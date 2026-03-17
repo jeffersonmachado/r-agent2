@@ -2,6 +2,16 @@ const crypto = require('crypto');
 const { PhysicalQueue, PhysicalTicket, PhysicalTicketSequence } = require('../db/models');
 const { appendEventV1 } = require('./eventLedgerService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -39,7 +49,7 @@ async function listQueues({ tenantId, locationId = null, status = null }) {
   const where = {
     tenant_key: tenantId,
     ...(locationId != null ? { location_id: locationId } : {}),
-    ...(status ? { status: String(status) } : {}),
+    ...(status ? { status: safeToString(status) } : {}),
   };
   const rows = await QueueModel.findAll({ where, order: [['created_at', 'ASC']] });
   return rows.map((q) => (q.toJSON ? q.toJSON() : q));
@@ -47,7 +57,7 @@ async function listQueues({ tenantId, locationId = null, status = null }) {
 
 async function upsertQueue({ tenantId, id = null, locationId = null, name, status = 'active', rules = {} }) {
   const QueueModel = PhysicalQueue();
-  const cleanName = String(name || '').trim();
+  const cleanName = safeTrim(name || '');
   if (!cleanName) {
     const err = new Error('physical_queue_name_required');
     // @ts-ignore
@@ -57,7 +67,7 @@ async function upsertQueue({ tenantId, id = null, locationId = null, name, statu
   const where = { tenant_key: tenantId, location_id: locationId || null, name: cleanName };
   const existing = await QueueModel.findOne({ where });
   if (existing) {
-    await existing.update({ status: String(status || 'active'), rules: rules || {} });
+    await existing.update({ status: safeToString(status || 'active'), rules: rules || {} });
     return existing.toJSON ? existing.toJSON() : existing;
   }
   const row = await QueueModel.create({
@@ -65,7 +75,7 @@ async function upsertQueue({ tenantId, id = null, locationId = null, name, statu
     tenant_key: tenantId,
     location_id: locationId || null,
     name: cleanName,
-    status: String(status || 'active'),
+    status: safeToString(status || 'active'),
     rules: rules || {},
   });
   return row.toJSON ? row.toJSON() : row;
@@ -119,24 +129,24 @@ async function createTicket({ tenantId, locationId, queueId = null, priority = 0
   // evitamos criar múltiplas senhas em retries (kiosk/QR).
   // Escopo recomendado: tenant + location + queue + dia.
   try {
-    const idemKey = context && context.idempotencyKey ? String(context.idempotencyKey).trim() : '';
+    const idemKey = context && context.idempotencyKey ? safeTrim(context.idempotencyKey) : '';
     const sequelize = TicketModel.sequelize;
     if (idemKey && sequelize) {
       const replacements = {
-        tenantKey: String(tenantId),
-        queueId: String(qId),
+        tenantKey: safeToString(tenantId),
+        queueId: safeToString(qId),
         idemKey,
       };
       let locSql = '';
       if (locationId != null) {
         locSql = `AND (context->>'locationId') = :locationId`;
-        replacements.locationId = String(locationId);
+        replacements.locationId = safeToString(locationId);
       }
       // Opcional: reduz colisões quando múltiplos dispositivos compartilham chaves
       let tokenSql = '';
       if (context && context.publicTokenId) {
         tokenSql = `AND (context->>'publicTokenId') = :publicTokenId`;
-        replacements.publicTokenId = String(context.publicTokenId);
+        replacements.publicTokenId = safeToString(context.publicTokenId);
       }
 
       const [rows] = await sequelize.query(
@@ -176,7 +186,7 @@ async function createTicket({ tenantId, locationId, queueId = null, priority = 0
 
   // best-effort: emit canonical event
   try {
-    const correlationId = (context && context.correlationId) ? String(context.correlationId) : (context?.publicTokenId ? `phycor-${String(context.publicTokenId)}-${json.id}` : null);
+    const correlationId = (context && context.correlationId) ? safeToString(context.correlationId) : (context?.publicTokenId ? `phycor-${safeToString(context.publicTokenId)}-${json.id}` : null);
     await appendEventV1({
       tenantId,
       type: 'PhysicalTicketCreated',
@@ -184,8 +194,8 @@ async function createTicket({ tenantId, locationId, queueId = null, priority = 0
       occurredAt: json.created_at || new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: context && context.publicTokenId ? { type: 'public_token', id: String(context.publicTokenId) } : { type: 'system', id: 'api' },
-      idempotencyKey: context && context.idempotencyKey ? `physical_ticket_created:${tenantId}:${String(context.idempotencyKey)}` : null,
+      actor: context && context.publicTokenId ? { type: 'public_token', id: safeToString(context.publicTokenId) } : { type: 'system', id: 'api' },
+      idempotencyKey: context && context.idempotencyKey ? `physical_ticket_created:${tenantId}:${safeToString(context.idempotencyKey)}` : null,
       payload: {
         ticketId: json.id,
         queueId: qId,
@@ -272,7 +282,7 @@ async function callNext({ tenantId, locationId, stationId = null }) {
 
   const json = row.toJSON ? row.toJSON() : row;
   try {
-    const correlationId = json?.context?.correlationId || (json?.context?.publicTokenId ? `phycor-${String(json.context.publicTokenId)}-${json.id}` : null);
+    const correlationId = json?.context?.correlationId || (json?.context?.publicTokenId ? `phycor-${safeToString(json.context.publicTokenId)}-${json.id}` : null);
     await appendEventV1({
       tenantId,
       type: 'PhysicalTicketCalled',
@@ -280,8 +290,8 @@ async function callNext({ tenantId, locationId, stationId = null }) {
       occurredAt: json.called_at || new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_called:${tenantId}:${json.id}:${String(json.called_at || '')}`,
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
+      idempotencyKey: `physical_ticket_called:${tenantId}:${json.id}:${safeToString(json.called_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -305,7 +315,7 @@ async function startService({ tenantId, ticketId, stationId = null, idempotencyK
   // Idempotência por chave (opcional)
   const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
   const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
-  if (idempotencyKey && row.status === 'in_service' && keys0.startService === String(idempotencyKey)) {
+  if (idempotencyKey && row.status === 'in_service' && keys0.startService === safeToString(idempotencyKey)) {
     return row.toJSON ? row.toJSON() : row;
   }
 
@@ -320,7 +330,7 @@ async function startService({ tenantId, ticketId, stationId = null, idempotencyK
   }
 
   const ctx = { ...ctx0 };
-  ctx.idempotencyKeys = { ...keys0, ...(idempotencyKey ? { startService: String(idempotencyKey) } : {}) };
+  ctx.idempotencyKeys = { ...keys0, ...(idempotencyKey ? { startService: safeToString(idempotencyKey) } : {}) };
 
   await row.update({
     status: 'in_service',
@@ -338,8 +348,8 @@ async function startService({ tenantId, ticketId, stationId = null, idempotencyK
       occurredAt: json.started_at || new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_started:${tenantId}:${json.id}:${String(json.started_at || '')}`,
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
+      idempotencyKey: `physical_ticket_started:${tenantId}:${json.id}:${safeToString(json.started_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, stationId: json.station_id || null, status: 'in_service' },
     });
   } catch (_) {}
@@ -358,7 +368,7 @@ async function pauseService({ tenantId, ticketId, stationId = null, reason = nul
 
   const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
   const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
-  if (idempotencyKey && row.status === 'paused' && keys0.pauseService === String(idempotencyKey)) {
+  if (idempotencyKey && row.status === 'paused' && keys0.pauseService === safeToString(idempotencyKey)) {
     return row.toJSON ? row.toJSON() : row;
   }
 
@@ -381,10 +391,10 @@ async function pauseService({ tenantId, ticketId, stationId = null, reason = nul
     pauseCount,
     pause: {
       pausedAt,
-      reason: reason ? String(reason) : (ctx0.pause?.reason || null),
+      reason: reason ? safeToString(reason) : (ctx0.pause?.reason || null),
       stationId: stationId || row.station_id || null,
     },
-    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { pauseService: String(idempotencyKey) } : {}) },
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { pauseService: safeToString(idempotencyKey) } : {}) },
   };
 
   await row.update({
@@ -402,10 +412,10 @@ async function pauseService({ tenantId, ticketId, stationId = null, reason = nul
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_service_paused:${tenantId}:${json.id}:${String(idempotencyKey)}`
-        : `physical_service_paused:${tenantId}:${json.id}:${String(json.updated_at || '')}`,
+        ? `physical_service_paused:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
+        : `physical_service_paused:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -430,7 +440,7 @@ async function resumeService({ tenantId, ticketId, stationId = null, idempotency
 
   const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
   const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
-  if (idempotencyKey && row.status === 'in_service' && keys0.resumeService === String(idempotencyKey)) {
+  if (idempotencyKey && row.status === 'in_service' && keys0.resumeService === safeToString(idempotencyKey)) {
     return row.toJSON ? row.toJSON() : row;
   }
 
@@ -452,7 +462,7 @@ async function resumeService({ tenantId, ticketId, stationId = null, idempotency
       resumedAt: new Date().toISOString(),
       resumedByStationId: stationId || row.station_id || null,
     },
-    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { resumeService: String(idempotencyKey) } : {}) },
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { resumeService: safeToString(idempotencyKey) } : {}) },
   };
 
   await row.update({
@@ -470,10 +480,10 @@ async function resumeService({ tenantId, ticketId, stationId = null, idempotency
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_service_resumed:${tenantId}:${json.id}:${String(idempotencyKey)}`
-        : `physical_service_resumed:${tenantId}:${json.id}:${String(json.updated_at || '')}`,
+        ? `physical_service_resumed:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
+        : `physical_service_resumed:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -497,7 +507,7 @@ async function skipTicket({ tenantId, ticketId, stationId = null, reason = null,
 
   const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
   const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
-  if (idempotencyKey && row.status === 'waiting' && keys0.skipTicket === String(idempotencyKey)) {
+  if (idempotencyKey && row.status === 'waiting' && keys0.skipTicket === safeToString(idempotencyKey)) {
     return row.toJSON ? row.toJSON() : row;
   }
 
@@ -515,8 +525,8 @@ async function skipTicket({ tenantId, ticketId, stationId = null, reason = null,
   const ctx = {
     ...ctx0,
     skipCount,
-    ...(reason ? { lastSkipReason: String(reason) } : {}),
-    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { skipTicket: String(idempotencyKey) } : {}) },
+    ...(reason ? { lastSkipReason: safeToString(reason) } : {}),
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { skipTicket: safeToString(idempotencyKey) } : {}) },
   };
 
   await row.update({
@@ -535,8 +545,8 @@ async function skipTicket({ tenantId, ticketId, stationId = null, reason = null,
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: idempotencyKey ? `physical_ticket_skipped:${tenantId}:${json.id}:${String(idempotencyKey)}` : `physical_ticket_skipped:${tenantId}:${json.id}:${String(json.updated_at || '')}`,
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
+      idempotencyKey: idempotencyKey ? `physical_ticket_skipped:${tenantId}:${json.id}:${safeToString(idempotencyKey)}` : `physical_ticket_skipped:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, action: 'skip', reason: reason || null, skipCount: json?.context?.skipCount || null },
     });
   } catch (_) {}
@@ -558,8 +568,8 @@ async function transferTicket({ tenantId, ticketId, toQueueId, idempotencyKey = 
   if (
     idempotencyKey &&
     row.status === 'waiting' &&
-    String(row.physical_queue_id) === String(toQueueId) &&
-    keys0.transferTicket === String(idempotencyKey)
+    safeToString(row.physical_queue_id) === safeToString(toQueueId) &&
+    keys0.transferTicket === safeToString(idempotencyKey)
   ) {
     return row.toJSON ? row.toJSON() : row;
   }
@@ -567,10 +577,10 @@ async function transferTicket({ tenantId, ticketId, toQueueId, idempotencyKey = 
   const fromQueueId = row.physical_queue_id;
   const ctx = {
     ...ctx0,
-    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { transferTicket: String(idempotencyKey) } : {}) },
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { transferTicket: safeToString(idempotencyKey) } : {}) },
   };
   await row.update({
-    physical_queue_id: String(toQueueId),
+    physical_queue_id: safeToString(toQueueId),
     status: 'waiting',
     station_id: null,
     called_at: null,
@@ -589,8 +599,8 @@ async function transferTicket({ tenantId, ticketId, toQueueId, idempotencyKey = 
       subject: { type: 'physical_ticket', id: json.id },
       actor: { type: 'system', id: 'transfer' },
       idempotencyKey: idempotencyKey
-        ? `physical_ticket_transferred:${tenantId}:${json.id}:${String(idempotencyKey)}`
-        : `physical_ticket_transferred:${tenantId}:${json.id}:${fromQueueId}->${toQueueId}:${String(json.updated_at || '')}`,
+        ? `physical_ticket_transferred:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
+        : `physical_ticket_transferred:${tenantId}:${json.id}:${fromQueueId}->${toQueueId}:${safeToString(json.updated_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, fromQueueId, toQueueId },
     });
   } catch (_) {}
@@ -609,7 +619,7 @@ async function abandonTicket({ tenantId, ticketId, stationId = null, reason = nu
 
   const ctx0 = (row.context && typeof row.context === 'object') ? row.context : {};
   const keys0 = (ctx0.idempotencyKeys && typeof ctx0.idempotencyKeys === 'object') ? ctx0.idempotencyKeys : {};
-  if (idempotencyKey && row.status === 'abandoned' && keys0.abandonTicket === String(idempotencyKey)) {
+  if (idempotencyKey && row.status === 'abandoned' && keys0.abandonTicket === safeToString(idempotencyKey)) {
     return row.toJSON ? row.toJSON() : row;
   }
   if (row.status === 'done') {
@@ -623,8 +633,8 @@ async function abandonTicket({ tenantId, ticketId, stationId = null, reason = nu
 
   const ctx = {
     ...ctx0,
-    ...(reason ? { lastAbandonReason: String(reason) } : {}),
-    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { abandonTicket: String(idempotencyKey) } : {}) },
+    ...(reason ? { lastAbandonReason: safeToString(reason) } : {}),
+    idempotencyKeys: { ...keys0, ...(idempotencyKey ? { abandonTicket: safeToString(idempotencyKey) } : {}) },
   };
 
   await row.update({
@@ -643,10 +653,10 @@ async function abandonTicket({ tenantId, ticketId, stationId = null, reason = nu
       occurredAt: json.finished_at || new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: stationId ? { type: 'station', id: String(stationId) } : { type: 'system', id: 'station' },
+      actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_ticket_abandoned:${tenantId}:${json.id}:${String(idempotencyKey)}`
-        : `physical_ticket_abandoned:${tenantId}:${json.id}:${String(json.finished_at || '')}`,
+        ? `physical_ticket_abandoned:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
+        : `physical_ticket_abandoned:${tenantId}:${json.id}:${safeToString(json.finished_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -667,7 +677,7 @@ async function getMetrics({ tenantId, locationId = null }) {
   let locSql = '';
   if (locationId != null) {
     locSql = `AND (context->>'locationId') = :locationId`;
-    replacements.locationId = String(locationId);
+    replacements.locationId = safeToString(locationId);
   }
 
   // Today in server timezone (best-effort). For strict multi-timezone, store day_key explicitly.
@@ -786,7 +796,7 @@ async function listTickets({
   const safeOffset = Math.max(Number(offset) || 0, 0);
 
   const replacements = {
-    tenantKey: String(tenantId),
+    tenantKey: safeToString(tenantId),
     limit: safeLimit,
     offset: safeOffset,
   };
@@ -794,11 +804,11 @@ async function listTickets({
   let locSql = '';
   if (locationId != null) {
     locSql = `AND (context->>'locationId') = :locationId`;
-    replacements.locationId = String(locationId);
+    replacements.locationId = safeToString(locationId);
   }
-  if (queueId) replacements.queueId = String(queueId);
-  if (status) replacements.status = String(status);
-  if (stationId) replacements.stationId = String(stationId);
+  if (queueId) replacements.queueId = safeToString(queueId);
+  if (status) replacements.status = safeToString(status);
+  if (stationId) replacements.stationId = safeToString(stationId);
 
   const [rows] = await sequelize.query(
     `SELECT *
@@ -853,7 +863,7 @@ async function finishTicket({ tenantId, ticketId }) {
   });
   const json = row.toJSON ? row.toJSON() : row;
   try {
-    const correlationId = json?.context?.correlationId || (json?.context?.publicTokenId ? `phycor-${String(json.context.publicTokenId)}-${json.id}` : null);
+    const correlationId = json?.context?.correlationId || (json?.context?.publicTokenId ? `phycor-${safeToString(json.context.publicTokenId)}-${json.id}` : null);
     await appendEventV1({
       tenantId,
       type: 'PhysicalTicketFinished',
@@ -861,8 +871,8 @@ async function finishTicket({ tenantId, ticketId }) {
       occurredAt: json.finished_at || new Date(),
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
-      actor: json?.station_id ? { type: 'station', id: String(json.station_id) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_finished:${tenantId}:${json.id}:${String(json.finished_at || '')}`,
+      actor: json?.station_id ? { type: 'station', id: safeToString(json.station_id) } : { type: 'system', id: 'station' },
+      idempotencyKey: `physical_ticket_finished:${tenantId}:${json.id}:${safeToString(json.finished_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,

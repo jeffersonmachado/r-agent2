@@ -171,4 +171,62 @@ describe('physicalQueueService', () => {
     expect(resumed.context.resumeCount).toBe(1);
     expect(resumed.context.pause.resumedByStationId).toBe('A1');
   });
+
+  test('upsertQueue tolera nome hostil e retorna erro de validação esperado', async () => {
+    const queueFindOne = jest.fn();
+    const queueCreate = jest.fn();
+
+    jest.doMock('../../api/db/models', () => ({
+      PhysicalQueue: () => ({ findOne: queueFindOne, create: queueCreate }),
+      PhysicalTicketSequence: () => ({ sequelize: null }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { upsertQueue } = require('../../api/services/physicalQueueService');
+
+    const hostileName = {
+      toString() {
+        throw new Error('boom-name');
+      },
+    };
+
+    await expect(
+      upsertQueue({ tenantId: 'tenant-1', locationId: 'loja-1', name: hostileName })
+    ).rejects.toMatchObject({ code: 'physical_queue_name_required' });
+
+    expect(queueFindOne).not.toHaveBeenCalled();
+    expect(queueCreate).not.toHaveBeenCalled();
+  });
+
+  test('listTickets tolera filtros hostis sem lançar exceção', async () => {
+    const query = jest.fn(async () => ([[], null]));
+
+    jest.doMock('../../api/db/models', () => ({
+      PhysicalTicket: () => ({ sequelize: { query } }),
+      PhysicalTicketSequence: () => ({ sequelize: null }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { listTickets } = require('../../api/services/physicalQueueService');
+
+    const hostile = {
+      toString() {
+        throw new Error('boom-filter');
+      },
+    };
+
+    const res = await listTickets({
+      tenantId: hostile,
+      locationId: hostile,
+      queueId: hostile,
+      status: hostile,
+      stationId: hostile,
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(res.ok).toBe(true);
+    expect(Array.isArray(res.items)).toBe(true);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
 });
