@@ -49,6 +49,21 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
 function toDbPayload(doc) {
   return {
     id: doc.id,
@@ -172,7 +187,7 @@ async function getDbDocumentIdsForTenant(tenantId) {
     attributes: ['id'],
     where: { tenant_key: tenantId || null },
   });
-  return rows.map((r) => (r?.id ? String(r.id) : null)).filter(Boolean);
+  return rows.map((r) => (r?.id ? safeToString(r.id, null) : null)).filter(Boolean);
 }
 
 /**
@@ -239,8 +254,9 @@ async function upsertDocumentFileToDb({ documentId, tenantId, filename, mimeType
   if (!dbAvailable()) return;
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
   const now = new Date();
+  const safeDocumentId = safeToString(documentId);
   const payload = {
-    document_id: String(documentId),
+    document_id: safeDocumentId,
     tenant_key: tenantId || null,
     filename: filename || null,
     mime_type: mimeType || null,
@@ -248,7 +264,7 @@ async function upsertDocumentFileToDb({ documentId, tenantId, filename, mimeType
     data,
     updated_at: now,
   };
-  const existing = await RagDocumentFileModel.findByPk(String(documentId));
+  const existing = await RagDocumentFileModel.findByPk(safeDocumentId);
   if (existing) {
     await existing.update(payload);
   } else {
@@ -259,8 +275,9 @@ async function upsertDocumentFileToDb({ documentId, tenantId, filename, mimeType
 async function getDocumentFileFromDb(documentId, tenantId) {
   if (!dbAvailable()) return null;
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
+  const safeDocumentId = safeToString(documentId);
   const row = await RagDocumentFileModel.findOne({
-    where: { document_id: String(documentId), tenant_key: tenantId || null },
+    where: { document_id: safeDocumentId, tenant_key: tenantId || null },
   });
   if (!row) return null;
   const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
@@ -278,7 +295,7 @@ async function deleteDocumentFileFromDb(documentId, tenantId) {
   if (!dbAvailable()) return;
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
   await RagDocumentFileModel.destroy({
-    where: { document_id: String(documentId), tenant_key: tenantId || null },
+    where: { document_id: safeToString(documentId), tenant_key: tenantId || null },
   });
 }
 
@@ -352,12 +369,15 @@ function listDocuments(filters = {}) {
     result = result.filter(doc => doc.status === filters.status);
   }
 
-  if (filters.search) {
-    const searchLower = filters.search.toLowerCase();
-    result = result.filter(doc => 
-      doc.title?.toLowerCase().includes(searchLower) ||
-      doc.content?.toLowerCase().includes(searchLower)
-    );
+  if (filters.search != null) {
+    const searchLower = safeTrimLower(filters.search);
+    if (searchLower) {
+      result = result.filter(doc => {
+        const titleLower = safeTrimLower(doc.title);
+        const contentLower = safeTrimLower(doc.content);
+        return titleLower.includes(searchLower) || contentLower.includes(searchLower);
+      });
+    }
   }
 
   // Ordena por data de atualização (mais recente primeiro)
@@ -390,7 +410,8 @@ function getDocument(documentId) {
 function findDocumentByUrl(url, tenantId) {
   if (!url) return null;
   
-  const normalizedUrl = url.trim().toLowerCase();
+  const normalizedUrl = safeTrimLower(url);
+  if (!normalizedUrl) return null;
   
   for (const doc of documents.values()) {
     // Verifica se é do mesmo tenant
@@ -398,7 +419,7 @@ function findDocumentByUrl(url, tenantId) {
     
     // Verifica se tem a mesma URL no metadata
     const docUrl = doc.metadata?.url;
-    if (docUrl && docUrl.trim().toLowerCase() === normalizedUrl) {
+    if (docUrl && safeTrimLower(docUrl) === normalizedUrl) {
       return doc;
     }
   }
@@ -417,7 +438,8 @@ function findDocumentByUrl(url, tenantId) {
 function findDocumentByFileName(fileName, tenantId, fileSize = null) {
   if (!fileName) return null;
   
-  const normalizedFileName = fileName.trim().toLowerCase();
+  const normalizedFileName = safeTrimLower(fileName);
+  if (!normalizedFileName) return null;
   
   for (const doc of documents.values()) {
     // Verifica se é do mesmo tenant
@@ -425,7 +447,7 @@ function findDocumentByFileName(fileName, tenantId, fileSize = null) {
     
     // Verifica se tem o mesmo nome de arquivo no metadata
     const docFileName = doc.metadata?.fileName;
-    if (docFileName && docFileName.trim().toLowerCase() === normalizedFileName) {
+    if (docFileName && safeTrimLower(docFileName) === normalizedFileName) {
       // Se fileSize foi fornecido, também verifica o tamanho para maior precisão
       if (fileSize !== null && doc.metadata?.fileSize) {
         if (doc.metadata.fileSize === fileSize) {
@@ -897,7 +919,11 @@ async function updateDocument(documentId, updates) {
  */
 async function deleteDocument(documentId) {
   try {
+    const safeDocumentId = safeToString(documentId);
     let document = documents.get(documentId);
+    if (!document && safeDocumentId) {
+      document = documents.get(safeDocumentId);
+    }
     let tenantId = document?.tenantId || null;
 
     // DELETE deve ser idempotente: se o documento já não existir, não deve falhar.
@@ -906,12 +932,12 @@ async function deleteDocument(documentId) {
     if (!document) {
       if (dbAvailable()) {
         const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-        const row = await RagDocumentModel.findByPk(String(documentId));
+        const row = await RagDocumentModel.findByPk(safeDocumentId);
         if (row) {
           const dbDoc = fromDbRow(row);
           tenantId = dbDoc?.tenantId || null;
           // Remove do banco imediatamente (idempotente)
-          await deleteDocumentFromDb(String(documentId));
+          await deleteDocumentFromDb(safeDocumentId);
         } else {
           return { success: true, alreadyDeleted: true };
         }
@@ -920,13 +946,16 @@ async function deleteDocument(documentId) {
       }
     } else {
       documents.delete(documentId);
+      if (safeDocumentId && safeDocumentId !== documentId) {
+        documents.delete(safeDocumentId);
+      }
       deleteDocumentBestEffort(documentId);
     }
 
     // Best-effort: remove também do vector store (Postgres) para evitar órfãos.
     try {
       if (tenantId) {
-        await postgresVectorStore.deleteDocumentVectors({ tenantId, documentId: String(documentId) });
+        await postgresVectorStore.deleteDocumentVectors({ tenantId, documentId: safeDocumentId });
       }
     } catch (e) {
       logger.warn('[RAGDocuments] Falha ao remover documento do vector store (best-effort)', {
@@ -939,7 +968,7 @@ async function deleteDocument(documentId) {
 
     // Best-effort: remove binário do documento (se existir)
     try {
-      await deleteDocumentFileFromDb(String(documentId), tenantId || null);
+      await deleteDocumentFileFromDb(safeDocumentId, tenantId || null);
     } catch (e) {
       logger.warn('[RAGDocuments] Falha ao remover binário do documento (best-effort)', {
         documentId,
@@ -1047,7 +1076,7 @@ async function reindexDocument(documentId) {
         indexedAt: document.indexedAt
       });
     } else {
-      const rawErrMsg = String(indexResult.error || '');
+      const rawErrMsg = safeToString(indexResult.error || '');
       const derivedCode = rawErrMsg.includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED';
       setIndexState(document, 'failed', {
         errorCode: derivedCode,
@@ -1068,7 +1097,7 @@ async function reindexDocument(documentId) {
     return {
       success: finalSuccess,
       chunksCreated: finalChunks,
-      errorCode: finalSuccess ? null : (document.indexErrorCode || (String(indexResult.error || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED')),
+      errorCode: finalSuccess ? null : (document.indexErrorCode || (safeToString(indexResult.error || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED')),
       error: finalSuccess ? null : (indexResult.error || 'Indexação retornou 0 chunks'),
     };
   } catch (error) {
@@ -1076,7 +1105,7 @@ async function reindexDocument(documentId) {
     return {
       success: false,
       chunksCreated: 0,
-      errorCode: String(error.message || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
+      errorCode: safeToString(error.message || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
       error: error.message,
     };
   }
