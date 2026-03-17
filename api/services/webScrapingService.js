@@ -15,6 +15,21 @@ const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+}
+
+function safeKeys(obj) {
+  if (!obj || typeof obj !== 'object') return [];
+  try { return Object.keys(obj); } catch (_) { return []; }
+}
+
 // Verifica se cheerio está disponível
 let cheerio = null;
 try {
@@ -233,7 +248,11 @@ async function scrapeWithPlaywright(url) {
     await page.waitForTimeout(2000);
 
     const data = await page.evaluate(() => {
-      const title = document?.title ? String(document.title).trim() : '';
+      const safeString = (v) => {
+        try { return String(v || ''); } catch (_) { return ''; }
+      };
+
+      const title = document?.title ? safeString(document.title).trim() : '';
       const metaDescription =
         document?.querySelector?.('meta[name="description"]')?.getAttribute?.('content') ||
         document?.querySelector?.('meta[property="og:description"]')?.getAttribute?.('content') ||
@@ -241,14 +260,14 @@ async function scrapeWithPlaywright(url) {
 
       const headings = Array.from(document.querySelectorAll('h1, h2'))
         .map((el) => (el && el.textContent ? el.textContent : ''))
-        .map((t) => String(t).replace(/\s+/g, ' ').trim())
+        .map((t) => safeString(t).replace(/\s+/g, ' ').trim())
         .filter(Boolean);
 
-      const extractedText = document?.body?.innerText ? String(document.body.innerText).trim() : '';
+      const extractedText = document?.body?.innerText ? safeString(document.body.innerText).trim() : '';
 
       return {
         title,
-        metaDescription: String(metaDescription || '').trim(),
+        metaDescription: safeString(metaDescription).trim(),
         headings: Array.from(new Set(headings)).slice(0, 30),
         extractedText,
       };
@@ -340,7 +359,7 @@ async function scrapeUrl(url, options = {}) {
     replay.start(replayId, {
       tenantId,
       url,
-      options: Object.keys(options),
+      options: safeKeys(options),
     });
   }
 
@@ -471,7 +490,7 @@ async function scrapeUrl(url, options = {}) {
 
       // 2) Se texto curto, tenta fallback Playwright (SPA/JS)
       const minCharsForNoFallback = 200;
-      const usePlaywright = String(process.env.USE_PLAYWRIGHT || '').toLowerCase() === 'true';
+      const usePlaywright = safeTrimLower(process.env.USE_PLAYWRIGHT) === 'true';
       if ((scrapeResult.extractedText || '').trim().length < minCharsForNoFallback) {
         warnings.push({
           code: 'SCRAPE_SHORT',
@@ -505,7 +524,7 @@ async function scrapeUrl(url, options = {}) {
             warnings.push({
               code: 'PLAYWRIGHT_FAILED',
               message: 'Fallback Playwright falhou. Continuando com o melhor resultado disponível.',
-              details: { url, error: pwErr.message || String(pwErr) },
+              details: { url, error: pwErr.message || safeToString(pwErr) },
             });
           }
         } else {
@@ -520,11 +539,11 @@ async function scrapeUrl(url, options = {}) {
       warnings.push({
         code: 'SCRAPE_FAILED',
         message: 'Falha ao extrair conteúdo via fetch/HTML estático. Tentando fallback.',
-        details: { url, error: fetchErr.message || String(fetchErr) },
+        details: { url, error: fetchErr.message || safeToString(fetchErr) },
       });
 
       // 2) Se fetch falhou, tenta Playwright
-      const usePlaywright = String(process.env.USE_PLAYWRIGHT || '').toLowerCase() === 'true';
+      const usePlaywright = safeTrimLower(process.env.USE_PLAYWRIGHT) === 'true';
       if (usePlaywright) {
         try {
           scrapeResult = await scrapeWithPlaywright(url);
@@ -538,7 +557,7 @@ async function scrapeUrl(url, options = {}) {
           warnings.push({
             code: 'PLAYWRIGHT_FAILED',
             message: 'Fallback Playwright também falhou. Indexando metadados mínimos.',
-            details: { url, error: pwErr.message || String(pwErr) },
+            details: { url, error: pwErr.message || safeToString(pwErr) },
           });
         }
       } else {
@@ -797,13 +816,13 @@ async function scrapeUrls(urls, options = {}) {
       const anyErr = /** @type {any} */ (err);
       return {
         name: anyErr.name || 'Error',
-        message: anyErr.message || String(err),
-        stack: anyErr.stack ? String(anyErr.stack) : undefined,
+        message: anyErr.message || safeToString(err),
+        stack: anyErr.stack ? safeToString(anyErr.stack) : undefined,
       };
     }
     return {
       name: 'Error',
-      message: String(err),
+      message: safeToString(err),
       stack: undefined,
     };
   }
