@@ -76,4 +76,50 @@ describe('ProcessPayloadValidator edge cases', () => {
     expect(Array.isArray(result.details)).toBe(true);
     expect(result.details.length).toBeGreaterThan(0);
   }, 5000));
+
+  test('safeClone retorna null quando schema nao e serializavel (toJSON que lanca)', withTimeout(async () => {
+    const validator = new ProcessPayloadValidator();
+    // Schema válido para AJV compilar (sem required → aceita {}), mas
+    // .toJSON() lança → JSON.stringify falha → safeClone retorna null
+    const schema = { type: 'object', properties: {} };
+    Object.defineProperty(schema, 'toJSON', {
+      value() { throw new Error('not serializable'); },
+      enumerable: false,
+    });
+
+    const result = validator.validatePayload({
+      node: { config: { resumeSchema: schema } },
+      payload: {},
+    });
+
+    // ok=true pois payload é válido; schema retornado é null (safeClone falhou)
+    expect(result.ok).toBe(true);
+    expect(result.schema).toBeNull();
+  }, 5000));
+
+  test('AJV error items hostis nao disparam excecao no map()', withTimeout(async () => {
+    const validator = new ProcessPayloadValidator();
+    const schema = {
+      type: 'object',
+      required: ['name'],
+      properties: { name: { type: 'string' } },
+    };
+
+    // Payload inválido (falta "name") para gerar validator.errors
+    const result = validator.validatePayload({
+      node: { config: { resumeSchema: schema } },
+      payload: {},
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('resume_payload_invalid');
+    // Os detalhes devem ser mapeados sem jogar exceção
+    expect(Array.isArray(result.details)).toBe(true);
+    expect(result.details.length).toBeGreaterThan(0);
+    // Cada detalhe tem campos seguros
+    for (const detail of result.details) {
+      expect(typeof detail.path).toBe('string');
+      expect(typeof detail.message).toBe('string');
+    }
+  }, 5000));
 });

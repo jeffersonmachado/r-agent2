@@ -2,8 +2,9 @@
 
 const Ajv = require('ajv');
 
-function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
+function safeClone(value) {
+  if (value == null) return value;
+  try { return JSON.parse(JSON.stringify(value)); } catch (_) { return null; }
 }
 
 function isObjectRecord(value) {
@@ -88,24 +89,29 @@ class ProcessPayloadValidator {
     } catch (error) {
       return {
         ok: false,
-        schema: clone(schema),
+        schema: safeClone(schema),
         error: 'resume_payload_invalid',
         details: buildValidationDetails(error),
       };
     }
 
     if (valid) {
-      return { ok: true, schema: clone(schema), payload };
+      return { ok: true, schema: safeClone(schema), payload };
     }
+    const ajvErrors = Array.isArray(validator.errors) ? validator.errors : [];
     return {
       ok: false,
-      schema: clone(schema),
+      schema: safeClone(schema),
       error: 'resume_payload_invalid',
-      details: (validator.errors || []).map((item) => ({
-        path: item.instancePath || item.schemaPath || '',
-        message: item.message || 'invalid',
-        keyword: item.keyword || null,
-      })),
+      details: ajvErrors.map((item) => {
+        let path = '';
+        let message = 'invalid';
+        let keyword = null;
+        try { path = item.instancePath || item.schemaPath || ''; } catch (_) { /* noop */ }
+        try { message = item.message || 'invalid'; } catch (_) { /* noop */ }
+        try { keyword = item.keyword || null; } catch (_) { /* noop */ }
+        return { path, message, keyword };
+      }),
     };
   }
 }
