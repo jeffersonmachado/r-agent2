@@ -185,4 +185,50 @@ describe('selftestService - eventDispatchRuntime', () => {
     expect(out.checks.eventDispatchRuntime.status).toBe('unhealthy');
     expect(out.status).toBe('FAIL');
   });
+
+  test('tolerates hostile tenantKey in byTenant payload without throwing', async () => {
+    process.env.SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON = JSON.stringify({
+      unknown: { deadFail: 999 },
+    });
+
+    const hostileTenantKey = {
+      toString() {
+        throw new Error('boom_tenant_key_toString');
+      },
+    };
+
+    setupCommonMocks({
+      dispatchSummary: {
+        pending: 0,
+        retryingPending: 0,
+        processing: 0,
+        done: 4,
+        doneRecent: 4,
+        dead: 0,
+        deadRecent: 0,
+        flowTriggerFailuresRecent: 0,
+        pendingLagSec: 0,
+      },
+      byTenant: [
+        {
+          tenantKey: hostileTenantKey,
+          pending: 0,
+          retryingPending: 0,
+          processing: 0,
+          done: 4,
+          doneRecent: 4,
+          dead: 0,
+          deadRecent: 0,
+          flowTriggerFailuresRecent: 0,
+          pendingLagSec: 0,
+        },
+      ],
+    });
+
+    const { runSelftest } = require('../../api/services/selftestService');
+    const out = await runSelftest();
+
+    expect(out.checks.eventDispatchRuntime.status).toBe('healthy');
+    expect(out.status).toBe('PASS');
+  });
 });

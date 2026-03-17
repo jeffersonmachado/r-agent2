@@ -10,6 +10,11 @@
 
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 async function safeCheckDb() {
   try {
     const dbHealth = require('../db/health');
@@ -109,7 +114,7 @@ function parseEventDispatchTenantThresholdOverrides() {
 }
 
 function eventDispatchThresholdsForTenant(base, overrides, tenantKey) {
-  const tenantCfg = overrides && typeof overrides === 'object' ? overrides[String(tenantKey || '')] : null;
+  const tenantCfg = overrides && typeof overrides === 'object' ? overrides[safeToString(tenantKey || '')] : null;
   if (!tenantCfg || typeof tenantCfg !== 'object' || Array.isArray(tenantCfg)) return base;
   return {
     deadWarn: safeThreshold(tenantCfg.deadWarn, base.deadWarn),
@@ -273,7 +278,7 @@ async function safeCheckEventDispatchRuntime() {
     const anyTargetWarn = byTarget.some((item) => eventDispatchItemStatus(item, baseThresholds).warn);
 
     const byTenantWithStatus = byTenant.map((item) => {
-      const tenantKey = String(item?.tenantKey || 'unknown');
+      const tenantKey = safeToString(item?.tenantKey || 'unknown');
       const thresholds = eventDispatchThresholdsForTenant(baseThresholds, tenantThresholdOverrides, tenantKey);
       const status = eventDispatchItemStatus(item, thresholds);
       return {
@@ -328,7 +333,7 @@ async function safeCheckEventDispatchRuntime() {
           maxPendingLagSec: maxLagSec,
         },
         byTarget: byTarget.map((item) => ({
-          target: String(item?.target || 'combined'),
+          target: safeToString(item?.target || 'combined'),
           pending: Number(item?.pending || 0),
           retryingPending: Number(item?.retryingPending || 0),
           processing: Number(item?.processing || 0),
@@ -363,7 +368,7 @@ async function safeCheckFlowExecutionLedger() {
     const modeBreakdownAvailable = !!(metrics.recentByMode && typeof metrics.recentByMode === 'object');
     const nonSimulationRecent = Number(metrics.nonSimulationRecent || 0);
     const recent = Number(metrics.recent || 0);
-    const requireRuntimeRecent = String(process.env.SELFTEST_FLOW_EXECUTION_LEDGER_REQUIRE_RUNTIME_RECENT || '1') !== '0';
+    const requireRuntimeRecent = safeToString(process.env.SELFTEST_FLOW_EXECUTION_LEDGER_REQUIRE_RUNTIME_RECENT || '1') !== '0';
     const runtimeMissing = modeBreakdownAvailable && requireRuntimeRecent && recent > 0 && nonSimulationRecent <= 0;
 
     const fail = failedRecent >= failedFail;
@@ -403,7 +408,7 @@ async function safeCheckPbxEventRuntime() {
 
     const byKind = {};
     for (const item of Array.isArray(queueMetrics.items) ? queueMetrics.items : []) {
-      byKind[String(item.kind || '')] = item;
+      byKind[safeToString(item.kind || '')] = item;
     }
     const scan = byKind.scan_pbx_cdr_events || {};
     const dispatch = byKind.dispatch_event_trigger || {};
