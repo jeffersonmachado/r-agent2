@@ -6,77 +6,139 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeNumber(value, fallbackValue = 0) {
+  const coerced = Number(value);
+  return Number.isFinite(coerced) ? coerced : fallbackValue;
+}
+
+function safeIsArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeArrayCopy(value) {
+  if (!safeIsArray(value)) return [];
+  try {
+    return value.slice();
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeHasOwn(value, key) {
+  try {
+    return Object.prototype.hasOwnProperty.call(value, key);
+  } catch (_) {
+    return false;
+  }
+}
+
 class ProcessReplayService {
   rebuildContextFromInstance(instance) {
+    const metadata = safeClone(safeGet(instance, 'metadata', {}), {}) ?? {};
     return ProcessExecutionContext.fromSnapshot({
-      processId: instance.processId,
-      processVersion: instance.processVersion || 1,
-      executionId: instance.executionId,
-      currentNodeId: instance.currentNodeId,
-      variables: clone(instance.variablesSnapshot || {}),
-      history: clone(instance.metadata?.history || []),
-      status: instance.status,
-      waitingState: clone(instance.waitingState || null),
-      startTime: instance.startedAt,
-      metadata: clone(instance.metadata || {}),
-      lastProcessedSequence: instance.lastEventSequence || 0,
+      processId: safeToString(safeGet(instance, 'processId', ''), ''),
+      processVersion: safeNumber(safeGet(instance, 'processVersion', 1), 1),
+      executionId: safeToString(safeGet(instance, 'executionId', ''), ''),
+      currentNodeId: safeGet(instance, 'currentNodeId', null),
+      variables: safeClone(safeGet(instance, 'variablesSnapshot', {}), {}) ?? {},
+      history: safeClone(safeGet(metadata, 'history', []), []) ?? [],
+      status: safeToString(safeGet(instance, 'status', 'pending'), 'pending'),
+      waitingState: safeClone(safeGet(instance, 'waitingState', null), null),
+      startTime: safeGet(instance, 'startedAt', null),
+      metadata,
+      lastProcessedSequence: safeNumber(safeGet(instance, 'lastEventSequence', 0), 0),
       recovery: {
         from: 'instance',
-        updatedAt: instance.updatedAt || null,
+        updatedAt: safeGet(instance, 'updatedAt', null),
       },
     });
   }
 
   rebuildContextFromEvents(compiledProcess, events = []) {
-    const firstEvent = events[0] || {};
+    const safeEvents = safeArrayCopy(events);
+    const firstEvent = safeEvents[0] || {};
     const context = new ProcessExecutionContext({
-      processId: compiledProcess?.id || '',
-      processVersion: compiledProcess?.version || firstEvent.processVersion || 1,
-      executionId: firstEvent.executionId || '',
-      currentNodeId: compiledProcess?.executionGraph?.startNode || null,
+      processId: safeToString(safeGet(compiledProcess, 'id', ''), ''),
+      processVersion: safeNumber(safeGet(compiledProcess, 'version') || safeGet(firstEvent, 'processVersion', 1), 1),
+      executionId: safeToString(safeGet(firstEvent, 'executionId', ''), ''),
+      currentNodeId: safeGet(safeGet(compiledProcess, 'executionGraph', null), 'startNode', null),
       status: 'pending',
       variables: {},
       history: [],
       metadata: {},
-      startTime: firstEvent.timestamp || null,
+      startTime: safeGet(firstEvent, 'timestamp', null),
     });
-    return this.replayToSequence(compiledProcess, events, Number.MAX_SAFE_INTEGER, context);
+    return this.replayToSequence(compiledProcess, safeEvents, Number.MAX_SAFE_INTEGER, context);
   }
 
   replayToSequence(compiledProcess, events = [], targetSequence = Number.MAX_SAFE_INTEGER, seedContext = null) {
+    const safeEvents = safeArrayCopy(events);
     const context = seedContext || new ProcessExecutionContext({
-      processId: compiledProcess?.id || '',
-      executionId: events[0]?.executionId || '',
-      currentNodeId: compiledProcess?.executionGraph?.startNode || null,
+      processId: safeToString(safeGet(compiledProcess, 'id', ''), ''),
+      executionId: safeToString(safeGet(safeEvents[0], 'executionId', ''), ''),
+      currentNodeId: safeGet(safeGet(compiledProcess, 'executionGraph', null), 'startNode', null),
     });
-    const ordered = events
+    const ordered = safeEvents
       .slice()
-      .sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0))
-      .filter((event) => Number(event.sequence || 0) <= Number(targetSequence));
+      .sort((a, b) => safeNumber(safeGet(a, 'sequence', 0), 0) - safeNumber(safeGet(b, 'sequence', 0), 0))
+      .filter((event) => safeNumber(safeGet(event, 'sequence', 0), 0) <= safeNumber(targetSequence, Number.MAX_SAFE_INTEGER));
 
     ordered.forEach((event) => {
-      context.lastProcessedSequence = Number(event.sequence || 0);
-      switch (event.eventType) {
+      const payload = safeGet(event, 'payload', null);
+      const metadata = safeGet(event, 'metadata', null);
+      const eventType = safeToString(safeGet(event, 'eventType', ''), '');
+      context.lastProcessedSequence = safeNumber(safeGet(event, 'sequence', 0), 0);
+      switch (eventType) {
         case 'PROCESS_STARTED':
         case 'PROCESS_RESUMED':
           context.status = 'running';
-          context.processVersion = Number(event.processVersion || context.processVersion || 1);
-          if (event.metadata && typeof event.metadata === 'object') {
+          context.processVersion = safeNumber(safeGet(event, 'processVersion', context.processVersion || 1), context.processVersion || 1);
+          if (metadata && typeof metadata === 'object') {
             context.metadata = {
               ...(context.metadata || {}),
-              ...clone(event.metadata),
+              ...(safeClone(metadata, {}) || {}),
             };
           }
           break;
         case 'NODE_ENTER':
-          if (event.nodeId != null) {
-            context.currentNodeId = String(event.nodeId);
+          if (safeGet(event, 'nodeId') != null) {
+            context.currentNodeId = safeToString(safeGet(event, 'nodeId'), null);
           }
-          if (event.payload?.variablesSnapshot) {
-            context.variables = clone(event.payload.variablesSnapshot);
+          if (safeGet(payload, 'variablesSnapshot')) {
+            context.variables = safeClone(safeGet(payload, 'variablesSnapshot'), {}) ?? {};
           }
-          if (Array.isArray(event.payload?.historySnapshot)) {
-            context.history = clone(event.payload.historySnapshot);
+          if (safeIsArray(safeGet(payload, 'historySnapshot'))) {
+            context.history = safeClone(safeGet(payload, 'historySnapshot'), []) ?? [];
           }
           break;
         case 'NODE_EXIT':
@@ -84,33 +146,33 @@ class ProcessReplayService {
         case 'NODE_RESUMED':
         case 'NODE_ERROR':
         case 'GATEWAY_DECISION':
-          if (event.payload?.variablesSnapshot) {
-            context.variables = clone(event.payload.variablesSnapshot);
+          if (safeGet(payload, 'variablesSnapshot')) {
+            context.variables = safeClone(safeGet(payload, 'variablesSnapshot'), {}) ?? {};
           }
-          if (Array.isArray(event.payload?.historySnapshot)) {
-            context.history = clone(event.payload.historySnapshot);
+          if (safeIsArray(safeGet(payload, 'historySnapshot'))) {
+            context.history = safeClone(safeGet(payload, 'historySnapshot'), []) ?? [];
           }
-          if (Object.prototype.hasOwnProperty.call(event.payload || {}, 'currentNodeId')) {
-            context.currentNodeId = event.payload.currentNodeId != null ? String(event.payload.currentNodeId) : null;
+          if (safeHasOwn(payload || {}, 'currentNodeId')) {
+            context.currentNodeId = safeGet(payload, 'currentNodeId') != null ? safeToString(safeGet(payload, 'currentNodeId'), null) : null;
           }
-          if (event.payload?.waitingState) {
-            context.setWaitingState(event.payload.waitingState);
+          if (safeGet(payload, 'waitingState')) {
+            context.setWaitingState(safeGet(payload, 'waitingState'));
           }
-          if (event.eventType === 'NODE_RESUMED') {
+          if (eventType === 'NODE_RESUMED') {
             context.clearWaitingState();
             context.status = 'running';
           }
-          if (event.eventType === 'NODE_WAITING') {
+          if (eventType === 'NODE_WAITING') {
             context.status = 'waiting';
           }
-          if (event.eventType === 'NODE_EXIT') {
+          if (eventType === 'NODE_EXIT') {
             context.clearWaitingState();
             context.status = 'running';
-            if (Object.prototype.hasOwnProperty.call(event.payload || {}, 'nextNodeId')) {
-              context.currentNodeId = event.payload.nextNodeId != null ? String(event.payload.nextNodeId) : null;
+            if (safeHasOwn(payload || {}, 'nextNodeId')) {
+              context.currentNodeId = safeGet(payload, 'nextNodeId') != null ? safeToString(safeGet(payload, 'nextNodeId'), null) : null;
             }
           }
-          if (event.eventType === 'NODE_ERROR') {
+          if (eventType === 'NODE_ERROR') {
             context.status = 'failed';
           }
           break;
@@ -134,14 +196,14 @@ class ProcessReplayService {
   }
 
   getExecutionPath(events = []) {
-    return events
-      .filter((event) => ['NODE_ENTER', 'NODE_EXIT', 'NODE_WAITING', 'NODE_RESUMED'].includes(event.eventType))
+    return safeArrayCopy(events)
+      .filter((event) => ['NODE_ENTER', 'NODE_EXIT', 'NODE_WAITING', 'NODE_RESUMED'].includes(safeToString(safeGet(event, 'eventType', ''), '')))
       .map((event) => ({
-        sequence: event.sequence,
-        nodeId: event.nodeId,
-        nodeType: event.nodeType,
-        eventType: event.eventType,
-        timestamp: event.timestamp,
+        sequence: safeGet(event, 'sequence', 0),
+        nodeId: safeGet(event, 'nodeId', null),
+        nodeType: safeGet(event, 'nodeType', null),
+        eventType: safeToString(safeGet(event, 'eventType', ''), ''),
+        timestamp: safeGet(event, 'timestamp', null),
       }));
   }
 
