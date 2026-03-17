@@ -53,4 +53,64 @@ describe('InMemoryProcessExecutionRepository', () => {
     const events = await repository.listEventsByExecution('exec-repo-2');
     expect(events.map((event) => event.sequence)).toEqual([3, 4]);
   }, 5000));
+
+  test('appendEvent tolera payload e metadata hostis com fallback seguro', withTimeout(async () => {
+    const repository = new InMemoryProcessExecutionRepository();
+    const { proxy: hostilePayload, revoke: revokePayload } = Proxy.revocable({ a: 1 }, {});
+    revokePayload();
+    const { proxy: hostileMetadata, revoke: revokeMetadata } = Proxy.revocable({ source: 'x' }, {});
+    revokeMetadata();
+
+    const saved = await repository.appendEvent({
+      executionId: 'exec-repo-hostile',
+      sequence: 1,
+      processId: 'proc-hostile',
+      processVersion: 1,
+      eventType: 'NODE_ENTER',
+      payload: hostilePayload,
+      metadata: hostileMetadata,
+    });
+
+    expect(saved.executionId).toBe('exec-repo-hostile');
+    expect(saved.sequence).toBe(1);
+    expect(saved.payload).toEqual({});
+    expect(saved.metadata).toEqual({});
+  }, 5000));
+
+  test('appendEvents tolera array revogado sem lançar', withTimeout(async () => {
+    const repository = new InMemoryProcessExecutionRepository();
+    const { proxy: hostileEvents, revoke } = Proxy.revocable([
+      {
+        executionId: 'exec-repo-batch',
+        sequence: 1,
+        processId: 'proc-batch',
+        processVersion: 1,
+        eventType: 'PROCESS_STARTED',
+      },
+    ], {});
+    revoke();
+
+    const saved = await repository.appendEvents(hostileEvents);
+    const listed = await repository.listEventsByExecution('exec-repo-batch');
+
+    expect(saved).toEqual([]);
+    expect(listed).toEqual([]);
+  }, 5000));
+
+  test('listEventsByExecution tolera executionId hostil e retorna vazio', withTimeout(async () => {
+    const repository = new InMemoryProcessExecutionRepository();
+    await repository.appendEvent({
+      executionId: 'exec-repo-safe',
+      sequence: 1,
+      processId: 'proc-safe',
+      processVersion: 1,
+      eventType: 'PROCESS_STARTED',
+    });
+
+    const { proxy: hostileExecutionId, revoke } = Proxy.revocable({ value: 'exec-repo-safe' }, {});
+    revoke();
+
+    const listed = await repository.listEventsByExecution(hostileExecutionId);
+    expect(listed).toEqual([]);
+  }, 5000));
 });

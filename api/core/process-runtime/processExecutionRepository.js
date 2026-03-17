@@ -7,23 +7,78 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeFiniteNumber(value, fallbackValue = 0) {
+  const coerced = Number(value);
+  return Number.isFinite(coerced) ? coerced : fallbackValue;
+}
+
+function safeArrayCopy(value) {
+  try {
+    return Array.isArray(value) ? value.slice() : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeShallowCloneRecord(value) {
+  if (!value || typeof value !== 'object') return {};
+  try {
+    return { ...value };
+  } catch (_) {
+    return {};
+  }
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
 
 function normalizeEvent(event = {}) {
+  const safeEvent = safeShallowCloneRecord(event);
+  const executionId = safeToString(safeGet(safeEvent, 'executionId', ''), '');
+  const sequence = safeFiniteNumber(safeGet(safeEvent, 'sequence', 0), 0);
+  const rawEventId = safeGet(safeEvent, 'eventId', null);
+  const eventId = rawEventId != null && rawEventId !== ''
+    ? safeToString(rawEventId, '')
+    : `${executionId || 'exec'}:${sequence}:${Date.now()}`;
   return {
-    eventId: event.eventId ? String(event.eventId) : `${String(event.executionId || 'exec')}:${String(event.sequence || 0)}:${Date.now()}`,
-    executionId: String(event.executionId || ''),
-    sequence: Number.isFinite(Number(event.sequence)) ? Number(event.sequence) : 0,
-    processId: String(event.processId || ''),
-    processVersion: Number.isFinite(Number(event.processVersion)) ? Number(event.processVersion) : 1,
-    nodeId: event.nodeId != null ? String(event.nodeId) : null,
-    nodeType: event.nodeType != null ? String(event.nodeType) : null,
-    eventType: String(event.eventType || 'PROCESS_EVENT'),
-    timestamp: event.timestamp || new Date().toISOString(),
-    payload: clone(event.payload || {}),
-    metadata: clone(event.metadata || {}),
+    eventId,
+    executionId,
+    sequence,
+    processId: safeToString(safeGet(safeEvent, 'processId', ''), ''),
+    processVersion: safeFiniteNumber(safeGet(safeEvent, 'processVersion', 1), 1),
+    nodeId: safeGet(safeEvent, 'nodeId', null) != null ? safeToString(safeGet(safeEvent, 'nodeId', null), null) : null,
+    nodeType: safeGet(safeEvent, 'nodeType', null) != null ? safeToString(safeGet(safeEvent, 'nodeType', null), null) : null,
+    eventType: safeToString(safeGet(safeEvent, 'eventType', 'PROCESS_EVENT'), 'PROCESS_EVENT') || 'PROCESS_EVENT',
+    timestamp: safeGet(safeEvent, 'timestamp', null) || new Date().toISOString(),
+    payload: safeClone(safeGet(safeEvent, 'payload', {}), {}) ?? {},
+    metadata: safeClone(safeGet(safeEvent, 'metadata', {}), {}) ?? {},
   };
 }
 
@@ -34,21 +89,22 @@ class InMemoryProcessExecutionRepository {
   }
 
   async getNextSequence(executionId) {
-    const key = String(executionId || '');
+    const key = safeToString(executionId || '', '');
     const next = (this._sequences.get(key) || 0) + 1;
     this._sequences.set(key, next);
     return next;
   }
 
   async appendEvent(event) {
-    const key = String(event?.executionId || '');
+    const safeEvent = safeShallowCloneRecord(event);
+    const key = safeToString(safeGet(safeEvent, 'executionId', ''), '');
     const list = this._eventsByExecution.get(key) || [];
     const persistedSequence = list.length > 0
-      ? Number(list[list.length - 1].sequence || 0)
+      ? safeFiniteNumber(safeGet(list[list.length - 1], 'sequence', 0), 0)
       : 0;
-    const requestedSequence = Number.isFinite(Number(event?.sequence)) ? Number(event.sequence) : 0;
+    const requestedSequence = safeFiniteNumber(safeGet(safeEvent, 'sequence', 0), 0);
     const normalized = normalizeEvent({
-      ...event,
+      ...safeEvent,
       sequence: requestedSequence > persistedSequence ? requestedSequence : persistedSequence + 1,
     });
     list.push(normalized);
@@ -60,7 +116,8 @@ class InMemoryProcessExecutionRepository {
 
   async appendEvents(events = []) {
     const saved = [];
-    for (const event of events) {
+    const safeEvents = safeArrayCopy(events);
+    for (const event of safeEvents) {
       // eslint-disable-next-line no-await-in-loop
       saved.push(await this.appendEvent(event));
     }
@@ -68,7 +125,7 @@ class InMemoryProcessExecutionRepository {
   }
 
   async listEventsByExecution(executionId) {
-    const list = this._eventsByExecution.get(String(executionId || '')) || [];
+    const list = this._eventsByExecution.get(safeToString(executionId || '', '')) || [];
     return list.map((event) => normalizeEvent(event));
   }
 
@@ -79,7 +136,7 @@ class InMemoryProcessExecutionRepository {
 
   async listEventsAfter(executionId, sequence) {
     const list = await this.listEventsByExecution(executionId);
-    const safeSequence = Number.isFinite(Number(sequence)) ? Number(sequence) : 0;
+    const safeSequence = safeFiniteNumber(sequence, 0);
     return list.filter((event) => event.sequence > safeSequence);
   }
 }
@@ -96,20 +153,21 @@ class SequelizeProcessExecutionRepository {
   async getNextSequence(executionId) {
     if (!dbAvailable()) return this._fallback.getNextSequence(executionId);
     const last = await this.model.findOne({
-      where: { execution_id: String(executionId || '') },
+      where: { execution_id: safeToString(executionId || '', '') },
       order: [['sequence', 'DESC']],
     });
-    const lastSequence = last ? Number((last.toJSON ? last.toJSON() : last).sequence || 0) : 0;
+    const lastSequence = last ? safeFiniteNumber(safeGet((last.toJSON ? last.toJSON() : last), 'sequence', 0), 0) : 0;
     return lastSequence + 1;
   }
 
   async appendEvent(event) {
     if (!dbAvailable()) return this._fallback.appendEvent(event);
-    const key = String(event?.executionId || '');
-    const requestedSequence = Number.isFinite(Number(event?.sequence)) ? Number(event.sequence) : 0;
+    const safeEvent = safeShallowCloneRecord(event);
+    const key = safeToString(safeGet(safeEvent, 'executionId', ''), '');
+    const requestedSequence = safeFiniteNumber(safeGet(safeEvent, 'sequence', 0), 0);
     const persistedSequence = await this.getLastEvent(key).then((last) => Number(last?.sequence || 0));
     const normalized = normalizeEvent({
-      ...event,
+      ...safeEvent,
       sequence: requestedSequence > persistedSequence ? requestedSequence : persistedSequence + 1,
     });
     const row = await this.model.create({
@@ -122,8 +180,8 @@ class SequelizeProcessExecutionRepository {
       node_type: normalized.nodeType,
       event_type: normalized.eventType,
       timestamp: normalized.timestamp,
-      payload: clone(normalized.payload || {}),
-      metadata: clone(normalized.metadata || {}),
+      payload: safeClone(normalized.payload || {}, {}) || {},
+      metadata: safeClone(normalized.metadata || {}, {}) || {},
     });
     const json = row.toJSON ? row.toJSON() : row;
     return normalizeEvent({
@@ -144,7 +202,8 @@ class SequelizeProcessExecutionRepository {
   async appendEvents(events = []) {
     if (!dbAvailable()) return this._fallback.appendEvents(events);
     const saved = [];
-    for (const event of events) {
+    const safeEvents = safeArrayCopy(events);
+    for (const event of safeEvents) {
       // eslint-disable-next-line no-await-in-loop
       saved.push(await this.appendEvent(event));
     }
@@ -154,7 +213,7 @@ class SequelizeProcessExecutionRepository {
   async listEventsByExecution(executionId) {
     if (!dbAvailable()) return this._fallback.listEventsByExecution(executionId);
     const rows = await this.model.findAll({
-      where: { execution_id: String(executionId || '') },
+      where: { execution_id: safeToString(executionId || '', '') },
       order: [['sequence', 'ASC'], ['timestamp', 'ASC']],
       limit: 10000,
     });
@@ -182,7 +241,7 @@ class SequelizeProcessExecutionRepository {
   }
 
   async listEventsAfter(executionId, sequence) {
-    const safeSequence = Number.isFinite(Number(sequence)) ? Number(sequence) : 0;
+    const safeSequence = safeFiniteNumber(sequence, 0);
     const list = await this.listEventsByExecution(executionId);
     return list.filter((event) => event.sequence > safeSequence);
   }
