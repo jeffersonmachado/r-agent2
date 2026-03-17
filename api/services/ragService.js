@@ -25,13 +25,29 @@ function getTenantService() {
   return tenantService;
 }
 
+// Defensive coercion helpers
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
 // URL padrão do serviço Python RAG
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
 
 function normalizeTenantId(tenantId) {
   if (tenantId === null || tenantId === undefined) return null;
-  const tid = String(tenantId).trim();
+  const tid = safeTrim(tenantId);
   return tid || null;
 }
 
@@ -74,6 +90,7 @@ function getRagServiceUrl(tenantId) {
  * @returns {number} Timeout em milissegundos
  */
 function getRagTimeout(tenantId) {
+  tenantId = normalizeTenantId(tenantId);
   if (!tenantId) {
     return DEFAULT_RAG_TIMEOUT;
   }
@@ -224,7 +241,7 @@ async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
   if (!tenantId) throw new Error('tenantId é obrigatório');
 
   const safeTexts = (Array.isArray(texts) ? texts : [])
-    .map((t) => (t === null || t === undefined ? '' : String(t)).trim())
+    .map((t) => safeTrim(t))
     .filter(Boolean)
     .map((t) => (t.length > 4000 ? t.slice(0, 4000) : t))
     .slice(0, 128);
@@ -1257,7 +1274,7 @@ async function listVectorDocuments(tenantId, options = {}) {
 
   const serviceUrl = getRagServiceUrl(tenantId);
   const timeout = getRagTimeout(tenantId);
-  const url = `${serviceUrl}/rag/documents?tenant_id=${encodeURIComponent(tenantId)}&limit=${encodeURIComponent(String(limit))}`;
+  const url = `${serviceUrl}/rag/documents?tenant_id=${encodeURIComponent(tenantId)}&limit=${encodeURIComponent(safeToString(limit))}`;
 
   const response = await fetchWithTimeout(url, { method: 'GET' }, Math.min(4000, timeout));
   if (!response.ok) {
