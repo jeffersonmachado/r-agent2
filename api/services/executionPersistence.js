@@ -18,6 +18,23 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { Execution } = require('../db/models');
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeGet(obj, key) {
+  if (obj == null) return undefined;
+  try { return obj[key]; } catch (_) { return undefined; }
+}
+
+function safeKeys(value) {
+  if (!value || typeof value !== 'object') return [];
+  try { return Object.keys(value); } catch (_) { return []; }
+}
+
+function safeArrayCopy(arr) {
+  if (!Array.isArray(arr)) return [];
+  try { return [...arr]; } catch (_) { return []; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Persiste uma execução completa.
  * 
@@ -55,10 +72,13 @@ async function persistExecution(execution) {
       success: execution.ragContext.success,
       chunksCount: execution.ragContext.chunks?.length || 0,
       sourcesCount: execution.ragContext.sources?.length || 0,
-      sources: execution.ragContext.sources?.map(s => ({
-        documentId: s.documentId || s,
-        chunksCount: s.chunksCount || 0,
-      })) || [],
+      sources: safeArrayCopy(execution.ragContext.sources).map((s) => {
+        let documentId;
+        try { documentId = s.documentId || s; } catch (_) { documentId = null; }
+        let chunksCount = 0;
+        try { chunksCount = s.chunksCount || 0; } catch (_) { /* noop */ }
+        return { documentId, chunksCount };
+      }),
     } : null,
   };
   
@@ -182,14 +202,18 @@ async function reuseDecision(executionId, currentExecution) {
     // Marca etapas como concluídas baseado na decisão anterior
     if (persisted.status === 'abstained') {
       // Se absteve, marca etapas até onde chegou
-      Object.keys(persisted.stages || {}).forEach(stage => {
-        if (persisted.stages[stage]) {
+      const persistedStages = safeGet(persisted, 'stages');
+      safeKeys(persistedStages).forEach((stage) => {
+        let stageValue;
+        try { stageValue = persistedStages[stage]; } catch (_) { stageValue = false; }
+        if (stageValue) {
           currentExecution.stages[stage] = true;
         }
       });
     } else if (persisted.status === 'approved') {
       // Se aprovou, todas as etapas foram concluídas
-      Object.keys(currentExecution.stages).forEach(stage => {
+      const currentStages = safeGet(currentExecution, 'stages');
+      safeKeys(currentStages).forEach((stage) => {
         currentExecution.stages[stage] = true;
       });
     }
