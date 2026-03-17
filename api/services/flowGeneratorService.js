@@ -19,6 +19,22 @@ const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
 const { validateFlow } = require('../../engine/validator');
 
+// Defensive coercion helpers
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
 function isObject(v) {
   return !!v && typeof v === 'object' && !Array.isArray(v);
 }
@@ -55,7 +71,7 @@ function replaceNextTarget(next, fromId, toId) {
 }
 
 function slugifyLabel(value) {
-  const raw = String(value || '').trim().toLowerCase();
+  const raw = safeTrimLower(value);
   if (!raw) return '';
   return raw
     .normalize('NFKD')
@@ -116,7 +132,7 @@ function migrateDeprecatedRouterContains(flow) {
       const val = r?.condition?.value;
       const label = slugifyLabel(val) || `cat_${labels.length + 1}`;
       if (!labels.includes(label)) labels.push(label);
-      keywords[label] = [String(val ?? '').trim()].filter(Boolean);
+      keywords[label] = [safeTrim(val)].filter(Boolean);
     }
 
     const aiTaskNode = {
@@ -572,13 +588,13 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
   
   // Garante que todos os caminhos terminem em end (suporta next: string | string[] | object)
   const endNodeId = flow.nodes.find(n => n.type === 'end')?.id || 'end';
-  const nodeIdsSet = new Set((flow.nodes || []).map((n) => String(n?.id || '')));
+  const nodeIdsSet = new Set((flow.nodes || []).map((n) => safeToString(n?.id || '')));
   flow.nodes.forEach((node) => {
     if (!node || !node.next) return;
 
     // next como string
     if (typeof node.next === 'string') {
-      if (!nodeIdsSet.has(String(node.next))) {
+      if (!nodeIdsSet.has(safeToString(node.next))) {
         node.next = endNodeId;
       }
       return;
@@ -586,7 +602,7 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
 
     // next como array
     if (Array.isArray(node.next)) {
-      node.next = node.next.map((nextId) => (nodeIdsSet.has(String(nextId)) ? nextId : endNodeId));
+      node.next = node.next.map((nextId) => (nodeIdsSet.has(safeToString(nextId)) ? nextId : endNodeId));
       return;
     }
 
@@ -791,7 +807,7 @@ async function generateFlowFromDescription(description, options = {}) {
   let usedFallback = false;
 
   const formatFixFeedback = (errors, warnings) => {
-    const safe = (v) => (v === null || v === undefined) ? '' : String(v);
+    const safe = (v) => (v === null || v === undefined) ? '' : safeToString(v);
     const normalizeItems = (items, max = 20) => {
       const arr = Array.isArray(items) ? items : [];
       const out = [];
@@ -824,7 +840,7 @@ async function generateFlowFromDescription(description, options = {}) {
   };
 
   const summarizeErrorsForMetadata = (items, max = 12) => {
-    const safe = (v) => (v === null || v === undefined) ? '' : String(v);
+    const safe = (v) => (v === null || v === undefined) ? '' : safeToString(v);
     const arr = Array.isArray(items) ? items : [];
     const out = [];
     for (const it of arr) {
@@ -846,8 +862,8 @@ async function generateFlowFromDescription(description, options = {}) {
   const summarizeFallbackReasonFromAttempts = (attemptsArr) => {
     const arr = Array.isArray(attemptsArr) ? attemptsArr : [];
     const last = arr.length > 0 ? arr[arr.length - 1] : null;
-    const kind = last && typeof last === 'object' ? String(last.kind || '') : '';
-    const msg = last && typeof last === 'object' ? String(last.message || '') : '';
+    const kind = last && typeof last === 'object' ? safeToString(last.kind || '') : '';
+    const msg = last && typeof last === 'object' ? safeToString(last.message || '') : '';
 
     // Mapeamento enxuto para UX (sem expor detalhes internos).
     if (kind === 'WRAPPER_REJECTED') return 'A IA retornou uma resposta fora do contrato esperado.';
@@ -864,21 +880,7 @@ async function generateFlowFromDescription(description, options = {}) {
     for (let i = arr.length - 1; i >= 0; i--) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
-      if (String(a.kind || '') !== 'GENERATION_ERROR') continue;
-      const msg = typeof a.message === 'string' ? a.message.trim() : '';
-      if (msg) return msg.slice(0, 360);
-    }
-    return null;
-  };
-
-  const extractFailureInfoFromAttempts = (attemptsArr) => {
-    const arr = Array.isArray(attemptsArr) ? attemptsArr : [];
-
-    // 1) Provider failure (exception) — preferimos a última GEN_ERROR.
-    for (let i = arr.length - 1; i >= 0; i--) {
-      const a = arr[i];
-      if (!a || typeof a !== 'object') continue;
-      if (String(a.kind || '') !== 'GENERATION_ERROR') continue;
+      if (safeToString(a.kind || '') !== 'GENERATION_ERROR') continue;
       const msg = typeof a.message === 'string' ? a.message.trim() : '';
       if (msg) return { failureSource: 'provider', failureMessage: msg.slice(0, 360) };
     }
@@ -887,7 +889,7 @@ async function generateFlowFromDescription(description, options = {}) {
     for (let i = arr.length - 1; i >= 0; i--) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
-      if (String(a.kind || '') !== 'WRAPPER_REJECTED') continue;
+      if (safeToString(a.kind || '') !== 'WRAPPER_REJECTED') continue;
       const msg =
         (typeof a.errorMessage === 'string' && a.errorMessage.trim())
           ? a.errorMessage.trim()
@@ -902,7 +904,47 @@ async function generateFlowFromDescription(description, options = {}) {
     for (let i = arr.length - 1; i >= 0; i--) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
-      if (String(a.kind || '') !== 'ENGINE_VALIDATION_FAILED') continue;
+      if (safeToString(a.kind || '') !== 'ENGINE_VALIDATION_FAILED') continue;
+      const msg = typeof a.firstError === 'string' ? a.firstError.trim() : '';
+      if (msg) return { failureSource: 'engine', failureMessage: msg.slice(0, 360) };
+      return { failureSource: 'engine', failureMessage: 'Falha na validação do fluxo gerado.' };
+    }
+
+    return { failureSource: 'unknown', failureMessage: msg ? msg.slice(0, 360) : 'Falha na geração (motivo não identificado).' };
+  };
+
+  const extractFailureInfoFromAttempts = (attemptsArr) => {
+    const arr = Array.isArray(attemptsArr) ? attemptsArr : [];
+
+    // 1) Provider failure (exception) — preferimos a última GEN_ERROR.
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const a = arr[i];
+      if (!a || typeof a !== 'object') continue;
+      if (safeToString(a.kind || '') !== 'GENERATION_ERROR') continue;
+      const msg = typeof a.message === 'string' ? a.message.trim() : '';
+      if (msg) return { failureSource: 'provider', failureMessage: msg.slice(0, 360) };
+    }
+
+    // 2) Wrapper rejected — ex.: saída fora do contrato/gate.
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const a = arr[i];
+      if (!a || typeof a !== 'object') continue;
+      if (safeToString(a.kind || '') !== 'WRAPPER_REJECTED') continue;
+      const msg =
+        (typeof a.errorMessage === 'string' && a.errorMessage.trim())
+          ? a.errorMessage.trim()
+          : (typeof a.message === 'string' ? a.message.trim() : '');
+      if (msg) return { failureSource: 'wrapper', failureMessage: msg.slice(0, 360) };
+      const errorType = typeof a.errorType === 'string' ? a.errorType.trim() : '';
+      if (errorType) return { failureSource: 'wrapper', failureMessage: `Wrapper rejeitou a geração (${errorType}).` };
+      return { failureSource: 'wrapper', failureMessage: 'Wrapper rejeitou a geração.' };
+    }
+
+    // 3) Engine validation failed — usamos firstError quando existir.
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const a = arr[i];
+      if (!a || typeof a !== 'object') continue;
+      if (safeToString(a.kind || '') !== 'ENGINE_VALIDATION_FAILED') continue;
       const msg = typeof a.firstError === 'string' ? a.firstError.trim() : '';
       if (msg) return { failureSource: 'engine', failureMessage: msg.slice(0, 360) };
       return { failureSource: 'engine', failureMessage: 'Falha na validação do fluxo gerado.' };
@@ -1016,7 +1058,7 @@ async function generateFlowFromDescription(description, options = {}) {
         if (err && (err.name === 'AbortError' || err.name === 'TimeoutError' || (signal && signal.aborted))) {
           throw err;
         }
-        const msg = err?.message || String(err);
+        const msg = err?.message || safeToString(err);
         attempts.push({
           attempt,
           ok: false,
@@ -1091,7 +1133,7 @@ async function generateFlowFromDescription(description, options = {}) {
       } catch (e) {
         // best-effort: nunca falhar geração por migrador (fluxo ainda pode ser validado/retentado)
         logger.debug?.('[flowGeneratorService] Migração contains->equals falhou (best-effort)', {
-          error: e?.message || String(e),
+          error: e?.message || safeToString(e),
         });
       }
 
@@ -1168,7 +1210,7 @@ async function generateFlowFromDescription(description, options = {}) {
       attempt: attempts.length + 1,
       ok: false,
       kind: 'UNEXPECTED_ERROR',
-      message: err?.message || String(err),
+      message: err?.message || safeToString(err),
     });
 
     recording.recordCustom('error', {
@@ -1502,19 +1544,19 @@ function generateFlowFromKeywords(description, options = {}) {
   });
 
   // Garante que todos os caminhos terminem em end
-  const nodeIdsSet = new Set((flow.nodes || []).map((n) => String(n?.id || '')));
+  const nodeIdsSet = new Set((flow.nodes || []).map((n) => safeToString(n?.id || '')));
   flow.nodes.forEach(node => {
     if (!node || !node.next) return;
 
     if (typeof node.next === 'string') {
-      if (!nodeIdsSet.has(String(node.next))) {
+      if (!nodeIdsSet.has(safeToString(node.next))) {
         node.next = endNodeId;
       }
       return;
     }
 
     if (Array.isArray(node.next)) {
-      node.next = node.next.map((nextId) => (nodeIdsSet.has(String(nextId)) ? nextId : endNodeId));
+      node.next = node.next.map((nextId) => (nodeIdsSet.has(safeToString(nextId)) ? nextId : endNodeId));
       return;
     }
 
