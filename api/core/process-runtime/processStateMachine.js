@@ -6,13 +6,80 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeIsArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeHasOwn(value, key) {
+  try {
+    return Object.prototype.hasOwnProperty.call(value, key);
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeHasKeys(value) {
+  if (!value || typeof value !== 'object') return false;
+  try {
+    return Object.keys(value).length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeKeyCount(value) {
+  if (!value || typeof value !== 'object') return -1;
+  try {
+    return Object.keys(value).length;
+  } catch (_) {
+    return -1;
+  }
+}
+
+function getEdgesForNode(compiledProcess, nodeId) {
+  const graph = safeGet(compiledProcess, 'executionGraph', null);
+  const edgesBySource = safeGet(graph, 'edgesBySource', null);
+  const edges = safeGet(edgesBySource, safeToString(nodeId, ''), []);
+  return safeIsArray(edges) ? edges : [];
+}
+
 function renderTemplate(template, variables = {}) {
-  return String(template || '').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, path) => {
-    const value = String(path || '')
+  return safeToString(template || '', '').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_match, path) => {
+    const value = safeToString(path || '', '')
       .split('.')
       .filter(Boolean)
-      .reduce((acc, key) => (acc != null && typeof acc === 'object' ? acc[key] : undefined), variables);
-    return value == null ? '' : String(value);
+      .reduce((acc, key) => safeGet(acc, key), variables);
+    return value == null ? '' : safeToString(value, '');
   });
 }
 
@@ -21,21 +88,23 @@ function toStateSnapshot(context) {
     sessionId: context.executionId,
     flowId: context.processId,
     currentNodeId: context.currentNodeId,
-    variables: clone(context.variables || {}),
-    history: clone(context.history || []),
-    metadata: clone(context.metadata || {}),
+    variables: safeClone(context.variables || {}) ?? {},
+    history: safeClone(context.history || []) ?? [],
+    metadata: safeClone(context.metadata || {}) ?? {},
   };
 }
 
 function pickEdgeTarget(compiledProcess, nodeId, preferredPort = null) {
-  const edges = compiledProcess?.executionGraph?.edgesBySource?.[String(nodeId)] || [];
-  if (!Array.isArray(edges) || edges.length === 0) return null;
+  const edges = getEdgesForNode(compiledProcess, nodeId);
+  if (edges.length === 0) return null;
   if (preferredPort) {
-    const matched = edges.find((edge) => String(edge?.metadata?.sourcePort || 'out') === String(preferredPort));
-    if (matched) return String(matched.target);
+    const matched = edges.find((edge) => safeToString(safeGet(safeGet(edge, 'metadata', null), 'sourcePort', 'out'), 'out') === safeToString(preferredPort, ''));
+    if (matched) return safeToString(safeGet(matched, 'target', null), null);
   }
-  const fallback = edges.find((edge) => ['out', 'default', 'fallback', 'main', 'success'].includes(String(edge?.metadata?.sourcePort || 'out')));
-  return fallback ? String(fallback.target) : String(edges[0].target);
+  const fallback = edges.find((edge) => ['out', 'default', 'fallback', 'main', 'success'].includes(safeToString(safeGet(safeGet(edge, 'metadata', null), 'sourcePort', 'out'), 'out')));
+  return fallback
+    ? safeToString(safeGet(fallback, 'target', null), null)
+    : safeToString(safeGet(edges[0], 'target', null), null);
 }
 
 function decideNextNode({ node, compiledProcess, handlerOutput, currentNodeId }) {
@@ -108,8 +177,12 @@ class ProcessStateMachine {
   }
 
   async executeMessageSend(node, context) {
-    const text = renderTemplate(node.config?.text || node.config?.message || node.label || '', context.variables || {});
-    context.pushHistory({ role: 'bot', type: 'message', text, nodeId: node.id });
+    const config = safeGet(node, 'config', null);
+    const text = renderTemplate(
+      safeGet(config, 'text') || safeGet(config, 'message') || safeGet(node, 'label') || '',
+      context.variables || {},
+    );
+    context.pushHistory({ role: 'bot', type: 'message', text, nodeId: safeGet(node, 'id', null) });
     return {
       nextState: toStateSnapshot(context),
       events: [],
@@ -118,8 +191,10 @@ class ProcessStateMachine {
   }
 
   async executeMessageReceive(node, context, input) {
-    const variableName = node.config?.variable || 'user_input';
-    const text = input?.text != null ? String(input.text) : null;
+    const config = safeGet(node, 'config', null);
+    const variableName = safeGet(config, 'variable', 'user_input') || 'user_input';
+    const rawText = safeGet(input, 'text', null);
+    const text = rawText != null ? safeToString(rawText, null) : null;
     if (!text || !text.trim()) {
       return {
         nextState: toStateSnapshot(context),
@@ -128,7 +203,7 @@ class ProcessStateMachine {
       };
     }
     context.setVariable(variableName, text);
-    context.pushHistory({ role: 'user', type: 'message', text, nodeId: node.id });
+    context.pushHistory({ role: 'user', type: 'message', text, nodeId: safeGet(node, 'id', null) });
     return {
       nextState: toStateSnapshot(context),
       events: [],
@@ -137,9 +212,13 @@ class ProcessStateMachine {
   }
 
   async executeGateway(node, context, compiledProcess, input) {
-    const edges = (compiledProcess?.executionGraph?.edgesBySource?.[String(node.id)] || []).slice();
+    const edges = getEdgesForNode(compiledProcess, safeGet(node, 'id', '')).slice();
     const chosen = edges.find((edge) => this.edgeMatchesCondition(edge, context, input))
-      || edges.find((edge) => !edge.condition || Object.keys(edge.condition || {}).length === 0)
+      || edges.find((edge) => {
+        const condition = safeGet(edge, 'condition');
+        const keyCount = safeKeyCount(condition);
+        return !condition || keyCount === 0;
+      })
       || edges[0]
       || null;
 
@@ -154,19 +233,20 @@ class ProcessStateMachine {
   }
 
   edgeMatchesCondition(edge, context, input) {
-    const condition = edge?.condition;
-    if (!condition || typeof condition !== 'object' || Object.keys(condition).length === 0) {
+    const condition = safeGet(edge, 'condition', null);
+    if (!condition || typeof condition !== 'object' || safeKeyCount(condition) <= 0) {
       return false;
     }
-    const variableName = condition.variable || condition.left || condition.path || null;
+    const variableName = safeGet(condition, 'variable') || safeGet(condition, 'left') || safeGet(condition, 'path') || null;
+    const inputValue = variableName ? safeGet(input, variableName) : undefined;
     const leftValue = variableName
-      ? context.getVariable(variableName, input?.[variableName])
+      ? context.getVariable(variableName, inputValue)
       : undefined;
-    const rightValue = Object.prototype.hasOwnProperty.call(condition, 'value')
-      ? condition.value
-      : condition.right;
+    const rightValue = safeHasOwn(condition, 'value')
+      ? safeGet(condition, 'value')
+      : safeGet(condition, 'right');
 
-    switch (String(condition.operator || condition.op || 'equals')) {
+    switch (safeToString(safeGet(condition, 'operator') || safeGet(condition, 'op') || 'equals', 'equals')) {
       case 'exists':
         return leftValue !== undefined && leftValue !== null && leftValue !== '';
       case 'not_exists':
@@ -187,9 +267,9 @@ class ProcessStateMachine {
       case '<=':
         return Number(leftValue) <= Number(rightValue);
       case 'includes':
-        return Array.isArray(leftValue)
+        return safeIsArray(leftValue)
           ? leftValue.includes(rightValue)
-          : String(leftValue || '').includes(String(rightValue || ''));
+          : safeToString(leftValue || '', '').includes(safeToString(rightValue || '', ''));
       case 'equals':
       case '==':
       default:
@@ -201,8 +281,10 @@ class ProcessStateMachine {
     if (typeof this.serviceExecutor === 'function') {
       return this.serviceExecutor(node, context, input);
     }
-    const outputVariable = node.config?.outputVariable || `${node.id}_result`;
-    const payload = node.config?.mockResult != null ? clone(node.config.mockResult) : { ok: true };
+    const config = safeGet(node, 'config', null);
+    const outputVariable = safeGet(config, 'outputVariable') || `${safeToString(safeGet(node, 'id', ''), '')}_result`;
+    const mockResult = safeGet(config, 'mockResult');
+    const payload = mockResult != null ? (safeClone(mockResult) ?? { ok: true }) : { ok: true };
     context.setVariable(outputVariable, payload);
     return {
       nextState: toStateSnapshot(context),
@@ -215,11 +297,13 @@ class ProcessStateMachine {
     if (typeof this.aiExecutor === 'function') {
       return this.aiExecutor(node, context, input);
     }
-    const outputVariable = node.config?.outputVariable || `${node.id}_ai`;
-    const prompt = typeof node.config?.promptTemplate === 'string'
-      ? renderTemplate(node.config.promptTemplate, context.variables || {})
-      : String(input?.text || context.getVariable('user_input', ''));
-    const response = { text: node.config?.mockResponse || prompt || 'ai_response', confidence: 1 };
+    const config = safeGet(node, 'config', null);
+    const outputVariable = safeGet(config, 'outputVariable') || `${safeToString(safeGet(node, 'id', ''), '')}_ai`;
+    const promptTemplate = safeGet(config, 'promptTemplate');
+    const prompt = typeof promptTemplate === 'string'
+      ? renderTemplate(promptTemplate, context.variables || {})
+      : safeToString(safeGet(input, 'text') || context.getVariable('user_input', ''), '');
+    const response = { text: safeGet(config, 'mockResponse') || prompt || 'ai_response', confidence: 1 };
     context.setVariable(outputVariable, response);
     return {
       nextState: toStateSnapshot(context),
@@ -232,10 +316,11 @@ class ProcessStateMachine {
     if (typeof this.scriptExecutor === 'function') {
       return this.scriptExecutor(node, context, input);
     }
-    const outputVariable = node.config?.outputVariable || `${node.id}_script`;
-    const value = Object.prototype.hasOwnProperty.call(node.config || {}, 'value')
-      ? node.config.value
-      : input?.value ?? true;
+    const config = safeGet(node, 'config', null);
+    const outputVariable = safeGet(config, 'outputVariable') || `${safeToString(safeGet(node, 'id', ''), '')}_script`;
+    const value = safeHasOwn(config || {}, 'value')
+      ? safeGet(config, 'value')
+      : safeGet(input, 'value', true);
     context.setVariable(outputVariable, value);
     return {
       nextState: toStateSnapshot(context),
@@ -245,18 +330,22 @@ class ProcessStateMachine {
   }
 
   async executeUserTask(node, context, input) {
-    const queue = node.config?.queue || node.config?.target || node.config?.assignee || 'human';
-    if (input && (input.resumeType === 'human' || input.approved === true || input.completed === true)) {
+    const config = safeGet(node, 'config', null);
+    const queue = safeGet(config, 'queue') || safeGet(config, 'target') || safeGet(config, 'assignee') || 'human';
+    const resumeType = safeGet(input, 'resumeType');
+    const approved = safeGet(input, 'approved');
+    const completed = safeGet(input, 'completed');
+    if (input && (resumeType === 'human' || approved === true || completed === true)) {
       context.metadata = {
         ...(context.metadata || {}),
         status: 'human_resolved',
         handoffQueue: queue,
-        humanResolution: clone(input),
+        humanResolution: safeClone(input) ?? {},
       };
       return {
         nextState: toStateSnapshot(context),
         events: [],
-        output: { type: 'handoff_resolved', queue, resolution: clone(input) },
+        output: { type: 'handoff_resolved', queue, resolution: safeClone(input) ?? {} },
       };
     }
     context.metadata = { ...(context.metadata || {}), status: 'waiting_human', handoffQueue: queue };
@@ -268,15 +357,16 @@ class ProcessStateMachine {
   }
 
   async executeTimer(node, context, input) {
-    const durationMs = Number(node.config?.durationMs ?? node.config?.delayMs ?? node.config?.duration ?? node.config?.timeoutMs ?? 0);
-    const readyTimer = this.timerService && this.timerService.consumeReadyTimer(context.executionId, node.id);
-    if (input?.timerFired === true || readyTimer) {
+    const config = safeGet(node, 'config', null);
+    const durationMs = Number(safeGet(config, 'durationMs') ?? safeGet(config, 'delayMs') ?? safeGet(config, 'duration') ?? safeGet(config, 'timeoutMs') ?? 0);
+    const readyTimer = this.timerService && this.timerService.consumeReadyTimer(context.executionId, safeGet(node, 'id', null));
+    if (safeGet(input, 'timerFired') === true || readyTimer) {
       context.metadata = {
         ...(context.metadata || {}),
         lastTimerElapsed: readyTimer || {
-          timerId: input?.timerId || null,
+          timerId: safeGet(input, 'timerId', null),
           durationMs,
-          nodeId: node.id,
+          nodeId: safeGet(node, 'id', null),
           executionId: context.executionId,
           processId: context.processId,
         },
@@ -317,13 +407,14 @@ class ProcessStateMachine {
     if (typeof this.subprocessExecutor === 'function') {
       return this.subprocessExecutor(node, context, input);
     }
-    if (node.config?.async === true || node.config?.waitForCompletion === false) {
+    const config = safeGet(node, 'config', null);
+    if (safeGet(config, 'async') === true || safeGet(config, 'waitForCompletion') === false) {
       return {
         nextState: toStateSnapshot(context),
         events: [],
         output: {
           type: 'subprocess_wait',
-          calledElement: node.config?.flowId || node.config?.calledElement || null,
+          calledElement: safeGet(config, 'flowId') || safeGet(config, 'calledElement') || null,
           waitForInput: true,
         },
       };
@@ -331,17 +422,18 @@ class ProcessStateMachine {
     return {
       nextState: toStateSnapshot(context),
       events: [],
-      output: { type: 'subprocess', calledElement: node.config?.flowId || node.config?.calledElement || null },
+      output: { type: 'subprocess', calledElement: safeGet(config, 'flowId') || safeGet(config, 'calledElement') || null },
       };
   }
 
   async executeFallback(node, context, input) {
-    const fallbackTarget = node.config?.target || null;
-    const mode = node.config?.mode || 'fallback';
+    const config = safeGet(node, 'config', null);
+    const fallbackTarget = safeGet(config, 'target', null);
+    const mode = safeGet(config, 'mode', 'fallback') || 'fallback';
     context.metadata = {
       ...(context.metadata || {}),
       fallbackTriggered: true,
-      fallbackReason: input?.error?.message || input?.reason || null,
+      fallbackReason: safeGet(safeGet(input, 'error', null), 'message') || safeGet(input, 'reason') || null,
     };
     return {
       nextState: toStateSnapshot(context),
@@ -351,7 +443,7 @@ class ProcessStateMachine {
   }
 
   async executeUtilityTime(node, context) {
-    const outputVariable = node.config?.outputVariable || 'current_time';
+    const outputVariable = safeGet(safeGet(node, 'config', null), 'outputVariable', 'current_time') || 'current_time';
     const value = new Date().toISOString();
     context.setVariable(outputVariable, value);
     return {
@@ -362,7 +454,7 @@ class ProcessStateMachine {
   }
 
   async executeUtilityUuid(node, context) {
-    const outputVariable = node.config?.outputVariable || 'uuid';
+    const outputVariable = safeGet(safeGet(node, 'config', null), 'outputVariable', 'uuid') || 'uuid';
     const value = uuidv4();
     context.setVariable(outputVariable, value);
     return {
@@ -373,9 +465,10 @@ class ProcessStateMachine {
   }
 
   async executeUtilityRandom(node, context) {
-    const outputVariable = node.config?.outputVariable || 'random';
-    const min = Number(node.config?.min ?? 0);
-    const max = Number(node.config?.max ?? 100);
+    const config = safeGet(node, 'config', null);
+    const outputVariable = safeGet(config, 'outputVariable', 'random') || 'random';
+    const min = Number(safeGet(config, 'min') ?? 0);
+    const max = Number(safeGet(config, 'max') ?? 100);
     const value = Math.floor(Math.random() * ((max - min) + 1)) + min;
     context.setVariable(outputVariable, value);
     return {
@@ -386,14 +479,15 @@ class ProcessStateMachine {
   }
 
   async executeUtilityTransform(node, context, input) {
-    const outputVariable = node.config?.outputVariable || `${node.id}_transform`;
+    const config = safeGet(node, 'config', null);
+    const outputVariable = safeGet(config, 'outputVariable') || `${safeToString(safeGet(node, 'id', ''), '')}_transform`;
     let value;
-    if (Object.prototype.hasOwnProperty.call(node.config || {}, 'template')) {
-      value = renderTemplate(node.config.template, { ...(context.variables || {}), input: input || {} });
-    } else if (Object.prototype.hasOwnProperty.call(node.config || {}, 'value')) {
-      value = clone(node.config.value);
+    if (safeHasOwn(config || {}, 'template')) {
+      value = renderTemplate(safeGet(config, 'template'), { ...(context.variables || {}), input: input || {} });
+    } else if (safeHasOwn(config || {}, 'value')) {
+      value = safeClone(safeGet(config, 'value'));
     } else {
-      value = input?.value ?? context.getVariable(node.config?.sourceVariable || '', null);
+      value = safeGet(input, 'value') ?? context.getVariable(safeGet(config, 'sourceVariable', '') || '', null);
     }
     context.setVariable(outputVariable, value);
     return {
@@ -404,11 +498,12 @@ class ProcessStateMachine {
   }
 
   async executeNode(node, context, compiledProcess, input = null) {
-    this.emit('NODE_ENTER', context, node, { nodeType: node.type, subtype: node.subtype || null });
+    const nodeType = safeToString(safeGet(node, 'type'), '');
+    this.emit('NODE_ENTER', context, node, { nodeType, subtype: safeGet(node, 'subtype', null) });
 
     let handlerOutput;
     try {
-      switch (String(node.type)) {
+      switch (nodeType) {
         case 'start':
           handlerOutput = await this.executeStart(node, context, input);
           break;
@@ -459,7 +554,7 @@ class ProcessStateMachine {
           handlerOutput = await this.executeUtilityTransform(node, context, input);
           break;
         default:
-          throw new Error(`Unsupported canonical node type: ${node.type}`);
+          throw new Error(`Unsupported canonical node type: ${nodeType}`);
       }
     } catch (error) {
       this.emit('NODE_ERROR', context, node, { error: error.message || String(error) });
@@ -478,7 +573,7 @@ class ProcessStateMachine {
     } else if (handlerOutput?.output?.waitForInput === true) {
       context.status = 'waiting_input';
       context.moveToNode(context.currentNodeId);
-    } else if (node.type === 'end' || nextNodeId == null) {
+    } else if (nodeType === 'end' || nextNodeId == null) {
       context.status = 'completed';
       context.moveToNode(null);
     } else {
