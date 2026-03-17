@@ -1,6 +1,20 @@
 const { EventLedger } = require('../db/models');
 const { buildEventV1 } = require('../events/eventModelV1');
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeToFiniteInt(value, fallback) {
+  try {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.trunc(n) : fallback;
+  } catch (_) { return fallback; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Append a canonical event to event_ledger.
  *
@@ -76,14 +90,14 @@ module.exports = {
    */
   async listEvents({ tenantId, subjectType = null, subjectId = null, correlationId = null, type = null, limit = 200, offset = 0 }) {
     const Model = EventLedger();
-    const where = { tenant_key: String(tenantId) };
-    if (subjectType) where.subject_type = String(subjectType);
-    if (subjectId) where.subject_id = String(subjectId);
-    if (correlationId) where.correlation_id = String(correlationId);
-    if (type) where.type = String(type);
+    const where = { tenant_key: safeToString(tenantId) };
+    if (subjectType) where.subject_type = safeToString(subjectType);
+    if (subjectId) where.subject_id = safeToString(subjectId);
+    if (correlationId) where.correlation_id = safeToString(correlationId);
+    if (type) where.type = safeToString(type);
 
-    const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 2000);
-    const safeOffset = Math.max(Number(offset) || 0, 0);
+    const safeLimit = Math.min(Math.max(safeToFiniteInt(limit, 200), 1), 2000);
+    const safeOffset = Math.max(safeToFiniteInt(offset, 0), 0);
 
     const { count, rows } = await Model.findAndCountAll({
       where,
