@@ -64,6 +64,29 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, path, fallback = null) {
+  try {
+    return path.split('.').reduce((acc, key) => acc?.[key], obj) ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 async function updateConversationForTicket(ticket, patch = {}) {
   if (!ticket || !ticket.conversationId) return;
   if (!dbAvailable()) return;
@@ -74,7 +97,7 @@ async function updateConversationForTicket(ticket, patch = {}) {
     if (!ConversationModel) return;
     await ConversationModel.update(
       { ...patch, updated_at: new Date() },
-      { where: { id: String(ticket.conversationId), tenant_key: String(ticket.tenantId) } },
+      { where: { id: safeToString(ticket.conversationId), tenant_key: safeToString(ticket.tenantId) } },
     );
   } catch (err) {
     logger.debug('[QueueService] Falha ao atualizar channel_conversation (ignorado)', {
@@ -120,7 +143,7 @@ function fromDbRow(row) {
     tenantId: row.tenant_key,
     sessionId: row.session_id,
     conversationId: row.conversation_id || null,
-    channelType: row.channel_type || (row.session_id && String(row.session_id).startsWith('whatsapp_') ? 'whatsapp' : null),
+    channelType: row.channel_type || (row.session_id && safeToString(row.session_id, '').startsWith('whatsapp_') ? 'whatsapp' : null),
     queue: row.queue,
     status: row.status,
     mode: row.mode || 'bot',
@@ -573,7 +596,7 @@ function getTicket(ticketId) {
  * @returns {Ticket|null}
  */
 function getTicketBySession(sessionId) {
-  const effectiveSessionId = sessionId ? String(sessionId) : null;
+  const effectiveSessionId = sessionId ? safeToString(sessionId) : null;
   if (!effectiveSessionId) return null;
 
   // Compatibilidade: se tenantId vier como 2º argumento, filtra hard por tenant
@@ -596,8 +619,8 @@ function getTicketBySession(sessionId) {
  * @returns {Ticket|null}
  */
 function getTicketByConversationId(conversationId, tenantId) {
-  const convId = conversationId ? String(conversationId) : null;
-  const tId = tenantId ? String(tenantId) : null;
+  const convId = conversationId ? safeToString(conversationId) : null;
+  const tId = tenantId ? safeToString(tenantId) : null;
   if (!convId || !tId) return null;
 
   for (const ticket of tickets.values()) {
@@ -815,15 +838,15 @@ function addAgentMessage(ticketId, message, agentId = null) {
 
   // Compatibilidade: aceita options como 4º argumento
   const options = arguments.length > 3 ? (arguments[3] || {}) : {};
-  const clientMessageId = options && options.clientMessageId ? String(options.clientMessageId) : null;
-  const externalMessageId = options && options.externalMessageId ? String(options.externalMessageId) : null;
-  const deliveryStatus = options && options.deliveryStatus ? String(options.deliveryStatus) : null;
-  const mediaType = options && options.mediaType ? String(options.mediaType).trim().toLowerCase() : null;
-  const mediaUrl = options && options.mediaUrl ? String(options.mediaUrl).trim() : null;
-  const mediaKind = options && options.mediaKind ? String(options.mediaKind).trim().toLowerCase() : null;
-  const documentId = options && options.documentId ? String(options.documentId).trim() : null;
-  const fileName = options && options.fileName ? String(options.fileName).trim() : null;
-  const mimeType = options && options.mimeType ? String(options.mimeType).trim() : null;
+  const clientMessageId = options && options.clientMessageId ? safeToString(options.clientMessageId) : null;
+  const externalMessageId = options && options.externalMessageId ? safeToString(options.externalMessageId) : null;
+  const deliveryStatus = options && options.deliveryStatus ? safeToString(options.deliveryStatus) : null;
+  const mediaType = options && options.mediaType ? safeTrimLower(options.mediaType) : null;
+  const mediaUrl = options && options.mediaUrl ? safeTrim(options.mediaUrl) : null;
+  const mediaKind = options && options.mediaKind ? safeTrimLower(options.mediaKind) : null;
+  const documentId = options && options.documentId ? safeTrim(options.documentId) : null;
+  const fileName = options && options.fileName ? safeTrim(options.fileName) : null;
+  const mimeType = options && options.mimeType ? safeTrim(options.mimeType) : null;
   const sizeBytes = Number.isFinite(options && options.sizeBytes) ? Number(options.sizeBytes) : null;
 
   const messageObj = {
@@ -885,7 +908,7 @@ function addTicketNote(ticketId, note, author = null) {
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
 
-  const text = note != null ? String(note).trim() : '';
+  const text = note != null ? safeTrim(note) : '';
   if (!text) return ticket;
 
   if (!ticket.messages) {
@@ -895,7 +918,7 @@ function addTicketNote(ticketId, note, author = null) {
   const authorId = author && typeof author === 'object' ? (author.id || author.username || null) : null;
   const authorName = author && typeof author === 'object'
     ? (author.username || author.name || author.id || 'system')
-    : (author ? String(author) : 'system');
+    : (author ? safeToString(author, 'system') : 'system');
 
   const messageObj = {
     id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -925,12 +948,12 @@ function transferTicket(ticketId, params = {}) {
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
 
-  const nextQueue = params.queue != null && String(params.queue).trim() !== ''
-    ? String(params.queue).trim()
+  const nextQueue = params.queue != null && safeTrim(params.queue) !== ''
+    ? safeTrim(params.queue)
     : null;
   const hasAssignedTo = Object.prototype.hasOwnProperty.call(params, 'assignedTo');
   const assignedTo = hasAssignedTo
-    ? (params.assignedTo != null && String(params.assignedTo).trim() !== '' ? String(params.assignedTo).trim() : null)
+    ? (params.assignedTo != null && safeTrim(params.assignedTo) !== '' ? safeTrim(params.assignedTo) : null)
     : undefined;
 
   if (!nextQueue && !hasAssignedTo) {
@@ -939,7 +962,7 @@ function transferTicket(ticketId, params = {}) {
 
   // Atualiza fila (ajustando índices)
   if (nextQueue && nextQueue !== ticket.queue) {
-    const prevQueue = ticket.queue ? String(ticket.queue) : null;
+    const prevQueue = ticket.queue ? safeToString(ticket.queue) : null;
     if (prevQueue) {
       const prevSet = queues.get(prevQueue);
       if (prevSet) prevSet.delete(ticketId);
@@ -988,9 +1011,9 @@ function updateOutboundMessageMeta(ticketId, patch = {}) {
   if (!ticket) return null;
   if (!Array.isArray(ticket.messages) || ticket.messages.length === 0) return ticket;
 
-  const clientMessageId = patch.clientMessageId ? String(patch.clientMessageId) : null;
-  const externalMessageId = patch.externalMessageId ? String(patch.externalMessageId) : null;
-  const deliveryStatus = patch.deliveryStatus ? String(patch.deliveryStatus) : null;
+  const clientMessageId = patch.clientMessageId ? safeToString(patch.clientMessageId) : null;
+  const externalMessageId = patch.externalMessageId ? safeToString(patch.externalMessageId) : null;
+  const deliveryStatus = patch.deliveryStatus ? safeToString(patch.deliveryStatus) : null;
 
   let changed = false;
 
