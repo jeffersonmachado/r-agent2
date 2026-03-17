@@ -29,6 +29,11 @@ const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 /**
  * Garante que o flow gerado esteja disponível via API (`GET /flows/:id`) antes do RPA.
  *
@@ -262,7 +267,7 @@ async function advancePipeline(execution, onProgress = null) {
       logger.debug('[PipelineOrchestrator] Falha ao emitir pipeline.status (stage start) (best-effort)', {
         executionId: execution.executionId,
         stage: nextStage,
-        error: err?.message || String(err),
+        error: err?.message || safeToString(err),
       });
     }
 
@@ -861,7 +866,7 @@ async function executeSeedGeneration(execution) {
 
       const baseUrl = (() => {
         const raw = process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
-        return String(raw).replace(/\/$/, '');
+        return safeToString(raw, 'http://localhost:5173').replace(/\/$/, '');
       })();
 
       const seedId = `seed-${flow.id}-${Date.now()}`;
