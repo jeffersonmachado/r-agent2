@@ -11,6 +11,39 @@ const tenantSettingsService = require('./tenantSettingsService');
 const SETTINGS_KEY = 'whatsapp_connections';
 const memoryStoreByTenant = new Map();
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrim(value, fallback = '') {
+  const s = safeToString(value, fallback);
+  try {
+    return s.trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrimLower(value, fallback = '') {
+  return safeTrim(value, fallback).toLowerCase();
+}
+
+function safeIsoDate(value, fallbackIso) {
+  if (!value) return fallbackIso;
+  try {
+    const d = value instanceof Date ? value : new Date(safeToString(value));
+    if (Number.isNaN(d.getTime())) return fallbackIso;
+    return d.toISOString();
+  } catch (_) {
+    return fallbackIso;
+  }
+}
+
 function normalizeStore(value) {
   const obj = value && typeof value === 'object' ? value : {};
   return {
@@ -21,10 +54,10 @@ function normalizeStore(value) {
 function normalizeConnection(conn) {
   if (!conn || typeof conn !== 'object') return null;
   return {
-    id: String(conn.id || ''),
-    name: conn.name ? String(conn.name) : '',
-    provider: conn.provider ? String(conn.provider) : 'whatsapp-qr',
-    status: conn.status ? String(conn.status) : 'disconnected',
+    id: safeToString(conn.id || ''),
+    name: conn.name ? safeToString(conn.name) : '',
+    provider: conn.provider ? safeToString(conn.provider) : 'whatsapp-qr',
+    status: conn.status ? safeToString(conn.status) : 'disconnected',
     createdAt: conn.createdAt || null,
     updatedAt: conn.updatedAt || null,
     lastQrAt: conn.lastQrAt || null,
@@ -44,7 +77,7 @@ function isQrExpired(conn, now = new Date()) {
 }
 
 function normalizeStatus(inputStatus) {
-  const s = String(inputStatus || '').trim().toLowerCase();
+  const s = safeTrimLower(inputStatus || '');
   if (s === 'connected') return 'connected';
   if (s === 'pairing') return 'pairing';
   if (s === 'disconnected') return 'disconnected';
@@ -55,7 +88,7 @@ function normalizeStatus(inputStatus) {
 async function getStore(tenantId) {
   const out = await tenantSettingsService.getSetting({ tenantId, key: SETTINGS_KEY });
   if (!out.ok) {
-    const mem = memoryStoreByTenant.get(String(tenantId)) || { connections: [] };
+    const mem = memoryStoreByTenant.get(safeToString(tenantId)) || { connections: [] };
     return {
       ok: true,
       store: normalizeStore(mem),
@@ -71,7 +104,7 @@ async function saveStore(tenantId, store) {
   const payload = normalizeStore(store);
   const out = await tenantSettingsService.upsertSetting({ tenantId, key: SETTINGS_KEY, value: payload });
   if (!out.ok) {
-    memoryStoreByTenant.set(String(tenantId), payload);
+    memoryStoreByTenant.set(safeToString(tenantId), payload);
     return {
       ok: true,
       store: normalizeStore(payload),
@@ -100,12 +133,12 @@ async function createConnection(tenantId, input) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
   const now = new Date().toISOString();
-  const id = input?.id ? String(input.id) : `waqr-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const id = input?.id ? safeToString(input.id) : `waqr-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const next = normalizeConnection({
     id,
-    name: input?.name ? String(input.name).trim() : `WhatsApp QR ${out.store.connections.length + 1}`,
-    provider: input?.provider ? String(input.provider).trim() : 'whatsapp-qr',
-    status: input?.status ? String(input.status) : 'disconnected',
+    name: input?.name ? safeTrim(input.name) : `WhatsApp QR ${out.store.connections.length + 1}`,
+    provider: input?.provider ? safeTrim(input.provider) : 'whatsapp-qr',
+    status: input?.status ? safeToString(input.status) : 'disconnected',
     createdAt: now,
     updatedAt: now,
     metadata: input?.metadata && typeof input.metadata === 'object' ? input.metadata : {},
@@ -124,7 +157,7 @@ async function createConnection(tenantId, input) {
 async function generateQr(tenantId, connectionId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 2 * 60 * 1000).toISOString();
@@ -150,7 +183,7 @@ async function generateQr(tenantId, connectionId) {
 async function disconnectConnection(tenantId, connectionId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const next = normalizeConnection({
@@ -169,7 +202,7 @@ async function disconnectConnection(tenantId, connectionId) {
 async function setConnectionStatus(tenantId, connectionId, input = {}) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (idx < 0) return { ok: false, error: 'not_found' };
 
   const status = normalizeStatus(input?.status);
@@ -202,10 +235,10 @@ async function setConnectionStatus(tenantId, connectionId, input = {}) {
 async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.connections.findIndex((c) => c && String(c.id) === String(connectionId));
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (idx < 0) return { ok: false, error: 'not_found' };
 
-  const eventType = String(input?.eventType || input?.type || '').trim().toLowerCase();
+  const eventType = safeTrimLower(input?.eventType || input?.type || '');
   if (!eventType) return { ok: false, error: 'event_type_required' };
 
   const prev = normalizeConnection(out.store.connections[idx]) || {};
@@ -224,10 +257,10 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
   };
 
   if (eventType === 'qr' || eventType === 'pairing') {
-    const qrText = input?.qr?.text != null ? String(input.qr.text).trim() : '';
-    const token = input?.qr?.token != null ? String(input.qr.token).trim() : '';
+    const qrText = input?.qr?.text != null ? safeTrim(input.qr.text) : '';
+    const token = input?.qr?.token != null ? safeTrim(input.qr.token) : '';
     const expiresAtRaw = input?.qr?.expiresAt || input?.qr?.expires_at || null;
-    const expiresAt = expiresAtRaw ? new Date(expiresAtRaw).toISOString() : new Date(now.getTime() + 2 * 60 * 1000).toISOString();
+    const expiresAt = safeIsoDate(expiresAtRaw, new Date(now.getTime() + 2 * 60 * 1000).toISOString());
     next.status = 'pairing';
     next.lastQrAt = nowIso;
     next.qr = {
@@ -259,7 +292,7 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
 async function getStatus(tenantId, connectionId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const conn = out.store.connections.find((c) => c && String(c.id) === String(connectionId));
+  const conn = out.store.connections.find((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (!conn) return { ok: false, error: 'not_found' };
   const normalized = normalizeConnection(conn);
   const expired = normalized.status === 'pairing' && isQrExpired(normalized);
