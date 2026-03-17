@@ -12,9 +12,34 @@ const { ProcessOptimizationService } = require('../core/process-intelligence/pro
 let runtimeSingleton = null;
 let recoveryPromise = null;
 
-function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value) {
+  if (value == null) return '';
+  try { return String(value); } catch (_) { return ''; }
 }
+
+/** Deep-copy via JSON round-trip; returns null on failure (proxies, circular). */
+function safeClone(value) {
+  if (value == null) return value;
+  try { return JSON.parse(JSON.stringify(value)); } catch (_) { return null; }
+}
+
+/** Access nested keys safely; returns undefined if any level throws. */
+function safeGet(obj, ...keys) {
+  let cur = obj;
+  for (const k of keys) {
+    if (cur == null) return undefined;
+    try { cur = cur[k]; } catch (_) { return undefined; }
+  }
+  return cur;
+}
+
+/** Copy an array; returns [] if arr is not iterable or throws. */
+function safeArrayCopy(arr) {
+  if (!Array.isArray(arr)) return [];
+  try { return [...arr]; } catch (_) { return []; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function resolveFlowProcessDefinition({ tenantId = null, processId, processVersion = null } = {}) {
   if (!processId) return null;
@@ -27,13 +52,15 @@ async function resolveFlowProcessDefinition({ tenantId = null, processId, proces
   if (!row) return null;
   const flow = row.toJSON ? row.toJSON() : row;
   const data = flow.data && typeof flow.data === 'object' ? flow.data : {};
-  if (data?.durableRuntime?.compiledProcess) {
-    return clone(data.durableRuntime.compiledProcess);
-  }
-  if (data?.compiledProcess) {
-    return clone(data.compiledProcess);
-  }
-  if (Array.isArray(data?.nodes)) {
+  let durableCompiled;
+  try { durableCompiled = data?.durableRuntime?.compiledProcess; } catch (_) { durableCompiled = undefined; }
+  if (durableCompiled) return safeClone(durableCompiled);
+  let directCompiled;
+  try { directCompiled = data?.compiledProcess; } catch (_) { directCompiled = undefined; }
+  if (directCompiled) return safeClone(directCompiled);
+  let hasNodes;
+  try { hasNodes = Array.isArray(data?.nodes); } catch (_) { hasNodes = false; }
+  if (hasNodes) {
     const sourceDefinition = Array.isArray(data?.edges)
       ? {
           ...data,
@@ -114,7 +141,7 @@ async function getProcessInstance(executionId, tenantId = null) {
   await ensureRecovered();
   const instance = await runtime.inspector.getInstanceState(executionId);
   if (!instance) return { ok: false, error: 'execution_not_found' };
-  if (tenantId != null && String(instance.metadata?.tenantId || '') !== String(tenantId)) {
+  if (tenantId != null && safeToString(safeGet(instance, 'metadata', 'tenantId')) !== safeToString(tenantId)) {
     return { ok: false, error: 'execution_not_found' };
   }
   const history = await runtime.inspector.getExecutionHistory(executionId);
@@ -132,15 +159,16 @@ async function getProcessInstance(executionId, tenantId = null) {
 }
 
 function filterExecutionHistory(events = [], filters = {}) {
-  const eventType = filters?.eventType ? String(filters.eventType).trim() : '';
-  const nodeId = filters?.nodeId ? String(filters.nodeId).trim() : '';
-  const limit = Number.isFinite(Number(filters?.limit)) ? Number(filters.limit) : null;
-  let filtered = Array.isArray(events) ? [...events] : [];
+  const eventType = safeToString(safeGet(filters, 'eventType')).trim();
+  const nodeId = safeToString(safeGet(filters, 'nodeId')).trim();
+  const rawLimit = safeGet(filters, 'limit');
+  const limit = Number.isFinite(Number(rawLimit)) ? Number(rawLimit) : null;
+  let filtered = safeArrayCopy(events);
   if (eventType) {
-    filtered = filtered.filter((item) => String(item?.eventType || '') === eventType);
+    filtered = filtered.filter((item) => safeToString(safeGet(item, 'eventType')) === eventType);
   }
   if (nodeId) {
-    filtered = filtered.filter((item) => String(item?.nodeId || '') === nodeId);
+    filtered = filtered.filter((item) => safeToString(safeGet(item, 'nodeId')) === nodeId);
   }
   if (limit != null && limit > 0) {
     filtered = filtered.slice(-limit);
@@ -153,7 +181,7 @@ async function getProcessInstanceHistory(executionId, tenantId = null, filters =
   await ensureRecovered();
   const instance = await runtime.inspector.getInstanceState(executionId);
   if (!instance) return { ok: false, error: 'execution_not_found' };
-  if (tenantId != null && String(instance.metadata?.tenantId || '') !== String(tenantId)) {
+  if (tenantId != null && safeToString(safeGet(instance, 'metadata', 'tenantId')) !== safeToString(tenantId)) {
     return { ok: false, error: 'execution_not_found' };
   }
   const history = await runtime.inspector.getExecutionHistory(executionId);
@@ -168,7 +196,7 @@ async function cancelProcessInstance(executionId, reason = 'cancelled', metadata
   await ensureRecovered();
   if (tenantId != null) {
     const instance = await runtime.inspector.getInstanceState(executionId);
-    if (!instance || String(instance.metadata?.tenantId || '') !== String(tenantId)) {
+    if (!instance || safeToString(safeGet(instance, 'metadata', 'tenantId')) !== safeToString(tenantId)) {
       return { ok: false, error: 'execution_not_found' };
     }
   }
@@ -180,7 +208,7 @@ async function resumeProcessInstance(executionId, payload = {}, tenantId = null)
   await ensureRecovered();
   if (tenantId != null) {
     const instance = await runtime.inspector.getInstanceState(executionId);
-    if (!instance || String(instance.metadata?.tenantId || '') !== String(tenantId)) {
+    if (!instance || safeToString(safeGet(instance, 'metadata', 'tenantId')) !== safeToString(tenantId)) {
       return { ok: false, error: 'execution_not_found' };
     }
   }
@@ -192,7 +220,7 @@ async function resumeExternalProcessEvent(correlationKey, payload = {}, tenantId
   await ensureRecovered();
   if (tenantId != null) {
     const waiting = await runtime.instanceStore.listWaitingInstances({ correlationKey });
-    const match = waiting.find((item) => String(item.metadata?.tenantId || '') === String(tenantId));
+    const match = waiting.find((item) => safeToString(safeGet(item, 'metadata', 'tenantId')) === safeToString(tenantId));
     if (!match) {
       return { ok: false, error: 'execution_not_found' };
     }
@@ -311,6 +339,7 @@ async function getProcessIntelligence({ tenantId = null, processId = null, proce
 module.exports = {
   getRuntime,
   ensureRecovered,
+  filterExecutionHistory,
   startDurableProcess,
   listProcessInstances,
   getProcessInstance,
