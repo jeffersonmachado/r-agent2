@@ -4,6 +4,41 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function isSafeObjectRecord(value) {
+  if (!value || typeof value !== 'object') return false;
+  try {
+    return !Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
+function isSafeArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
 class ProcessExecutionContext {
   constructor({
     processId,
@@ -23,14 +58,14 @@ class ProcessExecutionContext {
     this.processVersion = Number.isFinite(Number(processVersion)) ? Number(processVersion) : 1;
     this.executionId = String(executionId || '');
     this.currentNodeId = currentNodeId != null ? String(currentNodeId) : null;
-    this.variables = variables && typeof variables === 'object' ? clone(variables) : {};
-    this.history = Array.isArray(history) ? clone(history) : [];
-    this.startTime = startTime || new Date().toISOString();
+    this.variables = isSafeObjectRecord(variables) ? (safeClone(variables) ?? {}) : {};
+    this.history = isSafeArray(history) ? (safeClone(history) ?? []) : [];
+    this.startTime = startTime ? String(startTime) : new Date().toISOString();
     this.status = String(status || 'running');
-    this.waitingState = waitingState && typeof waitingState === 'object' ? clone(waitingState) : null;
+    this.waitingState = isSafeObjectRecord(waitingState) ? (safeClone(waitingState) ?? null) : null;
     this.lastProcessedSequence = Number.isFinite(Number(lastProcessedSequence)) ? Number(lastProcessedSequence) : 0;
-    this.metadata = metadata && typeof metadata === 'object' ? clone(metadata) : {};
-    this.recovery = recovery && typeof recovery === 'object' ? clone(recovery) : {};
+    this.metadata = isSafeObjectRecord(metadata) ? (safeClone(metadata) ?? {}) : {};
+    this.recovery = isSafeObjectRecord(recovery) ? (safeClone(recovery) ?? {}) : {};
   }
 
   getVariable(name, fallbackValue = undefined) {
@@ -49,17 +84,27 @@ class ProcessExecutionContext {
   }
 
   pushHistory(entry) {
-    const payload = entry && typeof entry === 'object' ? clone(entry) : { value: entry };
-    this.history.push({
-      ...payload,
-      timestamp: payload.timestamp || new Date().toISOString(),
-    });
+    let payload;
+    if (isSafeObjectRecord(entry)) {
+      payload = safeClone(entry) ?? { value: entry };
+    } else {
+      payload = { value: entry };
+    }
+    const timestamp = safeGet(payload, 'timestamp') || new Date().toISOString();
+    const historyEntry = { ...payload, timestamp };
+    this.history.push(historyEntry);
     return this.history[this.history.length - 1];
   }
 
   getCurrentNode(compiledProcess) {
-    if (!compiledProcess || !compiledProcess.executionGraph || !this.currentNodeId) return null;
-    return compiledProcess.executionGraph.nodesById[this.currentNodeId] || null;
+    if (!compiledProcess || !this.currentNodeId) return null;
+    try {
+      const graph = compiledProcess.executionGraph;
+      if (!graph) return null;
+      return safeGet(graph.nodesById, this.currentNodeId, null);
+    } catch (_) {
+      return null;
+    }
   }
 
   moveToNode(nodeId) {
@@ -68,7 +113,7 @@ class ProcessExecutionContext {
   }
 
   setWaitingState(waitingState) {
-    this.waitingState = waitingState && typeof waitingState === 'object' ? clone(waitingState) : null;
+    this.waitingState = isSafeObjectRecord(waitingState) ? (safeClone(waitingState) ?? null) : null;
     if (this.waitingState) {
       this.status = 'waiting';
     }
@@ -94,14 +139,14 @@ class ProcessExecutionContext {
       processVersion: this.processVersion,
       executionId: this.executionId,
       currentNodeId: this.currentNodeId,
-      variables: clone(this.variables),
-      history: clone(this.history),
+      variables: safeClone(this.variables) ?? {},
+      history: safeClone(this.history) ?? [],
       startTime: this.startTime,
       status: this.status,
-      waitingState: this.waitingState ? clone(this.waitingState) : null,
+      waitingState: this.waitingState ? (safeClone(this.waitingState) ?? null) : null,
       lastProcessedSequence: this.lastProcessedSequence,
-      metadata: clone(this.metadata),
-      recovery: clone(this.recovery),
+      metadata: safeClone(this.metadata) ?? {},
+      recovery: safeClone(this.recovery) ?? {},
     };
   }
 
