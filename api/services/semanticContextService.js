@@ -3,9 +3,13 @@ const { resolveContextSources } = require('./contextSourceResolver');
 const questionGenerationRulesService = require('./questionGenerationRules.service');
 const { generateAiResponse } = require('./aiProviderService');
 
-function safeString(v) {
-  if (v === null || v === undefined) return '';
-  return String(v);
+function safeString(v, fallback = '') {
+  if (v === null || v === undefined) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function normalizeForComparison(s) {
