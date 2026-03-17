@@ -5,7 +5,11 @@ const faqGeneratorService = require('./faqGeneratorService');
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
-  return String(v);
+  try {
+    return String(v);
+  } catch (_) {
+    return '';
+  }
 }
 
 function normalizeExclusions(exclusions) {
@@ -233,7 +237,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
     const candidate = (start >= 0 && end > start) ? text.slice(start, end + 1) : text;
     parsed = JSON.parse(candidate);
   } catch (e) {
-    throw new Error(`IA retornou JSON inválido ao gerar intents/respostas: ${e?.message || String(e)}`);
+    throw new Error(`IA retornou JSON inválido ao gerar intents/respostas: ${e?.message || safeString(e)}`);
   }
 
   const groups = Array.isArray(parsed) ? parsed : [];
@@ -364,7 +368,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
           logger.warn('[InitialGraph] Falha ao regenerar examples (best-effort)', {
             tenantIdForAI,
             executionId,
-            error: err?.message || String(err),
+            error: err?.message || safeString(err),
             question: safeString(it.question).slice(0, 160),
           });
         }
@@ -393,7 +397,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
               logger.warn('[InitialGraph] Falha ao regenerar answer (best-effort)', {
                 tenantIdForAI,
                 executionId,
-                error: err?.message || String(err),
+                error: err?.message || safeString(err),
                 question: safeString(it.question).slice(0, 160),
               });
               break;
@@ -487,7 +491,7 @@ async function generateInitialGraph(input) {
   } catch (err) {
     logger.warn('[InitialGraph] Falha ao resolver contexto para intents/respostas (best-effort)', {
       tenantIdForAI,
-      error: err?.message || String(err),
+      error: err?.message || safeString(err),
     });
     contextSources = [];
   }
