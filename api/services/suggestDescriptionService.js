@@ -5,9 +5,13 @@ const { generateAiResponse } = require('./aiProviderService');
 const { getTenant } = require('./tenantService');
 const { getEphemeralContext } = require('./ephemeralRagContextService');
 
-function safeString(v) {
-  if (v === null || v === undefined) return '';
-  return String(v);
+function safeString(v, fallback = '') {
+  if (v === null || v === undefined) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function normalizeWs(s) {
@@ -28,8 +32,8 @@ function mergeContextSources(a, b) {
 
   const push = (s) => {
     if (!s || typeof s !== 'object') return;
-    const h = s.hash ? String(s.hash) : null;
-    const c = s.chunkId ? String(s.chunkId) : null;
+    const h = s.hash ? safeString(s.hash) : null;
+    const c = s.chunkId ? safeString(s.chunkId) : null;
     if (h && seenHashes.has(h)) return;
     if (c && seenChunkIds.has(c)) return;
     if (h) seenHashes.add(h);
@@ -202,7 +206,7 @@ function buildRagContextDump({ contextSources, notes }) {
     lines.push('- (nenhum trecho relevante encontrado nos arquivos enviados)');
   } else {
     for (const s of uploaded) {
-      lines.push(`- (${s.sourceId || 'N/A'}) score=${Number(s.score || 0).toFixed(3)} id=${s.chunkId || 'N/A'}`);
+      lines.push(`- (${safeString(s.sourceId || 'N/A')}) score=${Number(s.score || 0).toFixed(3)} id=${safeString(s.chunkId || 'N/A')}`);
       lines.push(`  ${safeString(s.excerpt || s.text || '').trim()}`);
     }
   }
@@ -212,7 +216,7 @@ function buildRagContextDump({ contextSources, notes }) {
     lines.push('- (nenhum trecho relevante encontrado no web scraping)');
   } else {
     for (const s of web) {
-      lines.push(`- (${s.sourceId || 'N/A'}) score=${Number(s.score || 0).toFixed(3)} id=${s.chunkId || 'N/A'}`);
+      lines.push(`- (${safeString(s.sourceId || 'N/A')}) score=${Number(s.score || 0).toFixed(3)} id=${safeString(s.chunkId || 'N/A')}`);
       lines.push(`  ${safeString(s.excerpt || s.text || '').trim()}`);
     }
   }
