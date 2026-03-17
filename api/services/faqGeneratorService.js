@@ -13,9 +13,13 @@ const questionGenerationRulesService = require('./questionGenerationRules.servic
 const { resolveContextSources } = require('./contextSourceResolver');
 const { extractSemanticContext, detectBusinessType } = require('./semanticContextService');
 
-function safeString(v) {
-  if (v === null || v === undefined) return '';
-  return String(v);
+function safeString(v, fallback = '') {
+  if (v === null || v === undefined) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function clamp01(x) {
@@ -179,7 +183,7 @@ function kmeansCosine(embeddings, k, maxIters = 25) {
 function flattenFaq(faq) {
   const out = [];
   for (const group of Array.isArray(faq) ? faq : []) {
-    for (const q of Array.isArray(group?.questions) ? group.questions : []) out.push(String(q));
+    for (const q of Array.isArray(group?.questions) ? group.questions : []) out.push(safeString(q));
   }
   return out;
 }
@@ -331,7 +335,7 @@ async function generateFaq(input) {
     // best-effort: segue com gerador antigo
     logger.warn('[FAQ] Falha ao extrair contexto semântico; usando pipeline legado (best-effort)', {
       tenantId,
-      error: err?.message || String(err),
+      error: err?.message || safeString(err),
     });
     semantic = null;
   }
