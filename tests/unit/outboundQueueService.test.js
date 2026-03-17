@@ -161,5 +161,52 @@ describe('OutboundQueueService', () => {
     expect(res).toMatchObject({ queued: false, idempotent: true, itemId: 'outq-existing2' });
     expect(Model.create).not.toHaveBeenCalled();
   });
+
+  test('enqueueOutbound tolera clientMessageId hostil sem quebrar dedupe', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+
+    const sequelize = { query: jest.fn(async () => [[]]) };
+    const Model = {
+      sequelize,
+      findOne: jest.fn(async () => null),
+      create: jest.fn(async () => ({ id: 'outq-created' })),
+    };
+
+    jest.doMock('../../api/db/models', () => ({
+      OutboundQueueItem: () => Model,
+      ChannelConversation: () => ({}),
+      ChannelMessage: () => ({}),
+      TicketEvent: () => ({}),
+    }));
+    jest.doMock('../../api/services/whatsappService', () => ({ sendTextMessage: jest.fn() }));
+    jest.doMock('../../api/services/instagramService', () => ({ sendInstagramMessage: jest.fn(), sendInstagramMedia: jest.fn() }));
+    jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
+    jest.doMock('../../api/services/auditService', () => ({ logAction: jest.fn() }));
+    jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+
+    const hostileClientMessageId = {
+      toString() {
+        throw new Error('boom_clientMessageId_toString');
+      },
+    };
+
+    // eslint-disable-next-line global-require
+    const { enqueueOutbound } = require('../../api/services/outboundQueueService');
+
+    const res = await enqueueOutbound({
+      tenantId: 'tenant-1',
+      channelType: 'whatsapp',
+      message: {
+        to: '5511999999999',
+        type: 'text',
+        body: { text: 'oi' },
+        meta: { clientMessageId: hostileClientMessageId },
+      },
+    });
+
+    expect(res).toMatchObject({ queued: true, itemId: 'outq-created' });
+    expect(Model.create).toHaveBeenCalledTimes(1);
+  });
 });
 

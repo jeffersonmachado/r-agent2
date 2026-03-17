@@ -29,14 +29,39 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, path, fallback = null) {
+  if (!obj || typeof obj !== 'object') return fallback;
+  try {
+    const parts = path.split('.');
+    let v = obj;
+    for (const part of parts) {
+      v = v?.[part];
+      if (v === undefined) return fallback;
+    }
+    return v ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function allowDirectSendWithoutDb() {
   // HARDENING: envio direto sem DB é perigoso (perde auditoria/retry).
   // Em produção, só é permitido via flag explícita.
-  return String(process.env.ALLOW_DIRECT_SEND_WITHOUT_DB || '').toLowerCase() === 'true';
+  return safeTrimLower(process.env.ALLOW_DIRECT_SEND_WITHOUT_DB) === 'true';
 }
 
 function isProduction() {
-  return String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  return safeTrimLower(process.env.NODE_ENV) === 'production';
 }
 
 function newId(prefix) {
@@ -106,9 +131,11 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   // - Se o caller fornecer externalMessageId (raro no enqueue), também deduplica.
   // -------------------------------------------------------------------
   try {
-    const meta = message && typeof message === 'object' ? (message.meta || {}) : {};
-    const clientMessageId = meta && meta.clientMessageId ? String(meta.clientMessageId) : null;
-    const externalMessageId = message && message.externalMessageId ? String(message.externalMessageId) : null;
+    const meta = message && typeof message === 'object' ? (safeGet(message, 'meta', {}) || {}) : {};
+    const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
+    const rawExternalMessageId = safeGet(message, 'externalMessageId', null);
+    const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
+    const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
 
     if (clientMessageId) {
       const sequelize = Model.sequelize;
@@ -126,7 +153,7 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
         },
       );
       if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
-        return { queued: false, idempotent: true, itemId: String(rows[0].id) };
+        return { queued: false, idempotent: true, itemId: safeToString(rows[0].id) };
       }
     }
 
@@ -204,7 +231,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
       const payload = {
         messaging_product: 'whatsapp',
-        to: String(to).replace(/^\+/, ''),
+        to: safeToString(to).replace(/^\+/, ''),
         type: 'template',
         template: {
           name: templateName,
@@ -218,7 +245,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
             type: 'body',
             parameters: parameters.map((param) => ({
               type: 'text',
-              text: String(param),
+              text: safeToString(param),
             })),
           },
         ];
@@ -354,7 +381,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       channelType,
       to,
       type: 'text',
-      body: { subject: String(subject), text: String(text), html: html ? String(html) : null, ...(meta ? { meta } : {}) },
+      body: { subject: safeToString(subject), text: safeToString(text), html: html ? safeToString(html) : null, ...(meta ? { meta } : {}) },
       externalMessageId,
       status: 'sent',
     }).catch((err) => {
@@ -368,9 +395,9 @@ async function deliverOutbound({ tenantId, channelType, message }) {
 
 function computeReasonCode(err) {
   if (!err) return null;
-  const code = err.code ? String(err.code) : null;
+  const code = safeGet(err, 'code', null) ? safeToString(safeGet(err, 'code', null)) : null;
   if (code) return code;
-  const msg = String(err.message || '').toLowerCase();
+  const msg = safeTrimLower(safeGet(err, 'message', ''));
   if (msg.includes('outside_window_24h')) return 'outside_window_24h';
   if (msg.includes('outside the allowed window') || msg.includes('24 hour') || msg.includes('requires a template')) return 'outside_window_24h';
   if (msg.includes('credentials')) return 'credentials_invalid';
@@ -404,10 +431,15 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
   const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
   const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
 
-  const externalId = String(to).replace(/^\+/, '');
+  const externalId = safeToString(to).replace(/^\+/, '');
   const now = new Date();
-  const meta = body && typeof body === 'object' ? body.meta : null;
-  const ticketId = meta?.ticketId || meta?.ticket_id || body?.ticketId || body?.ticket_id || null;
+  const meta = body && typeof body === 'object' ? safeGet(body, 'meta', null) : null;
+  const ticketId =
+    safeGet(meta, 'ticketId', null) ||
+    safeGet(meta, 'ticket_id', null) ||
+    safeGet(body, 'ticketId', null) ||
+    safeGet(body, 'ticket_id', null) ||
+    null;
 
   let conversation = await ConversationModel.findOne({
     where: { tenant_key: tenantId, channel_type: channelType, external_id: externalId },
@@ -417,7 +449,7 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
     await conversation.update({
       last_message_at: now,
       updated_at: now,
-      ...(ticketId ? { current_ticket_id: String(ticketId), status: 'human' } : {}),
+      ...(ticketId ? { current_ticket_id: safeToString(ticketId), status: 'human' } : {}),
     });
   } else {
     conversation = await ConversationModel.create({
@@ -427,7 +459,7 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
       external_id: externalId,
       contact_id: externalId,
       status: ticketId ? 'human' : 'bot',
-      current_ticket_id: ticketId ? String(ticketId) : null,
+      current_ticket_id: ticketId ? safeToString(ticketId) : null,
       last_message_at: now,
       created_at: now,
       updated_at: now,
@@ -437,7 +469,7 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
   // Idempotência por external_message_id (quando existir)
   if (externalMessageId) {
     const existing = await MessageModel.findOne({
-      where: { tenant_key: tenantId, channel_type: channelType, external_message_id: String(externalMessageId) },
+      where: { tenant_key: tenantId, channel_type: channelType, external_message_id: safeToString(externalMessageId) },
     });
     if (existing) return;
   }
@@ -451,14 +483,14 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
       direction: 'out',
       type: type || 'text',
       body: body || {},
-      external_message_id: externalMessageId ? String(externalMessageId) : null,
+      external_message_id: externalMessageId ? safeToString(externalMessageId) : null,
       status: status || 'sent',
       created_at: now,
       updated_at: now,
     });
   } catch (err) {
-    const msg = String(err?.message || '');
-    const pgCode = err?.original?.code ? String(err.original.code) : null;
+    const msg = safeToString(safeGet(err, 'message', ''));
+    const pgCode = safeGet(err, 'original.code', null) ? safeToString(safeGet(err, 'original.code', null)) : null;
     if (
       err?.name === 'SequelizeUniqueConstraintError' ||
       pgCode === '23505' ||
@@ -468,7 +500,7 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
       logger.debug('[OutboundQueue] Duplicate message ignored', {
         tenantId,
         channelType,
-        externalMessageId: externalMessageId ? String(externalMessageId) : null,
+        externalMessageId: externalMessageId ? safeToString(externalMessageId) : null,
       });
       return;
     }
@@ -559,10 +591,13 @@ async function processDue({ limit = 25 } = {}) {
 
       // Best-effort: sincroniza status "sent" no histórico do ticket (UI atual)
       try {
-        const meta = row.message?.meta || {};
-        const ticketId = meta.ticketId ? String(meta.ticketId) : null;
-        const clientMessageId = meta.clientMessageId ? String(meta.clientMessageId) : null;
-        const externalMessageId = result.externalMessageId ? String(result.externalMessageId) : null;
+        const meta = safeGet(row, 'message.meta', {}) || {};
+        const rawTicketId = safeGet(meta, 'ticketId', null);
+        const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
+        const rawExternalMessageId = safeGet(result, 'externalMessageId', null);
+        const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
+        const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
+        const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
         if (ticketId) {
           const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, externalMessageId, deliveryStatus: 'sent' });
           if (updatedTicket) {
@@ -602,7 +637,7 @@ async function processDue({ limit = 25 } = {}) {
                 to,
                 type: 'template',
                 body: {
-                  templateName: String(fallbackTemplateName),
+                  templateName: safeToString(fallbackTemplateName),
                   languageCode: 'pt_BR',
                   parameters: [],
                 },
@@ -611,7 +646,7 @@ async function processDue({ limit = 25 } = {}) {
             }).catch(() => null);
 
             // Auditoria + TicketEvent
-            const ticketId = meta.ticketId ? String(meta.ticketId) : null;
+            const ticketId = safeGet(meta, 'ticketId', null) ? safeToString(safeGet(meta, 'ticketId', null)) : null;
             if (ticketId) {
               logAction({
                 agentId: 'system',
@@ -648,9 +683,11 @@ async function processDue({ limit = 25 } = {}) {
 
       // Best-effort: marca falha no histórico do ticket quando houver correlação
       try {
-        const meta = row.message?.meta || {};
-        const ticketId = meta.ticketId ? String(meta.ticketId) : null;
-        const clientMessageId = meta.clientMessageId ? String(meta.clientMessageId) : null;
+        const meta = safeGet(row, 'message.meta', {}) || {};
+        const rawTicketId = safeGet(meta, 'ticketId', null);
+        const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
+        const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
+        const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
         if (ticketId) {
           const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, deliveryStatus: 'failed' });
           if (updatedTicket) {
