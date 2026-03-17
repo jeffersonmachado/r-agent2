@@ -20,6 +20,16 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
 function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -32,7 +42,7 @@ function safeJson(obj, fallback) {
 
 function normalizeDateOrNull(v) {
   if (!v) return null;
-  const d = v instanceof Date ? v : new Date(String(v));
+  const d = v instanceof Date ? v : new Date(safeToString(v));
   if (Number.isNaN(d.getTime())) return null;
   return d;
 }
@@ -46,7 +56,7 @@ function parseAllowlist(raw) {
 function allowlistIncludes(allowlist, value) {
   if (!allowlist) return true;
   if (value == null) return false;
-  return allowlist.has(String(value));
+  return allowlist.has(safeToString(value));
 }
 
 async function startFlowExecution({
@@ -60,13 +70,20 @@ async function startFlowExecution({
   meta = {},
 }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
-  if (!tenantId) return { ok: false, error: 'tenant_id_required' };
-  if (!flowId) return { ok: false, error: 'flow_id_required' };
+  const tenantKey = safeTrim(tenantId);
+  const flowKey = safeTrim(flowId);
+  const correlationKey = safeTrim(correlationId) || null;
+  const sessionKey = safeTrim(sessionId) || null;
+  const subjectTypeKey = safeTrim(subjectType) || null;
+  const subjectIdKey = safeTrim(subjectId) || null;
+
+  if (!tenantKey) return { ok: false, error: 'tenant_id_required' };
+  if (!flowKey) return { ok: false, error: 'flow_id_required' };
 
   const Model = FlowExecution();
   // Idempotência best-effort para triggers de evento
-  if (meta && meta.mode === 'event' && correlationId) {
-    const eventId = meta?.eventId ? String(meta.eventId) : null;
+  if (meta && meta.mode === 'event' && correlationKey) {
+    const eventId = meta?.eventId ? safeToString(meta.eventId) : null;
     if (eventId) {
       const sequelize = getSequelize();
       const [rows] = await sequelize.query(
@@ -81,9 +98,9 @@ async function startFlowExecution({
          LIMIT 1`,
         {
           replacements: {
-            tenantKey: String(tenantId),
-            flowId: String(flowId),
-            correlationId: String(correlationId),
+            tenantKey,
+            flowId: flowKey,
+            correlationId: correlationKey,
             eventId,
           },
         },
@@ -93,9 +110,9 @@ async function startFlowExecution({
     } else {
       const existing = await Model.findOne({
         where: {
-          tenant_key: String(tenantId),
-          flow_id: String(flowId),
-          correlation_id: String(correlationId),
+          tenant_key: tenantKey,
+          flow_id: flowKey,
+          correlation_id: correlationKey,
         },
         order: [['started_at', 'DESC']],
       });
@@ -108,13 +125,13 @@ async function startFlowExecution({
   const now = new Date();
   const row = await Model.create({
     id: newId('fx'),
-    tenant_key: String(tenantId),
-    flow_id: String(flowId),
+    tenant_key: tenantKey,
+    flow_id: flowKey,
     flow_version: flowVersion != null ? Number(flowVersion) : null,
-    session_id: sessionId ? String(sessionId) : null,
-    correlation_id: correlationId ? String(correlationId) : null,
-    subject_type: subjectType ? String(subjectType) : null,
-    subject_id: subjectId ? String(subjectId) : null,
+    session_id: sessionKey,
+    correlation_id: correlationKey,
+    subject_type: subjectTypeKey,
+    subject_id: subjectIdKey,
     status: 'running',
     started_at: now,
     finished_at: null,
@@ -143,19 +160,22 @@ async function appendNodeExecution({
   errorMessage = null,
 }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
-  if (!tenantId) return { ok: false, error: 'tenant_id_required' };
-  if (!executionId) return { ok: false, error: 'execution_id_required' };
+  const tenantKey = safeTrim(tenantId);
+  const execKey = safeTrim(executionId);
+
+  if (!tenantKey) return { ok: false, error: 'tenant_id_required' };
+  if (!execKey) return { ok: false, error: 'execution_id_required' };
 
   const Model = NodeExecution();
   const now = new Date();
   const row = await Model.create({
     id: newId('nx'),
-    tenant_key: String(tenantId),
-    execution_id: String(executionId),
-    node_id: nodeId ? String(nodeId) : null,
-    node_type: nodeType ? String(nodeType) : null,
+    tenant_key: tenantKey,
+    execution_id: execKey,
+    node_id: nodeId ? safeToString(nodeId) : null,
+    node_type: nodeType ? safeToString(nodeType) : null,
     step_index: stepIndex != null ? Number(stepIndex) : null,
-    status: String(status) === 'error' ? 'error' : 'ok',
+    status: safeToString(status) === 'error' ? 'error' : 'ok',
     started_at: normalizeDateOrNull(startedAt) || now,
     finished_at: normalizeDateOrNull(finishedAt) || null,
     input: safeJson(input, {}),
@@ -163,7 +183,7 @@ async function appendNodeExecution({
     state_before: safeJson(stateBefore, {}),
     state_after: safeJson(stateAfter, {}),
     events: Array.isArray(events) ? events : [],
-    error_message: errorMessage ? String(errorMessage) : null,
+    error_message: errorMessage ? safeToString(errorMessage) : null,
     created_at: now,
     updated_at: now,
   });
@@ -173,8 +193,10 @@ async function appendNodeExecution({
 
 async function finishFlowExecution({ tenantId, executionId, status = 'done', metaPatch = null }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
+  const tenantKey = safeTrim(tenantId);
+  const execKey = safeTrim(executionId);
   const Model = FlowExecution();
-  const row = await Model.findOne({ where: { tenant_key: String(tenantId), id: String(executionId) } });
+  const row = await Model.findOne({ where: { tenant_key: tenantKey, id: execKey } });
   if (!row) return { ok: false, error: 'execution_not_found' };
 
   const meta = (row.meta && typeof row.meta === 'object') ? { ...row.meta } : {};
@@ -182,7 +204,7 @@ async function finishFlowExecution({ tenantId, executionId, status = 'done', met
     Object.assign(meta, metaPatch);
   }
 
-  row.status = String(status) === 'failed' ? 'failed' : 'done';
+  row.status = safeToString(status) === 'failed' ? 'failed' : 'done';
   row.finished_at = new Date();
   row.meta = meta;
   await row.save();
@@ -223,11 +245,11 @@ async function getFlowExecutionDetails({ tenantId, executionId }) {
   const ExecModel = FlowExecution();
   const NodeModel = NodeExecution();
 
-  const exec = await ExecModel.findOne({ where: { tenant_key: String(tenantId), id: String(executionId) } });
+  const exec = await ExecModel.findOne({ where: { tenant_key: safeTrim(tenantId), id: safeTrim(executionId) } });
   if (!exec) return { ok: false, error: 'execution_not_found' };
 
   const nodes = await NodeModel.findAll({
-    where: { tenant_key: String(tenantId), execution_id: String(executionId) },
+    where: { tenant_key: safeTrim(tenantId), execution_id: safeTrim(executionId) },
     order: [['step_index', 'ASC'], ['created_at', 'ASC']],
     limit: 10000,
   });
@@ -251,11 +273,11 @@ async function listFlowExecutions({
 }) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const Model = FlowExecution();
-  const where = { tenant_key: String(tenantId) };
-  if (correlationId) where.correlation_id = String(correlationId);
-  if (sessionId) where.session_id = String(sessionId);
-  if (subjectType) where.subject_type = String(subjectType);
-  if (subjectId) where.subject_id = String(subjectId);
+  const where = { tenant_key: safeTrim(tenantId) };
+  if (correlationId) where.correlation_id = safeToString(correlationId);
+  if (sessionId) where.session_id = safeToString(sessionId);
+  if (subjectType) where.subject_type = safeToString(subjectType);
+  if (subjectId) where.subject_id = safeToString(subjectId);
 
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 500);
   const safeOffset = Math.max(Number(offset) || 0, 0);
@@ -362,7 +384,7 @@ async function replayFromNode({
   if (!enabled) return { ok: false, error: 'replay_disabled' };
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const allowlist = parseAllowlist(process.env.EXECUTION_LEDGER_REPLAY_ALLOWLIST_TENANTS || '');
-  if (allowlist && !allowlist.has(String(tenantId || ''))) {
+  if (allowlist && !allowlist.has(safeToString(tenantId || ''))) {
     return { ok: false, error: 'replay_not_allowed_for_tenant' };
   }
 
@@ -376,7 +398,7 @@ async function replayFromNode({
     if (!allowReal) {
       return { ok: false, error: 'replay_only_supported_for_simulation' };
     }
-    if (String(header.status || '') === 'running') {
+    if (safeToString(header.status || '') === 'running') {
       return { ok: false, error: 'replay_execution_running' };
     }
     const executionAllowlist = parseAllowlist(process.env.EXECUTION_LEDGER_REPLAY_REAL_ALLOWLIST_EXECUTIONS || '');
@@ -390,7 +412,7 @@ async function replayFromNode({
 
   const nodes = Array.isArray(details.nodes) ? details.nodes : [];
   const fromNode = fromNodeExecutionId
-    ? nodes.find((n) => String(n.id) === String(fromNodeExecutionId))
+    ? nodes.find((n) => safeToString(n.id) === safeToString(fromNodeExecutionId))
     : (fromStepIndex != null ? nodes.find((n) => Number(n.step_index) === Number(fromStepIndex)) : null);
   if (!fromNode) {
     return { ok: false, error: 'from_node_not_found' };
@@ -400,7 +422,7 @@ async function replayFromNode({
   if (!flowId) return { ok: false, error: 'flow_id_missing' };
 
   const persistence = require('../../engine/services/persistenceServices');
-  const flow = await persistence.getFlow(String(flowId));
+  const flow = await persistence.getFlow(safeToString(flowId));
   if (!flow) return { ok: false, error: 'flow_not_found' };
 
   const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
@@ -425,8 +447,8 @@ async function replayFromNode({
     subjectId: header.subject_id || null,
     meta: {
       mode: 'replay',
-      replayOf: String(executionId),
-      fromNodeExecutionId: String(fromNode.id),
+      replayOf: safeToString(executionId),
+      fromNodeExecutionId: safeToString(fromNode.id),
       fromStepIndex: fromNode.step_index != null ? Number(fromNode.step_index) : null,
     },
   });
@@ -489,13 +511,13 @@ async function replayFromNode({
         stateBefore: before,
         stateAfter: before,
         events: [],
-        errorMessage: error && error.message ? error.message : String(error),
+        errorMessage: error && error.message ? error.message : safeToString(error),
       }).catch(() => {});
       await finishFlowExecution({
         tenantId,
         executionId: replayExecutionId,
         status: 'failed',
-        metaPatch: { error: error && error.message ? error.message : String(error) },
+        metaPatch: { error: error && error.message ? error.message : safeToString(error) },
       }).catch(() => {});
       return { ok: true, replayExecutionId, ranSteps: ran, stoppedOnError: true };
     }
