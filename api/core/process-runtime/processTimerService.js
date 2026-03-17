@@ -1,5 +1,79 @@
 'use strict';
 
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeFiniteNumber(value, fallbackValue = 0) {
+  try {
+    const coerced = Number(value);
+    return Number.isFinite(coerced) ? coerced : fallbackValue;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeNow() {
+  try {
+    return Date.now();
+  } catch (_) {
+    return 0;
+  }
+}
+
+function safeIsoFromMs(ms) {
+  try {
+    return new Date(ms).toISOString();
+  } catch (_) {
+    return '1970-01-01T00:00:00.000Z';
+  }
+}
+
+function safeArrayCopy(value) {
+  try {
+    return Array.isArray(value) ? value.slice() : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function normalizeCorrelationKey(value) {
+  if (value == null) return null;
+  const normalized = safeToString(value, '');
+  return normalized || null;
+}
+
+function parseResumeAtMs(resumeAt) {
+  if (resumeAt == null) return NaN;
+  try {
+    return new Date(resumeAt).getTime();
+  } catch (_) {
+    return NaN;
+  }
+}
+
 class ProcessTimerService {
   constructor({ eventBus, instanceStore, resumeService } = {}) {
     this._eventBus = eventBus || null;
@@ -10,56 +84,64 @@ class ProcessTimerService {
   }
 
   async scheduleTimer({ context, node, durationMs, onElapsed, correlationKey = null }) {
-    const safeDuration = Number.isFinite(Number(durationMs)) ? Math.max(0, Number(durationMs)) : 0;
-    const timerId = `${String(context.executionId)}:${String(node.id)}:${Date.now()}`;
-    const readyKey = `${String(context.executionId)}:${String(node.id)}`;
-    const resumeAt = new Date(Date.now() + safeDuration).toISOString();
+    const executionId = safeToString(safeGet(context, 'executionId', ''), '');
+    const processId = safeToString(safeGet(context, 'processId', ''), '');
+    const nodeId = safeToString(safeGet(node, 'id', ''), '');
+    const safeDuration = Math.max(0, safeFiniteNumber(durationMs, 0));
+    const now = safeNow();
+    const timerId = `${executionId}:${nodeId}:${now}`;
+    const readyKey = `${executionId}:${nodeId}`;
+    const resumeAt = safeIsoFromMs(now + safeDuration);
     const waitingState = {
       type: 'timer',
       resumeAt,
-      correlationKey: correlationKey ? String(correlationKey) : null,
+      correlationKey: normalizeCorrelationKey(correlationKey),
       externalRef: timerId,
-      nodeId: String(node.id),
+      nodeId,
       metadata: { durationMs: safeDuration, timerId },
     };
 
     if (this._instanceStore) {
-      await this._instanceStore.markWaiting(context.executionId, waitingState);
+      await this._instanceStore.markWaiting(executionId, waitingState);
     }
 
     const handle = setTimeout(async () => {
       this._timers.delete(timerId);
       const payload = {
         timerId,
-        processId: context.processId,
-        executionId: context.executionId,
-        nodeId: node.id,
+        processId,
+        executionId,
+        nodeId,
         metadata: { durationMs: safeDuration },
       };
       this._readyTimers.set(readyKey, payload);
       if (this._eventBus) {
-        this._eventBus.emit('PROCESS_TIMEOUT', payload);
+        try {
+          this._eventBus.emit('PROCESS_TIMEOUT', payload);
+        } catch (_) {}
       }
       if (typeof onElapsed === 'function') {
-        await onElapsed({
-          timerId,
-          durationMs: safeDuration,
-          nodeId: node.id,
-          executionId: context.executionId,
-          processId: context.processId,
-        });
+        try {
+          await onElapsed({
+            timerId,
+            durationMs: safeDuration,
+            nodeId,
+            executionId,
+            processId,
+          });
+        } catch (_) {}
       }
       if (this._resumeService) {
         try {
-          await this._resumeService.resumeByTimer(context.executionId);
+          await this._resumeService.resumeByTimer(executionId);
         } catch (_) {}
       }
     }, safeDuration);
 
     this._timers.set(timerId, {
       timerId,
-      executionId: context.executionId,
-      nodeId: node.id,
+      executionId,
+      nodeId,
       durationMs: safeDuration,
       handle,
     });
@@ -78,42 +160,48 @@ class ProcessTimerService {
 
   async recoverPendingTimers() {
     if (!this._instanceStore) return [];
-    const waitingInstances = await this._instanceStore.listWaitingInstances({ type: 'timer' });
+    const waitingInstances = safeArrayCopy(await this._instanceStore.listWaitingInstances({ type: 'timer' }));
     const recovered = [];
     for (const instance of waitingInstances) {
-      const waitingState = instance.waitingState || null;
-      if (!waitingState || !waitingState.resumeAt || !waitingState.nodeId) continue;
-      const durationMs = Math.max(new Date(waitingState.resumeAt).getTime() - Date.now(), 0);
-      const timerId = waitingState.externalRef || `${instance.executionId}:${waitingState.nodeId}:recovered`;
+      const executionId = safeToString(safeGet(instance, 'executionId', ''), '');
+      const processId = safeToString(safeGet(instance, 'processId', ''), '');
+      const waitingState = safeGet(instance, 'waitingState', null);
+      const resumeAt = safeGet(waitingState, 'resumeAt', null);
+      const nodeId = safeToString(safeGet(waitingState, 'nodeId', ''), '');
+      if (!waitingState || !resumeAt || !nodeId || !executionId) continue;
+      const durationMs = Math.max(parseResumeAtMs(resumeAt) - safeNow(), 0);
+      const timerId = normalizeCorrelationKey(safeGet(waitingState, 'externalRef')) || `${executionId}:${nodeId}:recovered`;
       if (this._timers.has(timerId)) continue;
       const handle = setTimeout(async () => {
         this._timers.delete(timerId);
         const payload = {
           timerId,
-          processId: instance.processId,
-          executionId: instance.executionId,
-          nodeId: waitingState.nodeId,
-          metadata: waitingState.metadata || {},
+          processId,
+          executionId,
+          nodeId,
+          metadata: safeClone(safeGet(waitingState, 'metadata', {}), {}) || {},
         };
-        this._readyTimers.set(`${instance.executionId}:${waitingState.nodeId}`, payload);
+        this._readyTimers.set(`${executionId}:${nodeId}`, payload);
         if (this._eventBus) {
-          this._eventBus.publishRuntimeEvent({
-            eventType: 'PROCESS_TIMEOUT',
-            ...payload,
-            timestamp: new Date().toISOString(),
-            mode: 'broadcast',
-          });
+          try {
+            this._eventBus.publishRuntimeEvent({
+              eventType: 'PROCESS_TIMEOUT',
+              ...payload,
+              timestamp: safeIsoFromMs(safeNow()),
+              mode: 'broadcast',
+            });
+          } catch (_) {}
         }
         if (this._resumeService) {
           try {
-            await this._resumeService.resumeByTimer(instance.executionId);
+            await this._resumeService.resumeByTimer(executionId);
           } catch (_) {}
         }
       }, durationMs);
       this._timers.set(timerId, {
         timerId,
-        executionId: instance.executionId,
-        nodeId: waitingState.nodeId,
+        executionId,
+        nodeId,
         durationMs,
         handle,
       });
@@ -124,24 +212,26 @@ class ProcessTimerService {
 
   async resumeExpiredTimers() {
     if (!this._instanceStore || !this._resumeService) return [];
-    const waitingInstances = await this._instanceStore.listWaitingInstances({ type: 'timer' });
+    const waitingInstances = safeArrayCopy(await this._instanceStore.listWaitingInstances({ type: 'timer' }));
     const resumed = [];
     for (const instance of waitingInstances) {
-      const resumeAt = instance.waitingState?.resumeAt ? new Date(instance.waitingState.resumeAt).getTime() : NaN;
-      if (!Number.isFinite(resumeAt) || resumeAt > Date.now()) continue;
+      const executionId = safeToString(safeGet(instance, 'executionId', ''), '');
+      if (!executionId) continue;
+      const resumeAt = parseResumeAtMs(safeGet(safeGet(instance, 'waitingState', null), 'resumeAt', null));
+      if (!Number.isFinite(resumeAt) || resumeAt > safeNow()) continue;
       // eslint-disable-next-line no-await-in-loop
-      await this._resumeService.resumeByTimer(instance.executionId);
-      resumed.push(instance.executionId);
+      await this._resumeService.resumeByTimer(executionId);
+      resumed.push(executionId);
     }
     return resumed;
   }
 
   isReady(executionId, nodeId) {
-    return this._readyTimers.has(`${String(executionId || '')}:${String(nodeId || '')}`);
+    return this._readyTimers.has(`${safeToString(executionId || '', '')}:${safeToString(nodeId || '', '')}`);
   }
 
   consumeReadyTimer(executionId, nodeId) {
-    const key = `${String(executionId || '')}:${String(nodeId || '')}`;
+    const key = `${safeToString(executionId || '', '')}:${safeToString(nodeId || '', '')}`;
     const payload = this._readyTimers.get(key) || null;
     if (payload) {
       this._readyTimers.delete(key);
@@ -150,9 +240,9 @@ class ProcessTimerService {
   }
 
   cancelByExecutionId(executionId) {
-    const target = String(executionId || '');
+    const target = safeToString(executionId || '', '');
     for (const [timerId, timer] of this._timers.entries()) {
-      if (String(timer.executionId) !== target) continue;
+      if (safeToString(safeGet(timer, 'executionId', ''), '') !== target) continue;
       clearTimeout(timer.handle);
       this._timers.delete(timerId);
     }
