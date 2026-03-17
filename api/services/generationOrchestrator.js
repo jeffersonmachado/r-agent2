@@ -28,6 +28,16 @@ const { executeRecording, getExecutionStatus } = require('./rpaService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
 /**
  * Calcula hash do contrato para versionamento.
  * 
@@ -83,7 +93,7 @@ function buildRagContextFromDiverse(diverse, { executionId = null } = {}) {
   const contextSources = Array.isArray(diverse?.contextSources) ? diverse.contextSources : [];
   const chunks = contextSources.slice(0, 18).map((s) => ({
     sourceFile: s?.sourceId || s?.sourceType || 'unknown',
-    content: String(s?.text || s?.excerpt || '').slice(0, 2400),
+    content: safeToString(s?.text || s?.excerpt || '').slice(0, 2400),
   }));
 
   const bySourceId = new Map();
@@ -901,9 +911,9 @@ async function orchestrateGeneration(payload, options = {}) {
         for (const sf of planned.slice(0, subflowMax)) {
           throwIfAborted();
           const subflowId = makeFlowId();
-          const subName = (sf?.name ? String(sf.name) : 'Subfluxo').slice(0, 120);
-          const subRole = sf?.role ? String(sf.role).slice(0, 80) : null;
-          const subDesc = String(sf?.description || '').trim();
+          const subName = (sf?.name ? safeToString(sf.name) : 'Subfluxo').slice(0, 120);
+          const subRole = sf?.role ? safeToString(sf.role).slice(0, 80) : null;
+          const subDesc = safeTrim(sf?.description || '');
           if (!subDesc) continue;
 
           // Regras explícitas: subfluxo não deve criar subfluxos.
@@ -943,7 +953,7 @@ async function orchestrateGeneration(payload, options = {}) {
       // best-effort: nunca falhar a geração principal por causa de subfluxos
       logger.warn('[orchestrateGeneration] Falha ao planejar/gerar subfluxos (best-effort)', {
         tenantId,
-        error: e?.message || String(e),
+        error: e?.message || safeToString(e),
       });
     }
 
@@ -951,9 +961,9 @@ async function orchestrateGeneration(payload, options = {}) {
     const mainDescription = (() => {
       if (!Array.isArray(subflows) || subflows.length === 0) return payload.description;
       const list = subflows.map((sf) => {
-        const id = sf?.id ? String(sf.id) : 'unknown';
-        const nm = sf?.name ? String(sf.name) : 'Subfluxo';
-        const role = sf?.metadata?.subflowRole ? String(sf.metadata.subflowRole) : '';
+        const id = sf?.id ? safeToString(sf.id) : 'unknown';
+        const nm = sf?.name ? safeToString(sf.name) : 'Subfluxo';
+        const role = sf?.metadata?.subflowRole ? safeToString(sf.metadata.subflowRole) : '';
         const label = role ? `${nm} (${role})` : nm;
         return `- ${label}: use flowId "${id}"`;
       });
