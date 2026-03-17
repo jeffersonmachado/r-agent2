@@ -1,7 +1,79 @@
 'use strict';
 
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeFiniteNumber(value, fallbackValue = 0) {
+  const coerced = Number(value);
+  return Number.isFinite(coerced) ? coerced : fallbackValue;
+}
+
+function safeIsArray(value) {
+  try {
+    return Array.isArray(value);
+  } catch (_) {
+    return false;
+  }
+}
+
+function safeArrayCopy(value) {
+  if (!safeIsArray(value)) return [];
+  try {
+    return value.slice();
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeEntries(value) {
+  if (!value || typeof value !== 'object') return [];
+  try {
+    return Object.entries(value);
+  } catch (_) {
+    return [];
+  }
+}
+
+function safeShallowCloneRecord(value) {
+  if (!value || typeof value !== 'object') return {};
+  try {
+    return { ...value };
+  } catch (_) {
+    return {};
+  }
+}
+
+function safeNodeId(value, fallbackValue = '') {
+  const nodeId = safeToString(value, fallbackValue);
+  return nodeId || fallbackValue;
+}
+
+function safeOptionalNodeId(value) {
+  if (value == null) return null;
+  const nodeId = safeToString(value, '');
+  return nodeId || null;
+}
+
+function safeEdgePriority(value, fallbackValue = 0) {
+  return safeFiniteNumber(value, fallbackValue);
+}
+
 function inferCanonicalType(nodeType) {
-  switch (String(nodeType || '')) {
+  switch (safeToString(nodeType || '', '')) {
     case 'start':
       return 'start';
     case 'end':
@@ -52,66 +124,73 @@ function inferCanonicalType(nodeType) {
 
 function buildEdgesFromNext(nodeId, nextValue, port = 'out') {
   if (nextValue == null) return [];
-  const targets = Array.isArray(nextValue) ? nextValue : [nextValue];
+  const targets = safeIsArray(nextValue) ? safeArrayCopy(nextValue) : [nextValue];
+  const sourceId = safeNodeId(nodeId, '');
+  const sourcePort = safeToString(port, 'out') || 'out';
   return targets
-    .filter((target) => target != null && String(target).trim() !== '')
+    .filter((target) => target != null && safeToString(target, '').trim() !== '')
     .map((target, index) => ({
-      id: `${String(nodeId)}:${String(port)}:${String(target)}:${index}`,
-      source: String(nodeId),
-      target: String(target),
+      id: `${sourceId}:${sourcePort}:${safeToString(target, '')}:${index}`,
+      source: sourceId,
+      target: safeToString(target, ''),
       condition: null,
       priority: index,
       eventTrigger: null,
-      metadata: { sourcePort: String(port) },
+      metadata: { sourcePort },
     }));
 }
 
 function engineFlowToCanonicalProcess(flow) {
-  const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
-  const canonicalNodes = nodes.map((node) => ({
-    id: String(node.id),
-    type: inferCanonicalType(node.type),
-    subtype: String(node.type || ''),
-    label: String(node.type || node.id),
-    config: node?.config && typeof node.config === 'object' ? { ...node.config } : {},
-    inputSchema: {},
-    outputSchema: {},
-    retryPolicy: {},
-    timeoutPolicy: {},
-    fallbackPolicy: {},
-    humanHandoffPolicy: {},
-    aiPolicy: {},
-    observability: {},
-    metadata: {
-      adapter: {
-        sourceFormat: 'engine',
-        engineType: String(node.type || ''),
+  const nodes = safeArrayCopy(safeGet(flow, 'nodes', []));
+  const canonicalNodes = nodes.map((node, index) => {
+    const id = safeNodeId(safeGet(node, 'id', null), `node-${index}`);
+    const type = safeGet(node, 'type', '');
+    return {
+      id,
+      type: inferCanonicalType(type),
+      subtype: safeToString(type || '', ''),
+      label: safeToString(type || id, id),
+      config: safeShallowCloneRecord(safeGet(node, 'config', null)),
+      inputSchema: {},
+      outputSchema: {},
+      retryPolicy: {},
+      timeoutPolicy: {},
+      fallbackPolicy: {},
+      humanHandoffPolicy: {},
+      aiPolicy: {},
+      observability: {},
+      metadata: {
+        adapter: {
+          sourceFormat: 'engine',
+          engineType: safeToString(type || '', ''),
+        },
       },
-    },
-  }));
+    };
+  });
 
   const canonicalEdges = [];
   nodes.forEach((node) => {
-    const next = node?.next;
+    const nodeId = safeNodeId(safeGet(node, 'id', null), '');
+    const next = safeGet(node, 'next', null);
     if (!next) return;
-    if (typeof next === 'string' || Array.isArray(next)) {
-      canonicalEdges.push(...buildEdgesFromNext(node.id, next, 'out'));
+    if (typeof next === 'string' || safeIsArray(next)) {
+      canonicalEdges.push(...buildEdgesFromNext(nodeId, next, 'out'));
       return;
     }
     if (typeof next === 'object') {
-      Object.entries(next).forEach(([port, target]) => {
-        canonicalEdges.push(...buildEdgesFromNext(node.id, target, port));
+      safeEntries(next).forEach(([port, target]) => {
+        canonicalEdges.push(...buildEdgesFromNext(nodeId, target, port));
       });
     }
   });
 
   return {
-    id: String(flow?.id || 'process'),
-    name: String(flow?.name || 'Process'),
-    version: Number.isFinite(Number(flow?.version)) ? Number(flow.version) : 1,
+    id: safeToString(safeGet(flow, 'id', 'process'), 'process') || 'process',
+    name: safeToString(safeGet(flow, 'name', 'Process'), 'Process') || 'Process',
+    version: safeFiniteNumber(safeGet(flow, 'version', 1), 1),
     metadata: {
-      tenantId: flow?.tenantId || null,
-      kind: flow?.kind || 'chat',
+      tenantId: safeGet(flow, 'tenantId', null),
+      kind: safeGet(flow, 'kind', 'chat') || 'chat',
       sourceFormat: 'engine',
     },
     nodes: canonicalNodes,
@@ -125,39 +204,49 @@ function engineFlowToCanonicalProcess(flow) {
 
 function compileCanonicalProcessDefinition(definition) {
   const process = definition && typeof definition === 'object' ? definition : {};
-  const nodes = Array.isArray(process.nodes) ? process.nodes.slice() : [];
-  const edges = Array.isArray(process.edges) ? process.edges.slice() : [];
-  const nodesById = Object.fromEntries(nodes.map((node) => [String(node.id), node]));
+  const nodes = safeArrayCopy(safeGet(process, 'nodes', []));
+  const edges = safeArrayCopy(safeGet(process, 'edges', []));
+  const nodesById = {};
+  nodes.forEach((node, index) => {
+    const id = safeNodeId(safeGet(node, 'id', null), `node-${index}`);
+    nodesById[id] = node;
+  });
   const edgesBySource = {};
 
   edges
     .slice()
     .sort((a, b) => {
-      if (String(a.source) !== String(b.source)) return String(a.source).localeCompare(String(b.source));
-      return Number(a.priority || 0) - Number(b.priority || 0);
+      const aSource = safeToString(safeGet(a, 'source', ''), '');
+      const bSource = safeToString(safeGet(b, 'source', ''), '');
+      if (aSource !== bSource) return aSource.localeCompare(bSource);
+      return safeEdgePriority(safeGet(a, 'priority', 0), 0) - safeEdgePriority(safeGet(b, 'priority', 0), 0);
     })
     .forEach((edge) => {
-      const source = String(edge.source);
+      const source = safeToString(safeGet(edge, 'source', ''), '');
+      if (!source) return;
       if (!edgesBySource[source]) edgesBySource[source] = [];
       edgesBySource[source].push(edge);
     });
 
+  const entrypoints = safeArrayCopy(safeGet(process, 'entrypoints', [])).map((entry) => safeToString(entry, '')).filter(Boolean);
+  const fallbackStartNode = safeGet((nodes.find((node) => safeToString(safeGet(node, 'type', ''), '') === 'start') || {}), 'id', null);
+
   return {
-    id: String(process.id || 'process'),
-    name: String(process.name || 'Process'),
-    version: Number.isFinite(Number(process.version)) ? Number(process.version) : 1,
-    metadata: process.metadata && typeof process.metadata === 'object' ? { ...process.metadata } : {},
+    id: safeToString(safeGet(process, 'id', 'process'), 'process') || 'process',
+    name: safeToString(safeGet(process, 'name', 'Process'), 'Process') || 'Process',
+    version: safeFiniteNumber(safeGet(process, 'version', 1), 1),
+    metadata: safeShallowCloneRecord(safeGet(process, 'metadata', null)),
     canonical: process,
     nodes,
     edges,
-    entrypoints: Array.isArray(process.entrypoints) ? process.entrypoints.slice() : [],
-    policies: process.policies && typeof process.policies === 'object' ? { ...process.policies } : {},
-    aiConfig: process.aiConfig && typeof process.aiConfig === 'object' ? { ...process.aiConfig } : {},
-    operationalConfig: process.operationalConfig && typeof process.operationalConfig === 'object' ? { ...process.operationalConfig } : {},
+    entrypoints,
+    policies: safeShallowCloneRecord(safeGet(process, 'policies', null)),
+    aiConfig: safeShallowCloneRecord(safeGet(process, 'aiConfig', null)),
+    operationalConfig: safeShallowCloneRecord(safeGet(process, 'operationalConfig', null)),
     executionGraph: {
       nodesById,
       edgesBySource,
-      startNode: (Array.isArray(process.entrypoints) && process.entrypoints[0]) || (nodes.find((node) => node.type === 'start') || {}).id || null,
+      startNode: (entrypoints[0] || safeOptionalNodeId(fallbackStartNode)),
     },
   };
 }
