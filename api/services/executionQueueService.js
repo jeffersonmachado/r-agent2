@@ -15,6 +15,35 @@ const { getSequelize } = require('../db/sequelize');
 const { ExecutionJob } = require('../db/models');
 const { checkRateLimit } = require('../../infra/rate-limit');
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, path, fallback = null) {
+  if (!obj || typeof obj !== 'object') return fallback;
+  try {
+    const parts = path.split('.');
+    let v = obj;
+    for (const part of parts) {
+      v = v?.[part];
+      if (v === undefined) return fallback;
+    }
+    return v ?? fallback;
+  } catch (_) { return fallback; }
+}
+
+function safeArrayFilter(arr, predicate) {
+  if (!Array.isArray(arr)) return [];
+  try {
+    return arr.filter(item => {
+      try { return predicate(item); } catch (_) { return false; }
+    });
+  } catch (_) { return []; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -65,10 +94,10 @@ async function enqueueJob({
   // Quota por tenant (jobs/min) - usa rate limiting (Redis) em produção.
   // Em dev/test, rate limiting retorna allowed=true.
   const quotaEnabled = boolEnv('EXECUTION_QUEUE_QUOTA_ENABLED', true);
-  if (quotaEnabled && String(tenantId) !== 'system') {
+  if (quotaEnabled && safeToString(tenantId) !== 'system') {
     try {
       const rl = await checkRateLimit({
-        userId: `tenant:${String(tenantId)}`,
+        userId: `tenant:${safeToString(tenantId)}`,
         operationType: 'EXECUTION_QUEUE_ENQUEUE',
       });
       if (!rl.allowed) {
@@ -82,15 +111,15 @@ async function enqueueJob({
     } catch (err) {
       // Se o rate limiter falhar, não bloqueia por enquanto (best-effort),
       // mas loga como alerta operacional.
-      if (String(err?.code || '') === 'exec_queue_quota_exceeded') throw err;
+      if (safeToString(safeGet(err, 'code', '')) === 'exec_queue_quota_exceeded') throw err;
       logger.warn('[ExecutionQueue] Falha ao aplicar quota por tenant (ignored)', { tenantId, error: err.message });
     }
   }
 
   const row = await Model.create({
     id: newId('job'),
-    tenant_key: String(tenantId),
-    kind: String(kind),
+    tenant_key: safeToString(tenantId),
+    kind: safeToString(kind),
     status: 'pending',
     priority: Number(priority) || 0,
     payload: payload && typeof payload === 'object' ? payload : {},
@@ -100,15 +129,15 @@ async function enqueueJob({
     processing_at: null,
     processing_by: null,
     last_error: null,
-    idempotency_key: idempotencyKey ? String(idempotencyKey) : null,
+    idempotency_key: idempotencyKey ? safeToString(idempotencyKey) : null,
     created_at: now,
     updated_at: now,
   }).catch(async (err) => {
     // Unique violation on idempotency: return existing
-    const isUnique = String(err?.original?.code || '') === '23505';
+    const isUnique = safeToString(safeGet(err, 'original.code', '')) === '23505';
     if (idempotencyKey && isUnique) {
       const existing = await Model.findOne({
-        where: { tenant_key: String(tenantId), kind: String(kind), idempotency_key: String(idempotencyKey) },
+        where: { tenant_key: safeToString(tenantId), kind: safeToString(kind), idempotency_key: safeToString(idempotencyKey) },
         order: [['created_at', 'DESC']],
       });
       return existing;
@@ -124,7 +153,7 @@ async function claimNextJob({ kinds = null, maxProcessingPerTenant = null, stale
   if (!sequelize) return null;
 
   const processingBy = getProcessingBy();
-  const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => String(k)) : null;
+  const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => safeToString(k)) : null;
 
   const maxProc =
     Number.isFinite(Number(maxProcessingPerTenant)) && Number(maxProcessingPerTenant) > 0
@@ -224,8 +253,8 @@ async function finishJob({ jobId, status, errorMessage = null, backoffSeconds = 
     { replacements: { id: jobId } },
   );
   const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
-  const attempts = Number(row?.attempts || 0) + 1;
-  const maxAttempts = Number(row?.max_attempts || 5);
+  const attempts = Number(safeGet(row, 'attempts', 0)) + 1;
+  const maxAttempts = Number(safeGet(row, 'max_attempts', 5));
 
   if (attempts >= maxAttempts) {
     await sequelize.query(
@@ -235,7 +264,7 @@ async function finishJob({ jobId, status, errorMessage = null, backoffSeconds = 
            last_error = :err,
            updated_at = NOW()
        WHERE id = :id`,
-      { replacements: { id: jobId, attempts, err: errorMessage ? String(errorMessage) : null } },
+      { replacements: { id: jobId, attempts, err: errorMessage ? safeToString(errorMessage) : null } },
     );
     return;
   }
@@ -256,7 +285,7 @@ async function finishJob({ jobId, status, errorMessage = null, backoffSeconds = 
         id: jobId,
         attempts,
         backoff,
-        err: errorMessage ? String(errorMessage) : null,
+        err: errorMessage ? safeToString(errorMessage) : null,
       },
     },
   );
@@ -267,10 +296,10 @@ async function listDeadJobs({ tenantId, kind = null, limit = 100, offset = 0 } =
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
   const safeOffset = Math.max(Number(offset) || 0, 0);
   const where = {
-    tenant_key: String(tenantId || 'system'),
+    tenant_key: safeToString(tenantId || 'system'),
     status: 'dead',
   };
-  if (kind) where.kind = String(kind);
+  if (kind) where.kind = safeToString(kind);
 
   const { count, rows } = await Model.findAndCountAll({
     where,
@@ -290,8 +319,8 @@ async function listDeadJobs({ tenantId, kind = null, limit = 100, offset = 0 } =
 async function retryDeadJob({ tenantId, jobId } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, error: 'db_unavailable' };
-  const tid = String(tenantId || 'system');
-  const id = String(jobId || '');
+  const tid = safeToString(tenantId || 'system');
+  const id = safeToString(jobId || '');
   if (!id) return { ok: false, error: 'job_id_required' };
 
   const [rows] = await sequelize.query(
@@ -309,7 +338,7 @@ async function retryDeadJob({ tenantId, jobId } = {}) {
      RETURNING *;`,
     { replacements: { id, tenantKey: tid } },
   );
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  const row = Array.isArray(rows) ? rows[0] || null : null;
   if (!row) return { ok: false, error: 'dead_job_not_found' };
   return { ok: true, job: row };
 }
@@ -320,7 +349,7 @@ async function getExecutionQueueMetrics({ tenantId = null } = {}) {
 
   const replacements = {};
   const whereTenant = tenantId ? 'WHERE tenant_key = :tenantKey' : '';
-  if (tenantId) replacements.tenantKey = String(tenantId);
+  if (tenantId) replacements.tenantKey = safeToString(tenantId);
 
   const [rows] = await sequelize.query(
     `WITH base AS (
@@ -339,7 +368,7 @@ async function getExecutionQueueMetrics({ tenantId = null } = {}) {
     { replacements },
   );
 
-  const r = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  const r = Array.isArray(rows) ? rows[0] || {} : {};
   const oldest = r.oldest_pending_next_attempt_at ? new Date(r.oldest_pending_next_attempt_at) : null;
   const lagSec = oldest ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 1000)) : 0;
 
@@ -363,9 +392,9 @@ async function getExecutionQueueMetricsByKind({ tenantId = null, kinds = null } 
 
   const replacements = {};
   const whereTenant = tenantId ? 'tenant_key = :tenantKey' : '1=1';
-  if (tenantId) replacements.tenantKey = String(tenantId);
+  if (tenantId) replacements.tenantKey = safeToString(tenantId);
 
-  const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => String(k)) : null;
+  const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => safeToString(k)) : null;
   const kindsSql = kindsFilter ? 'AND kind = ANY(:kinds)' : '';
   if (kindsFilter) replacements.kinds = kindsFilter;
 
@@ -389,7 +418,7 @@ async function getExecutionQueueMetricsByKind({ tenantId = null, kinds = null } 
     const oldest = r.oldest_pending_next_attempt_at ? new Date(r.oldest_pending_next_attempt_at) : null;
     const lagSec = oldest ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 1000)) : 0;
     return {
-      kind: String(r.kind || ''),
+      kind: safeToString(r.kind || ''),
       pending: Number(r.pending || 0),
       retryingPending: Number(r.retrying_pending || 0),
       processing: Number(r.processing || 0),
@@ -409,7 +438,7 @@ let _running = false;
 let _lastStaleReleaseAt = 0;
 
 async function processJob(job) {
-  const kind = String(job.kind || '');
+  const kind = safeToString(safeGet(job, 'kind', ''));
   if (kind === 'scan_sla') {
     const { runSlaScan } = require('./opsSlaService');
     await runSlaScan();
@@ -436,18 +465,18 @@ async function processJob(job) {
   }
   if (kind === 'scan_event_triggers') {
     const { scanAndEnqueue } = require('./eventLedgerTriggerDispatcher');
-    const consumer = job?.payload?.consumer || 'webhooks_v1';
-    const batchSize = job?.payload?.batchSize || 100;
-    const dispatchTargets = Array.isArray(job?.payload?.dispatchTargets) ? job.payload.dispatchTargets : null;
+    const consumer = safeGet(job, 'payload.consumer', 'webhooks_v1');
+    const batchSize = safeGet(job, 'payload.batchSize', 100);
+    const dispatchTargets = Array.isArray(safeGet(job, 'payload.dispatchTargets')) ? safeGet(job, 'payload.dispatchTargets') : null;
     await scanAndEnqueue({ consumer, batchSize, dispatchTargets });
     return;
   }
   if (kind === 'dispatch_event_trigger') {
     const { dispatchOne } = require('./eventLedgerTriggerDispatcher');
-    const tenantId = job?.tenant_key || job?.tenantId || 'system';
-    const consumer = job?.payload?.consumer || 'webhooks_v1';
-    const eventId = job?.payload?.eventId || null;
-    const dispatchTargets = Array.isArray(job?.payload?.dispatchTargets) ? job.payload.dispatchTargets : null;
+    const tenantId = safeGet(job, 'tenant_key') || safeGet(job, 'tenantId') || 'system';
+    const consumer = safeGet(job, 'payload.consumer', 'webhooks_v1');
+    const eventId = safeGet(job, 'payload.eventId', null);
+    const dispatchTargets = Array.isArray(safeGet(job, 'payload.dispatchTargets')) ? safeGet(job, 'payload.dispatchTargets') : null;
     const out = await dispatchOne({ tenantId, consumer, eventId, dispatchTargets });
     if (!out.ok && out.reason === 'event_not_found') {
       // Nada a fazer (idempotente): marca como done
@@ -488,7 +517,7 @@ function startExecutionQueueWorker({ intervalMs = 800 } = {}) {
         await processJob(job);
         await finishJob({ jobId: job.id, status: 'done' });
       } catch (err) {
-        await finishJob({ jobId: job.id, status: 'failed', errorMessage: err.message || String(err) });
+        await finishJob({ jobId: job.id, status: 'failed', errorMessage: err.message || safeToString(err) });
       }
     } catch (err) {
       logger.warn('[ExecutionQueue] tick failed (ignored)', { error: err.message });
