@@ -332,6 +332,21 @@ const ROLE_PERMISSIONS = {
   ],
 };
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+}
+
+function safeKeys(obj) {
+  if (!obj || typeof obj !== 'object') return [];
+  try { return Object.keys(obj); } catch (_) { return []; }
+}
+
 /**
  * Normaliza roles para compatibilidade e consistência.
  * - supervisor -> manager
@@ -342,7 +357,7 @@ const ROLE_PERMISSIONS = {
  */
 function normalizeRole(role) {
   if (!role) return null;
-  const r = String(role).toLowerCase();
+  const r = safeTrimLower(role);
   if (r === 'supervisor') return 'manager';
   if (r === 'agent') return 'operator';
   return r;
@@ -460,7 +475,7 @@ function getRolePermissions(role) {
  * @returns {string[]}
  */
 function listRoles() {
-  return Object.keys(ROLE_PERMISSIONS);
+  return safeKeys(ROLE_PERMISSIONS);
 }
 
 function listPermissions() {
@@ -488,8 +503,16 @@ function sanitizePermissions(raw = []) {
   if (!Array.isArray(raw)) return out;
   for (const p of raw) {
     if (!p || typeof p !== 'object') continue;
-    const resource = typeof p.resource === 'string' ? p.resource.trim() : '';
-    const action = typeof p.action === 'string' ? p.action.trim() : '';
+    let resource = '';
+    let action = '';
+    try {
+      const rawResource = p.resource;
+      const rawAction = p.action;
+      resource = typeof rawResource === 'string' ? rawResource.trim() : '';
+      action = typeof rawAction === 'string' ? rawAction.trim() : '';
+    } catch (_) {
+      continue;
+    }
     if (!resource || !action) continue;
     const key = `${resource}:${action}`;
     if (seen.has(key)) continue;
@@ -500,7 +523,7 @@ function sanitizePermissions(raw = []) {
 }
 
 function createRole(roleName, permissions = []) {
-  const name = roleName ? String(roleName).trim().toLowerCase() : '';
+  const name = roleName ? safeTrimLower(roleName) : '';
   if (!name) return { success: false, error: 'role inválido' };
   if (ROLE_PERMISSIONS[name]) {
     return { success: false, error: 'role já existe' };
