@@ -2,9 +2,13 @@ const crypto = require('crypto');
 const logger = require('../utils/logger');
 const ragService = require('./ragService');
 
-function safeString(v) {
-  if (v === null || v === undefined) return '';
-  return String(v);
+function safeString(v, fallback = '') {
+  if (v === null || v === undefined) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function normalizeWhitespace(text) {
@@ -165,8 +169,8 @@ function dedupeByKey(items) {
   const seenHashes = new Set();
   const out = [];
   for (const it of items) {
-    const chunkKey = it.chunkId ? String(it.chunkId) : null;
-    const hashKey = it.hash ? String(it.hash) : null;
+    const chunkKey = it.chunkId ? safeString(it.chunkId) : null;
+    const hashKey = it.hash ? safeString(it.hash) : null;
 
     // Dedup forte: se o texto é igual (hash igual), remove mesmo que chunkId seja diferente
     if (hashKey && seenHashes.has(hashKey)) continue;
@@ -206,7 +210,8 @@ function formatContext({ uploaded, web, notes }) {
     lines.push('- (nenhum trecho relevante encontrado nos arquivos enviados)');
   } else {
     for (const s of uploaded) {
-      lines.push(`- (${s.sourceId}) score=${s.score.toFixed(3)} id=${s.chunkId || s.hash.slice(0, 12)}`);
+      const chunkDisplayId = safeString(s.chunkId) || safeString(s.hash).slice(0, 12);
+      lines.push(`- (${s.sourceId}) score=${s.score.toFixed(3)} id=${chunkDisplayId}`);
       lines.push(`  ${s.excerpt}`);
     }
   }
@@ -216,7 +221,8 @@ function formatContext({ uploaded, web, notes }) {
     lines.push('- (nenhum trecho relevante encontrado no web scraping)');
   } else {
     for (const s of web) {
-      lines.push(`- (${s.sourceId}) score=${s.score.toFixed(3)} id=${s.chunkId || s.hash.slice(0, 12)}`);
+      const chunkDisplayId = safeString(s.chunkId) || safeString(s.hash).slice(0, 12);
+      lines.push(`- (${s.sourceId}) score=${s.score.toFixed(3)} id=${chunkDisplayId}`);
       lines.push(`  ${s.excerpt}`);
     }
   }
@@ -310,8 +316,8 @@ async function buildDiverseRagContext({
   const seenChunkIds = new Set();
   const seenHashes = new Set();
   const add = (s) => {
-    const chunkKey = s.chunkId ? String(s.chunkId) : null;
-    const hashKey = s.hash ? String(s.hash) : null;
+    const chunkKey = s.chunkId ? safeString(s.chunkId) : null;
+    const hashKey = s.hash ? safeString(s.hash) : null;
     if (hashKey && seenHashes.has(hashKey)) return false;
     if (chunkKey && seenChunkIds.has(chunkKey)) return false;
     if (hashKey) seenHashes.add(hashKey);
