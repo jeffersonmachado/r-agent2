@@ -1,7 +1,51 @@
 'use strict';
 
 function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
+  return safeClone(value, value == null ? value : null);
+}
+
+function safeClone(value, fallbackValue = null) {
+  if (value == null) return value;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeGet(value, key, fallbackValue = undefined) {
+  try {
+    const result = value?.[key];
+    return result === undefined ? fallbackValue : result;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeToString(value, fallbackValue = '') {
+  try {
+    return String(value);
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeFiniteNumber(value, fallbackValue = 0) {
+  try {
+    const coerced = Number(value);
+    return Number.isFinite(coerced) ? coerced : fallbackValue;
+  } catch (_) {
+    return fallbackValue;
+  }
+}
+
+function safeShallowCloneRecord(value) {
+  if (!value || typeof value !== 'object') return {};
+  try {
+    return { ...value };
+  } catch (_) {
+    return {};
+  }
 }
 
 class InMemoryProcessIdempotencyService {
@@ -11,37 +55,49 @@ class InMemoryProcessIdempotencyService {
   }
 
   buildKey({ executionId, nodeId, sequence = 0 }) {
-    return `${String(executionId || '')}:${String(nodeId || '')}:${Number(sequence || 0)}`;
+    const safeExecutionId = safeToString(executionId || '', '');
+    const safeNodeId = safeToString(nodeId || '', '');
+    const safeSequence = safeFiniteNumber(sequence || 0, 0);
+    return `${safeExecutionId}:${safeNodeId}:${safeSequence}`;
   }
 
   async getRecord(key, params = {}) {
-    const normalizedKey = String(key || '');
+    const safeParams = safeShallowCloneRecord(params);
+    const normalizedKey = safeToString(key || '', '');
     if (this._records.has(normalizedKey)) {
       return clone(this._records.get(normalizedKey));
     }
-    if (!this._instanceStore || !params.executionId) {
+    const executionId = safeToString(safeGet(safeParams, 'executionId', ''), '');
+    if (!this._instanceStore || !executionId) {
       return null;
     }
-    const instance = await this._instanceStore.loadInstance(params.executionId);
-    const persisted = instance?.metadata?.idempotencyRecords?.[normalizedKey];
+    const instance = await this._instanceStore.loadInstance(executionId);
+    const metadata = safeGet(instance, 'metadata', null);
+    const idempotencyRecords = safeGet(metadata, 'idempotencyRecords', null);
+    const persisted = safeGet(idempotencyRecords, normalizedKey, null);
     if (persisted == null) return null;
-    this._records.set(normalizedKey, clone(persisted));
-    return clone(persisted);
+    const persistedClone = safeClone(persisted, null);
+    this._records.set(normalizedKey, persistedClone);
+    return clone(persistedClone);
   }
 
   async saveRecord(key, value, params = {}) {
-    const normalizedKey = String(key || '');
-    const normalizedValue = clone(value);
+    const safeParams = safeShallowCloneRecord(params);
+    const normalizedKey = safeToString(key || '', '');
+    const normalizedValue = safeClone(value, null);
     this._records.set(normalizedKey, normalizedValue);
 
-    if (this._instanceStore && params.executionId) {
-      const instance = await this._instanceStore.loadInstance(params.executionId);
+    const executionId = safeToString(safeGet(safeParams, 'executionId', ''), '');
+    if (this._instanceStore && executionId) {
+      const instance = await this._instanceStore.loadInstance(executionId);
       if (instance) {
-        await this._instanceStore.updateInstance(params.executionId, {
+        const metadata = safeShallowCloneRecord(safeGet(instance, 'metadata', null));
+        const idempotencyRecords = safeShallowCloneRecord(safeGet(metadata, 'idempotencyRecords', null));
+        await this._instanceStore.updateInstance(executionId, {
           metadata: {
-            ...(instance.metadata || {}),
+            ...metadata,
             idempotencyRecords: {
-              ...((instance.metadata && instance.metadata.idempotencyRecords) || {}),
+              ...idempotencyRecords,
               [normalizedKey]: normalizedValue,
             },
           },
@@ -53,8 +109,9 @@ class InMemoryProcessIdempotencyService {
   }
 
   async runOnce(params, executor) {
-    const key = this.buildKey(params);
-    const existing = await this.getRecord(key, params);
+    const safeParams = safeShallowCloneRecord(params);
+    const key = this.buildKey(safeParams);
+    const existing = await this.getRecord(key, safeParams);
     if (existing) {
       return {
         reused: true,
@@ -63,7 +120,7 @@ class InMemoryProcessIdempotencyService {
       };
     }
     const value = await executor();
-    await this.saveRecord(key, value, params);
+    await this.saveRecord(key, value, safeParams);
     return {
       reused: false,
       key,
