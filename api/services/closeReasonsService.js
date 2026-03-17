@@ -12,6 +12,18 @@ const { CloseReason: CloseReasonGetter } = require('../db/models');
 /** @type {Map<string, any>} */
 const reasons = new Map(); // id -> reason
 
+// ── defensive helpers ────────────────────────────────────────────────────────
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeSafeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -95,14 +107,15 @@ async function persistBestEffort(reason) {
 
 async function createCloseReason({ tenantId, name, createdBy = null }) {
   if (!tenantId) return { success: false, error: 'tenantId é obrigatório' };
-  if (!name || !String(name).trim()) return { success: false, error: 'name é obrigatório' };
+  const safeName = safeToString(name).trim();
+  if (!safeName) return { success: false, error: 'name é obrigatório' };
 
   const id = newId();
   const now = new Date().toISOString();
   const reason = {
     id,
     tenantId,
-    name: String(name).trim(),
+    name: safeName,
     active: true,
     createdBy,
     createdAt: now,
@@ -115,21 +128,27 @@ async function createCloseReason({ tenantId, name, createdBy = null }) {
 
 function getCloseReasonByName(tenantId, name) {
   if (!tenantId || !name) return null;
-  const t = String(tenantId);
-  const n = String(name).trim().toLowerCase();
+  const t = safeToString(tenantId);
+  const n = safeSafeTrimLower(name);
   if (!n) return null;
   for (const r of reasons.values()) {
     if (!r) continue;
-    if (r.tenantId !== t) continue;
-    if (String(r.name || '').trim().toLowerCase() === n) return r;
+    let rTenantId;
+    try { rTenantId = r.tenantId; } catch (_) { continue; }
+    if (rTenantId !== t) continue;
+    const rName = safeSafeTrimLower(r.name || '');
+    if (rName === n) return r;
   }
   return null;
 }
 
 async function ensureDefaultsForTenant(tenantId) {
   if (!tenantId) return;
-  const t = String(tenantId);
-  const existing = Array.from(reasons.values()).filter(r => r && r.tenantId === t);
+  const t = safeToString(tenantId);
+  const existing = Array.from(reasons.values()).filter((r) => {
+    if (!r) return false;
+    try { return r.tenantId === t; } catch (_) { return false; }
+  });
   if (existing.length > 0) return;
 
   const defaults = [
@@ -152,13 +171,14 @@ async function ensureDefaultsForTenant(tenantId) {
 
 async function getOrCreateCloseReasonByName({ tenantId, name, createdBy = null }) {
   if (!tenantId) return { success: false, error: 'tenantId é obrigatório' };
-  if (!name || !String(name).trim()) return { success: false, error: 'name é obrigatório' };
+  const safeName = safeToString(name).trim();
+  if (!safeName) return { success: false, error: 'name é obrigatório' };
 
   await ensureDefaultsForTenant(tenantId);
   const existing = getCloseReasonByName(tenantId, name);
   if (existing) return { success: true, reason: existing, created: false };
 
-  const created = await createCloseReason({ tenantId, name, createdBy });
+  const created = await createCloseReason({ tenantId, name: safeName, createdBy });
   if (!created.success) return created;
   return { success: true, reason: created.reason, created: true };
 }
