@@ -3,9 +3,13 @@ const { generateAiResponse } = require('./aiProviderService');
 const { getSequelize } = require('../db/sequelize');
 const { TenantExclusion: TenantExclusionGetter } = require('../db/models');
 
-function safeString(v) {
-  if (v === null || v === undefined) return '';
-  return String(v);
+function safeString(v, fallback = '') {
+  if (v === null || v === undefined) return fallback;
+  try {
+    return String(v);
+  } catch (_) {
+    return fallback;
+  }
 }
 
 function normalizeKey(s) {
@@ -110,7 +114,7 @@ async function loadTenantExclusions(tenantId, { limit = 100 } = {}) {
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao carregar exclusões persistidas (best-effort)', {
       tenantId: tid,
-      error: err?.message || String(err),
+      error: err?.message || safeString(err),
     });
     return [];
   }
@@ -167,7 +171,7 @@ async function persistNewTenantExclusions(tenantId, storedExclusions, inferredEx
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao persistir exclusões (best-effort)', {
       tenantId: tid,
-      error: err?.message || String(err),
+      error: err?.message || safeString(err),
     });
     return { persisted: 0, skipped: toInsert.length };
   }
@@ -300,31 +304,41 @@ function findTechnicalArtifact(text) {
 function filterQuestions(questions, exclusions) {
   const qs = Array.isArray(questions) ? questions : [];
   const ex = Array.isArray(exclusions) ? exclusions : [];
-  if (qs.length === 0) return qs;
+  if (qs.length === 0) return [];
 
   const loweredTerms = ex
     .map((t) => safeString(t).trim())
     .filter(Boolean)
     .map((t) => t.toLowerCase());
 
-  return qs.filter((q) => {
+  const out = [];
+  for (const q of qs) {
     // Bloqueia artefatos comuns do pipeline de extração (OCR/PDF/scraping),
     // que às vezes viram "conceitos" indevidos durante a geração.
-    const rawQ = safeString(q);
-    if (/texto\s+extra[ií]do/i.test(rawQ)) return false;
-    if (/sem\s+texto\s+extra[ií]do/i.test(rawQ)) return false;
+    const rawQ = safeString(q).trim();
+    if (!rawQ) continue;
+    if (/texto\s+extra[ií]do/i.test(rawQ)) continue;
+    if (/sem\s+texto\s+extra[ií]do/i.test(rawQ)) continue;
 
     const artifact = findTechnicalArtifact(q);
-    if (artifact) return false;
+    if (artifact) continue;
 
-    if (loweredTerms.length === 0) return true;
+    if (loweredTerms.length === 0) {
+      out.push(rawQ);
+      continue;
+    }
 
     const qq = rawQ.toLowerCase();
+    let excluded = false;
     for (const term of loweredTerms) {
-      if (term && qq.includes(term)) return false;
+      if (term && qq.includes(term)) {
+        excluded = true;
+        break;
+      }
     }
-    return true;
-  });
+    if (!excluded) out.push(rawQ);
+  }
+  return out;
 }
 
 function extractArtifactsFromFileNames(fileNames) {
@@ -392,7 +406,7 @@ async function inferExclusions(ragContext, tenantId) {
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao inferir exclusões (best-effort)', {
       tenantId: tid,
-      error: err?.message || String(err),
+      error: err?.message || safeString(err),
     });
     return [];
   }

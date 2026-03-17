@@ -64,5 +64,19 @@ describe('exclusions.service', () => {
     // como dedupe por % 10, deve ficar 10
     expect(parsed.length).toBe(10);
   });
+
+  test('sanitizeContext tolera valor hostil sem quebrar', () => {
+    const hostile = { toString: () => { throw new Error('boom-sanitize'); } };
+    expect(sanitizeContext(hostile)).toBe('');
+  });
+
+  test('filterQuestions ignora pergunta hostil e mantém válidas', () => {
+    const questions = [
+      { toString: () => { throw new Error('boom-question'); } },
+      'Quais são as formas de pagamento?',
+    ];
+    const out = filterQuestions(questions, []);
+    expect(out).toEqual(['Quais são as formas de pagamento?']);
+  });
 });
 
