@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -84,6 +87,23 @@ describe('onboardingService coercion hardening', () => {
     expect(out.success).toBe(true);
   });
 
+  test('createInitialTemplates tolera err.message e toString hostis no createQueue', async () => {
+    const hostileErr = {
+      get message() {
+        throw new Error('boom-message-getter');
+      },
+      toString() {
+        throw new Error('boom-toString');
+      },
+    };
+
+    setupBaseMocks({ queueThrows: hostileErr });
+    const { createInitialTemplates } = require('../../api/services/onboardingService');
+
+    const out = await createInitialTemplates('tenant-1', { segment: 'geral' });
+    expect(out.success).toBe(true);
+  });
+
   test('completeOnboarding segue fluxo mesmo com onboarding parcial', async () => {
     const tenant = {
       id: 'tenant-1',
@@ -106,5 +126,12 @@ describe('onboardingService coercion hardening', () => {
     const { completeOnboarding } = require('../../api/services/onboardingService');
     const out = await completeOnboarding('tenant-1');
     expect(out.success).toBe(true);
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/onboardingService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });

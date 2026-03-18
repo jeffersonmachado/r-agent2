@@ -33,11 +33,15 @@ function safeTrim(value, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
+  let message;
   try {
-    return err.message || String(err) || fallback;
+    message = err?.message;
   } catch (_) {
-    return fallback;
+    message = null;
   }
+
+  if (message !== null && message !== undefined) return safeTrim(message, fallback);
+  return safeTrim(err, fallback);
 }
 
 /**
