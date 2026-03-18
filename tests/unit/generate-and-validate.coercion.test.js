@@ -60,12 +60,19 @@ const { enforceRateLimit } = require('../../infra/rate-limit');
 const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
 const pipelineContext = require('../../api/services/pipelineExecutionContext');
 const { generateAndValidate, executeRpaTest } = require('../../api/services/generate-and-validate');
+const fs = require('fs');
+const path = require('path');
 
 function hostileErr() {
   const e = new Error('real');
   Object.defineProperty(e, 'message', {
     get() {
       throw new Error('hostile message getter');
+    },
+  });
+  Object.defineProperty(e, 'toString', {
+    get() {
+      throw new Error('hostile toString getter');
     },
   });
   return e;
@@ -121,5 +128,13 @@ describe('generate-and-validate coercion guards', () => {
 
     expect(out.success).toBe(false);
     expect(typeof out.error).toBe('string');
+  });
+
+  test('static guard: service nao deve usar return err.message || String(err)', () => {
+    const servicePath = path.join(__dirname, '../../api/services/generate-and-validate.js');
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)\s*\|\|\s*fallback/);
   });
 });

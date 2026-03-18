@@ -32,8 +32,13 @@ const { advancePipeline } = require('./pipelineOrchestrator');
 const { isSuperAdmin } = require('./superAdminService');
 
 function safeErrorMessage(err, fallback = '') {
-  if (!err) return fallback;
-  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+  if (err == null) return fallback;
+  let message = '';
+  try { message = err.message; } catch (_) { message = ''; }
+  if (message) {
+    try { return String(message); } catch (_) { return fallback; }
+  }
+  try { return String(err); } catch (_) { return fallback; }
 }
 function safeGet(obj, key, fallback = null) {
   if (!obj) return fallback;
