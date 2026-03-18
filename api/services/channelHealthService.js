@@ -22,17 +22,44 @@ const { logAction } = require('./auditService');
 const { decrypt } = require('../utils/crypto');
 const https = require('https');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value).trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || String(err) || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
 
 function safeInt(v, d = 0) {
-  const n = Number.parseInt(String(v), 10);
+  const n = Number.parseInt(safeToString(v), 10);
   return Number.isFinite(n) ? n : d;
 }
 
 function safeFloat(v, d = 0) {
-  const n = Number.parseFloat(String(v));
+  const n = Number.parseFloat(safeToString(v));
   return Number.isFinite(n) ? n : d;
 }
 
@@ -179,7 +206,7 @@ function httpGetJson(url, { headers = {}, timeoutMs = 3500 } = {}) {
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         const contentType = res.headers['content-type'] || '';
-        const isJson = String(contentType).includes('application/json');
+        const isJson = safeToString(contentType).includes('application/json');
         let parsed = null;
         if (isJson) {
           try { parsed = JSON.parse(data || '{}'); } catch { parsed = null; }
@@ -199,7 +226,7 @@ const waQualityCache = new Map(); // accountId -> { atMs, qualityRating, profile
 function getAny(obj, keys = []) {
   if (!obj || typeof obj !== 'object') return undefined;
   for (const k of keys) {
-    if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return obj[k];
+    if (obj[k] !== undefined && obj[k] !== null && safeTrim(obj[k]) !== '') return obj[k];
   }
   return undefined;
 }
@@ -208,12 +235,12 @@ async function fetchWhatsAppQualityBestEffort({ accountId, cfg, externalId, nowM
   const cached = waQualityCache.get(accountId);
   if (cached && (nowMs - cached.atMs) < (15 * 60 * 1000)) return cached;
 
-  const apiUrl = String(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0');
+  const apiUrl = safeToString(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0');
   const token = getAny(cfg, ['accessToken', 'token', 'whatsappAccessToken', 'pageAccessToken']);
   const phoneNumberId = externalId || getAny(cfg, ['phone_number_id', 'phoneNumberId', 'phone_numberId']);
   if (!token || !phoneNumberId) return null;
 
-  const url = `${apiUrl.replace(/\/$/, '')}/${encodeURIComponent(String(phoneNumberId))}?fields=quality_rating,verified_name,display_phone_number,name_status`;
+  const url = `${apiUrl.replace(/\/$/, '')}/${encodeURIComponent(safeToString(phoneNumberId))}?fields=quality_rating,verified_name,display_phone_number,name_status`;
   try {
     const resp = await httpGetJson(url, { headers: { Authorization: `Bearer ${token}` }, timeoutMs: 3500 });
     if (!(resp.statusCode >= 200 && resp.statusCode < 300)) return null;
@@ -246,8 +273,8 @@ async function queryAccountDiagnostics(tenantId) {
   for (const row of rows) {
     const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
     const type = normalizeChannelType(base.type);
-    const status = String(base.status || 'unknown').toLowerCase();
-    const externalId = base.external_id ? String(base.external_id) : null;
+    const status = safeToString(base.status || 'unknown').toLowerCase();
+    const externalId = base.external_id ? safeToString(base.external_id) : null;
 
     const cfg = safeDecryptConfig(base.config_encrypted);
     const missing = [];
@@ -297,7 +324,7 @@ async function queryAccountDiagnostics(tenantId) {
 }
 
 function normalizeChannelType(t) {
-  const s = String(t || '').toLowerCase();
+  const s = safeToString(t || '').toLowerCase();
   if (s === 'whatsapp' || s === 'instagram' || s === 'webchat') return s;
   return s || 'unknown';
 }
@@ -497,7 +524,7 @@ function startChannelHealthMonitor({
         }
       }
     } catch (err) {
-      logger.warn('[ChannelHealth] Falha no monitor (ignorado)', { error: err.message });
+      logger.warn('[ChannelHealth] Falha no monitor (ignorado)', { error: safeErrorMessage(err) });
     }
   }, Math.max(5000, safeInt(intervalMs, 60000)));
 }
