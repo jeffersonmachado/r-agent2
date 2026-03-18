@@ -2,6 +2,15 @@ const crypto = require('crypto');
 const { Delivery } = require('../db/models');
 const { appendEventV1 } = require('./eventLedgerService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function makeId() {
   return `del-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -15,7 +24,7 @@ async function createDeliveryForOrder({
 }) {
   const Model = Delivery();
   const sequelize = Model.sequelize;
-  const idk = context && context.idempotencyKey ? String(context.idempotencyKey) : null;
+  const idk = context && context.idempotencyKey ? safeToString(context.idempotencyKey) : null;
   if (idk && sequelize) {
     try {
       const [rows] = await sequelize.query(
@@ -29,7 +38,7 @@ async function createDeliveryForOrder({
         { replacements: { tenantKey: tenantId, idk } },
       );
       if (Array.isArray(rows) && rows[0] && rows[0].id) {
-        const existing = await Model.findOne({ where: { tenant_key: tenantId, id: String(rows[0].id) } });
+        const existing = await Model.findOne({ where: { tenant_key: tenantId, id: safeToString(rows[0].id) } });
         if (existing) return existing.toJSON ? existing.toJSON() : existing;
       }
     } catch (_) {}
@@ -48,7 +57,7 @@ async function createDeliveryForOrder({
 
   // best-effort: emit canonical event
   try {
-    const correlationId = context && context.correlationId ? String(context.correlationId) : (context?.orderCorrelationId ? String(context.orderCorrelationId) : null);
+    const correlationId = context && context.correlationId ? safeToString(context.correlationId) : (context?.orderCorrelationId ? safeToString(context.orderCorrelationId) : null);
     await appendEventV1({
       tenantId,
       type: 'DeliveryCreated',
@@ -56,8 +65,8 @@ async function createDeliveryForOrder({
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'delivery', id },
-      actor: context && context.publicTokenId ? { type: 'public_token', id: String(context.publicTokenId) } : { type: 'system', id: 'api' },
-      idempotencyKey: context && context.idempotencyKey ? `delivery_created:${tenantId}:${String(context.idempotencyKey)}` : null,
+      actor: context && context.publicTokenId ? { type: 'public_token', id: safeToString(context.publicTokenId) } : { type: 'system', id: 'api' },
+      idempotencyKey: context && context.idempotencyKey ? `delivery_created:${tenantId}:${safeToString(context.idempotencyKey)}` : null,
       payload: { deliveryId: id, orderId, status: 'pending' },
     });
   } catch (_) {}
@@ -81,7 +90,7 @@ async function updateDeliveryStatus({ tenantId, deliveryId, status, patch = {} }
     err.code = 'delivery_not_found';
     throw err;
   }
-  const next = String(status);
+  const next = safeToString(status);
   const now = new Date();
   const timestamps = {};
   if (next === 'dispatched') timestamps.dispatched_at = now;
@@ -105,7 +114,7 @@ async function updateDeliveryStatus({ tenantId, deliveryId, status, patch = {} }
       correlationId,
       subject: { type: 'delivery', id: deliveryId },
       actor: { type: 'system', id: 'api' },
-      idempotencyKey: `delivery_status:${tenantId}:${deliveryId}:${next}:${String(json.updated_at || '')}`,
+      idempotencyKey: `delivery_status:${tenantId}:${deliveryId}:${next}:${safeToString(json.updated_at || '')}`,
       payload: {
         deliveryId,
         orderId: json?.order_id || null,
