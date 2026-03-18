@@ -25,6 +25,28 @@ const {
   cosineSimilarity,
 } = require('../utils/contentNormalization');
 
+function safeString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(error, fallback = '') {
+  let message;
+
+  try {
+    message = error?.message;
+  } catch (_) {
+    message = null;
+  }
+
+  if (message !== null && message !== undefined) return safeString(message, fallback);
+  return safeString(error, fallback);
+}
+
 // Storage em memória para metadados de chunks (em produção, usar Redis ou DB)
 // Estrutura: Map<tenantId, Map<contentHash, metadata>>
 const contentHashIndex = new Map();
@@ -140,7 +162,7 @@ async function checkSemanticDuplicate(tenantId, embedding, semanticHash, sourceI
         logger.warn('[RAGDeduplication] Erro ao calcular similaridade', {
           tenantId,
           chunkId,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       }
     }
