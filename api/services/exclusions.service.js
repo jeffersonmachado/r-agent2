@@ -12,6 +12,15 @@ function safeString(v, fallback = '') {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || safeString(err, fallback) || fallback;
+  } catch (_) {
+    return safeString(err, fallback) || fallback;
+  }
+}
+
 function normalizeKey(s) {
   return safeString(s)
     .trim()
@@ -114,7 +123,7 @@ async function loadTenantExclusions(tenantId, { limit = 100 } = {}) {
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao carregar exclusões persistidas (best-effort)', {
       tenantId: tid,
-      error: err?.message || safeString(err),
+      error: safeErrorMessage(err),
     });
     return [];
   }
@@ -171,7 +180,7 @@ async function persistNewTenantExclusions(tenantId, storedExclusions, inferredEx
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao persistir exclusões (best-effort)', {
       tenantId: tid,
-      error: err?.message || safeString(err),
+      error: safeErrorMessage(err),
     });
     return { persisted: 0, skipped: toInsert.length };
   }
@@ -406,7 +415,7 @@ async function inferExclusions(ragContext, tenantId) {
   } catch (err) {
     logger.warn('[exclusions.service] Falha ao inferir exclusões (best-effort)', {
       tenantId: tid,
-      error: err?.message || safeString(err),
+      error: safeErrorMessage(err),
     });
     return [];
   }
