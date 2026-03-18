@@ -34,6 +34,11 @@ function safeToString(value, fallback = '') {
   try { return String(value); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /**
  * Garante que o flow gerado esteja disponível via API (`GET /flows/:id`) antes do RPA.
  *
@@ -92,9 +97,9 @@ async function ensureFlowPersistedForRpa(execution) {
     logger.error('[PipelineOrchestrator] Falha ao persistir flow para RPA', {
       executionId: execution.executionId,
       flowId: flow.id,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
-    throw new Error(`Falha ao persistir flow para execução RPA: ${err.message}`);
+    throw new Error(`Falha ao persistir flow para execução RPA: ${safeErrorMessage(err)}`);
   }
 }
 
@@ -213,7 +218,7 @@ async function advancePipeline(execution, onProgress = null) {
     persistExecution(execution).catch(err => {
       logger.error('[PipelineOrchestrator] Erro ao persistir execução', {
         executionId: execution.executionId,
-        error: err.message,
+        error: safeErrorMessage(err),
       });
     });
     
@@ -267,7 +272,7 @@ async function advancePipeline(execution, onProgress = null) {
       logger.debug('[PipelineOrchestrator] Falha ao emitir pipeline.status (stage start) (best-effort)', {
         executionId: execution.executionId,
         stage: nextStage,
-        error: err?.message || safeToString(err),
+        error: safeErrorMessage(err),
       });
     }
 
@@ -293,13 +298,13 @@ async function advancePipeline(execution, onProgress = null) {
     logger.error('[PipelineOrchestrator] Erro ao executar etapa', {
       executionId: execution.executionId,
       stage: nextStage,
-      error: error.message,
+      error: safeErrorMessage(error),
     });
     updateStatus(execution, 'failed', {
       currentStage: nextStage,
       stageStatus: 'error',
       reason: { code: 'PIPELINE_STAGE_FAILED', stage: nextStage },
-      message: error.message || `Falha ao executar etapa: ${nextStage}`,
+      message: safeErrorMessage(error) || `Falha ao executar etapa: ${nextStage}`,
       source: 'pipelineOrchestrator.advancePipeline',
     });
 
@@ -307,13 +312,13 @@ async function advancePipeline(execution, onProgress = null) {
     if (execution._recording) {
       execution._recording.recordCustom('error', {
         step: 'pipeline-error',
-        value: { error: error.message, stage: nextStage },
+        value: { error: safeErrorMessage(error), stage: nextStage },
       });
       execution._recording.stop();
       execution._recording.save(`pipeline-${execution.executionId}-error`);
     }
 
-    return { shouldContinue: false, error: error.message };
+    return { shouldContinue: false, error: safeErrorMessage(error) };
   }
 }
 
@@ -533,7 +538,7 @@ async function executeRagContextBuilding(execution) {
       persistExecution(execution).catch(err => {
         logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
           executionId: execution.executionId,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       });
       
@@ -580,7 +585,7 @@ async function executeRagContextBuilding(execution) {
       persistExecution(execution).catch(err => {
         logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
           executionId: execution.executionId,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       });
       
@@ -614,13 +619,13 @@ async function executeRagContextBuilding(execution) {
     // Pela governança epistemológica, isso gera ABSTENÇÃO (não falha).
     logger.error('[PipelineOrchestrator] Erro ao construir contexto RAG (abstenção)', {
       executionId: execution.executionId,
-      error: error.message,
+      error: safeErrorMessage(error),
     });
 
     updateStatus(execution, 'abstained', {
       abstentionReason: {
         code: 'INSUFFICIENT_EVIDENCE',
-        description: error.message || 'Erro ao construir contexto RAG (evidência insuficiente)',
+        description: safeErrorMessage(error) || 'Erro ao construir contexto RAG (evidência insuficiente)',
       },
       decisionAuthority: {
         type: 'system',
@@ -629,7 +634,7 @@ async function executeRagContextBuilding(execution) {
       evidenceContext: {
         available: false,
         type: 'rag',
-        error: error.message,
+        error: safeErrorMessage(error),
         code: error.code || null,
         details: error.details || null,
       },
@@ -640,7 +645,7 @@ async function executeRagContextBuilding(execution) {
     persistExecution(execution).catch(err => {
       logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
         executionId: execution.executionId,
-        error: err.message,
+        error: safeErrorMessage(err),
       });
     });
 
@@ -702,7 +707,7 @@ async function executeAIGeneration(execution) {
       persistExecution(execution).catch(err => {
         logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
           executionId: execution.executionId,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       });
       
@@ -745,7 +750,7 @@ async function executeAIGeneration(execution) {
       persistExecution(execution).catch(err => {
         logger.error('[PipelineOrchestrator] Erro ao persistir execução após abstenção', {
           executionId: execution.executionId,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       });
       
@@ -918,7 +923,7 @@ async function executeSeedGeneration(execution) {
     logger.error('[PipelineOrchestrator] Falha ao gerar seed', {
       executionId: execution.executionId,
       flowId: execution.flow.id,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     throw err;
   }
