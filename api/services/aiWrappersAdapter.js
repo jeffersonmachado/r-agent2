@@ -32,9 +32,11 @@ let cachedRagChatbotBundle = null;
 
 const PROMPT_SUMMARY_MARKER = 'PROMPT_SUMMARY_MODE=1';
 
-function safeToString(v, fallback = '') {
-  if (v == null) return fallback;
-  try { return String(v); } catch (_) { return fallback; }
+function safeToString(v, fallback = '') { if (v == null) return fallback; try { return String(v); } catch (_) { return fallback; } }
+
+function safeTrim(v, fallback = '') {
+  const str = safeToString(v, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
 }
 
 function safeGet(obj, key, fallback = '') {
@@ -44,7 +46,7 @@ function safeGet(obj, key, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   try {
-    const message = err && typeof err === 'object' ? err.message : null;
+    const message = safeGet(err, 'message', '');
     return safeToString(message) || safeToString(err, fallback);
   } catch (_) { return safeToString(err, fallback); }
 }
@@ -80,7 +82,7 @@ function isProviderContextOverflowError(err) {
 }
 
 function extractRagBlockFromPrompt(prompt) {
-  const raw = String(prompt || '');
+  const raw = safeToString(prompt, '');
   const ragStart = raw.indexOf('## Conhecimento Interno (RAG)');
   const userDesc = raw.indexOf('## Descrição do Usuário');
   if (ragStart < 0 || userDesc < 0) return null;
@@ -97,7 +99,7 @@ function buildRagSummarizationPrompt(ragBlock, options = {}) {
   const maxChars = Number.isFinite(Number(options.maxChars)) ? Number(options.maxChars) : 45000;
   const maxLines = Number.isFinite(Number(options.maxLines)) ? Number(options.maxLines) : 60;
   const maxPerSection = Number.isFinite(Number(options.maxPerSection)) ? Number(options.maxPerSection) : 12;
-  const raw = String(ragBlock || '');
+  const raw = safeToString(ragBlock, '');
   const clipped = raw.length > maxChars ? `${raw.slice(0, maxChars)}\n\n[TRUNCATED_INPUT_FOR_SUMMARY=true]` : raw;
 
   return [
@@ -144,7 +146,7 @@ function buildPromptIndicatorDefault({ promptChars }) {
 }
 
 function upsertPromptIndicator(promptText, { summarized, reason, originalPromptChars, summarizedPromptChars }) {
-  const raw = String(promptText || '');
+  const raw = safeToString(promptText, '');
   const hasHeader = raw.includes('## Indicador de Prompt');
   const hasMarker = raw.includes(PROMPT_SUMMARY_MARKER);
 
@@ -176,7 +178,7 @@ function upsertPromptIndicator(promptText, { summarized, reason, originalPromptC
 
 function minifyJsonText(rawJsonText, filenameForLog) {
   try {
-    const obj = JSON.parse(String(rawJsonText || ''));
+    const obj = JSON.parse(safeToString(rawJsonText, ''));
     return JSON.stringify(obj);
   } catch (err) {
     logger.warn('[aiWrappersAdapter] Falha ao minificar JSON (mantendo bruto)', {
@@ -274,7 +276,7 @@ async function callModel(prompt, meta) {
         ...context,
         source: 'aiWrappersAdapter:rag_summarize',
       });
-      summaryText = safeToString(sumRes?.text).trim();
+      summaryText = safeTrim(sumRes?.text);
     } catch (sumErr) {
       logger.warn('[aiWrappersAdapter] Falha ao sumarizar RAG após overflow (sem retry)', {
         tenantId,
@@ -392,22 +394,23 @@ async function buildKnowledgeContext(description, options = {}) {
  * @returns {Promise<{ finalPrompt: string, promptSummary: string, objective: string, ragMeta: { ragUsed: boolean, ragExecutionId: any, ragSources: any[] } }>}
  */
 async function buildChatbotFinalPrompt(description, options = {}) {
-  const objective = typeof description === 'string' ? description.trim() : '';
+  const objective = typeof description === 'string' ? safeTrim(description) : '';
   if (!objective) {
     throw new Error('description é obrigatório');
   }
   const tenantId = options?.tenantId || null;
-  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+  const normalizedTenantId = safeTrim(tenantId);
+  if (!tenantId || typeof tenantId !== 'string' || normalizedTenantId === '') {
     throw new Error('tenantId é obrigatório');
   }
 
   const prompt = loadPrompt('chatbot_flow');
-  const knowledge = await buildKnowledgeContext(objective, { ...options, tenantId: tenantId.trim() });
+  const knowledge = await buildKnowledgeContext(objective, { ...options, tenantId: normalizedTenantId });
 
   const finalPromptRaw = [
     prompt,
     '',
-    knowledge?.text ? safeToString(knowledge.text).trim() : '',
+    knowledge?.text ? safeTrim(knowledge.text) : '',
     '',
     '## Descrição do Usuário',
     objective,
