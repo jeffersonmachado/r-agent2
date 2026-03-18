@@ -4,6 +4,9 @@
  * Coercion-guard tests for systemStatusService.js
  */
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -58,6 +61,17 @@ function hostileErr() {
   return e;
 }
 
+function hostileErrFull() {
+  return {
+    get message() {
+      throw new Error('hostile message getter');
+    },
+    toString() {
+      throw new Error('hostile toString');
+    },
+  };
+}
+
 describe('systemStatusService coercion guards', () => {
   beforeEach(() => {
     config.get.mockImplementation((key, fallback) => fallback);
@@ -71,6 +85,13 @@ describe('systemStatusService coercion guards', () => {
     const out = await checkRedisStatus();
     expect(out.status).toBe('unhealthy');
     expect(typeof out.error).toBe('string');
+  });
+
+  test('checkRedisStatus: hostile err.message and toString in catch does not throw', async () => {
+    isRedisAvailable.mockRejectedValue(hostileErrFull());
+    const out = await checkRedisStatus();
+    expect(out.status).toBe('unhealthy');
+    expect(out.error).toBe('');
   });
 
   test('checkRagServiceStatus: hostile err.message in catch does not throw', async () => {
@@ -101,5 +122,26 @@ describe('systemStatusService coercion guards', () => {
     } finally {
       process.memoryUsage = originalMemoryUsage;
     }
+  });
+
+  test('checkApiServerStatus: hostile err.message and toString in catch does not throw', async () => {
+    const originalMemoryUsage = process.memoryUsage;
+    process.memoryUsage = () => {
+      throw hostileErrFull();
+    };
+    try {
+      const out = await checkApiServerStatus();
+      expect(out.status).toBe('unhealthy');
+      expect(out.error).toBe('');
+    } finally {
+      process.memoryUsage = originalMemoryUsage;
+    }
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/systemStatusService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });

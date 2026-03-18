@@ -13,7 +13,16 @@ const config = require('../utils/config');
 
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
-  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+  let message;
+  try {
+    message = err?.message;
+  } catch (_) {
+    message = null;
+  }
+  if (message !== null && message !== undefined) {
+    try { return String(message); } catch (_) {}
+  }
+  try { return String(err); } catch (_) { return fallback; }
 }
 const { isRedisAvailable, getRateLimitClient } = require('../../infra/redis/rateLimitClient');
 const { isRagAvailable, getRagServiceUrl } = require('./ragService');
