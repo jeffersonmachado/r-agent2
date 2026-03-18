@@ -218,7 +218,7 @@ function isValidUrl(url) {
 function isPlaceholderSite(url) {
   if (!url || typeof url !== 'string') return false;
   try {
-    const u = new URL(url.trim());
+    const u = new URL(safeTrim(url));
     const host = safeTrim(u.hostname || '', '').toLowerCase();
     // placeholders comuns usados pelo sistema/IA
     return host === 'exemplo.com' || host === 'example.com' || host === 'exemplo.org' || host === 'example.org';
@@ -398,7 +398,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
  */
 async function createTenant({ id, tenant_key, name, site, ramo_atividade, objetivo, plan = 'trial', status = null, limits = null, settings = {}, branding = {}, _aiSafeMode = false }) {
   // Validações
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  if (!name || typeof name !== 'string' || safeTrim(name) === '') {
     return { success: false, error: 'Nome é obrigatório' };
   }
 
@@ -406,7 +406,10 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
   // - Em safe-mode por IA, `site` pode estar ausente ou vir como placeholder (ex.: https://exemplo.com).
   //   Nesses casos, tratamos como null (para evitar bloqueio por "site duplicado").
   // - Fora do safe-mode, mantém validação rígida.
-  let normalizedSite = (site && typeof site === 'string') ? site.trim() : '';
+  const normalizedName = safeTrim(name);
+  const normalizedRamo = safeTrim(ramo_atividade);
+  const normalizedObjetivo = safeTrim(objetivo);
+  let normalizedSite = (site && typeof site === 'string') ? safeTrim(site) : '';
   if (_aiSafeMode && (!normalizedSite || isPlaceholderSite(normalizedSite) || !isValidUrl(normalizedSite))) {
     normalizedSite = '';
   }
@@ -419,11 +422,11 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     }
   }
 
-  if (!ramo_atividade || typeof ramo_atividade !== 'string' || ramo_atividade.trim() === '') {
+  if (!ramo_atividade || typeof ramo_atividade !== 'string' || normalizedRamo === '') {
     return { success: false, error: 'Ramo de atividade é obrigatório' };
   }
 
-  if (!objetivo || typeof objetivo !== 'string' || objetivo.trim() === '') {
+  if (!objetivo || typeof objetivo !== 'string' || normalizedObjetivo === '') {
     return { success: false, error: 'Objetivo é obrigatório' };
   }
 
@@ -500,10 +503,10 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     const { Tenant } = getModels();
     const tenantRecord = await Tenant.create({
       tenant_key: finalTenantKey,
-      name: name.trim(),
+      name: normalizedName,
       site: normalizedSite || null,
-      ramo_atividade: ramo_atividade.trim(),
-      objetivo: objetivo.trim(),
+      ramo_atividade: normalizedRamo,
+      objetivo: normalizedObjetivo,
       status: finalStatus,
       plan: plan,
       limits: finalLimits || {},
@@ -541,17 +544,17 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     };
 
     // Cria/atualiza tenant_context automaticamente (tenant_key)
-    syncTenantContext(tenantKey, ramo_atividade.trim(), objetivo.trim(), site.trim());
+    syncTenantContext(tenantKey, normalizedRamo, normalizedObjetivo, normalizedSite);
 
     // Indexa site como fonte institucional canônica (assíncrono, não bloqueia)
     // Hardening: em safe-mode/pending_review, NÃO ativa integrações externas automaticamente.
     if (tenantStatus !== 'pending_review') {
-      indexSiteAsInstitutionalSource(tenantKey, site.trim()).catch(err => {
-        logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, err);
+      indexSiteAsInstitutionalSource(tenantKey, normalizedSite).catch(err => {
+        logger.error(`[TenantService] Erro ao indexar site após criação do tenant:`, safeErrorMessage(err));
       });
     }
 
-    logger.info(`[TenantService] Tenant criado: ${tenantKey} (${name}), plano: ${plan}`);
+    logger.info(`[TenantService] Tenant criado: ${tenantKey} (${normalizedName}), plano: ${plan}`);
 
     return { success: true, tenant };
   } catch (err) {
@@ -898,7 +901,7 @@ async function getTenant(tenantId) {
     const tenantPlan = tenantData.plan;
     
     // Valida que o tenant tem nome (obrigatório)
-    if (!tenantName || (typeof tenantName === 'string' && tenantName.trim() === '')) {
+    if (!tenantName || (typeof tenantName === 'string' && safeTrim(tenantName) === '')) {
       logger.error('[TenantService] Tenant encontrado sem nome', {
         tenantId,
         tenant_key: tenantKey,
@@ -1022,7 +1025,7 @@ async function updateTenantContext(tenantId, updates, options = {}) {
     if (pattern.test(updatesStr)) {
       logger.warn('[TenantService] Tentativa de prompt injection detectada', {
         tenantId,
-        pattern: pattern.toString(),
+        pattern: safeToString(pattern),
       });
       return { success: false, error: 'Atualização inválida detectada' };
     }
@@ -1328,7 +1331,7 @@ async function getTenantUsage(tenantId) {
  * @returns {Promise<any|null>}
  */
 async function findTenantBySite(site) {
-  const s = (site && typeof site === 'string') ? site.trim() : '';
+  const s = (site && typeof site === 'string') ? safeTrim(site) : '';
   if (!s) return null;
   const sequelize = getSequelize();
   if (!sequelize || !isConnected()) return null;
