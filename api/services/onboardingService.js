@@ -13,6 +13,33 @@ const { createQueue } = require('./queueService');
 const flowTemplateMarketplaceService = require('./flowTemplateMarketplaceService');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value).trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || String(err) || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 /**
  * Checklist de onboarding.
  */
@@ -232,7 +259,7 @@ function startOnboarding(tenantId) {
  */
 function normalizeSegment(raw) {
   if (!raw) return 'geral';
-  const s = String(raw).trim().toLowerCase();
+  const s = safeTrim(raw).toLowerCase();
   if (!s) return 'geral';
   return s;
 }
@@ -266,7 +293,7 @@ function getOnboardingTemplatePlan(segment) {
 
 function stableTenantTemplateId(tenantId, globalTemplateId) {
   // Ex: onb-<tenantId>-mkt-lead-captacao
-  return `onb-${tenantId}-${String(globalTemplateId).replace(/[^a-zA-Z0-9_-]/g, '')}`.slice(0, 180);
+  return `onb-${tenantId}-${safeToString(globalTemplateId).replace(/[^a-zA-Z0-9_-]/g, '')}`.slice(0, 180);
 }
 
 async function createInitialTemplates(tenantId, options = {}) {
@@ -297,7 +324,7 @@ async function createInitialTemplates(tenantId, options = {}) {
         created.queues.push(queueResult.queue);
       }
     } catch (err) {
-      logger.warn('[Onboarding] Erro ao criar fila padrão', { tenantId, error: err.message });
+      logger.warn('[Onboarding] Erro ao criar fila padrão', { tenantId, error: safeErrorMessage(err) });
     }
 
     // Cria respostas rápidas padrão
@@ -326,7 +353,7 @@ async function createInitialTemplates(tenantId, options = {}) {
         }
       }
     } catch (err) {
-      logger.warn('[Onboarding] Erro ao criar respostas rápidas', { tenantId, error: err.message });
+      logger.warn('[Onboarding] Erro ao criar respostas rápidas', { tenantId, error: safeErrorMessage(err) });
     }
 
     // Cria templates de fluxo do tenant com base no catálogo global (por segmento)
@@ -354,7 +381,7 @@ async function createInitialTemplates(tenantId, options = {}) {
         }
       }
     } catch (err) {
-      logger.warn('[Onboarding] Erro ao criar templates de fluxo do tenant', { tenantId, segment, error: err.message });
+      logger.warn('[Onboarding] Erro ao criar templates de fluxo do tenant', { tenantId, segment, error: safeErrorMessage(err) });
     }
 
     // Marca templatesCreated no tenant (best-effort)
@@ -389,11 +416,11 @@ async function createInitialTemplates(tenantId, options = {}) {
   } catch (err) {
     logger.error('[Onboarding] Erro ao criar templates iniciais', {
       tenantId,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     return {
       success: false,
-      error: err.message,
+      error: safeErrorMessage(err),
     };
   }
 }
