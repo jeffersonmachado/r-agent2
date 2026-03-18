@@ -4,6 +4,9 @@
  * Coercion-guard tests for tenantSettingsService.js
  */
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/db/sequelize', () => ({
   getSequelize: jest.fn(),
 }));
@@ -41,6 +44,17 @@ function hostileErr() {
   return e;
 }
 
+function hostileErrFull() {
+  return {
+    get message() {
+      throw new Error('hostile message getter');
+    },
+    toString() {
+      throw new Error('hostile toString');
+    },
+  };
+}
+
 describe('tenantSettingsService coercion guards', () => {
   let model;
 
@@ -66,10 +80,24 @@ describe('tenantSettingsService coercion guards', () => {
     expect(typeof out.details).toBe('string');
   });
 
+  test('getSetting: hostile err.message and toString in catch does not throw', async () => {
+    model.findOne.mockRejectedValue(hostileErrFull());
+    const out = await getSetting({ tenantId: 't1', key: 'k1' });
+    expect(out.ok).toBe(false);
+    expect(out.details).toBe('');
+  });
+
   test('upsertSetting: hostile tenantId/key do not throw', async () => {
     model.findOne.mockResolvedValue(null);
     model.create.mockResolvedValue({ toJSON: () => ({ value: {} }) });
     const out = await upsertSetting({ tenantId: hostileToString(), key: hostileToString(), value: {} });
     expect(out.ok).toBe(true);
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/tenantSettingsService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
