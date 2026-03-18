@@ -17,14 +17,14 @@ function makeId(prefix) {
 }
 
 function formatTicketNumber(n) {
-  return String(n).padStart(3, '0');
+  return safeToString(n, '0').padStart(3, '0');
 }
 
 function dayKey(d = new Date()) {
   // UTC date to avoid timezone surprises in multi-unit deployments.
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const m = safeToString(d.getUTCMonth() + 1, '1').padStart(2, '0');
+  const dd = safeToString(d.getUTCDate(), '1').padStart(2, '0');
   return `${y}-${m}-${dd}`;
 }
 
@@ -91,7 +91,7 @@ async function nextTicketNumber({ tenantId, locationId, queueId }) {
 
   const now = new Date();
   const day = dayKey(now);
-  const seqId = `pts-${tenantId}-${locationId || 'null'}-${queueId}-${day}`;
+  const seqId = `pts-${safeToString(tenantId)}-${safeToString(locationId || 'null')}-${safeToString(queueId)}-${day}`;
 
   // Atomic increment using transaction + row lock.
   return sequelize.transaction(async (t) => {
@@ -195,7 +195,7 @@ async function createTicket({ tenantId, locationId, queueId = null, priority = 0
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
       actor: context && context.publicTokenId ? { type: 'public_token', id: safeToString(context.publicTokenId) } : { type: 'system', id: 'api' },
-      idempotencyKey: context && context.idempotencyKey ? `physical_ticket_created:${tenantId}:${safeToString(context.idempotencyKey)}` : null,
+      idempotencyKey: context && context.idempotencyKey ? `physical_ticket_created:${safeToString(tenantId)}:${safeToString(context.idempotencyKey)}` : null,
       payload: {
         ticketId: json.id,
         queueId: qId,
@@ -291,7 +291,7 @@ async function callNext({ tenantId, locationId, stationId = null }) {
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_called:${tenantId}:${json.id}:${safeToString(json.called_at || '')}`,
+      idempotencyKey: `physical_ticket_called:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.called_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -349,7 +349,7 @@ async function startService({ tenantId, ticketId, stationId = null, idempotencyK
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_started:${tenantId}:${json.id}:${safeToString(json.started_at || '')}`,
+      idempotencyKey: `physical_ticket_started:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.started_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, stationId: json.station_id || null, status: 'in_service' },
     });
   } catch (_) {}
@@ -414,8 +414,8 @@ async function pauseService({ tenantId, ticketId, stationId = null, reason = nul
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_service_paused:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
-        : `physical_service_paused:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
+        ? `physical_service_paused:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(idempotencyKey)}`
+        : `physical_service_paused:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.updated_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -482,8 +482,8 @@ async function resumeService({ tenantId, ticketId, stationId = null, idempotency
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_service_resumed:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
-        : `physical_service_resumed:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
+        ? `physical_service_resumed:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(idempotencyKey)}`
+        : `physical_service_resumed:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.updated_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -546,7 +546,7 @@ async function skipTicket({ tenantId, ticketId, stationId = null, reason = null,
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
-      idempotencyKey: idempotencyKey ? `physical_ticket_skipped:${tenantId}:${json.id}:${safeToString(idempotencyKey)}` : `physical_ticket_skipped:${tenantId}:${json.id}:${safeToString(json.updated_at || '')}`,
+      idempotencyKey: idempotencyKey ? `physical_ticket_skipped:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(idempotencyKey)}` : `physical_ticket_skipped:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.updated_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, action: 'skip', reason: reason || null, skipCount: json?.context?.skipCount || null },
     });
   } catch (_) {}
@@ -599,8 +599,8 @@ async function transferTicket({ tenantId, ticketId, toQueueId, idempotencyKey = 
       subject: { type: 'physical_ticket', id: json.id },
       actor: { type: 'system', id: 'transfer' },
       idempotencyKey: idempotencyKey
-        ? `physical_ticket_transferred:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
-        : `physical_ticket_transferred:${tenantId}:${json.id}:${fromQueueId}->${toQueueId}:${safeToString(json.updated_at || '')}`,
+        ? `physical_ticket_transferred:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(idempotencyKey)}`
+        : `physical_ticket_transferred:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(fromQueueId)}->${safeToString(toQueueId)}:${safeToString(json.updated_at || '')}`,
       payload: { ticketId: json.id, ticketNumber: json.ticket_number, fromQueueId, toQueueId },
     });
   } catch (_) {}
@@ -655,8 +655,8 @@ async function abandonTicket({ tenantId, ticketId, stationId = null, reason = nu
       subject: { type: 'physical_ticket', id: json.id },
       actor: stationId ? { type: 'station', id: safeToString(stationId) } : { type: 'system', id: 'station' },
       idempotencyKey: idempotencyKey
-        ? `physical_ticket_abandoned:${tenantId}:${json.id}:${safeToString(idempotencyKey)}`
-        : `physical_ticket_abandoned:${tenantId}:${json.id}:${safeToString(json.finished_at || '')}`,
+        ? `physical_ticket_abandoned:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(idempotencyKey)}`
+        : `physical_ticket_abandoned:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.finished_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
@@ -872,7 +872,7 @@ async function finishTicket({ tenantId, ticketId }) {
       correlationId,
       subject: { type: 'physical_ticket', id: json.id },
       actor: json?.station_id ? { type: 'station', id: safeToString(json.station_id) } : { type: 'system', id: 'station' },
-      idempotencyKey: `physical_ticket_finished:${tenantId}:${json.id}:${safeToString(json.finished_at || '')}`,
+      idempotencyKey: `physical_ticket_finished:${safeToString(tenantId)}:${safeToString(json.id)}:${safeToString(json.finished_at || '')}`,
       payload: {
         ticketId: json.id,
         ticketNumber: json.ticket_number,
