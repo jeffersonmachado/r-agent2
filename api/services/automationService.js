@@ -10,6 +10,16 @@ const tenantSettingsService = require('./tenantSettingsService');
 
 const SETTINGS_KEY = 'automations';
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 function normalizeStore(value) {
   const obj = value && typeof value === 'object' ? value : {};
   return {
@@ -20,10 +30,10 @@ function normalizeStore(value) {
 function normalizeAutomation(item) {
   if (!item || typeof item !== 'object') return null;
   return {
-    id: String(item.id || ''),
-    name: item.name ? String(item.name) : '',
-    description: item.description ? String(item.description) : '',
-    status: item.status ? String(item.status) : 'draft',
+    id: safeToString(item.id || ''),
+    name: item.name ? safeToString(item.name) : '',
+    description: item.description ? safeToString(item.description) : '',
+    status: item.status ? safeToString(item.status) : 'draft',
     definition: item.definition && typeof item.definition === 'object' ? item.definition : {},
     createdAt: item.createdAt || null,
     updatedAt: item.updatedAt || null,
@@ -58,12 +68,12 @@ async function upsertAutomation(tenantId, input) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
   const now = new Date().toISOString();
-  const id = input?.id ? String(input.id) : `auto-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const id = input?.id ? safeToString(input.id) : `auto-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const next = normalizeAutomation({
     id,
-    name: input?.name ? String(input.name).trim() : '',
-    description: input?.description ? String(input.description).trim() : '',
-    status: input?.status ? String(input.status) : 'draft',
+    name: input?.name ? safeTrim(input.name) : '',
+    description: input?.description ? safeTrim(input.description) : '',
+    status: input?.status ? safeToString(input.status) : 'draft',
     definition: input?.definition && typeof input.definition === 'object' ? input.definition : {},
     updatedAt: now,
   });
@@ -88,7 +98,7 @@ async function upsertAutomation(tenantId, input) {
 async function publishAutomation(tenantId, automationId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.automations.findIndex((a) => a && String(a.id) === String(automationId));
+  const idx = out.store.automations.findIndex((a) => a && safeToString(a.id) === safeToString(automationId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const next = normalizeAutomation({
@@ -106,7 +116,7 @@ async function publishAutomation(tenantId, automationId) {
 async function runAutomation(tenantId, automationId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.automations.findIndex((a) => a && String(a.id) === String(automationId));
+  const idx = out.store.automations.findIndex((a) => a && safeToString(a.id) === safeToString(automationId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const runId = `run-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
