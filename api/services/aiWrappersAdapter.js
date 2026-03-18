@@ -32,11 +32,28 @@ let cachedRagChatbotBundle = null;
 
 const PROMPT_SUMMARY_MARKER = 'PROMPT_SUMMARY_MODE=1';
 
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, key, fallback = '') {
+  if (obj == null) return fallback;
+  try { return safeToString(obj[key], fallback); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) { return safeToString(err, fallback); }
+}
+
 function isProviderContextOverflowError(err) {
   if (!err) return false;
-  const msg = String(err?.message || '').toLowerCase();
-  const code = String(err?.code || '').toLowerCase();
-  const type = String(err?.type || '').toLowerCase();
+  const msg = safeErrorMessage(err).toLowerCase();
+  const code = safeGet(err, 'code').toLowerCase();
+  const type = safeGet(err, 'type').toLowerCase();
   const status = typeof err?.status === 'number' ? err.status : null;
 
   // OpenAI costuma sinalizar code/type.
@@ -164,9 +181,9 @@ function minifyJsonText(rawJsonText, filenameForLog) {
   } catch (err) {
     logger.warn('[aiWrappersAdapter] Falha ao minificar JSON (mantendo bruto)', {
       file: filenameForLog,
-      error: err?.message || String(err),
+      error: safeErrorMessage(err),
     });
-    return String(rawJsonText || '');
+    return safeToString(rawJsonText);
   }
 }
 
@@ -228,9 +245,9 @@ async function callModel(prompt, meta) {
     const res = await generateAiResponse(prompt, tenantId, context);
     return { text: res?.text || '', usage: res?.usage || null };
   } catch (err) {
-    const msg = err?.message || String(err);
+    const msg = safeErrorMessage(err);
     const overflow = isProviderContextOverflowError(err);
-    const alreadySummarized = String(prompt || '').includes(PROMPT_SUMMARY_MARKER);
+    const alreadySummarized = safeToString(prompt).includes(PROMPT_SUMMARY_MARKER);
 
     if (!overflow || alreadySummarized) {
       throw err;
@@ -257,11 +274,11 @@ async function callModel(prompt, meta) {
         ...context,
         source: 'aiWrappersAdapter:rag_summarize',
       });
-      summaryText = String(sumRes?.text || '').trim();
+      summaryText = safeToString(sumRes?.text).trim();
     } catch (sumErr) {
       logger.warn('[aiWrappersAdapter] Falha ao sumarizar RAG após overflow (sem retry)', {
         tenantId,
-        error: sumErr?.message || String(sumErr),
+        error: safeErrorMessage(sumErr),
       });
       throw err;
     }
@@ -287,7 +304,7 @@ async function callModel(prompt, meta) {
     const summarizedPromptWithSize = upsertPromptIndicator(summarizedPrompt, {
       summarized: true,
       reason: 'PROVIDER_CONTEXT_OVERFLOW',
-      originalPromptChars: String(prompt || '').length,
+      originalPromptChars: safeToString(prompt).length,
       summarizedPromptChars: summarizedPrompt.length,
     });
 
@@ -301,7 +318,7 @@ async function callModel(prompt, meta) {
     } catch (retryErr) {
       logger.error('[aiWrappersAdapter] Retry com prompt sumarizado falhou', {
         tenantId,
-        error: retryErr?.message || String(retryErr),
+        error: safeErrorMessage(retryErr),
       });
       throw retryErr;
     }
@@ -320,14 +337,14 @@ async function buildKnowledgeContext(description, options = {}) {
     const text = chunks.length
       ? [
           `## Conhecimento Interno (RAG) - Execution ID: ${rc.executionId || 'N/A'}`,
-          ...chunks.slice(0, 18).map((c) => `- ${String(c?.content || c?.text || '').slice(0, 900)}`),
+          ...chunks.slice(0, 18).map((c) => `- ${safeToString(c?.content || c?.text).slice(0, 900)}`),
         ].join('\n')
       : '';
     return {
       text,
       ragUsed: true,
       ragExecutionId: rc.executionId || null,
-      ragSources: sources.map((s) => s?.documentId || s?.sourceId || s?.sourceType || String(s)).slice(0, 40),
+      ragSources: sources.map((s) => s?.documentId || s?.sourceId || s?.sourceType || safeToString(s)).slice(0, 40),
     };
   }
 
@@ -348,7 +365,7 @@ async function buildKnowledgeContext(description, options = {}) {
     const text = contextSources.length
       ? [
           '## Conhecimento Interno (RAG)',
-          ...contextSources.slice(0, 18).map((s) => `- ${String(s?.text || s?.excerpt || '').slice(0, 900)}`),
+          ...contextSources.slice(0, 18).map((s) => `- ${safeToString(s?.text || s?.excerpt).slice(0, 900)}`),
         ].join('\n')
       : '';
     return {
@@ -390,7 +407,7 @@ async function buildChatbotFinalPrompt(description, options = {}) {
   const finalPromptRaw = [
     prompt,
     '',
-    knowledge?.text ? String(knowledge.text).trim() : '',
+    knowledge?.text ? safeToString(knowledge.text).trim() : '',
     '',
     '## Descrição do Usuário',
     objective,
