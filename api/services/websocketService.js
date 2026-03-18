@@ -19,6 +19,21 @@ const { WebSocketServer } = WebSocket;
 const { validateToken } = require('./authService');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return err.message || String(err); } catch (_) { return fallback; }
+}
+
 /**
  * @typedef {Object} WebSocketClient
  * @property {string} id - ID único da conexão
@@ -48,7 +63,7 @@ function getConnectedAgentsByTenant(tenantId) {
   for (const client of clients.values()) {
     if (!client || client.tenantId !== tenantId) continue;
     if (!client.agentId) continue;
-    const agentId = String(client.agentId);
+    const agentId = safeToString(client.agentId);
     const existing = result.get(agentId);
     if (!existing) {
       result.set(agentId, {
@@ -85,7 +100,7 @@ function initializeWebSocket(httpServer) {
   });
 
   wss.on('error', (err) => {
-    logger.error('[WebSocketService] Erro no servidor WebSocket:', err);
+    logger.error('[WebSocketService] Erro no servidor WebSocket:', safeErrorMessage(err));
   });
 
   wss.on('connection', (ws, req) => {
@@ -118,7 +133,7 @@ function initializeWebSocket(httpServer) {
     ws.on('message', async (message) => {
       try {
         client.lastActivity = new Date();
-        const data = JSON.parse(message.toString());
+        const data = JSON.parse(safeToString(message));
 
         // Autenticação
         if (data.type === 'auth' && data.token) {
@@ -174,7 +189,7 @@ function initializeWebSocket(httpServer) {
 
         // Subscribe por executionId (pipeline): permite isolar eventos por execução
         if (data.type === 'subscribeExecution' && data.executionId) {
-          const executionId = typeof data.executionId === 'string' ? data.executionId.trim() : '';
+          const executionId = typeof data.executionId === 'string' ? safeTrim(data.executionId) : '';
           const isValidExecutionId = !!(executionId && executionId.length <= 96 && /^exec-[a-zA-Z0-9-]+$/.test(executionId));
           if (!isValidExecutionId) {
             sendToClient(clientId, {
@@ -196,7 +211,7 @@ function initializeWebSocket(httpServer) {
         }
 
         if (data.type === 'unsubscribeExecution' && data.executionId) {
-          const executionId = typeof data.executionId === 'string' ? data.executionId.trim() : '';
+          const executionId = typeof data.executionId === 'string' ? safeTrim(data.executionId) : '';
           if (executionId) client.executionIds.delete(executionId);
           sendToClient(clientId, {
             type: 'unsubscribeExecution',
@@ -213,7 +228,7 @@ function initializeWebSocket(httpServer) {
           message: 'Tipo de mensagem não reconhecido',
         });
       } catch (err) {
-        logger.error(`[WebSocketService] Erro ao processar mensagem do cliente ${clientId}:`, err);
+        logger.error(`[WebSocketService] Erro ao processar mensagem do cliente ${clientId}:`, safeErrorMessage(err));
         sendToClient(clientId, {
           type: 'error',
           message: 'Erro ao processar mensagem',
@@ -229,7 +244,7 @@ function initializeWebSocket(httpServer) {
 
     // Handler de erro
     ws.on('error', (err) => {
-      logger.error(`[WebSocketService] Erro no WebSocket do cliente ${clientId}:`, err);
+      logger.error(`[WebSocketService] Erro no WebSocket do cliente ${clientId}:`, safeErrorMessage(err));
       clients.delete(clientId);
     });
   });
@@ -267,7 +282,7 @@ function sendToClient(clientId, data) {
   try {
     client.ws.send(JSON.stringify(data));
   } catch (err) {
-    logger.error(`[WebSocketService] Erro ao enviar mensagem para cliente ${clientId}:`, err);
+    logger.error(`[WebSocketService] Erro ao enviar mensagem para cliente ${clientId}:`, safeErrorMessage(err));
   }
 }
 
@@ -285,7 +300,7 @@ function broadcastToTenant(tenantId, data) {
         client.ws.send(JSON.stringify(data));
         sent++;
       } catch (err) {
-        logger.error(`[WebSocketService] Erro ao enviar broadcast para cliente ${clientId}:`, err);
+        logger.error(`[WebSocketService] Erro ao enviar broadcast para cliente ${clientId}:`, safeErrorMessage(err));
       }
     }
   }
@@ -322,7 +337,7 @@ function broadcastToExecution(tenantId, executionId, data) {
       client.ws.send(JSON.stringify(data));
       sent++;
     } catch (err) {
-      logger.error(`[WebSocketService] Erro ao enviar broadcast (execution) para cliente ${clientId}:`, err);
+      logger.error(`[WebSocketService] Erro ao enviar broadcast (execution) para cliente ${clientId}:`, safeErrorMessage(err));
     }
   }
   logger.info('[WebSocketService] Broadcast (execution) enviado', { tenantId, executionId, sent, event: data?.event || null });
@@ -342,7 +357,7 @@ function sendToAgent(agentId, data) {
         client.ws.send(JSON.stringify(data));
         sent++;
       } catch (err) {
-        logger.error(`[WebSocketService] Erro ao enviar mensagem para agente ${agentId}:`, err);
+        logger.error(`[WebSocketService] Erro ao enviar mensagem para agente ${agentId}:`, safeErrorMessage(err));
       }
     }
   }
@@ -376,8 +391,8 @@ function emitEvent(event, payload, options = {}) {
         stages: payload?.stages ? Object.keys(payload.stages).filter((k) => payload.stages[k] === true) : [],
       });
     }
-    if (executionId && typeof executionId === 'string' && executionId.trim()) {
-      broadcastToExecution(tenantId, executionId.trim(), message);
+    if (executionId && typeof executionId === 'string' && safeTrim(executionId)) {
+      broadcastToExecution(tenantId, safeTrim(executionId), message);
     } else {
       broadcastToTenant(tenantId, message);
     }
@@ -391,7 +406,7 @@ function emitEvent(event, payload, options = {}) {
         try {
           client.ws.send(JSON.stringify(message));
         } catch (err) {
-          logger.error(`[WebSocketService] Erro ao enviar evento para cliente ${clientId}:`, err);
+          logger.error(`[WebSocketService] Erro ao enviar evento para cliente ${clientId}:`, safeErrorMessage(err));
         }
       }
     }
