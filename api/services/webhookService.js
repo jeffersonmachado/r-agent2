@@ -18,6 +18,11 @@ const { validateInput, ValidationError } = require('../utils/inputValidator');
 const { getSequelize } = require('../db/sequelize');
 const { Webhook: WebhookGetter } = require('../db/models');
 
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 /**
  * @typedef {Object} Webhook
  * @property {string} id - ID único do webhook
@@ -139,7 +144,7 @@ function persistWebhookBestEffort(webhook) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertWebhookToDb(webhook).catch((err) => {
-      logger.warn('[WebhookService] Falha ao persistir webhook no PostgreSQL', { id: webhook.id, error: err.message });
+      logger.warn('[WebhookService] Falha ao persistir webhook no PostgreSQL', { id: webhook.id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -148,7 +153,7 @@ function deleteWebhookBestEffort(id) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     deleteWebhookFromDb(id).catch((err) => {
-      logger.warn('[WebhookService] Falha ao remover webhook no PostgreSQL', { id, error: err.message });
+      logger.warn('[WebhookService] Falha ao remover webhook no PostgreSQL', { id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -168,7 +173,7 @@ async function initialize() {
     }
     logger.info('[WebhookService] Cache inicializado do PostgreSQL', { count: webhooks.size });
   } catch (err) {
-    logger.warn('[WebhookService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[WebhookService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -265,7 +270,7 @@ function callWebhook(webhook, payload) {
 
         resolve({
           success: false,
-          error: err.message,
+          error: safeErrorMessage(err),
         });
       });
 
@@ -287,7 +292,7 @@ function callWebhook(webhook, payload) {
     } catch (err) {
       resolve({
         success: false,
-        error: err.message,
+        error: safeErrorMessage(err),
       });
     }
   });
@@ -450,7 +455,7 @@ function createWebhook(data) {
     return { success: true, webhook: webhookSafe };
   } catch (err) {
     if (err instanceof ValidationError) {
-      return { success: false, error: err.message };
+      return { success: false, error: safeErrorMessage(err) };
     }
     logger.error('[WebhookService] Erro ao criar webhook:', err);
     return { success: false, error: 'Erro interno ao criar webhook' };
@@ -563,7 +568,7 @@ function updateWebhook(id, updates) {
     return { success: true, webhook: webhookSafe };
   } catch (err) {
     if (err instanceof ValidationError) {
-      return { success: false, error: err.message };
+      return { success: false, error: safeErrorMessage(err) };
     }
     logger.error('[WebhookService] Erro ao atualizar webhook:', err);
     return { success: false, error: 'Erro interno ao atualizar webhook' };

@@ -3,6 +3,11 @@ const { listAgents } = require('./authService');
 const queueDefinitionService = require('./queueDefinitionService');
 const { getConnectedAgentsByTenant } = require('./websocketService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 function parseDate(value) {
   if (!value) return null;
   const d = new Date(value);
@@ -84,7 +89,7 @@ async function getSupervisorMetrics({ tenantId, groupBy = 'agent', period = 'day
   const agents = Array.isArray(agentsRaw)
     ? agentsRaw
     : (agentsRaw && Array.isArray(agentsRaw.agents) ? agentsRaw.agents : []);
-  const agentNameMap = new Map(agents.map((a) => [String(a.id), a.name || a.username || a.email || a.id]));
+  const agentNameMap = new Map(agents.map((a) => [safeToString(a.id), a.name || a.username || a.email || a.id]));
 
   const accumulator = new Map();
 
@@ -95,8 +100,8 @@ async function getSupervisorMetrics({ tenantId, groupBy = 'agent', period = 'day
     if (!periodKey) continue;
 
     const groupKey = effectiveGroupBy === 'queue'
-      ? (ticket.queue ? String(ticket.queue) : 'unknown')
-      : (ticket.assignedTo ? String(ticket.assignedTo) : 'unassigned');
+      ? (ticket.queue ? safeToString(ticket.queue) : 'unknown')
+      : (ticket.assignedTo ? safeToString(ticket.assignedTo) : 'unassigned');
 
     const mapKey = `${periodKey}::${groupKey}`;
     if (!accumulator.has(mapKey)) {
@@ -198,8 +203,8 @@ async function getSupervisorAgentStatus({ tenantId }) {
   const connected = getConnectedAgentsByTenant(tenantId);
 
   return agents.map((agent) => {
-    const agentId = String(agent.id);
-    const agentTickets = tickets.filter((t) => t && t.assignedTo && String(t.assignedTo) === agentId && t.status !== 'closed');
+    const agentId = safeToString(agent.id);
+    const agentTickets = tickets.filter((t) => t && t.assignedTo && safeToString(t.assignedTo) === agentId && t.status !== 'closed');
     const inProgress = agentTickets.filter((t) => t.status === 'in_progress');
     const waiting = agentTickets.filter((t) => t.status === 'waiting');
 
@@ -227,17 +232,17 @@ function getSupervisorQueueStatus({ tenantId }) {
 
   const queueNames = new Set();
   for (const t of tickets) {
-    if (t && t.queue) queueNames.add(String(t.queue));
+    if (t && t.queue) queueNames.add(safeToString(t.queue));
   }
 
   try {
     for (const q of queueDefinitionService.listQueues({ tenantId, activeOnly: false })) {
-      if (q?.name) queueNames.add(String(q.name));
+      if (q?.name) queueNames.add(safeToString(q.name));
     }
   } catch (_) {}
 
   try {
-    for (const q of (listQueues() || [])) queueNames.add(String(q));
+    for (const q of (listQueues() || [])) queueNames.add(safeToString(q));
   } catch (_) {}
 
   const result = [];

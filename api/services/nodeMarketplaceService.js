@@ -10,6 +10,15 @@
 const fs = require('fs');
 const path = require('path');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 const REGISTRY_PATH = path.resolve(__dirname, '../../governance/node-marketplace-registry.json');
 
 function ensureRegistryFile() {
@@ -77,17 +86,17 @@ function listBuiltinNodes() {
 
 function normalizeNodeItem(item, defaults = {}) {
   if (!item || typeof item !== 'object') return null;
-  const id = item.id != null ? String(item.id).trim() : '';
-  const label = item.label != null ? String(item.label).trim() : '';
-  const category = item.category != null ? String(item.category).trim() : '';
-  const version = item.version != null ? String(item.version).trim() : '';
+  const id = item.id != null ? safeTrim(item.id) : '';
+  const label = item.label != null ? safeTrim(item.label) : '';
+  const category = item.category != null ? safeTrim(item.category) : '';
+  const version = item.version != null ? safeTrim(item.version) : '';
   if (!id || !label || !category || !version) return null;
   return {
     id,
     label,
     category,
     version,
-    description: item.description != null ? String(item.description) : null,
+    description: item.description != null ? safeToString(item.description) : null,
     configSchema: item.configSchema && typeof item.configSchema === 'object' ? item.configSchema : null,
     visibility: item.visibility === 'public' ? 'public' : (item.visibility === 'tenant' ? 'tenant' : (defaults.visibility || 'tenant')),
     tenantId: defaults.tenantId || null,
@@ -102,7 +111,7 @@ function listPublishedNodes({ tenantId } = {}) {
   return items.filter((item) => {
     if (!item) return false;
     if (item.visibility === 'public') return true;
-    if (tenantId && item.visibility === 'tenant' && item.tenantId === String(tenantId)) return true;
+    if (tenantId && item.visibility === 'tenant' && item.tenantId === safeToString(tenantId)) return true;
     return false;
   });
 }
@@ -118,8 +127,8 @@ function publishNode({ tenantId, node, actorId = null }) {
   const registry = loadRegistry();
   const items = Array.isArray(registry.items) ? registry.items : [];
   const normalized = normalizeNodeItem(node, {
-    tenantId: String(tenantId),
-    publishedBy: actorId ? String(actorId) : null,
+    tenantId: safeToString(tenantId),
+    publishedBy: actorId ? safeToString(actorId) : null,
     visibility: node && node.visibility ? node.visibility : 'tenant',
   });
   if (!normalized) return { ok: false, error: 'invalid_node' };
@@ -141,7 +150,7 @@ function revokeNode({ tenantId, nodeId }) {
   const registry = loadRegistry();
   const items = Array.isArray(registry.items) ? registry.items : [];
   const before = items.length;
-  registry.items = items.filter((item) => !(item && item.id === String(nodeId) && item.tenantId === String(tenantId)));
+  registry.items = items.filter((item) => !(item && item.id === safeToString(nodeId) && item.tenantId === safeToString(tenantId)));
   if (registry.items.length === before) return { ok: false, error: 'not_found' };
   saveRegistry(registry);
   return { ok: true };

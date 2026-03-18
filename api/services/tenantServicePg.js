@@ -10,6 +10,11 @@ const { getSequelize } = require('../db/sequelize');
 const { Tenant } = require('../db/models');
 const logger = require('../utils/logger');
 
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 /**
  * Verifica se PostgreSQL está disponível
  */
@@ -62,7 +67,7 @@ async function getTenantFromPg(tenantKey) {
       trialExpiresAt: tenant.trialExpiresAt?.toISOString() || null,
     };
   } catch (err) {
-    logger.warn('[TenantServicePg] Erro ao buscar tenant do PostgreSQL:', err.message);
+    logger.warn('[TenantServicePg] Erro ao buscar tenant do PostgreSQL:', safeErrorMessage(err));
     return null;
   }
 }
@@ -102,7 +107,7 @@ async function listTenantsFromPg() {
       trialExpiresAt: tenant.trialExpiresAt?.toISOString() || null,
     }));
   } catch (err) {
-    logger.warn('[TenantServicePg] Erro ao listar tenants do PostgreSQL:', err.message);
+    logger.warn('[TenantServicePg] Erro ao listar tenants do PostgreSQL:', safeErrorMessage(err));
     return [];
   }
 }
@@ -176,7 +181,7 @@ async function saveTenantToPg(tenantData) {
     };
   } catch (err) {
     logger.error('[TenantServicePg] Erro ao salvar tenant no PostgreSQL:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: safeErrorMessage(err) };
   }
 }
 
