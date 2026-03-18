@@ -69,4 +69,29 @@ describe('entityProfileService coercion hardening', () => {
       ],
     })).rejects.toThrow('Resposta da IA não contém JSON válido');
   });
+
+  test('extractJsonFromAiText não crash com getter hostil em JSON.parse err.message', async () => {
+    const logger = require('../../api/utils/logger');
+    jest.doMock('../../api/services/tenantService', () => ({
+      getTenant: jest.fn(async () => ({ id: 't1', name: 'Empresa X', site: 'https://empresa-x.com' })),
+    }));
+    jest.doMock('../../api/services/aiProviderService', () => ({
+      generateAiResponse: jest.fn(async () => ({ text: 'TEXTO_INVALIDO_SEM_JSON' })),
+    }));
+
+    const { buildEntityProfile } = require('../../api/services/entityProfileService');
+
+    await expect(buildEntityProfile('t1', {
+      chunks: [
+        { text: 'Texto suficientemente longo para forcar caminho de IA com evidencias reais e sem fallback prematuro. ' +
+            'Inclui telefone (11) 91111-2222 e detalhes operacionais do negocio para superar o limiar minimo.' },
+      ],
+    })).rejects.toThrow('Resposta da IA não contém JSON válido');
+
+    // O logger.warn deve ter sido chamado com a chave error sem lançar
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[EntityProfile] JSON inválido na resposta da IA',
+      expect.objectContaining({ error: expect.any(String) })
+    );
+  });
 });

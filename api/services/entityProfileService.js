@@ -50,6 +50,15 @@ function safeString(v, fallback = '') {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeString(message) || safeString(err, fallback);
+  } catch (_) {
+    return safeString(err, fallback);
+  }
+}
+
 function cleanOcrText(s) {
   let out = safeString(s);
   // remove control chars
@@ -182,7 +191,7 @@ function extractJsonFromAiText(text) {
   try {
     return JSON.parse(candidate);
   } catch (err) {
-    logger.warn('[EntityProfile] JSON inválido na resposta da IA', { error: err.message });
+    logger.warn('[EntityProfile] JSON inválido na resposta da IA', { error: safeErrorMessage(err) });
     throw new Error('Resposta da IA não contém JSON válido');
   }
 }
