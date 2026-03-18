@@ -94,6 +94,15 @@ function safeTrim(value, fallback = '') {
   try { return s.trim(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err) {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err);
+  } catch (_) {
+    return safeToString(err);
+  }
+}
+
 function intEnv(name, def) {
   const raw = process.env[name];
   const n = raw ? Number(raw) : NaN;
@@ -160,6 +169,10 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   const flowId = flow?.id || null;
   if (!tenantId || !flowId) return { ok: false, reason: 'invalid_args' };
 
+  const tenantIdStr = safeToString(tenantId);
+  const flowIdStr = safeToString(flowId);
+  if (!tenantIdStr || !flowIdStr) return { ok: false, reason: 'invalid_args' };
+
   const compiled = getOrCompileFlow(flow);
   const startNodeId = resolveStartNodeId(compiled);
   if (!startNodeId) return { ok: false, reason: 'start_node_missing' };
@@ -168,9 +181,9 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   const subjectType = event?.subject?.type ? safeToString(event.subject.type) : 'event';
   const subjectId = event?.subject?.id ? safeToString(event.subject.id) : safeToString(event?.id || '');
 
-  const sessionId = `event_${tenantId}_${flowId}_${Date.now()}`;
+  const sessionId = `event_${tenantIdStr}_${flowIdStr}_${Date.now()}`;
   const start = await startFlowExecution({
-    tenantId,
+    tenantId: tenantIdStr,
     flowId: compiled.id,
     flowVersion: compiled.version,
     sessionId,
@@ -193,7 +206,7 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   }
 
   let state = {
-    tenantId,
+    tenantId: tenantIdStr,
     sessionId,
     flowId: compiled.id,
     flowVersion: compiled.version,
@@ -216,7 +229,7 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   };
 
   const registry = createNodeRegistry();
-  const aiProvider = getAiProviderForTenant(tenantId);
+  const aiProvider = getAiProviderForTenant(tenantIdStr);
   const stepsLimit = resolvePositiveStepLimit(maxSteps, intEnv('EVENT_TRIGGER_MAX_STEPS', 50));
   let steps = 0;
   const executionLedgerAdapter = executionId
@@ -264,10 +277,10 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
   } catch (err) {
     if (executionId) {
       await finishFlowExecutionSafe({
-        tenantId,
+        tenantId: tenantIdStr,
         executionId,
         status: 'failed',
-        metaPatch: { error: err.message || safeToString(err) },
+        metaPatch: { error: safeErrorMessage(err) },
       }).catch(() => {});
     }
     throw err;
@@ -275,7 +288,7 @@ async function executeFlowForEvent({ tenantId, flow, event, maxSteps = null }) {
 
   if (executionId) {
     await finishFlowExecutionSafe({
-      tenantId,
+      tenantId: tenantIdStr,
       executionId,
       status: 'done',
       metaPatch: {
@@ -307,13 +320,13 @@ async function dispatchFlowsForEvent({ tenantId, event }) {
       failed += 1;
       failures.push({
         flowId: flow?.id || null,
-        error: err?.message || safeToString(err),
+        error: safeErrorMessage(err),
       });
       logger.warn('[EventTrigger] Falha ao executar flow para evento', {
         tenantId,
         flowId: flow?.id || null,
         eventId: event?.id || null,
-        error: err.message || safeToString(err),
+        error: safeErrorMessage(err),
       });
     }
   }
