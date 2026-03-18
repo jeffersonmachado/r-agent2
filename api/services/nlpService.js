@@ -7,6 +7,21 @@
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 // URL padrão do serviço Python RAG (sem /rag no final, será adicionado no endpoint)
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
 
@@ -19,7 +34,7 @@ const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.s
  */
 async function analyzeText(text, expand = true) {
   try {
-    if (!text || !text.trim()) {
+    if (!safeTrim(text)) {
       throw new Error('Texto não pode ser vazio');
     }
 
@@ -50,7 +65,7 @@ async function analyzeText(text, expand = true) {
     
     return data;
   } catch (error) {
-    logger.error(`[NLPService] Erro ao analisar texto: ${error.message}`, error);
+    logger.error(`[NLPService] Erro ao analisar texto: ${safeErrorMessage(error)}`, error);
     throw error;
   }
 }
