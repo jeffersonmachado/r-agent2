@@ -156,6 +156,16 @@ function createInitialState(flow, sessionId, from) {
   };
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 /**
  * Processa uma mensagem vinda do webhook do WhatsApp.
  *
@@ -165,12 +175,12 @@ function createInitialState(flow, sessionId, from) {
  */
 async function processWhatsAppMessage(message, value, deps) {
   const { flows, sessionEvents, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
-  const effectiveChannelType = (deps && deps.channelType && String(deps.channelType).trim())
-    ? String(deps.channelType).trim()
+  const effectiveChannelType = (deps && deps.channelType && safeTrim(deps.channelType))
+    ? safeTrim(deps.channelType)
     : 'whatsapp';
 
   const from = message.from; // número do usuário (ex.: "5511999999999")
-  const text = message.text && message.text.body ? String(message.text.body) : '';
+  const text = message.text && message.text.body ? safeToString(message.text.body) : '';
   const messageId = message.id;
   const sessionId = `${effectiveChannelType}_${from}`;
 
@@ -179,7 +189,7 @@ async function processWhatsAppMessage(message, value, deps) {
     if (!effectiveTenantId) {
       logger.warn('[MessageProcessor] TenantId ausente; outbound ignorado (best-effort)', {
         to,
-        messageId: messageId ? String(messageId) : null,
+        messageId: messageId ? safeToString(messageId) : null,
         conversationId: conversationId || null,
         sessionId,
       });
@@ -256,7 +266,7 @@ async function processWhatsAppMessage(message, value, deps) {
     // Blindagem: nunca processa inbound sem tenant explícito (evita cross-tenant)
     logger.warn('[MessageProcessor] TenantId ausente no inbound; mensagem ignorada', {
       from,
-      messageId: messageId ? String(messageId) : null,
+      messageId: messageId ? safeToString(messageId) : null,
       conversationId: conversationId || null,
     });
     return;
@@ -290,7 +300,7 @@ async function processWhatsAppMessage(message, value, deps) {
     // Atualiza última mensagem do usuário no ticket e adiciona ao histórico (idempotente por externalMessageId)
     const ts = message?.timestamp ? Number(message.timestamp) : null;
     const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
-    updateLastMessage(existingTicket.id, text, messageId ? String(messageId) : null, iso);
+    updateLastMessage(existingTicket.id, text, messageId ? safeToString(messageId) : null, iso);
     
     // Emite evento WebSocket para notificar sobre nova mensagem do usuário
     const ticket = getTicket(existingTicket.id);
@@ -338,7 +348,7 @@ async function processWhatsAppMessage(message, value, deps) {
     try {
       const ticketFromSession = getTicketBySession(sessionId, inboundTenantId);
       if (ticketFromSession && ticketFromSession.status !== 'closed') {
-        updateLastMessage(ticketFromSession.id, text, messageId ? String(messageId) : null, iso);
+        updateLastMessage(ticketFromSession.id, text, messageId ? safeToString(messageId) : null, iso);
         ticket = getTicket(ticketFromSession.id);
         if (ticket) {
           emitEvent('ticket.message.received', {
@@ -447,7 +457,7 @@ async function processWhatsAppMessage(message, value, deps) {
           flowId: state.flowId,
           flowVersion: state.flowVersion,
           sessionId,
-          correlationId: conversationId ? String(conversationId) : `channel:${effectiveChannelType}:${sessionId}`,
+          correlationId: conversationId ? safeToString(conversationId) : `channel:${effectiveChannelType}:${sessionId}`,
           subjectType: 'channel_session',
           subjectId: sessionId,
           meta: {
@@ -680,7 +690,7 @@ async function processWhatsAppMessage(message, value, deps) {
         // Atualiza ticket existente para fila de atendimento e registra última mensagem (idempotente por externalMessageId)
         const ts = message?.timestamp ? Number(message.timestamp) : null;
         const iso = ts && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
-        updateLastMessage(existing.id, text, messageId ? String(messageId) : null, iso);
+        updateLastMessage(existing.id, text, messageId ? safeToString(messageId) : null, iso);
 
         const mergedContext = {
           ...(existing.context || {}),
