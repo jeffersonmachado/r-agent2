@@ -11,6 +11,21 @@ function safeString(v, fallback = '') {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  let message;
+  try {
+    message = err?.message;
+  } catch (_) {
+    message = null;
+  }
+
+  if (message !== null && message !== undefined) {
+    return safeString(message, fallback);
+  }
+
+  return safeString(err, fallback);
+}
+
 function normalizeWhitespace(text) {
   return safeString(text).replace(/\s+/g, ' ').trim();
 }
@@ -158,7 +173,7 @@ function enrichFromDocumentStore(candidate, tenantId) {
     logger.debug('[RAGContextBuilder] Falha ao enriquecer source via ragDocumentsService', {
       tenantId,
       documentId: docId,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     return candidate;
   }
