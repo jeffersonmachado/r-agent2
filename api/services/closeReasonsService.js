@@ -22,6 +22,11 @@ function safeSafeTrimLower(value, fallback = '') {
   const str = safeToString(value, fallback);
   try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
 }
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function dbAvailable() {
@@ -61,7 +66,7 @@ async function initialize() {
       logger.info('[CloseReasons] Cache inicializado do PostgreSQL', { count: reasons.size });
     }
   } catch (err) {
-    logger.warn('[CloseReasons] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[CloseReasons] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
