@@ -21,18 +21,31 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
-function safeStr(v) {
-  return v == null ? '' : String(v).trim();
+function safeStr(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v).trim(); } catch (_) { return fallback; }
+}
+
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) { return safeToString(err, fallback); }
 }
 
 async function getTenantRow(tenantKey) {
   const TenantModel = typeof TenantGetter === 'function' ? TenantGetter() : TenantGetter;
-  return TenantModel.findOne({ where: { tenant_key: String(tenantKey) } });
+  return TenantModel.findOne({ where: { tenant_key: safeStr(tenantKey) } });
 }
 
 async function getUserRowByEmail(email) {
   const UserModel = typeof UserGetter === 'function' ? UserGetter() : UserGetter;
-  return UserModel.findOne({ where: { email: String(email) } });
+  return UserModel.findOne({ where: { email: safeStr(email) } });
 }
 
 async function ensureTenant({ tenantKey, name, site, ramoAtividade, objetivo, plan = 'trial', settings = {} }) {
@@ -87,7 +100,7 @@ async function ensureAdminUser({ tenantKey, email, password, username = null, na
     };
   }
 
-  const accept = await acceptInvitation(invite.invitationToken, String(password), username || cleanEmail.split('@')[0]);
+  const accept = await acceptInvitation(invite.invitationToken, safeToString(password), username || cleanEmail.split('@')[0]);
   if (!accept.success) {
     throw new Error(accept.error || 'accept_invitation_failed');
   }
@@ -146,7 +159,7 @@ async function bootstrapTenantOneClick({
     ok: true,
     tenantKey: tk,
     startedAt: new Date().toISOString(),
-    suites: Array.isArray(suites) ? suites.map((s) => String(s).trim()).filter(Boolean) : [],
+    suites: Array.isArray(suites) ? suites.map((s) => safeStr(s)).filter(Boolean) : [],
     created: {
       tenant: false,
       adminUser: false,
@@ -206,11 +219,11 @@ async function bootstrapTenantOneClick({
       email: safeStr(adminEmail) || null,
     });
   } catch (err) {
-    result.warnings.push(`admin_user_bootstrap_failed:${err.message}`);
+    result.warnings.push(`admin_user_bootstrap_failed:${safeErrorMessage(err)}`);
     result.report.steps.push({
       step: 'admin_user',
       ok: false,
-      error: err.message || 'admin_user_bootstrap_failed',
+      error: safeErrorMessage(err) || 'admin_user_bootstrap_failed',
       email: safeStr(adminEmail) || null,
     });
   }
@@ -228,11 +241,11 @@ async function bootstrapTenantOneClick({
         segment,
       });
     } catch (err) {
-      result.warnings.push(`templates_bootstrap_failed:${err.message}`);
+      result.warnings.push(`templates_bootstrap_failed:${safeErrorMessage(err)}`);
       result.report.steps.push({
         step: 'templates',
         ok: false,
-        error: err.message || 'templates_bootstrap_failed',
+        error: safeErrorMessage(err) || 'templates_bootstrap_failed',
         segment,
       });
     }
@@ -241,11 +254,11 @@ async function bootstrapTenantOneClick({
   }
 
   const locsRaw = Array.isArray(locationIds) ? locationIds : (locationId != null ? [locationId] : []);
-  const locs = locsRaw.map((x) => (x == null ? null : String(x).trim())).filter((x) => x !== '');
+  const locs = locsRaw.map((x) => (x == null ? null : safeStr(x))).filter((x) => x !== '');
   const effectiveLocs = locs.length > 0 ? locs : [null];
 
   // Suite defaults (opções por suíte)
-  const suiteList = Array.isArray(suites) ? suites.map((s) => String(s).trim().toLowerCase()).filter(Boolean) : [];
+  const suiteList = Array.isArray(suites) ? suites.map((s) => safeStr(s).toLowerCase()).filter(Boolean) : [];
   const suiteTokenKinds = (() => {
     if (!suiteList.length) return null;
     const kinds = new Set();
@@ -270,7 +283,7 @@ async function bootstrapTenantOneClick({
         // eslint-disable-next-line no-await-in-loop
         const q = await upsertPhysicalQueue({
           tenantId: tk,
-          locationId: loc ? String(loc) : null,
+          locationId: loc ? safeStr(loc) : null,
           name: 'Geral',
           status: 'active',
           rules: {},
@@ -285,11 +298,11 @@ async function bootstrapTenantOneClick({
           queueId: q?.id || null,
         });
       } catch (err) {
-        result.warnings.push(`physical_queue_bootstrap_failed:${err.message}`);
+        result.warnings.push(`physical_queue_bootstrap_failed:${safeErrorMessage(err)}`);
         result.report.steps.push({
           step: 'physical_queue',
           ok: false,
-          error: err.message || 'physical_queue_bootstrap_failed',
+          error: safeErrorMessage(err) || 'physical_queue_bootstrap_failed',
           locationId: loc || null,
         });
       }
@@ -301,7 +314,7 @@ async function bootstrapTenantOneClick({
   // 5) Public tokens
   if (createTokens) {
     const kinds = Array.isArray(tokenKinds) && tokenKinds.length
-      ? tokenKinds.map((k) => String(k).trim()).filter(Boolean)
+      ? tokenKinds.map((k) => safeStr(k)).filter(Boolean)
       : (suiteTokenKinds || ['storefront', 'kiosk', 'panel', 'station']);
     for (const loc of effectiveLocs) {
       for (const kind of kinds) {
@@ -310,10 +323,10 @@ async function bootstrapTenantOneClick({
           const ensured = await ensurePublicToken({
             tenantKey: tk,
             kind,
-            locationId: loc ? String(loc) : null,
-            meta: { segment, locationId: loc ? String(loc) : null },
+            locationId: loc ? safeStr(loc) : null,
+            meta: { segment, locationId: loc ? safeStr(loc) : null },
           });
-          const key = loc ? `${kind}:${String(loc)}` : kind;
+          const key = loc ? `${kind}:${safeStr(loc)}` : kind;
           result.created.tokens[key] = ensured.created;
           result.tokens[key] = ensured.token;
           result.report.steps.push({
@@ -325,11 +338,11 @@ async function bootstrapTenantOneClick({
             tokenId: ensured?.token?.id || null,
           });
         } catch (err) {
-          result.warnings.push(`public_token_bootstrap_failed:${kind}:${err.message}`);
+          result.warnings.push(`public_token_bootstrap_failed:${kind}:${safeErrorMessage(err)}`);
           result.report.steps.push({
             step: 'public_token',
             ok: false,
-            error: err.message || 'public_token_bootstrap_failed',
+            error: safeErrorMessage(err) || 'public_token_bootstrap_failed',
             kind,
             locationId: loc || null,
           });
