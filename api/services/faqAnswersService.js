@@ -5,7 +5,11 @@ const { resolveContextSources } = require('./contextSourceResolver');
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
-  return String(v);
+  try {
+    return String(v);
+  } catch (_) {
+    return '';
+  }
 }
 
 function normalizeQuestions(raw, { max = 50 } = {}) {
