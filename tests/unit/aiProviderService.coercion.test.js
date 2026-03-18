@@ -5,6 +5,9 @@
  * Verifies hostile err.message and tenantId toString don't crash provider init/load.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/config', () => ({
   get: jest.fn((key, def) => def),
 }));
@@ -29,6 +32,7 @@ jest.mock('../../api/services/tenantAIService', () => ({
 }));
 
 const { initializeAiProviders, ensureTenantAiConfigLoaded } = require('../../api/services/aiProviderService');
+const { getAIConfig } = require('../../api/services/tenantAIService');
 
 const hostileToString = () => {
   const o = Object.create(null);
@@ -46,5 +50,29 @@ describe('aiProviderService – coercion guards', () => {
     await expect(ensureTenantAiConfigLoaded(hostileToString())).resolves.toEqual(
       expect.objectContaining({ loaded: false })
     );
+  });
+
+  test('initializeAiProviders: hostile err.message and toString during config load does not throw', async () => {
+    const hostileErr = {
+      get message() {
+        throw new Error('hostile message getter');
+      },
+      toString() {
+        throw new Error('hostile toString');
+      },
+    };
+
+    getAIConfig.mockImplementationOnce(async () => {
+      throw hostileErr;
+    });
+
+    await expect(initializeAiProviders()).resolves.toBeUndefined();
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/aiProviderService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
