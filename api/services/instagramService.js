@@ -11,6 +11,33 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const { processWhatsAppMessage } = require('./messageProcessor');
 
+function safeErrorMessage(err) {
+  let message;
+
+  try {
+    message = err?.message;
+  } catch (_) {
+    // Ignore coercion errors from hostile getters.
+  }
+
+  if (typeof message === 'string') return message;
+
+  try {
+    if (message != null) return String(message);
+  } catch (_) {
+    // Ignore coercion errors while coercing extracted message.
+  }
+
+  try {
+    if (typeof err === 'string') return err;
+    if (err != null) return String(err);
+  } catch (_) {
+    // Ignore coercion errors from hostile toString/valueOf.
+  }
+
+  return '';
+}
+
 /**
  * Verifica webhook do Instagram.
  * @param {string} mode
@@ -82,7 +109,7 @@ async function sendInstagramMessage(recipientId, text) {
     logger.error('[Instagram] Erro ao enviar mensagem:', error);
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -216,7 +243,7 @@ async function sendInstagramMedia(recipientId, mediaUrl, mediaType = 'image') {
     logger.error('[Instagram] Erro ao enviar mídia:', error);
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
