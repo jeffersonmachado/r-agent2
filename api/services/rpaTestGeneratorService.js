@@ -20,6 +20,21 @@ const { generateAiResponse } = require('./aiProviderService');
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 // Cache dos prompts carregados
 let cachedPrompts = null;
 
@@ -45,7 +60,7 @@ function loadRpaTestPrompts() {
       cachedPrompts = null;
     }
   } catch (err) {
-    logger.error('Erro ao carregar prompts de teste RPA', { error: err.message });
+    logger.error('Erro ao carregar prompts de teste RPA', { error: safeErrorMessage(err) });
     cachedPrompts = null;
   }
 
@@ -297,7 +312,7 @@ function parseRpaTestResponse(aiResponse) {
       type: typeof aiResponse,
       isNull: aiResponse === null,
       isUndefined: aiResponse === undefined,
-      value: String(aiResponse).substring(0, 200)
+      value: safeToString(aiResponse).substring(0, 200)
     });
     return null;
   }
@@ -346,7 +361,7 @@ function parseRpaTestResponse(aiResponse) {
     return parsed;
   } catch (err) {
     logger.error('Erro ao parsear resposta da IA', { 
-      error: err.message,
+      error: safeErrorMessage(err),
       stack: err.stack,
       responsePreview: aiResponse.substring(0, 500),
       responseLength: aiResponse.length
@@ -397,7 +412,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       });
     }
   } catch (err) {
-    logger.warn('[RpaTestGenerator] Recording desabilitado (best-effort)', { error: err.message });
+    logger.warn('[RpaTestGenerator] Recording desabilitado (best-effort)', { error: safeErrorMessage(err) });
     recording = null;
     recordingId = null;
   }
@@ -514,8 +529,8 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
                           config.get('tests.rpa.frontendUrl') ||
                           config.get('frontend.url') ||
                           'http://localhost:5173';
-      const baseUrl = String(frontendUrl).replace(/\/$/, '');
-      const chatUrl = `${baseUrl}/chat?flowId=${encodeURIComponent(String(flow.id))}`;
+      const baseUrl = safeToString(frontendUrl).replace(/\/$/, '');
+      const chatUrl = `${baseUrl}/chat?flowId=${encodeURIComponent(safeToString(flow.id))}`;;
 
       const insertAt = dependencySteps.length; // depois das dependências
       const firstPostDepStep = rpaTest.steps?.[insertAt];
@@ -566,7 +581,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     // Ex.: "input, textarea, [contenteditable='true']" com exists=false.
     try {
       const isGenericSelector = (sel) => {
-        const s = String(sel || '').trim();
+        const s = safeTrim(sel || '');
         if (!s) return false;
         // Normaliza aspas para facilitar matching
         const norm = s.replace(/"/g, "'").replace(/\s+/g, ' ');
@@ -705,12 +720,12 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     return rpaTest;
   } catch (err) {
     logger.error('Erro ao gerar teste RPA com IA', { 
-      error: err.message,
+      error: safeErrorMessage(err),
       stack: err.stack 
     });
     recording?.recordCustom?.('error', {
       step: 'generation-error',
-      value: { error: err.message },
+      value: { error: safeErrorMessage(err) },
     });
     recording?.stop?.();
     if (recordingId) recording?.save?.(`${recordingId}-error`);
