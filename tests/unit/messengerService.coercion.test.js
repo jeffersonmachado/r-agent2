@@ -18,6 +18,8 @@ jest.mock('../../api/services/messageProcessor', () => ({
   processWhatsAppMessage: jest.fn()
 }));
 
+const fs = require('fs');
+const path = require('path');
 const messengerService = require('../../api/services/messengerService');
 
 describe('messengerService coercion safety', () => {
@@ -31,6 +33,12 @@ describe('messengerService coercion safety', () => {
       enumerable: false,
       get() {
         throw new Error('Hostile message getter');
+      }
+    });
+    Object.defineProperty(err, 'toString', {
+      enumerable: false,
+      get() {
+        throw new Error('Hostile toString getter');
       }
     });
     return err;
@@ -182,6 +190,16 @@ describe('messengerService coercion safety', () => {
       
       const finalMsg = errorMsg || `Messenger API error: ${status}`;
       expect(finalMsg).toBe('Messenger API error: 500');
+    });
+  });
+
+  describe('static guard against unsafe helper pattern', () => {
+    test('service should not contain direct err.message || String(err)', () => {
+      const servicePath = path.join(__dirname, '../../api/services/messengerService.js');
+      const source = fs.readFileSync(servicePath, 'utf8');
+
+      expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+      expect(source).not.toMatch(/try\s*\{\s*return\s+err\.message\s*\|\|\s*String\(err\)/);
     });
   });
 });
