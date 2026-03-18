@@ -41,6 +41,11 @@ function safeTrimLower(value, fallback = '') {
   try { return str.toLowerCase(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 // URL padrão do serviço Python RAG
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
@@ -219,7 +224,7 @@ async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT
       throw new Error(`RAG service timeout após ${timeout}ms ao acessar ${url}`);
     }
     // Melhora mensagens de erro de conexão
-    if (error.message && error.message.includes('fetch failed')) {
+    if (safeErrorMessage(error).includes('fetch failed')) {
       throw new Error(`Falha ao conectar com serviço RAG em ${url}. Verifique se o serviço está rodando e acessível.`);
     }
     throw error;
@@ -368,7 +373,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         });
       }
     } catch (contextError) {
-      logger.warn('[RAGService] Erro ao carregar tenant context', { error: contextError.message });
+      logger.warn('[RAGService] Erro ao carregar tenant context', { error: safeErrorMessage(contextError) });
       // Continua sem contexto se falhar
     }
 
@@ -402,7 +407,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         });
       }
     } catch (nlpError) {
-      logger.warn('[RAGService] NLP não disponível, usando query original', { error: nlpError.message });
+      logger.warn('[RAGService] NLP não disponível, usando query original', { error: safeErrorMessage(nlpError) });
       // Continua com query original se NLP falhar
     }
 
