@@ -3,6 +3,28 @@ const { GenerationFailureReasons } = require('../constants/GenerationFailureReas
 const { createPipelineWs } = require('../ws/pipelineEmitter');
 const { emitPipelineStage } = require('../ws/emitPipelineStage');
 
+function safeToString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(error, fallback = '') {
+  let message;
+
+  try {
+    message = error?.message;
+  } catch (_) {
+    message = null;
+  }
+
+  if (message !== null && message !== undefined) return safeToString(message, fallback);
+  return safeToString(error, fallback);
+}
+
 /**
  * Falha terminal centralizada:
  * - atualiza estado interno via updateStatus(execution, 'failed', metadata)
@@ -18,10 +40,11 @@ async function failGeneration({ execution, reason = GenerationFailureReasons.UNK
       const tenantId = execution?.options?.tenantId || extra?.tenantId || null;
       const executionId = execution?.executionId || null;
       if (tenantId && executionId) {
+        const safeMessage = safeErrorMessage(error);
         emitPipelineStage(createPipelineWs({ tenantId }), executionId, {
           stage: extra?.stage || execution?.currentStage || 'pipeline',
           status: 'error',
-          message: error?.message || 'Falha no pipeline',
+          message: safeMessage || 'Falha no pipeline',
           meta: extra || null,
         });
       }
@@ -34,7 +57,7 @@ async function failGeneration({ execution, reason = GenerationFailureReasons.UNK
       reason: (typeof reason === 'string') ? { code: reason } : reason,
       currentStage: execution.currentStage || null,
       stageStatus: 'error',
-      ...(error ? { message: error.message || String(error) } : {}),
+      ...(error ? { message: safeErrorMessage(error) } : {}),
       ...(extra && typeof extra === 'object' ? { extra } : {}),
     });
   }
