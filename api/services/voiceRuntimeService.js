@@ -64,6 +64,18 @@ const {
   buildExecutionLedgerAdapter,
 } = require('./flowExecutionLedgerService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) { return safeToString(err, fallback); }
+}
+
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
 
@@ -109,13 +121,13 @@ function createNodeRegistry() {
 }
 
 function getSessionKey({ tenantId, callId }) {
-  return `${String(tenantId)}:${String(callId)}`;
+  return `${safeToString(tenantId)}:${safeToString(callId)}`;
 }
 
 function resolveStartNodeId(flow) {
   const nodes = Array.isArray(flow?.nodes) ? flow.nodes : [];
   const startNode = nodes.find((n) => n && n.type === 'start');
-  return startNode ? String(startNode.id) : null;
+  return startNode ? safeToString(startNode.id) : null;
 }
 
 function createInitialState({ flow, sessionId, callId, variables = {} }) {
@@ -129,7 +141,7 @@ function createInitialState({ flow, sessionId, callId, variables = {} }) {
     history: [],
     metadata: {
       channel: 'voice',
-      callId: String(callId),
+      callId: safeToString(callId),
       createdAt: new Date().toISOString(),
       lastVoiceEventId: null,
     },
@@ -143,8 +155,8 @@ async function emitVoiceRuntimeEvent({ tenantId, callId, type, payload }) {
       type,
       source: 'voice.runtime',
       occurredAt: new Date(),
-      correlationId: String(callId),
-      subject: { type: 'pbx_call', id: String(callId) },
+      correlationId: safeToString(callId),
+      subject: { type: 'pbx_call', id: safeToString(callId) },
       actor: { type: 'system', id: 'voice_runtime' },
       idempotencyKey: `voice_runtime:${tenantId}:${callId}:${type}:${Date.now()}`,
       payload: payload && typeof payload === 'object' ? payload : {},
@@ -160,12 +172,12 @@ async function ensureExecutionLedger({ tenantId, state, callId }) {
       flowId: state.flowId,
       flowVersion: state.flowVersion,
       sessionId: state.sessionId,
-      correlationId: `voice:${String(callId)}`,
+      correlationId: `voice:${safeToString(callId)}`,
       subjectType: 'pbx_call',
-      subjectId: String(callId),
+      subjectId: safeToString(callId),
       meta: {
         mode: 'voice',
-        callId: String(callId),
+        callId: safeToString(callId),
       },
     });
     if (started && started.ok) {
@@ -202,15 +214,15 @@ async function runVoiceSession({
     const rawFlow = await require('../../engine/services/persistenceServices').getFlow(flowId);
     flow = rawFlow ? getOrCompileFlow(rawFlow) : null;
   } catch (err) {
-    logger.error('[VoiceRuntime] Falha ao carregar fluxo', { flowId, err: err?.message });
+    logger.error('[VoiceRuntime] Falha ao carregar fluxo', { flowId, err: safeErrorMessage(err) });
   }
 
   if (!flow) return { ok: false, error: 'flow_not_found' };
-  if (String(flow.kind || 'chat') !== 'voice') return { ok: false, error: 'flow_kind_not_voice' };
+  if (safeToString(flow.kind || 'chat') !== 'voice') return { ok: false, error: 'flow_kind_not_voice' };
 
   if (!state) {
     if (!startIfMissing) return { ok: false, error: 'session_not_found' };
-    const sessionId = `voice_${tenantId}_${callId}`;
+    const sessionId = `voice_${safeToString(tenantId)}_${safeToString(callId)}`;
     state = createInitialState({ flow, sessionId, callId, variables });
   }
 
@@ -243,13 +255,13 @@ async function runVoiceSession({
   let lastEvents = [];
 
   if (input) {
-    const incomingEventId = input?.eventId ? String(input.eventId) : null;
-    const lastVoiceEventId = state?.metadata?.lastVoiceEventId ? String(state.metadata.lastVoiceEventId) : null;
+    const incomingEventId = input?.eventId ? safeToString(input.eventId) : null;
+    const lastVoiceEventId = state?.metadata?.lastVoiceEventId ? safeToString(state.metadata.lastVoiceEventId) : null;
     if (incomingEventId && lastVoiceEventId && incomingEventId === lastVoiceEventId) {
       return {
         ok: true,
-        callId: String(callId),
-        flowId: String(flow.id),
+        callId: safeToString(callId),
+        flowId: safeToString(flow.id),
         executionId: executionId || null,
         steps: 0,
         output: null,
@@ -278,7 +290,7 @@ async function runVoiceSession({
         tenantId,
         callId,
         type: 'VoiceRecordingCaptured',
-        payload: { recordingUrl: String(recUrl) },
+        payload: { recordingUrl: safeToString(recUrl) },
       });
     }
   }
@@ -330,8 +342,8 @@ async function runVoiceSession({
 
   return {
     ok: true,
-    callId: String(callId),
-    flowId: String(flow.id),
+    callId: safeToString(callId),
+    flowId: safeToString(flow.id),
     executionId: executionId || null,
     steps,
     output: lastOutput,
@@ -349,10 +361,10 @@ function clearVoiceSession({ tenantId, callId }) {
 function getVoiceRuntimeStats({ tenantId = null } = {}) {
   const items = [];
   for (const [key, state] of sessions.entries()) {
-    const split = String(key).split(':');
+    const split = safeToString(key).split(':');
     const itemTenant = split[0] || null;
     const callId = split.slice(1).join(':') || null;
-    if (tenantId && String(itemTenant) !== String(tenantId)) continue;
+    if (tenantId && safeToString(itemTenant) !== safeToString(tenantId)) continue;
     items.push({
       tenantId: itemTenant,
       callId,
