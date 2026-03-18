@@ -14,6 +14,16 @@ const { getTenant, getTenantUsage } = require('./tenantService');
 const { getSetting, upsertSetting } = require('./tenantSettingsService');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /**
  * Limites padrão por plano.
  */
@@ -224,7 +234,7 @@ function incrementUsage(tenantId, resource, amount = 1) {
       logger.debug('[PlanLimits] Falha ao persistir uso (ignorado)', {
         tenantId,
         resource: normalizedResource,
-        error: err.message,
+        error: safeErrorMessage(err),
       });
     }
   });
