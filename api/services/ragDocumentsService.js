@@ -64,6 +64,11 @@ function safeTrimLower(value, fallback = '') {
   try { return str.toLowerCase(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 function toDbPayload(doc) {
   return {
     id: doc.id,
@@ -303,7 +308,7 @@ function persistDocumentBestEffort(doc) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertDocumentToDb(doc).catch((err) => {
-      logger.warn('[RAGDocuments] Falha ao persistir documento no PostgreSQL', { documentId: doc.id, error: err.message });
+      logger.warn('[RAGDocuments] Falha ao persistir documento no PostgreSQL', { documentId: doc.id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -312,7 +317,7 @@ function deleteDocumentBestEffort(id) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     deleteDocumentFromDb(id).catch((err) => {
-      logger.warn('[RAGDocuments] Falha ao remover documento no PostgreSQL', { documentId: id, error: err.message });
+      logger.warn('[RAGDocuments] Falha ao remover documento no PostgreSQL', { documentId: id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -332,7 +337,7 @@ async function initialize() {
     }
     logger.info('[RAGDocuments] Cache inicializado do PostgreSQL', { count: documents.size });
   } catch (err) {
-    logger.warn('[RAGDocuments] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[RAGDocuments] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -540,7 +545,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 });
               }
             } catch (indexError) {
-              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: indexError.message });
+              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
               documents.set(existingDoc.id, existingDoc);
               persistDocumentBestEffort(existingDoc);
               logger.error('[RAGDocuments] Erro ao indexar documento duplicado', {
@@ -631,11 +636,11 @@ async function createDocument(documentData, tenantId, options = {}) {
                 });
               }
             } catch (indexError) {
-              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: indexError.message });
+              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
               documents.set(existingDoc.id, existingDoc);
               persistDocumentBestEffort(existingDoc);
               logger.error('[RAGDocuments] Erro ao indexar documento duplicado (arquivo)', {
-                error: indexError.message,
+                error: safeErrorMessage(indexError),
                 stack: indexError.stack,
                 documentId: existingDoc.id,
                 tenantId: finalTenantId
@@ -774,7 +779,7 @@ async function createDocument(documentData, tenantId, options = {}) {
         documents.set(document.id, document);
         persistDocumentBestEffort(document);
         logger.error('[RAGDocuments] Erro ao indexar documento automaticamente', {
-          error: indexError.message,
+                error: safeErrorMessage(indexError),
           stack: indexError.stack,
           documentId: document.id,
           tenantId: document.tenantId,

@@ -1,0 +1,50 @@
+--- a/api/services/queueService.js
++++ b/api/services/queueService.js
+@@ -64,6 +64,29 @@ const queues = new Map(); // queueName -> Set<ticketId>
+ function dbAvailable() {
+   return !!getSequelize();
+ }
++
++function safeToString(value, fallback = '') {
++  if (value == null) return fallback;
++  try { return String(value); } catch (_) { return fallback; }
++}
++
++function safeTrim(value, fallback = '') {
++  const str = safeToString(value, fallback);
++  try { return str.trim(); } catch (_) { return fallback; }
++}
++
++function safeTrimLower(value, fallback = '') {
++  const str = safeTrim(value, fallback);
++  try { return str.toLowerCase(); } catch (_) { return fallback; }
++}
++
++function safeGet(obj, path, fallback = null) {
++  try {
++    return path.split('.').reduce((acc, key) => acc?.[key], obj) ?? fallback;
++  } catch (_) {
++    return fallback;
++  }
++}
+ 
+ async function updateConversationForTicket(ticket, patch = {}) {
+   if (!ticket || !ticket.conversationId) return;
+@@ -75,8 +98,8 @@ async function updateConversationForTicket(ticket, patch = {}) {
+     if (!ConversationModel) return;
+     await ConversationModel.update(
+       { ...patch, updated_at: new Date() },
+-      { where: { id: String(ticket.conversationId), tenant_key: String(ticket.tenantId) } },
++      { where: { id: safeToString(ticket.conversationId), tenant_key: safeToString(ticket.tenantId) } },
+     );
+   } catch (err) {
+     logger.debug('[QueueService] Falha ao atualizar channel_conversation (ignorado)', {
+@@ -101,7 +124,7 @@ async function addAgentMessage(
+     if (!ChannelMessage) return;
+ 
+     const channel = ChannelConversationGetter ? ChannelConversationGetter() : ChannelConversation;
+-    const sessionChannel = String(session_id).startsWith('RA_') ? 'RA' : 'DEFAULT';
++    const sessionChannel = safeToString(session_id, 'DEFAULT').startsWith('RA_') ? 'RA' : 'DEFAULT';
+ 
+     const message = await ChannelMessage.create({
+       id: uuid(),
