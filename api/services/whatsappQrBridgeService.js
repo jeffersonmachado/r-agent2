@@ -18,8 +18,26 @@ const activeClients = new Map();
 let started = false;
 let syncTimer = null;
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  return safeToString(value, fallback).trim();
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function isBridgeEnabled() {
-  return String(process.env.ENABLE_WHATSAPP_QR_BRIDGE || 'false').toLowerCase() === 'true';
+  return safeToString(process.env.ENABLE_WHATSAPP_QR_BRIDGE || 'false', 'false').toLowerCase() === 'true';
 }
 
 function syncIntervalMs() {
@@ -28,18 +46,18 @@ function syncIntervalMs() {
 }
 
 function resolveBridgeTenants() {
-  const raw = String(process.env.WHATSAPP_QR_BRIDGE_TENANTS || '').trim();
+  const raw = safeTrim(process.env.WHATSAPP_QR_BRIDGE_TENANTS || '');
   if (!raw) return null;
-  const items = raw.split(',').map((x) => String(x || '').trim()).filter(Boolean);
+  const items = raw.split(',').map((x) => safeTrim(x)).filter(Boolean);
   return items.length > 0 ? Array.from(new Set(items)) : null;
 }
 
 function clientKey(tenantId, connectionId) {
-  return `${String(tenantId)}:${String(connectionId)}`;
+  return `${safeToString(tenantId)}:${safeToString(connectionId)}`;
 }
 
 function sanitizeClientId(tenantId, connectionId) {
-  return `ria_${String(tenantId)}_${String(connectionId)}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
+  return `ria_${safeToString(tenantId)}_${safeToString(connectionId)}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
 }
 
 function loadWhatsappWebJs() {
@@ -53,7 +71,7 @@ function loadWhatsappWebJs() {
 }
 
 function buildPuppeteerOptions() {
-  const noSandbox = String(process.env.WHATSAPP_QR_PUPPETEER_NO_SANDBOX || 'true').toLowerCase() !== 'false';
+  const noSandbox = safeToString(process.env.WHATSAPP_QR_PUPPETEER_NO_SANDBOX || 'true', 'true').toLowerCase() !== 'false';
   return {
     headless: true,
     args: noSandbox
@@ -98,7 +116,7 @@ async function ensureClient({ tenantId, connection }) {
       await ingestConnectionEvent(tenantId, connection.id, {
         eventType: 'qr',
         qr: {
-          text: String(qr || ''),
+          text: safeToString(qr),
           token: '',
           expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
         },
@@ -120,7 +138,7 @@ async function ensureClient({ tenantId, connection }) {
     try {
       await ingestConnectionEvent(tenantId, connection.id, {
         eventType: 'disconnected',
-        metadata: { reason: reason ? String(reason) : null, bridge: 'whatsapp-web.js' },
+        metadata: { reason: reason ? safeToString(reason) : null, bridge: 'whatsapp-web.js' },
       });
     } catch (_) {}
     await destroyClient(key);
@@ -130,7 +148,7 @@ async function ensureClient({ tenantId, connection }) {
     try {
       await ingestConnectionEvent(tenantId, connection.id, {
         eventType: 'error',
-        metadata: { reason: msg ? String(msg) : 'auth_failure', bridge: 'whatsapp-web.js' },
+        metadata: { reason: msg ? safeToString(msg) : 'auth_failure', bridge: 'whatsapp-web.js' },
       });
     } catch (_) {}
   });
@@ -144,11 +162,11 @@ async function ensureClient({ tenantId, connection }) {
     logger.error('[WhatsAppQRBridge] Falha ao inicializar cliente', {
       tenantId,
       connectionId: connection.id,
-      error: err?.message || String(err),
+      error: safeErrorMessage(err),
     });
     await ingestConnectionEvent(tenantId, connection.id, {
       eventType: 'error',
-      metadata: { reason: err?.message || String(err), bridge: 'whatsapp-web.js' },
+      metadata: { reason: safeErrorMessage(err), bridge: 'whatsapp-web.js' },
     }).catch(() => null);
     await destroyClient(key);
   }
@@ -162,7 +180,8 @@ async function resolveTenantIdsForSync() {
     const ids = (Array.isArray(tenants) ? tenants : [])
       .map((t) => t?.tenant_key || t?.id)
       .filter(Boolean)
-      .map(String);
+      .map((value) => safeToString(value))
+      .filter(Boolean);
     if (ids.length > 0) return Array.from(new Set(ids));
   } catch (_) {}
   return ['system'];
@@ -179,11 +198,11 @@ async function syncConnections() {
     const connections = Array.isArray(listed.connections) ? listed.connections : [];
     for (const conn of connections) {
       if (!conn || !conn.id) continue;
-      const provider = String(conn.provider || 'whatsapp-qr').toLowerCase();
+      const provider = safeToString(conn.provider || 'whatsapp-qr', 'whatsapp-qr').toLowerCase();
       if (!provider.includes('whatsapp')) continue;
       const key = clientKey(tenantId, conn.id);
       desired.add(key);
-      if (String(conn.status || '').toLowerCase() === 'disconnected') {
+      if (safeToString(conn.status).toLowerCase() === 'disconnected') {
         // Quando desconectado no painel, garantimos stop do client local.
         // eslint-disable-next-line no-await-in-loop
         await destroyClient(key);
@@ -212,7 +231,7 @@ async function startWhatsAppQrBridge() {
     try {
       await syncConnections();
     } catch (err) {
-      logger.warn('[WhatsAppQRBridge] Falha no sync (ignorado)', { error: err?.message || String(err) });
+      logger.warn('[WhatsAppQRBridge] Falha no sync (ignorado)', { error: safeErrorMessage(err) });
     }
   };
   await tick();
