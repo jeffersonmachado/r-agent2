@@ -78,5 +78,33 @@ describe('api/services/flowGeneratorService - failure metadata on fallback', () 
     expect(flow?.metadata?.aiGeneration?.failureSource).toBe('wrapper');
     expect(String(flow?.metadata?.aiGeneration?.failureMessage || '')).toContain('contrato');
   });
+
+  test('não lança quando err.message é um getter hostil no pipeline de geração', async () => {
+    mockDeps({
+      generateChatbotViaCoreImpl: async () => {
+        const hostile = {};
+        Object.defineProperty(hostile, 'message', {
+          get() { throw new Error('getter hostil em flowGenerator'); },
+          enumerable: true,
+        });
+        throw hostile;
+      },
+    });
+
+    const { generateFlowFromDescription } = require('../../api/services/flowGeneratorService');
+
+    let result;
+    await expect(
+      generateFlowFromDescription('qualquer descrição', {
+        tenantId: 't1',
+        useRag: false,
+        useWebScraping: false,
+        maxFixAttempts: 1,
+      }).then((r) => { result = r; })
+    ).resolves.not.toThrow();
+
+    // Deve ter retornado um flow de fallback (não undefined/null)
+    expect(result).toBeDefined();
+  });
 });
 

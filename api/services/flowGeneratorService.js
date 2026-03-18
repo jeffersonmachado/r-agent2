@@ -39,6 +39,15 @@ function isObject(v) {
   return !!v && typeof v === 'object' && !Array.isArray(v);
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function extractTargetsFromNext(next) {
   if (!next) return [];
   if (typeof next === 'string') return [next];
@@ -531,7 +540,7 @@ function parseAiResponse(aiResponse) {
     
     return parsed;
   } catch (err) {
-    logger.error('Erro ao parsear resposta da IA', { error: err.message, response: aiResponse.substring(0, 200) });
+    logger.error('Erro ao parsear resposta da IA', { error: safeErrorMessage(err), response: aiResponse.substring(0, 200) });
     return null;
   }
 }
@@ -615,11 +624,11 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
           continue;
         }
         if (typeof rawValue === 'string') {
-          updated[key] = nodeIdsSet.has(String(rawValue)) ? rawValue : endNodeId;
+          updated[key] = nodeIdsSet.has(safeToString(rawValue)) ? rawValue : endNodeId;
           continue;
         }
         if (Array.isArray(rawValue)) {
-          updated[key] = rawValue.map((nextId) => (nodeIdsSet.has(String(nextId)) ? nextId : endNodeId));
+          updated[key] = rawValue.map((nextId) => (nodeIdsSet.has(safeToString(nextId)) ? nextId : endNodeId));
           continue;
         }
         // valor inesperado: converte para end
@@ -1058,7 +1067,7 @@ async function generateFlowFromDescription(description, options = {}) {
         if (err && (err.name === 'AbortError' || err.name === 'TimeoutError' || (signal && signal.aborted))) {
           throw err;
         }
-        const msg = err?.message || safeToString(err);
+        const msg = safeErrorMessage(err);
         attempts.push({
           attempt,
           ok: false,
@@ -1133,7 +1142,7 @@ async function generateFlowFromDescription(description, options = {}) {
       } catch (e) {
         // best-effort: nunca falhar geração por migrador (fluxo ainda pode ser validado/retentado)
         logger.debug?.('[flowGeneratorService] Migração contains->equals falhou (best-effort)', {
-          error: e?.message || safeToString(e),
+          error: safeErrorMessage(e),
         });
       }
 
@@ -1202,20 +1211,20 @@ async function generateFlowFromDescription(description, options = {}) {
       throw err;
     }
     logger.error('Erro ao gerar fluxo com wrapper oficial (com retries)', {
-      error: err.message,
-      stack: err.stack,
+      error: safeErrorMessage(err),
+      stack: err?.stack,
     });
 
     attempts.push({
       attempt: attempts.length + 1,
       ok: false,
       kind: 'UNEXPECTED_ERROR',
-      message: err?.message || safeToString(err),
+      message: safeErrorMessage(err),
     });
 
     recording.recordCustom('error', {
       step: 'generation-error',
-      value: { error: err.message },
+      value: { error: safeErrorMessage(err) },
     });
     recording.stop();
     recording.save(`${recordingId}-error`);
@@ -1568,11 +1577,11 @@ function generateFlowFromKeywords(description, options = {}) {
           continue;
         }
         if (typeof rawValue === 'string') {
-          updated[key] = nodeIdsSet.has(String(rawValue)) ? rawValue : endNodeId;
+          updated[key] = nodeIdsSet.has(safeToString(rawValue)) ? rawValue : endNodeId;
           continue;
         }
         if (Array.isArray(rawValue)) {
-          updated[key] = rawValue.map((nextId) => (nodeIdsSet.has(String(nextId)) ? nextId : endNodeId));
+          updated[key] = rawValue.map((nextId) => (nodeIdsSet.has(safeToString(nextId)) ? nextId : endNodeId));
           continue;
         }
         updated[key] = endNodeId;
