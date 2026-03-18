@@ -11,6 +11,16 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const outboundQueueService = require('./outboundQueueService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /**
  * Envia mensagem usando template do WhatsApp Business API.
  * @param {string} to - Número do destinatário
@@ -57,7 +67,7 @@ async function sendTemplateMessage(to, templateName, languageCode = 'pt_BR', par
     logger.error('[WhatsAppTemplate] Erro ao enviar template:', error);
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -185,7 +195,7 @@ async function createTemplate(template) {
     logger.error('[WhatsAppTemplate] Erro ao criar template:', error);
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
