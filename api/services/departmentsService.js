@@ -33,6 +33,24 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value).trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || String(err) || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function toDbPayload(dept) {
   if (!dept || !dept.tenantId || typeof dept.tenantId !== 'string' || dept.tenantId.trim() === '') {
     throw new Error('tenantId é obrigatório para Department');
@@ -90,7 +108,7 @@ function persistDepartmentBestEffort(dept) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertDepartmentToDb(dept).catch((err) => {
-      logger.warn('[DepartmentsService] Falha ao persistir departamento no PostgreSQL', { id: dept.id, error: err.message });
+      logger.warn('[DepartmentsService] Falha ao persistir departamento no PostgreSQL', { id: dept.id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -99,7 +117,7 @@ function deleteDepartmentBestEffort(id) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     deleteDepartmentFromDb(id).catch((err) => {
-      logger.warn('[DepartmentsService] Falha ao remover departamento no PostgreSQL', { id, error: err.message });
+      logger.warn('[DepartmentsService] Falha ao remover departamento no PostgreSQL', { id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -125,7 +143,7 @@ async function initialize() {
       logger.info('[DepartmentsService] Cache inicializado do PostgreSQL', { count: departments.size });
     }
   } catch (err) {
-    logger.warn('[DepartmentsService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[DepartmentsService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -193,18 +211,22 @@ function createDepartment(data) {
     createdBy = null,
     tenantId = null,
   } = data;
+  const normalizedName = safeTrim(name);
+  const normalizedDescription = safeTrim(description);
+  const normalizedColor = safeTrim(color, '#3B82F6') || '#3B82F6';
   
   if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
     return { success: false, error: 'tenantId é obrigatório' };
   }
 
-  if (!name || name.trim() === '') {
+  if (!normalizedName) {
     return { success: false, error: 'Nome do departamento é obrigatório' };
   }
   
   // Verifica se já existe departamento com o mesmo nome
+  const normalizedNameLower = normalizedName.toLowerCase();
   const existing = Array.from(departments.values()).find(
-    d => d.tenantId === tenantId && d.name.toLowerCase() === name.toLowerCase().trim()
+    d => d.tenantId === tenantId && d.name.toLowerCase() === normalizedNameLower
   );
   if (existing) {
     return { success: false, error: 'Já existe um departamento com este nome' };
@@ -216,11 +238,11 @@ function createDepartment(data) {
   const department = {
     id,
     tenantId,
-    name: name.trim(),
-    description: description.trim(),
+    name: normalizedName,
+    description: normalizedDescription,
     agentIds: Array.isArray(agentIds) ? agentIds : [],
     queueNames: Array.isArray(queueNames) ? queueNames : [],
-    color: color.trim(),
+    color: normalizedColor,
     active: true,
     createdAt: now,
     updatedAt: now,
@@ -244,11 +266,14 @@ function updateDepartment(id, updates) {
   if (!existing) {
     return { success: false, error: 'Departamento não encontrado' };
   }
+  const updatedName = updates && Object.prototype.hasOwnProperty.call(updates, 'name')
+    ? safeTrim(updates.name)
+    : null;
   
   // Se está alterando o nome, verifica se não conflita com outro
-  if (updates.name && updates.name.trim() !== existing.name) {
+  if (updatedName && updatedName !== existing.name) {
     const conflicting = Array.from(departments.values()).find(
-      d => d.id !== id && d.name.toLowerCase() === updates.name.toLowerCase().trim()
+      d => d.id !== id && d.name.toLowerCase() === updatedName.toLowerCase()
     );
     if (conflicting) {
       return { success: false, error: 'Já existe um departamento com este nome' };
@@ -263,15 +288,15 @@ function updateDepartment(id, updates) {
   };
   
   // Normaliza campos
-  if (updated.name) updated.name = updated.name.trim();
-  if (updated.description) updated.description = updated.description.trim();
+  if (updated.name) updated.name = safeTrim(updated.name);
+  if (updated.description) updated.description = safeTrim(updated.description);
   if (updated.agentIds) {
     updated.agentIds = Array.isArray(updated.agentIds) ? updated.agentIds : [];
   }
   if (updated.queueNames) {
     updated.queueNames = Array.isArray(updated.queueNames) ? updated.queueNames : [];
   }
-  if (updated.color) updated.color = updated.color.trim();
+  if (updated.color) updated.color = safeTrim(updated.color);
   
   departments.set(id, updated);
   persistDepartmentBestEffort(updated);
