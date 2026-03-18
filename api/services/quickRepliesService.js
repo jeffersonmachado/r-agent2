@@ -33,6 +33,29 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value).trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeLowerTrim(value, fallback = '') {
+  const s = safeTrim(value, fallback);
+  return s ? s.toLowerCase() : s;
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || String(err) || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function toDbPayload(reply) {
   if (!reply || !reply.tenantId || typeof reply.tenantId !== 'string' || reply.tenantId.trim() === '') {
     throw new Error('tenantId é obrigatório para QuickReply');
@@ -90,7 +113,7 @@ function persistQuickReplyBestEffort(reply) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertQuickReplyToDb(reply).catch((err) => {
-      logger.warn('[QuickRepliesService] Falha ao persistir quick reply no PostgreSQL', { id: reply.id, error: err.message });
+      logger.warn('[QuickRepliesService] Falha ao persistir quick reply no PostgreSQL', { id: reply.id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -99,7 +122,7 @@ function deleteQuickReplyBestEffort(id) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     deleteQuickReplyFromDb(id).catch((err) => {
-      logger.warn('[QuickRepliesService] Falha ao remover quick reply no PostgreSQL', { id, error: err.message });
+      logger.warn('[QuickRepliesService] Falha ao remover quick reply no PostgreSQL', { id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -125,7 +148,7 @@ async function initialize() {
       logger.info('[QuickRepliesService] Cache inicializado do PostgreSQL', { count: quickReplies.size });
     }
   } catch (err) {
-    logger.warn('[QuickRepliesService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[QuickRepliesService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -140,25 +163,27 @@ async function initialize() {
  */
 function listQuickReplies(filters = {}) {
   let results = Array.from(quickReplies.values());
+  const categoryFilter = safeTrim(filters.category);
+  const tagFilter = safeTrim(filters.tag);
 
   if (filters.tenantId) {
     results = results.filter((r) => r.tenantId === filters.tenantId);
   }
   
-  if (filters.category) {
-    results = results.filter(r => r.category === filters.category);
+  if (categoryFilter) {
+    results = results.filter(r => r.category === categoryFilter);
   }
   
-  if (filters.tag) {
-    results = results.filter(r => r.tags && r.tags.includes(filters.tag));
+  if (tagFilter) {
+    results = results.filter(r => r.tags && r.tags.includes(tagFilter));
   }
   
   if (filters.activeOnly !== false) {
     results = results.filter(r => r.active !== false);
   }
   
-  if (filters.search) {
-    const searchLower = filters.search.toLowerCase();
+  const searchLower = safeLowerTrim(filters.search);
+  if (searchLower) {
     results = results.filter(r => 
       r.title.toLowerCase().includes(searchLower) ||
       r.message.toLowerCase().includes(searchLower) ||
@@ -198,12 +223,18 @@ function getQuickReply(id) {
  */
 function createQuickReply(data) {
   const { title, message, tags = [], category = 'geral', createdBy = null, tenantId = null } = data;
+  const normalizedTitle = safeTrim(title);
+  const normalizedMessage = safeTrim(message);
+  const normalizedCategory = safeLowerTrim(category, 'geral') || 'geral';
+  const normalizedTags = Array.isArray(tags)
+    ? tags.map((t) => safeLowerTrim(t)).filter(Boolean)
+    : [];
   
   if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
     return { success: false, error: 'tenantId é obrigatório' };
   }
   
-  if (!title || !message) {
+  if (!normalizedTitle || !normalizedMessage) {
     return { success: false, error: 'Título e mensagem são obrigatórios' };
   }
   
@@ -213,10 +244,10 @@ function createQuickReply(data) {
   const quickReply = {
     id,
     tenantId,
-    title: title.trim(),
-    message: message.trim(),
-    tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()) : [],
-    category: category.trim().toLowerCase(),
+    title: normalizedTitle,
+    message: normalizedMessage,
+    tags: normalizedTags,
+    category: normalizedCategory,
     usageCount: 0,
     createdAt: now,
     updatedAt: now,
@@ -248,23 +279,27 @@ function updateQuickReply(id, updates) {
     id, // Garante que o ID não seja alterado
     updatedAt: new Date().toISOString(),
   };
+  const hasTitle = Object.prototype.hasOwnProperty.call(updates || {}, 'title');
+  const hasMessage = Object.prototype.hasOwnProperty.call(updates || {}, 'message');
   
   // Valida campos obrigatórios
-  if (updated.title && updated.title.trim() === '') {
+  if (hasTitle && safeTrim(updated.title) === '') {
     return { success: false, error: 'Título não pode estar vazio' };
   }
-  if (updated.message && updated.message.trim() === '') {
+  if (hasMessage && safeTrim(updated.message) === '') {
     return { success: false, error: 'Mensagem não pode estar vazia' };
   }
   
   // Normaliza campos
-  if (updated.title) updated.title = updated.title.trim();
-  if (updated.message) updated.message = updated.message.trim();
+  if (updated.title) updated.title = safeTrim(updated.title);
+  if (updated.message) updated.message = safeTrim(updated.message);
   if (updated.tags) {
-    updated.tags = Array.isArray(updated.tags) ? updated.tags.map(t => t.trim().toLowerCase()) : [];
+    updated.tags = Array.isArray(updated.tags)
+      ? updated.tags.map((t) => safeLowerTrim(t)).filter(Boolean)
+      : [];
   }
   if (updated.category) {
-    updated.category = updated.category.trim().toLowerCase();
+    updated.category = safeLowerTrim(updated.category);
   }
   
   quickReplies.set(id, updated);
