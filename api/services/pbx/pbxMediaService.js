@@ -4,6 +4,26 @@ const path = require('path');
 const { spawn } = require('child_process');
 const models = require('../../db/models');
 
+function safeString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorField(error, field, fallback = '') {
+  let value;
+  try {
+    value = error?.[field];
+  } catch (_) {
+    value = null;
+  }
+  if (value !== null && value !== undefined) return safeString(value, fallback);
+  return fallback;
+}
+
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -84,7 +104,10 @@ async function createAudioAssetFromUpload({
     await ffmpegConvertToWav({ inputPath: rawPath, outputPath: wavPath });
     converted = true;
   } catch (err) {
-    convertError = { code: err.code || 'convert_error', message: err.message || 'convert failed' };
+    convertError = {
+      code: safeErrorField(err, 'code', 'convert_error') || 'convert_error',
+      message: safeErrorField(err, 'message', 'convert failed') || 'convert failed',
+    };
   }
 
   const storage = {
