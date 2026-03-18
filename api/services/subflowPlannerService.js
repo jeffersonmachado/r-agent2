@@ -13,6 +13,19 @@
 const logger = require('../utils/logger');
 const { generateAiResponse } = require('./aiProviderService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 function clampInt(v, { min, max, fallback }) {
   const n = Number(v);
   if (!Number.isFinite(n)) return fallback;
@@ -47,7 +60,7 @@ async function planSubflows(input) {
   const tenantId = input?.tenantId;
   if (!tenantId || typeof tenantId !== 'string') return [];
 
-  const description = String(input?.description || '').trim();
+  const description = safeTrim(input?.description || '');
   if (!description) return [];
 
   const subflowMax = clampInt(input?.subflowMax, { min: 0, max: 5, fallback: 2 });
@@ -70,7 +83,7 @@ async function planSubflows(input) {
     '{ "subflows": [ { "name": "string", "description": "string", "role": "string(opcional)" } ] }',
     '',
     'Contexto do fluxo principal:',
-    `- Nome: ${input?.name ? String(input.name).slice(0, 120) : 'N/A'}`,
+    `- Nome: ${input?.name ? safeToString(input.name).slice(0, 120) : 'N/A'}`,
     `- Descrição: ${description.slice(0, 2500)}`,
   ].join('\n');
 
@@ -86,9 +99,9 @@ async function planSubflows(input) {
     const cleaned = [];
     for (const sf of subflowsRaw) {
       if (!sf || typeof sf !== 'object') continue;
-      const name = String(sf.name || '').trim().slice(0, 120);
-      const desc = String(sf.description || '').trim().slice(0, 2000);
-      const role = sf.role != null ? String(sf.role || '').trim().slice(0, 80) : undefined;
+      const name = safeTrim(sf.name || '').slice(0, 120);
+      const desc = safeTrim(sf.description || '').slice(0, 2000);
+      const role = sf.role != null ? safeTrim(sf.role || '').slice(0, 80) : undefined;
       if (!name || desc.length < 20) continue;
       cleaned.push({ name, description: desc, ...(role ? { role } : {}) });
       if (cleaned.length >= subflowMax) break;
@@ -104,7 +117,7 @@ async function planSubflows(input) {
   } catch (err) {
     logger.warn('[SubflowPlanner] Falha ao planejar subfluxos (best-effort)', {
       tenantId,
-      error: err?.message || String(err),
+      error: safeErrorMessage(err),
     });
     return [];
   }

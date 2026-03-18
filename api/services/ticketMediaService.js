@@ -1,10 +1,19 @@
 const crypto = require('crypto');
 const getTicketMediaModel = require('../db/models/TicketMedia');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 let ensureReadyPromise = null;
 
 function normalizeTenant(tenantId) {
-  const value = String(tenantId || '').trim();
+  const value = safeTrim(tenantId || '');
   return value || 'default';
 }
 
@@ -28,7 +37,7 @@ function buildMediaId() {
 
 function toSize(value, fallback = null) {
   if (Number.isFinite(value)) return Number(value);
-  const parsed = parseInt(String(value || ''), 10);
+  const parsed = parseInt(safeToString(value || ''), 10);
   if (Number.isFinite(parsed)) return parsed;
   return fallback;
 }
@@ -42,8 +51,8 @@ async function storeTicketMedia({ tenantId, fileName, mimeType, sizeBytes, buffe
   const id = buildMediaId();
   const normalizedTenant = normalizeTenant(tenantId);
   const now = new Date();
-  const safeMimeType = String(mimeType || '').trim() || 'application/octet-stream';
-  const safeFileName = String(fileName || '').trim() || id;
+  const safeMimeType = safeTrim(mimeType || '') || 'application/octet-stream';
+  const safeFileName = safeTrim(fileName || '') || id;
   const finalSize = toSize(sizeBytes, buffer.length);
   const hash = crypto.createHash('sha256').update(buffer).digest('hex');
 
@@ -54,7 +63,7 @@ async function storeTicketMedia({ tenantId, fileName, mimeType, sizeBytes, buffe
     mimeType: safeMimeType,
     sizeBytes: finalSize,
     sha256: hash,
-    createdBy: createdBy ? String(createdBy) : null,
+    createdBy: createdBy ? safeToString(createdBy) : null,
     data: buffer,
     created_at: now,
     updated_at: now,
@@ -75,7 +84,7 @@ async function getTicketMediaById(id, tenantId) {
   const normalizedTenant = normalizeTenant(tenantId);
 
   const row = await TicketMedia.findOne({
-    where: { id: String(id), tenantKey: normalizedTenant },
+    where: { id: safeToString(id), tenantKey: normalizedTenant },
   });
 
   if (!row) return null;
