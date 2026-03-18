@@ -22,6 +22,15 @@ function safeString(v, fallback = '') {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeString(message) || safeString(err, fallback);
+  } catch (_) {
+    return safeString(err, fallback);
+  }
+}
+
 function clamp01(x) {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(1, x));
@@ -482,7 +491,7 @@ async function generateFaq(input) {
       }
     }
   } catch (err) {
-    logger.warn('[FAQ] Falha ao gerar embeddings; degradando para agrupamento simples', { tenantId, error: err.message });
+    logger.warn('[FAQ] Falha ao gerar embeddings; degradando para agrupamento simples', { tenantId, error: safeErrorMessage(err) });
     questionEmb = null;
     chunkEmbAll = null;
   }
@@ -573,7 +582,7 @@ async function generateFaq(input) {
   try {
     categoryNames = await inferCategoryNamesWithAI({ tenantId, clusters: enrichedClusters });
   } catch (err) {
-    logger.debug('[FAQ] Falha ao inferir labels via IA; fallback determinístico', { tenantId, error: err.message });
+    logger.debug('[FAQ] Falha ao inferir labels via IA; fallback determinístico', { tenantId, error: safeErrorMessage(err) });
     categoryNames = null;
   }
 

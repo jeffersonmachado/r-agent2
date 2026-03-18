@@ -88,4 +88,27 @@ describe('faqGeneratorService coercion hardening', () => {
     expect(Array.isArray(out.flatQuestions)).toBe(true);
     out.flatQuestions.forEach((q) => expect(typeof q).toBe('string'));
   });
+
+  test('generateFaq survives hostile err.message getters thrown in embedding/label steps', async () => {
+    jest.resetModules();
+    jest.clearAllMocks();
+    buildMocks();
+
+    // Override ragService to return a hostile error when generateEmbeddingsBatch is called
+    const hostileErr = {};
+    Object.defineProperty(hostileErr, 'message', { get() { throw new Error('boom-getter'); } });
+    jest.doMock('../../api/services/ragService', () => ({
+      generateEmbeddingsBatch: jest.fn(async () => { throw hostileErr; }),
+    }));
+
+    const { generateFaq } = require('../../api/services/faqGeneratorService');
+    // Should not throw — service degrades gracefully
+    const out = await generateFaq({ tenantId: 'tenant-hostile-err' });
+    expect(out).toEqual(expect.objectContaining({
+      faq: expect.any(Array),
+      flatQuestions: expect.any(Array),
+      coverage: 0,
+    }));
+    expect(out.faq.length).toBeGreaterThanOrEqual(1);
+  });
 });
