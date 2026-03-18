@@ -16,6 +16,16 @@ const logger = require('../utils/logger');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 // Diretório onde resultados de QA são salvos
 const QA_RESULTS_DIR = path.join(__dirname, '../../qa');
 const QA_RESULT_FILE = path.join(QA_RESULTS_DIR, 'qa-result.json');
@@ -37,7 +47,7 @@ function getLatestQaResult() {
     const results = readQaResults(1);
     return results.length > 0 ? results[0] : null;
   } catch (error) {
-    logger.error('[qaService] Erro ao obter último resultado QA', { error: error.message });
+    logger.error('[qaService] Erro ao obter último resultado QA', { error: safeErrorMessage(error) });
     return null;
   }
 }
@@ -64,7 +74,7 @@ function getQaHistory(options = {}) {
     // Limita resultados
     return results.slice(0, limit);
   } catch (error) {
-    logger.error('[qaService] Erro ao obter histórico QA', { error: error.message });
+    logger.error('[qaService] Erro ao obter histórico QA', { error: safeErrorMessage(error) });
     return [];
   }
 }
@@ -91,7 +101,7 @@ function getQaResultById(id) {
 
     return result || null;
   } catch (error) {
-    logger.error('[qaService] Erro ao obter resultado QA por ID', { error: error.message });
+    logger.error('[qaService] Erro ao obter resultado QA por ID', { error: safeErrorMessage(error) });
     return null;
   }
 }
@@ -202,9 +212,10 @@ function runQaManual(options = {}) {
 
     return result;
   } catch (error) {
+    const errorMessage = safeErrorMessage(error, 'Erro ao executar QA manual');
     replay.recordError(error, 'qa-execution');
     replay.recordEvent('qa_execution_failed', {
-      error: error.message,
+      error: errorMessage,
     });
     replay.stop();
     const replayPath = replay.save(`${replayId}-error`);
@@ -212,13 +223,13 @@ function runQaManual(options = {}) {
     // Registra erro na gravação
     recording.recordCustom('error', {
       step: 'qa-execution-error',
-      value: { error: error.message },
+      value: { error: errorMessage },
     });
     recording.stop();
     const recordingPath = recording.save(`${recordingId}-error`);
     
     logger.error('[qaService] Erro ao executar QA manual', {
-      error: error.message,
+      error: errorMessage,
       replayPath,
       recordingPath,
     });
@@ -235,7 +246,7 @@ function getQaStatistics() {
   try {
     return getQaStats();
   } catch (error) {
-    logger.error('[qaService] Erro ao obter estatísticas QA', { error: error.message });
+    logger.error('[qaService] Erro ao obter estatísticas QA', { error: safeErrorMessage(error) });
     return {
       total: 0,
       byStatus: { PASS: 0, FAIL: 0, WARN: 0 },
