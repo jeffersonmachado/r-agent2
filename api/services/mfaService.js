@@ -1,5 +1,14 @@
 const crypto = require('crypto');
 const { encrypt, decrypt } = require('../utils/crypto');
+
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
 const { getSequelize } = require('../db/sequelize');
 const { User: UserGetter } = require('../db/models');
 
@@ -17,7 +26,7 @@ function getUserModel() {
 }
 
 function hashCode(value) {
-  return crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
+  return crypto.createHash('sha256').update(safeToString(value), 'utf8').digest('hex');
 }
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -45,7 +54,7 @@ function base32Encode(buffer) {
 }
 
 function base32Decode(input) {
-  const clean = String(input || '').replace(/=+$/, '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  const clean = safeToString(input || '').replace(/=+$/, '').toUpperCase().replace(/[^A-Z2-7]/g, '');
   let bits = 0;
   let value = 0;
   const bytes = [];
@@ -70,8 +79,8 @@ function generateSecret() {
 }
 
 function buildOtpAuthUrl({ secret, label, issuer }) {
-  const safeIssuer = issuer ? String(issuer).trim() : 'ChatPro';
-  const safeLabel = label ? String(label).trim() : 'Conta';
+  const safeIssuer = issuer ? safeTrim(issuer) : 'ChatPro';
+  const safeLabel = label ? safeTrim(label) : 'Conta';
   const encodedLabel = encodeURIComponent(`${safeIssuer}:${safeLabel}`);
   const encodedIssuer = encodeURIComponent(safeIssuer);
   return `otpauth://totp/${encodedLabel}?secret=${secret}&issuer=${encodedIssuer}&algorithm=SHA1&digits=${MFA_DIGITS}&period=${MFA_STEP_SECONDS}`;
@@ -96,7 +105,7 @@ function generateTotp(secret, timestamp = Date.now()) {
 }
 
 function verifyTotp(token, secret) {
-  const clean = String(token || '').replace(/\s+/g, '');
+  const clean = safeToString(token || '').replace(/\s+/g, '');
   if (!clean) return false;
   const now = Date.now();
   for (let w = -MFA_WINDOW; w <= MFA_WINDOW; w += 1) {

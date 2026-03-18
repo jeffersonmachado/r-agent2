@@ -13,6 +13,11 @@
 
 const crypto = require('crypto');
 const logger = require('../utils/logger');
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
 const { emitEvent } = require('./websocketService');
 
 const STAGE_LABELS_PT = Object.freeze({
@@ -358,7 +363,7 @@ function updateStage(execution, stage, value) {
     logger.debug('[PipelineContext] Falha ao emitir pipeline.status em updateStage (best-effort)', {
       executionId: execution.executionId,
       stage,
-      error: err?.message || String(err),
+      error: safeErrorMessage(err),
     });
   }
 
@@ -398,7 +403,7 @@ function updateStatus(execution, status, metadata = {}) {
       logger.debug('[PipelineContext] Falha ao re-emitir pipeline.status terminal (best-effort)', {
         executionId: execution.executionId,
         status: previousStatus,
-        error: err?.message || String(err),
+        error: safeErrorMessage(err),
       });
     }
     return;
@@ -475,7 +480,7 @@ function updateStatus(execution, status, metadata = {}) {
       logger.debug('[PipelineContext] Falha ao emitir pipeline.status em regressão (best-effort)', {
         executionId: execution.executionId,
         status: previousStatus,
-        error: err?.message || String(err),
+        error: safeErrorMessage(err),
       });
     }
     return;
@@ -528,7 +533,7 @@ function updateStatus(execution, status, metadata = {}) {
     logger.debug('[PipelineContext] Falha ao emitir pipeline.status (best-effort)', {
       executionId: execution.executionId,
       status,
-      error: err?.message || String(err),
+      error: safeErrorMessage(err),
     });
   }
 }

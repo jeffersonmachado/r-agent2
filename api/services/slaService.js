@@ -8,6 +8,15 @@
 const crypto = require('crypto');
 const tenantSettingsService = require('./tenantSettingsService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 const SETTINGS_KEY = 'sla_policies';
 
 function normalizeStore(value) {
@@ -21,10 +30,10 @@ function normalizeStore(value) {
 function normalizePolicy(item) {
   if (!item || typeof item !== 'object') return null;
   return {
-    id: String(item.id || ''),
-    name: item.name ? String(item.name) : '',
-    description: item.description ? String(item.description) : '',
-    customerSegment: item.customerSegment ? String(item.customerSegment) : 'default',
+    id: safeToString(item.id || ''),
+    name: item.name ? safeToString(item.name) : '',
+    description: item.description ? safeToString(item.description) : '',
+    customerSegment: item.customerSegment ? safeToString(item.customerSegment) : 'default',
     responseTimeMin: Number.isFinite(item.responseTimeMin) ? Number(item.responseTimeMin) : null,
     resolutionTimeMin: Number.isFinite(item.resolutionTimeMin) ? Number(item.resolutionTimeMin) : null,
     enabled: item.enabled !== false,
@@ -57,12 +66,12 @@ async function upsertPolicy(tenantId, input) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
   const now = new Date().toISOString();
-  const id = input?.id ? String(input.id) : `sla-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const id = input?.id ? safeToString(input.id) : `sla-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const next = normalizePolicy({
     id,
-    name: input?.name ? String(input.name).trim() : '',
-    description: input?.description ? String(input.description).trim() : '',
-    customerSegment: input?.customerSegment ? String(input.customerSegment).trim() : 'default',
+    name: input?.name ? safeTrim(input.name) : '',
+    description: input?.description ? safeTrim(input.description) : '',
+    customerSegment: input?.customerSegment ? safeTrim(input.customerSegment) : 'default',
     responseTimeMin: input?.responseTimeMin != null ? Number(input.responseTimeMin) : null,
     resolutionTimeMin: input?.resolutionTimeMin != null ? Number(input.resolutionTimeMin) : null,
     enabled: input?.enabled !== false,
