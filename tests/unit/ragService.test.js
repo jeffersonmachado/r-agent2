@@ -1,4 +1,6 @@
 const ragService = require('../../api/services/ragService');
+const fs = require('fs');
+const path = require('path');
 
 // Mock nlpService and ragDeduplicationService
 jest.mock('../../api/services/nlpService', () => ({
@@ -129,6 +131,65 @@ describe('RAGService - Defensive Coercions', () => {
       expect(() => {
         ragService.isRagAvailable?.(hostileTenantId);
       }).not.toThrow();
+    });
+  });
+
+  describe('queryRag - hostile error coercion', () => {
+    let originalFetch;
+    let originalReplay;
+    let originalRecording;
+
+    beforeEach(() => {
+      originalFetch = global.fetch;
+      originalReplay = process.env.ENABLE_RAG_REPLAY;
+      originalRecording = process.env.ENABLE_RAG_RECORDING;
+      process.env.ENABLE_RAG_REPLAY = 'false';
+      process.env.ENABLE_RAG_RECORDING = 'false';
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+      if (originalReplay === undefined) {
+        delete process.env.ENABLE_RAG_REPLAY;
+      } else {
+        process.env.ENABLE_RAG_REPLAY = originalReplay;
+      }
+
+      if (originalRecording === undefined) {
+        delete process.env.ENABLE_RAG_RECORDING;
+      } else {
+        process.env.ENABLE_RAG_RECORDING = originalRecording;
+      }
+    });
+
+    it('should not crash when fetch rejection has hostile message getter', async () => {
+      const hostileError = {
+        get message() {
+          throw new Error('poisoned message getter');
+        },
+        toString() {
+          throw new Error('poisoned toString');
+        },
+      };
+
+      global.fetch = jest.fn().mockRejectedValue(hostileError);
+
+      await expect(ragService.queryRag('pergunta de teste', 'tenant-123'))
+        .rejects
+        .toThrow('Erro desconhecido ao consultar RAG');
+    });
+  });
+
+  describe('regression guard - no direct error.message outside helper', () => {
+    it('ragService should avoid direct error.message accesses outside safeErrorMessage', () => {
+      const sourcePath = path.resolve(__dirname, '../../api/services/ragService.js');
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      const sanitizedSource = source
+        .split('\n')
+        .filter((line) => !line.includes('String(err.message)'))
+        .join('\n');
+
+      expect(sanitizedSource).not.toMatch(/\b(?:error|err)\.message\b/);
     });
   });
 });

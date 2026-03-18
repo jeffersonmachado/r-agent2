@@ -527,15 +527,16 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     };
   } catch (error) {
     const serviceUrl = getRagServiceUrl(tenantId);
+    const rawErrorMessage = safeErrorMessage(error);
     
     // Melhora mensagens de erro para casos comuns
-    let errorMessage = error.message;
+    let errorMessage = rawErrorMessage || 'Erro desconhecido ao consultar RAG';
     
-    if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
+    if (rawErrorMessage.includes('fetch failed') || rawErrorMessage.includes('ECONNREFUSED') || rawErrorMessage.includes('ENOTFOUND')) {
       errorMessage = `Serviço RAG não está acessível em ${serviceUrl}. Verifique se o serviço está rodando.`;
-    } else if (error.message.includes('timeout')) {
+    } else if (rawErrorMessage.includes('timeout')) {
       errorMessage = `Timeout ao consultar serviço RAG em ${serviceUrl}. O serviço pode estar sobrecarregado.`;
-    } else if (error.message.includes('404') || error.message.includes('Not found')) {
+    } else if (rawErrorMessage.includes('404') || rawErrorMessage.includes('Not found')) {
       errorMessage = `Endpoint não encontrado no serviço RAG (${serviceUrl}). Verifique se o serviço está configurado corretamente.`;
     }
     
@@ -562,7 +563,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     
     logger.error('[RAGService] Erro ao consultar RAG', {
       error: errorMessage,
-      originalError: error.message,
+      originalError: rawErrorMessage,
       serviceUrl,
       tenantId,
       stack: error.stack,
@@ -800,7 +801,7 @@ async function indexDocument(document, tenantId) {
       }
     } catch (healthErr) {
       logger.warn('[RAGService] Erro ao verificar vector store após indexação', {
-        error: healthErr.message,
+        error: safeErrorMessage(healthErr),
         tenantId
       });
     }
@@ -817,7 +818,7 @@ async function indexDocument(document, tenantId) {
     };
   } catch (error) {
     logger.error('[RAGService] Erro ao indexar documento', {
-      error: error.message,
+      error: safeErrorMessage(error),
       documentId: document.id,
     });
     throw error;
@@ -863,7 +864,7 @@ async function isRagAvailable(tenantId = null) {
     return isHealthy;
   } catch (error) {
     logger.warn('[RAGService] Serviço RAG não disponível', {
-      error: error.message,
+      error: safeErrorMessage(error),
       stack: error.stack,
       tenantId
     });
@@ -930,7 +931,7 @@ async function updateSynonymsFromDocuments(tenantId, documents) {
     };
   } catch (error) {
     logger.error('[RAGService] Erro ao atualizar sinônimos', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
     });
     throw error;
@@ -971,7 +972,7 @@ async function getLearningMetrics(tenantId) {
     return await response.json();
   } catch (error) {
     logger.error('[RAGService] Erro ao obter métricas de aprendizado', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
     });
     throw error;
@@ -1019,7 +1020,7 @@ async function triggerLearning(tenantId) {
     return result;
   } catch (error) {
     logger.error('[RAGService] Erro ao disparar aprendizado', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
     });
     throw error;
@@ -1060,7 +1061,7 @@ async function getFullLearningData(tenantId) {
     return await response.json();
   } catch (error) {
     logger.error('[RAGService] Erro ao obter dados completos de aprendizado', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
     });
     throw error;
@@ -1108,7 +1109,7 @@ async function updateSynonym(tenantId, term, synonyms) {
     return await response.json();
   } catch (error) {
     logger.error('[RAGService] Erro ao atualizar sinônimo', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
       term,
     });
@@ -1151,7 +1152,7 @@ async function deleteSynonym(tenantId, term) {
     return await response.json();
   } catch (error) {
     logger.error('[RAGService] Erro ao remover sinônimo', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
       term,
     });
@@ -1193,7 +1194,7 @@ async function cleanInvalidQueries(tenantId) {
     return await response.json();
   } catch (error) {
     logger.error('[RAGService] Erro ao limpar queries inválidas', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId,
     });
     throw error;
@@ -1259,7 +1260,7 @@ async function cleanOrphanedDocuments(tenantId, documentIds) {
     };
   } catch (error) {
     logger.error('[RAGService] Erro ao limpar documentos órfãos', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId
     });
     throw error;
