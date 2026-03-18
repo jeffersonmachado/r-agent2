@@ -21,6 +21,11 @@ function safeTrimLower(value, fallback = '') {
   try { return str.toLowerCase(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return err.message || String(err); } catch (_) { return fallback; }
+}
+
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
 let INJECTABLE_SCRIPT = null;
 function getInjectableScript() {
@@ -29,7 +34,7 @@ function getInjectableScript() {
       const overlayInjector = require('../../rpa/overlayInjector');
       INJECTABLE_SCRIPT = overlayInjector.INJECTABLE_SCRIPT;
     } catch (error) {
-      logger.warn('Não foi possível carregar overlayInjector', { error: error.message });
+      logger.warn('Não foi possível carregar overlayInjector', { error: safeErrorMessage(error) });
       INJECTABLE_SCRIPT = ''; // Fallback vazio
     }
   }
@@ -110,20 +115,20 @@ function listRecordings() {
               });
             } catch (error) {
               // Ignora arquivos inválidos
-              logger.warn(`Erro ao ler gravação ${file}`, { error: error.message, path: seedsDir });
+              logger.warn(`Erro ao ler gravação ${file}`, { error: safeErrorMessage(error), path: seedsDir });
             }
           }
         }
       }
     } catch (error) {
-      logger.warn('Erro ao ler diretório seeds', { error: error.message, path: seedsDir });
+      logger.warn('Erro ao ler diretório seeds', { error: safeErrorMessage(error), path: seedsDir });
     }
 
     logger.debug('Gravações RPA listadas', { count: recordings.length, basePath });
     return recordings;
   } catch (error) {
     logger.error('Erro ao listar gravações RPA', { 
-      error: error.message, 
+      error: safeErrorMessage(error), 
       stack: error.stack,
       cwd: process.cwd(),
       __dirname: __dirname
@@ -427,7 +432,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                       }
                     }
                   } catch (error) {
-                    logger.error(`[RPA Overlay] Erro no consoleHandler: ${error.message}`);
+                    logger.error(`[RPA Overlay] Erro no consoleHandler: ${safeErrorMessage(error)}`);
                   }
                 };
                 page.on('console', consoleHandler);
@@ -435,7 +440,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                 
                 // Captura erros da página também
                 page.on('pageerror', error => {
-                  logger.error(`[RPA Overlay] [PAGE ERROR] ${error.message}`);
+                  logger.error(`[RPA Overlay] [PAGE ERROR] ${safeErrorMessage(error)}`);
                 });
                 
                 // Aguarda um pouco para garantir que o listener esteja totalmente registrado
@@ -552,7 +557,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                     } catch (error) {
                       console.error('[RPA Overlay] [INJECT] ERRO ao executar script:', error);
                       console.error('[RPA Overlay] [INJECT] Stack completo:', error.stack);
-                      return { success: false, error: error.message, stack: error.stack };
+                      return { success: false, error: safeErrorMessage(error), stack: error.stack };
                     }
                   }, getInjectableScript());
                   
@@ -671,14 +676,14 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                       }
                     } catch (error) {
                       console.error('[RPA Overlay] [SERVER] ERRO ao chamar init/create:', error);
-                      return { success: false, error: error.message, stack: error.stack };
+                      return { success: false, error: safeErrorMessage(error), stack: error.stack };
                     }
                   }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
                   
                   logger.info('[RPA Overlay] page.evaluate() concluído, resultado recebido');
                 } catch (evaluateError) {
-                  logger.error(`[RPA Overlay] ERRO ao executar page.evaluate() para init(): ${evaluateError.message}`);
-                  initResult = { success: false, error: evaluateError.message };
+                  logger.error(`[RPA Overlay] ERRO ao executar page.evaluate() para init(): ${safeErrorMessage(evaluateError)}`);
+                  initResult = { success: false, error: safeErrorMessage(evaluateError) };
                 }
                 
                 logger.info(`[RPA Overlay] Resultado do init(): ${JSON.stringify(initResult)}`);
@@ -773,7 +778,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                     };
                   } catch (error) {
                     console.error('[RPA Overlay] ERRO ao verificar overlay:', error);
-                    return { success: false, error: error.message };
+                    return { success: false, error: safeErrorMessage(error) };
                   }
                 });
                   
@@ -1078,13 +1083,13 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       }
     } catch (error) {
       // Erro geral (init, load, etc)
-      addLog('error', `💥 Erro fatal: ${error.message}`, {
-        error: error.message,
+      addLog('error', `💥 Erro fatal: ${safeErrorMessage(error)}`, {
+        error: safeErrorMessage(error),
         stack: error.stack,
       });
       
       execution.status = 'failed';
-      execution.error = error.message;
+      execution.error = safeErrorMessage(error);
       execution.endTime = new Date().toISOString();
       execution.currentStep = null;
       
@@ -1239,7 +1244,7 @@ async function cancelExecution(executionId) {
     execution.endTime = new Date().toISOString();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: safeErrorMessage(error) };
   }
 }
 
@@ -1251,7 +1256,7 @@ async function cancelExecution(executionId) {
  * @returns {{success: boolean, message: string, deletedId?: string}}
  */
 function deleteRecording(recordingId) {
-  if (!recordingId || typeof recordingId !== 'string' || recordingId.trim() === '') {
+  if (!recordingId || typeof recordingId !== 'string' || safeTrim(recordingId) === '') {
     return {
       success: false,
       message: 'ID da gravação é obrigatório',
@@ -1372,7 +1377,7 @@ function deleteRecording(recordingId) {
     logger.error('Erro ao remover gravação:', err);
     return {
       success: false,
-      message: `Erro ao remover gravação: ${err.message}`,
+      message: `Erro ao remover gravação: ${safeErrorMessage(err)}`,
     };
   }
 }
@@ -1403,7 +1408,7 @@ setInterval(cleanupOldExecutions, 30 * 60 * 1000);
  */
 async function startManualRecording(seedName, initialUrl) {
   try {
-    if (!seedName || seedName.trim() === '') {
+    if (!seedName || safeTrim(seedName) === '') {
       return {
         success: false,
         error: 'Nome do seed é obrigatório',
@@ -1447,10 +1452,10 @@ async function startManualRecording(seedName, initialUrl) {
       message: `Gravação "${seedName}" iniciada. Interaja com o navegador e chame /rpa/record/stop quando terminar.`,
     };
   } catch (error) {
-    logger.error('Erro ao iniciar gravação manual', { error: error.message, stack: error.stack });
+    logger.error('Erro ao iniciar gravação manual', { error: safeErrorMessage(error), stack: error.stack });
     return {
       success: false,
-      error: error.message || 'Erro ao iniciar gravação manual',
+      error: safeErrorMessage(error) || 'Erro ao iniciar gravação manual',
     };
   }
 }
@@ -1463,7 +1468,7 @@ async function startManualRecording(seedName, initialUrl) {
  */
 async function stopManualRecording(recordingId) {
   try {
-    if (!recordingId || recordingId.trim() === '') {
+    if (!recordingId || safeTrim(recordingId) === '') {
       return {
         success: false,
         error: 'ID da gravação é obrigatório',
@@ -1497,14 +1502,14 @@ async function stopManualRecording(recordingId) {
       message: `Gravação "${recordingId}" salva com sucesso`,
     };
   } catch (error) {
-    logger.error('Erro ao parar gravação manual', { error: error.message, stack: error.stack });
+    logger.error('Erro ao parar gravação manual', { error: safeErrorMessage(error), stack: error.stack });
     
     // Remove da lista mesmo em caso de erro
     activeRecordings.delete(recordingId);
     
     return {
       success: false,
-      error: error.message || 'Erro ao parar gravação manual',
+      error: safeErrorMessage(error) || 'Erro ao parar gravação manual',
     };
   }
 }
@@ -1517,7 +1522,7 @@ async function stopManualRecording(recordingId) {
  */
 function getRecordingStatus(recordingId) {
   try {
-    if (!recordingId || recordingId.trim() === '') {
+    if (!recordingId || safeTrim(recordingId) === '') {
       return {
         success: false,
         error: 'ID da gravação é obrigatório',
@@ -1539,10 +1544,10 @@ function getRecordingStatus(recordingId) {
       startTime: recording.startTime,
     };
   } catch (error) {
-    logger.error('Erro ao obter status da gravação', { error: error.message });
+    logger.error('Erro ao obter status da gravação', { error: safeErrorMessage(error) });
     return {
       success: false,
-      error: error.message || 'Erro ao obter status da gravação',
+      error: safeErrorMessage(error) || 'Erro ao obter status da gravação',
     };
   }
 }
