@@ -277,7 +277,7 @@ async function createAgent({ tenantId, username, email, password, role, name }) 
     }
   } catch (e) {
     // não bloqueia se houver falha no cálculo de uso
-    logger.warn('[AuthService] Falha ao checar limite de agentes (ignorado)', { tenantId, error: e.message });
+    logger.warn('[AuthService] Falha ao checar limite de agentes (ignorado)', { tenantId, error: safeErrorMessage(e) });
   }
 
   if (!dbAvailable()) {
