@@ -10,9 +10,63 @@ const { getSequelize } = require('../db/sequelize');
 const { Tenant } = require('../db/models');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
-  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+  try {
+    const message = safeToString(err.message, '');
+    return message || safeToString(err, fallback) || fallback;
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
+function safeIsoDate(value, fallback = null) {
+  if (value == null) return fallback;
+  try {
+    if (typeof value.toISOString === 'function') {
+      return value.toISOString();
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? fallback : date.toISOString();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeToDate(value, fallback = null) {
+  if (value == null) return fallback;
+  try {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function toTenantPayload(tenant) {
+  return {
+    id: tenant.tenant_key,
+    tenant_key: tenant.tenant_key,
+    name: tenant.name,
+    site: tenant.site,
+    ramo_atividade: tenant.ramo_atividade,
+    objetivo: tenant.objetivo,
+    active: tenant.status !== 'suspended' && tenant.status !== 'terminated',
+    status: tenant.status,
+    plan: tenant.plan,
+    limits: tenant.limits || {},
+    settings: tenant.settings || {},
+    branding: tenant.branding || {},
+    createdAt: safeIsoDate(tenant.createdAt, new Date().toISOString()),
+    updatedAt: safeIsoDate(tenant.updatedAt, new Date().toISOString()),
+    suspendedAt: safeIsoDate(tenant.suspendedAt, null),
+    trialExpiresAt: safeIsoDate(tenant.trialExpiresAt, null),
+  };
 }
 
 /**
@@ -48,24 +102,7 @@ async function getTenantFromPg(tenantKey) {
     }
 
     // Converte para formato compatível com o tenantService original
-    return {
-      id: tenant.tenant_key,
-      tenant_key: tenant.tenant_key,
-      name: tenant.name,
-      site: tenant.site,
-      ramo_atividade: tenant.ramo_atividade,
-      objetivo: tenant.objetivo,
-      active: tenant.status !== 'suspended' && tenant.status !== 'terminated',
-      status: tenant.status,
-      plan: tenant.plan,
-      limits: tenant.limits || {},
-      settings: tenant.settings || {},
-      branding: tenant.branding || {},
-      createdAt: tenant.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: tenant.updatedAt?.toISOString() || new Date().toISOString(),
-      suspendedAt: tenant.suspendedAt?.toISOString() || null,
-      trialExpiresAt: tenant.trialExpiresAt?.toISOString() || null,
-    };
+    return toTenantPayload(tenant);
   } catch (err) {
     logger.warn('[TenantServicePg] Erro ao buscar tenant do PostgreSQL:', safeErrorMessage(err));
     return null;
@@ -88,24 +125,7 @@ async function listTenantsFromPg() {
       order: [['created_at', 'DESC']],
     });
 
-    return tenants.map(tenant => ({
-      id: tenant.tenant_key,
-      tenant_key: tenant.tenant_key,
-      name: tenant.name,
-      site: tenant.site,
-      ramo_atividade: tenant.ramo_atividade,
-      objetivo: tenant.objetivo,
-      active: tenant.status !== 'suspended' && tenant.status !== 'terminated',
-      status: tenant.status,
-      plan: tenant.plan,
-      limits: tenant.limits || {},
-      settings: tenant.settings || {},
-      branding: tenant.branding || {},
-      createdAt: tenant.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: tenant.updatedAt?.toISOString() || new Date().toISOString(),
-      suspendedAt: tenant.suspendedAt?.toISOString() || null,
-      trialExpiresAt: tenant.trialExpiresAt?.toISOString() || null,
-    }));
+    return tenants.map((tenant) => toTenantPayload(tenant));
   } catch (err) {
     logger.warn('[TenantServicePg] Erro ao listar tenants do PostgreSQL:', safeErrorMessage(err));
     return [];
@@ -124,8 +144,9 @@ async function saveTenantToPg(tenantData) {
   }
 
   try {
+    const safeTenantData = tenantData && typeof tenantData === 'object' ? tenantData : {};
     const TenantModel = typeof Tenant === 'function' ? Tenant() : Tenant;
-    const tenantKey = tenantData.id || tenantData.tenant_key;
+    const tenantKey = safeToString(safeTenantData.id || safeTenantData.tenant_key, '');
 
     if (!tenantKey) {
       return { success: false, error: 'tenant_key é obrigatório' };
@@ -137,17 +158,17 @@ async function saveTenantToPg(tenantData) {
 
     const tenantDataToSave = {
       tenant_key: tenantKey,
-      name: tenantData.name,
-      site: tenantData.site,
-      ramo_atividade: tenantData.ramo_atividade,
-      objetivo: tenantData.objetivo,
-      status: tenantData.status || 'trial',
-      plan: tenantData.plan || 'trial',
-      limits: tenantData.limits || {},
-      settings: tenantData.settings || {},
-      branding: tenantData.branding || {},
-      suspendedAt: tenantData.suspendedAt ? new Date(tenantData.suspendedAt) : null,
-      trialExpiresAt: tenantData.trialExpiresAt ? new Date(tenantData.trialExpiresAt) : null,
+      name: safeTenantData.name,
+      site: safeTenantData.site,
+      ramo_atividade: safeTenantData.ramo_atividade,
+      objetivo: safeTenantData.objetivo,
+      status: safeTenantData.status || 'trial',
+      plan: safeTenantData.plan || 'trial',
+      limits: safeTenantData.limits || {},
+      settings: safeTenantData.settings || {},
+      branding: safeTenantData.branding || {},
+      suspendedAt: safeToDate(safeTenantData.suspendedAt, null),
+      trialExpiresAt: safeToDate(safeTenantData.trialExpiresAt, null),
     };
 
     let tenant;
@@ -160,27 +181,10 @@ async function saveTenantToPg(tenantData) {
 
     return {
       success: true,
-      tenant: {
-        id: tenant.tenant_key,
-        tenant_key: tenant.tenant_key,
-        name: tenant.name,
-        site: tenant.site,
-        ramo_atividade: tenant.ramo_atividade,
-        objetivo: tenant.objetivo,
-        active: tenant.status !== 'suspended' && tenant.status !== 'terminated',
-        status: tenant.status,
-        plan: tenant.plan,
-        limits: tenant.limits || {},
-        settings: tenant.settings || {},
-        branding: tenant.branding || {},
-        createdAt: tenant.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: tenant.updatedAt?.toISOString() || new Date().toISOString(),
-        suspendedAt: tenant.suspendedAt?.toISOString() || null,
-        trialExpiresAt: tenant.trialExpiresAt?.toISOString() || null,
-      },
+      tenant: toTenantPayload(tenant),
     };
   } catch (err) {
-    logger.error('[TenantServicePg] Erro ao salvar tenant no PostgreSQL:', err);
+    logger.error('[TenantServicePg] Erro ao salvar tenant no PostgreSQL:', safeErrorMessage(err));
     return { success: false, error: safeErrorMessage(err) };
   }
 }
