@@ -5,6 +5,9 @@
  * Verifies hostile err.message getters don't crash the service.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   warn: jest.fn(),
   error: jest.fn(),
@@ -30,11 +33,25 @@ const hostileErr = () => {
   return e;
 };
 
+const hostileErrFull = () => ({
+  get message() {
+    throw new Error('hostile message getter');
+  },
+  toString() {
+    throw new Error('hostile toString');
+  },
+});
+
 describe('webhookService – coercion guards', () => {
   beforeEach(() => jest.clearAllMocks());
 
   test('initialize: hostile err.message in catch does not throw', async () => {
     Webhook.findAll.mockRejectedValue(hostileErr());
+    await expect(initialize()).resolves.toBeUndefined();
+  });
+
+  test('initialize: hostile err.message and toString in catch does not throw', async () => {
+    Webhook.findAll.mockRejectedValue(hostileErrFull());
     await expect(initialize()).resolves.toBeUndefined();
   });
 
@@ -50,5 +67,12 @@ describe('webhookService – coercion guards', () => {
       events: ['ticket.created'],
     });
     expect(typeof result.success).toBe('boolean');
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/webhookService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
