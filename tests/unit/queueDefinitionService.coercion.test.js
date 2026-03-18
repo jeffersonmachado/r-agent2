@@ -4,6 +4,9 @@
  * Coercion-guard tests for queueDefinitionService.js
  */
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -55,6 +58,17 @@ function hostileErr() {
   return e;
 }
 
+function hostileErrFull() {
+  return {
+    get message() {
+      throw new Error('hostile message getter');
+    },
+    toString() {
+      throw new Error('hostile toString');
+    },
+  };
+}
+
 describe('queueDefinitionService coercion guards', () => {
   beforeEach(() => {
     getSequelize.mockReturnValue({});
@@ -68,6 +82,11 @@ describe('queueDefinitionService coercion guards', () => {
     await expect(initialize()).resolves.toBeUndefined();
   });
 
+  test('initialize: hostile err.message and toString does not throw', async () => {
+    Queue.findAll.mockRejectedValue(hostileErrFull());
+    await expect(initialize()).resolves.toBeUndefined();
+  });
+
   test('getQueueByName: hostile name does not throw', () => {
     expect(() => getQueueByName('tenant-1', hostileToString())).not.toThrow();
   });
@@ -77,5 +96,12 @@ describe('queueDefinitionService coercion guards', () => {
     const out = await upsertQueue({ tenantId: 'tenant-1', name: hostileToString() });
     expect(out.success).toBe(false);
     expect(typeof out.error).toBe('string');
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/queueDefinitionService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
