@@ -305,7 +305,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
     sessionId,
     // Channel Gateway (fase 2): campos novos (best-effort)
     conversationId: context.conversationId || null,
-    channelType: context.channelType || (sessionId && String(sessionId).startsWith('whatsapp_') ? 'whatsapp' : null),
+    channelType: context.channelType || (sessionId && safeToString(sessionId, '').startsWith('whatsapp_') ? 'whatsapp' : null),
     queue,
     status: 'waiting',
     // Compatibilidade: ticket implica atendimento humano por padrão
@@ -719,12 +719,12 @@ function closeTicket(ticketId) {
     const orderId = ticket?.context?.metadata?.orderId || null;
     if (kind === 'order_incident' && orderId && ticket.tenantId) {
       const { getOrderIncident, setOrderIncident } = require('./orderService');
-      getOrderIncident({ tenantId: ticket.tenantId, orderId: String(orderId) })
+      getOrderIncident({ tenantId: ticket.tenantId, orderId: safeToString(orderId) })
         .then((existing) => {
           const base = existing && typeof existing === 'object' ? existing : {};
           return setOrderIncident({
             tenantId: ticket.tenantId,
-            orderId: String(orderId),
+            orderId: safeToString(orderId),
             incident: {
               ...base,
               ticketId: ticket.id,
@@ -753,8 +753,8 @@ function updateTicket(ticketId, patch = {}) {
   if (!ticket) return null;
 
   // Se a fila mudou, precisa mover o ticket entre os Sets de filas
-  const nextQueue = patch && patch.queue ? String(patch.queue) : null;
-  const prevQueue = ticket.queue ? String(ticket.queue) : null;
+  const nextQueue = patch && patch.queue ? safeToString(patch.queue) : null;
+  const prevQueue = ticket.queue ? safeToString(ticket.queue) : null;
 
   if (nextQueue && prevQueue && nextQueue !== prevQueue) {
     const prevSet = queues.get(prevQueue);
@@ -1166,7 +1166,7 @@ function listAllTickets(options = {}) {
 
   // Filtro de status (pode ser string única ou múltiplos separados por vírgula)
   if (options.status) {
-    const statusList = String(options.status)
+    const statusList = safeTrimLower(options.status)
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s);
@@ -1181,14 +1181,14 @@ function listAllTickets(options = {}) {
 
   // Filtro de busca por query (q) - procura em ID, contact, número, etc
   if (options.q) {
-    const query = String(options.q).toLowerCase();
+    const query = safeTrimLower(options.q);
     ticketList = ticketList.filter((t) => {
-      const id = String(t.id || '').toLowerCase();
-      const contact = String(t.contact || '').toLowerCase();
-      const phone = String(t.phone || '').toLowerCase();
-      const firstName = String(t.firstName || '').toLowerCase();
-      const lastName = String(t.lastName || '').toLowerCase();
-      const queue = String(t.queue || '').toLowerCase();
+      const id = safeTrimLower(safeToString(t.id || ''));
+      const contact = safeTrimLower(safeToString(t.contact || ''));
+      const phone = safeTrimLower(safeToString(t.phone || ''));
+      const firstName = safeTrimLower(safeToString(t.firstName || ''));
+      const lastName = safeTrimLower(safeToString(t.lastName || ''));
+      const queue = safeTrimLower(safeToString(t.queue || ''));
       
       return (
         id.includes(query) ||
