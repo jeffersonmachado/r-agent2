@@ -32,6 +32,24 @@ function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try {
+    return str.trim().toLowerCase();
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function safeJsonParse(text, fallback = null) {
   try {
     return JSON.parse(text);
@@ -47,7 +65,7 @@ function decryptConfig(configEncrypted) {
     return safeJsonParse(json, null);
   } catch (err) {
     // Não quebrar ingest por config inválida
-    logger.warn('[ChannelGateway] Falha ao descriptografar config', { error: err.message });
+    logger.warn('[ChannelGateway] Falha ao descriptografar config', { error: safeToString(err?.message || err) });
     return null;
   }
 }
@@ -81,7 +99,7 @@ async function resolveTenantForWebhook(channelType, payload) {
     const account = await AccountModel.findOne({
       where: {
         type: channelType,
-        external_id: String(externalId),
+        external_id: safeToString(externalId),
         status: 'active',
       },
       order: [['created_at', 'DESC']],
@@ -95,7 +113,7 @@ async function resolveTenantForWebhook(channelType, payload) {
     };
   } catch (err) {
     // HARDENING: erro ao resolver tenant => ignora (caller deve descartar com segurança).
-    logger.warn('[ChannelGateway] Falha ao resolver tenant do webhook; ignorando', { channelType, error: err.message });
+    logger.warn('[ChannelGateway] Falha ao resolver tenant do webhook; ignorando', { channelType, error: safeToString(err?.message || err) });
     return { tenantId: null, account: null };
   }
 }
@@ -104,8 +122,8 @@ function normalizeIncoming(channelType, payload) {
   if (channelType === 'whatsapp') {
     const msg = payload?.message;
     const value = payload?.value || {};
-    const from = msg?.from ? String(msg.from) : null;
-    const messageId = msg?.id ? String(msg.id) : null;
+    const from = msg?.from ? safeToString(msg.from) : null;
+    const messageId = msg?.id ? safeToString(msg.id) : null;
 
     const waType = msg?.type || (msg?.text?.body ? 'text' : null);
     let type = 'text';
@@ -113,7 +131,7 @@ function normalizeIncoming(channelType, payload) {
 
     if (waType === 'text') {
       type = 'text';
-      body = { text: String(msg?.text?.body || '') };
+      body = { text: safeToString(msg?.text?.body || '') };
     } else if (waType === 'audio') {
       type = 'audio';
       body = { audio: msg?.audio || {} };
@@ -167,16 +185,16 @@ function normalizeIncoming(channelType, payload) {
       };
     }
 
-    const senderId = messaging?.sender?.id ? String(messaging.sender.id) : 'unknown';
+    const senderId = messaging?.sender?.id ? safeToString(messaging.sender.id) : 'unknown';
     const msg = messaging?.message || {};
-    const mid = msg?.mid ? String(msg.mid) : null;
+    const mid = msg?.mid ? safeToString(msg.mid) : null;
 
     let type = 'text';
     let body = {};
 
     if (msg?.text) {
       type = 'text';
-      body = { text: String(msg.text) };
+      body = { text: safeToString(msg.text) };
     } else if (Array.isArray(msg?.attachments) && msg.attachments.length > 0) {
       const att = msg.attachments[0];
       const attType = att?.type || 'attachment';
@@ -209,18 +227,18 @@ function normalizeIncoming(channelType, payload) {
       || payload?.entry?.messaging?.[0]
       || payload?.entry?.[0]?.messaging?.[0]
       || null;
-    const senderId = messaging?.sender?.id ? String(messaging.sender.id) : null;
-    const recipientId = messaging?.recipient?.id ? String(messaging.recipient.id) : null; // pageId
+    const senderId = messaging?.sender?.id ? safeToString(messaging.sender.id) : null;
+    const recipientId = messaging?.recipient?.id ? safeToString(messaging.recipient.id) : null; // pageId
     const msg = messaging?.message || null;
-    const externalMessageId = msg?.mid ? String(msg.mid) : null;
+    const externalMessageId = msg?.mid ? safeToString(msg.mid) : null;
 
     let type = 'text';
     let body = {};
     if (msg?.text) {
       type = 'text';
-      body = { text: String(msg.text) };
+      body = { text: safeToString(msg.text) };
     } else if (Array.isArray(msg?.attachments) && msg.attachments.length > 0) {
-      type = String(msg.attachments[0]?.type || 'attachment');
+      type = safeToString(msg.attachments[0]?.type || 'attachment');
       body = { attachments: msg.attachments };
     } else {
       type = 'text';
@@ -299,8 +317,8 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     return { persisted: false, reason: 'db_unavailable' };
   }
 
-  const externalId = String(conversationKey.externalId || 'unknown');
-  const contactId = conversationKey.contactId ? String(conversationKey.contactId) : null;
+  const externalId = safeToString(conversationKey.externalId || 'unknown');
+  const contactId = conversationKey.contactId ? safeToString(conversationKey.contactId) : null;
 
   // Mapeia ticket existente (compatibilidade com ticket = sessão)
   let currentTicketId = null;
@@ -308,7 +326,7 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
   const bodyMeta = messageNormalized?.body && typeof messageNormalized.body === 'object' ? messageNormalized.body.meta : null;
   const metaTicketId = bodyMeta?.ticketId || bodyMeta?.ticket_id || messageNormalized?.body?.ticketId || null;
   if (metaTicketId) {
-    currentTicketId = String(metaTicketId);
+    currentTicketId = safeToString(metaTicketId);
     derivedStatus = 'human';
   }
   if (!currentTicketId && channelType === 'whatsapp' && externalId && externalId !== 'unknown') {
@@ -333,7 +351,7 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
   const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
   const now = new Date();
 
-  const externalMessageId = messageNormalized.externalMessageId ? String(messageNormalized.externalMessageId) : null;
+  const externalMessageId = messageNormalized.externalMessageId ? safeToString(messageNormalized.externalMessageId) : null;
 
   if (externalMessageId) {
     const existing = await MessageModel.findOne({
@@ -366,8 +384,8 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     return { persisted: true, idempotent: false, conversationId: conversation.id, messageId: created.id };
   } catch (err) {
     // Protege contra race: unique violation em external_message_id
-    const msg = String(err.message || '');
-    const pgCode = err?.original?.code ? String(err.original.code) : null;
+    const msg = safeToString(err?.message || '');
+    const pgCode = err?.original?.code ? safeToString(err.original.code) : null;
     if (
       err?.name === 'SequelizeUniqueConstraintError' ||
       pgCode === '23505' ||
@@ -406,7 +424,7 @@ async function ingestIncoming(channelType, payload, options = {}) {
     conversationKey: normalized.conversationKey,
     messageNormalized: normalized.message,
   }).catch((err) => {
-    logger.warn('[ChannelGateway] Falha ao persistir inbound (best-effort)', { channelType, tenantId, error: err.message });
+    logger.warn('[ChannelGateway] Falha ao persistir inbound (best-effort)', { channelType, tenantId, error: safeToString(err?.message || err) });
     return { persisted: false, reason: 'persist_failed' };
   });
 
@@ -457,8 +475,8 @@ async function updateStatus(channelType, statusPayload, options = {}) {
   let updated = 0;
 
   for (const st of statuses) {
-    const externalMessageId = st?.id ? String(st.id) : null;
-    const status = st?.status ? String(st.status) : null;
+    const externalMessageId = st?.id ? safeToString(st.id) : null;
+    const status = st?.status ? safeToString(st.status) : null;
     if (!externalMessageId || !status) continue;
 
     const row = await MessageModel.findOne({
@@ -488,7 +506,7 @@ async function updateStatus(channelType, statusPayload, options = {}) {
 
     // Best-effort: propaga status para o ledger do ticket (UI atual)
     try {
-      const conversationId = row.conversation_id ? String(row.conversation_id) : null;
+      const conversationId = row.conversation_id ? safeToString(row.conversation_id) : null;
       if (conversationId) {
         const ticket = getTicketByConversationId(conversationId, tenantId);
         if (ticket) {
