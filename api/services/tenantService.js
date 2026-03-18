@@ -63,6 +63,26 @@ function safeTrim(value, fallback = '') {
   try { return str.trim(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
+function safeIsoDate(value, fallback = null) {
+  if (!value) return fallback;
+  try {
+    if (typeof value.toISOString === 'function') return value.toISOString();
+    const d = new Date(value);
+    return Number.isFinite(d.getTime()) ? d.toISOString() : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 // Lazy loading do ragDocumentsService para evitar dependência circular
 let ragDocumentsService = null;
 function getRagDocumentsService() {
@@ -356,7 +376,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
     }
   } catch (error) {
     logger.error(`[TenantService] Erro ao indexar site institucional para tenant ${tenantId}:`, {
-      error: error.message,
+      error: safeErrorMessage(error),
       site,
     });
     // Não falha a criação/atualização do tenant se a indexação falhar
@@ -436,7 +456,7 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     });
     if (existing) {
       const existingJson = existing.toJSON ? existing.toJSON() : existing;
-      if (existingJson && existingJson.tenant_key && String(existingJson.tenant_key) !== String(finalTenantKey)) {
+      if (existingJson && existingJson.tenant_key && safeToString(existingJson.tenant_key) !== safeToString(finalTenantKey)) {
         // Defesa contra mocks/retornos inconsistentes: ignora se não bate a chave
         existing = null;
       }
@@ -514,10 +534,10 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
       limits: tenantData.limits || {},
       settings: tenantData.settings || {},
       branding: tenantData.branding || {},
-      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
-      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
-      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+      createdAt: safeIsoDate(tenantData.created_at) || safeIsoDate(tenantData.createdAt) || new Date().toISOString(),
+      updatedAt: safeIsoDate(tenantData.updated_at) || safeIsoDate(tenantData.updatedAt) || new Date().toISOString(),
+      suspendedAt: safeIsoDate(tenantData.suspended_at) || safeIsoDate(tenantData.suspendedAt) || null,
+      trialExpiresAt: safeIsoDate(tenantData.trial_expires_at) || safeIsoDate(tenantData.trialExpiresAt) || null,
     };
 
     // Cria/atualiza tenant_context automaticamente (tenant_key)
@@ -536,7 +556,7 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
     return { success: true, tenant };
   } catch (err) {
     logger.error('[TenantService] Erro ao criar tenant no PostgreSQL:', err);
-    return { success: false, error: err.message || 'Erro ao criar tenant' };
+    return { success: false, error: safeErrorMessage(err) || 'Erro ao criar tenant' };
   }
 }
 
@@ -568,11 +588,11 @@ async function updateTenant(tenantId, updates) {
     const { Op } = require('sequelize');
 
     if (updates.name !== undefined) {
-      updateData.name = String(updates.name).trim();
+      updateData.name = safeTrim(updates.name);
     }
 
     if (updates.site !== undefined) {
-      const newSite = String(updates.site).trim();
+      const newSite = safeTrim(updates.site);
       if (!isValidUrl(newSite)) {
         return { success: false, error: 'Site deve ser uma URL válida (http:// ou https://)' };
       }
@@ -590,7 +610,7 @@ async function updateTenant(tenantId, updates) {
     }
 
     if (updates.ramo_atividade !== undefined) {
-      const newRamo = String(updates.ramo_atividade).trim();
+      const newRamo = safeTrim(updates.ramo_atividade);
       if (newRamo === '') {
         return { success: false, error: 'Ramo de atividade não pode ser vazio' };
       }
@@ -598,7 +618,7 @@ async function updateTenant(tenantId, updates) {
     }
 
     if (updates.objetivo !== undefined) {
-      const newObjetivo = String(updates.objetivo).trim();
+      const newObjetivo = safeTrim(updates.objetivo);
       if (newObjetivo === '') {
         return { success: false, error: 'Objetivo não pode ser vazio' };
       }
@@ -698,10 +718,10 @@ async function updateTenant(tenantId, updates) {
       limits: tenantData.limits || {},
       settings: tenantData.settings || {},
       branding: tenantData.branding || {},
-      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
-      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
-      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+      createdAt: safeIsoDate(tenantData.created_at) || safeIsoDate(tenantData.createdAt) || new Date().toISOString(),
+      updatedAt: safeIsoDate(tenantData.updated_at) || safeIsoDate(tenantData.updatedAt) || new Date().toISOString(),
+      suspendedAt: safeIsoDate(tenantData.suspended_at) || safeIsoDate(tenantData.suspendedAt) || null,
+      trialExpiresAt: safeIsoDate(tenantData.trial_expires_at) || safeIsoDate(tenantData.trialExpiresAt) || null,
     };
 
     // Sincroniza tenant_context
@@ -724,7 +744,7 @@ async function updateTenant(tenantId, updates) {
     return { success: true, tenant };
   } catch (err) {
     logger.error('[TenantService] Erro ao atualizar tenant no PostgreSQL:', err);
-    return { success: false, error: err.message || 'Erro ao atualizar tenant' };
+    return { success: false, error: safeErrorMessage(err) || 'Erro ao atualizar tenant' };
   }
 }
 
@@ -766,10 +786,10 @@ async function listTenants() {
         limits: tenantData.limits || {},
         settings: tenantData.settings || {},
         branding: tenantData.branding || {},
-        createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
-        suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
-        trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+        createdAt: safeIsoDate(tenantData.created_at) || safeIsoDate(tenantData.createdAt) || new Date().toISOString(),
+        updatedAt: safeIsoDate(tenantData.updated_at) || safeIsoDate(tenantData.updatedAt) || new Date().toISOString(),
+        suspendedAt: safeIsoDate(tenantData.suspended_at) || safeIsoDate(tenantData.suspendedAt) || null,
+        trialExpiresAt: safeIsoDate(tenantData.trial_expires_at) || safeIsoDate(tenantData.trialExpiresAt) || null,
       };
     });
   } catch (err) {
@@ -902,10 +922,10 @@ async function getTenant(tenantId) {
       limits: tenantData.limits || {},
       settings: tenantData.settings || {},
       branding: tenantData.branding || {},
-      createdAt: tenantData.created_at?.toISOString() || tenantData.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: tenantData.updated_at?.toISOString() || tenantData.updatedAt?.toISOString() || new Date().toISOString(),
-      suspendedAt: tenantData.suspended_at?.toISOString() || tenantData.suspendedAt?.toISOString() || null,
-      trialExpiresAt: tenantData.trial_expires_at?.toISOString() || tenantData.trialExpiresAt?.toISOString() || null,
+      createdAt: safeIsoDate(tenantData.created_at) || safeIsoDate(tenantData.createdAt) || new Date().toISOString(),
+      updatedAt: safeIsoDate(tenantData.updated_at) || safeIsoDate(tenantData.updatedAt) || new Date().toISOString(),
+      suspendedAt: safeIsoDate(tenantData.suspended_at) || safeIsoDate(tenantData.suspendedAt) || null,
+      trialExpiresAt: safeIsoDate(tenantData.trial_expires_at) || safeIsoDate(tenantData.trialExpiresAt) || null,
     };
   } catch (err) {
     logger.error('[TenantService] Erro ao obter tenant do PostgreSQL:', err);
@@ -947,7 +967,7 @@ async function deleteTenant(tenantId) {
     return { success: true };
   } catch (err) {
     logger.error('[TenantService] Erro ao remover tenant do PostgreSQL:', err);
-    return { success: false, error: err.message || 'Erro ao remover tenant' };
+    return { success: false, error: safeErrorMessage(err) || 'Erro ao remover tenant' };
   }
 }
 
@@ -1036,15 +1056,15 @@ async function updateTenantContext(tenantId, updates, options = {}) {
 
   // Atualiza campos permitidos
   if (updates.ramo_atividade !== undefined) {
-    context.ramo_atividade = String(updates.ramo_atividade).trim();
+    context.ramo_atividade = safeTrim(updates.ramo_atividade);
   }
 
   if (updates.objetivo !== undefined) {
-    context.objetivo = String(updates.objetivo).trim();
+    context.objetivo = safeTrim(updates.objetivo);
   }
 
   if (updates.site_oficial !== undefined) {
-    const newSite = String(updates.site_oficial).trim();
+    const newSite = safeTrim(updates.site_oficial);
     if (!isValidUrl(newSite)) {
       return { success: false, error: 'Site oficial deve ser uma URL válida' };
     }
@@ -1112,7 +1132,7 @@ async function reactivateTenant(tenantId) {
     return await updateTenant(tenantId, { status, active: true });
   } catch (err) {
     logger.error('[TenantService] Erro ao reativar tenant:', err);
-    return { success: false, error: err.message || 'Erro ao reativar tenant' };
+    return { success: false, error: safeErrorMessage(err) || 'Erro ao reativar tenant' };
   }
 }
 
@@ -1263,7 +1283,7 @@ async function getTenantUsage(tenantId) {
       usageMetrics = null;
     }
 
-    const usageMonthStart = usageMetrics && usageMetrics.monthStart ? String(usageMetrics.monthStart) : null;
+    const usageMonthStart = usageMetrics && usageMetrics.monthStart ? safeToString(usageMetrics.monthStart) : null;
     const currentMonthStart = monthStart.toISOString();
     const usageCounters = usageMonthStart === currentMonthStart && usageMetrics && usageMetrics.counters && typeof usageMetrics.counters === 'object'
       ? usageMetrics.counters
@@ -1271,7 +1291,7 @@ async function getTenantUsage(tenantId) {
 
     const getCounter = (key) => {
       const v = usageCounters && Object.prototype.hasOwnProperty.call(usageCounters, key)
-        ? Number(usageCounters[key])
+        ? Number(safeToString(usageCounters[key], '0'))
         : 0;
       return Number.isFinite(v) ? v : 0;
     };
@@ -1338,7 +1358,7 @@ async function findTenantBySite(site) {
       trialExpiresAt: data.trial_expires_at?.toISOString?.() || data.trialExpiresAt?.toISOString?.() || null,
     };
   } catch (err) {
-    logger.warn('[TenantService] Falha ao buscar tenant por site', { site: s, error: err.message });
+    logger.warn('[TenantService] Falha ao buscar tenant por site', { site: s, error: safeErrorMessage(err) });
     return null;
   }
 }
