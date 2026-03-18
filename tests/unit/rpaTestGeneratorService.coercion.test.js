@@ -46,7 +46,22 @@ describe('rpaTestGeneratorService coercion hardening', () => {
   test('rpaTestGeneratorService.safeErrorMessage handles hostile error objects gracefully', () => {
     const safeErrorMessage = function(err, fallback = '') {
       if (!err) return fallback;
-      try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+      let message;
+      try {
+        message = err?.message;
+      } catch (_) {
+        message = null;
+      }
+      if (message !== null && message !== undefined) return safeToString(message, fallback);
+      if (typeof err === 'string' || typeof err === 'number' || typeof err === 'boolean' || typeof err === 'bigint') {
+        return safeToString(err, fallback);
+      }
+      return fallback;
+    };
+
+    const safeToString = function(value, fallback = '') {
+      if (value == null) return fallback;
+      try { return String(value); } catch (_) { return fallback; }
     };
 
     const hostile = { toString() { throw new Error('boom'); } };
@@ -131,7 +146,7 @@ describe('rpaTestGeneratorService coercion hardening', () => {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Skip safe helper definitions
-      if (line.includes('function safeErrorMessage') || line.includes('try { return err.message')) {
+      if (line.includes('function safeErrorMessage')) {
         continue;
       }
       // Check for remaining unsafe error.message patterns

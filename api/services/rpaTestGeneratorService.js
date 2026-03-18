@@ -32,7 +32,17 @@ function safeTrim(value, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
-  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+  let message;
+  try {
+    message = err?.message;
+  } catch (_) {
+    message = null;
+  }
+  if (message !== null && message !== undefined) return safeToString(message, fallback);
+  if (typeof err === 'string' || typeof err === 'number' || typeof err === 'boolean' || typeof err === 'bigint') {
+    return safeToString(err, fallback);
+  }
+  return fallback;
 }
 
 // Cache dos prompts carregados
