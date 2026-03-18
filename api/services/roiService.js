@@ -10,6 +10,11 @@
 
 const { getSequelize } = require('../db/sequelize');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 function intEnv(name, def) {
   const raw = process.env[name];
   const n = raw ? Number(raw) : NaN;
@@ -26,7 +31,7 @@ function jsonEnv(name, def) {
   const raw = process.env[name];
   if (!raw) return def;
   try {
-    const parsed = JSON.parse(String(raw));
+    const parsed = JSON.parse(safeToString(raw));
     return parsed && typeof parsed === 'object' ? parsed : def;
   } catch (_) {
     return def;
@@ -50,7 +55,7 @@ async function getVoiceCostForWindow({ sequelize, tenantId, days }) {
      WHERE tenant_key = :tenantKey
        AND type IN ('CallEnded', 'VoiceCallEnded')
        AND received_at >= NOW() - (:days || ' days')::interval`,
-    { replacements: { tenantKey: String(tenantId), days: Number(days) } },
+    { replacements: { tenantKey: safeToString(tenantId), days: Number(days) } },
   );
   const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
   const totalBillSeconds = safeNumber(row.total_billsec || 0, 0);
@@ -69,7 +74,7 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
   const operationalCostPerOrder = floatEnv('ROI_OPERATIONAL_COST_PER_ORDER', 0);
   const operationalCostPerLead = floatEnv('ROI_OPERATIONAL_COST_PER_LEAD', 0);
 
-  const replacements = { tenantKey: String(tenantId), days };
+  const replacements = { tenantKey: safeToString(tenantId), days };
 
   const [orderRows] = await sequelize.query(
     `SELECT
@@ -120,7 +125,7 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
   const totalLeadOperationalCost = totalLeads > 0 ? Number((totalLeads * operationalCostPerLead).toFixed(2)) : 0;
   const totalOperationalCost = Number((totalOrderOperationalCost + totalLeadOperationalCost + voiceCosts.estimatedCost).toFixed(2));
   const orderSources = (orderSourceRows || []).map((row) => {
-    const source = String(row?.source || 'unknown');
+    const source = safeToString(row?.source || 'unknown');
     const orders = safeNumber(row?.total_orders || 0, 0);
     const revenue = safeNumber(row?.total_revenue || 0, 0);
     const cost = safeNumber(channelCosts[source] || 0, 0);
@@ -182,7 +187,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   if (!tenantId) return { ok: false, error: 'tenant_required' };
 
   const days = Number.isFinite(Number(windowDays)) ? Math.max(1, Math.floor(Number(windowDays))) : intEnv('ROI_WINDOW_DAYS', 30);
-  const replacements = { tenantKey: String(tenantId), days };
+  const replacements = { tenantKey: safeToString(tenantId), days };
 
   const [leadStageRows] = await sequelize.query(
     `SELECT stage, COUNT(*)::int AS total
@@ -241,7 +246,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   const stageCounts = {};
   for (const row of (leadStageRows || [])) {
     if (!row) continue;
-    stageCounts[String(row.stage || 'unknown')] = Number(row.total || 0);
+    stageCounts[safeToString(row.stage || 'unknown')] = Number(row.total || 0);
   }
 
   const stagesOrdered = ['visitor', 'lead', 'mql', 'sql', 'customer'];
@@ -269,7 +274,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   const totalOrdersFromSources = (orderSourceRows || []).reduce((sum, row) => sum + safeNumber(row?.total_orders || 0, 0), 0);
   const orderSourceMap = new Map(
     (orderSourceRows || []).map((row) => [
-      String(row?.source || 'unknown').toLowerCase(),
+      safeToString(row?.source || 'unknown').toLowerCase(),
       {
         orders: safeNumber(row?.total_orders || 0, 0),
         revenue: safeNumber(row?.total_revenue || 0, 0),
@@ -277,7 +282,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
     ]),
   );
   const channels = (leadChannelRows || []).map((row) => {
-    const channel = String(row?.channel || 'unknown');
+    const channel = safeToString(row?.channel || 'unknown');
     const leads = safeNumber(row?.total || 0, 0);
     const cost = safeNumber(channelCosts[channel] || 0, 0);
     const orderData = orderSourceMap.get(channel.toLowerCase()) || { orders: 0, revenue: 0 };
@@ -303,7 +308,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   });
 
   const orderSources = (orderSourceRows || []).map((row) => {
-    const source = String(row?.source || 'unknown');
+    const source = safeToString(row?.source || 'unknown');
     const orders = safeNumber(row?.total_orders || 0, 0);
     const revenue = safeNumber(row?.total_revenue || 0, 0);
     const cost = safeNumber(channelCosts[source] || 0, 0);
