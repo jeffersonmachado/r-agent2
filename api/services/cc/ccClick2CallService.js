@@ -2,6 +2,28 @@ const crypto = require('crypto');
 const models = require('../../db/models');
 const ami = require('../asterisk/amiClient');
 
+function safeString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorField(error, field, fallback = '') {
+  let value;
+
+  try {
+    value = error?.[field];
+  } catch (_) {
+    value = null;
+  }
+
+  if (value !== null && value !== undefined) return safeString(value, fallback);
+  return fallback;
+}
+
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -67,7 +89,16 @@ async function createClick2CallRequest({
       });
       await row.update({ status: 'originated' });
     } catch (err) {
-      await row.update({ status: 'failed', extra: { ...extra, originateError: { code: err.code || 'ami_error', message: err.message } } });
+      await row.update({
+        status: 'failed',
+        extra: {
+          ...extra,
+          originateError: {
+            code: safeErrorField(err, 'code', 'ami_error') || 'ami_error',
+            message: safeErrorField(err, 'message'),
+          },
+        },
+      });
     }
   }
 
