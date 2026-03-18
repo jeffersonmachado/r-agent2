@@ -14,6 +14,17 @@ function safeString(v, fallback = '') {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  let message;
+  try {
+    message = err?.message;
+  } catch (_) {
+    message = null;
+  }
+  if (message !== null && message !== undefined) return safeString(message, fallback);
+  return safeString(err, fallback);
+}
+
 function normalizeWs(s) {
   return safeString(s).replace(/\s+/g, ' ').trim();
 }
@@ -598,7 +609,7 @@ async function suggestDescription(input) {
     } catch (err) {
       logger.warn('[SuggestDescription] Falha ao gerar modo técnico via IA; retornando relatório determinístico', {
         tenantId,
-        error: err.message,
+        error: safeErrorMessage(err),
       });
       suggestion = buildTechnicalReport({ profile, contextSources });
     }
