@@ -30,6 +30,15 @@ function safeTrim(value, fallback = '') {
   try { return str.trim(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -511,13 +520,13 @@ async function replayFromNode({
         stateBefore: before,
         stateAfter: before,
         events: [],
-        errorMessage: error && error.message ? error.message : safeToString(error),
+        errorMessage: safeErrorMessage(error),
       }).catch(() => {});
       await finishFlowExecution({
         tenantId,
         executionId: replayExecutionId,
         status: 'failed',
-        metaPatch: { error: error && error.message ? error.message : safeToString(error) },
+        metaPatch: { error: safeErrorMessage(error) },
       }).catch(() => {});
       return { ok: true, replayExecutionId, ranSteps: ran, stoppedOnError: true };
     }
