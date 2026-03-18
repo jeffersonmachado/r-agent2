@@ -33,6 +33,16 @@ function safeArrayCopy(arr) {
   if (!Array.isArray(arr)) return [];
   try { return [...arr]; } catch (_) { return []; }
 }
+
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -118,7 +128,7 @@ async function persistExecution(execution) {
   } catch (error) {
     logger.error('[executionPersistence] Erro ao persistir execução', {
       executionId,
-      error: error.message,
+      error: safeErrorMessage(error),
     });
     throw error;
   }
@@ -150,7 +160,7 @@ async function retrieveExecution(executionId) {
   } catch (error) {
     logger.error('[executionPersistence] Erro ao recuperar execução (PostgreSQL)', {
       executionId,
-      error: error.message,
+      error: safeErrorMessage(error),
     });
     return null;
   }
