@@ -10,6 +10,15 @@ const tenantSettingsService = require('./tenantSettingsService');
 
 const SETTINGS_KEY = 'tasks';
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  return safeToString(value, fallback).trim();
+}
+
 function normalizeStore(value) {
   const obj = value && typeof value === 'object' ? value : {};
   return {
@@ -20,16 +29,16 @@ function normalizeStore(value) {
 function normalizeTask(item) {
   if (!item || typeof item !== 'object') return null;
   return {
-    id: String(item.id || ''),
-    title: item.title ? String(item.title) : '',
-    description: item.description ? String(item.description) : '',
+    id: safeToString(item.id || ''),
+    title: item.title ? safeToString(item.title) : '',
+    description: item.description ? safeToString(item.description) : '',
     dueAt: item.dueAt || null,
     reminderAt: item.reminderAt || null,
-    status: item.status ? String(item.status) : 'open',
+    status: item.status ? safeToString(item.status) : 'open',
     createdAt: item.createdAt || null,
     updatedAt: item.updatedAt || null,
     completedAt: item.completedAt || null,
-    priority: item.priority ? String(item.priority) : 'normal',
+    priority: item.priority ? safeToString(item.priority) : 'normal',
   };
 }
 
@@ -60,11 +69,11 @@ async function createTask(tenantId, input) {
   const id = `task-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const next = normalizeTask({
     id,
-    title: input?.title ? String(input.title).trim() : '',
-    description: input?.description ? String(input.description).trim() : '',
+    title: input?.title ? safeTrim(input.title) : '',
+    description: input?.description ? safeTrim(input.description) : '',
     dueAt: input?.dueAt || null,
     status: 'open',
-    priority: input?.priority ? String(input.priority) : 'normal',
+    priority: input?.priority ? safeToString(input.priority) : 'normal',
     createdAt: now,
     updatedAt: now,
   });
@@ -77,7 +86,7 @@ async function createTask(tenantId, input) {
 async function completeTask(tenantId, taskId) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.tasks.findIndex((t) => t && String(t.id) === String(taskId));
+  const idx = out.store.tasks.findIndex((t) => t && safeToString(t.id) === safeToString(taskId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const next = normalizeTask({
@@ -95,7 +104,7 @@ async function completeTask(tenantId, taskId) {
 async function scheduleReminder(tenantId, taskId, reminderAt) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
-  const idx = out.store.tasks.findIndex((t) => t && String(t.id) === String(taskId));
+  const idx = out.store.tasks.findIndex((t) => t && safeToString(t.id) === safeToString(taskId));
   if (idx < 0) return { ok: false, error: 'not_found' };
   const now = new Date().toISOString();
   const next = normalizeTask({
