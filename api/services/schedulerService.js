@@ -16,6 +16,11 @@ function safeToString(value, fallback = '') {
   if (value == null) return fallback;
   try { return String(value); } catch (_) { return fallback; }
 }
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function dbAvailable() {
@@ -81,7 +86,7 @@ async function tickScheduler({ batchSize = 10 } = {}) {
         next_run_at: next,
       });
     } catch (err) {
-      logger.warn('[Scheduler] failed to update schedule (ignored)', { id: schedule.id, error: err.message });
+      logger.warn('[Scheduler] failed to update schedule (ignored)', { id: schedule.id, error: safeErrorMessage(err) });
     }
   }
 }
@@ -101,7 +106,7 @@ function startScheduler({ intervalMs = 2000, batchSize = 10 } = {}) {
     try {
       await tickScheduler({ batchSize });
     } catch (err) {
-      logger.warn('[Scheduler] tick failed (ignored)', { error: err.message });
+      logger.warn('[Scheduler] tick failed (ignored)', { error: safeErrorMessage(err) });
     }
   };
   _timer = setInterval(() => { tick(); }, Math.max(500, Number(intervalMs) || 2000));
