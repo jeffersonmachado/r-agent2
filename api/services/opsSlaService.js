@@ -2,6 +2,16 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { appendEventV1 } = require('./eventLedgerService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 function intEnv(name, def) {
   const raw = process.env[name];
   const n = raw ? Number(raw) : NaN;
@@ -151,8 +161,8 @@ async function scanPhysicalSla() {
 async function runSlaScan() {
   const started = Date.now();
   const [orders, physical] = await Promise.all([
-    scanOrdersSla().catch((err) => ({ ok: false, error: err.message })),
-    scanPhysicalSla().catch((err) => ({ ok: false, error: err.message })),
+    scanOrdersSla().catch((err) => ({ ok: false, error: safeErrorMessage(err) })),
+    scanPhysicalSla().catch((err) => ({ ok: false, error: safeErrorMessage(err) })),
   ]);
   const result = { ok: true, orders, physical, durationMs: Date.now() - started };
   try {
