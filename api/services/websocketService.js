@@ -31,7 +31,12 @@ function safeTrim(value, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (err == null) return fallback;
-  try { return err.message || String(err); } catch (_) { return fallback; }
+  let message = '';
+  try { message = err.message; } catch (_) { message = ''; }
+  if (message) {
+    try { return String(message); } catch (_) { return fallback; }
+  }
+  try { return String(err); } catch (_) { return fallback; }
 }
 
 /**

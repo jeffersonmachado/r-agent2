@@ -26,6 +26,8 @@ jest.mock('ws', () => {
 });
 
 const websocketService = require('../../api/services/websocketService');
+const fs = require('fs');
+const path = require('path');
 
 describe('websocketService coercion safety', () => {
   beforeEach(() => {
@@ -41,6 +43,23 @@ describe('websocketService coercion safety', () => {
       }
     });
     return obj;
+  }
+
+  function createHostileError() {
+    const err = {};
+    Object.defineProperty(err, 'message', {
+      enumerable: false,
+      get() {
+        throw new Error('Hostile message getter');
+      }
+    });
+    Object.defineProperty(err, 'toString', {
+      enumerable: false,
+      get() {
+        throw new Error('Hostile toString getter');
+      }
+    });
+    return err;
   }
 
   describe('getConnectedAgentsByTenant - agentId coercion', () => {
@@ -161,6 +180,22 @@ describe('websocketService coercion safety', () => {
       expect(safeErrorMessage(undefined)).toBe('');
       expect(safeErrorMessage(null, 'custom')).toBe('custom');
     });
+
+    test('should fallback safely when both message and toString are hostile', () => {
+      const hostileError = createHostileError();
+
+      const safeErrorMessage = (err, fallback = '') => {
+        if (err == null) return fallback;
+        let message = '';
+        try { message = err.message; } catch (_) { message = ''; }
+        if (message) {
+          try { return String(message); } catch (_) { return fallback; }
+        }
+        try { return String(err); } catch (_) { return fallback; }
+      };
+
+      expect(safeErrorMessage(hostileError, 'fallback-msg')).toBe('fallback-msg');
+    });
   });
 
   describe('getStats - safe aggregation', () => {
@@ -249,6 +284,16 @@ describe('websocketService coercion safety', () => {
       expect(safeTrim('  hello  ')).toBe('hello');
       expect(safeTrim('  exec-123  ')).toBe('exec-123');
       expect(safeTrim('\n\ttab\t\n')).toBe('tab');
+    });
+  });
+
+  describe('static guard against unsafe helper pattern', () => {
+    test('service should not contain direct err.message || String(err)', () => {
+      const servicePath = path.join(__dirname, '../../api/services/websocketService.js');
+      const source = fs.readFileSync(servicePath, 'utf8');
+
+      expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+      expect(source).not.toMatch(/try\s*\{\s*return\s+err\.message\s*\|\|\s*String\(err\)/);
     });
   });
 });
