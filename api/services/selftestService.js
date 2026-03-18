@@ -15,6 +15,16 @@ function safeToString(value, fallback = '') {
   try { return String(value); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try {
+    const message = safeToString(err.message, '');
+    return message || safeToString(err, fallback) || fallback;
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 async function safeCheckDb() {
   try {
     const dbHealth = require('../db/health');
@@ -29,7 +39,7 @@ async function safeCheckDb() {
       error: connectionCheck.ok ? null : connectionCheck.errorMessage,
     };
   } catch (err) {
-    return { status: 'unhealthy', error: err.message || 'db_check_failed' };
+    return { status: 'unhealthy', error: safeErrorMessage(err, 'db_check_failed') };
   }
 }
 
@@ -68,7 +78,7 @@ async function safeCheckPublicTokens() {
     };
   } catch (err) {
     // Best-effort: não bloqueia selftest inteiro por falha em tabela opcional
-    return { status: 'degraded', error: err.message || 'public_tokens_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'public_tokens_check_failed') };
   }
 }
 
@@ -107,7 +117,7 @@ function parseEventDispatchTenantThresholdOverrides() {
     return parsed;
   } catch (err) {
     logger.warn('[Selftest] SELFTEST_EVENT_DISPATCH_THRESHOLDS_BY_TENANT_JSON invalido, ignorando', {
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     return {};
   }
@@ -211,7 +221,7 @@ async function safeCheckExecutionQueue() {
       error: fail ? 'exec_queue_threshold_exceeded' : null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'exec_queue_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'exec_queue_check_failed') };
   }
 }
 
@@ -220,7 +230,7 @@ async function safeCheckRedis() {
     const systemStatus = require('./systemStatusService');
     return await systemStatus.checkRedisStatus();
   } catch (err) {
-    return { status: 'unhealthy', error: err.message || 'redis_check_failed' };
+    return { status: 'unhealthy', error: safeErrorMessage(err, 'redis_check_failed') };
   }
 }
 
@@ -229,7 +239,7 @@ async function safeCheckRag() {
     const systemStatus = require('./systemStatusService');
     return await systemStatus.checkRagServiceStatus();
   } catch (err) {
-    return { status: 'unhealthy', error: err.message || 'rag_check_failed' };
+    return { status: 'unhealthy', error: safeErrorMessage(err, 'rag_check_failed') };
   }
 }
 
@@ -244,7 +254,7 @@ async function safeCheckEventLedger() {
       error: null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'event_ledger_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'event_ledger_check_failed') };
   }
 }
 
@@ -350,7 +360,7 @@ async function safeCheckEventDispatchRuntime() {
       error: fail ? 'event_dispatch_runtime_threshold_exceeded' : null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'event_dispatch_runtime_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'event_dispatch_runtime_check_failed') };
   }
 }
 
@@ -391,7 +401,7 @@ async function safeCheckFlowExecutionLedger() {
           : null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'flow_execution_ledger_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'flow_execution_ledger_check_failed') };
   }
 }
 
@@ -507,7 +517,7 @@ async function safeCheckPbxEventRuntime() {
       error: fail ? 'pbx_event_runtime_threshold_exceeded' : null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'pbx_event_runtime_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'pbx_event_runtime_check_failed') };
   }
 }
 
@@ -583,7 +593,7 @@ async function safeCheckVoiceRuntime() {
       error: fail ? 'voice_runtime_threshold_exceeded' : null,
     };
   } catch (err) {
-    return { status: 'degraded', error: err.message || 'voice_runtime_check_failed' };
+    return { status: 'degraded', error: safeErrorMessage(err, 'voice_runtime_check_failed') };
   }
 }
 
