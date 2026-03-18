@@ -11,6 +11,11 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const { processWhatsAppMessage } = require('./messageProcessor');
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return err.message || String(err); } catch (_) { return fallback; }
+}
+
 /**
  * Verifica webhook do Facebook Messenger.
  * @param {string} mode
@@ -57,7 +62,8 @@ async function sendMessengerMessage(recipientId, text) {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `Messenger API error: ${response.status}`);
+      const errorMsg = (errorData.error && typeof errorData.error === 'object') ? safeErrorMessage(errorData.error) : '';
+      throw new Error(errorMsg || `Messenger API error: ${response.status}`);
     }
     
     const data = await response.json();
@@ -72,10 +78,10 @@ async function sendMessengerMessage(recipientId, text) {
       messageId: data.message_id,
     };
   } catch (error) {
-    logger.error('[Messenger] Erro ao enviar mensagem:', error);
+    logger.error('[Messenger] Erro ao enviar mensagem:', safeErrorMessage(error));
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -147,7 +153,7 @@ async function processMessengerMessage(messageData, flows, sessionEvents) {
     
     logger.info('[Messenger] Mensagem processada com sucesso', { senderId });
   } catch (error) {
-    logger.error('[Messenger] Erro ao processar mensagem:', error);
+    logger.error('[Messenger] Erro ao processar mensagem:', safeErrorMessage(error));
     throw error;
   }
 }
@@ -211,10 +217,10 @@ async function sendMessengerButtons(recipientId, text, buttons) {
       messageId: data.message_id,
     };
   } catch (error) {
-    logger.error('[Messenger] Erro ao enviar botões:', error);
+    logger.error('[Messenger] Erro ao enviar botões:', safeErrorMessage(error));
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
