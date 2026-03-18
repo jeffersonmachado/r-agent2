@@ -192,7 +192,7 @@ function normalizeQuestionsList(questions) {
   const seen = new Set();
   for (const q of questions) {
     if (typeof q !== 'string') continue;
-    const trimmed = q.trim();
+    const trimmed = safeTrim(q);
     if (!trimmed) continue;
     const capped = trimmed.length > 220 ? trimmed.slice(0, 220) : trimmed;
     if (seen.has(capped)) continue;
@@ -237,7 +237,7 @@ function applyFaqQuestionsToFlow(flow, questions, options = {}) {
     ].join('\n');
     // Evita duplicar caso reprocessado
     if (!firstAi.config.promptTemplate.includes('Perguntas (FAQ) importantes')) {
-      firstAi.config.promptTemplate = `${firstAi.config.promptTemplate.trim()}\n${appendix}`.trim();
+      firstAi.config.promptTemplate = safeTrim(`${safeTrim(firstAi.config.promptTemplate)}\n${appendix}`);
     }
     return flow;
   }
@@ -519,7 +519,7 @@ Gere o fluxo JSON agora (APENAS JSON, sem explicações):`;
 function parseAiResponse(aiResponse) {
   try {
     // Tenta extrair JSON da resposta (pode vir com markdown ou texto adicional)
-    let jsonStr = aiResponse.trim();
+    let jsonStr = safeTrim(aiResponse);
     
     // Remove markdown code blocks se existirem
     jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
@@ -540,7 +540,10 @@ function parseAiResponse(aiResponse) {
     
     return parsed;
   } catch (err) {
-    logger.error('Erro ao parsear resposta da IA', { error: safeErrorMessage(err), response: aiResponse.substring(0, 200) });
+    logger.error('Erro ao parsear resposta da IA', {
+      error: safeErrorMessage(err),
+      response: safeToString(aiResponse).slice(0, 200),
+    });
     return null;
   }
 }
@@ -569,7 +572,7 @@ function convertWrapperResultToFlowDefinition(wrapperResult, flowId, tenantId, f
     metadata: {
       generated: true,
       generatedBy: 'ai',
-      description: description,
+      description: safeToString(description),
       generatedAt: new Date().toISOString(),
       promptVersion: wrapperResult.promptVersion,
       validation: wrapperResult.validation,
@@ -731,20 +734,21 @@ async function resolveKnowledgeContext(description, options = {}) {
     const scrapingResults = [];
     
     for (const url of scrapingTargets) {
-      if (!url || !url.trim()) continue;
+      const cleanUrl = safeTrim(url);
+      if (!cleanUrl) continue;
       
       try {
-        const scrapeResult = await webScrapingService.scrapeUrl(url, {
+        const scrapeResult = await webScrapingService.scrapeUrl(cleanUrl, {
           tenantId: tenantId || 'demo-tenant',
           autoIndex: false, // Não indexa automaticamente durante geração
         });
         
         if (scrapeResult.success && scrapeResult.content) {
-          scrapingResults.push(`\n### ${scrapeResult.title || url}:\n${scrapeResult.content.substring(0, 1000)}...\n`);
-          logger.debug('URL raspada com sucesso', { url, contentLength: scrapeResult.contentLength });
+          scrapingResults.push(`\n### ${scrapeResult.title || cleanUrl}:\n${scrapeResult.content.substring(0, 1000)}...\n`);
+          logger.debug('URL raspada com sucesso', { url: cleanUrl, contentLength: scrapeResult.contentLength });
         }
       } catch (scrapeError) {
-        logger.warn('Erro ao raspar URL, continuando', { url, error: scrapeError.message });
+        logger.warn('Erro ao raspar URL, continuando', { url: cleanUrl, error: safeErrorMessage(scrapeError) });
       }
     }
     
@@ -799,7 +803,7 @@ async function generateFlowFromDescription(description, options = {}) {
   });
   
   logger.info('Gerando fluxo a partir de descrição usando wrapper oficial', { 
-    description: description.substring(0, 100),
+    description: safeToString(description).slice(0, 100),
     flowId,
     flowName,
     tenantId,
@@ -823,12 +827,12 @@ async function generateFlowFromDescription(description, options = {}) {
       for (const it of arr) {
         if (!it) continue;
         if (typeof it === 'string') {
-          const s = it.trim();
+          const s = safeTrim(it);
           if (s) out.push(s);
         } else if (typeof it === 'object') {
           const msg = it.message || it.code || it.type || safe(it);
           const rule = it.rule ? ` (${it.rule})` : '';
-          const s = `${safe(msg)}${rule}`.trim();
+          const s = safeTrim(`${safe(msg)}${rule}`);
           if (s) out.push(s);
         }
         if (out.length >= max) break;
@@ -845,7 +849,7 @@ async function generateFlowFromDescription(description, options = {}) {
     if (warnLines.length > 0) {
       blocks.push('', 'Avisos (melhore se possível):', ...warnLines.map((l) => `- ${l}`));
     }
-    return blocks.join('\n').trim();
+    return safeTrim(blocks.join('\n'));
   };
 
   const summarizeErrorsForMetadata = (items, max = 12) => {
@@ -855,12 +859,12 @@ async function generateFlowFromDescription(description, options = {}) {
     for (const it of arr) {
       if (!it) continue;
       if (typeof it === 'string') {
-        const s = it.trim();
+        const s = safeTrim(it);
         if (s) out.push(s.slice(0, 240));
       } else if (typeof it === 'object') {
         const msg = it.message || it.code || it.type || safe(it);
         const rule = it.rule ? ` (${it.rule})` : '';
-        const s = `${safe(msg)}${rule}`.trim();
+        const s = safeTrim(`${safe(msg)}${rule}`);
         if (s) out.push(s.slice(0, 240));
       }
       if (out.length >= max) break;
@@ -890,7 +894,7 @@ async function generateFlowFromDescription(description, options = {}) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'GENERATION_ERROR') continue;
-      const msg = typeof a.message === 'string' ? a.message.trim() : '';
+      const msg = safeTrim(a.message);
       if (msg) return { failureSource: 'provider', failureMessage: msg.slice(0, 360) };
     }
 
@@ -900,11 +904,11 @@ async function generateFlowFromDescription(description, options = {}) {
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'WRAPPER_REJECTED') continue;
       const msg =
-        (typeof a.errorMessage === 'string' && a.errorMessage.trim())
-          ? a.errorMessage.trim()
-          : (typeof a.message === 'string' ? a.message.trim() : '');
+        (safeTrim(a.errorMessage))
+          ? safeTrim(a.errorMessage)
+          : safeTrim(a.message);
       if (msg) return { failureSource: 'wrapper', failureMessage: msg.slice(0, 360) };
-      const errorType = typeof a.errorType === 'string' ? a.errorType.trim() : '';
+      const errorType = safeTrim(a.errorType);
       if (errorType) return { failureSource: 'wrapper', failureMessage: `Wrapper rejeitou a geração (${errorType}).` };
       return { failureSource: 'wrapper', failureMessage: 'Wrapper rejeitou a geração.' };
     }
@@ -914,7 +918,7 @@ async function generateFlowFromDescription(description, options = {}) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'ENGINE_VALIDATION_FAILED') continue;
-      const msg = typeof a.firstError === 'string' ? a.firstError.trim() : '';
+      const msg = safeTrim(a.firstError);
       if (msg) return { failureSource: 'engine', failureMessage: msg.slice(0, 360) };
       return { failureSource: 'engine', failureMessage: 'Falha na validação do fluxo gerado.' };
     }
@@ -930,7 +934,7 @@ async function generateFlowFromDescription(description, options = {}) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'GENERATION_ERROR') continue;
-      const msg = typeof a.message === 'string' ? a.message.trim() : '';
+      const msg = safeTrim(a.message);
       if (msg) return { failureSource: 'provider', failureMessage: msg.slice(0, 360) };
     }
 
@@ -940,11 +944,11 @@ async function generateFlowFromDescription(description, options = {}) {
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'WRAPPER_REJECTED') continue;
       const msg =
-        (typeof a.errorMessage === 'string' && a.errorMessage.trim())
-          ? a.errorMessage.trim()
-          : (typeof a.message === 'string' ? a.message.trim() : '');
+        (safeTrim(a.errorMessage))
+          ? safeTrim(a.errorMessage)
+          : safeTrim(a.message);
       if (msg) return { failureSource: 'wrapper', failureMessage: msg.slice(0, 360) };
-      const errorType = typeof a.errorType === 'string' ? a.errorType.trim() : '';
+      const errorType = safeTrim(a.errorType);
       if (errorType) return { failureSource: 'wrapper', failureMessage: `Wrapper rejeitou a geração (${errorType}).` };
       return { failureSource: 'wrapper', failureMessage: 'Wrapper rejeitou a geração.' };
     }
@@ -954,16 +958,14 @@ async function generateFlowFromDescription(description, options = {}) {
       const a = arr[i];
       if (!a || typeof a !== 'object') continue;
       if (safeToString(a.kind || '') !== 'ENGINE_VALIDATION_FAILED') continue;
-      const msg = typeof a.firstError === 'string' ? a.firstError.trim() : '';
+      const msg = safeTrim(a.firstError);
       if (msg) return { failureSource: 'engine', failureMessage: msg.slice(0, 360) };
       return { failureSource: 'engine', failureMessage: 'Falha na validação do fluxo gerado.' };
     }
 
     // 4) Unknown/unexpected
     const last = arr.length > 0 ? arr[arr.length - 1] : null;
-    const msg = last && typeof last === 'object' && typeof last.message === 'string'
-      ? last.message.trim()
-      : '';
+    const msg = (last && typeof last === 'object') ? safeTrim(last.message) : '';
     return {
       failureSource: 'unknown',
       failureMessage: msg ? msg.slice(0, 360) : 'Falha na geração (motivo não identificado).',
@@ -972,13 +974,14 @@ async function generateFlowFromDescription(description, options = {}) {
 
   try {
     // Resolve contexto de conhecimento (RAG e scraping) se solicitado
-    let enhancedDescriptionBase = description;
+    const safeDescription = safeToString(description);
+    let enhancedDescriptionBase = safeDescription;
     if (options.useRag || options.useWebScraping) {
-      const knowledgeContext = await resolveKnowledgeContext(description, options);
+      const knowledgeContext = await resolveKnowledgeContext(safeDescription, options);
       if (knowledgeContext) {
-        enhancedDescriptionBase = `${description}\n\n${knowledgeContext}`;
+        enhancedDescriptionBase = `${safeDescription}\n\n${knowledgeContext}`;
         logger.debug('Descrição enriquecida com contexto', {
-          originalLength: description.length,
+          originalLength: safeDescription.length,
           enhancedLength: enhancedDescriptionBase.length,
         });
       }
@@ -986,7 +989,7 @@ async function generateFlowFromDescription(description, options = {}) {
 
     // Injeta bloco de perguntas (FAQ) se habilitado
     if (faqQuestions.length > 0) {
-      enhancedDescriptionBase = `${enhancedDescriptionBase}\n\n${formatQuestionsBlock(faqQuestions)}`.trim();
+      enhancedDescriptionBase = safeTrim(`${enhancedDescriptionBase}\n\n${formatQuestionsBlock(faqQuestions)}`);
     }
 
     // Retentativas: quando o wrapper rejeita (gate/contrato) ou quando validateFlow falha,
@@ -1289,13 +1292,13 @@ function generateFlowFromKeywords(description, options = {}) {
   const flowName = options.flowName || 'Fluxo Gerado';
   
   logger.info('Gerando fluxo usando análise de palavras-chave (fallback)', { 
-    description: description.substring(0, 100),
+    description: safeToString(description).slice(0, 100),
     flowId,
     flowName 
   });
 
   // Normaliza a descrição
-  const normalizedDescription = description.trim().toLowerCase();
+  const normalizedDescription = safeTrimLower(description);
   
   // Gera o fluxo baseado na descrição
   const flow = {
@@ -1306,7 +1309,7 @@ function generateFlowFromKeywords(description, options = {}) {
     nodes: [],
     metadata: {
       generated: true,
-      description: description,
+      description: safeToString(description),
       generatedAt: new Date().toISOString(),
     },
   };
