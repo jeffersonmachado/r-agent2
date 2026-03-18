@@ -22,6 +22,24 @@ function model() {
   return typeof ChannelAccountGetter === 'function' ? ChannelAccountGetter() : ChannelAccountGetter;
 }
 
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeTrim(v, fallback = '') {
+  return safeToString(v, fallback).trim();
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function newId(prefix = 'acct') {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -84,7 +102,7 @@ async function createAccount({ tenantId, type, externalId = null, status = 'acti
       return { success: false, error: limitCheck.error || 'Limite de canais excedido' };
     }
   } catch (e) {
-    logger.warn('[ChannelAccounts] Falha ao checar limite de canais (ignorado)', { tenantId, error: e.message });
+    logger.warn('[ChannelAccounts] Falha ao checar limite de canais (ignorado)', { tenantId, error: safeErrorMessage(e) });
   }
 
   const Model = model();
@@ -94,9 +112,9 @@ async function createAccount({ tenantId, type, externalId = null, status = 'acti
   const payload = {
     id,
     tenant_key: tenantId,
-    type: String(type),
+    type: safeToString(type),
     status: status || 'active',
-    external_id: externalId ? String(externalId) : null,
+    external_id: externalId ? safeToString(externalId) : null,
     config_encrypted: config ? encryptConfig(config) : null,
     created_at: now,
     updated_at: now,
@@ -114,9 +132,9 @@ async function updateAccount({ tenantId, id, patch = {} } = {}) {
   if (!row) return { success: false, error: 'not_found' };
 
   const updates = {};
-  if (patch.type) updates.type = String(patch.type);
-  if (patch.status) updates.status = String(patch.status);
-  if (patch.externalId !== undefined) updates.external_id = patch.externalId ? String(patch.externalId) : null;
+  if (patch.type) updates.type = safeToString(patch.type);
+  if (patch.status) updates.status = safeToString(patch.status);
+  if (patch.externalId !== undefined) updates.external_id = patch.externalId ? safeToString(patch.externalId) : null;
   if (patch.config !== undefined) updates.config_encrypted = patch.config ? encryptConfig(patch.config) : null;
   updates.updated_at = new Date();
 
@@ -136,13 +154,13 @@ async function deleteAccount({ tenantId, id } = {}) {
 function getAny(obj, keys = []) {
   if (!obj || typeof obj !== 'object') return undefined;
   for (const k of keys) {
-    if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') return obj[k];
+    if (obj[k] !== undefined && obj[k] !== null && safeTrim(obj[k]) !== '') return obj[k];
   }
   return undefined;
 }
 
 function validateConfigForType(type, { externalId, config } = {}) {
-  const t = String(type || '').toLowerCase();
+  const t = safeToString(type).toLowerCase();
   const cfg = config && typeof config === 'object' ? config : null;
   const missing = [];
 
@@ -186,7 +204,7 @@ function httpGetJson(url, { headers = {}, timeoutMs = 8000 } = {}) {
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         const contentType = res.headers['content-type'] || '';
-        const isJson = String(contentType).includes('application/json');
+        const isJson = safeToString(contentType).includes('application/json');
         const parsed = isJson ? (JSON.parse(data || '{}') || {}) : null;
         resolve({ statusCode: res.statusCode, data: parsed, raw: data });
       });
@@ -211,15 +229,15 @@ async function testAccountConnection({ tenantId, id, timeoutMs = 8000 } = {}) {
     return { success: false, error: 'missing_config', missing: validation.missing };
   }
 
-  const t = String(account.type || '').toLowerCase();
+  const t = safeToString(account.type).toLowerCase();
   if (t === 'webchat') {
     return { success: true, details: { type: 'webchat', ok: true, note: 'webchat não requer teste externo' } };
   }
 
   if (t === 'whatsapp') {
-    const apiUrl = String(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0');
-    const token = String(getAny(cfg, ['accessToken', 'token', 'whatsappAccessToken', 'pageAccessToken']));
-    const phoneNumberId = String(account.externalId || getAny(cfg, ['phone_number_id', 'phoneNumberId', 'phone_numberId']));
+    const apiUrl = safeToString(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0', 'https://graph.facebook.com/v18.0');
+    const token = safeToString(getAny(cfg, ['accessToken', 'token', 'whatsappAccessToken', 'pageAccessToken']));
+    const phoneNumberId = safeToString(account.externalId || getAny(cfg, ['phone_number_id', 'phoneNumberId', 'phone_numberId']));
     const url = `${apiUrl.replace(/\/$/, '')}/${encodeURIComponent(phoneNumberId)}?fields=display_phone_number,verified_name`;
     const resp = await httpGetJson(url, { headers: { Authorization: `Bearer ${token}` }, timeoutMs });
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -235,9 +253,9 @@ async function testAccountConnection({ tenantId, id, timeoutMs = 8000 } = {}) {
   }
 
   if (t === 'instagram') {
-    const apiUrl = String(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0');
-    const token = String(getAny(cfg, ['pageAccessToken', 'accessToken', 'token']));
-    const pageId = String(account.externalId || getAny(cfg, ['pageId', 'page_id']));
+    const apiUrl = safeToString(getAny(cfg, ['apiUrl', 'api_url']) || 'https://graph.facebook.com/v18.0', 'https://graph.facebook.com/v18.0');
+    const token = safeToString(getAny(cfg, ['pageAccessToken', 'accessToken', 'token']));
+    const pageId = safeToString(account.externalId || getAny(cfg, ['pageId', 'page_id']));
     const url = `${apiUrl.replace(/\/$/, '')}/${encodeURIComponent(pageId)}?fields=name,instagram_business_account`;
     const resp = await httpGetJson(url, { headers: { Authorization: `Bearer ${token}` }, timeoutMs });
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
