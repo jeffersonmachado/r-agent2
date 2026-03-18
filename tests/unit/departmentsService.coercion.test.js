@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -75,5 +78,44 @@ describe('departmentsService coercion hardening', () => {
       description: '',
       color: '',
     }));
+  });
+
+  test('initialize tolera getter hostil em error.message de falha no DB', async () => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    const hostileError = {
+      get message() {
+        throw new Error('poisoned message getter');
+      },
+      toString() {
+        throw new Error('poisoned toString');
+      },
+    };
+
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({ ok: true })) }));
+    jest.doMock('../../api/db/models', () => ({
+      Department: jest.fn(() => ({
+        findAll: jest.fn(async () => {
+          throw hostileError;
+        }),
+      })),
+    }));
+
+    const logger = require('../../api/utils/logger');
+    const { initialize } = require('../../api/services/departmentsService');
+
+    await expect(initialize()).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[DepartmentsService] Falha ao inicializar cache do PostgreSQL',
+      expect.objectContaining({ error: '' })
+    );
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/departmentsService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
