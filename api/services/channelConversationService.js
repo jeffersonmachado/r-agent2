@@ -11,6 +11,15 @@
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, ChannelMessage, Ticket } = require('../db/models');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -30,12 +39,15 @@ async function listConversations({ tenantId, status = null, channelType = null, 
   const Op = sequelize.constructor.Op;
 
   const where = { tenant_key: tenantId };
-  if (status) where.status = String(status);
-  if (channelType) where.channel_type = String(channelType);
+  const statusValue = safeToString(status).trim();
+  const channelTypeValue = safeToString(channelType).trim();
+  if (statusValue) where.status = statusValue;
+  if (channelTypeValue) where.channel_type = channelTypeValue;
 
-  if (queue) {
+  const queueValue = safeToString(queue).trim();
+  if (queueValue) {
     const ticketRows = await TicketModel.findAll({
-      where: { tenant_key: tenantId, queue: String(queue) },
+      where: { tenant_key: tenantId, queue: queueValue },
       attributes: ['id'],
       limit: 5000,
     });
