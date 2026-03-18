@@ -9,6 +9,16 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { AuditEvent, GenerationAudit, AuditReport } = require('../db/models');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 // ============================================================================
 // AUDITORIA DE AÇÕES DO SISTEMA (logAction, queryLogs, getAuditStats)
 // ============================================================================
@@ -74,7 +84,7 @@ function logAction({ agentId, username, tenantId = null, action, resource, resou
         ip_address: ipAddress || null,
         user_agent: userAgent || null,
       }).catch((err) => {
-        logger.warn('[AuditService] Falha ao persistir audit_event no PostgreSQL', { error: err.message });
+        logger.warn('[AuditService] Falha ao persistir audit_event no PostgreSQL', { error: safeErrorMessage(err) });
       });
     });
   }
