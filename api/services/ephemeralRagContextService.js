@@ -18,7 +18,12 @@ function getReadyRedisClientOrNull() {
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
-  return String(v);
+  try { return String(v); } catch (_) { return ''; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeString(err) || fallback; }
 }
 
 function normalizeText(s) {
@@ -183,7 +188,7 @@ async function upsertEphemeralContext(input) {
       merged = dedupeAndCap([...prevChunks, ...incoming]);
     }
   } catch (err) {
-    logger.warn('[EphemeralContext] Falha ao ler contexto existente, sobrescrevendo', { tenantId, executionId, error: err.message });
+    logger.warn('[EphemeralContext] Falha ao ler contexto existente, sobrescrevendo', { tenantId, executionId, error: safeErrorMessage(err) });
     merged = incoming;
   }
 
@@ -215,7 +220,7 @@ async function upsertEphemeralContext(input) {
     logger.warn('[EphemeralContext] Falha ao persistir no Redis, usando fallback memória', {
       tenantId,
       executionId,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
   }
 
@@ -253,7 +258,7 @@ async function getEphemeralContext(input) {
     const chunks = Array.isArray(parsed?.chunks) ? parsed.chunks : [];
     return { ok: true, found: chunks.length > 0, chunks, used: redis ? 'redis' : 'memory' };
   } catch (err) {
-    logger.warn('[EphemeralContext] Falha ao recuperar contexto', { tenantId, executionId, error: err.message });
+    logger.warn('[EphemeralContext] Falha ao recuperar contexto', { tenantId, executionId, error: safeErrorMessage(err) });
     return { ok: true, found: false, chunks: [], used: redis ? 'redis' : 'memory' };
   }
 }
