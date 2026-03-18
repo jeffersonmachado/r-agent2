@@ -52,6 +52,17 @@ function getModels() {
   };
 }
 
+// Defensive helpers para coerções seguras
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
 // Lazy loading do ragDocumentsService para evitar dependência circular
 let ragDocumentsService = null;
 function getRagDocumentsService() {
@@ -132,7 +143,7 @@ function persistTenantContextBestEffort(context) {
   if (!dbAvailable() || !isConnected()) return;
   setImmediate(() => {
     upsertTenantContextToDb(context).catch((err) => {
-      logger.warn('[TenantService] Falha ao persistir tenant_context no PostgreSQL', { tenantId: context.tenantId, error: err.message });
+      logger.warn('[TenantService] Falha ao persistir tenant_context no PostgreSQL', { tenantId: context.tenantId, error: safeToString(err?.message || err) });
     });
   });
 }
@@ -152,13 +163,13 @@ async function initializeTenantContexts() {
         site_oficial: base.site_oficial || '',
         prioridade: base.prioridade || 'HIGH',
         escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
-        createdAt: base.created_at ? new Date(base.created_at).toISOString() : (base.createdAt?.toISOString?.() || new Date().toISOString()),
-        updatedAt: base.updated_at ? new Date(base.updated_at).toISOString() : (base.updatedAt?.toISOString?.() || new Date().toISOString()),
+        createdAt: base.created_at ? new Date(base.created_at).toISOString() : (typeof base.createdAt?.toISOString === 'function' ? base.createdAt.toISOString() : new Date().toISOString()),
+        updatedAt: base.updated_at ? new Date(base.updated_at).toISOString() : (typeof base.updatedAt?.toISOString === 'function' ? base.updatedAt.toISOString() : new Date().toISOString()),
       });
     }
     logger.info('[TenantService] Tenant contexts carregados do PostgreSQL', { count: tenantContexts.size });
   } catch (err) {
-    logger.warn('[TenantService] Falha ao carregar tenant contexts do PostgreSQL', { error: err.message });
+    logger.warn('[TenantService] Falha ao carregar tenant contexts do PostgreSQL', { error: safeToString(err?.message || err) });
   }
 }
 // Diretório raiz do projeto (para executar scripts auxiliares)
@@ -188,7 +199,7 @@ function isPlaceholderSite(url) {
   if (!url || typeof url !== 'string') return false;
   try {
     const u = new URL(url.trim());
-    const host = String(u.hostname || '').toLowerCase();
+    const host = safeTrim(u.hostname || '', '').toLowerCase();
     // placeholders comuns usados pelo sistema/IA
     return host === 'exemplo.com' || host === 'example.com' || host === 'exemplo.org' || host === 'example.org';
   } catch {
