@@ -87,6 +87,11 @@ function safeGet(obj, path, fallback = null) {
   }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return err.message || String(err); } catch (_) { return fallback; }
+}
+
 async function updateConversationForTicket(ticket, patch = {}) {
   if (!ticket || !ticket.conversationId) return;
   if (!dbAvailable()) return;
@@ -102,7 +107,7 @@ async function updateConversationForTicket(ticket, patch = {}) {
   } catch (err) {
     logger.debug('[QueueService] Falha ao atualizar channel_conversation (ignorado)', {
       ticketId: ticket.id,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
   }
 }
@@ -213,6 +218,7 @@ function persistTicketBestEffort(ticket) {
   setImmediate(() => {
     upsertTicketToDb(ticket).catch((err) => {
       logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: err.message });
+      logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: safeErrorMessage(err) });
     });
   });
 }
@@ -222,6 +228,7 @@ function deleteTicketBestEffort(ticketId) {
   setImmediate(() => {
     deleteTicketFromDb(ticketId).catch((err) => {
       logger.warn('[QueueService] Falha ao remover ticket no PostgreSQL', { ticketId, error: err.message });
+      logger.warn('[QueueService] Falha ao remover ticket no PostgreSQL', { ticketId, error: safeErrorMessage(err) });
     });
   });
 }
@@ -249,6 +256,7 @@ async function initialize() {
     logger.info('[QueueService] Cache inicializado do PostgreSQL', { tickets: tickets.size, queues: queues.size });
   } catch (err) {
     logger.warn('[QueueService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[QueueService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -292,8 +300,8 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   // Valida tenantId ou usa padrão
   const effectiveTenantId = tenantId || context.tenantId; // Tenant deve ser fornecido explicitamente
   
-  if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || effectiveTenantId.trim() === '') {
-    throw new Error('tenantId é obrigatório para criar ticket');
+    if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || effectiveTenantId.trim() === '') {
+      throw new Error('Invalid tenantId');
   }
 
   const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -301,7 +309,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
 
   const ticket = {
     id,
-    tenantId: effectiveTenantId.trim(),
+    tenantId: safeTrim(effectiveTenantId),
     sessionId,
     // Channel Gateway (fase 2): campos novos (best-effort)
     conversationId: context.conversationId || null,
@@ -414,7 +422,7 @@ function createQueue(queueName) {
     };
   }
 
-  const normalizedName = queueName.trim();
+  const normalizedName = safeTrim(queueName);
 
   // Validação: nome deve ter pelo menos 1 caractere e no máximo 100
   if (normalizedName.length < 1 || normalizedName.length > 100) {
@@ -474,8 +482,7 @@ function deleteQueue(queueName, force = false) {
     };
   }
 
-  const normalizedName = queueName.trim();
-
+  const normalizedName = safeTrim(queueName);
   // Verifica se a fila existe
   if (!queues.has(normalizedName)) {
     return {
@@ -544,7 +551,7 @@ function getQueueInfo(queueName) {
     return null;
   }
 
-  const normalizedName = queueName.trim();
+  const normalizedName = safeTrim(queueName);
   const queueSet = queues.get(normalizedName);
 
   if (!queueSet) {
