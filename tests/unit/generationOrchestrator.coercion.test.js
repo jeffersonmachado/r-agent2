@@ -1,5 +1,5 @@
 describe('generationOrchestrator - defensive coercions', () => {
-  function mockCommonDeps({ planSubflowsImpl, generateFlowImpl }) {
+  function mockCommonDeps({ planSubflowsImpl, generateFlowImpl, recordingCtorImpl }) {
     jest.doMock('../../api/utils/contractValidator', () => ({
       validateGenerationContract: jest.fn(() => ({ valid: true, errors: [] })),
     }));
@@ -49,12 +49,16 @@ describe('generationOrchestrator - defensive coercions', () => {
 
     jest.doMock('../../lib/recordingSystem', () => ({
       RecordingSystem: jest.fn().mockImplementation(() => ({
-        start: jest.fn(),
-        recordAction: jest.fn(),
-        recordGeneration: jest.fn(),
-        recordCustom: jest.fn(),
-        stop: jest.fn(),
-        save: jest.fn(() => 'recordings/mock.json'),
+        ...(typeof recordingCtorImpl === 'function'
+          ? recordingCtorImpl()
+          : {
+              start: jest.fn(),
+              recordAction: jest.fn(),
+              recordGeneration: jest.fn(),
+              recordCustom: jest.fn(),
+              stop: jest.fn(),
+              save: jest.fn(() => 'recordings/mock.json'),
+            }),
       })),
     }));
   }
@@ -107,7 +111,15 @@ describe('generationOrchestrator - defensive coercions', () => {
   });
 
   it('tolerates hostile thrown value from subflow planner', async () => {
-    const hostileThrown = { toString() { throw new Error('planner explode'); } };
+    const hostileThrown = {};
+    Object.defineProperty(hostileThrown, 'message', {
+      get() {
+        throw new Error('planner message explode');
+      },
+    });
+    hostileThrown.toString = () => {
+      throw new Error('planner stringify explode');
+    };
 
     mockCommonDeps({
       planSubflowsImpl: async () => {
@@ -137,5 +149,81 @@ describe('generationOrchestrator - defensive coercions', () => {
 
     expect(res.success).toBe(true);
     expect(res.flowDefinition.id).toBe('flow-main-2');
+  });
+
+  it('continues when RecordingSystem setup throws hostile error', async () => {
+    const hostileRecordingError = {};
+    Object.defineProperty(hostileRecordingError, 'message', {
+      get() {
+        throw new Error('recording message explode');
+      },
+    });
+    hostileRecordingError.toString = () => {
+      throw new Error('recording stringify explode');
+    };
+
+    mockCommonDeps({
+      planSubflowsImpl: async () => [],
+      generateFlowImpl: async () => ({
+        flowDefinition: {
+          id: 'flow-main-3',
+          name: 'Main 3',
+          nodes: [{ id: 'start', type: 'start' }, { id: 'end', type: 'end' }],
+        },
+      }),
+      recordingCtorImpl: () => {
+        throw hostileRecordingError;
+      },
+    });
+
+    const { orchestrateGeneration } = require('../../api/services/generationOrchestrator');
+
+    const res = await orchestrateGeneration(
+      {
+        name: 'Fluxo Recording Hostile',
+        description: 'descricao recording hostile',
+        useRag: false,
+        useWebScraping: false,
+        generateRpaTest: false,
+      },
+      { tenantId: 'tenant-1', dryRun: false }
+    );
+
+    expect(res.success).toBe(true);
+    expect(res.flowDefinition.id).toBe('flow-main-3');
+  });
+
+  it('preserves original hostile thrown object in orchestrateGeneration catch path', async () => {
+    const hostileGenerationError = {};
+    Object.defineProperty(hostileGenerationError, 'message', {
+      get() {
+        throw new Error('generation message explode');
+      },
+    });
+    hostileGenerationError.toString = () => {
+      throw new Error('generation stringify explode');
+    };
+
+    mockCommonDeps({
+      planSubflowsImpl: async () => [],
+      generateFlowImpl: async () => {
+        throw hostileGenerationError;
+      },
+    });
+
+    const { orchestrateGeneration } = require('../../api/services/generationOrchestrator');
+
+    await expect(
+      orchestrateGeneration(
+        {
+          name: 'Fluxo Catch Hostile',
+          description: 'descricao catch hostile',
+          useRag: false,
+          useWebScraping: false,
+          generateRpaTest: false,
+        },
+        { tenantId: 'tenant-1', dryRun: false }
+      )
+    ).rejects.toBe(hostileGenerationError);
   });
 });

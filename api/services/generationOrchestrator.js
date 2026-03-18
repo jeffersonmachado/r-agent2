@@ -38,6 +38,11 @@ function safeTrim(value, fallback = '') {
   try { return str.trim(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /**
  * Calcula hash do contrato para versionamento.
  * 
@@ -568,11 +573,11 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
     }
   } catch (err) {
     logger.error('Erro ao executar teste RPA', { 
-      error: err.message, 
+      error: safeErrorMessage(err), 
       stack: err.stack,
       testId: rpaTest.id 
     });
-    return { success: false, error: err.message };
+    return { success: false, error: safeErrorMessage(err) };
   }
 }
 
@@ -686,7 +691,7 @@ async function orchestrateGeneration(payload, options = {}) {
       });
     }
   } catch (err) {
-    logger.warn('[GenerationOrchestrator] Recording desabilitado (best-effort)', { error: err.message });
+    logger.warn('[GenerationOrchestrator] Recording desabilitado (best-effort)', { error: safeErrorMessage(err) });
     recording = null;
     recordingId = null;
   }
@@ -733,7 +738,7 @@ async function orchestrateGeneration(payload, options = {}) {
       replay.recordError(error, 'validate-payload');
       recording?.recordCustom?.('error', {
         step: 'validate-payload-error',
-        value: { error: error.message },
+        value: { error: safeErrorMessage(error) },
       });
       replay.stop();
       replay.save(replayId);
@@ -953,7 +958,7 @@ async function orchestrateGeneration(payload, options = {}) {
       // best-effort: nunca falhar a geração principal por causa de subfluxos
       logger.warn('[orchestrateGeneration] Falha ao planejar/gerar subfluxos (best-effort)', {
         tenantId,
-        error: e?.message || safeToString(e),
+        error: safeErrorMessage(e),
       });
     }
 
@@ -1147,7 +1152,7 @@ async function orchestrateGeneration(payload, options = {}) {
     // Registra erro no replay
     replay.recordError(err, 'orchestrate-generation');
     replay.recordEvent('generation_failed', {
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     replay.stop();
     const replayPath = replay.save(`${replayId}-error`);
@@ -1155,13 +1160,13 @@ async function orchestrateGeneration(payload, options = {}) {
     // Registra erro na gravação
     recording?.recordCustom?.('error', {
       step: 'generation-error',
-      value: { error: err.message },
+      value: { error: safeErrorMessage(err) },
     });
     recording?.stop?.();
     const recordingPath = recordingId ? (recording?.save?.(`${recordingId}-error`) || null) : null;
     
     logger.error('Erro na orquestração de geração', {
-      error: err.message,
+      error: safeErrorMessage(err),
       stack: err.stack,
       payloadName: payload.name,
       bootstrap: payload.bootstrap || false,
