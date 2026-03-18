@@ -22,22 +22,33 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
 async function ensureStateRow({ consumer }) {
   const sequelize = getSequelize();
   if (!sequelize) return null;
-  const id = `eds:${String(consumer)}`;
+  const consumerKey = safeToString(consumer);
+  const id = `eds:${consumerKey}`;
   await sequelize.query(
     `INSERT INTO event_dispatch_state (id, consumer, last_received_at, last_event_id, created_at, updated_at)
      VALUES (:id, :consumer, '1970-01-01'::timestamptz, NULL, NOW(), NOW())
      ON CONFLICT (consumer) DO NOTHING`,
-    { replacements: { id, consumer: String(consumer) } },
+    { replacements: { id, consumer: consumerKey } },
   );
   const [rows] = await sequelize.query(
     `SELECT id, consumer, last_received_at, last_event_id
      FROM event_dispatch_state
      WHERE consumer = :consumer
      LIMIT 1`,
-    { replacements: { consumer: String(consumer) } },
+    { replacements: { consumer: consumerKey } },
   );
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
@@ -53,8 +64,9 @@ function boolEnv(name, def = false) {
 async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispatchTargets = null } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, reason: 'db_unavailable' };
+  const consumerKey = safeToString(consumer, 'webhooks_v1') || 'webhooks_v1';
 
-  const state = await ensureStateRow({ consumer });
+  const state = await ensureStateRow({ consumer: consumerKey });
   if (!state) return { ok: false, reason: 'state_unavailable' };
 
   const safeBatch = Math.min(Math.max(Number(batchSize) || 100, 1), 1000);
@@ -66,11 +78,11 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
        FROM event_dispatch_state
        WHERE consumer = :consumer
        FOR UPDATE`,
-      { replacements: { consumer: String(consumer) }, transaction: t },
+      { replacements: { consumer: consumerKey }, transaction: t },
     );
     const locked = Array.isArray(lockedRows) && lockedRows[0] ? lockedRows[0] : null;
     const lastReceivedAt = locked?.last_received_at ? new Date(locked.last_received_at) : new Date('1970-01-01');
-    const lastEventId = locked?.last_event_id ? String(locked.last_event_id) : '';
+    const lastEventId = locked?.last_event_id ? safeToString(locked.last_event_id) : '';
 
     const EventModel = EventLedger();
     const events = await EventModel.findAll({
@@ -106,9 +118,9 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
       if (receivedAt) {
         if (receivedAt > maxReceivedAt) {
           maxReceivedAt = receivedAt;
-          maxEventId = String(eventId || '');
-        } else if (receivedAt.getTime() === maxReceivedAt.getTime() && String(eventId || '') > String(maxEventId || '')) {
-          maxEventId = String(eventId || '');
+          maxEventId = safeToString(eventId || '');
+        } else if (receivedAt.getTime() === maxReceivedAt.getTime() && safeToString(eventId || '') > safeToString(maxEventId || '')) {
+          maxEventId = safeToString(eventId || '');
         }
       }
 
@@ -119,14 +131,14 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
             tenantId,
             kind: 'dispatch_event_trigger',
             payload: {
-              consumer: String(consumer),
-              eventId: String(eventId),
-              dispatchTargets: [String(target)],
+              consumer: consumerKey,
+              eventId: safeToString(eventId),
+              dispatchTargets: [safeToString(target)],
             },
             runAt: new Date(),
             priority: 0,
             maxAttempts: 10,
-            idempotencyKey: `event_dispatch:${String(eventId)}:${String(target)}`,
+            idempotencyKey: `event_dispatch:${safeToString(eventId)}:${safeToString(target)}`,
           }).then(() => { enqueued += 1; }).catch(() => {});
         }
       } else {
@@ -136,13 +148,13 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
           tenantId,
           kind: 'dispatch_event_trigger',
           payload: {
-            consumer: String(consumer),
-            eventId: String(eventId),
+            consumer: consumerKey,
+            eventId: safeToString(eventId),
           },
           runAt: new Date(),
           priority: 0,
           maxAttempts: 10,
-          idempotencyKey: `event_dispatch:${String(eventId)}`,
+          idempotencyKey: `event_dispatch:${safeToString(eventId)}`,
         }).then(() => { enqueued += 1; }).catch(() => {});
       }
     }
@@ -151,7 +163,7 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
       `UPDATE event_dispatch_state
        SET last_received_at = :ts, last_event_id = :eid, updated_at = NOW()
        WHERE consumer = :consumer`,
-      { replacements: { ts: maxReceivedAt, eid: maxEventId || null, consumer: String(consumer) }, transaction: t },
+      { replacements: { ts: maxReceivedAt, eid: maxEventId || null, consumer: consumerKey }, transaction: t },
     );
 
     return { ok: true, enqueued, cursor: { receivedAt: maxReceivedAt.toISOString(), eventId: maxEventId || null } };
@@ -163,15 +175,17 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispat
   if (!tenantId || !eventId) return { ok: false, reason: 'invalid_args' };
 
   const EventModel = EventLedger();
-  const ev = await EventModel.findOne({ where: { tenant_key: String(tenantId), id: String(eventId) } });
+  const tenantKey = safeToString(tenantId);
+  const eventKey = safeToString(eventId);
+  const ev = await EventModel.findOne({ where: { tenant_key: tenantKey, id: eventKey } });
   if (!ev) return { ok: false, reason: 'event_not_found' };
 
   const json = ev.toJSON ? ev.toJSON() : ev;
-  const type = String(json.type || '').trim();
+  const type = safeTrim(json.type || '');
 
   const hasExplicitTargets = Array.isArray(dispatchTargets) && dispatchTargets.length;
   const targets = hasExplicitTargets
-    ? dispatchTargets.map((t) => String(t))
+    ? dispatchTargets.map((t) => safeToString(t))
     : ['webhooks', 'flows'];
   const strictFailures = boolEnv('EVENT_DISPATCH_STRICT_FAILURES', true);
 
@@ -194,7 +208,7 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispat
   if (targets.includes('webhooks')) {
     const eventName = `event_ledger.${type}`;
     try {
-      await triggerWebhooks(String(tenantId), eventName, eventPayload);
+      await triggerWebhooks(tenantKey, eventName, eventPayload);
       webhooksOk = true;
     } catch (err) {
       webhooksOk = false;
@@ -208,7 +222,7 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispat
 
   if (targets.includes('flows')) {
     try {
-      await dispatchFlowsForEvent({ tenantId: String(tenantId), event: eventPayload });
+      await dispatchFlowsForEvent({ tenantId: tenantKey, event: eventPayload });
       flowsOk = true;
     } catch (err) {
       flowsOk = false;
