@@ -20,9 +20,19 @@ function safeToString(value, fallback = '') {
   try { return String(value); } catch (_) { return fallback; }
 }
 
-function safeTrimLower(value, fallback = '') {
+function safeTrim(value, fallback = '') {
   const str = safeToString(value, fallback);
-  try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
+  try { return str.trim(); } catch (_) { return fallback; }
+}
+
+function safeTrimLower(value, fallback = '') {
+  const str = safeTrim(value, fallback);
+  try { return str.toLowerCase(); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return err.message || String(err); } catch (_) { return fallback; }
 }
 
 function safeKeys(obj) {
@@ -491,19 +501,19 @@ async function scrapeUrl(url, options = {}) {
       // 2) Se texto curto, tenta fallback Playwright (SPA/JS)
       const minCharsForNoFallback = 200;
       const usePlaywright = safeTrimLower(process.env.USE_PLAYWRIGHT) === 'true';
-      if ((scrapeResult.extractedText || '').trim().length < minCharsForNoFallback) {
+      if (safeTrim(scrapeResult.extractedText).length < minCharsForNoFallback) {
         warnings.push({
           code: 'SCRAPE_SHORT',
           message: `Conteúdo extraído via fetch é curto (<${minCharsForNoFallback} chars). Tentando fallback Playwright.`,
-          details: { extractedLength: (scrapeResult.extractedText || '').trim().length, url },
+          details: { extractedLength: safeTrim(scrapeResult.extractedText).length, url },
         });
         if (usePlaywright) {
           try {
             const pw = await scrapeWithPlaywright(url);
             usedPlaywright = true;
             // Usa Playwright se trouxer mais conteúdo, ou se fetch não trouxe nada
-            const pwLen = (pw.extractedText || '').trim().length;
-            const fetchLen = (scrapeResult.extractedText || '').trim().length;
+            const pwLen = safeTrim(pw.extractedText).length;
+            const fetchLen = safeTrim(scrapeResult.extractedText).length;
             if (pwLen > fetchLen) {
               scrapeResult = pw;
             } else {
@@ -524,7 +534,7 @@ async function scrapeUrl(url, options = {}) {
             warnings.push({
               code: 'PLAYWRIGHT_FAILED',
               message: 'Fallback Playwright falhou. Continuando com o melhor resultado disponível.',
-              details: { url, error: pwErr.message || safeToString(pwErr) },
+              details: { url, error: safeErrorMessage(pwErr) || safeToString(pwErr) },
             });
           }
         } else {
@@ -539,7 +549,7 @@ async function scrapeUrl(url, options = {}) {
       warnings.push({
         code: 'SCRAPE_FAILED',
         message: 'Falha ao extrair conteúdo via fetch/HTML estático. Tentando fallback.',
-        details: { url, error: fetchErr.message || safeToString(fetchErr) },
+        details: { url, error: safeErrorMessage(fetchErr) || safeToString(fetchErr) },
       });
 
       // 2) Se fetch falhou, tenta Playwright
@@ -557,7 +567,7 @@ async function scrapeUrl(url, options = {}) {
           warnings.push({
             code: 'PLAYWRIGHT_FAILED',
             message: 'Fallback Playwright também falhou. Indexando metadados mínimos.',
-            details: { url, error: pwErr.message || safeToString(pwErr) },
+            details: { url, error: safeErrorMessage(pwErr) || safeToString(pwErr) },
           });
         }
       } else {
@@ -575,7 +585,7 @@ async function scrapeUrl(url, options = {}) {
     }
 
     // Se texto ainda é vazio, garante placeholder indexável
-    if (!(scrapeResult.extractedText || '').trim()) {
+    if (!safeTrim(scrapeResult.extractedText)) {
       warnings.push({
         code: 'NO_TEXT_EXTRACTED',
         message: 'Sem texto extraído. Indexando metadados do site.',
@@ -664,7 +674,7 @@ async function scrapeUrl(url, options = {}) {
               tenantId,
               durationMs: Date.now() - startedAt,
               scrapeMethod: usedPlaywright ? 'playwright' : 'fetch',
-              extractedLength: (scrapeResult?.extractedText || '').trim().length,
+              extractedLength: safeTrim(scrapeResult?.extractedText).length,
               warningsCount: Array.isArray(warnings) ? warnings.length : 0,
               indexed: result.existingDocument.indexed || false,
               chunksCreated: result.existingDocument.chunksCount || 0,
@@ -708,7 +718,7 @@ async function scrapeUrl(url, options = {}) {
           replay.recordError(indexError, 'document-indexing');
         }
         logger.error('[WebScraping] Erro ao indexar documento', {
-          error: indexError.message,
+          error: safeErrorMessage(indexError),
           documentId,
         });
         // Não falha o scraping se a indexação falhar
@@ -735,7 +745,7 @@ async function scrapeUrl(url, options = {}) {
       tenantId,
       durationMs: Date.now() - startedAt,
       scrapeMethod: usedPlaywright ? 'playwright' : 'fetch',
-      extractedLength: (scrapeResult?.extractedText || '').trim().length,
+      extractedLength: safeTrim(scrapeResult?.extractedText).length,
       warningsCount: Array.isArray(warnings) ? warnings.length : 0,
       indexed,
       chunksCreated,
@@ -763,9 +773,10 @@ async function scrapeUrl(url, options = {}) {
     };
   } catch (error) {
     // Registra erro no replay
+    const safeError = safeErrorMessage(error);
     if (replay) {
       replay.recordError(error, 'url-scraping');
-      replay.recordEvent('scraping_failed', { error: error.message });
+      replay.recordEvent('scraping_failed', { error: safeError });
       replay.stop();
       replay.save(`${replayId}-error`);
     }
@@ -773,7 +784,7 @@ async function scrapeUrl(url, options = {}) {
     // Registra erro na gravação
     recording?.recordCustom?.('error', {
       step: 'scraping-error',
-      value: { error: error.message },
+      value: { error: safeError },
     });
     recording?.stop?.();
     if (recordingId) recording?.save?.(`${recordingId}-error`);
@@ -783,7 +794,7 @@ async function scrapeUrl(url, options = {}) {
       executionId,
       tenantId,
       durationMs: Date.now() - startedAt,
-      error: error.message,
+      error: safeError,
     });
     throw error;
   }
