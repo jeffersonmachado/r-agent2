@@ -15,6 +15,28 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
+function safeString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(error, fallback = '') {
+  let message;
+
+  try {
+    message = error?.message;
+  } catch (_) {
+    message = null;
+  }
+
+  if (message !== null && message !== undefined) return safeString(message, fallback);
+  return safeString(error, fallback);
+}
+
 /**
  * Baixa arquivo de áudio de uma URL.
  * @param {string} url - URL do áudio
@@ -214,11 +236,12 @@ async function transcribeAudio(options) {
     return result;
   } catch (error) {
     logger.error('[AudioTranscription] Erro na transcrição:', error);
+    const safeMessage = safeErrorMessage(error);
     
     // Retorna erro amigável
     return {
-      text: `[Erro ao transcrever áudio: ${error.message}]`,
-      error: error.message,
+      text: `[Erro ao transcrever áudio: ${safeMessage}]`,
+      error: safeMessage,
       provider,
     };
   }
