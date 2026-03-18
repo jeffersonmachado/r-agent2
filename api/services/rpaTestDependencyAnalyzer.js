@@ -12,6 +12,26 @@ const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeGet(obj, key, fallback = undefined) {
+  if (obj == null) return fallback;
+  try {
+    const value = obj[key];
+    return value === undefined ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /**
  * Analisa dependências de um fluxo.
  * 
@@ -223,7 +243,7 @@ async function loadExistingData(dependencies, tenantId) {
     }
 
   } catch (err) {
-    logger.error('Erro ao carregar dados existentes', { error: err.message });
+    logger.error('Erro ao carregar dados existentes', { error: safeErrorMessage(err) });
   }
 }
 
@@ -285,7 +305,7 @@ async function identifyAvailableSeeds(dependencies) {
     }
 
   } catch (err) {
-    logger.error('Erro ao identificar seeds disponíveis', { error: err.message });
+    logger.error('Erro ao identificar seeds disponíveis', { error: safeErrorMessage(err) });
   }
 }
 
@@ -325,9 +345,9 @@ async function resolveDependencies(dependencies, tenantId = 'demo-tenant') {
 
   // Para cada seed faltante, executa se disponível
   for (const seedInfo of dependencies.seeds.missing) {
+    const seedName = safeToString(safeGet(seedInfo, 'seedName', ''), '');
+
     try {
-      const seedName = seedInfo.seedName;
-      
       // Verifica se o seed existe
       if (!dependencies.seeds.available.includes(seedName)) {
         resolution.failedSeeds.push({
@@ -361,7 +381,7 @@ async function resolveDependencies(dependencies, tenantId = 'demo-tenant') {
             throw new Error(result?.message || 'Seed RPA executado com falha');
           }
         } catch (err) {
-          logger.warn('Falha ao executar seed RPA (ignorado)', { seedName, error: err.message });
+          logger.warn('Falha ao executar seed RPA (ignorado)', { seedName, error: safeErrorMessage(err) });
         }
       }
 
@@ -373,14 +393,16 @@ async function resolveDependencies(dependencies, tenantId = 'demo-tenant') {
       });
 
     } catch (err) {
-      logger.error('Erro ao executar seed', { seedName: seedInfo.seedName, error: err.message });
+      const failedSeedName = seedName || safeToString(safeGet(seedInfo, 'seedName', ''), '');
+      const errorMessage = safeErrorMessage(err);
+      logger.error('Erro ao executar seed', { seedName: failedSeedName, error: errorMessage });
       resolution.failedSeeds.push({
-        seedName: seedInfo.seedName,
-        reason: err.message,
+        seedName: failedSeedName,
+        reason: errorMessage,
       });
       resolution.errors.push({
-        seedName: seedInfo.seedName,
-        error: err.message,
+        seedName: failedSeedName,
+        error: errorMessage,
       });
     }
   }
