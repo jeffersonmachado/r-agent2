@@ -30,6 +30,24 @@ function nowIso(d) {
   try { return new Date(d).toISOString(); } catch { return new Date().toISOString(); }
 }
 
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeTrim(v, fallback = '') {
+  return safeToString(v, fallback).trim();
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function fromDbRow(row) {
   return {
     id: row.id,
@@ -185,7 +203,7 @@ function tryLoadSeedTemplate(fileName) {
     if (!tpl?.id || !tpl?.name || !tpl?.flow) return null;
     return tpl;
   } catch (err) {
-    logger.warn('[FlowTemplateMarketplace] Falha ao carregar seed template', { fileName, error: err.message });
+    logger.warn('[FlowTemplateMarketplace] Falha ao carregar seed template', { fileName, error: safeErrorMessage(err) });
     return null;
   }
 }
@@ -203,7 +221,7 @@ async function upsertToDbBestEffort(tpl) {
       await FlowTemplateModel.create({ ...payload, created_at: now, updated_at: now });
     }
   } catch (err) {
-    logger.warn('[FlowTemplateMarketplace] Falha ao persistir template', { id: tpl.id, error: err.message });
+    logger.warn('[FlowTemplateMarketplace] Falha ao persistir template', { id: tpl.id, error: safeErrorMessage(err) });
   }
 }
 
@@ -267,7 +285,7 @@ async function initialize() {
 
     await seedSystemTemplatesBestEffort();
   } catch (err) {
-    logger.warn('[FlowTemplateMarketplace] Falha ao inicializar cache', { error: err.message });
+    logger.warn('[FlowTemplateMarketplace] Falha ao inicializar cache', { error: safeErrorMessage(err) });
   }
 }
 
@@ -290,17 +308,17 @@ function listTemplates({ tenantId, tag, q, scope = 'all', activeOnly = true } = 
   }
 
   if (tag) {
-    const tagLower = String(tag).toLowerCase();
-    list = list.filter(t => (t.tags || []).some(x => String(x).toLowerCase() === tagLower));
+    const tagLower = safeToString(tag).toLowerCase();
+    list = list.filter(t => (t.tags || []).some(x => safeToString(x).toLowerCase() === tagLower));
   }
 
   if (q) {
-    const qLower = String(q).toLowerCase();
+    const qLower = safeToString(q).toLowerCase();
     list = list.filter(t =>
-      String(t.name || '').toLowerCase().includes(qLower) ||
-      String(t.description || '').toLowerCase().includes(qLower) ||
-      String(t.id || '').toLowerCase().includes(qLower) ||
-      (t.tags || []).some(x => String(x).toLowerCase().includes(qLower))
+      safeToString(t.name).toLowerCase().includes(qLower) ||
+      safeToString(t.description).toLowerCase().includes(qLower) ||
+      safeToString(t.id).toLowerCase().includes(qLower) ||
+      (t.tags || []).some(x => safeToString(x).toLowerCase().includes(qLower))
     );
   }
 
@@ -308,7 +326,7 @@ function listTemplates({ tenantId, tag, q, scope = 'all', activeOnly = true } = 
     const ag = a.tenantId === 'system' ? 0 : 1;
     const bg = b.tenantId === 'system' ? 0 : 1;
     if (ag !== bg) return ag - bg;
-    return String(a.name || '').localeCompare(String(b.name || ''));
+    return safeToString(a.name).localeCompare(safeToString(b.name));
   });
 
   // Retorna sem o flow para listagem
@@ -325,7 +343,7 @@ function getTemplate({ tenantId, id } = {}) {
 
 async function createTemplate({ tenantId, name, description = '', icon = '📋', tags = [], flow, createdBy = null, id = null }) {
   if (!tenantId) return { success: false, error: 'tenantId é obrigatório' };
-  if (!name || !String(name).trim()) return { success: false, error: 'name é obrigatório' };
+  if (!safeTrim(name)) return { success: false, error: 'name é obrigatório' };
   if (!flow || typeof flow !== 'object') return { success: false, error: 'flow é obrigatório' };
 
   const validation = validateFlow(flow);
@@ -336,10 +354,10 @@ async function createTemplate({ tenantId, name, description = '', icon = '📋',
   const tpl = {
     id: id || newId('tpl'),
     tenantId,
-    name: String(name).trim(),
-    description: String(description || ''),
-    icon: String(icon || '📋').substring(0, 2),
-    tags: Array.isArray(tags) ? tags.map(t => String(t).trim()).filter(Boolean) : [],
+    name: safeTrim(name),
+    description: safeToString(description),
+    icon: safeToString(icon || '📋', '📋').substring(0, 2),
+    tags: Array.isArray(tags) ? tags.map(t => safeTrim(t)).filter(Boolean) : [],
     flow,
     active: true,
     createdBy,
@@ -366,7 +384,7 @@ async function deleteTemplate({ tenantId, id }) {
     const FlowTemplateModel = model();
     await FlowTemplateModel.destroy({ where: { id } });
   } catch (err) {
-    logger.warn('[FlowTemplateMarketplace] Falha ao deletar template (best-effort)', { id, error: err.message });
+    logger.warn('[FlowTemplateMarketplace] Falha ao deletar template (best-effort)', { id, error: safeErrorMessage(err) });
   }
 
   return { success: true, deletedId: id };
