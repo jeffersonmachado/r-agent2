@@ -1,5 +1,25 @@
 const config = require('../../utils/config');
 
+function safeToString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(error, fallback = '') {
+  let message;
+  try {
+    message = error?.message;
+  } catch (_) {
+    message = null;
+  }
+  if (message !== null && message !== undefined) return safeToString(message, fallback);
+  return safeToString(error, fallback);
+}
+
 let pool = null;
 let mysql = null;
 
@@ -132,7 +152,7 @@ async function checkMariaDbHealth() {
     const ok = Array.isArray(rows) && rows[0] && rows[0].ok === 1;
     return { configured: true, status: ok ? 'healthy' : 'unhealthy' };
   } catch (err) {
-    return { configured: true, status: 'unhealthy', error: err.message };
+    return { configured: true, status: 'unhealthy', error: safeErrorMessage(err) };
   }
 }
 
