@@ -20,6 +20,21 @@ const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const { logAction } = require('./auditService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try {
+    const message = safeToString(err.message, '');
+    return message || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 /**
  * @typedef {Object} PipelineResult
  * @property {boolean} success - Se o pipeline foi executado com sucesso
@@ -360,7 +375,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     // Registra erro no replay
     replay.recordError(error, 'rpa-flow-pipeline');
     replay.recordEvent('pipeline_failed', {
-      error: error.message,
+      error: safeErrorMessage(error),
     });
     replay.stop();
     const replayPath = replay.save(`${replayId}-error`);
@@ -369,19 +384,19 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     // Registra erro na gravação
     recordingSystem.recordCustom('error', {
       step: 'pipeline-error',
-      value: { error: error.message },
+      value: { error: safeErrorMessage(error) },
     });
     recordingSystem.stop();
     const recordingPath = recordingSystem.save(`${recordingId}-error`);
     result.recordingPath = recordingPath;
     
     logger.error('[RpaFlowPipeline] Erro no pipeline', {
-      error: error.message,
+      error: safeErrorMessage(error),
       stack: error.stack,
       replayPath,
       recordingPath,
     });
-    result.errors.push(error.message);
+    result.errors.push(safeErrorMessage(error));
   }
 
   try {
@@ -458,10 +473,10 @@ async function executeRequiredSeeds(requiredSeeds, tenantId) {
         });
       }
     } catch (error) {
-      result.errors.push(`Erro ao executar seed ${seedName}: ${error.message}`);
+      result.errors.push(`Erro ao executar seed ${seedName}: ${safeErrorMessage(error)}`);
       logger.error('[RpaFlowPipeline] Erro ao executar seed', {
         seedName,
-        error: error.message,
+        error: safeErrorMessage(error),
       });
     }
   }
