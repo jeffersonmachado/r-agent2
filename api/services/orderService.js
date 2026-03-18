@@ -2,6 +2,15 @@ const crypto = require('crypto');
 const { Order } = require('../db/models');
 const { appendEventV1 } = require('./eventLedgerService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  return safeToString(value, fallback).trim();
+}
+
 function makeId() {
   return `ord-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -12,7 +21,7 @@ function makeCorrelationId(prefix = 'cor') {
 
 function makeOrderNumber({ tenantId }) {
   // Simples e único por tenant, suficiente para v1.
-  const shortTenant = String(tenantId).replace(/[^a-zA-Z0-9]/g, '').slice(0, 6) || 't';
+  const shortTenant = safeToString(tenantId).replace(/[^a-zA-Z0-9]/g, '').slice(0, 6) || 't';
   return `${shortTenant}-${Date.now().toString(36)}`;
 }
 
@@ -26,9 +35,9 @@ function normalizeItems(items) {
   if (!Array.isArray(items)) return [];
   return items
     .map((it) => ({
-      name: it && it.name != null ? String(it.name).trim() : '',
+      name: it && it.name != null ? safeTrim(it.name) : '',
       qty: it && it.qty != null ? Number(it.qty) : 1,
-      notes: it && it.notes != null ? String(it.notes).trim() : null,
+      notes: it && it.notes != null ? safeTrim(it.notes) : null,
       price: it && it.price != null ? Number(it.price) : null,
     }))
     .filter((it) => it.name);
@@ -51,7 +60,7 @@ async function createOrder({
   const sequelize = Model.sequelize;
   const id = makeId();
   const orderNumber = makeOrderNumber({ tenantId });
-  const correlationId = context && context.correlationId ? String(context.correlationId) : makeCorrelationId('ordcor');
+  const correlationId = context && context.correlationId ? safeToString(context.correlationId) : makeCorrelationId('ordcor');
 
   const cleanItems = normalizeItems(items);
   if (cleanItems.length === 0) {
@@ -64,7 +73,7 @@ async function createOrder({
   // Idempotência (v1): se o caller fornecer context.idempotencyKey, evita duplicar pedidos
   // em retries HTTP (ex.: storefront) no mesmo dia.
   try {
-    const idk = context && context.idempotencyKey ? String(context.idempotencyKey) : null;
+    const idk = context && context.idempotencyKey ? safeToString(context.idempotencyKey) : null;
     if (idk && sequelize) {
       const [rows] = await sequelize.query(
         `SELECT id
@@ -77,7 +86,7 @@ async function createOrder({
         { replacements: { tenantKey: tenantId, idk } },
       );
       if (Array.isArray(rows) && rows[0] && rows[0].id) {
-        const existing = await Model.findOne({ where: { tenant_key: tenantId, id: String(rows[0].id) } });
+        const existing = await Model.findOne({ where: { tenant_key: tenantId, id: safeToString(rows[0].id) } });
         if (existing) return existing.toJSON ? existing.toJSON() : existing;
       }
     }
@@ -111,8 +120,8 @@ async function createOrder({
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'order', id },
-      actor: context && context.publicTokenId ? { type: 'public_token', id: String(context.publicTokenId) } : { type: 'system', id: 'api' },
-      idempotencyKey: context && context.idempotencyKey ? `order_created:${tenantId}:${String(context.idempotencyKey)}` : null,
+      actor: context && context.publicTokenId ? { type: 'public_token', id: safeToString(context.publicTokenId) } : { type: 'system', id: 'api' },
+      idempotencyKey: context && context.idempotencyKey ? `order_created:${tenantId}:${safeToString(context.idempotencyKey)}` : null,
       payload: {
         orderId: id,
         orderNumber,
@@ -163,7 +172,7 @@ async function updateOrderStatus({ tenantId, orderId, status }) {
     throw err;
   }
 
-  const next = String(status);
+  const next = safeToString(status);
   if (!isValidTransition(row.status, next)) {
     const err = new Error('invalid_order_status_transition');
     // @ts-ignore
@@ -191,7 +200,7 @@ async function updateOrderStatus({ tenantId, orderId, status }) {
       correlationId,
       subject: { type: 'order', id: orderId },
       actor: { type: 'system', id: 'api' },
-      idempotencyKey: `order_status:${tenantId}:${orderId}:${next}:${String(json.updated_at || '')}`,
+      idempotencyKey: `order_status:${tenantId}:${orderId}:${next}:${safeToString(json.updated_at || '')}`,
       payload: {
         orderId: orderId,
         fromStatus: row.previous('status') || null,
@@ -206,7 +215,7 @@ async function updateOrderStatus({ tenantId, orderId, status }) {
 async function listOrders({ tenantId, status = null, limit = 50, offset = 0 }) {
   const Model = Order();
   const where = { tenant_key: tenantId };
-  if (status) where.status = String(status);
+  if (status) where.status = safeToString(status);
   const { rows, count } = await Model.findAndCountAll({
     where,
     order: [['created_at', 'DESC']],
@@ -261,7 +270,7 @@ async function getOrderMetrics({ tenantId, locationId = null }) {
   let locSql = '';
   if (locationId != null) {
     locSql = 'AND location_id = :locationId';
-    replacements.locationId = String(locationId);
+    replacements.locationId = safeToString(locationId);
   }
 
   const [rows] = await sequelize.query(
