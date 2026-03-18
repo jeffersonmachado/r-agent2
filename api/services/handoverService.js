@@ -20,6 +20,16 @@ const { emitEvent } = require('./websocketService');
 const { autoAssign } = require('./assignmentService');
 const { logAction } = require('./auditService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -45,7 +55,7 @@ async function createTicketEventBestEffort({ tenantId, ticketId, type, payload, 
       updated_at: now,
     });
   } catch (err) {
-    logger.debug('[Handover] Falha ao persistir ticket_event (ignorado)', { error: err.message });
+    logger.debug('[Handover] Falha ao persistir ticket_event (ignorado)', { error: safeErrorMessage(err) });
   }
 }
 
@@ -83,7 +93,7 @@ async function updateConversationStatusBestEffort(ticket) {
       updated_at: new Date(),
     });
   } catch (err) {
-    logger.debug('[Handover] Falha ao atualizar status da conversa (ignorado)', { error: err.message });
+    logger.debug('[Handover] Falha ao atualizar status da conversa (ignorado)', { error: safeErrorMessage(err) });
   }
 }
 
@@ -274,7 +284,7 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
         await returnToBot(t.id, { id: 'system', username: 'system' }, 'inactivity');
       }
     } catch (err) {
-      logger.debug('[Handover] autoReturnToBot erro (ignorado)', { error: err.message });
+      logger.debug('[Handover] autoReturnToBot erro (ignorado)', { error: safeErrorMessage(err) });
     }
   }, intervalMs);
 
