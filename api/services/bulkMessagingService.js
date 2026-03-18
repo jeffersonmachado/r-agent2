@@ -19,6 +19,33 @@ const path = require('path');
 const logger = require('../utils/logger');
 const outboundQueueService = require('./outboundQueueService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try {
+    return String(value).trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try {
+    return err.message || String(err) || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 /**
  * @typedef {Object} BulkCampaign
  * @property {string} id - ID único da campanha
@@ -124,16 +151,18 @@ function createCampaign(data) {
     rateLimit = 20,
     createdBy 
   } = data;
+  const normalizedName = safeTrim(name);
+  const normalizedMessage = safeTrim(message);
   
   if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
     return { success: false, error: 'tenantId é obrigatório' };
   }
 
-  if (!name || name.trim() === '') {
+  if (!normalizedName) {
     return { success: false, error: 'Nome da campanha é obrigatório' };
   }
   
-  if (!message || message.trim() === '') {
+  if (!normalizedMessage) {
     return { success: false, error: 'Mensagem é obrigatória' };
   }
   
@@ -150,7 +179,7 @@ function createCampaign(data) {
   const phoneRegex = /^\+?[1-9]\d{10,14}$/;
   
   for (const phone of phoneNumbers) {
-    const cleanPhone = String(phone).replace(/\s+/g, '').replace(/[^\d+]/g, '');
+    const cleanPhone = safeToString(phone).replace(/\s+/g, '').replace(/[^\d+]/g, '');
     if (phoneRegex.test(cleanPhone)) {
       const normalized = cleanPhone.replace(/^\+/, '');
       if (!validPhoneNumbers.includes(normalized)) {
@@ -175,8 +204,8 @@ function createCampaign(data) {
   const campaign = {
     id,
     tenantId: tenantId.trim(),
-    name: name.trim(),
-    message: message.trim(),
+    name: normalizedName,
+    message: normalizedMessage,
     phoneNumbers: validPhoneNumbers,
     status: scheduledAt && new Date(scheduledAt) > new Date() ? 'scheduled' : 'draft',
     scheduledAt: scheduledAt || null,
@@ -224,8 +253,8 @@ function updateCampaign(id, updates) {
   };
   
   // Normaliza campos
-  if (updated.name) updated.name = updated.name.trim();
-  if (updated.message) updated.message = updated.message.trim();
+  if (updated.name) updated.name = safeTrim(updated.name);
+  if (updated.message) updated.message = safeTrim(updated.message);
   if (updated.rateLimit) {
     updated.rateLimit = Math.max(1, Math.min(100, updated.rateLimit));
   }
@@ -418,7 +447,7 @@ async function startSendingProcess(campaignId) {
       campaign.deliveryStatus[phoneNumber] = 'failed';
       campaign.failedCount++;
       campaign.pendingCount--;
-      logger.error(`[BulkMessaging] Erro ao enviar para ${phoneNumber}:`, error.message);
+      logger.error(`[BulkMessaging] Erro ao enviar para ${phoneNumber}:`, safeErrorMessage(error));
     }
     
     campaign.updatedAt = new Date().toISOString();
