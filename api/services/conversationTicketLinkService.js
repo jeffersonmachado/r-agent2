@@ -28,6 +28,24 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeTrim(v, fallback = '') {
+  return safeToString(v, fallback).trim();
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -39,7 +57,7 @@ function newId(prefix) {
  */
 function normalizePhone(phone) {
   if (!phone) return null;
-  const raw = String(phone).trim();
+  const raw = safeTrim(phone);
   if (!raw) return null;
 
   // Mantém apenas dígitos e '+'
@@ -77,15 +95,15 @@ async function touchConversation({ tenantId, conversationId, status = null } = {
       last_message_at: new Date(),
       updated_at: new Date(),
     };
-    if (status) patch.status = String(status);
+    if (status) patch.status = safeToString(status);
     await ConversationModel.update(patch, {
-      where: { tenant_key: String(tenantId), id: String(conversationId) },
+      where: { tenant_key: safeToString(tenantId), id: safeToString(conversationId) },
     });
   } catch (err) {
     logger.debug('[ConversationTicketLink] Falha ao atualizar conversation (ignorado)', {
       tenantId,
       conversationId,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
   }
 }
@@ -120,21 +138,21 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     conversation = await ConversationModel.findOne({
       where: {
         tenant_key: effectiveTenantId,
-        channel_type: String(channelType),
-        external_id: String(externalConversationId),
+        channel_type: safeToString(channelType),
+        external_id: safeToString(externalConversationId),
       },
     });
   }
 
   const normalizedPhone = normalizePhone(contactRef.phone || externalConversationId);
-  const contactId = contactRef.contactId ? String(contactRef.contactId) : (normalizedPhone ? normalizedPhone.replace(/^\+/, '') : null);
+  const contactId = contactRef.contactId ? safeToString(contactRef.contactId) : (normalizedPhone ? normalizedPhone.replace(/^\+/, '') : null);
 
   if (!conversation && dbAvailable()) {
     conversation = await ConversationModel.create({
       id: newId('conv'),
       tenant_key: effectiveTenantId,
-      channel_type: String(channelType),
-      external_id: String(externalConversationId),
+      channel_type: safeToString(channelType),
+      external_id: safeToString(externalConversationId),
       contact_id: contactId,
       status: 'bot',
       current_ticket_id: null,
@@ -151,8 +169,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     }
 
     const sessionId = channelType === 'whatsapp'
-      ? `whatsapp_${String(externalConversationId).replace(/^\+/, '')}`
-      : `${channelType}_${String(externalConversationId).replace(/^\+/, '')}`;
+      ? `whatsapp_${safeToString(externalConversationId).replace(/^\+/, '')}`
+      : `${channelType}_${safeToString(externalConversationId).replace(/^\+/, '')}`;
 
     const existing = queueService.getTicketBySession(sessionId, effectiveTenantId);
     if (existing && existing.status !== 'closed') {
@@ -227,7 +245,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
         existingDbTicket = queueService._upsertTicketFromDbRow(row);
       }
     } catch (err) {
-      logger.debug('[ConversationTicketLink] Falha ao buscar ticket no DB (ignorado)', { error: err.message });
+      logger.debug('[ConversationTicketLink] Falha ao buscar ticket no DB (ignorado)', { error: safeErrorMessage(err) });
     }
   }
 
@@ -263,8 +281,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
 
   const defaultQueue = config.get('flows.defaultQueue', 'default');
   const sessionId = channelType === 'whatsapp'
-    ? `whatsapp_${String(externalConversationId).replace(/^\+/, '')}`
-    : `${channelType}_${String(externalConversationId).replace(/^\+/, '')}`;
+    ? `whatsapp_${safeToString(externalConversationId).replace(/^\+/, '')}`
+    : `${channelType}_${safeToString(externalConversationId).replace(/^\+/, '')}`;
 
   const ticket = queueService.createTicket({
     tenantId: effectiveTenantId,
@@ -307,9 +325,9 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
 function appendTicketMessage(ticketId, normalizedMessage = {}) {
   if (!ticketId || typeof ticketId !== 'string') throw new Error('ticketId é obrigatório');
   const dir = normalizedMessage.direction === 'out' ? 'out' : 'in';
-  const text = normalizedMessage.text ? String(normalizedMessage.text) : '';
-  const externalMessageId = normalizedMessage.externalMessageId ? String(normalizedMessage.externalMessageId) : null;
-  const timestamp = normalizedMessage.timestamp ? String(normalizedMessage.timestamp) : null;
+  const text = normalizedMessage.text ? safeToString(normalizedMessage.text) : '';
+  const externalMessageId = normalizedMessage.externalMessageId ? safeToString(normalizedMessage.externalMessageId) : null;
+  const timestamp = normalizedMessage.timestamp ? safeToString(normalizedMessage.timestamp) : null;
 
   const ticket = queueService.getTicket(ticketId);
   if (!ticket) return null;
