@@ -72,14 +72,14 @@ function buildReteGraphFromIntents({ categories, startMessage }) {
 
   // IDs do "Rete JSON" são as chaves do objeto (string) e são referenciadas em outputs.connections[].node
   let nextKey = 1;
-  const alloc = () => String(nextKey++);
+  const alloc = () => safeString(nextKey++, '1');
 
   const startKey = alloc();
   const fallbackKey = alloc();
 
   // Start
   nodes[startKey] = {
-    id: Number(startKey),
+    id: Number(safeString(startKey, '0')) || 0,
     data: {
       type: 'start',
       config: {
@@ -99,7 +99,7 @@ function buildReteGraphFromIntents({ categories, startMessage }) {
 
   const fallbackMessage = `Posso ajudar com: ${categoryLabels.join(', ')}. O que você deseja?`;
   nodes[fallbackKey] = {
-    id: Number(fallbackKey),
+    id: Number(safeString(fallbackKey, '0')) || 0,
     data: {
       type: 'fallback',
       config: {
@@ -216,7 +216,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
           '- NÃO mencionar nem repetir os termos proibidos listados abaixo.',
           '',
           '<termos_proibidos>',
-          forbidden.join('\n'),
+          forbidden.map(safeString).join('\n'),
           '</termos_proibidos>',
         ]
       : []),
@@ -237,7 +237,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
     const candidate = (start >= 0 && end > start) ? text.slice(start, end + 1) : text;
     parsed = JSON.parse(candidate);
   } catch (e) {
-    throw new Error(`IA retornou JSON inválido ao gerar intents/respostas: ${e?.message || safeString(e)}`);
+    throw new Error(`IA retornou JSON inválido ao gerar intents/respostas: ${safeString(e?.message) || safeString(e)}`);
   }
 
   const groups = Array.isArray(parsed) ? parsed : [];
@@ -275,7 +275,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
       '- NÃO mencionar nem repetir os termos proibidos listados abaixo.',
       '',
       '<termos_proibidos>',
-      forbidden.join('\n'),
+      forbidden.map(safeString).join('\n'),
       '</termos_proibidos>',
       '',
       'Pergunta:',
@@ -307,7 +307,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
       '- NÃO mencionar nem repetir os termos proibidos listados abaixo.',
       '',
       '<termos_proibidos>',
-      forbidden.join('\n'),
+      forbidden.map(safeString).join('\n'),
       '</termos_proibidos>',
       '',
       'Se não houver resposta no contexto, diga:',
@@ -368,7 +368,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
           logger.warn('[InitialGraph] Falha ao regenerar examples (best-effort)', {
             tenantIdForAI,
             executionId,
-            error: err?.message || safeString(err),
+            error: safeString(err?.message) || safeString(err),
             question: safeString(it.question).slice(0, 160),
           });
         }
@@ -397,7 +397,7 @@ async function inferIntentsAndAnswersWithAI({ tenantIdForAI, faq, contextSources
               logger.warn('[InitialGraph] Falha ao regenerar answer (best-effort)', {
                 tenantIdForAI,
                 executionId,
-                error: err?.message || safeString(err),
+                error: safeString(err?.message) || safeString(err),
                 question: safeString(it.question).slice(0, 160),
               });
               break;
@@ -491,7 +491,7 @@ async function generateInitialGraph(input) {
   } catch (err) {
     logger.warn('[InitialGraph] Falha ao resolver contexto para intents/respostas (best-effort)', {
       tenantIdForAI,
-      error: err?.message || safeString(err),
+      error: safeString(err?.message) || safeString(err),
     });
     contextSources = [];
   }
