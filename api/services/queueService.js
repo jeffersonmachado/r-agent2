@@ -89,7 +89,10 @@ function safeGet(obj, path, fallback = null) {
 
 function safeErrorMessage(err, fallback = '') {
   if (err == null) return fallback;
-  try { return err.message || String(err); } catch (_) { return fallback; }
+  try {
+    const message = safeToString(err.message, '');
+    return message || safeToString(err, fallback);
+  } catch (_) { return safeToString(err, fallback); }
 }
 
 async function updateConversationForTicket(ticket, patch = {}) {
@@ -217,7 +220,6 @@ function persistTicketBestEffort(ticket) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     upsertTicketToDb(ticket).catch((err) => {
-      logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: err.message });
       logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', { ticketId: ticket.id, error: safeErrorMessage(err) });
     });
   });
@@ -227,7 +229,6 @@ function deleteTicketBestEffort(ticketId) {
   if (!dbAvailable()) return;
   setImmediate(() => {
     deleteTicketFromDb(ticketId).catch((err) => {
-      logger.warn('[QueueService] Falha ao remover ticket no PostgreSQL', { ticketId, error: err.message });
       logger.warn('[QueueService] Falha ao remover ticket no PostgreSQL', { ticketId, error: safeErrorMessage(err) });
     });
   });
@@ -255,7 +256,6 @@ async function initialize() {
 
     logger.info('[QueueService] Cache inicializado do PostgreSQL', { tickets: tickets.size, queues: queues.size });
   } catch (err) {
-    logger.warn('[QueueService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
     logger.warn('[QueueService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
@@ -299,9 +299,10 @@ function extractPhoneNumber(sessionId) {
 function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {}, tags = [], category = null }) {
   // Valida tenantId ou usa padrão
   const effectiveTenantId = tenantId || context.tenantId; // Tenant deve ser fornecido explicitamente
+  const normalizedTenantId = safeTrim(effectiveTenantId);
   
-    if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || effectiveTenantId.trim() === '') {
-      throw new Error('Invalid tenantId');
+  if (!effectiveTenantId || typeof effectiveTenantId !== 'string' || normalizedTenantId === '') {
+    throw new Error('Invalid tenantId');
   }
 
   const id = `${queue}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -309,7 +310,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
 
   const ticket = {
     id,
-    tenantId: safeTrim(effectiveTenantId),
+    tenantId: normalizedTenantId,
     sessionId,
     // Channel Gateway (fase 2): campos novos (best-effort)
     conversationId: context.conversationId || null,
@@ -414,15 +415,14 @@ function listQueues() {
  * @returns {{success: boolean, message: string, queueName: string}}
  */
 function createQueue(queueName) {
-  if (!queueName || typeof queueName !== 'string' || queueName.trim() === '') {
+  const normalizedName = safeTrim(queueName);
+  if (!queueName || typeof queueName !== 'string' || normalizedName === '') {
     return {
       success: false,
       message: 'Nome da fila é obrigatório',
       queueName: null,
     };
   }
-
-  const normalizedName = safeTrim(queueName);
 
   // Validação: nome deve ter pelo menos 1 caractere e no máximo 100
   if (normalizedName.length < 1 || normalizedName.length > 100) {
@@ -475,14 +475,14 @@ function createQueue(queueName) {
  * @returns {{success: boolean, message: string, deletedTickets?: number}}
  */
 function deleteQueue(queueName, force = false) {
-  if (!queueName || typeof queueName !== 'string' || queueName.trim() === '') {
+  const normalizedName = safeTrim(queueName);
+  if (!queueName || typeof queueName !== 'string' || normalizedName === '') {
     return {
       success: false,
       message: 'Nome da fila é obrigatório',
     };
   }
 
-  const normalizedName = safeTrim(queueName);
   // Verifica se a fila existe
   if (!queues.has(normalizedName)) {
     return {
@@ -1175,7 +1175,7 @@ function listAllTickets(options = {}) {
   if (options.status) {
     const statusList = safeTrimLower(options.status)
       .split(',')
-      .map((s) => s.trim())
+      .map((s) => safeTrim(s))
       .filter((s) => s);
     if (statusList.length > 0) {
       ticketList = ticketList.filter((t) => statusList.includes(t.status));
@@ -1230,7 +1230,7 @@ function listAllTickets(options = {}) {
   const paginatedTickets = ticketList.slice(offset, offset + limit);
   const nextOffset = offset + limit;
   const hasMore = nextOffset < total;
-  const nextCursor = hasMore ? String(nextOffset) : null;
+  const nextCursor = hasMore ? safeToString(nextOffset) : null;
 
   return {
     items: paginatedTickets,

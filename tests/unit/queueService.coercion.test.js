@@ -138,4 +138,36 @@ describe('queueService coercion hardening', () => {
     expect(Array.isArray(results.items)).toBe(true);
     expect(results.items.length).toBeGreaterThan(0);
   });
+
+  test('queueService não mantém err/error.message diretos fora do helper', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../../api/services/queueService.js'),
+      'utf-8'
+    );
+
+    const lines = content.split('\n');
+    const offenders = [];
+
+    for (const line of lines) {
+      if (!/\b(err|error)\.message\b/.test(line)) continue;
+      if (line.includes('safeToString(err.message')) continue; // safeErrorMessage internals
+      offenders.push(line.trim());
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  test('queueService remove guards com trim direto em entradas externas', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../../api/services/queueService.js'),
+      'utf-8'
+    );
+
+    expect(content).not.toMatch(/effectiveTenantId\.trim\(\) === ''/);
+    expect(content).not.toMatch(/queueName\.trim\(\) === ''/);
+  });
 });
