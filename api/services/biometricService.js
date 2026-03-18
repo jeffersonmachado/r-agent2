@@ -1,5 +1,10 @@
 const crypto = require('crypto');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
 // -----------------------------------------------------------------------------
 // BiometricRef v1
 //
@@ -28,15 +33,15 @@ function base64urlEncode(buf) {
 }
 
 function base64urlDecodeToString(s) {
-  const b64 = String(s).replace(/-/g, '+').replace(/_/g, '/');
+  const b64 = safeToString(s).replace(/-/g, '+').replace(/_/g, '/');
   const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
   return Buffer.from(b64 + pad, 'base64').toString('utf8');
 }
 
 function timingSafeEqHex(aHex, bHex) {
   try {
-    const a = Buffer.from(String(aHex), 'hex');
-    const b = Buffer.from(String(bHex), 'hex');
+    const a = Buffer.from(safeToString(aHex), 'hex');
+    const b = Buffer.from(safeToString(bHex), 'hex');
     if (a.length !== b.length) return false;
     return crypto.timingSafeEqual(a, b);
   } catch {
@@ -46,8 +51,8 @@ function timingSafeEqHex(aHex, bHex) {
 
 function computeSigHex({ secret, payloadB64Url }) {
   return crypto
-    .createHmac('sha256', String(secret))
-    .update(String(payloadB64Url))
+    .createHmac('sha256', safeToString(secret))
+    .update(safeToString(payloadB64Url))
     .digest('hex');
 }
 
@@ -59,7 +64,7 @@ function signBiometricRef({ secret, payload }) {
 }
 
 function parseBiometricRef(ref) {
-  const s = String(ref || '');
+  const s = safeToString(ref);
   const parts = s.split('.');
   if (parts.length !== 3 || parts[0] !== 'v1') {
     const err = new Error('invalid_biometric_ref_format');
@@ -126,7 +131,7 @@ function verifyBiometricRef({
     throw err;
   }
 
-  const nonce = payload.nonce ? String(payload.nonce) : '';
+  const nonce = payload.nonce ? safeToString(payload.nonce) : '';
   if (!nonce || nonce.length < 6) {
     const err = new Error('invalid_biometric_ref_nonce');
     // @ts-ignore
@@ -134,23 +139,23 @@ function verifyBiometricRef({
     throw err;
   }
 
-  const tokenId = payload.tokenId ? String(payload.tokenId) : '';
-  if (!tokenId || tokenId !== String(expectedTokenId || '')) {
+  const tokenId = payload.tokenId ? safeToString(payload.tokenId) : '';
+  if (!tokenId || tokenId !== safeToString(expectedTokenId || '')) {
     const err = new Error('invalid_biometric_ref_binding');
     // @ts-ignore
     err.code = 'invalid_biometric_ref_binding';
     throw err;
   }
 
-  const locationId = payload.locationId != null ? String(payload.locationId) : null;
-  if (expectedLocationId != null && String(expectedLocationId) !== String(locationId)) {
+  const locationId = payload.locationId != null ? safeToString(payload.locationId) : null;
+  if (expectedLocationId != null && safeToString(expectedLocationId) !== safeToString(locationId)) {
     const err = new Error('invalid_biometric_ref_location');
     // @ts-ignore
     err.code = 'invalid_biometric_ref_location';
     throw err;
   }
 
-  const mode = payload.mode ? String(payload.mode) : '';
+  const mode = payload.mode ? safeToString(payload.mode) : '';
   if (!allowedModes.includes(mode)) {
     const err = new Error('invalid_biometric_ref_mode');
     // @ts-ignore
@@ -158,7 +163,7 @@ function verifyBiometricRef({
     throw err;
   }
 
-  const subjectId = payload.subjectId ? String(payload.subjectId) : '';
+  const subjectId = payload.subjectId ? safeToString(payload.subjectId) : '';
   if (!subjectId) {
     const err = new Error('invalid_biometric_ref_subject');
     // @ts-ignore
