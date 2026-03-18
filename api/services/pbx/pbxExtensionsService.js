@@ -3,6 +3,37 @@ const { getSequelize } = require('../../db/sequelize');
 const models = require('../../db/models');
 const { makePjsipId } = require('./pbxId');
 
+function safeString(value, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return String(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function safeErrorField(error, field, fallback = '') {
+  let value;
+  try {
+    value = error?.[field];
+  } catch (_) {
+    value = null;
+  }
+  if (value !== null && value !== undefined) return safeString(value, fallback);
+  return fallback;
+}
+
+function safeErrorDetails(error) {
+  let details;
+  try {
+    details = error?.details;
+  } catch (_) {
+    details = null;
+  }
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return null;
+  return details;
+}
+
 function makeId(prefix) {
   return `${prefix}_${crypto.randomUUID()}`;
 }
@@ -298,10 +329,12 @@ async function bulkUpsertExtensions({ tenantKey, items, actorUserId = null }) {
       const row = await upsertExtension({ tenantKey, payload: item, actorUserId });
       results.push({ ok: true, extension: row });
     } catch (err) {
+      const safeCode = safeErrorField(err, 'code');
+      const safeMessage = safeErrorField(err, 'message');
       errors.push({
         ok: false,
-        error: err.code || err.message || 'bulk_upsert_failed',
-        details: err.details || null,
+        error: safeCode || safeMessage || 'bulk_upsert_failed',
+        details: safeErrorDetails(err),
         payload: item,
       });
     }
