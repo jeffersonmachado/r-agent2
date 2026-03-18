@@ -1,5 +1,23 @@
 const logger = require('../utils/logger');
 
+function safeToString(v, fallback = '') {
+  if (v == null) return fallback;
+  try { return String(v); } catch (_) { return fallback; }
+}
+
+function safeTrim(v, fallback = '') {
+  return safeToString(v, fallback).trim();
+}
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function withTimeout(promise, timeoutMs, label) {
   if (!timeoutMs || timeoutMs <= 0) return promise;
   return Promise.race([
@@ -24,7 +42,7 @@ function withTimeout(promise, timeoutMs, label) {
  * @returns {string}
  */
 function cleanupOcrText(text) {
-  const raw = (text == null) ? '' : String(text);
+  const raw = safeToString(text);
   if (!raw.trim()) return '';
 
   // Remove caracteres invisíveis/ruins comuns em OCR
@@ -88,7 +106,7 @@ async function preprocessImageForOcr(buffer, options = {}) {
     warnings.push({
       code: 'OCR_PREPROCESS_UNAVAILABLE',
       message: 'Pré-processamento de OCR indisponível (sharp não instalado).',
-      details: { error: err.message },
+      details: { error: safeErrorMessage(err) },
     });
     return { variants: [], warnings };
   }
@@ -146,7 +164,7 @@ async function preprocessImageForOcr(buffer, options = {}) {
     warnings.push({
       code: 'OCR_PREPROCESS_FAILED',
       message: 'Falha ao pré-processar imagem para OCR. Usando imagem original.',
-      details: { error: err.message || String(err) },
+      details: { error: safeErrorMessage(err) },
     });
     return { variants: [], warnings };
   }
@@ -172,7 +190,7 @@ async function extractPdfText(buffer, options = {}) {
     warnings.push({
       code: 'PDF_PARSE_FAILED',
       message: 'pdf-parse não está disponível para extração de PDF.',
-      details: { error: err.message },
+      details: { error: safeErrorMessage(err) },
     });
     return { text: '', warnings };
   }
@@ -191,9 +209,9 @@ async function extractPdfText(buffer, options = {}) {
     warnings.push({
       code: 'PDF_PARSE_FAILED',
       message: 'Falha ao extrair texto do PDF.',
-      details: { error: err.message || String(err) },
+      details: { error: safeErrorMessage(err) },
     });
-    logger.warn('[FileExtraction] PDF parse failed', { error: err.message });
+    logger.warn('[FileExtraction] PDF parse failed', { error: safeErrorMessage(err) });
     return { text: '', warnings };
   }
 }
@@ -218,15 +236,15 @@ async function extractImageTextOcr(buffer, options = {}) {
     warnings.push({
       code: 'OCR_FAILED',
       message: 'tesseract.js não está disponível para OCR.',
-      details: { error: err.message },
+      details: { error: safeErrorMessage(err) },
     });
     return { text: '', warnings };
   }
 
   const run = async () => {
-    const lang = String(process.env.OCR_LANG || 'por+eng');
-    const psm = String(process.env.OCR_PSM || '6'); // 6 = bloco uniforme de texto (bom default)
-    const enablePreprocess = String(process.env.OCR_PREPROCESS || 'true').toLowerCase() !== 'false';
+    const lang = safeToString(process.env.OCR_LANG || 'por+eng', 'por+eng');
+    const psm = safeToString(process.env.OCR_PSM || '6', '6'); // 6 = bloco uniforme de texto (bom default)
+    const enablePreprocess = safeToString(process.env.OCR_PREPROCESS || 'true', 'true').toLowerCase() !== 'false';
 
     const pre = await preprocessImageForOcr(buffer, { enabled: enablePreprocess });
     warnings.push(...pre.warnings);
@@ -254,7 +272,7 @@ async function extractImageTextOcr(buffer, options = {}) {
         warnings.push({
           code: 'OCR_PARAMS_UNSUPPORTED',
           message: 'Não foi possível aplicar parâmetros avançados do OCR. Continuando com defaults.',
-          details: { error: err.message || String(err) },
+          details: { error: safeErrorMessage(err) },
         });
       }
 
@@ -263,7 +281,7 @@ async function extractImageTextOcr(buffer, options = {}) {
 
       for (const c of candidates) {
         const res = await worker.recognize(c.buffer);
-        const text = res?.data?.text ? String(res.data.text).trim() : '';
+        const text = res?.data?.text ? safeTrim(res.data.text) : '';
         const confidence = Number.isFinite(res?.data?.confidence) ? Number(res.data.confidence) : undefined;
         results.push({ label: c.label, text, confidence });
 
@@ -310,9 +328,9 @@ async function extractImageTextOcr(buffer, options = {}) {
     warnings.push({
       code: 'OCR_FAILED',
       message: 'Falha ao executar OCR na imagem.',
-      details: { error: err.message || String(err) },
+      details: { error: safeErrorMessage(err) },
     });
-    logger.warn('[FileExtraction] OCR failed', { error: err.message });
+    logger.warn('[FileExtraction] OCR failed', { error: safeErrorMessage(err) });
     return { text: '', warnings };
   }
 }
@@ -369,7 +387,7 @@ async function extractTextFromFile(file, options = {}) {
       warnings.push({
         code: 'TEXT_READ_FAILED',
         message: 'Falha ao ler arquivo de texto.',
-        details: { error: err.message || String(err) },
+        details: { error: safeErrorMessage(err) },
       });
       return { extractedText: '', warnings };
     }
