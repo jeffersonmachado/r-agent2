@@ -3,7 +3,11 @@ const logger = require('../utils/logger');
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
-  return String(v);
+  try {
+    return String(v);
+  } catch (_) {
+    return '';
+  }
 }
 
 function normalizeExclusions(exclusions) {
