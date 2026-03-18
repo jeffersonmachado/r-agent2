@@ -10,6 +10,16 @@ const config = require('../utils/config');
 const { getTicket, getTicketMessages, updateTicket } = require('./queueService');
 const { generateAiResponse } = require('./aiProviderService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 function buildPrompt(ticket, messages) {
   const vars = ticket?.context?.variables && typeof ticket.context.variables === 'object'
     ? ticket.context.variables
@@ -68,12 +78,13 @@ async function generateAiSummary({ ticketId, tenantId, agent }) {
     const result = await generateAiResponse(prompt, tenantId, { purpose: 'ticket_ai_summary', ticketId });
     text = result?.text || '';
   } catch (err) {
+    const errorMessage = safeErrorMessage(err, 'Erro ao gerar resumo por IA');
     const allowHeuristicFallback = config.get('fallbacks.ticketInsightHeuristic', false) === true;
     if (!allowHeuristicFallback) {
-      logger.warn('[TicketInsight] Falha ao gerar resumo por IA (sem fallback heurístico)', { error: err.message });
-      return { success: false, error: 'ai_summary_failed', message: err.message };
+      logger.warn('[TicketInsight] Falha ao gerar resumo por IA (sem fallback heurístico)', { error: errorMessage });
+      return { success: false, error: 'ai_summary_failed', message: errorMessage };
     }
-    logger.warn('[TicketInsight] Falha ao gerar resumo por IA (fallback heurístico)', { error: err.message });
+    logger.warn('[TicketInsight] Falha ao gerar resumo por IA (fallback heurístico)', { error: errorMessage });
     text = heuristicSummary(ticket, messages);
   }
 
