@@ -14,11 +14,16 @@ function safeString(v, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
+  let message = '';
   try {
-    return err.message || safeString(err, fallback) || fallback;
+    message = err.message;
   } catch (_) {
-    return safeString(err, fallback) || fallback;
+    message = '';
   }
+
+  const safeMessage = safeString(message, '');
+  if (safeMessage) return safeMessage;
+  return safeString(err, fallback) || fallback;
 }
 
 function normalizeKey(s) {

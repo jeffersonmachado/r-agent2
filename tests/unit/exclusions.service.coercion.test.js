@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -18,6 +21,11 @@ describe('exclusions.service coercion hardening', () => {
     Object.defineProperty(err, 'message', {
       get() {
         throw new Error('boom-message-getter');
+      },
+    });
+    Object.defineProperty(err, 'toString', {
+      get() {
+        throw new Error('boom-tostring-getter');
       },
     });
     return err;
@@ -93,5 +101,13 @@ describe('exclusions.service coercion hardening', () => {
     const { inferExclusions } = require('../../api/services/exclusions.service');
     const out = await inferExclusions('contexto com ruido', 'tenant-1');
     expect(out).toEqual([]);
+  });
+
+  test('static guard: service nao deve usar return err.message || String(err)', () => {
+    const servicePath = path.join(__dirname, '../../api/services/exclusions.service.js');
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*safeString\(err/);
   });
 });
