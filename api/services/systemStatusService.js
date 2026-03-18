@@ -10,6 +10,11 @@
 
 const logger = require('../utils/logger');
 const config = require('../utils/config');
+
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
 const { isRedisAvailable, getRateLimitClient } = require('../../infra/redis/rateLimitClient');
 const { isRagAvailable, getRagServiceUrl } = require('./ragService');
 const { getWebSocketServer } = require('./websocketService');
@@ -83,7 +88,7 @@ async function checkRedisStatus() {
           };
         } catch (infoErr) {
           // Se ping funcionou mas info falhou, ainda consideramos saudável
-          logger.debug('[SystemStatus] Erro ao obter info do Redis, mas ping OK', { error: infoErr.message });
+          logger.debug('[SystemStatus] Erro ao obter info do Redis, mas ping OK', { error: safeErrorMessage(infoErr) });
           // Extrai a porta da URL do Redis
           const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
           const port = extractPortFromUrl(redisUrl, 6379);
@@ -138,11 +143,11 @@ async function checkRedisStatus() {
       },
     };
   } catch (err) {
-    logger.error('[SystemStatus] Erro ao verificar Redis', { error: err.message });
+    logger.error('[SystemStatus] Erro ao verificar Redis', { error: safeErrorMessage(err) });
     const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
     return {
       status: 'unhealthy',
-      error: err.message,
+      error: safeErrorMessage(err),
       details: {
         redisUrl: redisUrl,
         errorType: 'verification_error',
@@ -240,7 +245,7 @@ async function checkRagServiceStatus() {
             }
           } catch (dbErr) {
             // Best-effort: não quebra /system/status se DB estiver indisponível
-            logger.debug('[SystemStatus] Não foi possível obter contagem do BD para consistência RAG', { error: dbErr.message });
+            logger.debug('[SystemStatus] Não foi possível obter contagem do BD para consistência RAG', { error: safeErrorMessage(dbErr) });
           }
           
           return {
@@ -259,7 +264,7 @@ async function checkRagServiceStatus() {
         }
       } catch (fetchErr) {
         // Se falhar, retorna status básico
-        logger.debug('[SystemStatus] Não foi possível obter detalhes do RAG', { error: fetchErr.message });
+        logger.debug('[SystemStatus] Não foi possível obter detalhes do RAG', { error: safeErrorMessage(fetchErr) });
       }
       
       // Extrai a porta da URL do serviço RAG
@@ -305,25 +310,25 @@ async function checkRagServiceStatus() {
         if (fetchErr.name === 'AbortError') {
           errorDetails.error = 'Timeout ao conectar com serviço RAG';
           errorDetails.errorType = 'timeout';
-        } else if (fetchErr.message && fetchErr.message.includes('ECONNREFUSED')) {
+        } else if (safeErrorMessage(fetchErr).includes('ECONNREFUSED')) {
           errorDetails.error = 'Conexão recusada - serviço RAG não está rodando';
           errorDetails.errorType = 'connection_refused';
-        } else if (fetchErr.message && fetchErr.message.includes('ENOTFOUND')) {
+        } else if (safeErrorMessage(fetchErr).includes('ENOTFOUND')) {
           errorDetails.error = `Host não encontrado: ${ragServiceUrl}`;
           errorDetails.errorType = 'host_not_found';
         } else {
-          errorDetails.error = `Erro ao conectar: ${fetchErr.message}`;
+          errorDetails.error = `Erro ao conectar: ${safeErrorMessage(fetchErr)}`;
           errorDetails.errorType = 'connection_error';
         }
       }
     } catch (checkErr) {
       // Se não conseguir fazer verificação adicional, mantém erro básico
-      logger.debug('[SystemStatus] Não foi possível obter detalhes do erro RAG', { error: checkErr.message });
+      logger.debug('[SystemStatus] Não foi possível obter detalhes do erro RAG', { error: safeErrorMessage(checkErr) });
     }
     
     return {
       status: 'unhealthy',
-      error: errorDetails.error,
+      error: safeErrorMessage(errorDetails.error),
       details: {
         serviceUrl: errorDetails.serviceUrl,
         errorType: errorDetails.errorType,
@@ -332,11 +337,11 @@ async function checkRagServiceStatus() {
       },
     };
   } catch (err) {
-    logger.error('[SystemStatus] Erro ao verificar RAG Service', { error: err.message });
+    logger.error('[SystemStatus] Erro ao verificar RAG Service', { error: safeErrorMessage(err) });
     const ragServiceUrl = getRagServiceUrl();
     return {
       status: 'unhealthy',
-      error: err.message,
+      error: safeErrorMessage(err),
       details: {
         serviceUrl: ragServiceUrl,
         hint: 'Erro ao verificar status do serviço RAG',
@@ -406,10 +411,10 @@ async function checkWebSocketStatus() {
       },
     };
   } catch (err) {
-    logger.error('[SystemStatus] Erro ao verificar WebSocket', { error: err.message });
+    logger.error('[SystemStatus] Erro ao verificar WebSocket', { error: safeErrorMessage(err) });
     return {
       status: 'unhealthy',
-      error: err.message,
+      error: safeErrorMessage(err),
       details: {
         errorType: 'verification_error',
         hint: 'Erro ao verificar status do servidor WebSocket',
@@ -448,11 +453,11 @@ async function checkApiServerStatus() {
       },
     };
   } catch (err) {
-    logger.error('[SystemStatus] Erro ao verificar API Server', { error: err.message });
+    logger.error('[SystemStatus] Erro ao verificar API Server', { error: safeErrorMessage(err) });
     const apiPort = config.get('api.port', 3000);
     return {
       status: 'unhealthy',
-      error: err.message,
+      error: safeErrorMessage(err),
       details: {
         port: apiPort,
         errorType: 'verification_error',

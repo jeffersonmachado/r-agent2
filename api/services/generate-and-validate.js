@@ -31,6 +31,20 @@ const { ensureExecutionContext, requireStages, updateStage, updateStatus, tryApp
 const { advancePipeline } = require('./pipelineOrchestrator');
 const { isSuperAdmin } = require('./superAdminService');
 
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+function safeGet(obj, key, fallback = null) {
+  if (!obj) return fallback;
+  try {
+    const value = obj[key];
+    return value === undefined ? fallback : value;
+  } catch (_) {
+    return fallback;
+  }
+}
+
 // Cache de execuções em andamento (proteção reentrante)
 const runningExecutions = new Map();
 
@@ -46,7 +60,7 @@ async function validateGovernance() {
     return { valid: true, errors: [] };
   } catch (err) {
     logger.error('Erro na validação de governança', err);
-    return { valid: false, errors: [err.message] };
+    return { valid: false, errors: [safeErrorMessage(err)] };
   }
 }
 
@@ -65,7 +79,7 @@ async function validateSchema(flow) {
     };
   } catch (err) {
     logger.error('Erro na validação de schema', err);
-    return { valid: false, errors: [err.message] };
+    return { valid: false, errors: [safeErrorMessage(err)] };
   }
 }
 
@@ -180,7 +194,7 @@ async function executeRpaTest(rpaTestPath) {
     }
     return {
       success: false,
-      error: err.message || 'Erro desconhecido ao executar teste RPA',
+      error: safeErrorMessage(err, 'Erro desconhecido ao executar teste RPA'),
       reportPath,
     };
   }
@@ -208,7 +222,7 @@ async function executeSystemValidate() {
     logger.error('system:validate falhou', err);
     return {
       success: false,
-      errors: [err.message || 'system:validate falhou'],
+      errors: [safeErrorMessage(err, 'system:validate falhou')],
     };
   }
 }
@@ -816,11 +830,11 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
     return result;
   } catch (err) {
     logger.error(`[Pipeline][${execution.executionId}] Erro em generate-and-validate`, {
-      error: err.message,
-      stack: err.stack,
-      name: err.name,
-      code: err.code,
-      fullError: err.toString(),
+      error: safeErrorMessage(err),
+      stack: safeGet(err, 'stack'),
+      name: safeGet(err, 'name'),
+      code: safeGet(err, 'code'),
+      fullError: safeErrorMessage(err),
       executionId: execution.executionId,
       flowId: execution.flow?.id,
       testId: execution.rpaTest?.id,
@@ -842,8 +856,8 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       }
     }
 
-    result.errors.push(err.message || 'Erro desconhecido');
-    result.motivo = err.message || 'Erro desconhecido';
+    result.errors.push(safeErrorMessage(err, 'Erro desconhecido'));
+    result.motivo = safeErrorMessage(err, 'Erro desconhecido');
     
     // Inclui artefatos gerados mesmo quando há erro, para que possam ser visualizados
     if (execution.flow) {
@@ -916,7 +930,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
       hasFlow: !!result.flowDefinition,
       hasRpaTest: !!result.rpaTest,
       hasSeed: !!result.seed,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     
     return result;

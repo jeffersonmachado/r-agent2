@@ -12,6 +12,19 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { Queue: QueueGetter } = require('../db/models');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 /** @type {Map<string, any>} */
 const queues = new Map(); // id -> QueueDefinition
 
@@ -61,7 +74,7 @@ async function initialize() {
     }
     logger.info('[QueueDefinitionService] Cache inicializado do PostgreSQL', { count: queues.size });
   } catch (err) {
-    logger.warn('[QueueDefinitionService] Falha ao inicializar cache do PostgreSQL', { error: err.message });
+    logger.warn('[QueueDefinitionService] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
@@ -79,7 +92,7 @@ function getQueueById(id) {
 
 function getQueueByName(tenantId, name) {
   if (!tenantId || !name) return null;
-  const needle = String(name).trim().toLowerCase();
+  const needle = safeTrim(name).toLowerCase();
   for (const q of queues.values()) {
     if (q.tenantId === tenantId && q.name.toLowerCase() === needle) return q;
   }
@@ -93,7 +106,7 @@ async function upsertQueue(queueData) {
   const now = new Date();
 
   const tenantId = queueData.tenantId;
-  const name = String(queueData.name || '').trim();
+  const name = safeTrim(queueData.name || '');
   if (!tenantId || typeof tenantId !== 'string') return { success: false, error: 'tenantId é obrigatório' };
   if (!name) return { success: false, error: 'name é obrigatório' };
 
