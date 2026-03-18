@@ -13,6 +13,16 @@ const path = require('path');
 
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 // Fonte da verdade (backend) para tipos/configs permitidos
 const CHATBOT_NODE_TYPES_PATH = path.join(__dirname, '..', 'data', 'rag', 'chatbot', 'nodes', 'node.types.json');
 
@@ -25,7 +35,7 @@ function loadChatbotNodeTypes() {
     return _cachedNodeTypes;
   } catch (err) {
     logger.error('[flowGenerator] Falha ao carregar node.types.json (fallback mínimo)', {
-      error: err.message,
+      error: safeErrorMessage(err),
       path: CHATBOT_NODE_TYPES_PATH,
     });
     _cachedNodeTypes = { nodeTypes: { core: {}, system: {} } };
@@ -160,7 +170,7 @@ function extractJsonFromResponse(text) {
     try {
       return JSON.parse(jsonMatch[0]);
     } catch (err) {
-      logger.warn('Erro ao fazer parse do JSON extraído', { error: err.message });
+      logger.warn('Erro ao fazer parse do JSON extraído', { error: safeErrorMessage(err) });
     }
   }
   
@@ -168,7 +178,7 @@ function extractJsonFromResponse(text) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    logger.warn('Erro ao fazer parse direto do texto', { error: err.message });
+    logger.warn('Erro ao fazer parse direto do texto', { error: safeErrorMessage(err) });
     throw new Error('Resposta da IA não contém JSON válido');
   }
 }
@@ -299,7 +309,7 @@ async function generateFlowFromDescription(description, tenantId = 'default') {
 
     return flow;
   } catch (error) {
-    logger.error('Erro ao gerar fluxo', error);
+    logger.error('Erro ao gerar fluxo', { error: safeErrorMessage(error) });
     throw error;
   }
 }
