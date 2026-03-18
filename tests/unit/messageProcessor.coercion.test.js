@@ -120,4 +120,30 @@ describe('messageProcessor coercion hardening', () => {
     // Verify safe pattern is in place for text.body
     expect(content).toMatch(/safeToString\(message\.text\.body\)/);
   });
+
+  test('messageProcessor adds safeError helpers for hostile error getters', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../../api/services/messageProcessor.js'),
+      'utf-8'
+    );
+
+    expect(content).toMatch(/function safeErrorMessage\(err, fallback = ''\)/);
+    expect(content).toMatch(/function safeErrorCode\(err, fallback = ''\)/);
+    expect(content).toMatch(/function safeErrorDetails\(err, fallback = null\)/);
+    expect(content).toMatch(/const code = safeErrorCode\(err\) \|\| safeErrorMessage\(err\)/);
+  });
+
+  test('messageProcessor removes direct inboundTenantId.trim guard access', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../../api/services/messageProcessor.js'),
+      'utf-8'
+    );
+
+    expect(content).toMatch(/safeTrim\(inboundTenantId\) === ''/);
+    expect(content).not.toMatch(/inboundTenantId\.trim\(\) === ''/);
+  });
 });

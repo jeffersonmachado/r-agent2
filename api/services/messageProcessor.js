@@ -166,6 +166,21 @@ function safeTrim(value, fallback = '') {
   try { return String(value).trim(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
+function safeErrorCode(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return safeToString(err.code, fallback); } catch (_) { return fallback; }
+}
+
+function safeErrorDetails(err, fallback = null) {
+  if (err == null) return fallback;
+  try { return err.details && err.details.errors ? err.details.errors : fallback; } catch (_) { return fallback; }
+}
+
 /**
  * Processa uma mensagem vinda do webhook do WhatsApp.
  *
@@ -262,7 +277,7 @@ async function processWhatsAppMessage(message, value, deps) {
     });
   }
 
-  if (!inboundTenantId || typeof inboundTenantId !== 'string' || inboundTenantId.trim() === '') {
+  if (!inboundTenantId || typeof inboundTenantId !== 'string' || safeTrim(inboundTenantId) === '') {
     // Blindagem: nunca processa inbound sem tenant explícito (evita cross-tenant)
     logger.warn('[MessageProcessor] TenantId ausente no inbound; mensagem ignorada', {
       from,
@@ -429,11 +444,11 @@ async function processWhatsAppMessage(message, value, deps) {
   try {
     compiledFlow = getOrCompileFlow(flow);
   } catch (err) {
-    if (err?.code === 'AI_FLOW_INVALID_AT_EXECUTION') {
+    if (safeErrorCode(err) === 'AI_FLOW_INVALID_AT_EXECUTION') {
       logger.warn('[MessageProcessor] Execução bloqueada: fluxo de IA inválido na revalidação', {
         flowId: state.flowId,
         tenantId: state.tenantId,
-        errors: err?.details?.errors || null,
+        errors: safeErrorDetails(err),
       });
       try {
         await sendWhatsAppTextBestEffort(from, 'Este fluxo foi gerado por IA mas ainda não está consistente para execução. Um administrador precisa revisar/ajustar antes de ativar.');
@@ -542,8 +557,8 @@ async function processWhatsAppMessage(message, value, deps) {
       },
     });
   } catch (err) {
-    const code = err && (err.code || err?.message);
-    if (code === 'FLOW_REQUIRES_REVIEW' || (err?.code === 'FLOW_REQUIRES_REVIEW')) {
+    const code = safeErrorCode(err) || safeErrorMessage(err);
+    if (code === 'FLOW_REQUIRES_REVIEW') {
       logger.warn('[MessageProcessor] Execução bloqueada: fluxo em safe-mode (requiresReview)', {
         flowId: state.flowId,
         tenantId: state.tenantId,
