@@ -32,7 +32,14 @@ function safeTrimLower(value, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (err == null) return fallback;
-  try { return err.message || String(err); } catch (_) { return fallback; }
+  let message;
+  try {
+    message = err?.message;
+  } catch (_) {
+    message = null;
+  }
+  if (message !== null && message !== undefined) return safeToString(message, fallback);
+  return safeToString(err, fallback);
 }
 
 function safeKeys(obj) {

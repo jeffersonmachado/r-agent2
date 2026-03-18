@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 describe('webScrapingService coercion hardening', () => {
   const oldReplay = process.env.ENABLE_SCRAPING_REPLAY;
   const oldRecording = process.env.ENABLE_SCRAPING_RECORDING;
@@ -109,5 +112,36 @@ describe('webScrapingService coercion hardening', () => {
         timeout: 1000,
       })
     ).rejects.toBeDefined();
+  });
+
+  test('nao quebra quando erro hostil tem message e toString que lancam', async () => {
+    const hostileError = {
+      get message() {
+        throw new Error('hostile message getter');
+      },
+      toString() {
+        throw new Error('hostile toString');
+      },
+    };
+
+    const { enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
+    enforceScrapingRateLimit.mockRejectedValue(hostileError);
+
+    const svc = require('../../api/services/webScrapingService');
+
+    await expect(
+      svc.scrapeUrl('https://example.com', {
+        tenantId: 'tenant-1',
+        autoIndex: false,
+        timeout: 1000,
+      })
+    ).rejects.toBeDefined();
+  });
+
+  test('static guard: no direct err/error.message outside helper', () => {
+    const sourcePath = path.resolve(__dirname, '../../api/services/webScrapingService.js');
+    const source = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(source).not.toMatch(/\b(?:error|err)\.message\b/);
   });
 });
