@@ -106,4 +106,68 @@ describe('bulkMessagingService coercion hardening', () => {
     expect(campaign.deliveryStatus['5511888888888']).toBe('failed');
     expect(logger.error).toHaveBeenCalled();
   });
+
+  test('listCampaigns usa tenantId normalizado com trim seguro', () => {
+    jest.doMock('../../api/services/outboundQueueService', () => ({
+      enqueueOutbound: jest.fn(async () => ({ ok: true })),
+    }));
+
+    const {
+      createCampaign,
+      listCampaigns,
+    } = require('../../api/services/bulkMessagingService');
+
+    const created = createCampaign({
+      tenantId: ' tenant-2 ',
+      name: 'Campanha C',
+      message: 'Mensagem C',
+      phoneNumbers: ['+5511777777777'],
+      createdBy: 'agent-1',
+    });
+
+    expect(created.success).toBe(true);
+
+    const listed = listCampaigns({ tenantId: '  tenant-2  ' });
+    expect(Array.isArray(listed)).toBe(true);
+    expect(listed.length).toBeGreaterThan(0);
+    expect(listed[0].tenantId).toBe('tenant-2');
+  });
+
+  test('startCampaign pausa com segurança quando tenantId da campanha é hostil', async () => {
+    jest.doMock('../../api/services/outboundQueueService', () => ({
+      enqueueOutbound: jest.fn(async () => ({ ok: true })),
+    }));
+
+    const logger = require('../../api/utils/logger');
+    const {
+      createCampaign,
+      startCampaign,
+      getCampaign,
+    } = require('../../api/services/bulkMessagingService');
+
+    const created = createCampaign({
+      tenantId: 'tenant-hostile',
+      name: 'Campanha D',
+      message: 'Mensagem D',
+      phoneNumbers: ['+5511666666666'],
+      createdBy: 'agent-1',
+      rateLimit: 60,
+    });
+
+    expect(created.success).toBe(true);
+
+    const campaignRef = getCampaign(created.campaign.id);
+    campaignRef.tenantId = {
+      toString() {
+        throw new Error('tenant toString hostile');
+      },
+    };
+
+    const out = await startCampaign(created.campaign.id);
+    expect(out).toEqual({ success: true });
+
+    const campaignAfter = getCampaign(created.campaign.id);
+    expect(campaignAfter.status).toBe('paused');
+    expect(logger.error).toHaveBeenCalled();
+  });
 });

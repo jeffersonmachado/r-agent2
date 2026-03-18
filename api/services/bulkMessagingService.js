@@ -40,9 +40,10 @@ function safeTrim(value, fallback = '') {
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
   try {
-    return err.message || String(err) || fallback;
+    const message = safeToString(err.message, '');
+    return message || safeToString(err, fallback) || fallback;
   } catch (_) {
-    return fallback;
+    return safeToString(err, fallback);
   }
 }
 
@@ -100,12 +101,13 @@ function ensureDataDir() {
  */
 function listCampaigns(filters = {}) {
   let results = Array.from(campaigns.values());
+  const normalizedTenantId = safeTrim(filters.tenantId);
 
   // Blindagem: listagem sempre deve ser tenant-aware
-  if (!filters.tenantId || typeof filters.tenantId !== 'string' || filters.tenantId.trim() === '') {
+  if (!filters.tenantId || typeof filters.tenantId !== 'string' || normalizedTenantId === '') {
     return [];
   }
-  results = results.filter((c) => c.tenantId === filters.tenantId);
+  results = results.filter((c) => c.tenantId === normalizedTenantId);
   
   if (filters.status) {
     results = results.filter(c => c.status === filters.status);
@@ -153,8 +155,9 @@ function createCampaign(data) {
   } = data;
   const normalizedName = safeTrim(name);
   const normalizedMessage = safeTrim(message);
+  const normalizedTenantId = safeTrim(tenantId);
   
-  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+  if (!tenantId || typeof tenantId !== 'string' || normalizedTenantId === '') {
     return { success: false, error: 'tenantId é obrigatório' };
   }
 
@@ -203,7 +206,7 @@ function createCampaign(data) {
   
   const campaign = {
     id,
-    tenantId: tenantId.trim(),
+    tenantId: normalizedTenantId,
     name: normalizedName,
     message: normalizedMessage,
     phoneNumbers: validPhoneNumbers,
@@ -380,7 +383,9 @@ async function startSendingProcess(campaignId) {
     return;
   }
 
-  if (!campaign.tenantId || typeof campaign.tenantId !== 'string' || campaign.tenantId.trim() === '') {
+  const normalizedTenantId = safeTrim(campaign.tenantId);
+
+  if (!campaign.tenantId || typeof campaign.tenantId !== 'string' || normalizedTenantId === '') {
     logger.error('[BulkMessaging] tenantId ausente na campanha; abortando envio', { campaignId });
     campaign.status = 'paused';
     campaign.updatedAt = new Date().toISOString();
