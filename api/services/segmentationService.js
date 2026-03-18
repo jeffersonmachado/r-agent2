@@ -8,6 +8,11 @@
  */
 
 const { listAllTickets } = require('./queueService');
+
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
 const logger = require('../utils/logger');
 
 /**
@@ -257,7 +262,7 @@ function setTicketCategory(ticketId, category) {
     return { success: false, error: 'Ticket não encontrado' };
   }
   
-  ticket.category = category ? category.trim() : null;
+  ticket.category = category ? safeTrim(category) : null;
   ticket.updatedAt = new Date().toISOString();
   updateTicket(ticketId, { category: ticket.category });
   

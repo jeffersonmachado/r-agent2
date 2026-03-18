@@ -13,6 +13,15 @@
  * - este módulo constrói um draft por whitelist (não confia no shape do modelo)
  */
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeTrim(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value).trim(); } catch (_) { return fallback; }
+}
+
 const FORBIDDEN_SENSITIVE_KEYS = [
   'secret',
   // 'token' é ambíguo (ex.: tokens_ia é quota). Preferimos padrões específicos.
@@ -27,7 +36,7 @@ const FORBIDDEN_SENSITIVE_KEYS = [
 ];
 
 function slugifyTenantKey(name) {
-  const base = String(name || '')
+  const base = safeToString(name || '')
     .toLowerCase()
     .trim()
     .replace(/[\s_]+/g, '-')
@@ -52,10 +61,10 @@ function buildTenantDraftFromAi(tenantData, options = {}) {
   const tenant_key = options.tenant_key || slugifyTenantKey(tenantData?.name);
   return {
     tenant_key,
-    name: String(tenantData?.name || '').trim(),
-    site: String(tenantData?.site || 'https://exemplo.com').trim(),
-    ramo_atividade: String(tenantData?.ramo_atividade || '').trim(),
-    objetivo: String(tenantData?.objetivo || '').trim(),
+    name: safeTrim(tenantData?.name || ''),
+    site: safeTrim(tenantData?.site || 'https://exemplo.com'),
+    ramo_atividade: safeTrim(tenantData?.ramo_atividade || ''),
+    objetivo: safeTrim(tenantData?.objetivo || ''),
     status: 'pending_review',
     plan: 'trial',
     limits: {
@@ -75,7 +84,7 @@ function buildTenantDraftFromAi(tenantData, options = {}) {
 }
 
 function clampString(v, maxLen) {
-  const s = String(v || '').trim();
+  const s = safeTrim(v || '');
   if (!Number.isFinite(maxLen) || maxLen <= 0) return s;
   if (s.length <= maxLen) return s;
   return s.slice(0, maxLen).trim();

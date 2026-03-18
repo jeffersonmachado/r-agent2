@@ -11,6 +11,15 @@ const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = requir
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+function safeErrorMessage(err, fallback = '') {
+  if (!err) return fallback;
+  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+}
+
 /**
  * Extrai um "caller hint" do stack para debug (dev only).
  * Ajuda a identificar qual serviço/arquivo originou a chamada de IA.
@@ -82,9 +91,9 @@ function createOpenAIProvider() {
         try {
           // eslint-disable-next-line global-require
           const { getDecryptedAPIKey } = require('./tenantAIService');
-          apiKey = await getDecryptedAPIKey(String(tenantId), 'openai');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), 'openai');
         } catch (e) {
-          logger.warn('⚠️ OpenAI: falha ao obter API key do tenant (DB)', { tenantId, error: e.message });
+          logger.warn('⚠️ OpenAI: falha ao obter API key do tenant (DB)', { tenantId, error: safeErrorMessage(e) });
         }
 
         if (!apiKey) {
@@ -116,7 +125,7 @@ function createOpenAIProvider() {
         } catch (requireError) {
           // SDK não instalado: usa fetch direto
           logger.debug('⚠️ SDK OpenAI não encontrado, usando fetch direto', {
-            error: requireError.message,
+            error: safeErrorMessage(requireError),
           });
           
           const url = 'https://api.openai.com/v1/chat/completions';
@@ -203,7 +212,7 @@ function createOpenAIProvider() {
         };
       } catch (error) {
         logger.error('❌ OpenAI: Erro ao gerar resposta', {
-          message: error.message,
+          message: safeErrorMessage(error),
           stack: error.stack,
           name: error.name,
           code: error.code,
@@ -231,9 +240,9 @@ function createAnthropicProvider() {
         try {
           // eslint-disable-next-line global-require
           const { getDecryptedAPIKey } = require('./tenantAIService');
-          apiKey = await getDecryptedAPIKey(String(tenantId), 'anthropic');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), 'anthropic');
         } catch (e) {
-          logger.warn('⚠️ Anthropic: falha ao obter API key do tenant (DB)', { tenantId, error: e.message });
+          logger.warn('⚠️ Anthropic: falha ao obter API key do tenant (DB)', { tenantId, error: safeErrorMessage(e) });
         }
 
         if (!apiKey) {
@@ -262,7 +271,7 @@ function createAnthropicProvider() {
         } catch (requireError) {
           // SDK não instalado: usa fetch direto
           logger.debug('⚠️ SDK Anthropic não encontrado, usando fetch direto', {
-            error: requireError.message,
+            error: safeErrorMessage(requireError),
           });
           
           const url = 'https://api.anthropic.com/v1/messages';
@@ -348,7 +357,7 @@ function createAnthropicProvider() {
         };
       } catch (error) {
         logger.error('❌ Anthropic: Erro ao gerar resposta', {
-          message: error.message,
+          message: safeErrorMessage(error),
           stack: error.stack,
           name: error.name,
           code: error.code,
@@ -374,7 +383,7 @@ async function initializeAiProviders() {
       registerAiProvider('openai', openaiProvider);
       logger.info('✅ Provider OpenAI registrado');
     } catch (err) {
-      logger.warn('⚠️  OpenAI não configurado', { message: err.message });
+      logger.warn('⚠️  OpenAI não configurado', { message: safeErrorMessage(err) });
     }
 
     // Tenta registrar Anthropic se configurado
@@ -383,7 +392,7 @@ async function initializeAiProviders() {
       registerAiProvider('anthropic', anthropicProvider);
       logger.info('✅ Provider Anthropic registrado');
     } catch (err) {
-      logger.warn('⚠️  Anthropic não configurado', { message: err.message });
+      logger.warn('⚠️  Anthropic não configurado', { message: safeErrorMessage(err) });
     }
 
     // Tenta carregar configurações do banco de dados
@@ -410,13 +419,13 @@ async function initializeAiProviders() {
             tenantsLoaded++;
           }
         } catch (err) {
-          logger.debug(`Não foi possível carregar configuração de IA para tenant ${tenant.tenant_key || tenant.id}`, { error: err.message });
+          logger.debug(`Não foi possível carregar configuração de IA para tenant ${tenant.tenant_key || tenant.id}`, { error: safeErrorMessage(err) });
         }
       }
       
       logger.info(`✅ Providers de IA inicializados. Tenants configurados do banco: ${tenantsLoaded}`);
     } catch (err) {
-      logger.warn('⚠️  Não foi possível carregar configurações do banco, usando config.json como fallback', { error: err.message });
+      logger.warn('⚠️  Não foi possível carregar configurações do banco, usando config.json como fallback', { error: safeErrorMessage(err) });
       
       // Fallback: carrega do config.json (para migração gradual)
       const aiConfig = config.get('ai', {});
@@ -465,7 +474,7 @@ async function initializeAiProviders() {
         logger.debug('ℹ️  Tenant "system" já possui provider configurado');
       }
     } catch (err) {
-      logger.warn('⚠️  Erro ao configurar tenant "system"', { error: err.message });
+      logger.warn('⚠️  Erro ao configurar tenant "system"', { error: safeErrorMessage(err) });
     }
   } catch (err) {
     logger.error('❌ Erro ao inicializar providers de IA', err);
@@ -518,7 +527,7 @@ async function ensureTenantAiConfigLoaded(tenantId) {
   } catch (err) {
     logger.warn('⚠️ ensureTenantAiConfigLoaded: Falha ao carregar config do tenant', {
       tenantId,
-      error: err.message,
+      error: safeErrorMessage(err),
     });
     return { loaded: false, reason: 'erro ao carregar config do banco' };
   }
@@ -588,7 +597,7 @@ async function generateAiResponse(prompt, tenantId, context = {}) {
   } catch (error) {
     logger.error('❌ generateAiResponse: Erro ao gerar', {
       tenantId,
-      error: error.message,
+      error: safeErrorMessage(error),
       stack: error.stack,
     });
     throw error;
