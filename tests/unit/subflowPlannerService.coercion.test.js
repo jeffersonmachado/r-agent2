@@ -17,6 +17,8 @@ jest.mock('../../api/services/aiProviderService', () => ({
 
 const { generateAiResponse } = require('../../api/services/aiProviderService');
 const { planSubflows } = require('../../api/services/subflowPlannerService');
+const fs = require('fs');
+const path = require('path');
 
 function hostileToString() {
   const o = Object.create(null);
@@ -71,5 +73,13 @@ describe('subflowPlannerService coercion guards', () => {
     });
     const out = await planSubflows({ tenantId: 't1', description: 'fluxo com multiplas etapas' });
     expect(Array.isArray(out)).toBe(true);
+  });
+
+  test('static guard: service nao deve usar err.message || String(err)', () => {
+    const servicePath = path.join(__dirname, '../../api/services/subflowPlannerService.js');
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)\s*\|\|\s*fallback/);
   });
 });

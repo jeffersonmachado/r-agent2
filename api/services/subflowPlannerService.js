@@ -23,7 +23,10 @@ function safeTrim(value, fallback = '') {
 }
 function safeErrorMessage(err, fallback = '') {
   if (!err) return fallback;
-  try { return err.message || String(err) || fallback; } catch (_) { return fallback; }
+  let message = '';
+  try { message = err.message; } catch (_) { message = ''; }
+  if (message) return safeToString(message, fallback);
+  return safeToString(err, fallback);
 }
 
 function clampInt(v, { min, max, fallback }) {
