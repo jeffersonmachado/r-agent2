@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -123,5 +126,13 @@ describe('rpaService coercion hardening', () => {
 
     expect(stopped.success).toBe(false);
     expect(typeof stopped.error).toBe('string');
+  });
+
+  test('static guard: service nao deve usar return err.message || String(err)', () => {
+    const servicePath = path.join(__dirname, '../../api/services/rpaService.js');
+    const source = fs.readFileSync(servicePath, 'utf8');
+
+    expect(source).not.toMatch(/return\s+err\.message\s*\|\|\s*String\(err\)/);
+    expect(source).not.toMatch(/try\s*\{\s*return\s+err\.message\s*\|\|\s*String\(err\)/);
   });
 });

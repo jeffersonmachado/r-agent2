@@ -23,7 +23,10 @@ function safeTrimLower(value, fallback = '') {
 
 function safeErrorMessage(err, fallback = '') {
   if (err == null) return fallback;
-  try { return err.message || String(err); } catch (_) { return fallback; }
+  let message = '';
+  try { message = err.message; } catch (_) { message = ''; }
+  if (message) return safeToString(message, fallback);
+  return safeToString(err, fallback);
 }
 
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
