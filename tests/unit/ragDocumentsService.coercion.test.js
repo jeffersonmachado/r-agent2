@@ -130,4 +130,24 @@ describe('ragDocumentsService - defensive coercions', () => {
     const result = await ragDocumentsService.deleteDocument(hostileId);
     expect(result.success).toBe(true);
   });
+
+  it('não mantém acessos diretos a err/error.message fora do helper', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const content = fs.readFileSync(
+      path.join(__dirname, '../../api/services/ragDocumentsService.js'),
+      'utf-8'
+    );
+
+    const lines = content.split('\n');
+    const offenders = [];
+
+    for (const line of lines) {
+      if (!/\b(err|error)\.message\b/.test(line)) continue;
+      if (line.includes('String(err.message)')) continue; // safeErrorMessage helper internals
+      offenders.push(line.trim());
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });

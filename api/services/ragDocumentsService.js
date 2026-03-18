@@ -820,7 +820,7 @@ async function createDocument(documentData, tenantId, options = {}) {
     return {
       success: false,
       document: null,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -896,9 +896,9 @@ async function updateDocument(documentId, updates) {
           persistDocumentBestEffort(document);
         }
       } catch (indexError) {
-        setIndexState(document, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: indexError.message });
+        setIndexState(document, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
         persistDocumentBestEffort(document);
-        logger.warn('[RAGDocuments] Erro ao reindexar documento:', indexError.message);
+        logger.warn('[RAGDocuments] Erro ao reindexar documento:', safeErrorMessage(indexError));
       }
     }
 
@@ -911,7 +911,7 @@ async function updateDocument(documentId, updates) {
     return {
       success: false,
       document: null,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -989,7 +989,7 @@ async function deleteDocument(documentId) {
     logger.error('[RAGDocuments] Erro ao deletar documento:', error);
     return {
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     };
   }
 }
@@ -1107,11 +1107,12 @@ async function reindexDocument(documentId) {
     };
   } catch (error) {
     logger.error('[RAGDocuments] Erro ao reindexar documento:', error);
+    const safeError = safeErrorMessage(error);
     return {
       success: false,
       chunksCreated: 0,
-      errorCode: safeToString(error.message || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
-      error: error.message,
+      errorCode: safeToString(safeError).includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
+      error: safeError,
     };
   }
 }
@@ -1264,11 +1265,11 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
         errors.push({
           documentId: doc.id,
           title: doc.title,
-          error: error.message || 'Erro desconhecido',
+          error: safeErrorMessage(error, 'Erro desconhecido'),
         });
         logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}`, {
           documentId: doc.id,
-          error: error.message,
+          error: safeErrorMessage(error),
           stack: error.stack,
           indexed: indexed,
           failed: failed
@@ -1456,7 +1457,7 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
       total: 0,
       indexed: 0,
       failed: 0,
-      errors: [{ error: error.message }],
+      errors: [{ error: safeErrorMessage(error) }],
     };
   }
 }
@@ -1557,7 +1558,7 @@ async function getDocumentsStats(tenantId = null) {
       indexedDocuments: 0,
       indexedChunks: 0,
       tenantId: tenantId || null,
-      error: err.message,
+      error: safeErrorMessage(err),
     };
     if (stats.indexed > 0) {
       stats.syncStatus = 'db_ahead';
@@ -1655,7 +1656,7 @@ async function getRagHealth(tenantId, options = {}) {
       error: {
         code: 'RAG_HEALTH_FAILED',
         message: 'Falha ao calcular health do RAG',
-        details: { tenantId: finalTenantId, message: err.message },
+        details: { tenantId: finalTenantId, message: safeErrorMessage(err) },
       },
     };
   }
@@ -1701,7 +1702,7 @@ async function cleanOrphanedDocuments(tenantId = null, orphanedDocumentIds = [])
     return result;
   } catch (error) {
     logger.error('[RAGDocuments] Erro ao limpar documentos órfãos', {
-      error: error.message,
+      error: safeErrorMessage(error),
       tenantId
     });
     throw error;
