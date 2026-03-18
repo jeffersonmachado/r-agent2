@@ -208,5 +208,70 @@ describe('OutboundQueueService', () => {
     expect(res).toMatchObject({ queued: true, itemId: 'outq-created' });
     expect(Model.create).toHaveBeenCalledTimes(1);
   });
+
+  test('processDue tolera erro hostil com getter de message quebrado', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+
+    const hostileErr = {};
+    Object.defineProperty(hostileErr, 'message', {
+      get() {
+        throw new Error('boom-message-getter');
+      },
+    });
+    hostileErr.toString = () => { throw new Error('boom-toString'); };
+
+    const sendTextMessage = jest.fn(async () => {
+      throw hostileErr;
+    });
+    jest.doMock('../../api/services/whatsappService', () => ({ sendTextMessage }));
+    jest.doMock('../../api/services/instagramService', () => ({ sendInstagramMessage: jest.fn(), sendInstagramMedia: jest.fn() }));
+    jest.doMock('../../api/services/messengerService', () => ({ sendMessengerMessage: jest.fn() }));
+    jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
+    jest.doMock('../../api/services/auditService', () => ({ logAction: jest.fn() }));
+    jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+
+    const row = {
+      id: 'outq-1',
+      tenant_key: 'tenant-1',
+      channel_type: 'whatsapp',
+      channel_account_id: null,
+      conversation_id: null,
+      external_message_id: null,
+      attempts: 0,
+      message: { to: '5511999999999', type: 'text', body: { text: 'oi' }, meta: {} },
+      update: jest.fn(async () => ({})),
+    };
+
+    const findAll = jest.fn(async () => [row]);
+    const bulkUpdate = jest.fn(async () => [0]);
+    const fakeSequelize = {
+      constructor: { Op: { lte: 'lte', is: 'is' } },
+      transaction: async (fn) => fn({ LOCK: { UPDATE: 'UPDATE' } }),
+    };
+    const Model = {
+      sequelize: fakeSequelize,
+      findAll,
+      update: bulkUpdate,
+      findOne: jest.fn(async () => null),
+      create: jest.fn(async () => ({ id: 'outq-new' })),
+    };
+
+    jest.doMock('../../api/db/models', () => ({
+      OutboundQueueItem: () => Model,
+      ChannelConversation: () => ({ findOne: jest.fn(async () => null), create: jest.fn(async () => ({ id: 'conv-1', update: jest.fn(async () => ({})) })) }),
+      ChannelMessage: () => ({ findOne: jest.fn(async () => null), create: jest.fn(async () => ({})) }),
+      TicketEvent: () => ({ create: jest.fn(async () => ({})) }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { processDue } = require('../../api/services/outboundQueueService');
+    const res = await processDue({ limit: 1 });
+
+    expect(res).toMatchObject({ processed: 1, failed: 1 });
+    const failedUpdateCall = row.update.mock.calls.find((c) => c && c[0] && c[0].status === 'failed');
+    expect(failedUpdateCall).toBeTruthy();
+    expect(failedUpdateCall[0].last_error).toBe('send_failed');
+  });
 });
 

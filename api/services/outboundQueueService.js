@@ -39,6 +39,15 @@ function safeTrimLower(value, fallback = '') {
   try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
 }
 
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
+
 function safeGet(obj, path, fallback = null) {
   if (!obj || typeof obj !== 'object') return fallback;
   try {
@@ -213,7 +222,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         externalMessageId,
         status: 'sent',
       }).catch((err) => {
-        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
       return { success: true, externalMessageId };
     }
@@ -282,7 +291,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         externalMessageId,
         status: 'sent',
       }).catch((err) => {
-        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
 
       return { success: true, externalMessageId };
@@ -310,7 +319,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
-        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
       return { success: true, externalMessageId: result.messageId || null };
     }
@@ -329,7 +338,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
-        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
       return { success: true, externalMessageId: result.messageId || null };
     }
@@ -356,7 +365,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
         externalMessageId: result.messageId || null,
         status: 'sent',
       }).catch((err) => {
-        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
       return { success: true, externalMessageId: result.messageId || null };
     }
@@ -385,7 +394,7 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       externalMessageId,
       status: 'sent',
     }).catch((err) => {
-      logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: err.message });
+      logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
     });
     return { success: true, externalMessageId };
   }
@@ -674,7 +683,7 @@ async function processDue({ limit = 25 } = {}) {
         status: 'failed',
         attempts,
         next_attempt_at: nextAttemptAt,
-        last_error: err.message,
+        last_error: safeErrorMessage(err, 'send_failed'),
         reason_code: reasonCode,
         processing_at: null,
         processing_by: null,
@@ -694,7 +703,7 @@ async function processDue({ limit = 25 } = {}) {
             emitEvent('ticket.updated', {
               ticketId: updatedTicket.id,
               ticket: updatedTicket,
-              change: { type: 'message_status', status: 'failed', error: err.message },
+              change: { type: 'message_status', status: 'failed', error: safeErrorMessage(err) },
             }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
           }
         }
@@ -706,7 +715,7 @@ async function processDue({ limit = 25 } = {}) {
         channelType: row.channel_type,
         attempts,
         nextAttemptAt: nextAttemptAt.toISOString(),
-        error: err.message,
+        error: safeErrorMessage(err),
       });
     }
   }
@@ -725,7 +734,7 @@ function startWorker({ intervalMs = 1500, batchSize = 25 } = {}) {
 
   workerTimer = setInterval(() => {
     processDue({ limit: batchSize }).catch((err) => {
-      logger.error('[OutboundQueue] Erro no worker', { error: err.message });
+      logger.error('[OutboundQueue] Erro no worker', { error: safeErrorMessage(err) });
     });
   }, intervalMs);
 
