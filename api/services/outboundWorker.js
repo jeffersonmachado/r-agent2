@@ -11,6 +11,16 @@
 const logger = require('../utils/logger');
 const outboundQueueService = require('./outboundQueueService');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 let timer = null;
 let running = false;
 
@@ -26,7 +36,7 @@ function start({ intervalMs = 1500, batchSize = 25 } = {}) {
   // Preferimos um setInterval controlado aqui para permitir stop explícito.
   timer = setInterval(() => {
     processPending({ batchSize }).catch((err) => {
-      logger.error('[OutboundWorker] Erro ao processar fila outbound', { error: err.message });
+      logger.error('[OutboundWorker] Erro ao processar fila outbound', { error: safeErrorMessage(err) });
     });
   }, intervalMs);
 
