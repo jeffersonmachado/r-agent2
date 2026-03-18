@@ -26,6 +26,16 @@ const { logAction } = require('./auditService');
 const { getSequelize } = require('../db/sequelize');
 const { QueueAssignmentState } = require('../db/models');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeErrorMessage(err, fallback = '') {
+  if (err == null) return fallback;
+  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
+}
+
 /** @type {Map<string, number>} */
 const rrCursor = new Map(); // key = `${tenantId}:${queueName}` => index
 
@@ -85,7 +95,7 @@ async function getAndBumpRoundRobinCursorDb(tenantId, queueName) {
       return current;
     });
   } catch (err) {
-    logger.debug('[Assignment] Falha ao obter cursor RR do DB (fallback para memória)', { tenantId, queueName, error: err.message });
+    logger.debug('[Assignment] Falha ao obter cursor RR do DB (fallback para memória)', { tenantId, queueName, error: safeErrorMessage(err) });
     return null;
   }
 }
@@ -318,7 +328,7 @@ function startAssignmentWorker({ intervalMs = 15000 } = {}) {
         reassignOfflineTicketsForTenant(tenantId).catch(() => {});
       }
     } catch (err) {
-      logger.debug('[Assignment] worker erro (ignorado)', { error: err.message });
+      logger.debug('[Assignment] worker erro (ignorado)', { error: safeErrorMessage(err) });
     }
   }, intervalMs);
   if (worker.unref) worker.unref();
