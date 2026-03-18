@@ -89,4 +89,30 @@ describe('AuthService', () => {
     const beforeInit = svc.validateToken('any-token');
     expect(beforeInit.valid).toBe(false);
   });
+
+  test('loginWithRpaToken tolera erro hostil no rpaTokenManager', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
+    jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => ({})), Session: jest.fn(() => ({})) }));
+
+    jest.doMock('../../tests/rpa/utils/rpaTokenManager', () => ({
+      loadRpaToken: jest.fn(() => {
+        const err = {};
+        Object.defineProperty(err, 'message', {
+          get() {
+            throw new Error('boom-message-getter');
+          },
+        });
+        err.toString = () => { throw new Error('boom-toString'); };
+        throw err;
+      }),
+      isTokenValid: jest.fn(() => true),
+    }));
+
+    // eslint-disable-next-line global-require
+    const svc = require('../../api/services/authService');
+
+    const out = await svc.loginWithRpaToken('token', 'tenant-1');
+    expect(out.success).toBe(false);
+    expect(out.error).toBe('Sistema de validação de token RPA não disponível');
+  });
 });

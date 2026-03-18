@@ -69,6 +69,15 @@ function safeTrimLower(value, fallback = '') {
   const str = safeToString(value, fallback);
   try { return str.trim().toLowerCase(); } catch (_) { return fallback; }
 }
+
+function safeErrorMessage(err, fallback = '') {
+  try {
+    const message = err && typeof err === 'object' ? err.message : null;
+    return safeToString(message) || safeToString(err, fallback);
+  } catch (_) {
+    return safeToString(err, fallback);
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function sha256Hex(value) {
@@ -694,7 +703,7 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
       return { success: false, error: 'Token RPA expirado ou inválido' };
     }
   } catch (err) {
-    logger.error('[AuthService] CRÍTICO: rpaTokenManager indisponível', { error: err.message });
+    logger.error('[AuthService] CRÍTICO: rpaTokenManager indisponível', { error: safeErrorMessage(err) });
     return { success: false, error: 'Sistema de validação de token RPA não disponível' };
   }
 
