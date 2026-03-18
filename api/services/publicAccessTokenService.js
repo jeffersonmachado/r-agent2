@@ -1,6 +1,15 @@
 const crypto = require('crypto');
 const { PublicAccessToken } = require('../db/models');
 
+function safeToString(value, fallback = '') {
+  if (value == null) return fallback;
+  try { return String(value); } catch (_) { return fallback; }
+}
+
+function safeTrim(value, fallback = '') {
+  return safeToString(value, fallback).trim();
+}
+
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -10,13 +19,13 @@ function makeToken() {
 }
 
 function maskToken(token) {
-  const s = String(token || '');
+  const s = safeToString(token);
   if (s.length <= 12) return '***';
   return `${s.slice(0, 6)}***${s.slice(-4)}`;
 }
 
 function normalizeKind(kind) {
-  return String(kind || '').trim();
+  return safeTrim(kind);
 }
 
 /**
@@ -44,7 +53,7 @@ async function createPublicToken({
   const safeKind = normalizeKind(kind);
   let expiresAtValue = null;
   if (expiresAt) {
-    expiresAtValue = expiresAt instanceof Date ? expiresAt : new Date(String(expiresAt));
+    expiresAtValue = expiresAt instanceof Date ? expiresAt : new Date(safeToString(expiresAt));
     // invalid date -> null
     if (Number.isNaN(expiresAtValue.getTime())) expiresAtValue = null;
   } else if (expiresInSec != null && !Number.isNaN(Number(expiresInSec))) {
@@ -56,7 +65,7 @@ async function createPublicToken({
     id,
     tenant_key: tenantId,
     kind: safeKind,
-    location_id: locationId,
+    location_id: locationId == null ? null : safeToString(locationId),
     token,
     active: true,
     meta,
@@ -95,7 +104,7 @@ async function listPublicTokens({ tenantId, kind = null, locationId = null, acti
   const Model = PublicAccessToken();
   const where = { tenant_key: tenantId };
   if (kind) where.kind = normalizeKind(kind);
-  if (locationId !== undefined && locationId !== null) where.location_id = String(locationId);
+  if (locationId !== undefined && locationId !== null) where.location_id = safeToString(locationId);
   if (active === true || active === false) where.active = active;
 
   const rows = await Model.findAll({
@@ -132,7 +141,7 @@ async function listPublicTokens({ tenantId, kind = null, locationId = null, acti
  */
 async function revokePublicToken({ tenantId, tokenId, reason = null, rotatedToId = null }) {
   const Model = PublicAccessToken();
-  const row = await Model.findOne({ where: { tenant_key: tenantId, id: String(tokenId) } });
+  const row = await Model.findOne({ where: { tenant_key: tenantId, id: safeToString(tokenId) } });
   if (!row) {
     return { ok: false, error: 'token_not_found' };
   }
@@ -141,8 +150,8 @@ async function revokePublicToken({ tenantId, tokenId, reason = null, rotatedToId
   }
 
   const meta = (row.meta && typeof row.meta === 'object') ? { ...row.meta } : {};
-  if (reason) meta.revokedReason = String(reason);
-  if (rotatedToId) meta.rotatedToId = String(rotatedToId);
+  if (reason) meta.revokedReason = safeToString(reason);
+  if (rotatedToId) meta.rotatedToId = safeToString(rotatedToId);
 
   row.active = false;
   row.revoked_at = new Date();
@@ -176,7 +185,7 @@ async function revokePublicToken({ tenantId, tokenId, reason = null, rotatedToId
  */
 async function rotatePublicToken({ tenantId, tokenId, expiresAt = null, expiresInSec = null }) {
   const Model = PublicAccessToken();
-  const oldRow = await Model.findOne({ where: { tenant_key: tenantId, id: String(tokenId) } });
+  const oldRow = await Model.findOne({ where: { tenant_key: tenantId, id: safeToString(tokenId) } });
   if (!oldRow) {
     return { ok: false, error: 'token_not_found' };
   }
@@ -214,7 +223,7 @@ async function rotatePublicToken({ tenantId, tokenId, expiresAt = null, expiresI
 async function resolvePublicToken({ token, allowedKinds }) {
   const Model = PublicAccessToken();
   const row = await Model.findOne({
-    where: { token: String(token) },
+    where: { token: safeToString(token) },
   });
   if (!row) {
     return { ok: false, error: 'invalid_token' };
@@ -259,11 +268,11 @@ async function resolvePublicToken({ token, allowedKinds }) {
 async function recordPublicTokenUsage({ tokenId, route, method = 'POST', statusCode = 200 } = {}) {
   if (!tokenId) return { ok: false, error: 'token_id_required' };
   const Model = PublicAccessToken();
-  const row = await Model.findOne({ where: { id: String(tokenId) } });
+  const row = await Model.findOne({ where: { id: safeToString(tokenId) } });
   if (!row) return { ok: false, error: 'token_not_found' };
 
-  const safeRoute = String(route || '/public/unknown').trim().slice(0, 240) || '/public/unknown';
-  const safeMethod = String(method || 'POST').trim().toUpperCase().slice(0, 12) || 'POST';
+  const safeRoute = safeTrim(route || '/public/unknown', '/public/unknown').slice(0, 240) || '/public/unknown';
+  const safeMethod = safeTrim(method || 'POST', 'POST').toUpperCase().slice(0, 12) || 'POST';
   const key = `${safeMethod} ${safeRoute}`;
   const nowIso = new Date().toISOString();
 
@@ -314,7 +323,7 @@ async function getPublicTokenStats({ tenantId }) {
      WHERE tenant_key = :tenantKey
      GROUP BY kind
      ORDER BY kind ASC`,
-    { replacements: { tenantKey: String(tenantId) } },
+    { replacements: { tenantKey: safeToString(tenantId) } },
   );
 
   const items = Array.isArray(rows) ? rows.map((r) => ({
