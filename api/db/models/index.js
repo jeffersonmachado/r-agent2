@@ -107,6 +107,10 @@ const getMarketBenchmark = require('./MarketBenchmark');
 const getMarketPattern = require('./MarketPattern');
 const getMarketPrediction = require('./MarketPrediction');
 const getMarketPlaybook = require('./MarketPlaybook');
+const getVerticalJourneyEvent = require('./VerticalJourneyEvent');
+const getVerticalAttendance = require('./VerticalAttendance');
+const getVerticalSessionBundle = require('./VerticalSessionBundle');
+const getVerticalEngagementSignal = require('./VerticalEngagementSignal');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -213,6 +217,10 @@ const MarketBenchmark = () => getMarketBenchmark();
 const MarketPattern = () => getMarketPattern();
 const MarketPrediction = () => getMarketPrediction();
 const MarketPlaybook = () => getMarketPlaybook();
+const VerticalJourneyEvent = () => getVerticalJourneyEvent();
+const VerticalAttendance = () => getVerticalAttendance();
+const VerticalSessionBundle = () => getVerticalSessionBundle();
+const VerticalEngagementSignal = () => getVerticalEngagementSignal();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -482,6 +490,10 @@ module.exports = {
   MarketPattern,
   MarketPrediction,
   MarketPlaybook,
+  VerticalJourneyEvent,
+  VerticalAttendance,
+  VerticalSessionBundle,
+  VerticalEngagementSignal,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -588,4 +600,8 @@ module.exports = {
   getMarketPattern,
   getMarketPrediction,
   getMarketPlaybook,
+  getVerticalJourneyEvent,
+  getVerticalAttendance,
+  getVerticalSessionBundle,
+  getVerticalEngagementSignal,
 };

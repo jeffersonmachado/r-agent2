@@ -356,6 +356,33 @@ async function resolveDecision({
         direction: action === 'enter' ? 'in' : 'out',
       });
     }
+
+    // Beauty advanced policy rules (room/resource/professional restriction, appointment window)
+    if (selectedPolicy) {
+      const { validateBeautyPolicyRules } = require('../../services/vertical/beautyPolicyRules');
+      const beautyCheck = validateBeautyPolicyRules({
+        policy: selectedPolicy,
+        subject: context.subject,
+        membership: context.membership,
+        roomId: rawPayload.room_id || null,
+        resourceId: rawPayload.resource_id || null,
+        professionalId: rawPayload.professional_id || null,
+        activeSchedule: context.activeSchedule,
+      });
+      if (!beautyCheck.allowed) {
+        return emitDecisionAndEvent({
+          tenantId,
+          deviceId,
+          credentialId: credential.id,
+          subjectId: context.subject.id,
+          action,
+          decision: 'deny',
+          reasonCode: beautyCheck.reasonCode,
+          metadata: { rawPayload, vertical, policyId: selectedPolicy.id, beautyReason: beautyCheck.reasonDetail },
+          direction: action === 'enter' ? 'in' : 'out',
+        });
+      }
+    }
   }
 
   if (context.membership) {
@@ -475,7 +502,7 @@ async function resolveDecision({
     ? allowedByBillingStatus(context.membership.billing_status).reasonCode
     : REASON_CODES.ALLOWED_VISITOR;
 
-  return emitDecisionAndEvent({
+  const finalResult = await emitDecisionAndEvent({
     tenantId,
     subjectId: context.subject.id,
     deviceId,
@@ -493,6 +520,34 @@ async function resolveDecision({
     },
     direction: action === 'enter' ? 'in' : 'out',
   });
+
+  // Auto-trigger fitness check-in/out (fire-and-forget, non-blocking)
+  if (vertical === 'fitness' && finalResult.decision) {
+    setImmediate(() => {
+      try {
+        const fitnessAttendanceService = require('../../services/vertical/fitnessAttendanceService');
+        if (action === 'enter') {
+          fitnessAttendanceService.recordCheckIn({
+            tenantId,
+            subjectId: context.subject.id,
+            membershipId: context.membership?.id || null,
+            accessDecisionId: finalResult.decision.id,
+            deviceId: deviceId || null,
+            unitId: device?.unit_id || device?.location || null,
+            metadata: { correlationId: finalResult.decision.id, auto: true },
+          }).catch(() => {/* best-effort */});
+        } else if (action === 'exit' || action === 'leave') {
+          fitnessAttendanceService.recordCheckOut({
+            tenantId,
+            subjectId: context.subject.id,
+            metadata: { correlationId: finalResult.decision.id, auto: true },
+          }).catch(() => {/* best-effort */});
+        }
+      } catch (_e) {/* best-effort */}
+    });
+  }
+
+  return finalResult;
 }
 
 async function issueVisitorQr({ tenantId, payload = {} }) {

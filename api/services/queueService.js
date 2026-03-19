@@ -263,7 +263,7 @@ async function initialize() {
 // Teste de getMetrics após carregar dados (apenas em desenvolvimento)
 if (process.env.NODE_ENV !== 'production') {
   // Aguarda um pouco para garantir que os dados foram carregados
-  setTimeout(() => {
+  const _metricsTestTimer = setTimeout(() => {
     const testMetrics = getMetrics();
     logger.debug('[QueueService] Teste de getMetrics após carregar dados:', {
       totalTickets: testMetrics.totalTickets,
@@ -271,6 +271,7 @@ if (process.env.NODE_ENV !== 'production') {
       ticketsByQueue: testMetrics.ticketsByQueue,
     });
   }, 100);
+  _metricsTestTimer.unref();
 }
 
 /**

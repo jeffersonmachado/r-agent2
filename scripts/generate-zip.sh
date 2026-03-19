@@ -183,7 +183,19 @@ if [[ "$INCLUDE_COVERAGE" == false ]]; then
 fi
 
 if [[ "$INCLUDE_DIST" == false ]]; then
-  ZIP_EXCLUDES+=("${PROJECT_NAME}/**/dist/*" "${PROJECT_NAME}/**/build/*")
+  # Keep exclusions scoped to project build artifacts. Dependency packages often
+  # ship required runtime code under build/, and excluding those directories
+  # corrupts bundled node_modules (for example jest-cli/build/index.js).
+  ZIP_EXCLUDES+=(
+    "${PROJECT_NAME}/dist/*"
+    "${PROJECT_NAME}/build/*"
+    "${PROJECT_NAME}/frontend/dist/*"
+    "${PROJECT_NAME}/frontend/build/*"
+    "${PROJECT_NAME}/apps/mobile/dist/*"
+    "${PROJECT_NAME}/apps/mobile/build/*"
+    "${PROJECT_NAME}/apps/mobile/android/build/*"
+    "${PROJECT_NAME}/apps/mobile/ios/build/*"
+  )
 fi
 
 # Sempre evita auto-inclusão do ZIP de saída quando o destino está dentro do projeto.

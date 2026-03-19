@@ -1846,6 +1846,54 @@ async function requestHandler(req, res) {
   }
 
   // =======================================================================
+  // Vertical - Beauty Routes
+  // =======================================================================
+  {
+    const { handleBeautyRoutes } = require('./serverHandlers/verticalBeautyRoutes');
+    const handledBeauty = await handleBeautyRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction,
+      },
+    });
+    if (handledBeauty) return;
+  }
+
+  // =======================================================================
+  // Vertical - Fitness Routes
+  // =======================================================================
+  {
+    const { handleFitnessRoutes } = require('./serverHandlers/verticalFitnessRoutes');
+    const handledFitness = await handleFitnessRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger, logAction,
+      },
+    });
+    if (handledFitness) return;
+  }
+
+  // =======================================================================
+  // Operations Dashboard - Pilot Monitoring (Beauty + Fitness)
+  // =======================================================================
+  {
+    const { handleOperationsDashboardRoutes } = require('./serverHandlers/operationsDashboardRoutes');
+    const handledOperationsDashboard = await handleOperationsDashboardRoutes({
+      req, res, method, pathname,
+      deps: {
+        requireAuth, requirePermission, requireTenant,
+        sendJson, badRequest, hasJsonContentType, parseJsonBody,
+        logger,
+      },
+    });
+    if (handledOperationsDashboard) return;
+  }
+
+  // =======================================================================
   // PBX v1 / Legacy Routes
   // =======================================================================
   {
@@ -2561,6 +2609,17 @@ if (require.main === module) {
           startExecutionQueueWorker({ intervalMs: 800 });
         } catch (err) {
           logger.warn('[ExecutionQueue] Falha ao iniciar worker (ignorado)', { error: err.message });
+        }
+      }
+
+      // Vertical journey scheduler (beauty + fitness automation) - best-effort
+      if (process.env.ENABLE_VERTICAL_SCHEDULER !== 'false') {
+        try {
+          const { startVerticalScheduler } = require('./services/vertical/verticalSchedulerService');
+          const verticalIntervalMs = parseInt(process.env.VERTICAL_SCHEDULER_INTERVAL_MS || '60000', 10);
+          startVerticalScheduler({ intervalMs: verticalIntervalMs });
+        } catch (err) {
+          logger.warn('[VerticalScheduler] Falha ao iniciar (ignorado)', { error: err.message });
         }
       }
 

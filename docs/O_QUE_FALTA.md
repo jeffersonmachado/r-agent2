@@ -210,9 +210,25 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - [x] integrações públicas/controladas iniciais com `PublicAccessToken(kind=access_control)`
 - [x] `execution_command` canônico para device/vendor e confirmação de execução via `ack`
 - [x] reconciliação operacional de decisão (`pending/executed/failed/expired`) + destaque para `pending_critical`
+- [x] **expandir policies avançadas para beauty (sala/recurso/profissional)** — `beautyPolicyRules.js` integrado ao decision engine
+- [x] **auto-trigger de attendance fitness no access decision** — `fitnessAttendanceService` integrado ao `resolveDecision`
+- [x] **jornada Beauty completa** — `beautyJourneyService.js` (confirmação/lembrete/no-show/follow-up/reativação)
+- [x] **jornada Fitness completa** — `fitnessMembershipService.js` + `fitnessAttendanceService.js` + `customerJourneyEngine.js`
+- [x] **engine de engajamento e churn** — `engagementEngine.js` com detecção de baixa frequência, inatividade e churn risk
+- [x] **métricas verticais** — `verticalMetricsEngine.js` (KPIs de attendance, journey, membership, revenue proxy, engagement)
+- [x] **recomendações heurísticas** — `verticalRecommendationService.js` (no-show risk, upsell, churn, frequência)
+- [x] **APIs Beauty** — `/api/beauty/*` (10 endpoints) via `verticalBeautyRoutes.js`
+- [x] **APIs Fitness** — `/api/fitness/*` (15 endpoints) via `verticalFitnessRoutes.js`
+- [x] **scheduler vertical automático** — `verticalSchedulerService.js` + `verticalJourneyJobHandler.js` (reminder 24h/1h, no-show scan, reativação, inatividade, grace expiry) com idempotência por janela de tempo
+- [x] **adapter de notificações** — `notificationAdapter.js` com canais WhatsApp/SMS/email/internal; ativados por env vars
+- [x] **saldo de pontos de fidelidade (beauty)** — `getLoyaltyBalance` agrega `LoyaltyPointsGranted/Reversed` do EventLedger; endpoint `GET /api/beauty/loyalty/:subjectId`
+- [x] **prevenção de check-in duplicado (fitness)** — `recordCheckIn` verifica attendance aberto antes de criar; retorna existente se duplicado
+- [x] **fechamento automático de attendances presos (fitness)** — `closeStaleOpenAttendances` marca como `absent` após N horas sem checkout
+- [x] **histórico de billing de membership (fitness)** — `getMembershipBillingHistory` lê EventLedger; endpoint `GET /api/fitness/membership/:id/billing-history`
+- [x] **testes de integração Beauty E2E** — 9 cenários cobrindo toda a jornada (confirmação → lembrete → no-show → serviço concluído → fidelidade → reativação)
+- [x] **testes de integração Fitness E2E** — 10 cenários cobrindo check-in, checkout, auto-close, acesso por status billing, inatividade, billing history
 - [ ] endurecer integrações com protocolos reais de dispositivos/vendors
 - [ ] completar overrides operacionais e analytics específicos de acesso/presença
-- [ ] expandir policies avançadas para beauty (sala/recurso/profissional)
 
 #### 2.3 PBX com TTS+ASR (voz real em produção)
 - **Fechar operação PBX v1 com evidência de chamada real**

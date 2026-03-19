@@ -44,6 +44,11 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 
 - **Casos de uso por segmento**: `CASOS_DE_USO.md`
 
+## 6.1) Operacao vertical Beauty/Fitness
+
+- **Painel operacional (pilot MVP)**: `OPERATIONS_DASHBOARD.md`
+- **Base tecnica das verticais Beauty/Fitness**: `VERTICALS_BEAUTY_FITNESS.md`
+
 ## 7) Documentação operacional e técnica existente (inventário)
 
 Este repositório já contém documentação detalhada por área. Alguns pontos de entrada úteis:

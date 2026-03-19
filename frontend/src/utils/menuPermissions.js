@@ -88,6 +88,13 @@ export const menuItems = [
     roles: ['supervisor', 'manager', 'admin', 'owner'],
   },
   {
+    label: 'Painel Operacional',
+    path: '/operations-dashboard',
+    icon: '🧭',
+    permission: { resource: 'reports', action: 'read' },
+    roles: ['supervisor', 'manager', 'admin', 'owner'],
+  },
+  {
     label: 'Solutions Packs',
     path: '/solutions',
     icon: '📦',

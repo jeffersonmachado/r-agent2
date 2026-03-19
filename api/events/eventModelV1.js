@@ -47,6 +47,36 @@ const EVENT_TYPES_V1 = new Set([
   'VoiceFlowInput',
   'VoiceFlowAction',
   'VoiceRecordingCaptured',
+
+  // Vertical - Journey Events (Beauty & Fitness shared)
+  'VerticalJourney_ConfirmationSent',
+  'VerticalJourney_ConfirmationReceived',
+  'VerticalJourney_Reminder24hSent',
+  'VerticalJourney_ReminderNearTimeSent',
+  'VerticalJourney_NoShowDetected',
+  'VerticalJourney_ServiceCompleted',
+  'VerticalJourney_FollowUpSent',
+  'VerticalJourney_ReviewRequested',
+  'VerticalJourney_ReactivationSent',
+  'VerticalJourney_WelcomeSent',
+  'VerticalJourney_FrequencyAlertSent',
+  'VerticalJourney_ReturnCampaignSent',
+  'VerticalJourney_LoyaltyPointsReversed',
+  'VerticalJourney_Custom',
+
+  // Vertical - Billing / Membership
+  'MembershipBillingStatusChanged',
+  'SessionBundleConsumed',
+  'SessionBundleCreated',
+  'LoyaltyPointsGranted',
+
+  // Vertical - Attendance (Fitness)
+  'FitnessCheckIn',
+  'FitnessCheckOut',
+  'FitnessAttendanceAbsent',
+
+  // Vertical - Engagement
+  'VerticalEngagementSignalComputed',
 ]);
 
 function makeId(prefix) {

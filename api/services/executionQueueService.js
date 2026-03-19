@@ -490,6 +490,12 @@ async function processJob(job) {
     }
     return;
   }
+  // Vertical journey kinds (beauty + fitness)
+  if (kind.startsWith('vertical_')) {
+    const { handleVerticalJob } = require('./vertical/verticalJourneyJobHandler');
+    const handled = await handleVerticalJob(job);
+    if (handled) return;
+  }
   // Unknown kind: mark as done (best-effort)
   logger.warn('[ExecutionQueue] Job kind desconhecido, ignorando', { kind, jobId: job.id });
 }
@@ -524,6 +530,7 @@ function startExecutionQueueWorker({ intervalMs = 800 } = {}) {
     }
   };
   _timer = setInterval(() => { tick(); }, Math.max(200, Number(intervalMs) || 800));
+  _timer.unref(); // allow process to exit cleanly (Jest, graceful shutdown)
   logger.info('[ExecutionQueue] worker iniciado', { intervalMs });
 }
 

@@ -110,6 +110,8 @@ Fitness é o primeiro vertical profile operacional:
 - anti-passback
 - visitante experimental por QR
 - trilha de entrada/saída
+- **auto-criação de `VerticalAttendance` a cada `allow` (fire-and-forget via `fitnessAttendanceService.recordCheckIn`)**
+- **auto-fechamento de attendance em ação `exit`/`leave` via `recordCheckOut`**
 
 ## Beauty opcional
 
@@ -117,12 +119,80 @@ Beauty entra por profile/policy:
 
 - acesso por agendamento válido
 - janela de atendimento
-- base para restrição por sala/recurso/profissional via metadata
+- regras avançadas por sala/recurso/profissional via `beautyPolicyRules.validateBeautyPolicyRules`
+  - `policy.metadata.room_ids`: lista de salas permitidas
+  - `policy.metadata.resource_ids`: lista de recursos permitidos
+  - `policy.metadata.professional_ids`: lista de profissionais permitidos
+  - `policy.metadata.require_appointment`: exige agendamento ativo
+  - `policy.metadata.require_active_bundle`: exige pacote/sessão disponível
+  - tolerância de janela via `policy.metadata.appointment_window_tolerance_ms`
 - QR temporário opcional
+
+## Beauty – Jornada do cliente
+
+O módulo `api/services/vertical/beautyJourneyService.js` orquestra a jornada completa:
+
+```
+confirmation_sent → confirmation_received → reminder_24h → reminder_1h
+→ [allow decision]
+→ service_completed (auto-deduct session + LoyaltyPointsGranted ledger)
+→ follow_up_sent → review_requested
+→ [inactive] → reactivation_sent
+→ [no show] → no_show_detected → rescheduling_offered
+```
+
+### APIs Beauty
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/beauty/journey/:subjectId` | Timeline do cliente |
+| POST | `/api/beauty/journey/event` | Emitir evento de jornada |
+| GET | `/api/beauty/reminders/:subjectId` | Histórico de lembretes |
+| GET | `/api/beauty/no-show-risk/:subjectId` | Score de risco de no-show |
+| GET | `/api/beauty/bundle/:subjectId` | Saldo de sessões |
+| POST | `/api/beauty/bundle` | Criar pacote de sessões |
+| POST | `/api/beauty/service-completed` | Registrar serviço realizado |
+| POST | `/api/beauty/no-show` | Detectar no-show |
+| GET | `/api/beauty/metrics` | KPIs do vertical |
+| GET | `/api/beauty/recommendations/:subjectId` | Recomendações IA/heurística |
+
+## Fitness – Jornada e memberships
+
+O módulo `api/services/vertical/fitnessMembershipService.js` gerencia o ciclo de vida:
+
+```
+active → grace_period → delinquent → blocked → cancelled → [reactivation] → active
+```
+
+Assiduidade rastreada por `api/services/vertical/fitnessAttendanceService.js`:
+
+- Cada `allow` cria um `VerticalAttendance` (status=open)
+- Cada `exit`/`leave` fecha o registro (status=completed, duration computada)
+- No-show marcado manualmente (status=absent)
+
+### APIs Fitness
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/fitness/subject/:subjectId/attendance` | Histórico + frequência |
+| POST | `/api/fitness/attendance/check-in` | Check-in manual |
+| POST | `/api/fitness/attendance/check-out` | Check-out manual |
+| GET | `/api/fitness/membership/:membershipId` | Detalhe da membership |
+| PATCH | `/api/fitness/membership/:membershipId/billing` | Atualizar billing status |
+| PATCH | `/api/fitness/membership/:membershipId/details` | Atualizar datas/plano |
+| POST | `/api/fitness/membership/:membershipId/grace-period` | Iniciar período de graça |
+| POST | `/api/fitness/membership/:membershipId/renew` | Processar renovação |
+| GET | `/api/fitness/subject/:subjectId/access-status` | Elegibilidade de acesso |
+| GET | `/api/fitness/subject/:subjectId/churn-risk` | Score de risco de churn |
+| GET | `/api/fitness/subject/:subjectId/timeline` | Timeline operacional |
+| GET | `/api/fitness/metrics` | KPIs do vertical |
+| GET | `/api/fitness/memberships` | Listar memberships |
+| POST | `/api/fitness/journey/event` | Emitir evento de jornada |
+| GET | `/api/fitness/attendance/open` | Attendances abertas |
 
 ## Roadmap incremental
 
-Fase atual:
+Fase atual (Beauty + Fitness v1 vendável):
 
 - núcleo canônico
 - CRUD de devices/credentials/policies/events
@@ -135,11 +205,18 @@ Fase atual:
 - pendência crítica destacada para follow-up operacional
 - snapshot de saúde operacional para triagem rápida
 - threshold de criticidade configurável por policy/unidade/device sem migration extra
+- **jornada do cliente Beauty completa (confirmação/lembrete/no-show/pós-serviço/reativação)**
+- **jornada do cliente Fitness completa (welcome/frequência/churn/bloqueio/renovação)**
+- **auto-attendance Fitness no access decision**
+- **regras avançadas de policy Beauty (sala/recurso/profissional)**
+- **engine de engajamento e detecção de churn**
+- **engine de métricas verticais (KPIs)**
+- **serviço de recomendações heurísticas (pluggable ML)**
 
 Próximas fases:
 
 - callbacks de execução/ack mais ricos por vendor
 - override operacional formal para delinquent
 - dashboards analíticos dedicados
-- regras avançadas por recurso/sala/profissional
 - adapters explícitos para Control iD, ZKTeco e parceiros
+- integração com PSP real (Stripe/Pagar.me) para billing automático

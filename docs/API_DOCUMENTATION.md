@@ -651,3 +651,90 @@ Acesso básico a tickets e atendimento.
 ## 📞 Suporte
 
 Para mais informações, consulte a documentação completa ou entre em contato com o suporte.
+
+---
+
+## 💄 Vertical Beauty — Endpoints
+
+Todos os endpoints exigem header `X-Tenant-ID` ou query param `tenantId`.
+
+| Método | Path | Descrição |
+|---|---|---|
+| `POST` | `/api/beauty/confirmation` | Enviar confirmação de agendamento |
+| `POST` | `/api/beauty/reminder` | Enviar lembrete (24h ou 1h) |
+| `POST` | `/api/beauty/no-show` | Registrar no-show de um agendamento |
+| `POST` | `/api/beauty/complete` | Concluir serviço (concede ponto de fidelidade) |
+| `POST` | `/api/beauty/follow-up` | Enviar follow-up pós-serviço |
+| `POST` | `/api/beauty/reactivation` | Enviar campanha de reativação |
+| `POST` | `/api/beauty/loyalty/reverse` | Estornar pontos de fidelidade |
+| `GET` | `/api/beauty/loyalty/:subjectId` | Saldo de pontos de fidelidade |
+| `GET` | `/api/beauty/events/:subjectId` | Listar eventos da jornada |
+| `GET` | `/api/beauty/timeline/:subjectId` | Timeline cronológica completa |
+
+### GET /api/beauty/loyalty/:subjectId
+
+```
+GET /api/beauty/loyalty/sub-001?tenantId=tenant-abc
+200 { "points": 5, "granted": 6, "reversed": 1, "lastUpdatedAt": "2025-12-01T10:00:00.000Z" }
+```
+
+---
+
+## 🏋️ Vertical Fitness — Endpoints
+
+| Método | Path | Descrição |
+|---|---|---|
+| `POST` | `/api/fitness/check-in` | Registrar check-in (idempotente) |
+| `POST` | `/api/fitness/check-out` | Fechar attendance aberto |
+| `POST` | `/api/fitness/no-show` | Marcar sessão como ausente |
+| `GET` | `/api/fitness/attendance/history` | Histórico de presenças + frequência |
+| `GET` | `/api/fitness/attendance/open` | Listar attendances abertos |
+| `GET` | `/api/fitness/membership/:membershipId` | Detalhe da membership |
+| `GET` | `/api/fitness/membership/:membershipId/billing-history` | Histórico de status de cobrança |
+| `GET` | `/api/fitness/memberships` | Listar memberships do tenant |
+| `POST` | `/api/fitness/membership/grace` | Iniciar período de carência |
+| `POST` | `/api/fitness/membership/block` | Bloquear membership |
+| `POST` | `/api/fitness/membership/reactivate` | Reativar membership bloqueada |
+| `POST` | `/api/fitness/membership/renewal` | Processar renovação |
+| `GET` | `/api/fitness/access-status` | Verificar elegibilidade de acesso |
+| `GET` | `/api/fitness/metrics` | KPIs verticais |
+| `GET` | `/api/fitness/recommendations` | Recomendações heurísticas |
+
+Ver [docs/VERTICALS_BEAUTY_FITNESS.md](VERTICALS_BEAUTY_FITNESS.md) para documentação técnica completa.
+
+---
+
+## 🧭 Operations Dashboard — Endpoints
+
+Namespace: `GET /api/operations-dashboard/*`
+
+Todos os endpoints exigem autenticação, `analytics:read` e escopo de tenant.
+
+| Método | Path | Descrição |
+|---|---|---|
+| `GET` | `/api/operations-dashboard/summary` | Resumo executivo (Beauty/Fitness/Sistema) |
+| `GET` | `/api/operations-dashboard/timeline` | Timeline operacional por sujeito/cliente/membership |
+| `GET` | `/api/operations-dashboard/jobs` | Visão de scheduler/fila (execuções, erro, duração, retries) |
+| `GET` | `/api/operations-dashboard/notifications` | Visão de entregas por canal (`sent/failed/skipped/provider-dependent`) |
+| `GET` | `/api/operations-dashboard/insights` | Insights acionáveis (Beauty/Fitness) com score + motivo |
+
+### Filtros suportados
+
+- `tenantId` (override apenas para super-admin)
+- `vertical` (`beauty`, `fitness`, `all`)
+- `startDate`, `endDate`
+- `subjectId`, `customerId`, `membershipId`
+- `status`, `channel`
+- `limit`, `page`
+
+### Exemplo
+
+```bash
+GET /api/operations-dashboard/summary?vertical=all&startDate=2026-03-01&endDate=2026-03-19
+GET /api/operations-dashboard/timeline?subjectId=sub-123&limit=50&page=1
+GET /api/operations-dashboard/jobs?vertical=fitness&status=failed
+GET /api/operations-dashboard/notifications?channel=whatsapp&status=provider-dependent
+GET /api/operations-dashboard/insights?vertical=beauty&limit=30
+```
+
+Detalhes de fontes/limitações: ver `docs/OPERATIONS_DASHBOARD.md`.
