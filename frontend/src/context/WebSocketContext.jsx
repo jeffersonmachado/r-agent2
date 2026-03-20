@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
 import { getToken } from '../api/auth';
 import logger from '../utils/logger';
+import { buildWebSocketUrl } from '../utils/wsUrl';
 
 const WebSocketContext = createContext(null);
 
@@ -30,12 +31,20 @@ export function WebSocketProvider({ children }) {
   const isConnectingRef = useRef(false); // Flag para evitar múltiplas conexões simultâneas
   const authenticatedRef = useRef(false);
   const checkServerHealthRef = useRef(null);
+  const isTestRuntime = Boolean(
+    (typeof process !== 'undefined' && process.env && process.env.VITEST)
+    || (import.meta.env && import.meta.env.MODE === 'test')
+  );
 
   useEffect(() => {
     authenticatedRef.current = authenticated;
   }, [authenticated]);
 
   const logReconnectConsole = useCallback((message, data = null) => {
+    if (isTestRuntime) {
+      return;
+    }
+
     const timestamp = new Date().toISOString();
     if (data) {
       // eslint-disable-next-line no-console
@@ -44,7 +53,7 @@ export function WebSocketProvider({ children }) {
     }
     // eslint-disable-next-line no-console
     console.info(`[${timestamp}] [WS_RECONNECT] ${message}`);
-  }, []);
+  }, [isTestRuntime]);
 
   const scheduleReconnect = useCallback((reason, extra = {}) => {
     if (isIntentionalCloseRef.current) {
@@ -90,51 +99,7 @@ export function WebSocketProvider({ children }) {
   }, [logReconnectConsole]);
 
   // Constrói URL do WebSocket
-  const getWebSocketUrl = useCallback(() => {
-    const base = import.meta.env.VITE_API_BASE_URL;
-    let basePath = '';
-
-    if (typeof window !== 'undefined') {
-      try {
-        const url = new URL(window.location.href);
-        const rawPath = url.pathname || window.location.pathname || '/';
-        const match = rawPath.match(/^\/([^/]+)(\/|$)/);
-        if (match && match[1]) {
-          basePath = `/${match[1]}`;
-        }
-      } catch {
-        const fallbackMatch = window.location.pathname && window.location.pathname.match(/^\/([^/]+)(\/|$)/);
-        if (fallbackMatch && fallbackMatch[1]) {
-          basePath = `/${fallbackMatch[1]}`;
-        }
-      }
-    }
-    
-    // Se VITE_API_BASE_URL estiver definido, usa URL absoluta
-    if (base && base.trim()) {
-      const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-      const wsBase = normalizedBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-      return `${wsBase}/ws`;
-    }
-    
-    // Se estiver vazio, detecta ambiente em runtime
-    if (typeof window !== 'undefined') {
-      const isViteDev = window.location.port === '5173' || 
-                        (window.location.hostname === 'localhost' && window.location.port !== '80' && window.location.port !== '443' && !window.location.port.includes('8086'));
-      
-      if (isViteDev) {
-        // Desenvolvimento (Vite): usa a porta da API do config.json (via define do Vite)
-        // Fallback para 3000 se não estiver disponível.
-        const devPort = Number(import.meta.env.VITE_API_DEV_PORT || 3000);
-        return `ws://localhost:${devPort}/ws`;
-      }
-    }
-    
-    // Produção ou quando servido via nginx/Apache: usa URL relativa com prefixo (/r-agent2/ws)
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsPath = `${basePath}/ws`.replace('//', '/');
-    return `${protocol}//${window.location.host}${wsPath}`;
-  }, []);
+  const getWebSocketUrl = useCallback(() => buildWebSocketUrl(), []);
 
   // Envia mensagem via WebSocket
   const sendMessage = useCallback((data) => {
