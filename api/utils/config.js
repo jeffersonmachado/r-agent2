@@ -19,6 +19,22 @@ const configFile = path.join(__dirname, '..', 'data', 'config.json');
 // Cache da configuração carregada
 let cachedConfig = null;
 
+function isTestRuntime() {
+  return process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+}
+
+function logConfigInfo(message) {
+  if (isTestRuntime()) return;
+  // eslint-disable-next-line no-console
+  console.log(message);
+}
+
+function logConfigWarn(message) {
+  if (isTestRuntime()) return;
+  // eslint-disable-next-line no-console
+  console.warn(message);
+}
+
 /**
  * Mapeamento de variáveis de ambiente antigas para novos caminhos JSON.
  * Usado para compatibilidade durante a migração.
@@ -102,12 +118,9 @@ function loadConfig() {
     if (fs.existsSync(configFile)) {
       const data = fs.readFileSync(configFile, 'utf8');
       cachedConfig = JSON.parse(data);
-      // Usa console.log aqui pois logger pode depender de config
-      // eslint-disable-next-line no-console
-      console.log(`[Config] Configuração carregada de ${configFile}`);
+      logConfigInfo(`[Config] Configuração carregada de ${configFile}`);
     } else {
-      // eslint-disable-next-line no-console
-      console.warn(`[Config] Arquivo de configuração não encontrado: ${configFile}. Usando valores padrão e process.env.`);
+      logConfigWarn(`[Config] Arquivo de configuração não encontrado: ${configFile}. Usando valores padrão e process.env.`);
       cachedConfig = {};
     }
     
@@ -115,19 +128,15 @@ function loadConfig() {
     try {
       const redisValidation = validateRedisConfig();
       if (!redisValidation.valid) {
-        // eslint-disable-next-line no-console
-        console.warn('[Config] Avisos na configuração do Redis:');
+        logConfigWarn('[Config] Avisos na configuração do Redis:');
         redisValidation.errors.forEach(error => {
-          // eslint-disable-next-line no-console
-          console.warn(`  - ${error}`);
+          logConfigWarn(`  - ${error}`);
         });
       } else if (redisValidation.config) {
-        // eslint-disable-next-line no-console
-        console.log(`[Config] Configuração do Redis válida: ${redisValidation.config.url}`);
+        logConfigInfo(`[Config] Configuração do Redis válida: ${redisValidation.config.url}`);
       }
     } catch (validationErr) {
-      // eslint-disable-next-line no-console
-      console.warn('[Config] Erro ao validar configuração do Redis:', validationErr.message);
+      logConfigWarn(`[Config] Erro ao validar configuração do Redis: ${validationErr.message}`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -266,6 +275,7 @@ function reload() {
 function validateRedisConfig() {
   const errors = [];
   const config = loadConfig();
+  const isProduction = process.env.NODE_ENV === 'production';
   
   // Obtém a URL do Redis
   // IMPORTANTE: variáveis de ambiente têm prioridade sobre config.json
@@ -278,6 +288,16 @@ function validateRedisConfig() {
   
   // Verifica se está configurada
   if (!redisUrl) {
+    if (!isProduction) {
+      return {
+        valid: true,
+        errors: [],
+        optional: true,
+        configured: false,
+        config: null,
+      };
+    }
+
     errors.push('URL do Redis não configurada. Configure rateLimit.redis.url em config.json ou defina RATE_LIMIT_REDIS_URL/REDIS_URL');
     return { valid: false, errors };
   }
@@ -315,6 +335,8 @@ function validateRedisConfig() {
   return {
     valid: errors.length === 0,
     errors,
+    optional: false,
+    configured: true,
     config: {
       url: redisUrl,
       host: host,
@@ -339,8 +361,7 @@ function getDatabaseUrl() {
 
   // 2) Fallback para DATABASE_URL (env)
   if (process.env.DATABASE_URL) {
-    // eslint-disable-next-line no-console
-    console.log('[Config] Usando DATABASE_URL de variável de ambiente (fallback)');
+    logConfigInfo('[Config] Usando DATABASE_URL de variável de ambiente (fallback)');
     return process.env.DATABASE_URL;
   }
 
@@ -352,8 +373,7 @@ function getDatabaseUrl() {
   const password = process.env.PGPASSWORD || get('database.password') || 'postgres';
 
   if (process.env.PGHOST || process.env.PGUSER) {
-    // eslint-disable-next-line no-console
-    console.log('[Config] Usando variáveis de ambiente individuais para banco (fallback)');
+    logConfigInfo('[Config] Usando variáveis de ambiente individuais para banco (fallback)');
   }
 
   return `postgres://${username}:${password}@${host}:${port}/${database}`;

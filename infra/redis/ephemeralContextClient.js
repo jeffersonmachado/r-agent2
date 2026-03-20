@@ -18,7 +18,7 @@ function getRedisUrl() {
   return config.get('rateLimit.redis.url')
     || process.env.REDIS_URL
     || process.env.RATE_LIMIT_REDIS_URL
-    || 'redis://localhost:6379';
+    || null;
 }
 
 function getEphemeralContextClient() {
@@ -47,8 +47,11 @@ function getEphemeralContextClient() {
   }
 
   const redisUrl = getRedisUrl();
-  if (process.env.NODE_ENV === 'production' && !redisUrl) {
-    throw new Error('REDIS_URL é obrigatória em produção para contexto efêmero');
+  if (!redisUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('REDIS_URL é obrigatória em produção para contexto efêmero');
+    }
+    return null;
   }
 
   try {

@@ -15,6 +15,13 @@ let redisClient = null;
 let connectionAttempts = 0;
 const MAX_RECONNECTION_ATTEMPTS = process.env.NODE_ENV === 'production' ? null : 10; // Em produção, tenta indefinidamente; em dev, limita a 10
 
+function getConfiguredRedisUrl() {
+  return config.get('rateLimit.redis.url')
+    || process.env.RATE_LIMIT_REDIS_URL
+    || process.env.REDIS_URL
+    || null;
+}
+
 /**
  * Obtém ou cria cliente Redis para rate limiting.
  * 
@@ -44,16 +51,16 @@ function getRateLimitClient() {
   }
 
   // Lê do config.json com fallback para env vars
-  const redisUrl = config.get('rateLimit.redis.url') 
-    || process.env.RATE_LIMIT_REDIS_URL 
-    || process.env.REDIS_URL 
-    || 'redis://localhost:6379';
+  const redisUrl = getConfiguredRedisUrl();
   
   // Se Redis não estiver disponível, retorna null (modo degradado)
   // Em produção, isso deve falhar explicitamente
-  if (process.env.NODE_ENV === 'production' && !redisUrl) {
-    logger.error('[RateLimit] Redis URL não configurada em produção');
-    throw new Error('RATE_LIMIT_REDIS_URL é obrigatória em produção');
+  if (!redisUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('[RateLimit] Redis URL não configurada em produção');
+      throw new Error('RATE_LIMIT_REDIS_URL é obrigatória em produção');
+    }
+    return null;
   }
 
   try {

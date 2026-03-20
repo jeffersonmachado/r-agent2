@@ -30,6 +30,13 @@ const { getWebSocketServer } = require('./websocketService');
 const { getSequelize } = require('../db/sequelize');
 const { RagDocument: RagDocumentGetter } = require('../db/models');
 
+function getConfiguredRedisUrl() {
+  return config.get('rateLimit.redis.url')
+    || process.env.RATE_LIMIT_REDIS_URL
+    || process.env.REDIS_URL
+    || null;
+}
+
 /**
  * Extrai a porta de uma URL.
  * 
@@ -74,6 +81,18 @@ function extractPortFromUrl(urlString, defaultPort = null) {
  */
 async function checkRedisStatus() {
   try {
+    const redisUrl = getConfiguredRedisUrl();
+    if (!redisUrl) {
+      return {
+        status: 'healthy',
+        details: {
+          configured: false,
+          mode: 'memory',
+          note: 'Redis não configurado; fallback em memória ativo fora de produção',
+        },
+      };
+    }
+
     const available = await isRedisAvailable();
     if (available) {
       const client = getRateLimitClient();
@@ -83,8 +102,6 @@ async function checkRedisStatus() {
           const versionMatch = info.match(/redis_version:([^\r\n]+)/);
           const version = versionMatch ? versionMatch[1].trim() : 'unknown';
           
-          // Extrai a porta da URL do Redis
-          const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
           const port = extractPortFromUrl(redisUrl, 6379);
           
           return {
@@ -98,8 +115,6 @@ async function checkRedisStatus() {
         } catch (infoErr) {
           // Se ping funcionou mas info falhou, ainda consideramos saudável
           logger.debug('[SystemStatus] Erro ao obter info do Redis, mas ping OK', { error: safeErrorMessage(infoErr) });
-          // Extrai a porta da URL do Redis
-          const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
           const port = extractPortFromUrl(redisUrl, 6379);
           
           return {
@@ -141,8 +156,6 @@ async function checkRedisStatus() {
     }
     
     // Tenta obter informações sobre a configuração do Redis
-    const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
-    
     return {
       status: 'unhealthy',
       error: 'Redis não disponível ou não conectado',
@@ -153,7 +166,7 @@ async function checkRedisStatus() {
     };
   } catch (err) {
     logger.error('[SystemStatus] Erro ao verificar Redis', { error: safeErrorMessage(err) });
-    const redisUrl = config.get('rateLimit.redis.url') || process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL || 'redis://localhost:6379';
+    const redisUrl = getConfiguredRedisUrl();
     return {
       status: 'unhealthy',
       error: safeErrorMessage(err),

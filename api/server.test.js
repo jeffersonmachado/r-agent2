@@ -7,12 +7,23 @@ const http = require('http');
  * @param {string} method
  * @param {string} path
  * @param {any} [body]
+ * @param {Record<string, string>} [extraHeaders]
  * @returns {Promise<{ status: number, headers: http.IncomingHttpHeaders, body: any }>}
  */
-function request(port, method, path, body) {
+function request(port, method, path, body, extraHeaders) {
   return new Promise((resolve, reject) => {
     const payload =
       body === undefined ? null : typeof body === 'string' ? body : JSON.stringify(body);
+
+    const headers = {
+      ...(payload != null
+        ? {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+          }
+        : {}),
+      ...(extraHeaders || {}),
+    };
 
     const req = http.request(
       {
@@ -20,13 +31,7 @@ function request(port, method, path, body) {
         port,
         path,
         method,
-        headers:
-          payload != null
-            ? {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload),
-              }
-            : {},
+        headers,
       },
       (res) => {
         let data = '';
@@ -232,6 +237,60 @@ describe('API server (api/server.js)', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('name', 'chatbot-engine-api');
     expect(res.body).toHaveProperty('env');
+  });
+
+  test('GET /login com Accept HTML deve cair no fallback do frontend em development', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/login', undefined, {
+      Accept: 'text/html',
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers).toHaveProperty('location', 'http://localhost:5173/login');
+  });
+
+  test('GET /api/nao-existe não deve cair no fallback do frontend', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/api/nao-existe', undefined, {
+      Accept: 'text/html',
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'not_found' });
+  });
+
+  test('GET /config com Accept HTML deve cair no fallback do frontend em development', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/config', undefined, {
+      Accept: 'text/html',
+    });
+
+    expect(res.status).toBe(302);
+    expect(res.headers).toHaveProperty('location', 'http://localhost:5173/config');
+  });
+
+  test('GET /config com Accept JSON deve responder configuração sanitizada da API', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/config', undefined, {
+      Accept: 'application/json',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).not.toBeNull();
+    expect(typeof res.body).toBe('object');
+    expect(Array.isArray(res.body)).toBe(false);
+    expect(res.body).not.toHaveProperty('ai');
+  });
+
+  test('POST /config/validate-provider-token sem JSON não deve cair no fallback do frontend', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'POST', '/config/validate-provider-token', undefined, {
+      Accept: 'text/html',
+      'Content-Type': 'text/plain',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'bad_request');
   });
 
   test('Fluxo completo: POST /flows -> GET /flows/:id -> validate -> simulate -> GET /replay/:sessionId', async () => {
