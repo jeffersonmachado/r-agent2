@@ -15,15 +15,16 @@ const DEFAULT_TIMEOUT_MS = 15000;
 
 /**
  * Constrói a URL a partir da base e do path relativo.
- * SEMPRE retorna uma URL absoluta para evitar resolução implícita pelo browser.
+ * Retorna URL absoluta quando VITE_API_BASE_URL estiver definido;
+ * caso contrário, usa URL relativa para o proxy do Vite (dev) ou para o mesmo host/prefixo (prod).
  * 
  * Prioridade de configuração:
- * 1. VITE_API_BASE_URL (variável de ambiente)
- * 2. Configuração via API /config (se disponível)
- * 3. Fallback: http://localhost:3001 (porta padrão da API)
+ * 1. VITE_API_BASE_URL injetado pelo Vite (env ou config.json -> frontend.apiBaseUrl)
+ * 2. Em desenvolvimento, URL relativa usando o proxy do Vite
+ * 3. Em produção, URL relativa no mesmo host com prefixo/base path
  * 
- * NOTA: O frontend não pode acessar diretamente api/data/config.json.
- * A configuração deve ser fornecida via variável de ambiente ou endpoint /config.
+ * NOTA: O frontend não acessa diretamente api/data/config.json.
+ * O valor é resolvido pelo Vite no build/dev-server e exposto via import.meta.env.
  *
  * @param {string} path
  * @returns {string}
@@ -66,7 +67,7 @@ function buildUrl(path) {
     
     if (isViteDev) {
       // Desenvolvimento: usa URL relativa para que o proxy do Vite funcione
-      // O proxy do Vite redireciona para a porta configurada em config.json (padrão: 3001) automaticamente
+      // O proxy do Vite redireciona para a porta da API injetada via Vite/config.json.
       // IMPORTANTE: Não adiciona basePath aqui em desenvolvimento, pois o proxy precisa da URL relativa
       console.log('[buildUrl] Desenvolvimento Vite detectado, usando URL relativa:', {
         path,
@@ -205,7 +206,7 @@ export async function fetchJson(path, init) {
       method, 
       url, 
       path,
-      baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)',
+      baseUrl: import.meta.env.VITE_API_BASE_URL || '[relative/proxy]',
       windowLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
       windowPort: typeof window !== 'undefined' ? window.location.port : 'N/A',
     });
@@ -213,11 +214,12 @@ export async function fetchJson(path, init) {
   
   // Log adicional para debug de proxy
   if (!silent && typeof window !== 'undefined' && window.location.port === '5173') {
+    const devPort = Number(import.meta.env.VITE_API_DEV_PORT || 3000);
     console.log('[HTTP Client] 🔄 Requisição em desenvolvimento:', {
       path,
       url,
       method,
-      expectedProxy: 'http://localhost:3000' + path,
+      expectedProxy: `http://localhost:${devPort}${path}`,
       currentLocation: window.location.href,
     });
   }
@@ -770,7 +772,7 @@ export async function fetchBlob(path, init) {
     method, 
     url, 
     path,
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000 (fallback - deve corresponder a config.json > frontend.apiBaseUrl)'
+    baseUrl: import.meta.env.VITE_API_BASE_URL || '[relative/proxy]'
   });
 
   try {

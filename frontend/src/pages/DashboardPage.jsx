@@ -16,16 +16,6 @@ export function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [kpis, setKpis] = useState(null);
   const [queuesKpis, setQueuesKpis] = useState(null);
-    {
-      id: 'operations-dashboard',
-      title: 'Painel Operacional',
-      description: 'Monitoramento do piloto Beauty/Fitness (jornada, jobs, notificações e insights)',
-      icon: '🧭',
-      path: '/operations-dashboard',
-      color: 'bg-emerald-600',
-      category: 'Operação',
-      requiresAdmin: true,
-    },
   const [kpiError, setKpiError] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(true);
   const [versionInfo, setVersionInfo] = useState(null);
@@ -207,6 +197,16 @@ export function DashboardPage() {
       path: '/supervisor',
       color: 'bg-teal-500',
       category: 'Analytics',
+    },
+    {
+      id: 'operations-dashboard',
+      title: 'Painel Operacional',
+      description: 'Monitoramento do piloto Beauty/Fitness (jornada, jobs, notificacoes e insights)',
+      icon: '🧭',
+      path: '/operations-dashboard',
+      color: 'bg-emerald-600',
+      category: 'Operacao',
+      requiresAdmin: true,
     },
     {
       id: 'export',

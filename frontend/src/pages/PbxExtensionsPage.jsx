@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getProvisioningToken, listAcls, listExtensions, upsertExtension } from '../api/pbx';
 import { Button } from '../styles/Button';
-import { DataGrid } from '../components/DataGrid';
+import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 
@@ -319,6 +319,83 @@ export function PbxExtensionsPage() {
 
   const hasActiveFilters = !!(filters.search || filters.contexto || filters.protocolo || filters.status);
 
+  const columns = [
+    {
+      id: 'extension',
+      header: 'Ramal',
+      accessor: (row) => row.extension,
+      render: (row) => (
+        <div>
+          <div className="font-medium text-text-primary">{row.extension}</div>
+          <div className="text-xs text-text-tertiary">id: {row.id}</div>
+        </div>
+      ),
+    },
+    { id: 'displayName', header: 'Nome', accessor: (row) => row.displayName || '—' },
+    { id: 'authUsername', header: 'Usuário', accessor: (row) => row.authUsername || '—' },
+    { id: 'contexto', header: 'Contexto', accessor: (row) => row?.endpointOptions?.contexto || '—' },
+    { id: 'protocolo', header: 'Protocolo', accessor: (row) => row?.endpointOptions?.protocolo || '—' },
+    {
+      id: 'acl',
+      header: 'ACL',
+      sortValue: (row) => getExtensionAclLabel(row, acls),
+      render: (row) => getExtensionAclLabel(row, acls),
+    },
+    {
+      id: 'provisioning',
+      header: 'Provisionamento',
+      sortable: false,
+      render: (row) => {
+        const provisioning = row?.endpointOptions?.provisioning || row?.provisioning;
+        return provisioning?.enabled
+          ? `${provisioning.vendor || '—'} / ${provisioning.mac || '—'}`
+          : '—';
+      },
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      render: (row) => {
+        const inactive = String(row?.status || 'active').toLowerCase() === 'inactive';
+        return inactive ? (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
+            Inativo
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
+            Ativo
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Ações',
+      sortable: false,
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+          <Button size="sm" variant="ghost" disabled>
+            Reset Senha
+          </Button>
+          <Button size="sm" variant="danger" disabled>
+            Remover
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const grid = usePlatformGridState({
+    rows: filteredExtensions,
+    columns,
+    initialSort: { columnId: 'extension', direction: 'asc' },
+    persistenceKey: 'pbx-extensions-grid',
+    getSearchText: (row) => [row?.extension, row?.displayName, row?.authUsername, row?.calleridName, row?.calleridNumber].join(' '),
+  });
+
   if (loading) {
     return (
       <div className="support-page">
@@ -431,78 +508,23 @@ export function PbxExtensionsPage() {
       </div>
 
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-        <DataGrid
-          rows={filteredExtensions}
-          emptyText="Nenhum ramal encontrado."
-          defaultSort={{ id: 'extension', dir: 'asc' }}
-          columns={[
-            {
-              id: 'extension',
-              header: 'Ramal',
-              accessor: (row) => row.extension,
-              render: (row) => (
-                <div>
-                  <div className="font-medium text-text-primary">{row.extension}</div>
-                  <div className="text-xs text-text-tertiary">id: {row.id}</div>
-                </div>
-              ),
-            },
-            { id: 'displayName', header: 'Nome', accessor: (row) => row.displayName || '—' },
-            { id: 'authUsername', header: 'Usuário', accessor: (row) => row.authUsername || '—' },
-            { id: 'contexto', header: 'Contexto', accessor: (row) => row?.endpointOptions?.contexto || '—' },
-            { id: 'protocolo', header: 'Protocolo', accessor: (row) => row?.endpointOptions?.protocolo || '—' },
-            {
-              id: 'acl',
-              header: 'ACL',
-              sortValue: (row) => getExtensionAclLabel(row, acls),
-              render: (row) => getExtensionAclLabel(row, acls),
-            },
-            {
-              id: 'provisioning',
-              header: 'Provisionamento',
-              sortable: false,
-              render: (row) => {
-                const provisioning = row?.endpointOptions?.provisioning || row?.provisioning;
-                return provisioning?.enabled
-                  ? `${provisioning.vendor || '—'} / ${provisioning.mac || '—'}`
-                  : '—';
-              },
-            },
-            {
-              id: 'status',
-              header: 'Status',
-              render: (row) => {
-                const inactive = String(row?.status || 'active').toLowerCase() === 'inactive';
-                return inactive ? (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
-                    Inativo
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
-                    Ativo
-                  </span>
-                );
-              },
-            },
-            {
-              id: 'actions',
-              header: 'Ações',
-              sortable: false,
-              render: (row) => (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled>
-                    Reset Senha
-                  </Button>
-                  <Button size="sm" variant="danger" disabled>
-                    Remover
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
+        <PlatformGrid
+          columns={columns}
+          rows={grid.rows}
+          sort={grid.sort}
+          onSortChange={grid.handleSortChange}
+          pagination={{
+            page: grid.page,
+            pageSize: grid.pageSize,
+            totalPages: grid.totalPages,
+            totalRows: grid.totalRows,
+            onPageChange: grid.handlePageChange,
+            onPageSizeChange: grid.handlePageSizeChange,
+          }}
+          emptyState={{
+            title: 'Nenhum ramal encontrado',
+            description: 'Comece adicionando um novo ramal ao PBX.',
+          }}
         />
       </div>
 

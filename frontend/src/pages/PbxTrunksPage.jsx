@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listTrunks, upsertTrunk } from '../api/pbx';
 import { Button } from '../styles/Button';
-import { DataGrid } from '../components/DataGrid';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
+import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -163,6 +163,71 @@ export function PbxTrunksPage() {
 
   const hasActiveFilters = !!(filters.search || filters.type || filters.status);
 
+  const columns = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessor: (row) => row.name,
+      render: (row) => (
+        <div>
+          <div className="font-medium text-text-primary">{row.name}</div>
+          <div className="text-xs text-text-tertiary">id: {row.id}</div>
+        </div>
+      ),
+    },
+    { id: 'type', header: 'Tipo', accessor: (row) => row.type || '-' },
+    { id: 'transport', header: 'Transport', accessor: (row) => row.transport || '-' },
+    { id: 'auth', header: 'Auth User', accessor: (row) => row?.auth?.username || '-' },
+    { id: 'aor', header: 'AOR Contact', accessor: (row) => row?.aor?.contact || '-' },
+    {
+      id: 'status',
+      header: 'Status',
+      accessor: (row) => row?.status || 'active',
+      render: (row) => {
+        const inactive = String(row?.status || 'active').toLowerCase() === 'inactive';
+        return inactive ? (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
+            Inativo
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
+            Ativo
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Acoes',
+      sortable: false,
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+          <Button size="sm" variant="danger" disabled>
+            Excluir
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const grid = usePlatformGridState({
+    rows: filteredTrunks,
+    columns,
+    initialSort: { columnId: 'name', direction: 'asc' },
+    persistenceKey: 'pbx-trunks-grid',
+    getSearchText: (row) => [
+      row?.name,
+      row?.type,
+      row?.transport,
+      row?.status,
+      row?.auth?.username,
+      row?.aor?.contact,
+    ].join(' '),
+  });
+
   if (loading) {
     return (
       <div className="support-page">
@@ -264,58 +329,24 @@ export function PbxTrunksPage() {
       </div>
 
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-        <DataGrid
-          rows={filteredTrunks}
-          emptyText="Nenhum tronco encontrado."
-          defaultSort={{ id: 'name', dir: 'asc' }}
-          columns={[
-            {
-              id: 'name',
-              header: 'Nome',
-              accessor: (row) => row.name,
-              render: (row) => (
-                <div>
-                  <div className="font-medium text-text-primary">{row.name}</div>
-                  <div className="text-xs text-text-tertiary">id: {row.id}</div>
-                </div>
-              ),
-            },
-            { id: 'type', header: 'Tipo', accessor: (row) => row.type || '—' },
-            { id: 'transport', header: 'Transport', accessor: (row) => row.transport || '—' },
-            { id: 'auth', header: 'Auth User', accessor: (row) => row?.auth?.username || '—' },
-            { id: 'aor', header: 'AOR Contact', accessor: (row) => row?.aor?.contact || '—' },
-            {
-              id: 'status',
-              header: 'Status',
-              render: (row) => {
-                const inactive = String(row?.status || 'active').toLowerCase() === 'inactive';
-                return inactive ? (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
-                    Inativo
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
-                    Ativo
-                  </span>
-                );
-              },
-            },
-            {
-              id: 'actions',
-              header: 'Ações',
-              sortable: false,
-              render: (row) => (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="danger" disabled>
-                    Excluir
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
+        <PlatformGrid
+          columns={columns}
+          rows={grid.rows}
+          sort={grid.sort}
+          onSortChange={grid.handleSortChange}
+          pagination={{
+            page: grid.page,
+            totalPages: grid.totalPages,
+            pageSize: grid.pageSize,
+            totalItems: grid.totalItems,
+            pageSizeOptions: grid.pageSizeOptions,
+            onPageChange: grid.setPage,
+            onPageSizeChange: grid.setPageSize,
+          }}
+          emptyState={{
+            title: 'Nenhum tronco encontrado.',
+            description: 'Ajuste os filtros para visualizar troncos PBX.',
+          }}
         />
       </div>
 

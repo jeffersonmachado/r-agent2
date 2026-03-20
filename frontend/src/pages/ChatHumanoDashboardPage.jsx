@@ -1,13 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { buildApiUrl } from '../api/client';
+import { DashboardKpiCard, DashboardSection, DashboardFeatureGrid } from '../components/DashboardBase';
 
 export function ChatHumanoDashboardPage() {
   const { navigate } = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [failedMessages, setFailedMessages] = useState({ pending: 0, failed: 0, errors: [] });
-  const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [failedMessages, setFailedMessages] = React.useState({ pending: 0, failed: 0, errors: [] });
+  const [loadingMetrics, setLoadingMetrics] = React.useState(true);
 
   // ✅ Buscar dados de mensagens falhadas
   useEffect(() => {
@@ -62,81 +61,39 @@ export function ChatHumanoDashboardPage() {
     [],
   );
 
-  const filteredFeatures = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    return features.filter((feature) => {
-      const matchesCategory = !selectedCategory || feature.category === selectedCategory;
-      if (!matchesCategory) return false;
-      if (!query) return true;
-      return feature.title.toLowerCase().includes(query) || feature.description.toLowerCase().includes(query);
-    });
-  }, [features, searchTerm, selectedCategory]);
-
   return (
     <div className="support-page">
       <div className="support-header">
         <h1>Dashboard Chat Humano</h1>
         <p>Pilar 1: cockpit operacional para atendimento omnichannel.</p>
-      
         <div className="support-controls">
-          <button
-            type="button"
-            className="btn-default px-4 py-2 text-sm"
-            onClick={() => window.location.reload()}
-          >
+          <button type="button" className="btn-default px-4 py-2 text-sm" onClick={() => window.location.reload()}>
             🔄 Atualizar
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-          <div className="text-xs text-text-tertiary">Módulos</div>
-          <div className="text-2xl font-semibold text-text-primary">{features.length}</div>
-          <div className="text-xs text-text-secondary">atalhos do pilar</div>
-        </div>
-        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-          <div className="text-xs text-text-tertiary">Categorias</div>
-          <div className="text-2xl font-semibold text-text-primary">{categories.length}</div>
-          <div className="text-xs text-text-secondary">grupos de navegação</div>
-        </div>
-        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-          <div className="text-xs text-text-tertiary">Core</div>
-          <div className="text-2xl font-semibold text-text-primary">Atendimento + Inbox</div>
-          <div className="text-xs text-text-secondary">execução diária</div>
-        </div>
-        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-          <div className="text-xs text-text-tertiary">Indicadores</div>
-          <div className="text-2xl font-semibold text-text-primary">Supervisor + Analytics</div>
-          <div className="text-xs text-text-secondary">medição e ajuste</div>
-        </div>
-        <div 
-          className={`rounded-xl border p-4 shadow-lg cursor-pointer transition-all ${failedMessages.failed > 0 ? 'bg-red-50 border-red-300 hover:shadow-xl' : 'bg-bg-elevated border-border-default'}`}
+        <DashboardKpiCard label="Módulos" value={features.length} subtitle="atalhos do pilar" />
+        <DashboardKpiCard label="Categorias" value={categories.length} subtitle="grupos de navegação" />
+        <DashboardKpiCard label="Core" value="Atendimento + Inbox" subtitle="execução diária" />
+        <DashboardKpiCard label="Indicadores" value="Supervisor + Analytics" subtitle="medição e ajuste" />
+        <DashboardKpiCard
+          label="Mensagens Falhadas"
+          value={failedMessages.failed}
+          subtitle={`${failedMessages.pending} pendentes • Clique para ver`}
+          icon={failedMessages.failed > 0 ? '⚠️' : '✅'}
+          variant={failedMessages.failed > 0 ? 'danger' : 'default'}
           onClick={() => navigate('/inbox')}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="text-xs text-text-tertiary flex items-center gap-2">
-            {failedMessages.failed > 0 ? '⚠️' : '✅'} Mensagens Falhadas
-          </div>
-          <div className={`text-2xl font-semibold ${failedMessages.failed > 0 ? 'text-red-600' : 'text-text-primary'}`}>
-            {failedMessages.failed}
-          </div>
-          <div className="text-xs text-text-secondary mt-1">
-            {failedMessages.pending} pendentes • Clique para ver
-          </div>
-        </div>
+        />
       </div>
 
       {failedMessages.errors.length > 0 && (
-        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-          <h3 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <span>🚨</span>
-            <span>Erros Recentes</span>
-          </h3>
+        <DashboardSection title="Erros Recentes" icon="🚨">
           <div className="space-y-2">
             {failedMessages.errors.slice(0, 5).map((error, idx) => (
-              <div key={idx} 
+              <div
+                key={idx}
                 className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm cursor-pointer hover:bg-red-100 transition-colors"
                 onClick={() => navigate('/failed-messages')}
                 role="button"
@@ -145,14 +102,11 @@ export function ChatHumanoDashboardPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-mono text-xs text-red-700 cursor-help" title={`ID: ${error.id}\n\nClique para filtrar em Mensagens Falhadas`}>
-                      {error.id?.substring(0, 20)}
-                      {error.id?.length > 20 ? '...' : ''}
+                      {error.id?.substring(0, 20)}{error.id?.length > 20 ? '...' : ''}
                     </div>
                     <div className="text-text-secondary">{error.last_error}</div>
                   </div>
-                  <div className="text-xs text-text-tertiary">
-                    {error.attempts || 0} tentativas
-                  </div>
+                  <div className="text-xs text-text-tertiary">{error.attempts || 0} tentativas</div>
                 </div>
               </div>
             ))}
@@ -163,55 +117,10 @@ export function ChatHumanoDashboardPage() {
           >
             Ver Todas as Falhas
           </button>
-        </div>
+        </DashboardSection>
       )}
 
-      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-        <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-          <span>🔍</span>
-          <span>Filtros da Navegação</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-text-primary">Buscar card</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nome ou descrição..."
-              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-text-primary">Categoria</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
-            >
-              <option value="">Todas as categorias</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredFeatures.map((feature) => (
-          <button key={feature.id} onClick={() => navigate(feature.path)} className="block text-left">
-            <div className="bg-bg-elevated rounded-xl border border-border-default hover:shadow-lg transition-shadow p-6 cursor-pointer">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`${feature.color} w-12 h-12 rounded-lg flex items-center justify-center text-2xl`}>{feature.icon}</div>
-                <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">{feature.category}</span>
-              </div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">{feature.title}</h3>
-              <p className="text-sm text-text-secondary">{feature.description}</p>
-            </div>
-          </button>
-        ))}
-      </div>
+      <DashboardFeatureGrid features={features} onNavigate={navigate} />
     </div>
   );
 }

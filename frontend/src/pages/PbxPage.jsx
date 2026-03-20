@@ -59,7 +59,7 @@ import {
 } from '../api/pbxLegacy';
 import { buildApiUrl } from '../api/client';
 import logger from '../utils/logger';
-import { DataGrid } from '../components/DataGrid';
+import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { Button } from '../styles/Button';
 import { useRouter } from '../hooks/useRouter';
 
@@ -2126,6 +2126,103 @@ export function PbxPage() {
   const sectionHint = activeSectionMeta?.hint || '';
   const hasTopFilters = Boolean(searchText || navCategory || (!isSectionMode && navSearchTerm));
 
+  const bulkItemsColumns = useMemo(() => [
+    { id: 'extension', header: 'Ramal', accessor: (r) => r.extension },
+    { id: 'displayName', header: 'Nome', accessor: (r) => r.displayName || '—' },
+    { id: 'authUsername', header: 'Usuário', accessor: (r) => r.authUsername || '—' },
+    { id: 'prov', header: 'Provisionamento', sortable: false, render: (r) => (r.provisioningEnabled ? `${r.provisioningVendor || '—'} / ${r.provisioningMac || '—'}` : '—') },
+    { id: 'actions', header: '', sortable: false, render: (r) => (<Button onClick={() => handleBulkRemoveItem(r._idx)} disabled={loading} size="sm" variant="danger">Remover</Button>) },
+  ], [loading]);
+
+  const extensionsColumns = useMemo(() => [
+    { id: 'extension', header: 'Ramal', accessor: (r) => r.extension },
+    { id: 'displayName', header: 'Nome', accessor: (r) => r.displayName || '—' },
+    { id: 'authUsername', header: 'Usuário', accessor: (r) => r.authUsername || '—' },
+    { id: 'contexto', header: 'Categoria', accessor: (r) => r?.endpointOptions?.contexto || '—' },
+    { id: 'protocolo', header: 'Protocolo', accessor: (r) => r?.endpointOptions?.protocolo || '—' },
+    { id: 'provisioning', header: 'Provisionamento', sortable: false, render: (r) => (r?.endpointOptions?.provisioning?.enabled ? `${r.endpointOptions.provisioning.vendor || '—'} / ${r.endpointOptions.provisioning.mac || '—'}` : '—') },
+    { id: 'acl', header: 'ACL', sortable: false, render: (r) => getExtensionAclLabel(r) },
+    { id: 'status', header: 'Status', accessor: (r) => r.status || '—' },
+    { id: 'actions', header: '', sortable: false, render: (r) => (<Button onClick={() => handleEditExtension(r)} disabled={loading} size="sm" variant="ghost">Editar</Button>) },
+  ], [loading, getExtensionAclLabel]);
+
+  const queueMetricsColumns = useMemo(() => [
+    { id: 'name', header: 'Fila', accessor: (m) => m.name },
+    { id: 'totalMembers', header: 'Membros', accessor: (m) => m.totalMembers ?? 0 },
+    { id: 'activeMembers', header: 'Ativos', accessor: (m) => m.activeMembers ?? 0 },
+    { id: 'pausedMembers', header: 'Pausados', accessor: (m) => m.pausedMembers ?? 0 },
+  ], []);
+
+  const aclsColumns = useMemo(() => [
+    {
+      id: 'name',
+      header: 'Nome',
+      sortValue: (a) => a.name,
+      render: (a) => (<div><div style={{ fontWeight: 600 }}>{a.name}</div><div style={{ opacity: 0.75, fontSize: 12 }}>{a.description || `id: ${a.id}`}</div></div>),
+    },
+    { id: 'enabled', header: 'Ativo', accessor: (a) => (a.enabled === false ? 'não' : 'sim'), sortValue: (a) => (a.enabled === false ? 0 : 1) },
+    { id: 'permit', header: 'Permit', render: (a) => <code>{String(a.permit || '').slice(0, 200) || '—'}</code> },
+    { id: 'deny', header: 'Deny', render: (a) => <code>{String(a.deny || '').slice(0, 200) || '—'}</code> },
+    {
+      id: 'actions',
+      header: '',
+      sortable: false,
+      render: (a) => (
+        <>
+          <button onClick={() => handleEditAcl(a)} disabled={loading} style={{ padding: '6px 10px', marginRight: 8 }}>Editar</button>
+          <button onClick={() => handleDeleteAcl(a.id)} disabled={loading} style={{ padding: '6px 10px' }}>Remover</button>
+        </>
+      ),
+    },
+  ], [loading]);
+
+  const campaignListDraftColumns = useMemo(() => [
+    { id: 'phone', header: 'Telefone', accessor: (r) => r.phone },
+    { id: 'ddd', header: 'DDD', accessor: (r) => r.ddd || '—' },
+    { id: 'key', header: 'Chave', accessor: (r) => r.key || '—' },
+    {
+      id: 'actions',
+      header: '',
+      sortable: false,
+      render: (r) => (<button onClick={() => handleCampaignListDraftRemove(r._idx)} disabled={loading} style={{ padding: '6px 10px' }}>Remover</button>),
+    },
+  ], [loading]);
+
+  const bulkGrid = usePlatformGridState({
+    rows: bulkItems.map((it, idx) => ({ ...it, _idx: idx })),
+    columns: bulkItemsColumns,
+    initialSort: { columnId: 'extension', direction: 'asc' },
+    persistenceKey: 'pbx-bulk-items-grid',
+  });
+
+  const extensionsGrid = usePlatformGridState({
+    rows: filteredExtensions,
+    columns: extensionsColumns,
+    initialSort: { columnId: 'extension', direction: 'asc' },
+    persistenceKey: 'pbx-extensions-main-grid',
+  });
+
+  const queueMetricsGrid = usePlatformGridState({
+    rows: queueMetrics,
+    columns: queueMetricsColumns,
+    initialSort: { columnId: 'name', direction: 'asc' },
+    persistenceKey: 'pbx-queue-metrics-grid',
+  });
+
+  const aclsGrid = usePlatformGridState({
+    rows: filteredAcls,
+    columns: aclsColumns,
+    initialSort: { columnId: 'name', direction: 'asc' },
+    persistenceKey: 'pbx-acls-grid',
+  });
+
+  const campaignListDraftGrid = usePlatformGridState({
+    rows: campaignListDraftItems.map((it, idx) => ({ ...it, _idx: idx })),
+    columns: campaignListDraftColumns,
+    initialSort: { columnId: 'phone', direction: 'asc' },
+    persistenceKey: 'pbx-campaign-draft-grid',
+  });
+
   if (isBulkProvisioningScreen) {
     return (
       <div className="support-page pbx-page">
@@ -2182,29 +2279,13 @@ export function PbxPage() {
             <Button onClick={handleBulkAddRow} disabled={loading} size="sm">Adicionar</Button>
           </div>
           <div style={{ marginTop: 10 }}>
-            <DataGrid
-              rows={bulkItems.map((it, idx) => ({ ...it, _idx: idx }))}
-              emptyText="Nenhum item no lote."
-              defaultSort={{ id: 'extension', dir: 'asc' }}
-              columns={[
-                { id: 'extension', header: 'Ramal', accessor: (r) => r.extension },
-                { id: 'displayName', header: 'Nome', accessor: (r) => r.displayName || '—' },
-                { id: 'authUsername', header: 'Usuário', accessor: (r) => r.authUsername || '—' },
-                {
-                  id: 'prov',
-                  header: 'Provisionamento',
-                  sortable: false,
-                  render: (r) => (r.provisioningEnabled ? `${r.provisioningVendor || '—'} / ${r.provisioningMac || '—'}` : '—'),
-                },
-                {
-                  id: 'actions',
-                  header: '',
-                  sortable: false,
-                  render: (r) => (
-                    <Button onClick={() => handleBulkRemoveItem(r._idx)} disabled={loading} size="sm" variant="danger">Remover</Button>
-                  ),
-                },
-              ]}
+            <PlatformGrid
+              columns={bulkItemsColumns}
+              rows={bulkGrid.rows}
+              sort={bulkGrid.sort}
+              onSortChange={bulkGrid.handleSortChange}
+              pagination={{ page: bulkGrid.page, pageSize: bulkGrid.pageSize, totalPages: bulkGrid.totalPages, totalRows: bulkGrid.totalRows, onPageChange: bulkGrid.handlePageChange, onPageSizeChange: bulkGrid.handlePageSizeChange }}
+              emptyState={{ title: 'Lista vazia', description: 'Nenhum item no lote.' }}
             />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2647,50 +2728,23 @@ export function PbxPage() {
               <Button onClick={() => navigate('/pbx/provisioning-lote')} size="sm" variant="primary">Abrir tela de lote</Button>
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default overflow-hidden shadow-lg mb-6">
-              <DataGrid
-                rows={filteredExtensions}
-                emptyText="Nenhum ramal encontrado."
-                defaultSort={{ id: 'extension', dir: 'asc' }}
-                columns={[
-                  { id: 'extension', header: 'Ramal', accessor: (r) => r.extension },
-                  { id: 'displayName', header: 'Nome', accessor: (r) => r.displayName || '—' },
-                  { id: 'authUsername', header: 'Usuário', accessor: (r) => r.authUsername || '—' },
-                  { id: 'contexto', header: 'Categoria', accessor: (r) => r?.endpointOptions?.contexto || '—' },
-                  { id: 'protocolo', header: 'Protocolo', accessor: (r) => r?.endpointOptions?.protocolo || '—' },
-                  {
-                    id: 'provisioning',
-                    header: 'Provisionamento',
-                    sortable: false,
-                    render: (r) => (r?.endpointOptions?.provisioning?.enabled
-                      ? `${r.endpointOptions.provisioning.vendor || '—'} / ${r.endpointOptions.provisioning.mac || '—'}`
-                      : '—'),
-                  },
-                  { id: 'acl', header: 'ACL', sortable: false, render: (r) => getExtensionAclLabel(r) },
-                  { id: 'status', header: 'Status', accessor: (r) => r.status || '—' },
-                  {
-                    id: 'actions',
-                    header: '',
-                    sortable: false,
-                    render: (r) => (
-                      <Button onClick={() => handleEditExtension(r)} disabled={loading} size="sm" variant="ghost">Editar</Button>
-                    ),
-                  },
-                ]}
+              <PlatformGrid
+                columns={extensionsColumns}
+                rows={extensionsGrid.rows}
+                sort={extensionsGrid.sort}
+                onSortChange={extensionsGrid.handleSortChange}
+                pagination={{ page: extensionsGrid.page, pageSize: extensionsGrid.pageSize, totalPages: extensionsGrid.totalPages, totalRows: extensionsGrid.totalRows, onPageChange: extensionsGrid.handlePageChange, onPageSizeChange: extensionsGrid.handlePageSizeChange }}
+                emptyState={{ title: 'Sem ramais', description: 'Nenhum ramal encontrado.' }}
               />
             </div>
             <h4 style={{ marginTop: 16 }}>Métricas operacionais de fila</h4>
-            <DataGrid
-              rows={queueMetrics}
-              emptyText="Sem métricas de filas."
-              defaultSort={{ id: 'name', dir: 'asc' }}
-              pageSizes={[10, 25, 50]}
-              defaultPageSize={25}
-              columns={[
-                { id: 'name', header: 'Fila', accessor: (m) => m.name },
-                { id: 'totalMembers', header: 'Membros', accessor: (m) => m.totalMembers ?? 0 },
-                { id: 'activeMembers', header: 'Ativos', accessor: (m) => m.activeMembers ?? 0 },
-                { id: 'pausedMembers', header: 'Pausados', accessor: (m) => m.pausedMembers ?? 0 },
-              ]}
+            <PlatformGrid
+              columns={queueMetricsColumns}
+              rows={queueMetricsGrid.rows}
+              sort={queueMetricsGrid.sort}
+              onSortChange={queueMetricsGrid.handleSortChange}
+              pagination={{ page: queueMetricsGrid.page, pageSize: queueMetricsGrid.pageSize, totalPages: queueMetricsGrid.totalPages, totalRows: queueMetricsGrid.totalRows, onPageChange: queueMetricsGrid.handlePageChange, onPageSizeChange: queueMetricsGrid.handlePageSizeChange }}
+              emptyState={{ title: 'Sem métricas', description: 'Sem métricas de filas.' }}
             />
           </>
         ) : null}
@@ -2761,54 +2815,13 @@ export function PbxPage() {
               </button>
             </div>
 
-            <DataGrid
-              rows={filteredAcls}
-              emptyText="Nenhuma ACL cadastrada."
-              defaultSort={{ id: 'name', dir: 'asc' }}
-              columns={[
-                {
-                  id: 'name',
-                  header: 'Nome',
-                  sortValue: (a) => a.name,
-                  render: (a) => (
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{a.name}</div>
-                      <div style={{ opacity: 0.75, fontSize: 12 }}>{a.description || `id: ${a.id}`}</div>
-                    </div>
-                  ),
-                },
-                {
-                  id: 'enabled',
-                  header: 'Ativo',
-                  accessor: (a) => (a.enabled === false ? 'não' : 'sim'),
-                  sortValue: (a) => (a.enabled === false ? 0 : 1),
-                },
-                {
-                  id: 'permit',
-                  header: 'Permit',
-                  render: (a) => <code>{String(a.permit || '').slice(0, 200) || '—'}</code>,
-                },
-                {
-                  id: 'deny',
-                  header: 'Deny',
-                  render: (a) => <code>{String(a.deny || '').slice(0, 200) || '—'}</code>,
-                },
-                {
-                  id: 'actions',
-                  header: '',
-                  sortable: false,
-                  render: (a) => (
-                    <>
-                      <button onClick={() => handleEditAcl(a)} disabled={loading} style={{ padding: '6px 10px', marginRight: 8 }}>
-                        Editar
-                      </button>
-                      <button onClick={() => handleDeleteAcl(a.id)} disabled={loading} style={{ padding: '6px 10px' }}>
-                        Remover
-                      </button>
-                    </>
-                  ),
-                },
-              ]}
+            <PlatformGrid
+              columns={aclsColumns}
+              rows={aclsGrid.rows}
+              sort={aclsGrid.sort}
+              onSortChange={aclsGrid.handleSortChange}
+              pagination={{ page: aclsGrid.page, pageSize: aclsGrid.pageSize, totalPages: aclsGrid.totalPages, totalRows: aclsGrid.totalRows, onPageChange: aclsGrid.handlePageChange, onPageSizeChange: aclsGrid.handlePageSizeChange }}
+              emptyState={{ title: 'Sem ACLs', description: 'Nenhuma ACL cadastrada.' }}
             />
           </>
         ) : null}
@@ -3683,25 +3696,13 @@ export function PbxPage() {
 	              </button>
 	            </div>
 	            <div style={{ marginTop: 10 }}>
-	              <DataGrid
-	                rows={campaignListDraftItems.map((it, idx) => ({ ...it, _idx: idx }))}
-	                emptyText="Nenhum item pendente."
-	                defaultSort={{ id: 'phone', dir: 'asc' }}
-	                columns={[
-	                  { id: 'phone', header: 'Telefone', accessor: (r) => r.phone },
-	                  { id: 'ddd', header: 'DDD', accessor: (r) => r.ddd || '—' },
-	                  { id: 'key', header: 'Chave', accessor: (r) => r.key || '—' },
-	                  {
-	                    id: 'actions',
-	                    header: '',
-	                    sortable: false,
-	                    render: (r) => (
-	                      <button onClick={() => handleCampaignListDraftRemove(r._idx)} disabled={loading} style={{ padding: '6px 10px' }}>
-	                        Remover
-	                      </button>
-	                    ),
-	                  },
-	                ]}
+	              <PlatformGrid
+	                columns={campaignListDraftColumns}
+	                rows={campaignListDraftGrid.rows}
+	                sort={campaignListDraftGrid.sort}
+	                onSortChange={campaignListDraftGrid.handleSortChange}
+	                pagination={{ page: campaignListDraftGrid.page, pageSize: campaignListDraftGrid.pageSize, totalPages: campaignListDraftGrid.totalPages, totalRows: campaignListDraftGrid.totalRows, onPageChange: campaignListDraftGrid.handlePageChange, onPageSizeChange: campaignListDraftGrid.handlePageSizeChange }}
+	                emptyState={{ title: 'Lista vazia', description: 'Nenhum item pendente.' }}
 	              />
 	            </div>
 	            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>

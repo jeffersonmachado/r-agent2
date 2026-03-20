@@ -5,6 +5,9 @@ import { useDevDashboard } from '../hooks/useDevDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DevDashboardHeader } from '../components/DevDashboard/DevDashboardHeader';
 import { DevDashboardTabs } from '../components/DevDashboard/DevDashboardTabs';
+import { DevDashboardLayout } from '../components/DevDashboard/DevDashboardLayout';
+import { DevDashboardSection } from '../components/DevDashboard/DevDashboardSection';
+import { DevDashboardKpiCard } from '../components/DevDashboard/DevDashboardKpiCard';
 import { FeaturesTab } from '../components/DevDashboard/FeaturesTab';
 import { StatusTab } from '../components/DevDashboard/StatusTab';
 import { FileEditor } from '../components/DevDashboard/FileEditor';
@@ -18,7 +21,7 @@ import {
 } from '../utils/devDashboardUtils';
 
 /**
- * Dashboard de Desenvolvimento - Versão Refatorada
+ * Dashboard de Desenvolvimento - Versão Canonica
  * 
  * Funcionalidades:
  * - Status dos serviços em tempo real
@@ -110,29 +113,21 @@ export function DevDashboardPage() {
           display: none;
         }
       `}</style>
-      <div className="h-screen w-full flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.bg.primary }}>
-        <div className="flex-1 overflow-y-auto dev-dashboard-scroll">
-          <div className="p-4 md:p-6 lg:p-8">
-            <div className="w-full">
-              <DevDashboardHeader
-                onShowLogs={() => setShowLogs(true)}
-                onRefresh={refreshAll}
-                loading={loading}
-                autoRefresh={autoRefresh}
-                setAutoRefresh={setAutoRefresh}
-                refreshInterval={refreshInterval}
-                setRefreshInterval={setRefreshInterval}
-                lastUpdate={lastUpdate}
-              />
-
-              <DevDashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-
-              {/* Conteúdo das tabs */}
-              <div className="rounded-lg p-4 md:p-6" style={{ 
-                backgroundColor: theme.colors.bg.elevated,
-                border: `1px solid ${theme.colors.border.default}`,
-                boxShadow: theme.name === 'dark' ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}>
+      <DevDashboardLayout
+        header={(
+          <DevDashboardHeader
+            onShowLogs={() => setShowLogs(true)}
+            onRefresh={refreshAll}
+            loading={loading}
+            autoRefresh={autoRefresh}
+            setAutoRefresh={setAutoRefresh}
+            refreshInterval={refreshInterval}
+            setRefreshInterval={setRefreshInterval}
+            lastUpdate={lastUpdate}
+          />
+        )}
+        tabs={<DevDashboardTabs activeTab={activeTab} setActiveTab={setActiveTab} />}
+      >
                 {/* Tab: Funcionalidades */}
                 {activeTab === 'features' && <FeaturesTab />}
 
@@ -141,8 +136,7 @@ export function DevDashboardPage() {
 
                 {/* Tab: Métricas - Mantida inline por enquanto */}
                 {activeTab === 'metrics' && (
-                  <div>
-                    <h2 className="text-xl md:text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Métricas de Performance</h2>
+                  <DevDashboardSection title="Métricas de Performance">
                     {metrics ? (
                       <div className="space-y-6">
                         {metrics.general && (
@@ -151,54 +145,14 @@ export function DevDashboardPage() {
                               📊 Visão Geral
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Tickets</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
-                                  {formatNumber(metrics.general.totalTickets || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tickets Abertos</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.status.warning }}>
-                                  {formatNumber(metrics.general.openTickets || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tickets Fechados</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.status.success }}>
-                                  {formatNumber(metrics.general.closedTickets || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Em Andamento</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.status.info }}>
-                                  {formatNumber(metrics.general.inProgressTickets || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Aguardando</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
-                                  {formatNumber(metrics.general.waitingTickets || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Total de Mensagens</div>
-                                <div className="text-3xl font-bold" style={{ color: theme.colors.text.primary }}>
-                                  {formatNumber(metrics.general.totalMessages || 0)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tempo Médio de Resolução</div>
-                                <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
-                                  {formatTime(metrics.general.avgResolutionTime)}
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-lg" style={{ backgroundColor: theme.colors.bg.secondary, border: `1px solid ${theme.colors.border.default}` }}>
-                                <div className="text-sm mb-1" style={{ color: theme.colors.text.secondary }}>Tempo Médio de Primeira Resposta</div>
-                                <div className="text-2xl font-bold" style={{ color: theme.colors.text.primary }}>
-                                  {formatTime(metrics.general.avgFirstResponseTime)}
-                                </div>
-                              </div>
+                              <DevDashboardKpiCard label="Total de Tickets" value={formatNumber(metrics.general.totalTickets || 0)} />
+                              <DevDashboardKpiCard label="Tickets Abertos" value={formatNumber(metrics.general.openTickets || 0)} valueColor={theme.colors.status.warning} />
+                              <DevDashboardKpiCard label="Tickets Fechados" value={formatNumber(metrics.general.closedTickets || 0)} valueColor={theme.colors.status.success} />
+                              <DevDashboardKpiCard label="Em Andamento" value={formatNumber(metrics.general.inProgressTickets || 0)} valueColor={theme.colors.status.info} />
+                              <DevDashboardKpiCard label="Aguardando" value={formatNumber(metrics.general.waitingTickets || 0)} />
+                              <DevDashboardKpiCard label="Total de Mensagens" value={formatNumber(metrics.general.totalMessages || 0)} />
+                              <DevDashboardKpiCard label="Tempo Médio de Resolução" value={formatTime(metrics.general.avgResolutionTime)} />
+                              <DevDashboardKpiCard label="Tempo Médio de Primeira Resposta" value={formatTime(metrics.general.avgFirstResponseTime)} />
                             </div>
                           </div>
                         )}
@@ -214,7 +168,7 @@ export function DevDashboardPage() {
                         Métricas não disponíveis. Verifique se o endpoint /analytics/metrics está disponível.
                       </div>
                     )}
-                  </div>
+                  </DevDashboardSection>
                 )}
 
                 {/* Tab: Ambiente - Mantida inline por enquanto */}
@@ -782,17 +736,12 @@ export function DevDashboardPage() {
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
+      </DevDashboardLayout>
 
         {/* Modal de Logs */}
         {showLogs && (
           <LogViewer onClose={() => setShowLogs(false)} />
         )}
-      </div>
     </>
   );
 }
-

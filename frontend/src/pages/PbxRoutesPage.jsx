@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listExtensions, listQueues, listRoutes, listTrunks, upsertRoute } from '../api/pbx';
 import { Button } from '../styles/Button';
-import { DataGrid } from '../components/DataGrid';
+import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import logger from '../utils/logger';
@@ -276,6 +276,81 @@ export function PbxRoutesPage() {
     label: `${item?.extension || ''}${item?.displayName ? ` — ${item.displayName}` : ''}`,
   }));
 
+  const columns = [
+    {
+      id: 'name',
+      header: 'Nome',
+      accessor: (row) => row.name,
+      render: (row) => (
+        <div>
+          <div className="font-medium text-text-primary">{row.name}</div>
+          <div className="text-xs text-text-tertiary">id: {row.id}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'direction',
+      header: 'Direção',
+      accessor: (row) => (row.direction === 'inbound' ? 'Entrada' : 'Saída'),
+    },
+    {
+      id: 'dialing',
+      header: 'Discagem',
+      sortValue: (row) => routeToDialingLabel(row),
+      render: (row) => routeToDialingLabel(row),
+    },
+    {
+      id: 'destination',
+      header: 'Destino',
+      sortValue: (row) => routeToDestinationLabel(row),
+      render: (row) => routeToDestinationLabel(row),
+    },
+    {
+      id: 'priority',
+      header: 'Prioridade',
+      accessor: (row) => row.priority ?? 100,
+      sortValue: (row) => Number(row.priority ?? 100),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      sortValue: (row) => (row.enabled === false ? 0 : 1),
+      render: (row) =>
+        row.enabled === false ? (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
+            Inativo
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
+            Ativo
+          </span>
+        ),
+    },
+    {
+      id: 'actions',
+      header: 'Ações',
+      sortable: false,
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+          <Button size="sm" variant="danger" onClick={() => handleDelete(row)} disabled={saving || row.enabled === false}>
+            Excluir
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const grid = usePlatformGridState({
+    rows: filteredRoutes,
+    columns,
+    initialSort: { columnId: 'priority', direction: 'asc' },
+    persistenceKey: 'pbx-routes-grid',
+    getSearchText: (row) => [row?.name, row?.direction, routeToDialingLabel(row), routeToDestinationLabel(row)].join(' '),
+  });
+
   if (loading) {
     return (
       <div className="support-page">
@@ -377,76 +452,23 @@ export function PbxRoutesPage() {
       </div>
 
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-        <DataGrid
-          rows={filteredRoutes}
-          emptyText="Nenhuma rota encontrada."
-          defaultSort={{ id: 'priority', dir: 'asc' }}
-          columns={[
-            {
-              id: 'name',
-              header: 'Nome',
-              accessor: (row) => row.name,
-              render: (row) => (
-                <div>
-                  <div className="font-medium text-text-primary">{row.name}</div>
-                  <div className="text-xs text-text-tertiary">id: {row.id}</div>
-                </div>
-              ),
-            },
-            {
-              id: 'direction',
-              header: 'Direção',
-              accessor: (row) => (row.direction === 'inbound' ? 'Entrada' : 'Saída'),
-            },
-            {
-              id: 'dialing',
-              header: 'Discagem',
-              sortValue: (row) => routeToDialingLabel(row),
-              render: (row) => routeToDialingLabel(row),
-            },
-            {
-              id: 'destination',
-              header: 'Destino',
-              sortValue: (row) => routeToDestinationLabel(row),
-              render: (row) => routeToDestinationLabel(row),
-            },
-            {
-              id: 'priority',
-              header: 'Prioridade',
-              accessor: (row) => row.priority ?? 100,
-              sortValue: (row) => Number(row.priority ?? 100),
-            },
-            {
-              id: 'status',
-              header: 'Status',
-              sortValue: (row) => (row.enabled === false ? 0 : 1),
-              render: (row) =>
-                row.enabled === false ? (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-error/20 text-status-error border border-status-error/30">
-                    Inativo
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-status-success/20 text-status-success border border-status-success/30">
-                    Ativo
-                  </span>
-                ),
-            },
-            {
-              id: 'actions',
-              header: 'Ações',
-              sortable: false,
-              render: (row) => (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(row)}>
-                    Editar
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => handleDelete(row)} disabled={saving || row.enabled === false}>
-                    Excluir
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
+        <PlatformGrid
+          columns={columns}
+          rows={grid.rows}
+          sort={grid.sort}
+          onSortChange={grid.handleSortChange}
+          pagination={{
+            page: grid.page,
+            pageSize: grid.pageSize,
+            totalPages: grid.totalPages,
+            totalRows: grid.totalRows,
+            onPageChange: grid.handlePageChange,
+            onPageSizeChange: grid.handlePageSizeChange,
+          }}
+          emptyState={{
+            title: 'Nenhuma rota encontrada',
+            description: 'Comece criando uma nova rota de entrada ou saída.',
+          }}
         />
       </div>
 

@@ -34,7 +34,7 @@ import {
 } from '../api/cc';
 import { listLegacyXmlEntity, upsertLegacyXmlEntity } from '../api/pbxLegacy';
 import { Button } from '../styles/Button';
-import { DataGrid } from '../components/DataGrid';
+import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
@@ -583,6 +583,27 @@ export function PbxModulePage() {
     return [{ id: 'json', header: 'Dados', accessor: (r) => JSON.stringify(r) }];
   }, [moduleConfig.key]);
 
+  const versionColumns = useMemo(() => [
+    { id: 'version', header: 'Versão', accessor: (r) => r.version || '—' },
+    { id: 'scope', header: 'Escopo', accessor: (r) => r.scope || '—' },
+    { id: 'createdAt', header: 'Criado em', render: (r) => formatDateTime(r.createdAt) },
+    { id: 'createdBy', header: 'Criado por', accessor: (r) => r.createdBy || '—' },
+  ], []);
+
+  const mainGrid = usePlatformGridState({
+    rows: filteredRows,
+    columns,
+    initialSort: { columnId: 'id', direction: 'asc' },
+    persistenceKey: `pbx-module-${moduleConfig.key}-grid`,
+  });
+
+  const versionsGrid = usePlatformGridState({
+    rows: versions,
+    columns: versionColumns,
+    initialSort: { columnId: 'createdAt', direction: 'desc' },
+    persistenceKey: 'pbx-module-versions-grid',
+  });
+
   const showCdrFilters = moduleConfig.key === 'cdr';
   const showQueuePicker = moduleConfig.key === 'queueMembers';
   const showCampaignPicker = moduleConfig.key === 'ccCampaignList';
@@ -731,11 +752,20 @@ export function PbxModulePage() {
         {loading ? (
           <div className="text-sm text-text-secondary">Carregando...</div>
         ) : (
-          <DataGrid
-            rows={filteredRows}
-            emptyText="Nenhum registro encontrado."
-            defaultSort={{ id: columns[0]?.id || 'id', dir: 'asc' }}
+          <PlatformGrid
             columns={columns}
+            rows={mainGrid.rows}
+            sort={mainGrid.sort}
+            onSortChange={mainGrid.handleSortChange}
+            pagination={{
+              page: mainGrid.page,
+              pageSize: mainGrid.pageSize,
+              totalPages: mainGrid.totalPages,
+              totalRows: mainGrid.totalRows,
+              onPageChange: mainGrid.handlePageChange,
+              onPageSizeChange: mainGrid.handlePageSizeChange,
+            }}
+            emptyState={{ title: 'Nenhum registro', description: 'Nenhum registro encontrado.' }}
           />
         )}
       </div>
@@ -743,20 +773,20 @@ export function PbxModulePage() {
       {moduleConfig.key === 'dialplan' && versions.length ? (
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg mt-6">
           <h3 className="text-xl font-semibold text-text-primary mb-4">Versões de Configuração</h3>
-          <DataGrid
-            rows={versions}
-            emptyText="Sem versões disponíveis."
-            defaultSort={{ id: 'createdAt', dir: 'desc' }}
-            columns={[
-              { id: 'version', header: 'Versão', accessor: (r) => r.version || '—' },
-              { id: 'scope', header: 'Escopo', accessor: (r) => r.scope || '—' },
-              {
-                id: 'createdAt',
-                header: 'Criado em',
-                render: (r) => formatDateTime(r.createdAt),
-              },
-              { id: 'createdBy', header: 'Criado por', accessor: (r) => r.createdBy || '—' },
-            ]}
+          <PlatformGrid
+            columns={versionColumns}
+            rows={versionsGrid.rows}
+            sort={versionsGrid.sort}
+            onSortChange={versionsGrid.handleSortChange}
+            pagination={{
+              page: versionsGrid.page,
+              pageSize: versionsGrid.pageSize,
+              totalPages: versionsGrid.totalPages,
+              totalRows: versionsGrid.totalRows,
+              onPageChange: versionsGrid.handlePageChange,
+              onPageSizeChange: versionsGrid.handlePageSizeChange,
+            }}
+            emptyState={{ title: 'Sem versões', description: 'Sem versões disponíveis.' }}
           />
         </div>
       ) : null}
