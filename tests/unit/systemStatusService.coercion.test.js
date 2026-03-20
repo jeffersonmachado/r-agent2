@@ -81,6 +81,7 @@ describe('systemStatusService coercion guards', () => {
   });
 
   test('checkRedisStatus: hostile err.message in catch does not throw', async () => {
+    config.get.mockImplementation((key, fallback) => (key === 'rateLimit.redis.url' ? 'redis://test:6379' : fallback));
     isRedisAvailable.mockRejectedValue(hostileErr());
     const out = await checkRedisStatus();
     expect(out.status).toBe('unhealthy');
@@ -88,6 +89,7 @@ describe('systemStatusService coercion guards', () => {
   });
 
   test('checkRedisStatus: hostile err.message and toString in catch does not throw', async () => {
+    config.get.mockImplementation((key, fallback) => (key === 'rateLimit.redis.url' ? 'redis://test:6379' : fallback));
     isRedisAvailable.mockRejectedValue(hostileErrFull());
     const out = await checkRedisStatus();
     expect(out.status).toBe('unhealthy');

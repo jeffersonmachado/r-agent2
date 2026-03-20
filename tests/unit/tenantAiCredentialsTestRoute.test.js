@@ -157,6 +157,48 @@ describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
     });
   }
 
+  async function httpPostRaw({ port, path, token, headers, rawBody }) {
+    const payload = rawBody == null ? '' : String(rawBody);
+    const requestHeaders = {
+      Authorization: token ? `Bearer ${token}` : undefined,
+      ...(headers || {}),
+    };
+    if (payload) {
+      requestHeaders['Content-Length'] = Buffer.byteLength(payload);
+    }
+
+    return await new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          method: 'POST',
+          hostname: '127.0.0.1',
+          port,
+          path,
+          headers: requestHeaders,
+        },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            try {
+              resolve({ status: res.statusCode, body: JSON.parse(data) });
+            } catch (_) {
+              resolve({ status: res.statusCode, body: data });
+            }
+          });
+        }
+      );
+
+      req.on('error', reject);
+      if (payload) {
+        req.write(payload);
+      }
+      req.end();
+    });
+  }
+
   test('retorna 200 (não 404) para /tenants/system/ai-credentials/test sem credencial salva', async () => {
     const { server, mocks } = startServerWithMocks({
       isSuperAdmin: true,
@@ -262,6 +304,186 @@ describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
         error: 'forbidden',
       })
     );
+    expect(mocks.getAIConfig).not.toHaveBeenCalled();
+    expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
+  });
+
+  test('retorna 403 quando alias /tenants/current não resolve tenant no middleware', async () => {
+    const { server, mocks } = startServerWithMocks({
+      defaultAgent: { id: 'a4', username: 'admin', tenantId: null, role: 'admin' },
+      isSuperAdmin: true,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => 'sk-test-openai'),
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostJson({
+      port: listenResult.port,
+      path: '/tenants/current/ai-credentials/test',
+      token: 'fake-token',
+      body: {},
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'tenant_validation_failed',
+      })
+    );
+    expect(mocks.getAIConfig).not.toHaveBeenCalled();
+    expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
+  });
+
+  test('prioriza provider do body no teste de credencial e preserva contrato de resposta', async () => {
+    const { server, mocks } = startServerWithMocks({
+      defaultAgent: { id: 'a5', username: 'admin', tenantId: 'tenant-demo', role: 'admin' },
+      isSuperAdmin: false,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => ''),
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostJson({
+      port: listenResult.port,
+      path: '/tenants/current/ai-credentials/test',
+      token: 'fake-token',
+      body: { provider: 'anthropic' },
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        valid: false,
+        provider: 'anthropic',
+        tenantId: 'tenant-demo',
+      })
+    );
+    expect(response.body).toHaveProperty('error');
+    expect(mocks.getAIConfig).toHaveBeenCalledWith('tenant-demo');
+    expect(mocks.getDecryptedAPIKey).toHaveBeenCalledWith('tenant-demo', 'anthropic');
+  });
+
+  test('retorna 400 para Content-Type não JSON sem cair em fallback', async () => {
+    const { server, mocks } = startServerWithMocks({
+      isSuperAdmin: true,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => 'sk-test-openai'),
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostRaw({
+      port: listenResult.port,
+      path: '/tenants/system/ai-credentials/test',
+      token: 'fake-token',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      rawBody: 'provider=openai',
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'bad_request',
+      })
+    );
+    expect(mocks.getAIConfig).not.toHaveBeenCalled();
+    expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
+  });
+
+  test('retorna 401 quando autenticação falha', async () => {
+    const prevNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    try {
+      const requireAuth = jest.fn(() => ({ valid: false, error: 'Token inválido' }));
+      const { server, mocks } = startServerWithMocks({
+        requireAuth,
+        isSuperAdmin: true,
+        getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+        getDecryptedAPIKey: jest.fn(async () => 'sk-test-openai'),
+      });
+
+      const listenResult = await listenOrSkip(server);
+      if (listenResult.skip) {
+        return;
+      }
+
+      const response = await httpPostJson({
+        port: listenResult.port,
+        path: '/tenants/system/ai-credentials/test',
+        token: 'invalid-token',
+        body: {},
+      });
+
+      await new Promise((resolve) => server.close(resolve));
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          error: 'unauthorized',
+        })
+      );
+      expect(mocks.getAIConfig).not.toHaveBeenCalled();
+      expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
+    } finally {
+      if (prevNodeEnv == null) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = prevNodeEnv;
+      }
+    }
+  });
+
+  test('retorna 400 para JSON inválido no corpo da requisição', async () => {
+    const { server, mocks } = startServerWithMocks({
+      isSuperAdmin: true,
+      getAIConfig: jest.fn(async () => ({ primary: 'openai' })),
+      getDecryptedAPIKey: jest.fn(async () => 'sk-test-openai'),
+    });
+
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const response = await httpPostRaw({
+      port: listenResult.port,
+      path: '/tenants/system/ai-credentials/test',
+      token: 'fake-token',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      rawBody: '{ invalid-json',
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'bad_request',
+      })
+    );
+    expect(String(response.body.message || '')).toMatch(/JSON inválido/i);
     expect(mocks.getAIConfig).not.toHaveBeenCalled();
     expect(mocks.getDecryptedAPIKey).not.toHaveBeenCalled();
   });

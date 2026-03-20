@@ -119,4 +119,6 @@ afterEach(() => {
   timeouts.clear();
 });
 
-console.log('✅ Proteções contra travamentos ativadas nos testes Jest');
+if (process.env.DEBUG_TEST_SETUP === 'true') {
+  console.log('✅ Proteções contra travamentos ativadas nos testes Jest');
+}

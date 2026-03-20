@@ -6,7 +6,7 @@
  * Este teste usa mocks para evitar boot real de DB/serviços.
  */
 
-const { Readable, Writable } = require('stream');
+const http = require('http');
 
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
@@ -88,7 +88,7 @@ describe('POST /flows/generate - validationWarnings', () => {
       getAuditStats: jest.fn(async () => ({})),
     }));
 
-    const { _internal } = require('../../api/server');
+    const { createExpressApp } = require('../../api/server');
 
     const payload = {
       name: 'Fluxo',
@@ -97,78 +97,91 @@ describe('POST /flows/generate - validationWarnings', () => {
       useRag: false,
     };
 
-    const { req, res, finished } = createMockReqRes({
-      method: 'POST',
-      url: '/flows/generate',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const server = http.createServer(createExpressApp());
+    let port = 0;
 
-    await _internal.requestHandler(req, res);
-    await finished;
+    try {
+      const started = await new Promise((resolve, reject) => {
+        server.listen(0, '127.0.0.1', () => {
+          const address = server.address();
+          port = address && typeof address === 'object' ? address.port : 0;
+          resolve(true);
+        });
+        server.once('error', (err) => {
+          if (err && err.code === 'EPERM') {
+            resolve(false);
+            return;
+          }
+          reject(err);
+        });
+      });
 
-    const resPayload = res._body ? JSON.parse(res._body) : null;
+      if (!started) {
+        return;
+      }
 
-    expect(res.statusCode).toBe(200);
-    expect(resPayload.success).toBe(true);
-    expect(resPayload.validationWarnings).toBeDefined();
-    expect(resPayload.validationWarnings.valid).toBe(false);
-    expect(resPayload.validationWarnings.codes).toContain('START_HAS_INPUTS');
-    expect(Array.isArray(resPayload.validationWarnings.errors)).toBe(true);
+      const response = await requestJson(port, 'POST', '/flows/generate', payload);
+      const resPayload = response.body;
+
+      expect(response.status).toBe(200);
+      expect(resPayload.success).toBe(true);
+      expect(resPayload.validationWarnings).toBeDefined();
+      expect(resPayload.validationWarnings.valid).toBe(false);
+      expect(resPayload.validationWarnings.codes).toContain('START_HAS_INPUTS');
+      expect(Array.isArray(resPayload.validationWarnings.errors)).toBe(true);
+    } finally {
+      await new Promise((resolve) => {
+        server.closeAllConnections?.();
+        server.close(() => resolve());
+      });
+    }
   }, 30000);
 });
 
-function createMockReqRes({ method, url, headers, body }) {
-  const req = new Readable({
-    read() {}
-  });
-  req.method = method;
-  req.url = url;
-  req.headers = headers || {};
-  req.connection = { remoteAddress: '127.0.0.1' };
-  req.socket = req.connection;
+function requestJson(port, method, path, body) {
+  return new Promise((resolve, reject) => {
+    const payload = body === undefined ? null : JSON.stringify(body);
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path,
+        method,
+        headers: payload
+          ? {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload),
+            }
+          : {},
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          let parsed = null;
+          if (data) {
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              parsed = data;
+            }
+          }
+          resolve({
+            status: res.statusCode || 0,
+            body: parsed,
+          });
+        });
+      },
+    );
 
-  const resChunks = [];
-  const res = new Writable({
-    write(chunk, _enc, cb) {
-      resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-      cb();
-    },
-  });
-  res.statusCode = 200;
-  res._headers = {};
-  res._body = '';
+    req.on('error', reject);
 
-  res.setHeader = (name, value) => {
-    res._headers[String(name).toLowerCase()] = value;
-  };
-  res.getHeader = (name) => res._headers[String(name).toLowerCase()];
-  res.writeHead = (statusCode, headersObj) => {
-    res.statusCode = statusCode;
-    if (headersObj) {
-      Object.entries(headersObj).forEach(([key, value]) => res.setHeader(key, value));
+    if (payload) {
+      req.write(payload);
     }
-  };
-  res.write = (chunk) => {
-    resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-  };
 
-  let resolveFinished;
-  const finished = new Promise((resolve) => {
-    resolveFinished = resolve;
+    req.end();
   });
-  res.end = (chunk) => {
-    if (chunk) {
-      resChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-    }
-    res._body = Buffer.concat(resChunks).toString('utf8');
-    resolveFinished();
-  };
-
-  if (body) {
-    req.push(body);
-  }
-  req.push(null);
-
-  return { req, res, finished };
 }

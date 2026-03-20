@@ -244,4 +244,67 @@ describe('endpoints públicos /storefront e /physical', () => {
 
     await new Promise((resolve) => server.close(resolve));
   });
+
+  test('POST /public/* aceita developer key sem tenant explícito', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({
+      connect: jest.fn(async () => ({})),
+      getSequelize: jest.fn(() => ({})),
+      close: jest.fn(async () => {}),
+      Sequelize: require('sequelize').Sequelize,
+    }));
+    jest.doMock('../../api/db/migrate', () => ({ runMigrations: jest.fn(async () => {}) }));
+    jest.doMock('../../api/db/seed', () => ({ runSeed: jest.fn(async () => {}) }));
+    jest.doMock('../../api/db/models', () => ({ defineRelationships: jest.fn() }));
+
+    const resolvePublicToken = jest.fn(async () => ({
+      ok: true,
+      tenantId: 'tenant-1',
+      tokenId: 'dev-token-1',
+      kind: 'developer',
+    }));
+    const recordPublicTokenUsage = jest.fn(async () => {});
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({
+      resolvePublicToken,
+      recordPublicTokenUsage,
+    }));
+
+    // eslint-disable-next-line global-require
+    const { createServer } = require('../../api/server');
+    const server = createServer();
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+    const port = listenResult.port;
+    const payload = { action: 'ping', meta: { source: 'jest' } };
+
+    const r = await httpJson({
+      port,
+      method: 'POST',
+      path: '/public/echo',
+      headers: { 'x-api-key': 'dev_123' },
+    }, payload);
+
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({
+      ok: true,
+      route: '/public/echo',
+      tenantId: 'tenant-1',
+      tokenId: 'dev-token-1',
+      received: payload,
+    });
+    expect(resolvePublicToken).toHaveBeenCalledWith({
+      token: 'dev_123',
+      allowedKinds: ['developer'],
+    });
+    expect(recordPublicTokenUsage).toHaveBeenCalledWith({
+      tokenId: 'dev-token-1',
+      route: '/public/echo',
+      method: 'POST',
+      statusCode: 200,
+    });
+
+    await new Promise((resolve) => server.close(resolve));
+  });
 });
