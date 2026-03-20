@@ -18,6 +18,20 @@ Namespace: `/api/operations-dashboard`
 - `GET /api/operations-dashboard/notifications`
 - `GET /api/operations-dashboard/insights`
 
+Endpoints complementares reutilizados pela mesma tela (blocos A/B/C):
+
+- `GET /api/beauty/agenda`
+- `GET /api/beauty/customers/search`
+- `GET /api/beauty/customer/:subjectId/detail`
+- `POST /api/beauty/service-completed`
+- `POST /api/beauty/no-show`
+- `POST /api/beauty/follow-up`
+- `POST /api/fitness/attendance/check-in`
+- `POST /api/fitness/attendance/check-out`
+- `GET /api/fitness/students/search`
+- `GET /api/fitness/student/:subjectId/detail`
+- `PATCH /api/fitness/membership/:membershipId/billing`
+
 Parâmetros suportados (conforme endpoint):
 
 - `tenantId` (override permitido apenas para super-admin)
@@ -136,14 +150,24 @@ Seções:
 
 - Filtros globais (`tenant`, `vertical`, `period`)
 - Cards executivos (Beauty/Fitness/Sistema)
-- Timeline
-- Jobs
-- Notificações
-- Insights
+- Aba `Agenda Beauty` (dia, profissional, status, ações operacionais)
+- Aba `Atendimento Beauty` (busca cliente, detalhe operacional, confiança de automação, follow-up manual)
+- Aba `Check-in Fitness` (busca rápida com check-in/check-out)
+- Aba `Aluno Fitness` (detalhe de acesso/frequência/risco + reativação)
+- Aba `Timeline`
+- Aba `Scheduler / Jobs`
+- Aba `Notificacoes`
+- Aba `Insights Operacionais`
 
 Atualização:
 
 - manual (botão de atualizar)
+
+Estados operacionais mínimos na UI:
+
+- loading por aba
+- empty state explícito por contexto
+- erro por aba com `toast` + mensagem em linha
 
 ## Segurança e multi-tenant
 

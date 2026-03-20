@@ -1,6 +1,7 @@
 # State of Architecture
 
 Data da auditoria: 2026-03-12
+Última atualização: 2026-03-19 — Modernização Frontend concluída (7 ondas / 61 itens ARC-001–ARC-061)
 
 ## Escopo auditado
 
@@ -64,6 +65,8 @@ As camadas abaixo ainda não existem de forma materializada ou estão apenas par
 | Process Analytics | Ausente |
 | Simulation Engine | Ausente como camada arquitetural alvo |
 | Process Intelligence / Optimization | Ausente |
+| **Frontend Grid (PlatformGrid)** | **✅ Canônico — DataGrid 100% migrado** |
+| **Frontend DashboardBase** | **✅ Implementado — componentes reutilizáveis** |
 
 ## 1. Componentes implementados
 
@@ -821,3 +824,30 @@ Em outras palavras:
 - `Observability`: presente, mas básica
 - `Analytics/Simulation/Intelligence`: ainda não implementados
 - `BPMN`: presente, mas no eixo errado da arquitetura alvo
+---
+
+## 13. Modernização Frontend (concluída em 2026-03-19)
+
+Ciclo de 7 ondas / 61 itens (ARC-001 a ARC-061) concluído integralmente.
+
+### Resultado das ondas
+
+| Onda | Escopo | Status |
+| --- | --- | --- |
+| 1 | Infraestrutura canônica de routing e módulos base | ✅ |
+| 2 | Migração de páginas PBX wave 1–2 para PlatformGrid | ✅ |
+| 3 | DashboardBase — componentes genéricos reutilizáveis | ✅ |
+| 4 | Consolidação de dashboards (QueuePhysical, ChatHumano) | ✅ |
+| 5 | Migração PbxModulePage e PbxPage (wave 3, casos mais complexos) | ✅ |
+| 6 | SaaS multi-tenant, endurecimento, logging | ✅ |
+| 7 | Demais melhorias e otimizações (ARC-013 a ARC-061) | ✅ |
+
+### Componentes canônicos introduzidos
+
+- **`frontend/src/modules/platform-grid/`** — único componente de grid da aplicação. `DataGrid` legado não possui mais consumidores externos.
+- **`frontend/src/components/DashboardBase/`** — `DashboardKpiCard`, `DashboardSection`, `DashboardFeatureCard`, `DashboardFeatureGrid`.
+
+### Validação pós-migração (2026-03-19)
+
+- Build Vite produção: ✅ 845 módulos, zero erros
+- Testes unitários: ✅ 639/642 passam (3 falhas pré-existentes em `pipelineValidatePrereqsRoute`, não relacionadas às migrações)

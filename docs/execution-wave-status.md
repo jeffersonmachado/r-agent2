@@ -1,0 +1,803 @@
+# Status de Execucao por Onda
+
+## Ciclo atual
+- Ciclo: ONDA 4 (decomposicao de hotspots)
+- Estado: concluida
+- Data de referencia: 2026-03-19
+
+## Entregas ONDA 1
+- `docs/architecture-modernization-plan.md`
+- `docs/architecture-modernization-backlog.md`
+- `docs/architecture-dependency-map.md`
+- `docs/architecture-risk-report.md`
+- `docs/backend-route-and-bootstrap-inventory.md`
+- `docs/frontend-grid-inventory.md`
+- `docs/frontend-dashboard-inventory.md`
+- `docs/frontend-crud-inventory.md`
+- `docs/legacy-and-duplication-report.md`
+- `docs/execution-wave-status.md`
+
+## Evidencias quantitativas
+- Backend:
+  - `api/server.js`: 1611 linhas (apos extracoes de bootstrap/workers/shutdown + consolidacao do dispatcher em registries)
+  - handlers: 69 total, 66 wired, 3 nao wired
+  - arestas locais (`api/**`): 1729
+  - condicoes de metodo em handlers: 556
+- Frontend:
+  - paginas `frontend/src/pages/**/*.jsx`: 91
+  - paginas importadas no `main.jsx`: 71
+  - arestas locais (`frontend/src/**`): 1086
+  - variantes DevDashboard: 3
+
+## Gate de saida ONDA 1
+- Inventario real da base: OK
+- Mapa de dependencia: OK
+- Mapa de risco: OK
+- Backlog priorizado: OK
+
+## Progresso ONDA 2 (concluida)
+- Extracao concluida:
+  - `startInitialization` movido para `api/bootstrap/startInitialization.js`.
+  - startup de workers movido para `api/runtime/startWorkers.js`.
+  - shutdown hooks movidos de `api/server.js` para `api/runtime/registerShutdownHooks.js`.
+- Comportamento preservado:
+  - bootstrap (connect/migrate/seed/init caches) mantido com mesma semantica.
+  - inicializacao de workers mantida com mesmas flags e logs.
+  - `SIGINT`, `SIGTERM` e `beforeExit` continuam com mesma semantica de flush/stop.
+
+## Progresso ONDA 3 (concluida)
+- Extracao concluida:
+  - primeira fatia do dispatcher de rotas movida para `api/routing/dispatchCoreRoutes.js` (segmento `systemAdmin` ate `conversation`) com ordem declarativa.
+  - segunda fatia do dispatcher de rotas movida para `api/routing/dispatchPlatformRoutes.js` (segmento `channelAccount` ate `publicToken`) com ordem declarativa.
+  - terceira fatia do dispatcher de rotas movida para `api/routing/dispatchExtendedRoutes.js` (demais handlers ate antes do fallback do frontend).
+- Cobertura de contrato consolidada:
+  - whitelist publica do `server.js` corrigida para incluir `/public` antes do tenant rate limit.
+  - teste HTTP direcionado adicionado para `POST /public/*` com developer key, complementando a cobertura publica de `storefront`, `physical` e `public-tokens/resolve`.
+  - suite `api/server.test.js` ampliada para cobrir a fronteira do fallback SPA: navegacao HTML vai para o frontend e `/api/*` desconhecido continua 404 sem cair no fallback.
+  - suite `api/server.test.js` ampliada para a fronteira hibrida de `/config`: `GET /config` respeita `Accept` e subcaminhos `/config/*` continuam tratados como API.
+  - suite dedicada `tests/unit/tenantAiCredentialsTestRoute.test.js` ampliada para garantir contrato de `/tenants/:tenantKey/ai-credentials/test` e alias `/tenants/current/...` em cenarios de permissao, middleware de tenant, provider override e content-type invalido.
+- Comportamento preservado:
+  - ordem de roteamento das fatias extraidas mantida sem alteracao de contrato HTTP.
+  - `api/server.js` preserva apenas entrada publica, rate limiting, dispatchers e fallback final.
+- Validacao executada:
+  - `node --check api/bootstrap/startInitialization.js`
+  - `node --check api/runtime/startWorkers.js`
+  - `node --check api/runtime/registerShutdownHooks.js`
+  - `node --check api/routing/dispatchCoreRoutes.js`
+  - `node --check api/routing/dispatchPlatformRoutes.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/publicStorefrontPhysicalEndpoints.test.js --runInBand` (5 testes, 5 pass)
+  - `npm exec -- jest --runTestsByPath tests/unit/tenantAiCredentialsTestRoute.test.js --runInBand` (8 testes, 8 pass)
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (28 testes, 28 pass)
+  - `npm run test:unit -- --runInBand --forceExit` (256 suites, 1244 testes, 100% pass)
+
+## Proxima onda habilitada
+- ONDA 4 (decomposicao de hotspots): em progresso
+
+## Plano imediato ONDA 4
+1. ~~Decomposicao de `pbxRoutes.js`~~ — concluida (ARC-006 done).
+2. ~~Decomposicao de `ragDocumentsRoutes.js`~~ — concluida com subdominios `core`, `operations`, `ingestion`, `query` e `learning`.
+3. ~~Decomposicao de `ticketRoutes.js`~~ — concluida com subdominios `core`, `lifecycle`, `communication` e `operations`.
+4. ~~Decompor `systemGenerationRoutes.js` por capacidade em `system-generation/*`~~ — concluida (ARC-053 done).
+5. Revisar handlers nao wired (`analytics`, `bulkCampaigns`, `quickReplies`) para decidir wire/move/remove.
+## Progresso ONDA 4 (em progresso)
+- ARC-053 — decomposicao completa de `systemGenerationRoutes.js` por capacidade:
+  - `api/serverHandlers/systemGenerationRoutes.js` reduzido de 892 para 32 linhas.
+  - `api/serverHandlers/system-generation/pipelineRoutes.js` extraido com `POST /system/pipeline/validate-prereqs`.
+  - `api/serverHandlers/system-generation/suggestDescriptionRoute.js` extraido com a logica de `POST /system/suggest-description`.
+  - `api/serverHandlers/system-generation/contentRoutes.js` extraido com `POST /system/generate-faq`, `POST /system/generate-faq-answers` e `POST /system/generate-initial-flow`.
+  - `api/serverHandlers/system-generation/controlRoutes.js` extraido com `POST /system/check-rate-limit` e `POST /system/generate-and-validate`.
+  - `api/serverHandlers/systemGenerationRoutes.js` passa a atuar como orquestrador fino delegando para quatro sub-handlers de capacidade.
+- Validacao ARC-053:
+  - `node --check api/serverHandlers/systemGenerationRoutes.js`
+  - `node --check api/serverHandlers/system-generation/pipelineRoutes.js`
+  - `node --check api/serverHandlers/system-generation/suggestDescriptionRoute.js`
+  - `node --check api/serverHandlers/system-generation/contentRoutes.js`
+  - `node --check api/serverHandlers/system-generation/controlRoutes.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/suggestDescriptionNoContext.test.js tests/unit/suggestDescriptionInstitutional.test.js tests/rate-limit/integration.test.js tests/unit/domainAdminIdentityFlowCutoverWiring.test.js --runInBand` (4 suites, 16 testes, 100% pass)
+- ARC-008 - revisao de handlers nao wired concluida:
+  - `api/serverHandlers/analyticsRoutes.js` montado via `api/modules/analytics/routes.js`.
+  - `api/serverHandlers/bulkCampaignsRoutes.js` montado via `api/modules/bulk-campaigns/routes.js`.
+  - `api/serverHandlers/quickRepliesRoutes.js` montado via `api/modules/quick-replies/routes.js`.
+  - `api/app/registerRoutes.js` atualizado com builders de deps e `app.use(...)` para os tres novos routers.
+- Validacao ARC-008:
+  - `node --check api/app/registerRoutes.js`
+  - `node --check api/modules/analytics/routes.js`
+  - `node --check api/modules/bulk-campaigns/routes.js`
+  - `node --check api/modules/quick-replies/routes.js`
+  - `npm exec -- jest tests/unit/nonWiredHandlersActivationWiring.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/platformResidualEliminationWiring.test.js --runInBand --no-coverage` (4 suites, 10 testes, 100% pass)
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (1 suite, 28 testes, 100% pass)
+- ARC-054 - decomposicao completa de `flowExecutionRoutes.js` por capacidade:
+  - `api/serverHandlers/flowExecutionRoutes.js` reduzido de 835 para 31 linhas.
+  - `api/serverHandlers/flow-execution/flowValidationRoutes.js` extraido com validacao e preview de fluxos.
+  - `api/serverHandlers/flow-execution/flowGenerationRoutes.js` extraido com geracao/dry-run e auditoria.
+  - `api/serverHandlers/flow-execution/rpaTestGenerationRoutes.js` extraido com geracao/salvamento de testes RPA.
+  - `api/serverHandlers/flow-execution/flowExecutionRoutes.js` extraido com simulacao, pipeline RPA e replay.
+  - `api/serverHandlers/flowExecutionRoutes.js` passa a atuar como orquestrador fino delegando para quatro sub-handlers de capacidade.
+- Validacao ARC-054:
+  - `node --check api/serverHandlers/flowExecutionRoutes.js`
+  - `node --check api/serverHandlers/flow-execution/flowValidationRoutes.js`
+  - `node --check api/serverHandlers/flow-execution/flowGenerationRoutes.js`
+  - `node --check api/serverHandlers/flow-execution/rpaTestGenerationRoutes.js`
+  - `node --check api/serverHandlers/flow-execution/flowExecutionRoutes.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/flowGeneratorService.test.js tests/unit/executionPersistenceDryRun.test.js --runInBand` (2 suites, 12 testes, 100% pass)
+- ARC-055 — decomposicao completa de `pbx/pbxCoreRoutes.js` por capacidade:
+  - `api/serverHandlers/pbx/pbxCoreRoutes.js` reduzido de 1148 para 26 linhas.
+  - `api/serverHandlers/pbx-core/extensionsProvisioningRoutes.js` extraido com extensoes e provisioning token.
+  - `api/serverHandlers/pbx-core/configurationRoutes.js` extraido com trunks, routes, dids e call-rules.
+  - `api/serverHandlers/pbx-core/queuesRoutes.js` extraido com queues, metrics e queue-members.
+  - `api/serverHandlers/pbx-core/dialplanRoutes.js` extraido com preview/apply/rollback e config-versions.
+  - `api/serverHandlers/pbx-core/systemRoutes.js` extraido com audit e reload.
+  - `api/serverHandlers/pbx/pbxCoreRoutes.js` passa a atuar como orquestrador fino delegando para cinco sub-handlers de capacidade.
+- Validacao ARC-055:
+  - `node --check api/serverHandlers/pbx/pbxCoreRoutes.js`
+  - `node --check api/serverHandlers/pbx-core/extensionsProvisioningRoutes.js`
+  - `node --check api/serverHandlers/pbx-core/configurationRoutes.js`
+  - `node --check api/serverHandlers/pbx-core/queuesRoutes.js`
+  - `node --check api/serverHandlers/pbx-core/dialplanRoutes.js`
+  - `node --check api/serverHandlers/pbx-core/systemRoutes.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/pbxExtensionsService.coercion.test.js tests/unit/pbxQueuesService.metrics.test.js tests/unit/pbxLegacyInventory.test.js --runInBand` (3 suites, 5 testes, 100% pass)
+- ARC-056 — decomposicao completa de `configRoutes.js` por capacidade:
+  - `api/serverHandlers/configRoutes.js` reduzido de 689 para 33 linhas.
+  - `api/serverHandlers/config/configCoreRoutes.js` extraido com `/config`, process manager e restart.
+  - `api/serverHandlers/config/contractsRoutes.js` extraido com contrato de regras RAG.
+  - `api/serverHandlers/config/tenantAiRoutes.js` extraido com configuracao/credenciais de IA por tenant.
+  - `api/serverHandlers/config/configValidationRoutes.js` extraido com validacao de provider token e Redis.
+  - `api/serverHandlers/config/configRouteUtils.js` extraido com util compartilhado (`ensureDataDir`, `validateProviderCredentials`).
+  - `api/serverHandlers/configRoutes.js` passa a atuar como orquestrador fino delegando para quatro sub-handlers de capacidade.
+- Validacao ARC-056:
+  - `node --check api/serverHandlers/configRoutes.js`
+  - `node --check api/serverHandlers/config/configCoreRoutes.js`
+  - `node --check api/serverHandlers/config/contractsRoutes.js`
+  - `node --check api/serverHandlers/config/tenantAiRoutes.js`
+  - `node --check api/serverHandlers/config/configValidationRoutes.js`
+  - `node --check api/serverHandlers/config/configRouteUtils.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/configModuleRoutes.test.js tests/unit/tenantAiCredentialsTestRoute.test.js tests/unit/tenantAiDraft.test.js --runInBand` (3 suites, 15 testes, 100% pass)
+- ARC-057 — decomposicao completa de `verticalBeautyRoutes.js` por capacidade:
+  - `api/serverHandlers/verticalBeautyRoutes.js` reduzido de 657 para 21 linhas.
+  - `api/serverHandlers/vertical-beauty/beautyCustomerRoutes.js` extraido com agenda, busca e detalhe de cliente.
+  - `api/serverHandlers/vertical-beauty/beautyLifecycleRoutes.js` extraido com jornada, eventos, bundle e automacoes.
+  - `api/serverHandlers/vertical-beauty/beautyInsightsRoutes.js` extraido com risco, metricas, recomendacoes e loyalty.
+  - `api/serverHandlers/vertical-beauty/beautyRouteHelpers.js` extraido com funcoes utilitarias e auth helpers compartilhados.
+  - `api/serverHandlers/verticalBeautyRoutes.js` passa a atuar como orquestrador fino delegando para tres sub-handlers de capacidade.
+- Validacao ARC-057:
+  - `node --check api/serverHandlers/verticalBeautyRoutes.js`
+  - `node --check api/serverHandlers/vertical-beauty/beautyCustomerRoutes.js`
+  - `node --check api/serverHandlers/vertical-beauty/beautyLifecycleRoutes.js`
+  - `node --check api/serverHandlers/vertical-beauty/beautyInsightsRoutes.js`
+  - `node --check api/serverHandlers/vertical-beauty/beautyRouteHelpers.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/verticalBeautyRoutes.test.js tests/unit/beautyJourneyService.test.js tests/unit/customerJourneyEngine.test.js --runInBand` (3 suites, 31 testes, 100% pass)
+- ARC-058 — decomposicao completa de `physicalStationRoutes.js` por capacidade:
+  - `api/serverHandlers/physicalStationRoutes.js` reduzido de 644 para 21 linhas.
+  - `api/serverHandlers/physical-station/physicalStationQueueRoutes.js` extraido com `call-next` e `transfer`.
+  - `api/serverHandlers/physical-station/physicalStationServiceRoutes.js` extraido com `start`, `finish`, `skip`, `pause`, `resume` e `abandon`.
+  - `api/serverHandlers/physical-station/physicalStationSupportRoutes.js` extraido com `open-support-ticket`.
+  - `api/serverHandlers/physical-station/physicalStationHelpers.js` extraido com token, rate-limit e IP helpers compartilhados.
+  - `api/serverHandlers/physicalStationRoutes.js` passa a atuar como orquestrador fino delegando para tres sub-handlers de capacidade.
+- Validacao ARC-058:
+  - `node --check api/serverHandlers/physicalStationRoutes.js`
+  - `node --check api/serverHandlers/physical-station/physicalStationQueueRoutes.js`
+  - `node --check api/serverHandlers/physical-station/physicalStationServiceRoutes.js`
+  - `node --check api/serverHandlers/physical-station/physicalStationSupportRoutes.js`
+  - `node --check api/serverHandlers/physical-station/physicalStationHelpers.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/physicalStationRoutes.test.js tests/unit/physicalQueueService.test.js tests/unit/physicalQueueService.coercion.test.js --runInBand` (3 suites, 42 testes, 100% pass)
+- ARC-059 - decomposicao completa de `publicSystemRoutes.js` por capacidade:
+  - `api/serverHandlers/publicSystemRoutes.js` reduzido de 629 para 31 linhas.
+  - `api/serverHandlers/public-system/publicHealthRoutes.js` extraido com `/health`, `/health/live`, `/health/db`, `/health/ready`, `/selftest` e `/version`.
+  - `api/serverHandlers/public-system/publicMarketingRoutes.js` extraido com `/mkt/*` e `/lp/*`.
+  - `api/serverHandlers/public-system/publicProvisioningRoutes.js` extraido com `/provision/*`.
+  - `api/serverHandlers/public-system/publicRuntimeRoutes.js` extraido com `/system/status` e `/system/websocket`.
+  - `api/serverHandlers/public-system/publicMarketingHelpers.js` extraido com util compartilhado de token/rate-limit.
+  - `api/serverHandlers/publicSystemRoutes.js` passa a atuar como orquestrador fino delegando para quatro sub-handlers de capacidade.
+- Validacao ARC-059:
+  - `node --check api/serverHandlers/publicSystemRoutes.js`
+  - `node --check api/serverHandlers/public-system/publicHealthRoutes.js`
+  - `node --check api/serverHandlers/public-system/publicMarketingRoutes.js`
+  - `node --check api/serverHandlers/public-system/publicProvisioningRoutes.js`
+  - `node --check api/serverHandlers/public-system/publicRuntimeRoutes.js`
+  - `npm run test:unit -- --runTestsByPath tests/unit/marketingModuleRoutes.test.js tests/unit/marketingService.coercion.test.js tests/unit/channelHealthService.test.js tests/unit/channelHealthService.coercion.test.js tests/unit/ragHealthRoute.test.js tests/unit/ragHealthInconsistency.test.js --runInBand` (6 suites, 15 testes, 100% pass)
+- ARC-060 - decomposicao completa de `rpaTestsRoutes.js` por capacidade:
+  - `api/serverHandlers/rpaTestsRoutes.js` reduzido de 607 para 20 linhas.
+  - `api/serverHandlers/rpa-tests/rpaRecordingsRoutes.js` extraido com listagem/remocao de gravacoes e ciclo manual de gravacao.
+  - `api/serverHandlers/rpa-tests/rpaExecutionRoutes.js` extraido com execucao, status, cancel/continue/next e report.
+  - `api/serverHandlers/rpa-tests/rpaReplayRoutes.js` extraido com leitura/listagem/remocao de arquivos de report/replay.
+  - `api/serverHandlers/rpa-tests/rpaRouteUtils.js` extraido com auth/path/filename helpers compartilhados.
+  - `api/serverHandlers/rpaTestsRoutes.js` passa a atuar como orquestrador fino delegando para tres sub-handlers de capacidade.
+- Validacao ARC-060:
+  - `node --check api/serverHandlers/rpaTestsRoutes.js`
+  - `node --check api/serverHandlers/rpa-tests/rpaRouteUtils.js`
+  - `node --check api/serverHandlers/rpa-tests/rpaRecordingsRoutes.js`
+  - `node --check api/serverHandlers/rpa-tests/rpaExecutionRoutes.js`
+  - `node --check api/serverHandlers/rpa-tests/rpaReplayRoutes.js`
+  - `npm run test:unit -- --runTestsByPath tests/unit/rpaFlowPipelineService.coercion.test.js tests/unit/rpaTestGeneratorService.coercion.test.js tests/unit/rpaTestDependencyAnalyzer.coercion.test.js tests/unit/rpaService.deleteRecording.test.js tests/unit/rpaService.coercion.test.js tests/unit/rpaReliabilityContract.test.js --runInBand` (6 suites, 22 testes, 100% pass)
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (1 suite, 28 testes, 100% pass)
+- ARC-016 - revisao de wrappers backend concluida:
+  - `api/routes/intelligence.js` removido (reexport sem consumidores).
+  - `api/routes/marketIntelligence.js` removido (reexport sem consumidores).
+  - documentacao de backlog/inventario/duplicacao atualizada para refletir a limpeza.
+- Validacao ARC-016:
+  - `node --check api/serverHandlers/intelligenceRoutes.js`
+  - `node --check api/serverHandlers/marketIntelligenceRoutes.js`
+  - `npm exec -- jest --runTestsByPath tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js --runInBand --no-coverage`
+- ARC-006 — `pbxRoutes.js` decomposto em 4 sub-handlers mais orquestrador fino:
+  - `api/serverHandlers/pbx/pbxLegacyRoutes.js` — `/api/pbx-legacy/*` (4 rotas)
+  - `api/serverHandlers/pbx/pbxCoreRoutes.js` — `/api/pbx/*` core (14 rotas)
+  - `api/serverHandlers/pbx/pbxContactCenterRoutes.js` — `/api/cc/*` (10 rotas)
+  - `api/serverHandlers/pbx/pbxMediaRoutes.js` — audio-assets, recordings, CDR (8 rotas)
+  - `api/serverHandlers/pbxRoutes.js` reduzido a 27 linhas como orquestrador
+- Validacao ARC-006:
+  - `node --check` em todos os 5 arquivos: OK
+  - `npm run test:unit -- --runInBand --forceExit` (256 suites, 1244 testes, 100% pass)
+- ARC-007 — `ragDocumentsRoutes.js` decomposto em orquestrador fino + sub-handlers de dominio:
+  - `api/serverHandlers/ragDocumentsRoutes.js` reduzido de 1441 para 29 linhas.
+  - `api/serverHandlers/rag/ragCoreRoutes.js` concentra CRUD, leitura de documento e dominios.
+  - `api/serverHandlers/rag/ragOperationsRoutes.js` concentra health, deduplicacao e reindexacoes.
+  - `api/serverHandlers/rag/ragIngestionRoutes.js` concentra upload multipart, extracao e persistencia do binario.
+  - `api/serverHandlers/rag/ragQueryRoutes.js` concentra consulta semantica.
+  - `api/serverHandlers/rag/ragLearningRoutes.js` concentra learning, sinonimos e validacao adaptativa.
+  - `api/routing/contextBuilders/buildRagRouteContext.js` introduz contexto de dominio para reduzir montagem manual no `dispatchExtendedRoutes`.
+- Validacao ARC-007:
+  - `node --check api/serverHandlers/ragDocumentsRoutes.js`
+  - `node --check api/serverHandlers/rag/ragCoreRoutes.js`
+  - `node --check api/serverHandlers/rag/ragOperationsRoutes.js`
+  - `node --check api/serverHandlers/rag/ragIngestionRoutes.js`
+  - `node --check api/serverHandlers/rag/ragQueryRoutes.js`
+  - `node --check api/serverHandlers/rag/ragLearningRoutes.js`
+  - `node --check api/serverHandlers/rag/ragRouteUtils.js`
+  - `node --check api/routing/contextBuilders/buildRagRouteContext.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/serverHandlers/ragDocumentsRoutes'); require('./api/serverHandlers/rag/ragCoreRoutes'); require('./api/serverHandlers/rag/ragOperationsRoutes'); require('./api/serverHandlers/rag/ragIngestionRoutes'); require('./api/serverHandlers/rag/ragQueryRoutes'); require('./api/serverHandlers/rag/ragLearningRoutes'); require('./api/routing/contextBuilders/buildRagRouteContext'); console.log('rag-modules-ok')"`: OK
+- ARC-061 - `ticketRoutes.js` decomposto em orquestrador fino + sub-handlers de dominio:
+  - `api/serverHandlers/ticketRoutes.js` reduzido de 1525 para 21 linhas.
+  - `api/serverHandlers/tickets/ticketCoreRoutes.js` concentra criacao, listagem, leitura detalhada e timeline.
+  - `api/serverHandlers/tickets/ticketLifecycleRoutes.js` concentra assign, handover, pause/resume, close e close reasons.
+  - `api/serverHandlers/tickets/ticketCommunicationRoutes.js` concentra mark-read e envio de mensagens.
+  - `api/serverHandlers/tickets/ticketOperationsRoutes.js` concentra ai-summary, reload e metricas de filas.
+  - `api/serverHandlers/tickets/ticketRouteUtils.js` centraliza autenticacao, validacao e auditoria compartilhada.
+  - `api/routing/contextBuilders/buildTicketRouteContext.js` introduz contexto de dominio para reduzir montagem manual no `dispatchPlatformRoutes`.
+- Validacao ARC-061:
+  - `node --check api/serverHandlers/ticketRoutes.js`
+  - `node --check api/serverHandlers/tickets/ticketRouteUtils.js`
+  - `node --check api/serverHandlers/tickets/ticketCoreRoutes.js`
+  - `node --check api/serverHandlers/tickets/ticketLifecycleRoutes.js`
+  - `node --check api/serverHandlers/tickets/ticketCommunicationRoutes.js`
+  - `node --check api/serverHandlers/tickets/ticketOperationsRoutes.js`
+  - `node --check api/routing/contextBuilders/buildTicketRouteContext.js`
+  - `node --check api/routing/dispatchPlatformRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/serverHandlers/ticketRoutes'); require('./api/serverHandlers/tickets/ticketRouteUtils'); require('./api/serverHandlers/tickets/ticketCoreRoutes'); require('./api/serverHandlers/tickets/ticketLifecycleRoutes'); require('./api/serverHandlers/tickets/ticketCommunicationRoutes'); require('./api/serverHandlers/tickets/ticketOperationsRoutes'); require('./api/routing/contextBuilders/buildTicketRouteContext'); console.log('ticket-modules-ok')"`: OK
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (28 testes, 28 pass)
+- ARC-009 — `tenantRoutes.js` decomposto em orquestrador fino + sub-handlers de dominio e primeira migracao real para Express iniciada:
+  - `api/serverHandlers/tenantRoutes.js` reduzido de 1140 para 23 linhas.
+  - `api/serverHandlers/tenants/tenantCoreRoutes.js` concentra CRUD principal.
+  - `api/serverHandlers/tenants/tenantContextRoutes.js` concentra context, usage e plan-usage.
+  - `api/serverHandlers/tenants/tenantAdminRoutes.js` concentra suspend, reactivate e change-plan.
+  - `api/serverHandlers/tenants/tenantAiRoutes.js` concentra AI generation, provider-status e ai-config.
+  - `api/serverHandlers/tenants/tenantRouteUtils.js` centraliza autenticacao, JSON, auditoria e parsing compartilhado.
+  - `api/routing/contextBuilders/buildTenantRouteContext.js` introduz contexto de dominio para reduzir montagem manual no `dispatchCoreRoutes`.
+  - `api/modules/tenant/*` inaugura modularizacao real por dominio com repository, validator, service, controller e routes.
+  - `api/server.js` passa a montar router Express real para `GET /tenants/:tenantId/plan-usage`, mantendo adapter legado em paralelo para o restante do dominio.
+- Validacao ARC-009:
+  - `node --check api/serverHandlers/tenantRoutes.js`
+  - `node --check api/serverHandlers/tenants/tenantRouteUtils.js`
+  - `node --check api/serverHandlers/tenants/tenantCoreRoutes.js`
+  - `node --check api/serverHandlers/tenants/tenantContextRoutes.js`
+  - `node --check api/serverHandlers/tenants/tenantAdminRoutes.js`
+  - `node --check api/serverHandlers/tenants/tenantAiRoutes.js`
+  - `node --check api/routing/contextBuilders/buildTenantRouteContext.js`
+  - `node --check api/express/adapters/createLegacyHandlerAdapter.js`
+  - `node --check api/modules/tenant/repository.js`
+  - `node --check api/modules/tenant/validator.js`
+  - `node --check api/modules/tenant/service.js`
+  - `node --check api/modules/tenant/controller.js`
+  - `node --check api/modules/tenant/routes.js`
+  - `node --check api/routing/dispatchCoreRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/serverHandlers/tenantRoutes'); require('./api/serverHandlers/tenants/tenantCoreRoutes'); require('./api/serverHandlers/tenants/tenantContextRoutes'); require('./api/serverHandlers/tenants/tenantAdminRoutes'); require('./api/serverHandlers/tenants/tenantAiRoutes'); require('./api/routing/contextBuilders/buildTenantRouteContext'); require('./api/express/adapters/createLegacyHandlerAdapter'); require('./api/modules/tenant/repository'); require('./api/modules/tenant/validator'); require('./api/modules/tenant/service'); require('./api/modules/tenant/controller'); require('./api/modules/tenant/routes'); console.log('tenant-modules-ok')"`: OK
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (28 testes, 28 pass)
+- ARC-010 — ampliacao da migracao Express em `tenant` e inicio da convergencia canonica do frontend:
+  - `api/modules/tenant/routes.js` passa a expor `GET /tenants/:tenantId/context`, `GET /tenants/:tenantId/plan-usage` e `GET /tenants/:tenantId`.
+  - `api/modules/tenant/service.js`, `controller.js`, `repository.js` e `validator.js` passam a cobrir leitura de tenant e contexto alem do plan-usage.
+  - `api/server.js` consolida o Express em paralelo ao legado, agora com mais endpoints reais de leitura no dominio `tenant`.
+  - `frontend/src/modules/platform-grid` definido como grid canonico para novas migracoes.
+  - `frontend/src/pages/NodeMarketplacePage.jsx` migrada de `DataGrid` para `PlatformGrid`.
+  - `frontend/src/pages/DevDashboardPage.jsx` consolidado como dashboard canonico com extracao inicial de `DevDashboardLayout`, `DevDashboardSection` e `DevDashboardKpiCard`.
+  - `frontend/src/pages/DevDashboardPage.refactored.jsx` e `frontend/src/pages/DevDashboardPage.jsx.backup` removidos.
+- Validacao ARC-010:
+  - `node --check api/modules/tenant/repository.js`
+  - `node --check api/modules/tenant/validator.js`
+  - `node --check api/modules/tenant/service.js`
+  - `node --check api/modules/tenant/controller.js`
+  - `node --check api/modules/tenant/routes.js`
+  - `node --check api/server.js`
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (28 testes, 28 pass)
+  - Revisao manual de `frontend/src/pages/NodeMarketplacePage.jsx`
+  - Revisao manual de `frontend/src/pages/DevDashboardPage.jsx`
+- ARC-017 — cobertura Express completa do dominio `tenant`:
+  - `api/modules/tenant/routes.js` passa a cobrir todos os endpoints atualmente expostos em `tenantRoutes.js` e nos paths de tenant ainda hospedados em `configRoutes.js`.
+  - Rotas de tenant agora cobertas no modulo Express: CRUD, context, usage, plan-usage, suspend/reactivate/change-plan, AI generation, ai-provider-status, ai-config, save credentials e credential test.
+  - `api/modules/tenant/service.js` consolida regras de acesso e contrato HTTP do dominio, incluindo aliases `current` e exigencia de `Content-Type: application/json` nos endpoints mutaveis.
+  - `api/server.js` mantem o adapter legado apenas como rede de seguranca; o fluxo principal de `tenant` no Express agora cobre toda a superficie publica atual do dominio.
+  - `api/serverHandlers/configRoutes.js` ainda preserva copias legadas de rotas de tenant por compatibilidade, mas deixou de ser o ponto preferencial para esse dominio no fluxo Express.
+- Validacao ARC-017:
+  - `node --check api/modules/tenant/aiWorkflows.js`
+  - `node --check api/modules/tenant/repository.js`
+  - `node --check api/modules/tenant/validator.js`
+  - `node --check api/modules/tenant/service.js`
+  - `node --check api/modules/tenant/controller.js`
+  - `node --check api/modules/tenant/routes.js`
+  - `node --check api/server.js`
+
+- ARC-018 — consolidacao do Express no entrypoint principal:
+  - `api/server.js` passa a ser o unico entrypoint HTTP da API com `Express` como fluxo principal.
+  - `createServer()` agora sobe `http.createServer(app)` sobre o app Express e preserva a inicializacao de WebSocket.
+  - `createExpressApp()` hospeda routers Express reais e usa o `requestHandler` legado apenas como fallback de compatibilidade durante a transicao.
+  - `api/server.express.js` foi removido para eliminar ambiguidade operacional entre dois pontos de entrada.
+- Validacao ARC-018:
+  - `node --check api/server.js`
+  - `node --check api/modules/tenant/routes.js`
+  - `node --check api/modules/tenant/controller.js`
+  - `node -e "require('./api/modules/tenant/aiWorkflows'); require('./api/modules/tenant/repository'); require('./api/modules/tenant/validator'); require('./api/modules/tenant/service'); require('./api/modules/tenant/controller'); require('./api/modules/tenant/routes'); console.log('tenant-module-all-endpoints-ok')"`: OK
+  - `npm exec -- jest api/server.test.js --runInBand --no-coverage` (28 testes, 28 pass)
+
+- ARC-019 — pipeline principal do `server.js` migrada para middlewares Express:
+  - `api/server.js` deixa de usar `requestHandler` como fluxo principal do app.
+  - As etapas `public system`, `tenant rate limit`, `tenant router`, `dispatchCoreRoutes`, `dispatchPlatformRoutes`, `dispatchExtendedRoutes`, `frontend fallback` e `404` passam a ser encadeadas no `Express` em ordem explicita.
+  - `requestHandler` permanece apenas como wrapper de compatibilidade para testes e chamadas internas, reutilizando a mesma pipeline.
+  - Builders dedicados (`tenant`, `ticket`, `rag`) passam a ser reutilizados por estagios Express e nao mais apenas por um handler monolitico.
+- Validacao ARC-019:
+  - `node --check api/server.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/flowsGenerateValidationWarnings.test.js --runInBand --no-coverage` (30 testes, 30 pass)
+
+- ARC-020 — todos os macrodominios do `server.js` convertidos em routers Express montaveis:
+  - `api/modules/core/routes.js` passa a montar o dominio `core` como router Express sobre o registry ja existente.
+  - `api/modules/platform/routes.js` passa a montar o dominio `platform` como router Express sobre o registry ja existente.
+  - `api/modules/extended/routes.js` passa a montar o dominio `extended` como router Express sobre o registry ja existente.
+  - `api/express/createHandlerRegistryRouter.js` generaliza a adaptacao de registries legados para routers Express sem reescrever todos os handlers agora.
+  - `api/server.js` deixa de iterar inline os dispatchers principais e monta `core`, `platform`, `extended` e `tenant` diretamente no app Express.
+- Validacao ARC-020:
+  - `node --check api/express/createHandlerRegistryRouter.js`
+  - `node --check api/modules/core/routes.js`
+  - `node --check api/modules/platform/routes.js`
+  - `node --check api/modules/extended/routes.js`
+  - `node --check api/server.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/flowsGenerateValidationWarnings.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/tenantAiCredentialsTestRoute.test.js --runInBand --no-coverage` (41 testes, 41 pass)
+
+- ARC-021 — todo o fluxo principal remanescente nao-Express foi migrado:
+  - `api/modules/public-system/routes.js` passa a montar `publicSystemRoutes` como router Express.
+  - `api/modules/frontend-fallback/routes.js` passa a montar `frontendFallbackRoutes` como router Express.
+  - `api/middleware/createTenantRateLimitMiddleware.js` transforma o rate limit por tenant em middleware Express dedicado.
+  - `api/server.js` deixa de usar `createStageMiddleware` e `runExpressRoutingPipeline` no fluxo principal.
+  - `requestHandler` passa a reutilizar o proprio app Express apenas como compatibilidade para testes e chamadas internas.
+- Validacao ARC-021:
+  - `node --check api/modules/public-system/routes.js`
+  - `node --check api/modules/frontend-fallback/routes.js`
+  - `node --check api/middleware/createTenantRateLimitMiddleware.js`
+  - `node --check api/server.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/flowsGenerateValidationWarnings.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/tenantAiCredentialsTestRoute.test.js --runInBand --no-coverage` (41 testes passando antes de hang do bootstrap em background)
+
+- ARC-022 — eliminacao das ambiguidades residuais do bootstrap e compatibilidade:
+  - `api/requestHandler.js` foi removido.
+  - `tests/unit/flowsGenerateValidationWarnings.test.js` deixa de depender de `_internal.requestHandler` e passa a exercitar `createExpressApp()`.
+  - `tests/unit/serverRoutingGuardrail.test.js` passa a garantir ausencia de pipeline paralela e de `requestHandler` no `server.js`.
+  - `api/server.js` deixa de iniciar bootstrap automatico quando o modulo e apenas importado.
+  - `api/server.js` deixa de criar `server` no import e move o auto cleanup de tickets para `startWorkers`, reduzindo handles residuais fora do runtime real.
+- Validacao ARC-022:
+  - `node --check api/server.js`
+  - `node --check api/runtime/startWorkers.js`
+  - `node --check tests/unit/flowsGenerateValidationWarnings.test.js`
+  - `node --check tests/unit/serverRoutingGuardrail.test.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/flowsGenerateValidationWarnings.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/tenantAiCredentialsTestRoute.test.js --runInBand --no-coverage` (suites alvo com status PASS observado)
+
+- ARC-023 — `auth` e `ticket` saem dos registries e entram no fluxo Express direto:
+  - `api/modules/auth/routes.js` passa a montar o dominio `auth` como router Express nativo no `server.js`.
+  - `api/modules/ticket/routes.js` passa a montar `ticket` diretamente no `server.js`, reutilizando os subhandlers ja decompostos via adapter Express.
+  - `api/routing/dispatchCoreRoutes.js` deixa de registrar `authRoutes`.
+  - `api/routing/dispatchPlatformRoutes.js` deixa de registrar `ticketRoutes`.
+  - `tests/unit/flowsGenerateValidationWarnings.test.js` deixa de depender de mock manual de stream e passa a validar o app Express via servidor HTTP leve, com fallback seguro para ambiente com `EPERM`.
+- Validacao ARC-023:
+  - `node --check api/modules/auth/routes.js`
+  - `node --check api/modules/ticket/routes.js`
+  - `node --check api/routing/dispatchCoreRoutes.js`
+  - `node --check api/routing/dispatchPlatformRoutes.js`
+  - `node --check api/server.js`
+  - `node --check tests/unit/flowsGenerateValidationWarnings.test.js`
+  - `npm exec -- jest tests/unit/flowsGenerateValidationWarnings.test.js tests/unit/tenantAiCredentialsTestRoute.test.js tests/unit/serverRoutingGuardrail.test.js api/server.test.js --runInBand --no-coverage --forceExit` (38 testes, 38 pass)
+
+- ARC-024 — `pbx` e `verticals` saem do registry estendido e entram no Express direto:
+  - `api/modules/pbx/routes.js` passa a montar `handlePbxRoutes` diretamente no `server.js`.
+  - `api/modules/vertical/routes.js` passa a montar `handleBeautyRoutes` e `handleFitnessRoutes` diretamente no `server.js`.
+  - `api/routing/dispatchExtendedRoutes.js` deixa de registrar `pbxRoutes`, `verticalBeautyRoutes` e `verticalFitnessRoutes`.
+  - `api/server.js` passa a montar `verticalRouter` e `pbxRouter` antes do `extendedRouter`.
+- Validacao ARC-024:
+  - `node --check api/modules/pbx/routes.js`
+  - `node --check api/modules/vertical/routes.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/pbx/routes'); require('./api/modules/vertical/routes'); require('./api/server'); console.log('pbx-vertical-router-wiring-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/verticalBeautyRoutes.test.js tests/unit/verticalFitnessRoutes.test.js --runInBand --no-coverage --forceExit` (49 testes, 49 pass)
+
+- ARC-025 — `webhooks`, `operationsDashboard` e `webScraping` saem do registry estendido e entram no Express direto:
+  - `api/modules/webhooks/routes.js` passa a montar `handleWebhooksRoutes` diretamente no `server.js`.
+  - `api/modules/operations-dashboard/routes.js` passa a montar `handleOperationsDashboardRoutes` diretamente no `server.js`.
+  - `api/modules/web-scraping/routes.js` passa a montar `handleWebScrapingRoutes` diretamente no `server.js`.
+  - `api/routing/dispatchExtendedRoutes.js` deixa de registrar `webhooksRoutes`, `operationsDashboardRoutes` e `webScrapingRoutes`.
+  - `api/server.js` passa a montar `webhooksRouter`, `operationsDashboardRouter` e `webScrapingRouter` antes do `extendedRouter`.
+- Validacao ARC-025:
+  - `node --check api/modules/webhooks/routes.js`
+  - `node --check api/modules/operations-dashboard/routes.js`
+  - `node --check api/modules/web-scraping/routes.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/webhooks/routes'); require('./api/modules/operations-dashboard/routes'); require('./api/modules/web-scraping/routes'); require('./api/server'); console.log('extended-direct-router-wiring-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/operationsDashboardRoutes.test.js tests/unit/webScrapingBatchEndpoint.test.js --runInBand --no-coverage --forceExit` (40 testes, 40 pass)
+
+- ARC-026 — `qa`, `rpaTests` e `devManagement` saem do registry estendido e entram no Express direto:
+  - `api/modules/qa/routes.js` passa a montar `handleQaRoutes` diretamente no `server.js`.
+  - `api/modules/rpa-tests/routes.js` passa a montar `handleRpaTestsRoutes` diretamente no `server.js`.
+  - `api/modules/dev-management/routes.js` passa a montar `handleDevManagementRoutes` diretamente no `server.js`.
+  - `api/routing/dispatchExtendedRoutes.js` deixa de registrar `qaRoutes`, `rpaTestsRoutes` e `devManagementRoutes`.
+  - `api/server.js` passa a montar `qaRouter`, `rpaTestsRouter` e `devManagementRouter` antes do `extendedRouter`.
+- Validacao ARC-026:
+  - `node --check api/modules/qa/routes.js`
+  - `node --check api/modules/rpa-tests/routes.js`
+  - `node --check api/modules/dev-management/routes.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/qa/routes'); require('./api/modules/rpa-tests/routes'); require('./api/modules/dev-management/routes'); require('./api/server'); console.log('qa-rpa-dev-router-wiring-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js --runInBand --no-coverage --forceExit` (29 testes, 29 pass)
+
+- ARC-027 — `intelligence`, `marketIntelligence`, `accessControl` e `voice` saem do registry estendido e entram no Express direto:
+  - `api/modules/intelligence/routes.js` passa a montar `handleIntelligenceRoutes` diretamente no `server.js`.
+  - `api/modules/market-intelligence/routes.js` passa a montar `handleMarketIntelligenceRoutes` diretamente no `server.js`.
+  - `api/modules/access-control/routes.js` passa a montar `handleAccessControlRoutes` diretamente no `server.js`.
+  - `api/modules/voice/routes.js` passa a montar `handleVoiceRoutes` diretamente no `server.js`.
+  - `api/routing/dispatchExtendedRoutes.js` deixa de registrar `intelligenceRoutes`, `marketIntelligenceRoutes`, `accessControlRoutes` e `voiceRoutes`.
+  - `api/server.js` passa a montar `intelligenceRouter`, `marketIntelligenceRouter`, `accessControlRouter` e `voiceRouter` antes do `extendedRouter`.
+  - `tests/unit/intelligenceRouteWiring.test.js` e `tests/unit/marketIntelligenceRouteWiring.test.js` passam a validar o router direto como canônico, em vez do registry.
+- Validacao ARC-027:
+  - `node --check api/modules/intelligence/routes.js`
+  - `node --check api/modules/market-intelligence/routes.js`
+  - `node --check api/modules/access-control/routes.js`
+  - `node --check api/modules/voice/routes.js`
+  - `node --check api/routing/dispatchExtendedRoutes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/intelligence/routes'); require('./api/modules/market-intelligence/routes'); require('./api/modules/access-control/routes'); require('./api/modules/voice/routes'); require('./api/server'); console.log('intel-access-voice-router-wiring-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/accessControlRoutes.test.js --runInBand --no-coverage --forceExit` (41 testes, 41 pass)
+
+- ARC-028 — registry estendido sai do fluxo principal do `server.js`:
+  - `api/modules/extended-residual/routes.js` passa a montar explicitamente os handlers residuais do macrodominio `extended` via adapters Express, sem depender de `dispatchExtendedRoutes` no caminho principal.
+  - `api/server.js` deixa de importar e montar `createExtendedRoutes` baseado no registry e passa a usar `createExtendedResidualRoutes`.
+  - O fluxo principal do servidor deixa de depender de `api/routing/dispatchExtendedRoutes.js`; o arquivo permanece apenas como resquicio de compatibilidade e referencia.
+- Validacao ARC-028:
+  - `node --check api/modules/extended-residual/routes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/extended-residual/routes'); require('./api/server'); console.log('extended-residual-router-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/orderRoutes.test.js tests/unit/automationRoutes.test.js tests/unit/developerKeyRoutes.test.js tests/unit/slaRoutes.test.js tests/unit/publicApiRoutes.test.js tests/unit/solutionRoutes.test.js tests/unit/whatsAppConnectionRoutes.test.js tests/unit/inboxRoutes.test.js tests/unit/schedulingSupportRoutes.test.js api/serverHandlers/__tests__/processRuntimeRoutes.test.js --runInBand --no-coverage --forceExit` (12 suites, 111 testes, 111 pass)
+
+- ARC-029 — registries `core` e `platform` saem do fluxo principal do `server.js`:
+  - `api/modules/core-residual/routes.js` passa a montar explicitamente os handlers residuais do macrodominio `core` via adapters Express.
+  - `api/modules/platform-residual/routes.js` passa a montar explicitamente os handlers residuais do macrodominio `platform` via adapters Express.
+  - `api/server.js` deixa de importar e usar `dispatchCoreRoutes`, `dispatchPlatformRoutes`, `createCoreRoutes` e `createPlatformRoutes` no caminho principal.
+  - O fluxo principal do servidor passa a depender apenas de routers Express montados diretamente no app, inclusive para os residuos de `core`, `platform` e `extended`.
+- Validacao ARC-029:
+  - `node --check api/modules/core-residual/routes.js`
+  - `node --check api/modules/platform-residual/routes.js`
+  - `node --check api/server.js`
+  - `node -e "require('./api/modules/core-residual/routes'); require('./api/modules/platform-residual/routes'); require('./api/server'); console.log('core-platform-residual-router-ok')"`: OK
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/agentRoutes.test.js tests/unit/auditRoutes.test.js tests/unit/onboardingRoutes.test.js tests/unit/queueRoutes.test.js tests/unit/storefrontRoutes.test.js tests/unit/physicalPublicRoutes.test.js tests/unit/physicalStationRoutes.test.js tests/unit/publicTokenRoutes.test.js tests/unit/flowsGenerateValidationWarnings.test.js --runInBand --no-coverage --forceExit` (11 suites, 154 testes, 154 pass)
+
+- ARC-030 — aposentadoria definitiva dos registries e wrappers obsoletos:
+  - `api/routing/dispatchCoreRoutes.js`, `api/routing/dispatchPlatformRoutes.js` e `api/routing/dispatchExtendedRoutes.js` sao removidos do repositorio.
+  - `api/modules/core/routes.js`, `api/modules/platform/routes.js` e `api/modules/extended/routes.js` sao removidos por terem ficado sem consumidores reais.
+  - `api/express/createHandlerRegistryRouter.js` e removido junto com o modelo de adapter baseado em registries, agora superado pelos routers residuais explicitos.
+  - O caminho principal do backend passa a depender apenas da composicao Express direta e dos routers residuais especializados.
+- Validacao ARC-030:
+  - `git grep -n "createHandlerRegistryRouter\\|modules/core/routes\\|modules/platform/routes\\|modules/extended/routes\\|routing/dispatchCoreRoutes\\|routing/dispatchPlatformRoutes\\|routing/dispatchExtendedRoutes" -- api tests ':!docs' ':!api/modules/core/routes.js' ':!api/modules/platform/routes.js' ':!api/modules/extended/routes.js' ':!api/express/createHandlerRegistryRouter.js' ':!api/routing/dispatchCoreRoutes.js' ':!api/routing/dispatchPlatformRoutes.js' ':!api/routing/dispatchExtendedRoutes.js'` (sem referencias residuais)
+  - `node --check api/server.js`
+  - `node --check api/modules/core-residual/routes.js && node --check api/modules/platform-residual/routes.js && node --check api/modules/extended-residual/routes.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/queueRoutes.test.js tests/unit/publicTokenRoutes.test.js tests/unit/agentRoutes.test.js tests/unit/onboardingRoutes.test.js tests/unit/auditRoutes.test.js tests/unit/flowsGenerateValidationWarnings.test.js --runInBand --no-coverage --forceExit` (8 suites, 105 testes, 105 pass)
+
+- ARC-031 — `platform-residual/routes.js` decomposto por subdominio:
+  - hotspot medido em 310 linhas antes da quebra.
+  - `api/modules/platform-residual/routes.js` passa a ser orquestrador fino.
+  - `api/modules/platform-residual/platformAdminRoutes.js` concentra `channelAccount`, `queue`, `config`, `department`, `export`, `segmentation` e `configAdmin`.
+  - `api/modules/platform-residual/platformContentRoutes.js` concentra `ai`, `templates`, `aiSuggestion`, `audioTranscription`, `whatsappTemplate` e `rag`.
+  - `api/modules/platform-residual/platformPublicRoutes.js` concentra `storefront`, `physicalPublic`, `physicalStation` e `publicToken`.
+  - `api/modules/platform-residual/routeUtils.js` centraliza o binder local dos adapters Express desse dominio residual.
+- Validacao ARC-031:
+  - `node --check api/modules/platform-residual/routeUtils.js`
+  - `node --check api/modules/platform-residual/platformAdminRoutes.js`
+  - `node --check api/modules/platform-residual/platformContentRoutes.js`
+  - `node --check api/modules/platform-residual/platformPublicRoutes.js`
+  - `node --check api/modules/platform-residual/routes.js`
+  - `node -e "require('./api/modules/platform-residual/routeUtils'); require('./api/modules/platform-residual/platformAdminRoutes'); require('./api/modules/platform-residual/platformContentRoutes'); require('./api/modules/platform-residual/platformPublicRoutes'); require('./api/modules/platform-residual/routes'); console.log('platform-residual-split-ok')"`: OK
+  - `npm exec -- jest tests/unit/queueRoutes.test.js tests/unit/publicTokenRoutes.test.js tests/unit/storefrontRoutes.test.js tests/unit/physicalPublicRoutes.test.js tests/unit/physicalStationRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (6 suites, 106 testes, 106 pass)
+
+- ARC-032 — `extended-residual/routes.js` decomposto por subdominio:
+  - hotspot medido em 306 linhas antes da quebra.
+  - `api/modules/extended-residual/routes.js` passa a ser orquestrador fino.
+  - `api/modules/extended-residual/extendedOperationsRoutes.js` concentra `schedulingSupport`, `queueTicket`, `ops`, `executionLedger`, `inbox`, `supportDebug`, `supervisor` e `task`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` concentra `automation`, `developerKey`, `marketing`, `order`, `processRuntime`, `ragDocuments`, `rbac`, `sla` e `solution`.
+  - `api/modules/extended-residual/extendedChannelRoutes.js` concentra `whatsAppConnection`, `publicApi`, `webhook`, `whatsAppIvr` e `whatsAppQrWebhook`.
+  - `api/modules/extended-residual/routeUtils.js` centraliza o binder local dos adapters Express desse dominio residual.
+- Validacao ARC-032:
+  - `node --check api/modules/extended-residual/routeUtils.js`
+  - `node --check api/modules/extended-residual/extendedOperationsRoutes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check api/modules/extended-residual/extendedChannelRoutes.js`
+  - `node --check api/modules/extended-residual/routes.js`
+  - `node -e "require('./api/modules/extended-residual/routeUtils'); require('./api/modules/extended-residual/extendedOperationsRoutes'); require('./api/modules/extended-residual/extendedBusinessRoutes'); require('./api/modules/extended-residual/extendedChannelRoutes'); require('./api/modules/extended-residual/routes'); console.log('extended-residual-split-ok')"`: OK
+  - `npm exec -- jest tests/unit/schedulingSupportRoutes.test.js tests/unit/inboxRoutes.test.js tests/unit/automationRoutes.test.js tests/unit/developerKeyRoutes.test.js tests/unit/orderRoutes.test.js tests/unit/processRuntimeRoutes.test.js tests/unit/publicApiRoutes.test.js tests/unit/slaRoutes.test.js tests/unit/solutionRoutes.test.js tests/unit/whatsAppConnectionRoutes.test.js tests/unit/whatsAppIvrRoutes.test.js tests/unit/whatsAppQrWebhookRoutes.test.js api/serverHandlers/__tests__/processRuntimeRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (14 suites, 126 testes, 126 pass)
+
+- ARC-033 — `core-residual/routes.js` decomposto por subdominio:
+  - hotspot medido em 199 linhas antes da quebra.
+  - `api/modules/core-residual/routes.js` passa a ser orquestrador fino.
+  - `api/modules/core-residual/coreAdminRoutes.js` concentra `systemAdmin`, `tenant`, `systemGeneration`, `superAdmin` e `onboarding`.
+  - `api/modules/core-residual/coreIdentityRoutes.js` concentra `agent` e `audit`.
+  - `api/modules/core-residual/coreFlowRoutes.js` concentra `flowCrud`, `flowExecution` e `conversation`.
+  - `api/modules/core-residual/routeUtils.js` centraliza o binder local dos adapters Express desse dominio residual.
+  - A fase de hotspots residuais grandes em arquivo unico fica encerrada com `core`, `platform` e `extended` todos decompostos em orquestradores finos.
+- Validacao ARC-033:
+  - `node --check api/modules/core-residual/routeUtils.js`
+  - `node --check api/modules/core-residual/coreAdminRoutes.js`
+  - `node --check api/modules/core-residual/coreIdentityRoutes.js`
+  - `node --check api/modules/core-residual/coreFlowRoutes.js`
+  - `node --check api/modules/core-residual/routes.js`
+  - `node -e "require('./api/modules/core-residual/routeUtils'); require('./api/modules/core-residual/coreAdminRoutes'); require('./api/modules/core-residual/coreIdentityRoutes'); require('./api/modules/core-residual/coreFlowRoutes'); require('./api/modules/core-residual/routes'); console.log('core-residual-split-ok')"`: OK
+  - `npm exec -- jest tests/unit/onboardingRoutes.test.js tests/unit/agentRoutes.test.js tests/unit/auditRoutes.test.js api/server.test.js tests/unit/flowsGenerateValidationWarnings.test.js --runInBand --no-coverage --forceExit` (5 suites, 75 testes, 75 pass)
+
+- ARC-034 — primeira migracao de subbloco residual para modulo Express nativo:
+  - `publicToken` sai do adapter legado dentro de `platform-residual`.
+  - `api/modules/public-token/repository.js`, `service.js`, `controller.js`, `validator.js` e `routes.js` passam a compor o subdominio de forma explicita.
+  - `api/modules/platform-residual/platformPublicRoutes.js` deixa de montar `handlePublicTokenRoutes` por adapter e passa a usar `createPublicTokenRoutes`.
+  - O contrato HTTP de `GET/POST /public-tokens*` permanece preservado, mas o wiring agora entra por router Express nativo.
+- Validacao ARC-034:
+  - `node --check api/modules/public-token/repository.js`
+  - `node --check api/modules/public-token/validator.js`
+  - `node --check api/modules/public-token/service.js`
+  - `node --check api/modules/public-token/controller.js`
+  - `node --check api/modules/public-token/routes.js`
+  - `node --check api/modules/platform-residual/platformPublicRoutes.js`
+  - `node --check tests/unit/publicTokenModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/publicTokenModuleRoutes.test.js tests/unit/publicTokenRoutes.test.js tests/unit/queueRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (4 suites, 61 testes, 61 pass)
+
+- ARC-035 — segunda migracao de subbloco residual para modulo Express nativo:
+  - `developerKey` sai do adapter legado dentro de `extended-residual`.
+  - `api/modules/developer-key/service.js`, `controller.js` e `routes.js` passam a compor o subdominio de forma explicita, reaproveitando `api/modules/public-token/repository.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de montar `handleDeveloperKeyRoutes` por adapter e passa a usar `createDeveloperKeyRoutes`.
+  - O contrato HTTP de `GET/POST /developer/keys` e `GET /developer/usage` permanece preservado, mas o wiring agora entra por router Express nativo.
+- Validacao ARC-035:
+  - `node --check api/modules/developer-key/service.js`
+  - `node --check api/modules/developer-key/controller.js`
+  - `node --check api/modules/developer-key/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/developerKeyModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/developerKeyModuleRoutes.test.js tests/unit/developerKeyRoutes.test.js tests/unit/publicTokenModuleRoutes.test.js tests/unit/publicTokenRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (5 suites, 52 testes, 52 pass)
+
+- ARC-036 — eliminacao completa do `createLegacyHandlerAdapter` do runtime:
+  - `api/express/adapters/createLegacyHandlerAdapter.js` foi removido do repositorio.
+  - `api/modules/shared/legacyExpressBridge.js` passa a concentrar a ponte Express explicita para handlers ainda nao reescritos.
+  - `api/server.js` deixa de montar o fallback de `tenant` via `legacyTenantAdapter` e passa a usar `legacyTenantFallback` baseado na nova bridge Express.
+  - `voice`, `operations-dashboard`, `frontend-fallback`, `dev-management`, `webhooks`, `rpa-tests`, `web-scraping`, `market-intelligence`, `vertical`, `intelligence`, `qa`, `ticket`, `pbx`, `access-control`, `public-system` e os registradores residuais deixam de depender do adapter legado antigo.
+  - O fluxo principal continua 100% Express, mas agora sem dependencia do adapter historico no codigo executavel.
+- Validacao ARC-036:
+  - `git grep -n "createLegacyHandlerAdapter" -- api ':!docs/*'` sem ocorrencias
+  - `node --check api/modules/shared/legacyExpressBridge.js`
+  - `node --check api/server.js`
+  - `node --check api/modules/tenant/routes.js`
+  - `node --check api/modules/ticket/routes.js`
+  - `node --check api/modules/public-system/routes.js`
+  - `node --check api/modules/platform-residual/routeUtils.js`
+  - `node --check api/modules/extended-residual/routeUtils.js`
+  - `node --check api/modules/core-residual/routeUtils.js`
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/publicTokenModuleRoutes.test.js tests/unit/developerKeyModuleRoutes.test.js tests/unit/intelligenceRouteWiring.test.js tests/unit/marketIntelligenceRouteWiring.test.js tests/unit/tenantAiCredentialsTestRoute.test.js --runInBand --no-coverage --forceExit` (7 suites, 47 testes, 47 pass)
+
+- ARC-037 — migracao nativa de `automation` e `queue`:
+  - `automation` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/automation/service.js`, `controller.js` e `routes.js`.
+  - `queue` sai do wiring legado dentro de `platform-residual` e passa a usar `api/modules/queue/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleAutomationRoutes` e passa a montar `createAutomationRoutes`.
+  - `api/modules/platform-residual/platformAdminRoutes.js` deixa de registrar `handleQueueRoutes` e passa a montar `createQueueRoutes`.
+  - Os contratos HTTP de `/automations*` e `/queues*` permanecem preservados, agora com composicao nativa em Express.
+- Validacao ARC-037:
+  - `node --check api/modules/automation/service.js`
+  - `node --check api/modules/automation/controller.js`
+  - `node --check api/modules/automation/routes.js`
+  - `node --check api/modules/queue/service.js`
+  - `node --check api/modules/queue/controller.js`
+  - `node --check api/modules/queue/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check api/modules/platform-residual/platformAdminRoutes.js`
+  - `node --check api/modules/platform-residual/routes.js`
+  - `node --check tests/unit/automationModuleRoutes.test.js`
+  - `node --check tests/unit/queueModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/automationRoutes.test.js tests/unit/automationModuleRoutes.test.js tests/unit/queueRoutes.test.js tests/unit/queueModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (5 suites, 61 testes, 61 pass)
+
+- ARC-038 — migracao nativa de `marketing` e `order`:
+  - `marketing` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/marketing/service.js`, `controller.js` e `routes.js`.
+  - `order` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/order/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleMarketingRoutes` e `handleOrderRoutes` e passa a montar `createMarketingRoutes` e `createOrderRoutes`.
+  - Os contratos HTTP de `/api/marketing/*`, `/orders*` e `/deliveries*` permanecem preservados, agora com composicao nativa em Express.
+- Validacao ARC-038:
+  - `node --check api/modules/marketing/service.js`
+  - `node --check api/modules/marketing/controller.js`
+  - `node --check api/modules/marketing/routes.js`
+  - `node --check api/modules/order/service.js`
+  - `node --check api/modules/order/controller.js`
+  - `node --check api/modules/order/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/marketingModuleRoutes.test.js`
+  - `node --check tests/unit/orderModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/orderRoutes.test.js tests/unit/orderModuleRoutes.test.js tests/unit/marketingModuleRoutes.test.js tests/unit/automationModuleRoutes.test.js tests/unit/queueModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (6 suites, 57 testes, 57 pass)
+
+- ARC-039 — migracao nativa de `config`:
+  - `config` sai do wiring legado dentro de `platform-residual` e passa a usar `api/modules/config/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/platform-residual/platformAdminRoutes.js` deixa de registrar `handleConfigRoutes` e passa a montar `createConfigRoutes`.
+  - O modulo nativo cobre `GET/PUT /config`, regras de RAG, aliases `tenants/current/*`, validacao de provider/Redis e introspeccao de process manager.
+  - O contrato de `/tenants/:tenantKey/ai-credentials/test` permanece preservado no fluxo Express principal.
+- Validacao ARC-039:
+  - `node --check api/modules/config/service.js`
+  - `node --check api/modules/config/controller.js`
+  - `node --check api/modules/config/routes.js`
+  - `node --check api/modules/platform-residual/platformAdminRoutes.js`
+  - `node --check tests/unit/configModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/configModuleRoutes.test.js tests/unit/tenantAiCredentialsTestRoute.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 39 testes, 39 pass)
+
+- ARC-040 — migracao nativa de `processRuntime`:
+  - `processRuntime` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/process-runtime/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleProcessRuntimeRoutes` e passa a montar `createProcessRuntimeRoutes`.
+  - O modulo nativo cobre listagem, start, analytics, simulate, intelligence, resume externo, inspeção, histórico, cancel e resume de instâncias.
+  - O contrato de `/api/process-runtime/*` e `/api/process-instances/*` permanece preservado no fluxo Express principal.
+- Validacao ARC-040:
+  - `node --check api/modules/process-runtime/service.js`
+  - `node --check api/modules/process-runtime/controller.js`
+  - `node --check api/modules/process-runtime/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/processRuntimeModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/processRuntimeRoutes.test.js api/serverHandlers/__tests__/processRuntimeRoutes.test.js tests/unit/processRuntimeModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (4 suites, 40 testes, 40 pass)
+
+- ARC-041 — migracao nativa de `rbac`:
+  - `rbac` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/rbac/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleRbacRoutes` e passa a montar `createRbacRoutes`.
+  - O contrato de `/rbac/roles`, `/rbac/permissions` e `/rbac/assign` permanece preservado no fluxo Express principal.
+- Validacao ARC-041:
+  - `node --check api/modules/rbac/service.js`
+  - `node --check api/modules/rbac/controller.js`
+  - `node --check api/modules/rbac/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/rbacModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/rbacModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (2 suites, 31 testes, 31 pass)
+
+- ARC-042 — router dedicado de `ragDocuments` fora do residual de business:
+  - `ragDocuments` sai do wiring residual dentro de `extended-residual` e passa a usar `api/modules/rag-documents/routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleRagDocumentsRoutes` e passa a montar `createRagDocumentsRoutes`.
+  - O novo router dedicado recompõe os subdominios ja decompostos de RAG (`operations`, `ingestion`, `core`, `query` e `learning`) no fluxo Express principal.
+  - O contrato de `/rag/*` permanece preservado sem voltar o dominio para um arquivo monolitico.
+- Validacao ARC-042:
+  - `node --check api/modules/rag-documents/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/ragDocumentsModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/ragDocumentsModuleRoutes.test.js tests/unit/ragHealthRoute.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 30 testes, 30 pass)
+
+- ARC-043 — migracao nativa de `solution`:
+  - `solution` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/solution/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleSolutionRoutes` e passa a montar `createSolutionRoutes`.
+  - O modulo nativo cobre `GET /api/solutions/packs` e `POST /api/solutions/packs/install`, preservando auth, permissao, validacao de `Content-Type` e contrato de instalacao por `segment`.
+- Validacao ARC-043:
+  - `node --check api/modules/solution/service.js`
+  - `node --check api/modules/solution/controller.js`
+  - `node --check api/modules/solution/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/solutionModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/solutionRoutes.test.js tests/unit/solutionModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 38 testes, 38 pass)
+
+- ARC-044 — migracao nativa de `sla`:
+  - `sla` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/sla/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedBusinessRoutes.js` deixa de registrar `handleSlaRoutes` e passa a montar `createSlaRoutes`.
+  - O modulo nativo cobre `GET /sla/policies`, `POST /sla/policies` e `GET /sla/breaches`, preservando auth, permissao de `reports`, validacao de `Content-Type` e contrato de persistencia/listagem.
+- Validacao ARC-044:
+  - `node --check api/modules/sla/service.js`
+  - `node --check api/modules/sla/controller.js`
+  - `node --check api/modules/sla/routes.js`
+  - `node --check api/modules/extended-residual/extendedBusinessRoutes.js`
+  - `node --check tests/unit/slaModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/slaRoutes.test.js tests/unit/slaModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 38 testes, 38 pass)
+
+- ARC-045 — migracao nativa de `task`:
+  - `task` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/task/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedOperationsRoutes.js` deixa de registrar `handleTaskRoutes` e passa a montar `createTaskRoutes`.
+  - O modulo nativo cobre `GET /tasks`, `POST /tasks`, `POST /tasks/:taskId/complete` e `POST /tasks/:taskId/reminder`, preservando auth, permissao de `config`, validacao de `Content-Type` e contratos de criacao/conclusao/lembrete.
+- Validacao ARC-045:
+  - `node --check api/modules/task/service.js`
+  - `node --check api/modules/task/controller.js`
+  - `node --check api/modules/task/routes.js`
+  - `node --check api/modules/extended-residual/extendedOperationsRoutes.js`
+  - `node --check api/modules/extended-residual/routes.js`
+  - `node --check tests/unit/taskModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/taskRoutes.test.js tests/unit/taskModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 38 testes, 38 pass)
+
+- ARC-046 — migracao nativa de `inbox`:
+  - `inbox` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/inbox/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedOperationsRoutes.js` deixa de registrar `handleInboxRoutes` e passa a montar `createInboxRoutes`.
+  - O modulo nativo cobre `GET /inbox/conversations`, `GET /inbox/conversations/:conversationId`, `POST /inbox/conversations/:conversationId/assign`, `POST /inbox/conversations/:conversationId/transfer` e `POST /inbox/conversations/:conversationId/notes`, preservando auth, permissao de `tickets`, validacao de `Content-Type` e regras de acesso/modificacao.
+- Validacao ARC-046:
+  - `node --check api/modules/inbox/service.js`
+  - `node --check api/modules/inbox/controller.js`
+  - `node --check api/modules/inbox/routes.js`
+  - `node --check api/modules/extended-residual/extendedOperationsRoutes.js`
+  - `node --check tests/unit/inboxModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/inboxRoutes.test.js tests/unit/inboxModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 44 testes, 44 pass)
+
+- ARC-047 — migracao nativa de `schedulingSupport`:
+  - `schedulingSupport` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/scheduling-support/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedOperationsRoutes.js` deixa de registrar `handleSchedulingSupportRoutes` e passa a montar `createSchedulingSupportRoutes`.
+  - O modulo nativo cobre `GET /api/users/search`, `GET /api/teams/search`, `GET /api/schedule-purposes`, `GET /api/crm/contacts`, `GET /api/calendar/me`, `GET /api/calendar/resource/:resourceId`, `POST /api/calendar/resource/:resourceId/blocks` e `DELETE /api/calendar/resource/:resourceId/blocks/:blockId`.
+- Validacao ARC-047:
+  - `node --check api/modules/scheduling-support/service.js`
+  - `node --check api/modules/scheduling-support/controller.js`
+  - `node --check api/modules/scheduling-support/routes.js`
+  - `node --check api/modules/extended-residual/extendedOperationsRoutes.js`
+  - `node --check tests/unit/schedulingSupportModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/schedulingSupportRoutes.test.js tests/unit/schedulingSupportModuleRoutes.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 35 testes, 35 pass)
+
+- ARC-048 — migracao nativa de `supervisor`:
+  - `supervisor` sai do wiring legado dentro de `extended-residual` e passa a usar `api/modules/supervisor/service.js`, `controller.js` e `routes.js`.
+  - `api/modules/extended-residual/extendedOperationsRoutes.js` deixa de registrar `handleSupervisorRoutes` e passa a montar `createSupervisorRoutes`.
+  - O modulo nativo cobre `GET /supervisor/metrics`, `GET /supervisor/agents/status` e `GET /supervisor/queues/status`, preservando auth, permissao de `reports` e contratos de agregacao/status.
+- Validacao ARC-048:
+  - `node --check api/modules/supervisor/service.js`
+  - `node --check api/modules/supervisor/controller.js`
+  - `node --check api/modules/supervisor/routes.js`
+  - `node --check api/modules/extended-residual/extendedOperationsRoutes.js`
+  - `node --check tests/unit/supervisorModuleRoutes.test.js`
+  - `npm exec -- jest tests/unit/supervisorModuleRoutes.test.js tests/unit/supervisorService.coercion.test.js api/server.test.js --runInBand --no-coverage --forceExit` (3 suites, 34 testes, 34 pass)
+
+## Bloqueios atuais
+- Nenhum bloqueio tecnico impeditivo para encerramento da ONDA 4.
+- Ponto de atencao operacional: garantir reinicio limpo do processo para evitar falso 404 em validacao de rota.
+
+- ARC-049 — eliminacao completa de `extended-residual`:
+  - `api/modules/domain-operations/routes.js` passa a agregar `task`, `scheduling-support`, `inbox` e `supervisor`.
+  - `api/modules/domain-business/routes.js` passa a agregar `rag-documents`, `rbac`, `process-runtime`, `marketing`, `order`, `automation`, `developer-key`, `solution` e `sla`.
+  - `api/modules/extended-residual/` e removido do repositorio.
+- Validacao ARC-049:
+  - `node --check api/modules/domain-operations/routes.js`
+  - `node --check api/modules/domain-business/routes.js`
+  - `npm exec -- jest tests/unit/domainOperationsBusinessCutoverWiring.test.js --runInBand --no-coverage` (9 testes, 9 pass)
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/domainOperationsBusinessCutoverWiring.test.js tests/unit/extendedResidualCutoverWiring.test.js tests/unit/extendedChannelCutoverWiring.test.js --runInBand --no-coverage` (9 suites acumuladas, 58 testes pass)
+
+- ARC-050 — eliminacao completa de `core-residual`:
+  - `api/modules/domain-admin/routes.js` passa a agregar `systemAdmin`, `systemGeneration`, `superAdmin` e `onboarding`.
+  - `api/modules/domain-identity/routes.js` passa a agregar `agent` e `audit`.
+  - `api/modules/domain-flow/routes.js` passa a agregar `flowCrud`, `flowExecution` e `conversation`.
+  - `api/modules/core-residual/` e removido do repositorio.
+- Validacao ARC-050:
+  - `node --check api/modules/domain-admin/routes.js`
+  - `node --check api/modules/domain-identity/routes.js`
+  - `node --check api/modules/domain-flow/routes.js`
+  - `npm exec -- jest tests/unit/domainAdminIdentityFlowCutoverWiring.test.js --runInBand --no-coverage` (12 testes, 12 pass)
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/domainAdminIdentityFlowCutoverWiring.test.js tests/unit/domainOperationsBusinessCutoverWiring.test.js --runInBand --no-coverage` (10 suites acumuladas, 70 testes pass)
+
+- ARC-051 — eliminacao completa de `platform-residual`:
+  - `api/modules/platform-admin/routes.js` agrega handlers bridged e os módulos nativos `config` e `queue`.
+  - `api/modules/platform-content/routes.js` agrega `ai`, `templates`, `aiSuggestion`, `audioTranscription`, `whatsappTemplate` e `rag`.
+  - `api/modules/platform-public/routes.js` agrega `storefront`, `physicalPublic`, `physicalStation` e `publicToken`.
+  - `api/modules/platform-residual/` e removido do repositorio.
+- Validacao ARC-051:
+  - `node --check api/modules/platform-admin/routes.js`
+  - `node --check api/modules/platform-content/routes.js`
+  - `node --check api/modules/platform-public/routes.js`
+  - `npm exec -- jest tests/unit/platformResidualEliminationWiring.test.js --runInBand --no-coverage` (5 testes, 5 pass)
+  - `npm exec -- jest api/server.test.js tests/unit/serverRoutingGuardrail.test.js tests/unit/platformResidualEliminationWiring.test.js tests/unit/domainAdminIdentityFlowCutoverWiring.test.js tests/unit/domainOperationsBusinessCutoverWiring.test.js --runInBand --no-coverage` (11 suites acumuladas, 75 testes pass)
+
+- ARC-052 — `ragRoutes.js` reduzido a orquestrador fino:
+  - `api/serverHandlers/ragRoutes.js` passa a delegar para `ragCoreRoutes`, `ragOperationsRoutes`, `ragIngestionRoutes`, `ragQueryRoutes`, `ragLearningRoutes` e `ragEphemeralRoutes`.
+  - `api/serverHandlers/rag/ragEphemeralRoutes.js` centraliza `POST /rag/ephemeral/context`.
+  - `api/modules/platform-content/routes.js` passa a usar `buildRagRouteContext(...)` para manter a superficie de dependencias coerente.
+- Validacao ARC-052:
+  - `node --check api/serverHandlers/ragRoutes.js`
+  - `node --check api/serverHandlers/rag/ragEphemeralRoutes.js`
+  - `node --check api/composition/platform/buildPlatformRoutingContext.js`
+  - `npm exec -- jest tests/unit/ragHealthRoute.test.js tests/unit/ragHealthInconsistency.test.js tests/unit/ragEphemeralContextRoute.test.js tests/unit/platformResidualEliminationWiring.test.js --runInBand --no-coverage` (4 suites, 9 testes pass)

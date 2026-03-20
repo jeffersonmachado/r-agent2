@@ -100,7 +100,6 @@ Regras obrigatorias:
 
 ### API
 
-- `api/routes/marketIntelligence.js`
 - `api/serverHandlers/marketIntelligenceRoutes.js`
 
 ## 7. Entidades da camada

@@ -100,13 +100,16 @@ GET /api/beauty/loyalty/:subjectId?tenantId=...
 | `POST` | `/api/beauty/confirmation` | Send appointment confirmation |
 | `POST` | `/api/beauty/reminder` | Manual trigger reminder |
 | `POST` | `/api/beauty/no-show` | Detect no-show for a schedule |
-| `POST` | `/api/beauty/complete` | Mark service as completed (auto-grants loyalty point) |
-| `POST` | `/api/beauty/follow-up` | Send post-service follow-up |
+| `POST` | `/api/beauty/service-completed` | Mark service as completed (auto-grants loyalty point) |
+| `POST` | `/api/beauty/follow-up` | Register/emit operational post-service follow-up |
 | `POST` | `/api/beauty/loyalty/reverse` | Reverse loyalty points |
 | `POST` | `/api/beauty/reactivation` | Send reactivation message |
 | `GET` | `/api/beauty/loyalty/:subjectId` | Get loyalty balance |
 | `GET` | `/api/beauty/events/:subjectId` | List journey events for subject |
 | `GET` | `/api/beauty/timeline/:subjectId` | Full chronological timeline |
+| `GET` | `/api/beauty/agenda` | Operational agenda (day/professional/status) |
+| `GET` | `/api/beauty/customers/search` | Search customers for operations |
+| `GET` | `/api/beauty/customer/:subjectId/detail` | Aggregated customer operational detail |
 
 All endpoints require `tenantId` (header `X-Tenant-ID` or query param).
 
@@ -162,8 +165,8 @@ is called on every `vertical_fitness_journey_tick`. Any attendance open longer t
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/fitness/check-in` | Record check-in (idempotent) |
-| `POST` | `/api/fitness/check-out` | Close open attendance |
+| `POST` | `/api/fitness/attendance/check-in` | Record check-in (idempotent) |
+| `POST` | `/api/fitness/attendance/check-out` | Close open attendance |
 | `POST` | `/api/fitness/no-show` | Mark session as absent |
 | `GET` | `/api/fitness/attendance/history` | Attendance list with frequency |
 | `GET` | `/api/fitness/attendance/open` | List currently open attendances |
@@ -177,6 +180,8 @@ is called on every `vertical_fitness_journey_tick`. Any attendance open longer t
 | `GET` | `/api/fitness/access-status` | Check access eligibility |
 | `GET` | `/api/fitness/metrics` | Vertical KPIs |
 | `GET` | `/api/fitness/recommendations` | Heuristic recommendations |
+| `GET` | `/api/fitness/students/search` | Search students for operational check-in |
+| `GET` | `/api/fitness/student/:subjectId/detail` | Aggregated student operational detail |
 
 ---
 

@@ -663,13 +663,16 @@ Todos os endpoints exigem header `X-Tenant-ID` ou query param `tenantId`.
 | `POST` | `/api/beauty/confirmation` | Enviar confirmação de agendamento |
 | `POST` | `/api/beauty/reminder` | Enviar lembrete (24h ou 1h) |
 | `POST` | `/api/beauty/no-show` | Registrar no-show de um agendamento |
-| `POST` | `/api/beauty/complete` | Concluir serviço (concede ponto de fidelidade) |
-| `POST` | `/api/beauty/follow-up` | Enviar follow-up pós-serviço |
+| `POST` | `/api/beauty/service-completed` | Concluir serviço (concede ponto de fidelidade) |
+| `POST` | `/api/beauty/follow-up` | Registrar/emitir follow-up operacional |
 | `POST` | `/api/beauty/reactivation` | Enviar campanha de reativação |
 | `POST` | `/api/beauty/loyalty/reverse` | Estornar pontos de fidelidade |
 | `GET` | `/api/beauty/loyalty/:subjectId` | Saldo de pontos de fidelidade |
 | `GET` | `/api/beauty/events/:subjectId` | Listar eventos da jornada |
 | `GET` | `/api/beauty/timeline/:subjectId` | Timeline cronológica completa |
+| `GET` | `/api/beauty/agenda` | Agenda operacional por dia/profissional/status |
+| `GET` | `/api/beauty/customers/search` | Busca operacional de clientes |
+| `GET` | `/api/beauty/customer/:subjectId/detail` | Detalhe operacional agregado de cliente |
 
 ### GET /api/beauty/loyalty/:subjectId
 
@@ -684,8 +687,8 @@ GET /api/beauty/loyalty/sub-001?tenantId=tenant-abc
 
 | Método | Path | Descrição |
 |---|---|---|
-| `POST` | `/api/fitness/check-in` | Registrar check-in (idempotente) |
-| `POST` | `/api/fitness/check-out` | Fechar attendance aberto |
+| `POST` | `/api/fitness/attendance/check-in` | Registrar check-in (idempotente) |
+| `POST` | `/api/fitness/attendance/check-out` | Fechar attendance aberto |
 | `POST` | `/api/fitness/no-show` | Marcar sessão como ausente |
 | `GET` | `/api/fitness/attendance/history` | Histórico de presenças + frequência |
 | `GET` | `/api/fitness/attendance/open` | Listar attendances abertos |
@@ -699,6 +702,8 @@ GET /api/beauty/loyalty/sub-001?tenantId=tenant-abc
 | `GET` | `/api/fitness/access-status` | Verificar elegibilidade de acesso |
 | `GET` | `/api/fitness/metrics` | KPIs verticais |
 | `GET` | `/api/fitness/recommendations` | Recomendações heurísticas |
+| `GET` | `/api/fitness/students/search` | Busca operacional de alunos |
+| `GET` | `/api/fitness/student/:subjectId/detail` | Detalhe operacional agregado do aluno |
 
 Ver [docs/VERTICALS_BEAUTY_FITNESS.md](VERTICALS_BEAUTY_FITNESS.md) para documentação técnica completa.
 
