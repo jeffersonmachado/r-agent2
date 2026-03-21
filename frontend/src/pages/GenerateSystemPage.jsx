@@ -4,15 +4,14 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Input, Textarea } from '../styles/Input';
-import { generateAndValidate, checkRateLimit } from '../api/system';
-import { useWebSocketContext } from '../context/WebSocketContext';
+
 import { usePipelineMachine, PipelineStage, PIPELINE_STAGE_ORDER } from '../hooks/usePipelineMachine';
 import { useFileUpload } from '../context/FileUploadContext';
 import { uploadDocument } from '../api/ragDocuments';
 import { processFile } from '../utils/fileProcessor';
 import { fetchBlob, fetchJson } from '../api/client';
 import { Dialog } from '../components/Dialog';
-import * as tenantsApi from '../api/tenants';
+
 import logger from '../utils/logger';
 import { getFallbackFlag } from '../utils/fallbacksConfig';
 import { getRpaReplay, createFlow, listRpaReplays } from '../api/flows';
@@ -68,7 +67,6 @@ import {
 import { executeTenantModeOrchestration } from './generate-system/generateSystemTenantModeOrchestrator';
 import { executeStandardModeOrchestration } from './generate-system/generateSystemStandardModeOrchestrator';
 import {
-  buildOrchestratorBuilderContext,
   buildStandardOrchestratorConfigFromPageContext,
   buildTenantOrchestratorConfigFromPageContext,
 } from './generate-system/generateSystemOrchestratorConfigBuilders';
@@ -77,6 +75,23 @@ import { useGenerateSystemFileUpload } from './generate-system/useGenerateSystem
 import { useGenerateSystemPendingFileProcessing } from './generate-system/useGenerateSystemPendingFileProcessing';
 import { useGenerateSystemScrapingTargets } from './generate-system/useGenerateSystemScrapingTargets';
 import { useGenerateSystemReportReplay } from './generate-system/useGenerateSystemReportReplay';
+import { useGenerateSystemPipelineRealtime } from './generate-system/useGenerateSystemPipelineRealtime';
+import { PIPELINE_LABELS, getStepMessage } from './generate-system/generateSystemPipelineUiConfig';
+import {
+  derivePreValidationStatus,
+} from './generate-system/generateSystemValidationUtils';
+
+import { useGenerateSystemPipelineDetailsUpdater } from './generate-system/useGenerateSystemPipelineDetailsUpdater';
+import { useGenerateSystemRateLimit } from './generate-system/useGenerateSystemRateLimit';
+import { useGenerateSystemInitialFlowObjective } from './generate-system/useGenerateSystemInitialFlowObjective';
+import { useGenerateSystemErrorToast } from './generate-system/useGenerateSystemErrorToast';
+import { useGenerateSystemBootstrapMode } from './generate-system/useGenerateSystemBootstrapMode';
+import { useGenerateSystemAuthGuard } from './generate-system/useGenerateSystemAuthGuard';
+import { useGenerateSystemExecutingRefSync } from './generate-system/useGenerateSystemExecutingRefSync';
+import { useGenerateSystemInitialFlowUiReset } from './generate-system/useGenerateSystemInitialFlowUiReset';
+import { useGenerateSystemValidationGate } from './generate-system/useGenerateSystemValidationGate';
+import { useGenerateSystemPayloadBuilder } from './generate-system/useGenerateSystemPayloadBuilder';
+import { useGenerateSystemOrchestratorContext } from './generate-system/useGenerateSystemOrchestratorContext';
 
 /**
  * Tela Única - Centro Operacional da Plataforma
@@ -86,7 +101,7 @@ import { useGenerateSystemReportReplay } from './generate-system/useGenerateSyst
  */
 export function GenerateSystemPage() {
   const { isAuthenticated, loading: authLoading, agent, updateAgent } = useAuth();
-  const { navigate, currentPath } = useRouter();
+  const { navigate } = useRouter();
   const { ToastContainer, showToast } = useToast();
   const pipelineSocket = usePipelineSocket(showToast);
 
@@ -401,11 +416,18 @@ export function GenerateSystemPage() {
   const executingRef = useRef(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const lastErrorToastRef = useRef(null);
   
-  // Rate Limit
-  const [rateLimitUntil, setRateLimitUntil] = useState(null); // Timestamp até quando o rate limit está ativo
-  const [rateLimitSecondsRemaining, setRateLimitSecondsRemaining] = useState(0);
+  const {
+    rateLimitUntil,
+    setRateLimitUntil,
+    rateLimitSecondsRemaining,
+    setRateLimitSecondsRemaining,
+    clearRateLimit,
+  } = useGenerateSystemRateLimit({
+    fetchJson,
+    logger,
+    setError,
+  });
   
   const {
     showReportModal,
@@ -437,184 +459,27 @@ export function GenerateSystemPage() {
     setError,
   });
 
-  // Preenche o editor de "objetivo" com o melhor texto disponível (best-effort).
-  // Prioridade:
-  // - entidades extraídas (escopo do atendimento do fluxo)
-  // - descrição do tenant criado (modo real)
-  // - descrição do formulário (modo dry-run / antes de criar tenant)
-  useEffect(() => {
-    if (!showInitialFlowModal) return;
-    const normalizeWs = (s) => String(s || '').replace(/\s+/g, ' ').trim();
-    const formatList = (arr, max = 10) => {
-      const items = (Array.isArray(arr) ? arr : [])
-        .map((x) => normalizeWs(typeof x === 'string' ? x : (x?.name || x?.label || x?.title || '')))
-        .filter(Boolean);
-      const unique = Array.from(new Set(items.map((x) => x.toLowerCase()))).map((k) => items.find((x) => x.toLowerCase() === k));
-      return unique.filter(Boolean).slice(0, max);
-    };
-    const entities = initialFlowEntities && typeof initialFlowEntities === 'object' ? initialFlowEntities : null;
-    const services = formatList(entities?.services, 10);
-    const plans = formatList(entities?.plans, 10);
-    const prices = formatList(entities?.prices, 8);
-    const schedules = formatList(entities?.schedules, 8);
+  useGenerateSystemInitialFlowObjective({
+    showInitialFlowModal,
+    initialFlowEntities,
+    tenantDescription: result?.tenant?.description,
+    description,
+    setInitialFlowObjectiveDraft,
+  });
 
-    const objectiveFromEntities = (() => {
-      const lines = [];
-      if (services.length) lines.push(`Serviços atendidos: ${services.join(', ')}`);
-      if (plans.length) lines.push(`Planos: ${plans.join(', ')}`);
-      if (prices.length) lines.push(`Preços/condições: ${prices.join(', ')}`);
-      if (schedules.length) lines.push(`Horários: ${schedules.join(', ')}`);
-      return lines.join('\n');
-    })();
+  useGenerateSystemExecutingRefSync({ executing, executingRef });
 
-    const objective =
-      normalizeWs(objectiveFromEntities) ||
-      normalizeWs(result?.tenant?.description) ||
-      normalizeWs(description) ||
-      '';
-    // Não sobrescreve se o usuário já editou manualmente.
-    setInitialFlowObjectiveDraft((prev) => (prev && prev.trim() ? prev : objective));
-  }, [showInitialFlowModal, initialFlowEntities, result?.tenant?.description, description]);
-
-  useEffect(() => {
-    executingRef.current = executing;
-  }, [executing]);
-
-  // Toast de erro “global” desta página (deduplicado).
-  // Importante: vários caminhos usam setError() sem chamar showToast().
-  useEffect(() => {
-    if (!error) return;
-    const msg = typeof error === 'string' ? error.trim() : String(error);
-    if (!msg) return;
-    if (lastErrorToastRef.current === msg) return;
-    lastErrorToastRef.current = msg;
-    showToast?.(msg, 'error', 10000);
-  }, [error, showToast]);
+  useGenerateSystemErrorToast({ error, showToast });
 
   // Tenant context swap via localStorage foi removido (ver applyTenantContextForEditor acima).
 
-  // Função auxiliar para atualizar pipeline com detalhes
-  const updatePipelineWithDetails = (statusUpdate, source = 'unknown') => {
-    const timestamp = new Date().toISOString();
-    logger.debug(`[Pipeline] Atualização recebida de ${source}`, { statusUpdate, timestamp });
+  const updatePipelineWithDetails = useGenerateSystemPipelineDetailsUpdater({
+    logger,
+    getStepMessage,
+    setPipelineStatus,
+    setPipelineDetails,
+  });
 
-    // Importante: o pipeline determinístico (etapas centrais) é atualizado SOMENTE via websocket
-    // e consumido pela PipelineMachine.
-    //
-    // Porém, precisamos permitir que o frontend atualize *detalhes/progresso* (mensagem/percentual)
-    // dessas etapas (ex.: filesInferred por arquivo, RPA em execução), sem marcar conclusão localmente.
-    const machineKeys = new Set([
-      'providerValidated',
-      'ragValidated',
-      'filesInferred',
-      'webScraping',
-      'descriptionSuggested',
-      'payloadValid',
-      'contractValid',
-      'contextBuilt',
-      'questionsGenerated',
-      'aiExecuted',
-      'flowGenerated',
-      'seedGenerated',
-      'rpaGenerated',
-      'rpaExecuted',
-      'approved',
-      'failed',
-    ]);
-    
-    // Prepara atualização de status simples (booleanos) baseado nos objetos de detalhes
-    const statusUpdateSimple = {};
-    const detailsUpdate = {};
-    
-    Object.keys(statusUpdate).forEach(key => {
-      const value = statusUpdate[key];
-      const isMachineKey = machineKeys.has(key);
-      if (value === true) {
-        // Para etapas do state machine, não marcamos como concluídas via update local.
-        // (Conclusão vem do websocket/pipeline.status)
-        if (!isMachineKey) {
-          statusUpdateSimple[key] = true;
-          detailsUpdate[key] = {
-            status: 'completed',
-            timestamp: timestamp,
-            message: getStepMessage(key, 'completed') || `Etapa concluída: ${key}`,
-            progress: 100,
-          };
-        }
-      } else if (value === false) {
-        if (!isMachineKey) {
-          statusUpdateSimple[key] = false;
-        }
-        // IMPORTANTE:
-        // Muitos produtores (callback/websocket) enviam o estado completo do pipeline com "false"
-        // para etapas ainda não concluídas. Se tratarmos isso como "reset", regressamos etapas já
-        // concluídas e o pipeline parece "travado". O reset real é feito explicitamente no início
-        // do handleExecute via setPipelineStatus/setPipelineDetails.
-        //
-        // Portanto, aqui "false" atualiza apenas o booleano (status simples) e NÃO sobrescreve
-        // detalhes (timestamp/mensagem/status) já existentes.
-      } else if (typeof value === 'object' && value !== null) {
-        // Se for um objeto com detalhes
-        const { status: rawStatus, timestamp: rawTimestamp, message: rawMessage, progress: rawProgress, ...rest } = value;
-        const status = rawStatus || 'pending';
-        // A partir de agora, o pipeline visível é 100% alimentado por eventos do backend (WS).
-        // Portanto, ignoramos updates locais para etapas do state machine (machineKeys),
-        // inclusive detalhes/progresso, para garantir "um tipo só".
-        if (!isMachineKey) {
-          // Atualiza status simples: true apenas se completed, false caso contrário
-          statusUpdateSimple[key] = status === 'completed';
-          detailsUpdate[key] = {
-            status: status,
-            timestamp: rawTimestamp || timestamp,
-            message: rawMessage || getStepMessage(key, status),
-            progress: rawProgress !== undefined ? rawProgress : (status === 'completed' ? 100 : 0),
-            ...rest,
-          };
-        }
-      }
-    });
-    
-    // Atualiza status simples
-    setPipelineStatus(prev => {
-      const next = { ...prev, ...statusUpdateSimple };
-      // Regra: "IA executada" deve vir antes de "Aprovado"
-      // (Evita UI mostrar aprovado quando o backend ainda não refletiu aiExecuted por algum motivo)
-      if (next.approved === true && next.aiExecuted !== true) {
-        next.approved = false;
-      }
-      return next;
-    });
-    
-    // Atualiza detalhes com timestamps e mensagens (apenas para steps fora do state machine)
-    setPipelineDetails(prev => {
-      const updated = { ...prev };
-      Object.keys(detailsUpdate).forEach(key => {
-        // Se a chave não existia (ex.: etapa exibida condicionalmente),
-        // ainda assim queremos persistir timestamp/mensagem para o card não ficar "sem hora".
-        updated[key] = detailsUpdate[key];
-        if (detailsUpdate[key].status === 'completed') {
-          logger.info(`[Pipeline] Etapa ${key} concluída`, { timestamp: detailsUpdate[key].timestamp, source });
-        } else if (detailsUpdate[key].status === 'error') {
-          logger.error(`[Pipeline] Etapa ${key} falhou`, { timestamp: detailsUpdate[key].timestamp, source, message: detailsUpdate[key].message });
-        }
-      });
-
-      return updated;
-    });
-  };
-
-  const getDescriptionSuggestionMeta = (suggestionResponse) => {
-    const warnings = Array.isArray(suggestionResponse?.warnings) ? suggestionResponse.warnings : [];
-    const fallback = warnings.some(w => String(w?.code || '') === 'NO_INDEXED_CONTEXT_FALLBACK');
-    const confidence =
-      (typeof suggestionResponse?.confidence === 'number')
-        ? suggestionResponse.confidence
-        : (typeof suggestionResponse?.entityProfile?.confidence === 'number' ? suggestionResponse.entityProfile.confidence : null);
-    const mode = suggestionResponse?.mode === 'technical' ? 'technical' : 'institutional';
-
-    return { mode, fallback, confidence, warningsCount: warnings.length };
-  };
-  
   // Função auxiliar para obter mensagens de cada etapa
   // Verifica se precisa sugerir descrição
   const needsDescriptionSuggestion = useMemo(() => {
@@ -622,299 +487,51 @@ export function GenerateSystemPage() {
     return executionMode === 'dry-run';
   }, [executionMode]);
 
-  const getStepMessage = (step, status) => {
-    const messages = {
-      providerValidated: {
-        completed: 'Provider de IA validado',
-        in_progress: 'Validando provider de IA...',
-        error: 'Provider de IA não configurado',
-      },
-      ragValidated: {
-        completed: 'Serviço RAG validado',
-        in_progress: 'Validando serviço RAG...',
-        error: 'Serviço RAG não disponível',
-      },
-      webScraping: {
-        completed: 'Web scraping concluído',
-        in_progress: 'Raspando URLs (web scraping)...',
-        error: 'Nenhuma URL foi raspada com sucesso',
-      },
-      descriptionSuggested: {
-        completed: 'Descrição sugerida pela IA',
-        in_progress: 'Sugerindo descrição com IA...',
-        error: 'Erro ao sugerir descrição',
-      },
-      questionsGenerated: {
-        completed: 'Perguntas geradas',
-        in_progress: 'Gerando perguntas...',
-        error: 'Erro ao gerar perguntas',
-      },
-      filesInferred: {
-        completed: 'Arquivos processados e indexados no RAG',
-        in_progress: 'Processando e indexando arquivos...',
-        error: 'Erro ao processar arquivos',
-      },
-      payloadValid: {
-        completed: 'Payload validado com sucesso',
-        in_progress: 'Validando payload...',
-        error: 'Payload inválido',
-      },
-      contractValid: {
-        completed: 'Contrato validado com sucesso',
-        in_progress: 'Validando contrato...',
-        error: 'Validação de contrato falhou',
-      },
-      contextBuilt: {
-        completed: 'Contexto montado com sucesso',
-        in_progress: 'Montando contexto para IA...',
-        error: 'Erro ao montar contexto',
-      },
-      ragContextBuilt: {
-        completed: 'Contexto RAG construído',
-        in_progress: 'Buscando evidências no RAG...',
-        error: 'Evidência insuficiente no RAG',
-      },
-      aiExecuted: {
-        completed: 'IA executada com sucesso',
-        in_progress: 'Executando IA...',
-        error: 'Erro na execução da IA',
-      },
-      flowGenerated: {
-        completed: 'Fluxo gerado com sucesso',
-        in_progress: 'Gerando fluxo...',
-        error: 'Erro ao gerar fluxo',
-      },
-      seedGenerated: {
-        completed: 'Seed gerado com sucesso',
-        in_progress: 'Gerando seed...',
-        error: 'Erro ao gerar seed',
-      },
-      rpaGenerated: {
-        completed: 'RPA gerado com sucesso',
-        in_progress: 'Gerando teste RPA...',
-        error: 'Erro ao gerar RPA',
-      },
-      rpaExecuted: {
-        completed: 'RPA executado com sucesso',
-        in_progress: 'Executando teste RPA...',
-        error: 'Erro na execução do RPA',
-      },
-      approved: {
-        completed: 'Sistema aprovado',
-        in_progress: 'Aguardando aprovação...',
-        error: 'Sistema reprovado',
-      },
-    };
-    return messages[step]?.[status] || `${step}: ${status}`;
-  };
-
-  const PIPELINE_LABELS = useMemo(() => ({
-    providerValidated: 'Provider de IA validado',
-    ragValidated: 'Serviço RAG validado',
-    webScraping: 'Web scraping',
-    descriptionSuggested: 'Sugerir descrição',
-    questionsGenerated: 'Perguntas geradas',
-    filesInferred: 'Arquivos inferidos e indexados',
-    payloadValid: 'Payload válido',
-    contractValid: 'Contrato válido',
-    contextBuilt: 'Contexto montado',
-    ragContextBuilt: 'Contexto RAG construído',
-    aiExecuted: 'Executando IA (geração do fluxo)',
-    flowGenerated: 'Fluxo gerado',
-    seedGenerated: 'Seed gerado',
-    rpaGenerated: 'RPA gerado',
-    rpaExecuted: 'RPA executado',
-    approved: 'Aprovado',
-  }), []);
-
-  const ws = useWebSocketContext({
-    enabled: true,
-    onEvent: (event, data) => {
-      if (event === 'pipeline.status') {
-        logger.debug('[WebSocket] pipeline.status recebido', { event, data });
-        pipelineMachine.dispatch({ type: 'PIPELINE_STATUS', payload: data });
-      }
-    },
-    subscribeEvents: ['pipeline.status'],
-  });
-
   // Garantia: antes de iniciar um pipeline "backend-only", precisamos que o WS esteja autenticado,
   // senão o backend vai broadcastar para 0 clientes (tenant não associado no servidor).
-  const wsStateRef = useRef({ connected: false, authenticated: false });
+  const { wsStateRef, ensureWebSocketAuthenticated } = useGenerateSystemPipelineRealtime({
+    pipelineMachine,
+  });
+
   // Marca que a execução atual foi abortada (para suprimir efeitos colaterais de tarefas em background)
   const pipelineAbortRef = useRef(false);
-  useEffect(() => {
-    wsStateRef.current = { connected: !!ws?.connected, authenticated: !!ws?.authenticated };
-  }, [ws?.connected, ws?.authenticated]);
 
-  const ensureWebSocketAuthenticated = useCallback(async (timeoutMs = 5000) => {
-    const start = Date.now();
+  useGenerateSystemAuthGuard({ isAuthenticated, authLoading, navigate });
 
-    // Se já estiver autenticado, ok.
-    if (wsStateRef.current.connected && wsStateRef.current.authenticated) return true;
+  useGenerateSystemBootstrapMode({
+    bootstrap,
+    scrapingTargets,
+    setGenerateFlow,
+    setGenerateRpa,
+    setGenerateSeed,
+    setUseRag,
+    setRagSources,
+    setUseWebScraping,
+    setScrapingTargets,
+  });
 
-    // Tenta reconectar (vai re-enviar auth com token atual no onopen).
-    try {
-      ws?.reconnect?.();
-    } catch (_) {
-      // best-effort
-    }
+  const { getValidationError, isValid } = useGenerateSystemValidationGate({
+    isTenantMode,
+    name,
+    description,
+    bootstrap,
+    useRag,
+    ragSources,
+    useWebScraping,
+    scrapingTargets,
+    validationStatus,
+    executionMode,
+    validateUrl,
+  });
 
-    // Aguarda autenticação (polling curto).
-    while (Date.now() - start < timeoutMs) {
-      if (wsStateRef.current.connected && wsStateRef.current.authenticated) return true;
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    return false;
-  }, [ws]);
-
-  // Proteção: redireciona para login se não estiver autenticado
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
-
-  // Lógica automática do modo Bootstrap
-  useEffect(() => {
-    if (bootstrap) {
-      setGenerateFlow(true);
-      setGenerateRpa(true);
-      setGenerateSeed(true);
-      setUseRag(false);
-      setRagSources({ flows: false, qa: false, docs: false });
-      setUseWebScraping(true);
-      if (scrapingTargets.length === 0 || scrapingTargets[0] === '') {
-        setScrapingTargets(['']);
-      }
-    } else {
-      // Quando bootstrap não está ativo, todas as opções do BLOCO 2 devem estar marcadas
-      setUseRag(true);
-      setRagSources({ flows: true, qa: true, docs: true });
-      setUseWebScraping(true);
-    }
-  }, [bootstrap]);
-
-  // Atualiza contador de rate limit a cada segundo
-  useEffect(() => {
-    if (!rateLimitUntil) {
-      setRateLimitSecondsRemaining(0);
-      return;
-    }
-
-    const updateCounter = () => {
-      const now = Date.now();
-      const remaining = Math.max(0, Math.ceil((rateLimitUntil - now) / 1000));
-      setRateLimitSecondsRemaining(remaining);
-
-      if (remaining <= 0) {
-        setRateLimitUntil(null);
-        setError(null);
-      }
-    };
-
-    // Atualiza imediatamente
-    updateCounter();
-
-    // Atualiza a cada segundo
-    const interval = setInterval(updateCounter, 1000);
-
-    return () => clearInterval(interval);
-  }, [rateLimitUntil]);
-
-  // Função para obter mensagem de erro de validação
-  const getValidationError = useMemo(() => {
-    // Nome obrigatório (tanto no modo tenant quanto normal)
-    if (!name.trim() || name.trim().length < 3) {
-      return 'O nome deve ter pelo menos 3 caracteres';
-    }
-    
-    // No modo tenant, descrição é obrigatória apenas no modo execução real
-    if (isTenantMode) {
-      if (executionMode === 'real') {
-        // No modo real, descrição é obrigatória
-        if (!description || !description.trim()) {
-          return 'A descrição do tenant é obrigatória no modo execução real';
-        }
-        if (description.trim().length < 10) {
-          return `A descrição do tenant deve ter pelo menos 10 caracteres (atual: ${description.trim().length})`;
-        }
-      } else if (executionMode === 'dry-run' && description.trim() && description.trim().length < 10) {
-        // No dry-run, se preencheu mas está muito curta, avisa
-        return `A descrição do tenant deve ter pelo menos 10 caracteres (atual: ${description.trim().length})`;
-      }
-      // No dry-run, se estiver vazia, não é erro (será sugerida pela IA)
-    } else {
-      // Descrição obrigatória apenas no modo execução real (modo normal)
-      if (executionMode === 'real') {
-        if (!description.trim() || description.trim().length < 10) {
-          return 'A descrição deve ter pelo menos 10 caracteres (obrigatória no modo execução real)';
-        }
-      } else if (executionMode === 'dry-run' && description.trim() && description.trim().length < 10) {
-        // No dry-run, se preencheu mas está muito curta, avisa
-        return 'A descrição deve ter pelo menos 10 caracteres';
-      }
-    }
-
-    // Se bootstrap, precisa de scraping
-    if (bootstrap) {
-      const validUrls = scrapingTargets.filter(url => validateUrl(url));
-      if (validUrls.length === 0) {
-        return 'No modo bootstrap, é necessário adicionar pelo menos uma URL válida para scraping';
-      }
-      return null;
-    }
-
-    // Se não bootstrap, precisa de pelo menos uma fonte
-    if (!useRag && !useWebScraping) {
-      return 'Selecione pelo menos uma fonte de conhecimento (RAG ou Web Scraping)';
-    }
-    
-    if (useRag) {
-      const hasRagSource = Object.values(ragSources).some(v => v === true);
-      if (!hasRagSource) {
-        return 'Selecione pelo menos uma fonte RAG (Fluxos, QA ou Documentos)';
-      }
-    }
-
-    if (useWebScraping) {
-      const validUrls = scrapingTargets.filter(url => validateUrl(url));
-      if (validUrls.length === 0) {
-        return 'Adicione pelo menos uma URL válida para Web Scraping';
-      }
-    }
-
-    // Validações automáticas devem estar OK
-    if (validationStatus.contract === 'invalid') {
-      return 'Validação de contrato falhou';
-    }
-    if (validationStatus.schema === 'invalid') {
-      return 'Validação de schema falhou';
-    }
-    if (validationStatus.governance === 'invalid') {
-      return 'Validação de governança falhou';
-    }
-    if (validationStatus.rpaPreValidation === 'invalid') {
-      return 'Validação prévia de RPA falhou';
-    }
-
-    return null;
-  }, [isTenantMode, name, description, bootstrap, useRag, ragSources, useWebScraping, scrapingTargets, validationStatus, executionMode]);
-
-  // Validação completa do formulário
-  const isValid = useMemo(() => {
-    return getValidationError === null;
-  }, [getValidationError]);
-
-  const resetInitialFlowUiState = useCallback(() => {
-    setInitialFlow(null);
-    setInitialFlowEntities(null);
-    setShowInitialFlowModal(false);
-    setInitialFlowModalSize({ width: null, height: null });
-    lastInitialFlowSignatureRef.current = null;
-    setInitialGraphLoading(false);
-  }, []);
+  const resetInitialFlowUiState = useGenerateSystemInitialFlowUiReset({
+    setInitialFlow,
+    setInitialFlowEntities,
+    setShowInitialFlowModal,
+    setInitialFlowModalSize,
+    lastInitialFlowSignatureRef,
+    setInitialGraphLoading,
+  });
 
   const {
     suggestQuestionsAutoList,
@@ -950,59 +567,28 @@ export function GenerateSystemPage() {
     showToast,
   });
 
-  // Gera payload único
-  const generatePayload = () => {
-    const payload = {
-      name: name.trim(),
-      description: description.trim(),
-      bootstrap: bootstrap || false,
-      executionMode: executionMode,
-      useRag: bootstrap ? false : useRag,
-      ragSources: bootstrap ? [] : (useRag ? Object.keys(ragSources).filter(k => ragSources[k]) : []),
-      useWebScraping: useWebScraping,
-      scrapingTargets: useWebScraping ? scrapingTargets.filter(url => validateUrl(url)) : [],
-      generate: {
-        flow: bootstrap ? true : generateFlow,
-        seed: bootstrap ? true : generateSeed,
-        rpa: bootstrap ? true : generateRpa,
-      },
-      rpaMode: rpaMode,
-      executeFullValidation: executeFullValidation,
-    };
-
-    if (bootstrap || includeQuestions) {
-      payload.includeQuestions = true;
-      payload.questions = Array.isArray(questionsList) ? questionsList.slice(0, 50) : [];
-    }
-
-    // Remove campos undefined
-    Object.keys(payload).forEach(key => {
-      if (payload[key] === undefined) {
-        delete payload[key];
-      }
-    });
-
-    return payload;
-  };
+  const generatePayload = useGenerateSystemPayloadBuilder({
+    name,
+    description,
+    bootstrap,
+    executionMode,
+    useRag,
+    ragSources,
+    useWebScraping,
+    scrapingTargets,
+    validateUrl,
+    generateFlow,
+    generateSeed,
+    generateRpa,
+    rpaMode,
+    executeFullValidation,
+    includeQuestions,
+    questionsList,
+  });
 
   // Validação prévia (simulada - será feita pelo backend)
   useEffect(() => {
-    if (name.trim() && description.trim()) {
-      // Simula validação - na prática será feita pelo backend
-      setValidationStatus({
-        contract: 'valid',
-        schema: 'valid',
-        governance: 'valid',
-        rpaPreValidation: generateRpa || bootstrap ? 'valid' : null,
-      });
-    } else {
-      setValidationStatus({
-        contract: null,
-        schema: null,
-        governance: null,
-        rpaPreValidation: null,
-      });
-    }
+    setValidationStatus(derivePreValidationStatus({ name, description, generateRpa, bootstrap }));
   }, [name, description, generateRpa, bootstrap]);
 
   // Executa geração e validação
@@ -1021,32 +607,6 @@ export function GenerateSystemPage() {
     await executeStandardModeOrchestration(
       buildStandardOrchestratorConfigFromPageContext(orchestratorBuilderContext)
     );
-  };
-
-  // Limpa rate limit (apenas em desenvolvimento)
-  const clearRateLimit = async () => {
-    try {
-      logger.info('[RateLimit] Tentando limpar rate limit');
-      const response = await fetchJson('/admin/rate-limit/clear', {
-        method: 'POST',
-      });
-      
-      if (response.success) {
-        setRateLimitUntil(null);
-        setRateLimitSecondsRemaining(0);
-        setError(null);
-        logger.info('[RateLimit] Rate limit limpo com sucesso', response);
-      } else {
-        throw new Error(response.message || 'Erro ao limpar rate limit');
-      }
-    } catch (err) {
-      logger.error('[RateLimit] Erro ao limpar rate limit', err);
-      if (err.status === 403) {
-        setError('Este recurso está disponível apenas em desenvolvimento');
-      } else {
-        setError(`Erro ao limpar rate limit: ${err.message || 'Erro desconhecido'}`);
-      }
-    }
   };
 
   const {
@@ -1095,114 +655,26 @@ export function GenerateSystemPage() {
     fileCategoryInferenceIssuesRef,
   });
 
-  const orchestratorFormAndFlags = {
-    name,
-    description,
-    descriptionMode,
-    executionMode,
-    generateFlow,
-    generateRpa,
-    generateSeed,
-    bootstrap,
-    useWebScraping,
-    needsDescriptionSuggestion,
-  };
-
-  const orchestratorState = {
-    uploadedFiles,
-    scrapingTargets,
-    questionsList,
-    pipelineDetails,
-    rateLimitUntil,
-    agent,
-  };
-
-  const orchestratorActions = {
-    setExecuting,
-    setError,
-    setResult,
-    setDescription,
-    setQuestionsList,
-    setInitialFlow,
-    setInitialFlowEntities,
-    setInitialGraphLoading,
-    resetInitialFlowUiState,
-    setPipelineStatus,
-    setPipelineDetails,
-    updatePipelineWithDetails,
-    setRateLimitUntil,
-    setRateLimitSecondsRemaining,
-  };
-
-  const orchestratorPipelineRefs = {
-    pipelineAbortRef,
-    wsStateRef,
-    pipelineExecutionIdRef,
-    targetTenantIdRef,
-    ephemeralChunksRef,
-    useInlineChunksForSuggestRef,
-    uploadedFilesRef,
-    pipelineMachine,
-    pipelineSocket,
-  };
-
-  const orchestratorSharedServices = {
-    processPendingFilesPipelineStep,
-    prepareExecutionQuestions,
-    verifyServerHealthBeforeExecution,
-    generatePayload,
-    generateAndValidate,
-    processPendingFilesWithPipeline,
-    fetchJson,
-    logger,
-    showToast,
-    suggestQuestionsAutoList,
-  };
-
-  const orchestratorTenantServices = {
-    ensureWebSocketAuthenticated,
-    validateTenantExecutionInput,
-    initializeTenantExecutionState,
-    ensurePipelineExecution,
-    validateTenantPipelinePrereqs,
-    reuseSuccessfulUploadedFilesAsEvidence,
-    prepareTenantDryRunDescription,
-    getValidHttpUrls,
-    executeTenantPostDescriptionScraping,
-    appendScrapedTextChunks,
-    persistDryRunEphemeralContext,
-    persistTenantTargetContentBestEffort,
-    startTenantInitialFlowBestEffort,
-    resetArtifactGenerationPipelineSteps,
-    persistWebScrapingOnTargetTenant,
-    processPendingFilesInBackground,
-    navigate,
-    tenantsApi,
-    uploadDocument,
-    updateUploadedFile,
-  };
-
-  const orchestratorStandardServices = {
-    initializeStandardExecutionState,
-    enforceLocalRateLimitBeforeExecution,
-    verifyServerRateLimitBeforeExecution,
-    handleExecutionRateLimitError,
-    handleGenericExecutionFailure,
-    collectUploadedFileNames,
-    requestDescriptionSuggestion,
-    getDescriptionSuggestionMeta,
-    checkRateLimit,
-    getStepMessage,
-  };
-
-  const orchestratorBuilderContext = buildOrchestratorBuilderContext({
-    formAndFlags: orchestratorFormAndFlags,
-    state: orchestratorState,
-    actions: orchestratorActions,
-    pipelineRefs: orchestratorPipelineRefs,
-    sharedServices: orchestratorSharedServices,
-    tenantServices: orchestratorTenantServices,
-    standardServices: orchestratorStandardServices,
+  const orchestratorBuilderContext = useGenerateSystemOrchestratorContext({
+    // form & flags
+    name, description, descriptionMode, executionMode, generateFlow, generateRpa,
+    generateSeed, bootstrap, useWebScraping, needsDescriptionSuggestion,
+    // state
+    uploadedFiles, scrapingTargets, questionsList, pipelineDetails, rateLimitUntil, agent,
+    // actions
+    setExecuting, setError, setResult, setDescription, setQuestionsList, setInitialFlow,
+    setInitialFlowEntities, setInitialGraphLoading, resetInitialFlowUiState,
+    setPipelineStatus, setPipelineDetails, updatePipelineWithDetails,
+    setRateLimitUntil, setRateLimitSecondsRemaining,
+    // pipeline refs & machines
+    pipelineAbortRef, wsStateRef, pipelineExecutionIdRef, targetTenantIdRef,
+    ephemeralChunksRef, useInlineChunksForSuggestRef, uploadedFilesRef,
+    pipelineMachine, pipelineSocket,
+    // computed functions
+    generatePayload, processPendingFilesWithPipeline, processPendingFilesInBackground,
+    updateUploadedFile, ensureWebSocketAuthenticated,
+    // services
+    showToast, suggestQuestionsAutoList, navigate,
   });
 
   const finalStatus = useMemo(() => buildFinalStatus(result), [result]);

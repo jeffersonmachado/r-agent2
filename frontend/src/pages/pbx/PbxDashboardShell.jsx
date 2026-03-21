@@ -3,6 +3,7 @@ import React from 'react';
 export function PbxDashboardShell({
   isSectionMode,
   currentSectionLabel,
+  sectionHint,
   lastUpdatedAt,
   formatDateTime,
   navigate,
@@ -34,8 +35,10 @@ export function PbxDashboardShell({
         <div>
           {isSectionMode ? (
             <>
-              <h1>{currentSectionLabel}</h1>
-              <p>Navegação direta para a seção selecionada do módulo PBX.</p>
+              <h1>📞 PBX • {currentSectionLabel}</h1>
+              <p>
+                {sectionHint || 'Gerencie esta seção do PBX com o mesmo padrão visual do painel de agentes.'}
+              </p>
             </>
           ) : (
             <>

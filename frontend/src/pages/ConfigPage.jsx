@@ -11,6 +11,18 @@ import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { CrudPageBase } from '../modules/crud-base';
+import { ConfigApiTab } from './config/ConfigApiTab';
+import { ConfigFrontendTab } from './config/ConfigFrontendTab';
+import { ConfigRagTab } from './config/ConfigRagTab';
+import { ConfigWhatsappTab } from './config/ConfigWhatsappTab';
+import { ConfigFlowsTab } from './config/ConfigFlowsTab';
+import { ConfigAiTab } from './config/ConfigAiTab';
+import { ConfigFeaturesTab } from './config/ConfigFeaturesTab';
+import { ConfigScriptsTab } from './config/ConfigScriptsTab';
+import { ConfigLoggingTab } from './config/ConfigLoggingTab';
+import { ConfigRateLimitTab } from './config/ConfigRateLimitTab';
+import { ConfigFallbacksTab } from './config/ConfigFallbacksTab';
+import { ConfigGeneralTab } from './config/ConfigGeneralTab';
 
 /**
  * Página de gerenciamento de configuração do sistema.
@@ -843,7 +855,6 @@ export function ConfigPage() {
   };
 
   const tabs = [
-    { id: 'api', label: 'API', icon: '⚙️' },
     { id: 'frontend', label: 'Frontend', icon: '🖥️' },
     { id: 'rag', label: 'RAG', icon: '🔍' },
     { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
@@ -1015,1190 +1026,102 @@ export function ConfigPage() {
           <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
             {/* Aba: API */}
             {activeTab === 'api' && (
-              <div className="space-y-6">
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                    <span>⚙️</span>
-                    <span>API</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {renderField('Porta', 'api.port', editedConfig.api?.port, 'number')}
-                  </div>
-                  <div className="mt-6 pt-6 border-t border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Limpeza de Tickets</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Intervalo (horas)', 'api.ticketCleanup.intervalHours', editedConfig.api?.ticketCleanup?.intervalHours, 'number')}
-                      {renderField('Idade Máxima (dias)', 'api.ticketCleanup.maxAgeDays', editedConfig.api?.ticketCleanup?.maxAgeDays, 'number')}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ConfigApiTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: Frontend */}
             {activeTab === 'frontend' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>🖥️</span>
-                  <span>Frontend</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderField('Porta', 'frontend.port', editedConfig.frontend?.port, 'number')}
-                  {renderField('URL Base da API', 'frontend.apiBaseUrl', editedConfig.frontend?.apiBaseUrl)}
-                </div>
-              </div>
+              <ConfigFrontendTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: RAG */}
             {activeTab === 'rag' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>🔍</span>
-                  <span>RAG Service</span>
-                </h3>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {renderField('URL do Serviço', 'rag.serviceUrl', editedConfig.rag?.serviceUrl)}
-                    {renderField('Timeout (ms)', 'rag.timeout', editedConfig.rag?.timeout, 'number')}
-                  </div>
-                  
-                  <div className="mt-6 pt-6 border-t border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Configuração por Tenant</h4>
-                    {editedConfig.rag?.tenants && Object.keys(editedConfig.rag.tenants).length > 0 ? (
-                      <div className="space-y-4">
-                        {Object.entries(editedConfig.rag.tenants).map(([tenantId, tenantConfig]) => (
-                          <div key={tenantId} className="p-4 bg-bg-primary rounded-lg border border-border-default">
-                            <h5 className="text-md font-semibold text-text-primary mb-3">{tenantId}</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {renderField(
-                                'URL do Serviço',
-                                `rag.tenants.${tenantId}.serviceUrl`,
-                                tenantConfig?.serviceUrl
-                              )}
-                              {renderField(
-                                'Timeout (ms)',
-                                `rag.tenants.${tenantId}.timeout`,
-                                tenantConfig?.timeout,
-                                'number'
-                              )}
-                            </div>
-                            {tenantConfig?.domains && (
-                              <div className="mt-4 pt-4 border-t border-border-default">
-                                <h6 className="text-sm font-medium text-text-secondary mb-2">Domínios</h6>
-                                <div className="space-y-2">
-                                  {Object.entries(tenantConfig.domains).map(([domainName, domainConfig]) => (
-                                    <div key={domainName} className="p-3 bg-bg-secondary rounded border border-border-default">
-                                      <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-text-primary">{domainName}</span>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                          <input
-                                            type="checkbox"
-                                            checked={domainConfig?.enabled || false}
-                                            onChange={(e) => updateValue(`rag.tenants.${tenantId}.domains.${domainName}.enabled`, e.target.checked)}
-                                            className="w-4 h-4 rounded border-border-default text-accent-primary focus:ring-2 focus:ring-accent-primary cursor-pointer"
-                                          />
-                                          <span className="text-xs text-text-secondary">Habilitado</span>
-                                        </label>
-                                      </div>
-                                      {domainConfig?.defaultCategory && (
-                                        <p className="text-xs text-text-secondary mt-1">
-                                          Categoria padrão: {domainConfig.defaultCategory}
-                                        </p>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-text-secondary text-sm">Nenhum tenant configurado</p>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                    <p className="text-sm text-text-secondary">
-                      💡 O RAG Service é um serviço Python (FastAPI) que fornece funcionalidades de Retrieval-Augmented Generation.
-                      Por padrão, o serviço roda na porta <strong>9000</strong>. Certifique-se de que o serviço está rodando antes de usar.
-                    </p>
-                    <p className="text-sm text-text-secondary mt-2">
-                      Para iniciar o serviço manualmente: <code className="bg-bg-primary px-2 py-1 rounded text-xs">cd rag-service && uvicorn main:app --reload --host 0.0.0.0 --port 9000</code>
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ConfigRagTab editedConfig={editedConfig} renderField={renderField} updateValue={updateValue} />
             )}
 
             {/* Aba: WhatsApp */}
             {activeTab === 'whatsapp' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>💬</span>
-                  <span>WhatsApp</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderField('URL da API', 'whatsapp.apiUrl', editedConfig.whatsapp?.apiUrl)}
-                  {renderField('Phone Number ID', 'whatsapp.phoneNumberId', editedConfig.whatsapp?.phoneNumberId)}
-                  {renderField('Access Token', 'whatsapp.accessToken', editedConfig.whatsapp?.accessToken, 'password')}
-                  {renderField('Verify Token', 'whatsapp.verifyToken', editedConfig.whatsapp?.verifyToken)}
-                </div>
-                <div className="mt-6 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                  <p className="text-sm text-text-secondary">
-                    💡 Configure seu WhatsApp Business no painel da Meta:{' '}
-                    <a 
-                      href="https://business.facebook.com/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-accent-primary hover:underline"
-                    >
-                      business.facebook.com
-                    </a>
-                    {' '}ou acesse o{' '}
-                    <a 
-                      href="https://developers.facebook.com/apps/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-accent-primary hover:underline"
-                    >
-                      painel de desenvolvedores
-                    </a>
-                  </p>
-                </div>
-              </div>
+              <ConfigWhatsappTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: Fluxos */}
             {activeTab === 'flows' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>🔄</span>
-                  <span>Fluxos</span>
-                </h3>
-                {renderField(
-                  'ID do Fluxo Padrão', 
-                  'flows.defaultFlowId', 
-                  editedConfig.flows?.defaultFlowId,
-                  'text',
-                  loadingFlows 
-                    ? [{ value: '', label: 'Carregando...' }]
-                    : flows.length > 0
-                      ? [{ value: '', label: 'Nenhum (vazio)' }, ...flows.map(f => ({ value: f.id, label: `${f.name || f.id} (${f.id})` }))]
-                      : null
-                )}
-                {loadingFlows && (
-                  <p className="text-sm text-text-secondary mt-2">Carregando lista de fluxos...</p>
-                )}
-                {!loadingFlows && flows.length === 0 && (
-                  <p className="text-sm text-text-secondary mt-2">Nenhum fluxo encontrado. Você pode digitar o ID manualmente.</p>
-                )}
-              </div>
+              <ConfigFlowsTab editedConfig={editedConfig} renderField={renderField} flows={flows} loadingFlows={loadingFlows} />
             )}
 
             {/* Aba: IA */}
             {activeTab === 'ai' && (
-              <div className="space-y-6">
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                    <span>🤖</span>
-                    <span>Inteligência Artificial</span>
-                  </h3>
-                  
-                  {(() => {
-                    const currentTenantId = agent?.tenantId;
-                    
-                    // Se não houver tenant, mostra mensagem
-                    if (!currentTenantId) {
-                      return (
-                        <div className="p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
-                          <p className="text-sm text-text-primary">
-                            <strong>⚠️ Não autenticado:</strong> É necessário estar autenticado para configurar IA.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    // Carregando configuração
-                    if (loadingTenantAiConfig) {
-                      return (
-                        <div className="p-4 text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary mx-auto mb-2"></div>
-                          <p className="text-sm text-text-secondary">Carregando configuração de IA...</p>
-                        </div>
-                      );
-                    }
-
-                    const tenantToUse = targetTenantId || agent?.tenantId;
-                    const currentConfig = tenantAiConfig || {
-                      tenantId: tenantToUse || null,
-                      primary: null,
-                      secondary: null,
-                      configured: false,
-                      model: null,
-                      temperature: null,
-                      max_tokens: null
-                    };
-
-                    const providerLabel = (p) => {
-                      if (!p) return '—';
-                      if (p === 'openai') return 'OpenAI';
-                      if (p === 'anthropic') return 'Anthropic (Claude)';
-                      return String(p);
-                    };
-
-                    const providerStatus = (() => {
-                      // Status do provider (similar ao indicador de WebSocket)
-                      if (!currentConfig.primary) {
-                        return {
-                          dotColor: 'rgb(156, 163, 175)', // cinza
-                          dotPulse: false,
-                          text: 'Não configurado',
-                          title: 'Provider primário de IA não configurado para este tenant.',
-                        };
-                      }
-
-                      if (providerAutoValidation.validating) {
-                        return {
-                          dotColor: 'rgb(59, 130, 246)', // azul
-                          dotPulse: true,
-                          text: `Validando (${providerLabel(currentConfig.primary)})...`,
-                          title: 'Validando credenciais salvas do provider (chamada real).',
-                        };
-                      }
-
-                      if (providerAutoValidation.status) {
-                        if (providerAutoValidation.status.valid) {
-                          return {
-                            dotColor: 'rgb(16, 185, 129)', // verde
-                            dotPulse: true,
-                            text: `Válido (${providerLabel(currentConfig.primary)})`,
-                            title: 'Provider validado com sucesso (API Key válida).',
-                          };
-                        }
-                        return {
-                          dotColor: 'rgb(239, 68, 68)', // vermelho
-                          dotPulse: false,
-                          text: `Inválido (${providerLabel(currentConfig.primary)})`,
-                          title: `Provider inválido: ${providerAutoValidation.status.error || 'erro desconhecido'}`,
-                        };
-                      }
-
-                      // Durante carga inicial, assume validação em andamento
-                      return {
-                        dotColor: 'rgb(59, 130, 246)', // azul
-                        dotPulse: true,
-                        text: `Validando (${providerLabel(currentConfig.primary)})...`,
-                        title: 'Validando credenciais salvas do provider...',
-                      };
-                    })();
-
-                    return (
-                      <div className="space-y-4">
-                        <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                          <p className="text-sm text-text-primary">
-                            <strong>ℹ️ Tenant:</strong> {tenantToUse}
-                            {targetTenantId && targetTenantId !== agent?.tenantId && (
-                              <span className="text-xs text-text-secondary ml-2">(configurando como super-admin)</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-text-secondary mt-1">
-                            Esta configuração é específica para este tenant. Cada tenant precisa ter seu próprio provider configurado.
-                          </p>
-                        </div>
-
-                        {/* Indicador de status do provider (estilo WebSocket) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span
-                            title={providerStatus.title}
-                            style={{
-                              display: 'inline-block',
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: providerStatus.dotColor,
-                              animation: providerStatus.dotPulse
-                                ? 'pulse 2s ease 0s infinite normal none running pulse'
-                                : 'none',
-                            }}
-                          />
-                          <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>
-                            {providerStatus.text}
-                          </span>
-                        </div>
-
-                        <div className="mb-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
-                          <p className="text-sm text-text-primary">
-                            <strong>⚠️ Importante:</strong> Cada tenant DEVE ter uma configuração específica de provider de IA. 
-                            Esta configuração é obrigatória para que o tenant possa usar os recursos de IA.
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block mb-2 text-sm font-medium text-text-primary">
-                              Provider Primário (Obrigatório)
-                            </label>
-                              <select
-                                value={currentConfig.primary || ''}
-                                onChange={(e) => {
-                                  const newPrimary = e.target.value || null;
-                                  setTenantAiConfig({
-                                    ...currentConfig,
-                                    primary: newPrimary,
-                                    configured: !!newPrimary,
-                                    // Reset modelo quando provider muda (modelos são específicos por provider)
-                                    model: null
-                                  });
-                                  // Reset estado de credenciais quando provider muda
-                                  setCredentialsValidatedAndSaved(false);
-                                  setApiKeyValidationStatus(null);
-                                }}
-                              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                            >
-                              <option value="">Selecione um provider...</option>
-                              <option value="openai">OpenAI</option>
-                              <option value="anthropic">Anthropic (Claude)</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block mb-2 text-sm font-medium text-text-primary">
-                              Provider Secundário (Opcional)
-                            </label>
-                            <select
-                              value={currentConfig.secondary || ''}
-                              onChange={(e) => {
-                                const newSecondary = e.target.value || null;
-                                setTenantAiConfig({
-                                  ...currentConfig,
-                                  secondary: newSecondary
-                                });
-                              }}
-                              disabled={!currentConfig.primary}
-                              className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <option value="">Nenhum</option>
-                              {currentConfig.primary !== 'openai' && <option value="openai">OpenAI</option>}
-                              {currentConfig.primary !== 'anthropic' && <option value="anthropic">Anthropic (Claude)</option>}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Modelo e Parâmetros */}
-                        {currentConfig.primary && (
-                          <div className="pt-6 border-t border-border-default space-y-4">
-                            <h4 className="text-lg font-medium text-text-primary">Modelo e Parâmetros</h4>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              <div>
-                                <label className="block mb-2 text-sm font-medium text-text-primary">
-                                  Modelo
-                                </label>
-                                <select
-                                  value={currentConfig.model || ''}
-                                  onChange={(e) => {
-                                    setTenantAiConfig({
-                                      ...currentConfig,
-                                      model: e.target.value || null
-                                    });
-                                  }}
-                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                >
-                                  <option value="">Padrão do provider</option>
-                                  {currentConfig.primary === 'openai' && (
-                                    <>
-                                      <option value="gpt-4">GPT-4</option>
-                                      <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                      <option value="gpt-4o">GPT-4o</option>
-                                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    </>
-                                  )}
-                                  {currentConfig.primary === 'anthropic' && (
-                                    <>
-                                      <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                                      <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                                      <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-                                      <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                                    </>
-                                  )}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="block mb-2 text-sm font-medium text-text-primary">
-                                  Temperatura (0-2)
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="2"
-                                  step="0.1"
-                                  value={currentConfig.temperature ?? ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value === '' ? null : parseFloat(e.target.value);
-                                    setTenantAiConfig({
-                                      ...currentConfig,
-                                      temperature: value
-                                    });
-                                  }}
-                                  placeholder="Padrão: 0.7"
-                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block mb-2 text-sm font-medium text-text-primary">
-                                  Max Tokens
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  value={currentConfig.max_tokens ?? ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value === '' ? null : parseInt(e.target.value);
-                                    setTenantAiConfig({
-                                      ...currentConfig,
-                                      max_tokens: value
-                                    });
-                                  }}
-                                  placeholder="Padrão: 2000"
-                                  className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Credenciais */}
-                        {currentConfig.primary && (
-                          <div className="pt-6 border-t border-border-default space-y-4">
-                            <h4 className="text-lg font-medium text-text-primary">Credenciais</h4>
-                            
-                            <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                              <p className="text-sm text-text-primary">
-                                <strong>ℹ️ Segurança:</strong> A chave atual nunca é exibida por segurança.
-                              </p>
-                              <p className="text-xs text-text-secondary mt-1">
-                                Para atualizar a chave, informe uma nova chave no campo abaixo e clique em "Salvar Credenciais".
-                              </p>
-                            </div>
-
-                            <div>
-                              <label className="block mb-2 text-sm font-medium text-text-primary">
-                                Provider para API Key
-                              </label>
-                              <select
-                                value={apiKeyProvider}
-                                onChange={(e) => setApiKeyProvider(e.target.value)}
-                                className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                              >
-                                <option value="">Selecione um provider...</option>
-                                {currentConfig.primary && <option value={currentConfig.primary}>{currentConfig.primary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
-                                {currentConfig.secondary && <option value={currentConfig.secondary}>{currentConfig.secondary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
-                              </select>
-                            </div>
-
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-text-primary">
-                                  API Key
-                                </label>
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
-                                    validatingApiKey
-                                      ? 'bg-status-info/20 text-status-info border-status-info/30'
-                                      : apiKeyValidationStatus
-                                        ? apiKeyValidationStatus.valid
-                                          ? 'bg-status-success/20 text-status-success border-status-success/30'
-                                          : 'bg-status-error/20 text-status-error border-status-error/30'
-                                        : 'bg-bg-primary text-text-secondary border-border-default'
-                                  }`}
-                                >
-                                  {validatingApiKey ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                                      <span>Validando...</span>
-                                    </>
-                                  ) : apiKeyValidationStatus ? (
-                                    apiKeyValidationStatus.valid ? (
-                                      <span>Válido</span>
-                                    ) : (
-                                      <span>Inválido</span>
-                                    )
-                                  ) : (
-                                    <span>{(apiKey || '').trim() ? 'Não testado' : 'Informe e teste'}</span>
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                  <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={(e) => {
-                                      setApiKey(e.target.value);
-                                      // Limpa status de validação quando o valor muda
-                                      setApiKeyValidationStatus(null);
-                                    }}
-                                    disabled={!apiKeyProvider}
-                                    placeholder="Informe uma nova chave para atualizar"
-                                    className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${
-                                      apiKeyValidationStatus
-                                        ? apiKeyValidationStatus.valid
-                                          ? 'border-status-success'
-                                          : 'border-status-error'
-                                        : 'border-border-default'
-                                    }`}
-                                  />
-                                  {apiKeyValidationStatus && (
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                      {apiKeyValidationStatus.valid ? (
-                                        <svg className="w-5 h-5 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                      ) : (
-                                        <svg className="w-5 h-5 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!apiKey || apiKey.trim() === '') {
-                                      showToast('Informe uma API Key para testar', 'warning');
-                                      return;
-                                    }
-                                    if (!apiKeyProvider) {
-                                      showToast('Selecione um provider antes de testar', 'error');
-                                      return;
-                                    }
-
-                                    setValidatingApiKey(true);
-                                    setApiKeyValidationStatus(null);
-
-                                    try {
-                                      const result = await validateProviderToken(apiKeyProvider, apiKey.trim());
-                                      setApiKeyValidationStatus({
-                                        valid: result.valid,
-                                        error: result.error || null,
-                                      });
-
-                                      if (result.valid) {
-                                        showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} válida!`, 'success');
-                                      } else {
-                                        showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
-                                      }
-                                    } catch (error) {
-                                      logger.error('Erro ao validar API Key', error);
-                                      setApiKeyValidationStatus({
-                                        valid: false,
-                                        error: error.message || 'Erro ao validar API Key',
-                                      });
-                                      showToast(`Erro ao validar API Key: ${error.message || 'Erro desconhecido'}`, 'error');
-                                    } finally {
-                                      setValidatingApiKey(false);
-                                    }
-                                  }}
-                                  disabled={!apiKey || !apiKey.trim() || !apiKeyProvider || validatingApiKey}
-                                  className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
-                                >
-                                  {validatingApiKey ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                      <span>Testando...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                      <span>Testar API Key</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                              {apiKeyValidationStatus && !apiKeyValidationStatus.valid && apiKeyValidationStatus.error && (
-                                <p className="mt-1 text-xs text-status-error">{apiKeyValidationStatus.error}</p>
-                              )}
-                              {apiKeyValidationStatus && apiKeyValidationStatus.valid && (
-                                <p className="mt-1 text-xs text-status-success">✓ API Key válida e funcionando corretamente</p>
-                              )}
-                              <p className="text-xs text-text-secondary mt-1">
-                                A chave atual nunca é exibida por segurança. Informe uma nova chave para atualizar.
-                              </p>
-                            </div>
-
-                            {/* Botão Salvar Credenciais */}
-                            <div className="flex gap-3">
-                              <button
-                                onClick={async () => {
-                                  if (!apiKey || apiKey.trim() === '') {
-                                    showToast('Informe uma API Key para salvar', 'warning');
-                                    return;
-                                  }
-                                  if (!apiKeyProvider) {
-                                    showToast('Selecione um provider antes de salvar credenciais', 'error');
-                                    return;
-                                  }
-
-                                  setSavingTenantAiCredentials(true);
-                                  try {
-                                    // Usa targetTenantId se disponível (super-admin), senão undefined (usa current)
-                                    await saveTenantAiCredentials({
-                                      provider: apiKeyProvider,
-                                      apiKey: apiKey.trim()
-                                    }, targetTenantId || undefined);
-                                    // Força revalidação automática do provider após salvar credenciais
-                                    setProviderAutoValidationNonce((n) => n + 1);
-                                    // Se a API Key foi validada antes de salvar, marca como validada e salva
-                                    if (apiKeyValidationStatus && apiKeyValidationStatus.valid) {
-                                      setCredentialsValidatedAndSaved(true);
-                                      showToast('Credenciais validadas e salvas com sucesso!', 'success');
-                                    } else {
-                                      showToast('Credenciais salvas, mas não foram validadas. Teste a API Key antes de salvar para garantir que está funcionando.', 'warning');
-                                    }
-                                    setApiKey(''); // Limpa o campo após salvar
-                                    setApiKeyProvider(''); // Limpa o provider também
-                                    setApiKeyValidationStatus(null); // Limpa status de validação
-                                  } catch (error) {
-                                    logger.error('Erro ao salvar credenciais de IA', error);
-                                    const errorMessage = error.body?.message || error.message || 'Erro ao salvar credenciais';
-                                    showToast(`Erro: ${errorMessage}`, 'error');
-                                  } finally {
-                                    setSavingTenantAiCredentials(false);
-                                  }
-                                }}
-                                disabled={savingTenantAiConfig || savingTenantAiCredentials || !apiKeyProvider || !apiKey.trim() || !apiKeyValidationStatus?.valid}
-                                className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
-                              >
-                                {savingTenantAiCredentials ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                    <span>Salvando...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>🔐</span>
-                                    <span>Salvar Credenciais</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {currentConfig.configured && credentialsValidatedAndSaved && (
-                          <div className="p-3 bg-status-success/10 rounded-lg border border-status-success/30">
-                            <p className="text-sm text-status-success">
-                              ✓ Configuração de IA ativa para este tenant
-                            </p>
-                            <p className="text-xs text-status-success mt-1">
-                              Provider configurado e credenciais validadas e salvas com sucesso.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
+              <ConfigAiTab
+                editedConfig={editedConfig}
+                agent={agent}
+                targetTenantId={targetTenantId}
+                loadingTenantAiConfig={loadingTenantAiConfig}
+                tenantAiConfig={tenantAiConfig}
+                providerAutoValidation={providerAutoValidation}
+                apiKey={apiKey}
+                apiKeyProvider={apiKeyProvider}
+                validatingApiKey={validatingApiKey}
+                apiKeyValidationStatus={apiKeyValidationStatus}
+                savingTenantAiConfig={savingTenantAiConfig}
+                savingTenantAiCredentials={savingTenantAiCredentials}
+                credentialsValidatedAndSaved={credentialsValidatedAndSaved}
+                setTenantAiConfig={setTenantAiConfig}
+                setApiKey={setApiKey}
+                setApiKeyProvider={setApiKeyProvider}
+                setApiKeyValidationStatus={setApiKeyValidationStatus}
+                setValidatingApiKey={setValidatingApiKey}
+                setSavingTenantAiCredentials={setSavingTenantAiCredentials}
+                setCredentialsValidatedAndSaved={setCredentialsValidatedAndSaved}
+                setProviderAutoValidationNonce={setProviderAutoValidationNonce}
+                showToast={showToast}
+              />
             )}
 
             {/* Aba: Features */}
             {activeTab === 'features' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>✨</span>
-                  <span>Features</span>
-                </h3>
-                <div className="space-y-4">
-                  <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editedConfig.features?.aiTasksEnabled || false}
-                      onChange={(e) => updateValue('features.aiTasksEnabled', e.target.checked)}
-                      className="w-5 h-5 rounded border-border-default text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <span className="text-text-primary font-medium">Tarefas de IA Habilitadas</span>
-                      <p className="text-text-secondary text-sm mt-1">(aiTasksEnabled)</p>
-                    </div>
-                  </label>
-                  <div className="p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                    <p className="text-sm text-text-secondary">
-                      💡 Controla se as tarefas de IA estão habilitadas. Quando desabilitado, todas as tarefas de IA retornam fallback.
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editedConfig.features?.useRealAiApi || false}
-                      onChange={(e) => updateValue('features.useRealAiApi', e.target.checked)}
-                      className="w-5 h-5 rounded border-border-default text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <span className="text-text-primary font-medium">Usar API Real de IA</span>
-                      <p className="text-text-secondary text-sm mt-1">(useRealAiApi)</p>
-                    </div>
-                  </label>
-                  <div className="p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                    <p className="text-sm text-text-secondary">
-                      💡 Quando habilitado, faz chamadas HTTP reais à API de IA (/api/ai/generate) ao invés de usar a implementação mock local baseada em palavras-chave. As requisições aparecerão na aba Network do DevTools.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ConfigFeaturesTab editedConfig={editedConfig} updateValue={updateValue} />
             )}
 
             {/* Aba: Scripts */}
             {activeTab === 'scripts' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>📜</span>
-                  <span>Scripts</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderField('URL da API', 'scripts.apiUrl', editedConfig.scripts?.apiUrl)}
-                  {renderField('Idade Máxima (dias)', 'scripts.maxAgeDays', editedConfig.scripts?.maxAgeDays, 'number')}
-                </div>
-                <div className="mt-6">
-                  <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editedConfig.scripts?.dryRun || false}
-                      onChange={(e) => updateValue('scripts.dryRun', e.target.checked)}
-                      className="w-5 h-5 rounded border-border-default text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary cursor-pointer"
-                    />
-                    <span className="text-text-primary font-medium">Dry Run (modo simulação)</span>
-                  </label>
-                </div>
-              </div>
+              <ConfigScriptsTab editedConfig={editedConfig} renderField={renderField} updateValue={updateValue} />
             )}
 
             {/* Aba: Logging */}
             {activeTab === 'logging' && (
-              <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                  <span>📝</span>
-                  <span>Logging</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {renderField(
-                    'Nível de Log', 
-                    'logging.level', 
-                    editedConfig.logging?.level,
-                    'text',
-                    [
-                      { value: 'DEBUG', label: 'DEBUG - Todas as mensagens (0)' },
-                      { value: 'INFO', label: 'INFO - Informações, avisos e erros (1)' },
-                      { value: 'WARN', label: 'WARN - Apenas avisos e erros (2)' },
-                      { value: 'ERROR', label: 'ERROR - Apenas erros (3)' },
-                      { value: 'NONE', label: 'NONE - Nenhum log (4)' }
-                    ]
-                  )}
-                  {renderField(
-                    'Formato de Saída', 
-                    'logging.format', 
-                    editedConfig.logging?.format,
-                    'text',
-                    [
-                      { value: 'json', label: 'JSON - Formato estruturado (recomendado)' },
-                      { value: 'text', label: 'TEXT - Formato texto legível' }
-                    ]
-                  )}
-                </div>
-                <div className="mt-6 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                  <p className="text-sm text-text-secondary mb-2">
-                    <strong>💡 Níveis de Log:</strong>
-                  </p>
-                  <ul className="text-sm text-text-secondary space-y-1 ml-4 list-disc">
-                    <li><strong>DEBUG:</strong> Todas as mensagens, incluindo informações detalhadas para debugging</li>
-                    <li><strong>INFO:</strong> Informações gerais, avisos e erros (padrão em produção)</li>
-                    <li><strong>WARN:</strong> Apenas avisos e erros</li>
-                    <li><strong>ERROR:</strong> Apenas erros</li>
-                    <li><strong>NONE:</strong> Nenhum log será exibido</li>
-                  </ul>
-                </div>
-                <div className="mt-4 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                  <p className="text-sm text-text-primary">
-                    <strong>ℹ️ Nota:</strong> Após alterar as configurações de logging, reinicie o servidor da API para aplicar as mudanças.
-                  </p>
-                </div>
-              </div>
+              <ConfigLoggingTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: Rate Limiting */}
             {activeTab === 'rateLimit' && (
-              <div className="space-y-6">
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                    <span>🚦</span>
-                    <span>Rate Limiting</span>
-                  </h3>
-                  
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Redis</h4>
-                    {renderField('URL do Redis', 'rateLimit.redis.url', editedConfig.rateLimit?.redis?.url)}
-                    <div className="mt-4 p-4 bg-accent-light rounded-lg border border-accent-primary/20">
-                      <p className="text-sm text-text-secondary">
-                        💡 URL de conexão do Redis para armazenar contadores de rate limiting. Exemplo: <code className="bg-bg-primary px-1 rounded">redis://localhost:6379</code>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - DRY-RUN</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Pontos (execuções)', 'rateLimit.policies.dryRun.points', editedConfig.rateLimit?.policies?.dryRun?.points, 'number')}
-                      {renderField('Duração (segundos)', 'rateLimit.policies.dryRun.duration', editedConfig.rateLimit?.policies?.dryRun?.duration, 'number')}
-                    </div>
-                    <div className="mt-4 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                      <p className="text-sm text-text-secondary">
-                        ℹ️ DRY-RUN é mais permissivo (padrão: 50 execuções por minuto) - usado para testes
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Geração Real</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Pontos (execuções)', 'rateLimit.policies.generation.points', editedConfig.rateLimit?.policies?.generation?.points, 'number')}
-                      {renderField('Duração (segundos)', 'rateLimit.policies.generation.duration', editedConfig.rateLimit?.policies?.generation?.duration, 'number')}
-                    </div>
-                    <div className="mt-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
-                      <p className="text-sm text-text-secondary">
-                        ⚠️ Geração real é restritiva (padrão: 5 execuções por minuto) - usado em produção
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Bootstrap</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Pontos (execuções)', 'rateLimit.policies.bootstrap.points', editedConfig.rateLimit?.policies?.bootstrap?.points, 'number')}
-                      {renderField('Duração (segundos)', 'rateLimit.policies.bootstrap.duration', editedConfig.rateLimit?.policies?.bootstrap?.duration, 'number')}
-                    </div>
-                    <div className="mt-4 p-4 bg-status-error/10 rounded-lg border border-status-error/30">
-                      <p className="text-sm text-text-secondary">
-                        🚨 Bootstrap é extremamente restritivo (padrão: 1 execução a cada 5 minutos) - usado para operações críticas
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6 pb-6 border-b border-border-default">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Scraping</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Pontos (requisições)', 'rateLimit.policies.scraping.points', editedConfig.rateLimit?.policies?.scraping?.points, 'number')}
-                      {renderField('Duração (segundos)', 'rateLimit.policies.scraping.duration', editedConfig.rateLimit?.policies?.scraping?.duration, 'number')}
-                      {renderField('Requisições por Segundo (por domínio)', 'rateLimit.policies.scraping.requestsPerSecond', editedConfig.rateLimit?.policies?.scraping?.requestsPerSecond, 'number')}
-                      {renderField('Páginas por Execução', 'rateLimit.policies.scraping.pagesPerExecution', editedConfig.rateLimit?.policies?.scraping?.pagesPerExecution, 'number')}
-                    </div>
-                    <div className="mt-4 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                      <p className="text-sm text-text-secondary">
-                        ℹ️ Scraping tem limites por domínio (requests por segundo) e por execução (páginas máximas)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium text-text-primary mb-4">Políticas - Validação de Sistema</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {renderField('Pontos (execuções)', 'rateLimit.policies.systemValidate.points', editedConfig.rateLimit?.policies?.systemValidate?.points, 'number')}
-                      {renderField('Duração (segundos)', 'rateLimit.policies.systemValidate.duration', editedConfig.rateLimit?.policies?.systemValidate?.duration, 'number')}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 p-4 bg-status-info/10 rounded-lg border border-status-info/30">
-                    <p className="text-sm text-text-primary mb-2">
-                      <strong>ℹ️ Sobre Rate Limiting:</strong>
-                    </p>
-                    <ul className="text-sm text-text-secondary space-y-1 ml-4 list-disc">
-                      <li>Todas as execuções passam por rate limiting antes de qualquer processamento</li>
-                      <li>Rate limiting bloqueia execuções que excedem os limites configurados</li>
-                      <li>Erros de rate limit retornam HTTP 429 com informação de quando tentar novamente</li>
-                      <li>Eventos são registrados em <code className="bg-bg-primary px-1 rounded">reports/rate-limit-events.json</code></li>
-                      <li>Redis é obrigatório em produção para rate limiting distribuído</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <ConfigRateLimitTab editedConfig={editedConfig} renderField={renderField} updateValue={updateValue} />
             )}
 
             {/* Aba: Fallbacks */}
             {activeTab === 'fallbacks' && (
-              <div className="space-y-6">
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-                    <h3 className="text-xl font-semibold text-text-primary flex items-center gap-2">
-                      <span>🛟</span>
-                      <span>Fallbacks (uso explícito)</span>
-                    </h3>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        if (!editedConfig) return;
-                        const next = JSON.parse(JSON.stringify(editedConfig));
-                        next.fallbacks = {
-                          aiProviderSecondary: false,
-                          ragFallbackToDirect: false,
-                          ticketInsightHeuristic: false,
-                          rateLimitRedisToMemory: false,
-                          frontendAiMockOnError: false,
-                          frontendAiDisabledReturnFallback: false,
-                          frontendNavigationHardRedirect: false,
-                        };
-                        setEditedConfig(next);
-                        if (viewMode === 'json') setJsonText(JSON.stringify(next, null, 2));
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <span>🧩</span>
-                      <span>Tornar explícito (todos false)</span>
-                    </Button>
-                  </div>
-
-                  <div className="p-4 bg-status-warning/10 rounded-lg border border-status-warning/30 mb-6">
-                    <p className="text-sm text-text-primary">
-                      <strong>⚠️ Importante:</strong> todos os toggles abaixo são <strong>false por padrão</strong>. Se um fallback estiver desabilitado, o sistema deve <strong>falhar de forma explícita</strong> (sem “jeitinho”) ou seguir o fluxo sem degradar silenciosamente.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.aiProviderSecondary === true}
-                        onClick={() => updateValue('fallbacks.aiProviderSecondary', !(editedConfig.fallbacks?.aiProviderSecondary === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.aiProviderSecondary === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.aiProviderSecondary === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">IA: usar provider secundário (primary → secondary)</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.aiProviderSecondary`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.ragFallbackToDirect === true}
-                        onClick={() => updateValue('fallbacks.ragFallbackToDirect', !(editedConfig.fallbacks?.ragFallbackToDirect === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.ragFallbackToDirect === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.ragFallbackToDirect === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">RAG: fallback para IA direta quando RAG falha/baixa confiança</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.ragFallbackToDirect`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.ticketInsightHeuristic === true}
-                        onClick={() => updateValue('fallbacks.ticketInsightHeuristic', !(editedConfig.fallbacks?.ticketInsightHeuristic === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.ticketInsightHeuristic === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.ticketInsightHeuristic === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">Atendimento: resumo heurístico quando IA falhar (best-effort)</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.ticketInsightHeuristic`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.rateLimitRedisToMemory === true}
-                        onClick={() => updateValue('fallbacks.rateLimitRedisToMemory', !(editedConfig.fallbacks?.rateLimitRedisToMemory === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.rateLimitRedisToMemory === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.rateLimitRedisToMemory === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">Rate limit: permitir fallback Redis → memória</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.rateLimitRedisToMemory`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.frontendAiMockOnError === true}
-                        onClick={() => updateValue('fallbacks.frontendAiMockOnError', !(editedConfig.fallbacks?.frontendAiMockOnError === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.frontendAiMockOnError === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.frontendAiMockOnError === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">Frontend: usar mock local se a API real de IA falhar</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendAiMockOnError`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true}
-                        onClick={() => updateValue('fallbacks.frontendAiDisabledReturnFallback', !(editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.frontendAiDisabledReturnFallback === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">Frontend: quando IA estiver desabilitada, retornar “fallback” automático</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendAiDisabledReturnFallback`</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={editedConfig.fallbacks?.frontendNavigationHardRedirect === true}
-                        onClick={() => updateValue('fallbacks.frontendNavigationHardRedirect', !(editedConfig.fallbacks?.frontendNavigationHardRedirect === true))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-                          editedConfig.fallbacks?.frontendNavigationHardRedirect === true
-                            ? 'bg-accent-primary border-accent-primary'
-                            : 'bg-bg-secondary border-border-default'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                            editedConfig.fallbacks?.frontendNavigationHardRedirect === true ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                      <div className="flex-1">
-                        <span className="text-text-primary font-medium">Frontend: permitir fallback de navegação via `window.location`</span>
-                        <p className="text-text-secondary text-sm mt-1">`fallbacks.frontendNavigationHardRedirect`</p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <ConfigFallbacksTab
+                editedConfig={editedConfig}
+                updateValue={updateValue}
+                setEditedConfig={setEditedConfig}
+                viewMode={viewMode}
+                setJsonText={setJsonText}
+              />
             )}
 
             {/* Aba: Geral */}
             {activeTab === 'general' && (
-              <div className="space-y-6">
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                    <span>🌐</span>
-                    <span>Geral</span>
-                  </h3>
-                  {renderField(
-                    'Ambiente',
-                    'nodeEnv',
-                    editedConfig.nodeEnv,
-                    'text',
-                    [
-                      { value: 'production', label: 'Production (Produção)' },
-                      { value: 'development', label: 'Development (Desenvolvimento)' },
-                      { value: 'test', label: 'Test (Teste)' }
-                    ]
-                  )}
-                </div>
-                <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
-                  <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-                    <span>🔒</span>
-                    <span>Privacidade</span>
-                  </h3>
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-text-primary font-medium">Mascaramento de telefone</p>
-                      <p className="text-text-secondary text-sm">
-                        Oculta números de telefone no inbox e tickets para este tenant.
-                      </p>
-                    </div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={phoneMaskingEnabled}
-                        onChange={async (e) => {
-                          const next = e.target.checked;
-                          setPhoneMaskingEnabled(next);
-                          setSavingPhoneMasking(true);
-                          try {
-                            await upsertTenantSetting('phone-masking', { enabled: next });
-                          } catch {
-                            setPhoneMaskingEnabled(!next);
-                          } finally {
-                            setSavingPhoneMasking(false);
-                          }
-                        }}
-                        disabled={loadingPhoneMasking || savingPhoneMasking}
-                        className="w-4 h-4 rounded border-border-default text-accent-primary focus:ring-2 focus:ring-accent-primary cursor-pointer"
-                      />
-                      <span className="text-sm text-text-secondary">
-                        {savingPhoneMasking ? 'Salvando...' : (phoneMaskingEnabled ? 'Ativo' : 'Inativo')}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <ConfigGeneralTab
+                editedConfig={editedConfig}
+                renderField={renderField}
+                updateValue={updateValue}
+                phoneMaskingEnabled={phoneMaskingEnabled}
+                loadingPhoneMasking={loadingPhoneMasking}
+                savingPhoneMasking={savingPhoneMasking}
+                setPhoneMaskingEnabled={setPhoneMaskingEnabled}
+                setSavingPhoneMasking={setSavingPhoneMasking}
+                showToast={showToast}
+                upsertTenantSetting={upsertTenantSetting}
+              />
             )}
           </div>
         ) : (

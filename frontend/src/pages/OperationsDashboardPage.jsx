@@ -25,6 +25,7 @@ import {
 import { markScheduleDone, markScheduleNoShow } from '../api/scheduling';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
+import { DashboardKpiCard, DashboardSectionState } from '../modules/dashboard-base';
 
 const TABS = [
   { id: 'beauty-agenda', label: 'Agenda Beauty' },
@@ -142,26 +143,11 @@ function FilterBar({ filters, onChange, onRefresh, loading }) {
 }
 
 function KpiCard({ title, value, subtitle }) {
-  return (
-    <div className="bg-bg-elevated border border-border-default rounded-xl p-4">
-      <div className="text-xs text-text-secondary mb-1">{title}</div>
-      <div className="text-2xl font-semibold text-text-primary">{cardNumber(value)}</div>
-      {subtitle ? <div className="text-xs text-text-tertiary mt-1">{subtitle}</div> : null}
-    </div>
-  );
+  return <DashboardKpiCard label={title} value={cardNumber(value)} subtitle={subtitle} />;
 }
 
-function SectionState({ loading, error, empty, emptyMessage }) {
-  if (loading) {
-    return <div className="text-sm text-text-secondary py-3">Carregando...</div>;
-  }
-  if (error) {
-    return <div className="text-sm text-rose-300 py-3">{error}</div>;
-  }
-  if (empty) {
-    return <div className="text-sm text-text-secondary py-3">{emptyMessage}</div>;
-  }
-  return null;
+function SectionState(props) {
+  return <DashboardSectionState {...props} />;
 }
 
 function TabButton({ tab, activeTab, setActiveTab }) {
