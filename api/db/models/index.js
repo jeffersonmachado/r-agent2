@@ -49,6 +49,7 @@ const getPhysicalTicket = require('./PhysicalTicket');
 const getPhysicalTicketSequence = require('./PhysicalTicketSequence');
 const getAccessSubject = require('./AccessSubject');
 const getAccessMembership = require('./AccessMembership');
+const getEvidence = require('./Evidence');
 const getAccessCredential = require('./AccessCredential');
 const getAccessPolicy = require('./AccessPolicy');
 const getAccessDevice = require('./AccessDevice');
@@ -159,6 +160,7 @@ const PhysicalTicket = () => getPhysicalTicket();
 const PhysicalTicketSequence = () => getPhysicalTicketSequence();
 const AccessSubject = () => getAccessSubject();
 const AccessMembership = () => getAccessMembership();
+const Evidence = () => getEvidence();
 const AccessCredential = () => getAccessCredential();
 const AccessPolicy = () => getAccessPolicy();
 const AccessDevice = () => getAccessDevice();
@@ -434,6 +436,7 @@ module.exports = {
   PhysicalTicketSequence,
   AccessSubject,
   AccessMembership,
+  Evidence,
   AccessCredential,
   AccessPolicy,
   AccessDevice,
@@ -542,6 +545,7 @@ module.exports = {
   getPhysicalTicketSequence,
   getAccessSubject,
   getAccessMembership,
+  getEvidence,
   getAccessCredential,
   getAccessPolicy,
   getAccessDevice,

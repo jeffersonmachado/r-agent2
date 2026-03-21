@@ -21,6 +21,7 @@ import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as g
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
 import { queryAuditLogs } from '../api/audit';
+import { getEvidenceEntityHistory, searchEvidence } from '../api/evidence';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -40,6 +41,9 @@ import {
 } from '../modules/support-workspace/components';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
+import { SupportDeliveryFailuresModal } from './support/SupportDeliveryFailuresModal';
+import { SupportCloseTicketModal } from './support/SupportCloseTicketModal';
+import { SupportNewConversationModal } from './support/SupportNewConversationModal';
 
 /**
  * Página de atendimento para gerenciar tickets.
@@ -96,6 +100,8 @@ export function SupportPage() {
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
+  const [evidenceHistory, setEvidenceHistory] = useState({ identity: null, evidence: null, timeline: [] });
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
 
   const applyTemplateVariables = useCallback((text, variables) => {
@@ -477,6 +483,44 @@ export function SupportPage() {
   };
 
   useEffect(() => {
+    if (!selectedTicket?.id) {
+      setEvidenceHistory({ identity: null, evidence: null, timeline: [] });
+      return;
+    }
+    const context = {
+      ticketId: selectedTicket.id,
+      conversationId: selectedTicket.conversationId || null,
+      phone: selectedTicket.phoneNumber || null,
+    };
+    setEvidenceLoading(true);
+    Promise.all([
+      getEvidenceEntityHistory({
+        ticketId: context.ticketId,
+        conversationId: context.conversationId,
+        phone: context.phone,
+        limit: 5,
+      }),
+      searchEvidence({
+        context,
+        query: selectedTicket.lastUserMessage || '',
+        options: { limit: 5, includeWeak: false },
+      }),
+    ])
+      .then(([historyResp, searchResp]) => {
+        setEvidenceHistory({
+          identity: historyResp?.identity || searchResp?.identity || null,
+          timeline: historyResp?.timeline || [],
+          evidence: searchResp?.ok ? searchResp : (historyResp?.evidence || null),
+        });
+      })
+      .catch((error) => {
+        logger.error('Erro ao carregar Evidence Engine', error);
+        setEvidenceHistory({ identity: null, evidence: null, timeline: [] });
+      })
+      .finally(() => setEvidenceLoading(false));
+  }, [selectedTicket?.id, selectedTicket?.conversationId, selectedTicket?.phoneNumber, selectedTicket?.lastUserMessage]);
+
+  useEffect(() => {
     if (!showCloseModal) return;
     listCloseReasons({ activeOnly: true })
       .then((resp) => setCloseReasons(resp?.closeReasons || []))
@@ -592,6 +636,66 @@ export function SupportPage() {
       return '';
     }
   }
+
+  async function copyToClipboard(text) {
+    const content = String(text || '').trim();
+    if (!content) return false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  function formatEvidenceLabel(value) {
+    if (!value) return 'n/a';
+    return String(value).replace(/_/g, ' ');
+  }
+
+  function buildEvidenceSuggestedReply(evidence) {
+    if (!evidence) return '';
+    const occurredAt = evidence.occurred_at ? formatDate(evidence.occurred_at) : 'data anterior';
+    const sourceLabel = formatEvidenceLabel(evidence.source_type || evidence.sourceType || 'origem anterior');
+    return `Identificamos que essa informação já foi comunicada anteriormente em ${occurredAt}, através de ${sourceLabel}. Posso reenviar o trecho ou documento relacionado.\n\nTrecho de apoio: ${evidence.excerpt || evidence.summary || ''}`.trim();
+  }
+
+  const handleCopyEvidence = useCallback(async (evidence) => {
+    const text = [
+      evidence?.summary || '',
+      evidence?.excerpt || '',
+      evidence?.source_ref?.ticketId ? `ticket=${evidence.source_ref.ticketId}` : '',
+      evidence?.source_ref?.conversationId ? `conversation=${evidence.source_ref.conversationId}` : '',
+    ].filter(Boolean).join('\n');
+    const copied = await copyToClipboard(text);
+    showToast(copied ? 'Evidência copiada' : 'Não foi possível copiar a evidência', copied ? 'success' : 'error');
+  }, [showToast]);
+
+  const handleUseEvidenceAsReply = useCallback((evidence) => {
+    const suggestion = buildEvidenceSuggestedReply(evidence);
+    setMessageText((prev) => {
+      if (!prev) return suggestion;
+      if (prev.includes(suggestion)) return prev;
+      return `${prev}\n\n${suggestion}`.trim();
+    });
+    showToast('Sugestão adicionada ao composer', 'success');
+  }, [showToast]);
+
+  const handleOpenEvidenceSource = useCallback((evidence) => {
+    const ticketId = evidence?.source_ref?.ticketId;
+    if (ticketId) {
+      const ticket = tickets.find((item) => item.id === ticketId);
+      if (ticket) {
+        setSelectedTicket(ticket);
+        showToast('Origem aberta no ticket relacionado', 'info');
+        return;
+      }
+    }
+    const sourceText = safeStringify(evidence?.source_ref || {}, 1200);
+    copyToClipboard(sourceText);
+    showToast('Origem rastreável copiada para consulta', 'info');
+  }, [tickets, showToast]);
 
   function summarizeChannelMessage(channelMsg) {
     const type = String(channelMsg?.type || '').toLowerCase();
@@ -1611,6 +1715,109 @@ export function SupportPage() {
                   </div>
 
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 700 }}>Entidade resolvida</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {evidenceLoading ? 'Carregando…' : (evidenceHistory.identity ? `${Math.round((evidenceHistory.identity.confidence || 0) * 100)}%` : 'sem match')}
+                      </div>
+                    </div>
+                    {evidenceHistory.identity ? (
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        <div>Tipo: <strong>{evidenceHistory.identity.entityType}</strong></div>
+                        <div>ID: <code>{evidenceHistory.identity.entityId}</code></div>
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Fontes</div>
+                          {(evidenceHistory.identity.sources || []).slice(0, 4).map((source, index) => (
+                            <div key={`${source.type || 'src'}-${index}`}>
+                              {formatEvidenceLabel(source.type || 'source')}
+                              {source.id ? ` • ${source.id}` : ''}
+                              {source.field ? ` • ${source.field}` : ''}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Relacionados</div>
+                          {(evidenceHistory.identity.relatedEntities || []).length === 0 ? (
+                            <div style={{ color: 'var(--color-text-tertiary)' }}>Sem entidades relacionadas detectadas.</div>
+                          ) : (
+                            (evidenceHistory.identity.relatedEntities || []).slice(0, 8).map((entity) => (
+                              <div key={`${entity.type}:${entity.id}`}>
+                                {entity.type}: <code>{entity.id}</code>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                        Nenhuma entidade foi resolvida com confiança suficiente para este atendimento.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 700 }}>Evidências relacionadas</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {evidenceLoading ? 'Carregando…' : `${(evidenceHistory.evidence?.best ? 1 : 0) + (evidenceHistory.evidence?.alternatives?.length || 0)} item(ns)`}
+                      </div>
+                    </div>
+                    {evidenceHistory.evidence?.best || (evidenceHistory.evidence?.alternatives || []).length > 0 ? (
+                      [evidenceHistory.evidence?.best, ...(evidenceHistory.evidence?.alternatives || [])]
+                        .filter(Boolean)
+                        .map((evidence, index) => (
+                          <div key={evidence.id || index} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                              <div>
+                                <strong>{formatEvidenceLabel(evidence.type)}</strong>
+                                {evidence.theme ? ` • ${formatEvidenceLabel(evidence.theme)}` : ''}
+                              </div>
+                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(evidence.occurred_at)}</div>
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
+                              <div>{formatEvidenceLabel(evidence.category)} • origem {formatEvidenceLabel(evidence.source_type)} • força {formatEvidenceLabel(evidence.strength)}</div>
+                              <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • score {evidence.reasoning?.score || 0}</div>
+                              {evidence.reasoning?.matchedBy?.length ? (
+                                <div>Match: {evidence.reasoning.matchedBy.join(', ')}</div>
+                              ) : null}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                              {evidence.excerpt || evidence.summary}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                              <Button type="button" onClick={() => handleOpenEvidenceSource(evidence)} style={{ width: 'auto' }}>
+                                Abrir origem
+                              </Button>
+                              <Button type="button" onClick={() => handleCopyEvidence(evidence)} style={{ width: 'auto' }}>
+                                Copiar evidência
+                              </Button>
+                              <Button type="button" onClick={() => handleUseEvidenceAsReply(evidence)} style={{ width: 'auto' }}>
+                                Usar na resposta
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                        Nenhuma evidência histórica relevante foi encontrada para o contexto atual.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Resposta sugerida</div>
+                    {evidenceHistory.evidence?.best ? (
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                        {buildEvidenceSuggestedReply(evidenceHistory.evidence.best)}
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                        Quando houver uma evidência forte, a sugestão aparecerá aqui sem interromper o fluxo atual.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                       {(extractedEntities.emails.length === 0
@@ -1805,376 +2012,56 @@ export function SupportPage() {
       <ConfirmDialog />
 
       {/* Modal: Falhas de entrega */}
-      {showDeliveryFailuresModal && (
-        <div
-          className="support-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delivery-failures-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeliveryFailuresModal(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setShowDeliveryFailuresModal(false);
-            }
-          }}
-        >
-          <div className="support-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2 id="delivery-failures-title" style={{ marginTop: 0 }}>
-              Falhas de entrega
-            </h2>
-
-            <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-              Mostra itens com erro no outbound e mensagens do canal marcadas como <strong>failed</strong>.
-            </div>
-
-            {deliveryFailuresLoading ? (
-              <div style={{ padding: '12px 0' }}>Carregando...</div>
-            ) : (
-              <>
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Outbound queue</div>
-                  {deliveryFailures.outboundQueue.length === 0 ? (
-                    <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma falha registrada.</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '220px', overflowY: 'auto' }}>
-                      {deliveryFailures.outboundQueue.map((it) => {
-                        const text = it?.message?.body?.text || it?.message?.body?.body || it?.message?.text || '';
-                        const to = it?.message?.to || null;
-                        const reasonCode = it?.reason_code || it?.reasonCode || null;
-                        return (
-                          <div key={it.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
-                              <strong>{it.channel_type}</strong> • {it.status} • tentativas: {it.attempts ?? '-'}
-                              {to ? ` • para: ${to}` : ''}
-                            </div>
-                            {reasonCode ? (
-                              <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '6px' }}>
-                                reason_code: <strong>{String(reasonCode)}</strong>
-                              </div>
-                            ) : null}
-                            <div style={{ fontSize: '13px', marginBottom: '6px', whiteSpace: 'pre-wrap' }}>
-                              {text ? text : <span style={{ color: '#999' }}>(sem texto)</span>}
-                            </div>
-                            {it.last_error ? (
-                              <div style={{ fontSize: '12px', color: '#b91c1c', marginBottom: '8px' }}>
-                                {String(it.last_error).slice(0, 500)}
-                              </div>
-                            ) : null}
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                              <Button
-                                onClick={async () => {
-                                  if (!selectedTicket) return;
-                                  if (!text || !String(text).trim()) {
-                                    showToast('Não há texto para reenviar', 'warning');
-                                    return;
-                                  }
-                                  try {
-                                    await sendTicketMessage(selectedTicket.id, String(text));
-                                    showToastRef.current('Reenvio solicitado', 'success', 2500);
-                                  } catch (err) {
-                                    logger.error('Erro ao reenviar', err);
-                                    showToast('Erro ao reenviar mensagem', 'error');
-                                  }
-                                }}
-                              >
-                                Reenviar
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Channel messages (failed)</div>
-                  {deliveryFailures.channelMessages.length === 0 ? (
-                    <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma mensagem do canal marcada como failed.</div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
-                      {deliveryFailures.channelMessages.map((m) => (
-                        <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                          <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
-                            <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
-                          </div>
-                          <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
-                            {m?.body?.text ? String(m.body.text) : JSON.stringify(m.body || {})}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <Button
-                    onClick={() => setShowDeliveryFailuresModal(false)}
-                    style={{ background: 'var(--color-bg-secondary)' }}
-                  >
-                    Fechar
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <SupportDeliveryFailuresModal
+        isOpen={showDeliveryFailuresModal}
+        loading={deliveryFailuresLoading}
+        deliveryFailures={deliveryFailures}
+        selectedTicket={selectedTicket}
+        showToast={showToast}
+        showToastRef={showToastRef}
+        onClose={() => setShowDeliveryFailuresModal(false)}
+      />
 
       {/* Modal de Encerramento com Motivo */}
-      {showCloseModal && (
-        <div
-          className="support-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="close-ticket-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !closing) {
-              setShowCloseModal(false);
-              setClosingTicketId(null);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape' && !closing) {
-              setShowCloseModal(false);
-              setClosingTicketId(null);
-            }
-          }}
-        >
-          <div className="support-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2 id="close-ticket-title" style={{ marginTop: 0 }}>
-              Encerrar Ticket
-            </h2>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Motivo de encerramento *
-              </label>
-              <select
-                value={selectedCloseReasonId}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setSelectedCloseReasonId(id);
-                  const found = closeReasons.find((r) => r.id === id);
-                  setSelectedCloseReasonName(found?.name || '');
-                }}
-                className="support-form-select"
-              >
-                <option value="">Selecione...</option>
-                {closeReasons.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-              <div style={{ marginTop: '10px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                  Ou digite um motivo
-                </label>
-                <input
-                  type="text"
-                  value={selectedCloseReasonName}
-                  onChange={(e) => {
-                    setSelectedCloseReasonName(e.target.value);
-                    setSelectedCloseReasonId('');
-                  }}
-                  placeholder="Ex: resolvido, sem resposta do cliente..."
-                  className="support-form-input"
-                />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Tags (opcional)
-              </label>
-              <input
-                type="text"
-                value={closeTagsInput}
-                onChange={(e) => setCloseTagsInput(e.target.value)}
-                placeholder="Ex: cobrança, prioridade, vip (separadas por vírgula)"
-                className="support-form-input"
-                list="support-known-tags"
-              />
-              <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                Dica: use tags curtas e consistentes.
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => {
-                  if (closing) return;
-                  setShowCloseModal(false);
-                  setClosingTicketId(null);
-                }}
-                style={{ background: 'var(--color-bg-secondary)' }}
-                disabled={closing}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleConfirmClose} className="support-button-danger" disabled={closing}>
-                {closing ? 'Fechando...' : 'Fechar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SupportCloseTicketModal
+        isOpen={showCloseModal}
+        closing={closing}
+        closeReasons={closeReasons}
+        selectedCloseReasonId={selectedCloseReasonId}
+        setSelectedCloseReasonId={setSelectedCloseReasonId}
+        selectedCloseReasonName={selectedCloseReasonName}
+        setSelectedCloseReasonName={setSelectedCloseReasonName}
+        closeTagsInput={closeTagsInput}
+        setCloseTagsInput={setCloseTagsInput}
+        onConfirmClose={handleConfirmClose}
+        onClose={() => {
+          setShowCloseModal(false);
+          setClosingTicketId(null);
+        }}
+      />
 
       {/* Modal para Iniciar Nova Conversa */}
-      {showNewConversationModal && (
-        <div
-          className="support-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="new-conversation-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowNewConversationModal(false);
-              setNewConversationPhone('');
-              setNewConversationMessage('');
-              setNewConversationQueue('');
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setShowNewConversationModal(false);
-              setNewConversationPhone('');
-              setNewConversationMessage('');
-              setNewConversationQueue('');
-            }
-          }}
-        >
-          <div
-            className="support-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="new-conversation-title" style={{ marginTop: 0 }}>
-              Iniciar Nova Conversa
-            </h2>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="new-conversation-phone"
-                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
-              >
-                Número de Telefone *
-              </label>
-              <input
-                id="new-conversation-phone"
-                type="tel"
-                value={newConversationPhone}
-                onChange={(e) => setNewConversationPhone(e.target.value)}
-                placeholder="+5511999999999 ou 5511999999999"
-                className="support-form-input"
-                aria-required="true"
-                aria-describedby="phone-format-hint"
-                autoFocus
-              />
-              <small id="phone-format-hint" style={{ color: '#666', fontSize: '12px' }}>
-                Formato: +5511999999999 ou 5511999999999
-              </small>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="new-conversation-queue"
-                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
-              >
-                Fila *
-              </label>
-              <select
-                id="new-conversation-queue"
-                value={newConversationQueue}
-                onChange={(e) => setNewConversationQueue(e.target.value)}
-                className="support-form-select"
-                aria-required="true"
-              >
-                <option value="">Selecione uma fila</option>
-                {queues.map((q) => (
-                  <option key={q} value={q}>{q}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="new-conversation-message"
-                style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}
-              >
-                Mensagem Inicial (opcional)
-              </label>
-              <textarea
-                id="new-conversation-message"
-                value={newConversationMessage}
-                onChange={(e) => setNewConversationMessage(e.target.value)}
-                placeholder="Olá! Como posso ajudá-lo hoje?"
-                rows={4}
-                className="support-form-textarea"
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <Button
-                onClick={() => {
-                  setShowNewConversationModal(false);
-                  setNewConversationPhone('');
-                  setNewConversationMessage('');
-                  setNewConversationQueue('');
-                }}
-                style={{ backgroundColor: '#6c757d' }}
-                aria-label="Cancelar criação de nova conversa"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!newConversationPhone.trim()) {
-                    showToast('Número de telefone é obrigatório', 'warning');
-                    return;
-                  }
-                  if (!newConversationQueue.trim()) {
-                    showToast('Fila é obrigatória', 'warning');
-                    return;
-                  }
-
-                  try {
-                    const ticket = await createTicket({
-                      phoneNumber: newConversationPhone.trim(),
-                      queue: newConversationQueue.trim(),
-                      initialMessage: newConversationMessage.trim() || undefined,
-                    });
-
-                    showToast('Conversa iniciada com sucesso!', 'success');
-                    setShowNewConversationModal(false);
-                    setNewConversationPhone('');
-                    setNewConversationMessage('');
-                    setNewConversationQueue('');
-
-                    // Recarrega tickets
-                    if (loadTicketsRef.current) {
-                      loadTicketsRef.current();
-                    }
-
-                    // Seleciona o ticket criado
-                    setSelectedTicket(ticket);
-                  } catch (error) {
-                    logger.error('Erro ao iniciar conversa', error);
-                    const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao iniciar conversa';
-                    showToast(errorMessage, 'error');
-                  }
-                }}
-                style={{ backgroundColor: '#25D366', color: 'white' }}
-                aria-label="Iniciar nova conversa"
-              >
-                Iniciar Conversa
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SupportNewConversationModal
+        isOpen={showNewConversationModal}
+        newConversationPhone={newConversationPhone}
+        setNewConversationPhone={setNewConversationPhone}
+        newConversationMessage={newConversationMessage}
+        setNewConversationMessage={setNewConversationMessage}
+        newConversationQueue={newConversationQueue}
+        setNewConversationQueue={setNewConversationQueue}
+        queues={queues}
+        showToast={showToast}
+        onClose={() => {
+          setShowNewConversationModal(false);
+          setNewConversationPhone('');
+          setNewConversationMessage('');
+          setNewConversationQueue('');
+        }}
+        onTicketCreated={(ticket) => {
+          if (loadTicketsRef.current) loadTicketsRef.current();
+          setSelectedTicket(ticket);
+        }}
+      />
     </CrudPageBase>
   );
 }

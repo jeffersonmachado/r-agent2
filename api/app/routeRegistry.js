@@ -1,0 +1,48 @@
+'use strict';
+
+function createRouteRegistry(routers) {
+  return [
+    { router: routers.publicSystemRouter },
+    { router: routers.authRouter },
+    { path: '/tenants', router: routers.tenantRouter },
+    { router: routers.domainAdminRouter },
+    { router: routers.domainIdentityRouter },
+    { router: routers.domainFlowRouter },
+    { router: routers.ticketRouter },
+    { router: routers.verticalRouter },
+    { router: routers.pbxRouter },
+    { router: routers.webhooksRouter },
+    { router: routers.operationsDashboardRouter },
+    { router: routers.webScrapingRouter },
+    { router: routers.qaRouter },
+    { router: routers.rpaTestsRouter },
+    { router: routers.devManagementRouter },
+    { router: routers.intelligenceRouter },
+    { router: routers.marketIntelligenceRouter },
+    { router: routers.accessControlRouter },
+    { router: routers.voiceRouter },
+    { router: routers.analyticsRouter },
+    { router: routers.bulkCampaignsRouter },
+    { router: routers.quickRepliesRouter },
+    { router: routers.platformAdminRouter },
+    { router: routers.platformContentRouter },
+    { router: routers.platformPublicRouter },
+    { router: routers.queueTicketRouter },
+    { router: routers.opsRouter },
+    { router: routers.executionLedgerRouter },
+    { router: routers.evidenceRouter },
+    { router: routers.supportDebugRouter },
+    { router: routers.publicApiRouter },
+    { router: routers.channelWebhookRouter },
+    { router: routers.whatsAppConnectionRouter },
+    { router: routers.whatsAppIvrRouter },
+    { router: routers.whatsAppQrWebhookRouter },
+    { router: routers.domainOperationsRouter },
+    { router: routers.domainBusinessRouter },
+    { router: routers.frontendFallbackRouter },
+  ];
+}
+
+module.exports = {
+  createRouteRegistry,
+};
