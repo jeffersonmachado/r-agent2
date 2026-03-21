@@ -27,7 +27,7 @@ jest.mock('../../api/services/vertical/verticalMetricsEngine', () => ({
   computeVerticalMetrics: jest.fn(async () => ({ vertical: 'beauty', attendance: {}, membership: {} })),
 }));
 
-const { handleBeautyRoutes } = require('../../api/serverHandlers/verticalBeautyRoutes');
+const { handleBeautyRoutes } = require('../../api/modules/vertical/handleBeautyRoutes');
 // Hold references so beforeEach can restore them after resetMocks: true
 const { emitJourneyEvent, listJourneyEvents, getSubjectTimeline } = require('../../api/services/vertical/customerJourneyEngine');
 const { detectNoShow, recordServiceCompleted, getCustomerSessionBalance } = require('../../api/services/vertical/beautyJourneyService');

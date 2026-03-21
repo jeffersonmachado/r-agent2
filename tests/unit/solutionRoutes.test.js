@@ -33,7 +33,7 @@ describe('solutionRoutes handler', () => {
     };
 
     jest.doMock('../../api/services/solutions/solutionsTemplateService', () => mockSvc);
-    handleSolutionRoutes = require('../../api/serverHandlers/solutionRoutes').handleSolutionRoutes;
+    handleSolutionRoutes = require('../../api/modules/solution/handleSolutionRoutes').handleSolutionRoutes;
   });
 
   test('retorna false para rota nao tratada', async () => {

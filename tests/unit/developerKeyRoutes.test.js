@@ -20,7 +20,7 @@ describe('developerKeyRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const deps = makeDeps();
     const handled = await handleDeveloperKeyRoutes({
@@ -37,7 +37,7 @@ describe('developerKeyRoutes handler', () => {
 
   test('GET /developer/keys retorna 401 sem autenticacao', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ listPublicTokens: jest.fn() }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { url: '/developer/keys' };
     const res = {};
@@ -55,7 +55,7 @@ describe('developerKeyRoutes handler', () => {
   test('GET /developer/keys exige permissao extra quando includeToken=true', async () => {
     const listPublicTokens = jest.fn(async () => []);
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ listPublicTokens }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { url: '/developer/keys?includeToken=true', tenantId: 't1' };
     const res = {};
@@ -79,7 +79,7 @@ describe('developerKeyRoutes handler', () => {
   test('GET /developer/keys normaliza active/includeToken e lista itens', async () => {
     const listPublicTokens = jest.fn(async () => [{ id: 'k1' }]);
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ listPublicTokens }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { url: '/developer/keys?includeToken=false&active=false', tenantId: 't1' };
     const res = {};
@@ -100,7 +100,7 @@ describe('developerKeyRoutes handler', () => {
   test('POST /developer/keys valida content-type', async () => {
     const createPublicToken = jest.fn(async () => ({ id: 'key-1' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ createPublicToken }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { tenantId: 't1' };
     const res = {};
@@ -116,7 +116,7 @@ describe('developerKeyRoutes handler', () => {
   test('POST /developer/keys cria token e registra auditoria', async () => {
     const createPublicToken = jest.fn(async () => ({ id: 'key-1', token: 'abc' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ createPublicToken }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = {
       tenantId: 't1',
@@ -161,7 +161,7 @@ describe('developerKeyRoutes handler', () => {
     const getPublicTokenStats = jest.fn(async () => ({ ok: false, error: 'stats_unavailable' }));
     const listPublicTokens = jest.fn(async () => []);
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ getPublicTokenStats, listPublicTokens }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { tenantId: 't1' };
     const res = {};
@@ -207,7 +207,7 @@ describe('developerKeyRoutes handler', () => {
     ]));
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ getPublicTokenStats, listPublicTokens }));
-    const { handleDeveloperKeyRoutes } = require('../../api/serverHandlers/developerKeyRoutes');
+    const { handleDeveloperKeyRoutes } = require('../../api/modules/developer-key/handleDeveloperKeyRoutes');
 
     const req = { tenantId: 't1' };
     const res = {};

@@ -64,7 +64,7 @@ jest.mock('../../api/modules/access-control/decisions/decisionStatusService', ()
   })),
 }));
 
-const { handleAccessControlRoutes } = require('../../api/serverHandlers/accessControlRoutes');
+const { handleAccessControlRoutes } = require('../../api/modules/access-control/handleAccessControlRoutes');
 const accessControlService = require('../../api/modules/access-control/accessControlService');
 const accessDecisionService = require('../../api/modules/access-control/accessDecisionService');
 const {

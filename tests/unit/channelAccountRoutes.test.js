@@ -39,7 +39,7 @@ describe('channelAccountRoutes handler', () => {
     };
 
     jest.doMock('../../api/services/channelAccountsService', () => mockSvc);
-    handleChannelAccountRoutes = require('../../api/serverHandlers/channelAccountRoutes').handleChannelAccountRoutes;
+    handleChannelAccountRoutes = require('../../api/modules/platform-admin/handleChannelAccountRoutes').handleChannelAccountRoutes;
   });
 
   // ── rota não tratada ────────────────────────────────────────────────────

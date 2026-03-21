@@ -18,7 +18,7 @@ describe('publicApiRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const deps = makeDeps();
     const handled = await handlePublicApiRoutes({
@@ -35,7 +35,7 @@ describe('publicApiRoutes handler', () => {
 
   test('POST /public/* valida content-type', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: {} };
     const res = {};
@@ -52,7 +52,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken: jest.fn(),
       recordPublicTokenUsage: jest.fn(),
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: {} };
     const res = { setHeader: jest.fn() };
@@ -74,7 +74,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken,
       recordPublicTokenUsage,
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: { authorization: 'Bearer bad-key' } };
     const res = { setHeader: jest.fn() };
@@ -98,7 +98,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken,
       recordPublicTokenUsage,
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: { 'x-api-key': 'abc' } };
     const res = { setHeader: jest.fn() };
@@ -128,7 +128,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken,
       recordPublicTokenUsage,
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: { authorization: 'Apikey key-2' } };
     const res = { setHeader: jest.fn() };
@@ -160,7 +160,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken,
       recordPublicTokenUsage,
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: { 'x-api_key': 'key-3' } };
     const res = { setHeader: jest.fn() };
@@ -185,7 +185,7 @@ describe('publicApiRoutes handler', () => {
       resolvePublicToken,
       recordPublicTokenUsage,
     }));
-    const { handlePublicApiRoutes } = require('../../api/serverHandlers/publicApiRoutes');
+    const { handlePublicApiRoutes } = require('../../api/modules/public-api/handlePublicApiRoutes');
 
     const req = { headers: { 'x-api-key': 'key-4' } };
     const res = { setHeader: jest.fn() };

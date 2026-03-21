@@ -8,9 +8,9 @@ describe('platform residual elimination wiring', () => {
     const registerRoutesPath = path.join(process.cwd(), 'api', 'app', 'registerRoutes.js');
     const source = fs.readFileSync(registerRoutesPath, 'utf8');
 
-    expect(source).toMatch(/createPlatformAdminRoutes/);
-    expect(source).toMatch(/createPlatformContentRoutes/);
-    expect(source).toMatch(/createPlatformPublicRoutes/);
+    expect(source).toMatch(/createPlatformAdminExpressRouter/);
+    expect(source).toMatch(/createPlatformContentExpressRouter/);
+    expect(source).toMatch(/createPlatformPublicExpressRouter/);
     expect(source).not.toMatch(/createPlatformResidualRoutes/);
 
     expect(source).toMatch(/app\.use\(platformAdminRouter\)/);

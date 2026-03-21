@@ -69,7 +69,7 @@ describe('ticketRoutes handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    handleTicketRoutes = require('../../api/serverHandlers/ticketRoutes').handleTicketRoutes;
+    handleTicketRoutes = require('../../api/modules/ticket/handleTicketRoutes').handleTicketRoutes;
   });
 
   test('retorna false para rota nao tratada', async () => {

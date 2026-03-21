@@ -43,7 +43,7 @@ describe('agentRoutes handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    handleAgentRoutes = require('../../api/serverHandlers/agentRoutes').handleAgentRoutes;
+    handleAgentRoutes = require('../../api/modules/domain-identity/handleAgentRoutes').handleAgentRoutes;
   });
 
   // ── rota não tratada ────────────────────────────────────────────────────

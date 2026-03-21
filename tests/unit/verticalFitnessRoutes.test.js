@@ -32,7 +32,7 @@ jest.mock('../../api/services/vertical/customerJourneyEngine', () => ({
   emitJourneyEvent: jest.fn(async () => ({ id: 'vje-1' })),
 }));
 
-const { handleFitnessRoutes } = require('../../api/serverHandlers/verticalFitnessRoutes');
+const { handleFitnessRoutes } = require('../../api/modules/vertical/handleFitnessRoutes');
 // Hold references so beforeEach can restore them after resetMocks: true
 const { getMembershipDetail: mockGetMembershipDetail, listFitnessMemberships: mockListFitnessMemberships, startGracePeriod: mockStartGracePeriod, processMembershipRenewal: mockProcessRenewal, getMembershipAccessStatus: mockGetMembershipAccessStatus, detectChurnRisk: mockDetectChurnRisk, updateMembershipDetails: mockUpdateMembershipDetails } = require('../../api/services/vertical/fitnessMembershipService');
 const { recordCheckIn: mockRecordCheckIn, recordCheckOut: mockRecordCheckOut, getAttendanceHistory: mockGetAttendanceHistory, listOpenAttendances: mockListOpenAttendances } = require('../../api/services/vertical/fitnessAttendanceService');

@@ -24,7 +24,7 @@ describe('auditRoutes handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    handleAuditRoutes = require('../../api/serverHandlers/auditRoutes').handleAuditRoutes;
+    handleAuditRoutes = require('../../api/modules/domain-identity/handleAuditRoutes').handleAuditRoutes;
   });
 
   test('retorna false para rota nao tratada', async () => {

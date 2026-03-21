@@ -20,7 +20,7 @@ describe('whatsAppConnectionRoutes handler', () => {
 
   test('retorna false para rota não tratada', async () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({}));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const deps = makeDeps();
     const req = {};
@@ -42,7 +42,7 @@ describe('whatsAppConnectionRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       listConnections: jest.fn(async () => ({ ok: true, connections: [] })),
     }));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const req = {};
     const res = {};
@@ -69,7 +69,7 @@ describe('whatsAppConnectionRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       createConnection: jest.fn(async () => ({ ok: true, connection: { id: 'c-1' } })),
     }));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const req = {};
     const res = {};
@@ -93,7 +93,7 @@ describe('whatsAppConnectionRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       setConnectionStatus,
     }));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const req = {};
     const res = {};
@@ -123,7 +123,7 @@ describe('whatsAppConnectionRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       ingestConnectionEvent,
     }));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const req = {};
     const res = {};
@@ -153,7 +153,7 @@ describe('whatsAppConnectionRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       getStatus,
     }));
-    const { handleWhatsAppConnectionRoutes } = require('../../api/serverHandlers/whatsAppConnectionRoutes');
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
 
     const req = {};
     const res = {};

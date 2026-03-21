@@ -20,7 +20,7 @@ describe('automationRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/automationService', () => ({}));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const deps = makeDeps();
     const handled = await handleAutomationRoutes({
@@ -37,7 +37,7 @@ describe('automationRoutes handler', () => {
 
   test('GET /automations retorna 401 quando nao autenticado', async () => {
     jest.doMock('../../api/services/automationService', () => ({ listAutomations: jest.fn() }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};
@@ -55,7 +55,7 @@ describe('automationRoutes handler', () => {
   test('POST /automations valida content-type', async () => {
     const upsertAutomation = jest.fn(async () => ({ ok: true, automation: { id: 'a1' } }));
     jest.doMock('../../api/services/automationService', () => ({ upsertAutomation }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};
@@ -71,7 +71,7 @@ describe('automationRoutes handler', () => {
   test('POST /automations exige name', async () => {
     const upsertAutomation = jest.fn(async () => ({ ok: true, automation: { id: 'a1' } }));
     jest.doMock('../../api/services/automationService', () => ({ upsertAutomation }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};
@@ -87,7 +87,7 @@ describe('automationRoutes handler', () => {
   test('POST /automations salva automacao', async () => {
     const upsertAutomation = jest.fn(async () => ({ ok: true, automation: { id: 'a-1', name: 'Auto 1' } }));
     jest.doMock('../../api/services/automationService', () => ({ upsertAutomation }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};
@@ -119,7 +119,7 @@ describe('automationRoutes handler', () => {
   test('POST /automations/:id/publish retorna 404 quando not_found', async () => {
     const publishAutomation = jest.fn(async () => ({ ok: false, error: 'not_found' }));
     jest.doMock('../../api/services/automationService', () => ({ publishAutomation }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};
@@ -148,7 +148,7 @@ describe('automationRoutes handler', () => {
       run: { id: 'run-1', status: 'done' },
     }));
     jest.doMock('../../api/services/automationService', () => ({ runAutomation }));
-    const { handleAutomationRoutes } = require('../../api/serverHandlers/automationRoutes');
+    const { handleAutomationRoutes } = require('../../api/modules/automation/handleAutomationRoutes');
 
     const req = {};
     const res = {};

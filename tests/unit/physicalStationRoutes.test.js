@@ -29,7 +29,7 @@ describe('physicalStationRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const deps = makeDeps();
     const handled = await handlePhysicalStationRoutes({
@@ -45,7 +45,7 @@ describe('physicalStationRoutes handler', () => {
 
   test('POST /physical/station/call-next valida content-type', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken: jest.fn() }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq();
     const res = {};
@@ -63,7 +63,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ callNext }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/call-next?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -86,7 +86,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ callNext }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/call-next?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -109,7 +109,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ finishTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/finish?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -132,7 +132,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ finishTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/finish?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -153,7 +153,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ finishTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/finish?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -176,7 +176,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ startService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/start?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -199,7 +199,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ startService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/start?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -220,7 +220,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ startService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/start?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -243,7 +243,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ skipTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/skip?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -266,7 +266,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ skipTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/skip?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -287,7 +287,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ skipTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/skip?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -316,7 +316,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ pauseService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/pause?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -339,7 +339,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ pauseService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/pause?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -360,7 +360,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ pauseService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/pause?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -389,7 +389,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ resumeService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/resume?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -412,7 +412,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ resumeService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/resume?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -433,7 +433,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ resumeService }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/resume?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -461,7 +461,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ transferTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/transfer?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -484,7 +484,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ transferTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/transfer?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -505,7 +505,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ transferTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/transfer?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -533,7 +533,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ abandonTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/abandon?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -556,7 +556,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ abandonTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/abandon?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -577,7 +577,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/physicalQueueService', () => ({ abandonTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/abandon?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -604,7 +604,7 @@ describe('physicalStationRoutes handler', () => {
     const resolvePublicToken = jest.fn(async () => ({ ok: true, tokenId: 'pt-s24', tenantId: 'tenant-1', locationId: 'loc-1' }));
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/open-support-ticket?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -623,7 +623,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/db/models', () => ({ PhysicalTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/open-support-ticket?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -652,7 +652,7 @@ describe('physicalStationRoutes handler', () => {
 
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/db/models', () => ({ PhysicalTicket }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/open-support-ticket?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -687,7 +687,7 @@ describe('physicalStationRoutes handler', () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/db/models', () => ({ PhysicalTicket }));
     jest.doMock('../../api/services/eventLedgerService', () => ({ appendEventV1 }));
-    const { handlePhysicalStationRoutes } = require('../../api/serverHandlers/physicalStationRoutes');
+    const { handlePhysicalStationRoutes } = require('../../api/modules/platform-public/handlePhysicalStationRoutes');
 
     const req = makeReq({ url: '/physical/station/open-support-ticket?token=abc' });
     const res = { setHeader: jest.fn() };

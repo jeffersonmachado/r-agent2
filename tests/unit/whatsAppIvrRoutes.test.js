@@ -25,7 +25,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting: jest.fn(async () => ({ ok: true, value: {} })),
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const deps = makeDeps();
     const req = {};
     const res = {};
@@ -49,7 +49,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting: jest.fn(async () => ({ ok: true, value: {} })),
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const req = {};
     const res = {};
     const deps = makeDeps({
@@ -86,7 +86,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting: jest.fn(async () => ({ ok: true, value: {} })),
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const req = {};
     const res = {};
     const deps = makeDeps();
@@ -117,7 +117,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting: jest.fn(async () => ({ ok: true, value: {} })),
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const req = {};
     const res = {};
     const deps = makeDeps({
@@ -142,7 +142,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting: jest.fn(async () => ({ ok: true, value: {} })),
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const req = {};
     const res = {};
     const deps = makeDeps({
@@ -181,7 +181,7 @@ describe('whatsAppIvrRoutes handler', () => {
       upsertSetting,
     }));
 
-    const { handleWhatsAppIvrRoutes } = require('../../api/serverHandlers/whatsAppIvrRoutes');
+    const { handleWhatsAppIvrRoutes } = require('../../api/modules/whatsapp-ivr/handleWhatsAppIvrRoutes');
     const req = {};
     const res = {};
     const deps = makeDeps({

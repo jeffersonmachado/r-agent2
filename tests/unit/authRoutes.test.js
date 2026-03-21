@@ -35,7 +35,7 @@ describe('authRoutes handler', () => {
   // ── rota não tratada ───────────────────────────────────────────────────────
 
   test('retorna false para rota nao tratada', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const handled = await handleAuthRoutes({
       req: makeReq(),
@@ -51,7 +51,7 @@ describe('authRoutes handler', () => {
   // ── POST /auth/login ─────────────────────────────────────────────────────
 
   test('POST /auth/login valida content-type', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
@@ -62,7 +62,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/login retorna 401 para credenciais invalidas', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -77,7 +77,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/login retorna token e agent no sucesso', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const agent = { id: 'a1', username: 'alice' };
@@ -94,7 +94,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/login retorna badRequest para ValidationError', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     class VE extends Error {}
@@ -112,7 +112,7 @@ describe('authRoutes handler', () => {
   // ── POST /auth/rpa/login ─────────────────────────────────────────────────
 
   test('POST /auth/rpa/login valida content-type', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
@@ -123,7 +123,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/rpa/login exige rpaToken', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ tenantId: 't1' })) });
@@ -134,7 +134,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/rpa/login exige tenantId', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ token: 'rpa-tok' })) });
@@ -145,7 +145,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/rpa/login retorna 401 para token invalido', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -159,7 +159,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/rpa/login autentica com sucesso', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const agent = { id: 'a1', username: 'rpa-user' };
@@ -177,7 +177,7 @@ describe('authRoutes handler', () => {
   // ── POST /auth/logout ────────────────────────────────────────────────────
 
   test('POST /auth/logout retorna 401 sem token', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const handled = await handleAuthRoutes({
@@ -193,7 +193,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/logout encerra sessao com token invalido (idempotente)', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -214,7 +214,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/logout encerra sessao com token valido', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -234,7 +234,7 @@ describe('authRoutes handler', () => {
   // ── POST /auth/logout-all ────────────────────────────────────────────────
 
   test('POST /auth/logout-all retorna 401 sem token', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -251,7 +251,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/logout-all retorna 401 para token invalido', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ validateToken: jest.fn(() => ({ valid: false, error: 'expirado' })) });
@@ -268,7 +268,7 @@ describe('authRoutes handler', () => {
   });
 
   test('POST /auth/logout-all encerra todas as sessoes', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ logoutAllSessions: jest.fn(() => 5) });
@@ -288,7 +288,7 @@ describe('authRoutes handler', () => {
   // ── GET /auth/me ─────────────────────────────────────────────────────────
 
   test('GET /auth/me retorna 401 sem token', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -305,7 +305,7 @@ describe('authRoutes handler', () => {
   });
 
   test('GET /auth/me retorna 401 para token invalido', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const deps = makeDeps({ validateToken: jest.fn(() => ({ valid: false, error: 'expirado' })) });
@@ -322,7 +322,7 @@ describe('authRoutes handler', () => {
   });
 
   test('GET /auth/me retorna agent autenticado', async () => {
-    const { handleAuthRoutes } = require('../../api/serverHandlers/authRoutes');
+    const { handleAuthRoutes } = require('../../api/modules/auth/handleAuthRoutes');
 
     const res = {};
     const agent = { id: 'a1', username: 'alice' };

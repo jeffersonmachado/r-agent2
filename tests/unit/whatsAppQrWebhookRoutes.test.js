@@ -20,7 +20,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
 
   test('retorna false para rota não tratada', async () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({}));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const deps = makeDeps();
     const handled = await handleWhatsAppQrWebhookRoutes({
@@ -39,7 +39,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       ingestConnectionEvent: jest.fn(async () => ({ ok: true, connection: { id: 'c-1' } })),
     }));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
     const handled = await handleWhatsAppQrWebhookRoutes({
@@ -60,7 +60,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrService', () => ({
       ingestConnectionEvent: jest.fn(async () => ({ ok: true, connection: { id: 'c-1' } })),
     }));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const req = { headers: {} };
     const res = {};
@@ -87,7 +87,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
     const ingestConnectionEvent = jest.fn(async () => ({ ok: false, error: 'invalid_event_type' }));
 
     jest.doMock('../../api/services/whatsappQrService', () => ({ ingestConnectionEvent }));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const req = { headers: {} };
     const res = {};
@@ -119,7 +119,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrBridgeService', () => ({
       getWhatsAppQrBridgeStats: jest.fn(() => ({ received: 0, processed: 0 })),
     }));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const req = { headers: {} };
     const res = {};
@@ -148,7 +148,7 @@ describe('whatsAppQrWebhookRoutes handler', () => {
     jest.doMock('../../api/services/whatsappQrBridgeService', () => ({
       getWhatsAppQrBridgeStats,
     }));
-    const { handleWhatsAppQrWebhookRoutes } = require('../../api/serverHandlers/whatsAppQrWebhookRoutes');
+    const { handleWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/handleWhatsAppQrWebhookRoutes');
 
     const req = { headers: {} };
     const res = {};

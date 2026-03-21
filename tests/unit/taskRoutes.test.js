@@ -20,7 +20,7 @@ describe('taskRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/tasksService', () => ({}));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const deps = makeDeps();
     const handled = await handleTaskRoutes({
@@ -37,7 +37,7 @@ describe('taskRoutes handler', () => {
 
   test('GET /tasks retorna 403 sem permissao', async () => {
     jest.doMock('../../api/services/tasksService', () => ({ listTasks: jest.fn() }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};
@@ -55,7 +55,7 @@ describe('taskRoutes handler', () => {
   test('POST /tasks valida content-type', async () => {
     const createTask = jest.fn(async () => ({ ok: true, task: { id: 't1' } }));
     jest.doMock('../../api/services/tasksService', () => ({ createTask }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};
@@ -71,7 +71,7 @@ describe('taskRoutes handler', () => {
   test('POST /tasks exige title', async () => {
     const createTask = jest.fn(async () => ({ ok: true, task: { id: 't1' } }));
     jest.doMock('../../api/services/tasksService', () => ({ createTask }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};
@@ -87,7 +87,7 @@ describe('taskRoutes handler', () => {
   test('POST /tasks cria tarefa', async () => {
     const createTask = jest.fn(async () => ({ ok: true, task: { id: 'task-1', title: 'Follow up' } }));
     jest.doMock('../../api/services/tasksService', () => ({ createTask }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};
@@ -118,7 +118,7 @@ describe('taskRoutes handler', () => {
   test('POST /tasks/:id/complete mapeia not_found para 404', async () => {
     const completeTask = jest.fn(async () => ({ ok: false, error: 'not_found' }));
     jest.doMock('../../api/services/tasksService', () => ({ completeTask }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};
@@ -143,7 +143,7 @@ describe('taskRoutes handler', () => {
   test('POST /tasks/:id/reminder agenda lembrete', async () => {
     const scheduleReminder = jest.fn(async () => ({ ok: true, task: { id: 'task-3', reminderAt: '2026-03-12T11:00:00.000Z' } }));
     jest.doMock('../../api/services/tasksService', () => ({ scheduleReminder }));
-    const { handleTaskRoutes } = require('../../api/serverHandlers/taskRoutes');
+    const { handleTaskRoutes } = require('../../api/modules/task/handleTaskRoutes');
 
     const req = {};
     const res = {};

@@ -42,7 +42,7 @@ jest.mock('../../api/core/tenant-intelligence/TenantIntelligenceService', () => 
 });
 
 const intelligenceServiceModule = require('../../api/core/tenant-intelligence/TenantIntelligenceService');
-const { handleIntelligenceRoutes } = require('../../api/serverHandlers/intelligenceRoutes');
+const { handleIntelligenceRoutes } = require('../../api/modules/intelligence/handleIntelligenceRoutes');
 
 function getService() {
   const calls = intelligenceServiceModule.getTenantIntelligenceService.mock.results || [];

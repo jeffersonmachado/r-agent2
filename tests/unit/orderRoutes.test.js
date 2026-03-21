@@ -29,7 +29,7 @@ describe('orderRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/orderService', () => ({}));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const deps = makeDeps();
     const handled = await handleOrderRoutes({
@@ -45,7 +45,7 @@ describe('orderRoutes handler', () => {
 
   test('GET /orders retorna 401 sem autenticacao', async () => {
     jest.doMock('../../api/services/orderService', () => ({ listOrders: jest.fn() }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'token inválido' })) });
     const handled = await handleOrderRoutes({ req: makeReq(), res: {}, method: 'GET', pathname: '/orders', deps });
@@ -56,7 +56,7 @@ describe('orderRoutes handler', () => {
 
   test('GET /orders retorna 403 sem permissao', async () => {
     jest.doMock('../../api/services/orderService', () => ({ listOrders: jest.fn() }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const deps = makeDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'sem permissao' })) });
     const handled = await handleOrderRoutes({ req: makeReq(), res: {}, method: 'GET', pathname: '/orders', deps });
@@ -68,7 +68,7 @@ describe('orderRoutes handler', () => {
   test('GET /orders lista pedidos com filtros', async () => {
     const listOrders = jest.fn(async () => ({ items: [{ id: 'o-1' }], total: 1 }));
     jest.doMock('../../api/services/orderService', () => ({ listOrders }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const req = makeReq({ url: '/orders?status=created&limit=10&offset=20' });
     const res = {};
@@ -85,7 +85,7 @@ describe('orderRoutes handler', () => {
     const getDeliveryByOrderId = jest.fn();
     jest.doMock('../../api/services/orderService', () => ({ getOrderById }));
     jest.doMock('../../api/services/deliveryService', () => ({ getDeliveryByOrderId }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -111,7 +111,7 @@ describe('orderRoutes handler', () => {
     const getDeliveryByOrderId = jest.fn(async () => ({ id: 'd-2' }));
     jest.doMock('../../api/services/orderService', () => ({ getOrderById }));
     jest.doMock('../../api/services/deliveryService', () => ({ getDeliveryByOrderId }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -136,7 +136,7 @@ describe('orderRoutes handler', () => {
     const findOne = jest.fn(async () => null);
     const Delivery = jest.fn(() => ({ findOne }));
     jest.doMock('../../api/db/models', () => ({ Delivery }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -161,7 +161,7 @@ describe('orderRoutes handler', () => {
     const findOne = jest.fn(async () => row);
     const Delivery = jest.fn(() => ({ findOne }));
     jest.doMock('../../api/db/models', () => ({ Delivery }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -182,7 +182,7 @@ describe('orderRoutes handler', () => {
 
   test('PUT /deliveries/:id/status valida content-type', async () => {
     jest.doMock('../../api/services/deliveryService', () => ({ updateDeliveryStatus: jest.fn() }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
@@ -205,7 +205,7 @@ describe('orderRoutes handler', () => {
       throw err;
     });
     jest.doMock('../../api/services/deliveryService', () => ({ updateDeliveryStatus }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ status: 'delivered' })) });
@@ -227,7 +227,7 @@ describe('orderRoutes handler', () => {
   test('PUT /deliveries/:id/status atualiza status', async () => {
     const updateDeliveryStatus = jest.fn(async () => ({ id: 'd-2', status: 'delivered' }));
     jest.doMock('../../api/services/deliveryService', () => ({ updateDeliveryStatus }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ status: ' delivered ' })) });
@@ -263,7 +263,7 @@ describe('orderRoutes handler', () => {
       getDeliveryByOrderId: jest.fn(),
       updateDeliveryStatus: jest.fn(),
     }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ status: 'done' })) });
@@ -293,7 +293,7 @@ describe('orderRoutes handler', () => {
       getDeliveryByOrderId,
       updateDeliveryStatus,
     }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({ status: 'dispatched' })) });
@@ -321,7 +321,7 @@ describe('orderRoutes handler', () => {
 
   test('POST /orders/:id/incidents valida content-type', async () => {
     jest.doMock('../../api/services/orderService', () => ({ getOrderById: jest.fn() }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
@@ -340,7 +340,7 @@ describe('orderRoutes handler', () => {
   test('POST /orders/:id/incidents retorna 404 quando pedido nao existe', async () => {
     const getOrderById = jest.fn(async () => null);
     jest.doMock('../../api/services/orderService', () => ({ getOrderById, getOrderIncident: jest.fn() }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps();
@@ -364,7 +364,7 @@ describe('orderRoutes handler', () => {
     const getOrderById = jest.fn(async () => ({ id: 'o-7', order_number: '0007' }));
     const getOrderIncident = jest.fn(async () => ({ ticketId: 't-existing', status: 'open' }));
     jest.doMock('../../api/services/orderService', () => ({ getOrderById, getOrderIncident }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const deps = makeDeps({ getTicket: jest.fn(() => ({ id: 't-existing', queue: 'Delivery' })) });
@@ -398,7 +398,7 @@ describe('orderRoutes handler', () => {
       setOrderIncident,
     }));
     jest.doMock('../../api/services/eventLedgerService', () => ({ appendEventV1 }));
-    const { handleOrderRoutes } = require('../../api/serverHandlers/orderRoutes');
+    const { handleOrderRoutes } = require('../../api/modules/order/handleOrderRoutes');
 
     const res = {};
     const req = makeReq({ agent: { id: 'agent-1' } });

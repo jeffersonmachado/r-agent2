@@ -8,7 +8,7 @@ jest.mock('../../api/services/durableProcessService', () => ({
 }));
 
 const service = require('../../api/services/durableProcessService');
-const { handleProcessRuntimeRoutes } = require('../../api/serverHandlers/processRuntimeRoutes');
+const { handleProcessRuntimeRoutes } = require('../../api/modules/process-runtime/handleProcessRuntimeRoutes');
 
 function createDeps() {
   return {

@@ -32,7 +32,7 @@ describe('publicTokenRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const deps = makeDeps();
     const handled = await handlePublicTokenRoutes({
@@ -50,7 +50,7 @@ describe('publicTokenRoutes handler', () => {
   test('GET /public-tokens bloqueia includeToken sem permissao update', async () => {
     const listPublicTokens = jest.fn(async () => []);
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ listPublicTokens }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ url: '/public-tokens?includeToken=true' });
     const res = {};
@@ -74,7 +74,7 @@ describe('publicTokenRoutes handler', () => {
   test('GET /public-tokens normaliza filtros e retorna lista', async () => {
     const listPublicTokens = jest.fn(async () => [{ id: 'pt-1' }]);
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ listPublicTokens }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ url: '/public-tokens?kind=kiosk&locationId=loc-1&active=true' });
     const res = {};
@@ -99,7 +99,7 @@ describe('publicTokenRoutes handler', () => {
   test('POST /public-tokens valida kind', async () => {
     const createPublicToken = jest.fn(async () => ({ id: 'pt-1' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ createPublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq();
     const res = {};
@@ -115,7 +115,7 @@ describe('publicTokenRoutes handler', () => {
   test('POST /public-tokens cria token e audita', async () => {
     const createPublicToken = jest.fn(async () => ({ id: 'pt-2', token: 'abc' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ createPublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ headers: { 'user-agent': 'jest' } });
     const res = {};
@@ -148,7 +148,7 @@ describe('publicTokenRoutes handler', () => {
   test('POST /public-tokens/:id/revoke retorna 404 quando token nao existe', async () => {
     const revokePublicToken = jest.fn(async () => ({ ok: false }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ revokePublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ url: '/public-tokens/pt-9/revoke?reason=test' });
     const res = {};
@@ -173,7 +173,7 @@ describe('publicTokenRoutes handler', () => {
   test('POST /public-tokens/:id/rotate mapeia token_inactive para 409', async () => {
     const rotatePublicToken = jest.fn(async () => ({ ok: false, error: 'token_inactive' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ rotatePublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ url: '/public-tokens/pt-10/rotate?expiresInSec=1200' });
     const res = {};
@@ -198,7 +198,7 @@ describe('publicTokenRoutes handler', () => {
   test('GET /public-tokens/resolve retorna 429 quando rate limit bloqueia', async () => {
     const resolvePublicToken = jest.fn();
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({
       url: '/public-tokens/resolve?token=abc',
@@ -235,7 +235,7 @@ describe('publicTokenRoutes handler', () => {
       meta: { label: 'A' },
     }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
-    const { handlePublicTokenRoutes } = require('../../api/serverHandlers/publicTokenRoutes');
+    const { handlePublicTokenRoutes } = require('../../api/modules/public-token/handlePublicTokenRoutes');
 
     const req = makeReq({ url: '/public-tokens/resolve?token=xyz' });
     const res = { setHeader: jest.fn() };

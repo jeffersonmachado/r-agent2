@@ -24,7 +24,7 @@ const authService = require('../../api/services/authService');
 const departmentsService = require('../../api/services/departmentsService');
 const scheduleService = require('../../api/services/scheduleService');
 const { MarketingLead } = require('../../api/db/models');
-const { handleSchedulingSupportRoutes } = require('../../api/serverHandlers/schedulingSupportRoutes');
+const { handleSchedulingSupportRoutes } = require('../../api/modules/scheduling-support/handleSchedulingSupportRoutes');
 
 function makeDeps(overrides = {}) {
   return {

@@ -32,7 +32,7 @@ describe('onboardingRoutes handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    handleOnboardingRoutes = require('../../api/serverHandlers/onboardingRoutes').handleOnboardingRoutes;
+    handleOnboardingRoutes = require('../../api/modules/domain-admin/handleOnboardingRoutes').handleOnboardingRoutes;
   });
 
   // ── rota não tratada ────────────────────────────────────────────────────

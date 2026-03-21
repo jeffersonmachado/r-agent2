@@ -20,7 +20,7 @@ describe('slaRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/slaService', () => ({}));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const deps = makeDeps();
     const handled = await handleSlaRoutes({
@@ -37,7 +37,7 @@ describe('slaRoutes handler', () => {
 
   test('GET /sla/policies retorna 403 sem permissao', async () => {
     jest.doMock('../../api/services/slaService', () => ({ listPolicies: jest.fn() }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};
@@ -55,7 +55,7 @@ describe('slaRoutes handler', () => {
   test('POST /sla/policies valida content-type', async () => {
     const upsertPolicy = jest.fn(async () => ({ ok: true, policy: { id: 'p-1' } }));
     jest.doMock('../../api/services/slaService', () => ({ upsertPolicy }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};
@@ -71,7 +71,7 @@ describe('slaRoutes handler', () => {
   test('POST /sla/policies exige name', async () => {
     const upsertPolicy = jest.fn(async () => ({ ok: true, policy: { id: 'p-1' } }));
     jest.doMock('../../api/services/slaService', () => ({ upsertPolicy }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};
@@ -87,7 +87,7 @@ describe('slaRoutes handler', () => {
   test('POST /sla/policies salva policy', async () => {
     const upsertPolicy = jest.fn(async () => ({ ok: true, policy: { id: 'policy-1', name: 'Premium' } }));
     jest.doMock('../../api/services/slaService', () => ({ upsertPolicy }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};
@@ -124,7 +124,7 @@ describe('slaRoutes handler', () => {
   test('GET /sla/breaches mapeia indisponibilidade para 503', async () => {
     const listBreaches = jest.fn(async () => ({ ok: false }));
     jest.doMock('../../api/services/slaService', () => ({ listBreaches }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};
@@ -143,7 +143,7 @@ describe('slaRoutes handler', () => {
   test('GET /sla/breaches retorna lista', async () => {
     const listBreaches = jest.fn(async () => ({ ok: true, breaches: [{ id: 'b-1' }] }));
     jest.doMock('../../api/services/slaService', () => ({ listBreaches }));
-    const { handleSlaRoutes } = require('../../api/serverHandlers/slaRoutes');
+    const { handleSlaRoutes } = require('../../api/modules/sla/handleSlaRoutes');
 
     const req = {};
     const res = {};

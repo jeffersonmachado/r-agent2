@@ -20,7 +20,7 @@ const {
   listInsights,
 } = require('../../api/services/operationsDashboardService');
 const { isSuperAdmin } = require('../../api/services/superAdminService');
-const { handleOperationsDashboardRoutes } = require('../../api/serverHandlers/operationsDashboardRoutes');
+const { handleOperationsDashboardRoutes } = require('../../api/modules/operations-dashboard/handleOperationsDashboardRoutes');
 
 function buildCtx(method, pathname, { tenantId = 'tenant-a', query = '', agent = null } = {}) {
   const reqAgent = agent || { id: 'agent-1', role: 'admin', tenantId };

@@ -27,7 +27,7 @@ describe('storefrontRoutes handler', () => {
 
   test('retorna false para rota nao tratada', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({}));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const deps = makeDeps();
     const handled = await handleStorefrontRoutes({
@@ -44,7 +44,7 @@ describe('storefrontRoutes handler', () => {
 
   test('POST /storefront/orders valida content-type', async () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken: jest.fn() }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq();
     const res = {};
@@ -59,7 +59,7 @@ describe('storefrontRoutes handler', () => {
   test('POST /storefront/orders retorna 401 quando token ausente', async () => {
     const resolvePublicToken = jest.fn();
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders' });
     const res = {};
@@ -78,7 +78,7 @@ describe('storefrontRoutes handler', () => {
   test('POST /storefront/orders retorna 429 no rate limit', async () => {
     const resolvePublicToken = jest.fn(async () => ({ ok: true, tokenId: 'pt-1', tenantId: 't-1', locationId: 'l-1' }));
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -103,7 +103,7 @@ describe('storefrontRoutes handler', () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/orderService', () => ({ createOrder }));
     jest.doMock('../../api/services/deliveryService', () => ({ createDeliveryForOrder }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -162,7 +162,7 @@ describe('storefrontRoutes handler', () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/orderService', () => ({ createOrder }));
     jest.doMock('../../api/services/deliveryService', () => ({ createDeliveryForOrder: jest.fn() }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -184,7 +184,7 @@ describe('storefrontRoutes handler', () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/orderService', () => ({ getOrderById }));
     jest.doMock('../../api/services/deliveryService', () => ({ getDeliveryByOrderId: jest.fn() }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders/ord-404?token=abc' });
     const res = { setHeader: jest.fn() };
@@ -214,7 +214,7 @@ describe('storefrontRoutes handler', () => {
     jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
     jest.doMock('../../api/services/orderService', () => ({ getOrderById }));
     jest.doMock('../../api/services/deliveryService', () => ({ getDeliveryByOrderId }));
-    const { handleStorefrontRoutes } = require('../../api/serverHandlers/storefrontRoutes');
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
 
     const req = makeReq({ url: '/storefront/orders/ord%202?token=abc' });
     const res = { setHeader: jest.fn() };

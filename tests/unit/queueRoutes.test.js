@@ -42,7 +42,7 @@ describe('queueRoutes handler', () => {
   // ── rota não tratada ──────────────────────────────────────────────────────
 
   test('retorna false para rota nao tratada', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const deps = makeDeps();
     const handled = await handleQueueRoutes({
@@ -59,7 +59,7 @@ describe('queueRoutes handler', () => {
   // ── GET /queues ────────────────────────────────────────────────────────────
 
   test('GET /queues retorna 401 sem autenticacao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'token inválido' })) });
@@ -76,7 +76,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues retorna 403 sem permissao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'sem permissao' })) });
@@ -93,7 +93,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues retorna merge de filas legadas e persistidas', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -120,7 +120,7 @@ describe('queueRoutes handler', () => {
   // ── POST /queues ───────────────────────────────────────────────────────────
 
   test('POST /queues retorna 401 sem autenticacao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'nao autenticado' })) });
@@ -137,7 +137,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues retorna 403 sem permissao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'proibido' })) });
@@ -154,7 +154,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues valida content-type', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ hasJsonContentType: jest.fn(() => false) });
@@ -171,7 +171,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues exige campo name', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ parseJsonBody: jest.fn(async () => ({})) });
@@ -188,7 +188,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues cria fila e registra auditoria', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -212,7 +212,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues retorna 200 quando fila ja existe', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -226,7 +226,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('POST /queues retorna badRequest quando createQueue falha', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -242,7 +242,7 @@ describe('queueRoutes handler', () => {
   // ── GET /queues/:name ─────────────────────────────────────────────────────
 
   test('GET /queues/:name retorna 401 sem autenticacao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'nao autenticado' })) });
@@ -259,7 +259,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues/:name retorna badRequest para fila invalida', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ getQueueInfo: jest.fn(() => null) });
@@ -276,7 +276,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues/:name retorna info da fila', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const queueInfo = { name: 'support', size: 5 };
@@ -297,7 +297,7 @@ describe('queueRoutes handler', () => {
   // ── DELETE /queues/:name ──────────────────────────────────────────────────
 
   test('DELETE /queues/:name retorna 401 sem autenticacao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'nao autenticado' })) });
@@ -314,7 +314,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('DELETE /queues/:name retorna 404 quando fila nao encontrada', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ deleteQueue: jest.fn(() => ({ success: false, message: 'Fila não encontrada' })) });
@@ -331,7 +331,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('DELETE /queues/:name apaga fila e registra auditoria', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({
@@ -354,7 +354,7 @@ describe('queueRoutes handler', () => {
   // ── GET /queues/:queue/tickets ────────────────────────────────────────────
 
   test('GET /queues/:queue/tickets retorna 401 sem autenticacao', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const deps = makeDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'nao autenticado' })) });
@@ -371,7 +371,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues/:queue/tickets lista tickets para admin', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const tickets = [{ id: 't1' }, { id: 't2' }];
@@ -391,7 +391,7 @@ describe('queueRoutes handler', () => {
   });
 
   test('GET /queues/:queue/tickets filtra por permissao para agent', async () => {
-    const { handleQueueRoutes } = require('../../api/serverHandlers/queueRoutes');
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
 
     const res = {};
     const t1 = { id: 't1', assignedTo: 'agent-1' };

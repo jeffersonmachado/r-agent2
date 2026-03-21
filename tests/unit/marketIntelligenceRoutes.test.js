@@ -35,7 +35,7 @@ jest.mock('../../api/services/tenantService', () => ({
 }));
 
 const marketKnowledgeModule = require('../../api/core/market-intelligence/MarketKnowledgeService');
-const { handleMarketIntelligenceRoutes } = require('../../api/serverHandlers/marketIntelligenceRoutes');
+const { handleMarketIntelligenceRoutes } = require('../../api/modules/market-intelligence/handleMarketIntelligenceRoutes');
 
 function createDeps(overrides = {}) {
   return {

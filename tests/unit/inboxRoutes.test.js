@@ -39,7 +39,7 @@ describe('inboxRoutes handler', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    handleInboxRoutes = require('../../api/serverHandlers/inboxRoutes').handleInboxRoutes;
+    handleInboxRoutes = require('../../api/modules/inbox/handleInboxRoutes').handleInboxRoutes;
   });
 
   // ── rota não tratada ────────────────────────────────────────────────────
