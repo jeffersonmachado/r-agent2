@@ -109,6 +109,7 @@ vi.mock('../api/conversations', () => ({
 vi.mock('../api/evidence', () => ({
   getEvidenceEntityHistory: vi.fn(() => Promise.resolve({ identity: null, timeline: [], evidence: null })),
   searchEvidence: vi.fn(() => Promise.resolve({ ok: true, identity: null, best: null, alternatives: [], reasoning: { matchedBy: [], score: 0 } })),
+  contextualSearchEvidence: vi.fn(() => Promise.resolve({ ok: true, identity: null, best: null, alternatives: [], timeline: [], reasoning: { matchedBy: [], score: 0 } })),
 }));
 vi.mock('../api/closeReasons', () => ({
   listCloseReasons: vi.fn(() => Promise.resolve({ closeReasons: [] })),

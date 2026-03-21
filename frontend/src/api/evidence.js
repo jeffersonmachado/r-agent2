@@ -27,3 +27,10 @@ export function searchEvidence(payload = {}) {
     body: JSON.stringify(payload),
   });
 }
+
+export function contextualSearchEvidence(payload = {}) {
+  return fetchJson('/api/evidence/contextual-search', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

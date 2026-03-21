@@ -102,6 +102,46 @@ vi.mock('../api/evidence', () => ({
     alternatives: [],
     reasoning: { matchedBy: ['theme_exact', 'text_overlap'], score: 92 },
   })),
+  contextualSearchEvidence: vi.fn(() => Promise.resolve({
+    ok: true,
+    identity: {
+      entityType: 'customer',
+      entityId: 'cust-123',
+      confidence: 0.96,
+      sources: [{ type: 'ticket', id: 't1', field: 'phone' }],
+      relatedEntities: [{ type: 'conversation', id: 'c1' }],
+    },
+    best: {
+      id: 'evd-1',
+      category: 'billing',
+      type: 'price_notice',
+      theme: 'price_adjustment',
+      occurred_at: '2026-02-10T12:00:00.000Z',
+      source_type: 'channel_message',
+      source_id: 'msg-1',
+      excerpt: 'Informamos anteriormente o reajuste previsto em contrato.',
+      summary: 'price notice identificado em channel_message',
+      confidence: 0.92,
+      strength: 'strong',
+      source_ref: { ticketId: 't1', conversationId: 'c1' },
+      evidence_origin: { kind: 'fallback_persisted', label: 'fallback_indexado' },
+      reasoning: { matchedBy: ['theme_exact', 'text_overlap'], score: 92 },
+    },
+    alternatives: [],
+    timeline: [
+      {
+        id: 'message:m1',
+        timestamp: '2026-02-10T12:00:00.000Z',
+        title: 'whatsapp outbound',
+        source: 'channel_message',
+        text: 'Informamos anteriormente o reajuste previsto em contrato.',
+        ticketId: 't1',
+        conversationId: 'c1',
+      },
+    ],
+    reasoning: { matchedBy: ['theme_exact', 'text_overlap'], score: 92, strategy: 'fallback_persisted' },
+    sourceInfo: { strategyUsed: 'fallback_persisted' },
+  })),
 }));
 vi.mock('../api/auth', () => ({
   getAgentNameById: vi.fn(() => Promise.resolve('agent1')),
@@ -133,6 +173,8 @@ describe('SupportPage evidence integration', () => {
       expect(screen.getByText(/Evidências relacionadas/i)).toBeInTheDocument();
       expect(screen.getByText(/price notice/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Informamos anteriormente o reajuste previsto em contrato./i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/fallback indexado/i)).toBeInTheDocument();
+      expect(screen.getByText(/Histórico consolidado/i)).toBeInTheDocument();
       expect(screen.getByText(/Resposta sugerida/i)).toBeInTheDocument();
     });
   });

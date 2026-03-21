@@ -21,7 +21,7 @@ import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as g
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
 import { queryAuditLogs } from '../api/audit';
-import { getEvidenceEntityHistory, searchEvidence } from '../api/evidence';
+import { contextualSearchEvidence } from '../api/evidence';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -493,24 +493,16 @@ export function SupportPage() {
       phone: selectedTicket.phoneNumber || null,
     };
     setEvidenceLoading(true);
-    Promise.all([
-      getEvidenceEntityHistory({
-        ticketId: context.ticketId,
-        conversationId: context.conversationId,
-        phone: context.phone,
-        limit: 5,
-      }),
-      searchEvidence({
-        context,
-        query: selectedTicket.lastUserMessage || '',
-        options: { limit: 5, includeWeak: false },
-      }),
-    ])
-      .then(([historyResp, searchResp]) => {
+    contextualSearchEvidence({
+      context,
+      query: selectedTicket.lastUserMessage || '',
+      options: { limit: 5, includeWeak: false, includeTimeline: true, persistFallback: true },
+    })
+      .then((searchResp) => {
         setEvidenceHistory({
-          identity: historyResp?.identity || searchResp?.identity || null,
-          timeline: historyResp?.timeline || [],
-          evidence: searchResp?.ok ? searchResp : (historyResp?.evidence || null),
+          identity: searchResp?.identity || null,
+          timeline: searchResp?.timeline || [],
+          evidence: searchResp?.ok ? searchResp : null,
         });
       })
       .catch((error) => {
@@ -654,6 +646,12 @@ export function SupportPage() {
     return String(value).replace(/_/g, ' ');
   }
 
+  function formatEvidenceOrigin(origin) {
+    const kind = origin?.label || origin?.kind;
+    if (!kind) return 'desconhecida';
+    return formatEvidenceLabel(kind);
+  }
+
   function buildEvidenceSuggestedReply(evidence) {
     if (!evidence) return '';
     const occurredAt = evidence.occurred_at ? formatDate(evidence.occurred_at) : 'data anterior';
@@ -683,7 +681,7 @@ export function SupportPage() {
   }, [showToast]);
 
   const handleOpenEvidenceSource = useCallback((evidence) => {
-    const ticketId = evidence?.source_ref?.ticketId;
+    const ticketId = evidence?.source_ref?.ticketId || evidence?.ticketId || null;
     if (ticketId) {
       const ticket = tickets.find((item) => item.id === ticketId);
       if (ticket) {
@@ -692,10 +690,40 @@ export function SupportPage() {
         return;
       }
     }
-    const sourceText = safeStringify(evidence?.source_ref || {}, 1200);
+    const conversationId = evidence?.source_ref?.conversationId || evidence?.conversationId || null;
+    if (conversationId) {
+      const relatedTicket = tickets.find((item) => item.conversationId === conversationId);
+      if (relatedTicket) {
+        setSelectedTicket(relatedTicket);
+        showToast('Origem aberta pela conversa relacionada', 'info');
+        return;
+      }
+    }
+    const sourceText = [
+      evidence?.source_type ? `source_type=${evidence.source_type}` : '',
+      evidence?.source_id ? `source_id=${evidence.source_id}` : '',
+      ticketId ? `ticket=${ticketId}` : '',
+      conversationId ? `conversation=${conversationId}` : '',
+      safeStringify(evidence?.source_ref || {}, 1200),
+    ].filter(Boolean).join('\n');
     copyToClipboard(sourceText);
     showToast('Origem rastreável copiada para consulta', 'info');
   }, [tickets, showToast]);
+
+  const handleOpenTimelineItem = useCallback((item) => {
+    if (!item) return;
+    handleOpenEvidenceSource({
+      source_type: item.sourceType || item.source,
+      source_id: item.id,
+      source_ref: {
+        ticketId: item.ticketId || null,
+        conversationId: item.conversationId || null,
+        source: item.source || null,
+      },
+      ticketId: item.ticketId || null,
+      conversationId: item.conversationId || null,
+    });
+  }, [handleOpenEvidenceSource]);
 
   function summarizeChannelMessage(channelMsg) {
     const type = String(channelMsg?.type || '').toLowerCase();
@@ -1776,9 +1804,19 @@ export function SupportPage() {
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                               <div>{formatEvidenceLabel(evidence.category)} • origem {formatEvidenceLabel(evidence.source_type)} • força {formatEvidenceLabel(evidence.strength)}</div>
+                              <div>Modo {formatEvidenceOrigin(evidence.evidence_origin)}</div>
                               <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • score {evidence.reasoning?.score || 0}</div>
                               {evidence.reasoning?.matchedBy?.length ? (
                                 <div>Match: {evidence.reasoning.matchedBy.join(', ')}</div>
+                              ) : null}
+                              {evidence.source_ref?.ticketId || evidence.source_ref?.conversationId || evidence.source_id ? (
+                                <div>
+                                  {evidence.source_ref?.ticketId ? `ticket ${evidence.source_ref.ticketId}` : null}
+                                  {evidence.source_ref?.ticketId && evidence.source_ref?.conversationId ? ' • ' : null}
+                                  {evidence.source_ref?.conversationId ? `conversation ${evidence.source_ref.conversationId}` : null}
+                                  {(evidence.source_ref?.ticketId || evidence.source_ref?.conversationId) && evidence.source_id ? ' • ' : null}
+                                  {evidence.source_id ? `source ${evidence.source_id}` : null}
+                                </div>
                               ) : null}
                             </div>
                             <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
@@ -1799,7 +1837,9 @@ export function SupportPage() {
                         ))
                     ) : (
                       <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        Nenhuma evidência histórica relevante foi encontrada para o contexto atual.
+                        {evidenceHistory.evidence?.reasoning?.reason
+                          ? `Nenhuma evidência forte foi encontrada: ${formatEvidenceLabel(evidenceHistory.evidence.reasoning.reason)}.`
+                          : 'Nenhuma evidência histórica relevante foi encontrada para o contexto atual.'}
                       </div>
                     )}
                   </div>
@@ -1813,6 +1853,40 @@ export function SupportPage() {
                     ) : (
                       <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
                         Quando houver uma evidência forte, a sugestão aparecerá aqui sem interromper o fluxo atual.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 700 }}>Histórico consolidado</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {evidenceLoading ? 'Carregando…' : `${(evidenceHistory.timeline || []).length} item(ns)`}
+                      </div>
+                    </div>
+                    {(evidenceHistory.timeline || []).length > 0 ? (
+                      (evidenceHistory.timeline || []).slice(0, 6).map((item) => (
+                        <div key={item.id} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                            <div>
+                              <strong>{item.title || formatEvidenceLabel(item.type)}</strong>
+                              {item.source ? ` • ${formatEvidenceLabel(item.source)}` : ''}
+                            </div>
+                            <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>{formatDate(item.timestamp)}</div>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                            {item.text || 'Sem conteúdo textual disponível.'}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                            <Button type="button" onClick={() => handleOpenTimelineItem(item)} style={{ width: 'auto' }}>
+                              Abrir origem
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                        O histórico consolidado aparecerá aqui quando o contexto atual puder ser relacionado a conversas, tickets ou eventos anteriores.
                       </div>
                     )}
                   </div>

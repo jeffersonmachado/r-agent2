@@ -143,4 +143,94 @@ describe('evidenceService', () => {
     expect(second.created).toBe(0);
     expect(second.existing).toBeGreaterThan(0);
   });
+
+  test('fallback híbrido extrai em tempo real quando não há persistido suficiente', async () => {
+    const model = makeEvidenceModel();
+    const service = createEvidenceService({
+      Evidence: getter(model),
+      identityService: {
+        resolveIdentity: jest.fn(async () => ({
+          ok: true,
+          identity: { entityType: 'customer', entityId: 'cust-9', confidence: 0.94, relatedEntities: [] },
+        })),
+      },
+      timelineService: {
+        getTimeline: jest.fn(async () => ({
+          ok: true,
+          items: [
+            {
+              id: 'message:m9',
+              timestamp: '2026-02-10T12:00:00.000Z',
+              source: 'channel_message',
+              sourceType: 'channel_message',
+              direction: 'outbound',
+              title: 'whatsapp outbound',
+              text: 'Informamos o reajuste previsto em contrato e reenviamos os termos.',
+              relatedEntities: [],
+              ticketId: 't9',
+              conversationId: 'c9',
+            },
+          ],
+        })),
+      },
+      ChannelConversation: getter({ findAll: jest.fn(async () => []) }),
+      EventLedger: getter({ findAll: jest.fn(async () => []) }),
+    });
+
+    const result = await service.findBestEvidenceForContextWithFallback({
+      tenantId: 'tenant1',
+      context: { entityType: 'customer', entityId: 'cust-9', ticketId: 't9' },
+      query: 'cliente disse que nao foi avisado do aumento',
+      options: { limit: 5, persistFallback: true },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.best).toBeTruthy();
+    expect(['transient', 'fallback_persisted']).toContain(result.best.evidence_origin.kind);
+    expect(result.reasoning.strategy).toMatch(/fallback/);
+    expect(result.timeline).toHaveLength(1);
+  });
+
+  test('fallback híbrido retorna best nulo quando nada atinge threshold', async () => {
+    const model = makeEvidenceModel();
+    const service = createEvidenceService({
+      Evidence: getter(model),
+      identityService: {
+        resolveIdentity: jest.fn(async () => ({
+          ok: true,
+          identity: { entityType: 'customer', entityId: 'cust-10', confidence: 0.94, relatedEntities: [] },
+        })),
+      },
+      timelineService: {
+        getTimeline: jest.fn(async () => ({
+          ok: true,
+          items: [
+            {
+              id: 'message:m10',
+              timestamp: '2026-02-10T12:00:00.000Z',
+              source: 'channel_message',
+              sourceType: 'channel_message',
+              direction: 'inbound',
+              title: 'whatsapp inbound',
+              text: 'oi tudo bem',
+              relatedEntities: [],
+            },
+          ],
+        })),
+      },
+      ChannelConversation: getter({ findAll: jest.fn(async () => []) }),
+      EventLedger: getter({ findAll: jest.fn(async () => []) }),
+    });
+
+    const result = await service.findBestEvidenceForContextWithFallback({
+      tenantId: 'tenant1',
+      context: { entityType: 'customer', entityId: 'cust-10' },
+      query: 'cliente questiona aumento',
+      options: { limit: 5, minScore: 90, persistFallback: false },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.best).toBeNull();
+    expect(result.reasoning.reason).toBeTruthy();
+  });
 });

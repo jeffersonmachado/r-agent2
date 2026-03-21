@@ -2,6 +2,7 @@
 
 const express = require('express');
 const evidenceService = require('../../services/evidenceService');
+const { safeString } = require('../../services/evidenceUtils');
 
 function toList(value) {
   if (!value) return [];
@@ -38,7 +39,7 @@ function requireAuthenticatedTenant(req, res, deps) {
 function buildSearchArgs(tenantId, payload = {}) {
   return {
     tenantId,
-    context: payload.context || {},
+    context: payload.context || buildContextFromRequest(payload),
     filters: {
       category: toList(payload.filters?.category || payload.category),
       type: toList(payload.filters?.type || payload.type),
@@ -48,6 +49,10 @@ function buildSearchArgs(tenantId, payload = {}) {
     options: {
       limit: numberValue(payload.options?.limit || payload.limit, 5, { min: 1, max: 20 }),
       includeWeak: boolValue(payload.options?.includeWeak ?? payload.includeWeak, false),
+      includeTimeline: boolValue(payload.options?.includeTimeline ?? payload.includeTimeline, true),
+      persistFallback: boolValue(payload.options?.persistFallback ?? payload.persistFallback, true),
+      minScore: numberValue(payload.options?.minScore || payload.minScore, 54, { min: 1, max: 200 }),
+      minConfidence: Math.max(0, Math.min(0.99, Number(payload.options?.minConfidence ?? payload.minConfidence) || 0.58)),
     },
   };
 }
@@ -64,6 +69,19 @@ function buildContextFromRequest(payload = {}) {
     customerId: payload.customerId || null,
     contactId: payload.contactId || null,
   };
+}
+
+function hasUsefulContext(context = {}) {
+  return Boolean(
+    context.ticketId
+    || context.conversationId
+    || context.phone
+    || (context.entityType && context.entityId)
+    || context.contactId
+    || context.membershipId
+    || context.subjectId
+    || context.customerId
+  );
 }
 
 function createEvidenceRoutes({ buildDeps }) {
@@ -144,6 +162,32 @@ function createEvidenceRoutes({ buildDeps }) {
       const result = await evidenceService.searchEvidence({
         tenantId,
         ...buildSearchArgs(tenantId, body),
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post('/api/evidence/contextual-search', async (req, res, next) => {
+    const deps = buildDeps(req, res);
+    const tenantId = requireAuthenticatedTenant(req, res, deps);
+    if (!tenantId) return;
+
+    try {
+      const body = await deps.parseJsonBody(req);
+      const context = body.context || buildContextFromRequest(body);
+      const query = safeString(body.query || body.q).trim();
+      if (!hasUsefulContext(context) && !query) {
+        deps.sendJson(res, 400, {
+          error: 'invalid_request',
+          message: 'Informe ao menos um contexto útil ou query para busca contextual.',
+        });
+        return;
+      }
+      const result = await evidenceService.findBestEvidenceForContextWithFallback({
+        tenantId,
+        ...buildSearchArgs(tenantId, { ...body, context, query }),
       });
       deps.sendJson(res, 200, result);
     } catch (err) {

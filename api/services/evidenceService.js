@@ -17,6 +17,9 @@ const {
 } = require('./evidenceUtils');
 
 function createEvidenceService(deps = {}) {
+  const DEFAULT_MIN_SCORE = Number(deps.minScore) || 54;
+  const DEFAULT_MIN_CONFIDENCE = Number(deps.minConfidence) || 0.58;
+  const DEFAULT_FALLBACK_PERSIST_LIMIT = Number(deps.fallbackPersistLimit) || 3;
   const EvidenceModel = deps.Evidence || Evidence;
   const ChannelConversationModel = deps.ChannelConversation || ChannelConversation;
   const EventLedgerModel = deps.EventLedger || EventLedger;
@@ -159,6 +162,94 @@ function createEvidenceService(deps = {}) {
     ].filter(Boolean).join(' '));
   }
 
+  function normalizeOptions(options = {}) {
+    return {
+      limit: Math.max(Number(options.limit) || 5, 1),
+      includeWeak: options.includeWeak === true,
+      minScore: Number.isFinite(Number(options.minScore)) ? Number(options.minScore) : DEFAULT_MIN_SCORE,
+      minConfidence: Number.isFinite(Number(options.minConfidence)) ? Number(options.minConfidence) : DEFAULT_MIN_CONFIDENCE,
+      includeTimeline: options.includeTimeline !== false,
+      persistFallback: options.persistFallback !== false,
+      fallbackPersistLimit: Math.max(Number(options.fallbackPersistLimit) || DEFAULT_FALLBACK_PERSIST_LIMIT, 1),
+    };
+  }
+
+  function strengthRank(value) {
+    return {
+      weak: 1,
+      moderate: 2,
+      strong: 3,
+      formal: 4,
+    }[safeString(value)] || 0;
+  }
+
+  function buildEvidenceOrigin(kind, extra = {}) {
+    const labels = {
+      persisted: 'indice_persistido',
+      transient: 'fallback_tempo_real',
+      fallback_persisted: 'fallback_indexado',
+    };
+    return {
+      kind,
+      label: labels[kind] || kind,
+      persisted: kind === 'persisted' || kind === 'fallback_persisted',
+      transient: kind === 'transient' || kind === 'fallback_persisted',
+      persistedAfterFallback: kind === 'fallback_persisted',
+      ...extra,
+    };
+  }
+
+  function decorateEvidence(item, { originKind = 'persisted', reasoning = null, sourceInfo = null } = {}) {
+    if (!item) return null;
+    const evidence = {
+      ...item,
+      source_ref: item.source_ref || {},
+      reasoning: reasoning || item.reasoning || { matchedBy: [], score: 0 },
+      evidence_origin: buildEvidenceOrigin(originKind, sourceInfo || {}),
+    };
+    return evidence;
+  }
+
+  function isEvidenceStrongEnough(evidence, options = {}) {
+    if (!evidence) return false;
+    const normalized = normalizeOptions(options);
+    const score = Number(evidence.reasoning?.score || 0);
+    const confidence = Number(evidence.confidence || 0);
+    const hasMeaningfulText = Boolean(safeString(evidence.excerpt || evidence.summary).trim());
+    if (!hasMeaningfulText) return false;
+    if (score < normalized.minScore) return false;
+    if (confidence >= normalized.minConfidence) return true;
+    return strengthRank(evidence.strength) >= strengthRank('strong');
+  }
+
+  function buildNoEvidenceResult({ ok = true, identity = null, timeline = [], options = {}, reason = 'no_good_evidence_found', persistedTried = false, fallbackTried = false } = {}) {
+    return {
+      ok,
+      identity,
+      best: null,
+      alternatives: [],
+      timeline,
+      reasoning: {
+        matchedBy: [],
+        score: 0,
+        strategy: fallbackTried ? 'fallback_exhausted' : (persistedTried ? 'persisted_only' : 'none'),
+        reason,
+        threshold: {
+          minScore: normalizeOptions(options).minScore,
+          minConfidence: normalizeOptions(options).minConfidence,
+        },
+      },
+      sourceInfo: {
+        strategyUsed: fallbackTried ? 'fallback_exhausted' : (persistedTried ? 'persisted_only' : 'none'),
+        persistedTried,
+        fallbackTried,
+        persistedAfterFallback: 0,
+        persistedCount: 0,
+        transientCount: 0,
+      },
+    };
+  }
+
   function scoreEvidence({ row, identity, queryText, filters }) {
     let score = 0;
     const matchedBy = [];
@@ -218,6 +309,7 @@ function createEvidenceService(deps = {}) {
 
   async function searchEvidence(args = {}) {
     const tenantId = ensureTenantId(args.tenantId);
+    const options = normalizeOptions(args.options);
     const identityResult = args.identity
       ? { ok: true, identity: args.identity }
       : await resolveIdentity({ tenantId, ...(args.context || {}), ...args });
@@ -243,14 +335,14 @@ function createEvidenceService(deps = {}) {
     if (toArray(args.filters?.category).length > 0) where.category = { [Op.in]: args.filters.category };
     if (toArray(args.filters?.type).length > 0) where.type = { [Op.in]: args.filters.type };
     if (toArray(args.filters?.theme).length > 0) where.theme = { [Op.in]: args.filters.theme };
-    if (args.options?.includeWeak !== true) {
+    if (!options.includeWeak) {
       where.strength = { [Op.in]: ['moderate', 'strong', 'formal'] };
     }
 
     const rows = await EvidenceModel().findAll({
       where,
       order: [['occurred_at', 'DESC']],
-      limit: Math.max((Number(args.options?.limit) || 5) * 10, 20),
+      limit: Math.max(options.limit * 10, 20),
     });
     const queryText = buildQueryTokens(args);
     const scored = (rows || []).map((row) => {
@@ -262,12 +354,11 @@ function createEvidenceService(deps = {}) {
         filters: args.filters || {},
       });
       return {
-        ...item,
-        reasoning,
+        ...decorateEvidence(item, { originKind: 'persisted', reasoning }),
       };
     }).sort((a, b) => b.reasoning.score - a.reasoning.score);
 
-    const limit = Math.max(Number(args.options?.limit) || 5, 1);
+    const limit = options.limit;
     const best = scored[0] || null;
     const alternatives = best ? scored.slice(1, limit) : [];
 
@@ -282,6 +373,199 @@ function createEvidenceService(deps = {}) {
 
   async function findBestEvidenceForContext(args = {}) {
     return searchEvidence(args);
+  }
+
+  function extractTransientEvidenceFromTimeline({ tenantId, identity, timelineItems, options }) {
+    const deduped = new Map();
+    for (const item of timelineItems || []) {
+      const extracted = extractionService.extractEvidenceFromSource(item, { includeWeak: options.includeWeak });
+      for (const evidence of extracted) {
+        const record = buildEvidenceRecord({
+          tenantId,
+          identity,
+          sourceItem: item,
+          evidence,
+        });
+        const current = deduped.get(record.idempotency_key);
+        if (!current || Number(current.confidence || 0) < Number(record.confidence || 0)) {
+          deduped.set(record.idempotency_key, record);
+        }
+      }
+    }
+    return Array.from(deduped.values());
+  }
+
+  function rankTransientEvidence({ identity, queryText, filters, records }) {
+    return (records || [])
+      .map((row) => {
+        const reasoning = scoreEvidence({ row, identity, queryText, filters });
+        return decorateEvidence(row, { originKind: 'transient', reasoning });
+      })
+      .sort((a, b) => b.reasoning.score - a.reasoning.score);
+  }
+
+  async function persistFallbackEvidence({ tenantId, records, rankedEvidence, options }) {
+    const persistable = (rankedEvidence || [])
+      .filter((item) => isEvidenceStrongEnough(item, options))
+      .slice(0, options.fallbackPersistLimit);
+    if (persistable.length === 0 || options.persistFallback !== true) {
+      return { persistedCount: 0, byIdempotencyKey: new Map() };
+    }
+
+    const selectedKeys = new Set(persistable.map((item) => item.idempotency_key));
+    const selectedRecords = (records || []).filter((item) => selectedKeys.has(item.idempotency_key));
+    const indexed = await indexEvidence({ tenantId, records: selectedRecords });
+    const byIdempotencyKey = new Map();
+    for (const item of [...indexed.created, ...indexed.existing]) {
+      byIdempotencyKey.set(item.idempotency_key, item);
+    }
+    return {
+      persistedCount: indexed.created.length + indexed.existing.length,
+      byIdempotencyKey,
+    };
+  }
+
+  function applyPersistedFallbackOrigin(rankedEvidence, persistedMap) {
+    return (rankedEvidence || []).map((item) => {
+      const persisted = persistedMap.get(item.idempotency_key);
+      if (!persisted) return item;
+      return decorateEvidence({
+        ...item,
+        ...persisted,
+        reasoning: item.reasoning,
+      }, {
+        originKind: 'fallback_persisted',
+        reasoning: item.reasoning,
+        sourceInfo: {
+          persistedId: persisted.id,
+        },
+      });
+    });
+  }
+
+  async function findBestEvidenceForContextWithFallback(args = {}) {
+    const tenantId = ensureTenantId(args.tenantId);
+    const options = normalizeOptions(args.options);
+    const identityResult = args.identity
+      ? { ok: true, identity: args.identity }
+      : await resolveIdentity({ tenantId, ...(args.context || {}), ...args });
+
+    if (!identityResult.ok) {
+      return buildNoEvidenceResult({
+        ok: false,
+        identity: null,
+        options,
+        reason: 'identity_not_resolved',
+      });
+    }
+
+    const identity = identityResult.identity;
+    const persistedResult = await searchEvidence({
+      tenantId,
+      identity,
+      context: args.context || args,
+      filters: args.filters || {},
+      query: args.query || '',
+      options,
+    });
+    const persistedBest = persistedResult.best ? decorateEvidence(persistedResult.best, { originKind: 'persisted' }) : null;
+    const persistedAlternatives = (persistedResult.alternatives || []).map((item) => decorateEvidence(item, { originKind: 'persisted' }));
+    const persistedGood = isEvidenceStrongEnough(persistedBest, options);
+
+    let timelineItems = [];
+    if (persistedGood && options.includeTimeline) {
+      const timeline = await getTimeline({ tenantId, identity, ...(args.context || {}), ...args });
+      timelineItems = timeline.items || [];
+    }
+
+    if (persistedGood) {
+      return {
+        ok: true,
+        identity,
+        best: persistedBest,
+        alternatives: persistedAlternatives.slice(0, Math.max(options.limit - 1, 0)),
+        timeline: timelineItems,
+        reasoning: {
+          ...persistedBest.reasoning,
+          strategy: 'persisted',
+          threshold: {
+            minScore: options.minScore,
+            minConfidence: options.minConfidence,
+          },
+        },
+        sourceInfo: {
+          strategyUsed: 'persisted',
+          persistedTried: true,
+          fallbackTried: false,
+          persistedAfterFallback: 0,
+          persistedCount: persistedBest ? 1 + persistedAlternatives.length : 0,
+          transientCount: 0,
+        },
+      };
+    }
+
+    const timeline = await getTimeline({ tenantId, identity, ...(args.context || {}), ...args });
+    timelineItems = timeline.items || [];
+    const transientRecords = extractTransientEvidenceFromTimeline({
+      tenantId,
+      identity,
+      timelineItems,
+      options,
+    });
+    const queryText = buildQueryTokens(args);
+    let transientRanked = rankTransientEvidence({
+      identity,
+      queryText,
+      filters: args.filters || {},
+      records: transientRecords,
+    });
+
+    const persistedFallback = await persistFallbackEvidence({
+      tenantId,
+      records: transientRecords,
+      rankedEvidence: transientRanked,
+      options,
+    });
+    transientRanked = applyPersistedFallbackOrigin(transientRanked, persistedFallback.byIdempotencyKey);
+
+    const fallbackBest = transientRanked[0] || null;
+    const fallbackGood = isEvidenceStrongEnough(fallbackBest, options);
+
+    if (!fallbackGood) {
+      return buildNoEvidenceResult({
+        identity,
+        timeline: timelineItems,
+        options,
+        reason: persistedBest ? 'persisted_evidence_below_threshold' : 'no_relevant_evidence_from_timeline',
+        persistedTried: true,
+        fallbackTried: true,
+      });
+    }
+
+    return {
+      ok: true,
+      identity,
+      best: fallbackBest,
+      alternatives: transientRanked.slice(1, options.limit),
+      timeline: timelineItems,
+      reasoning: {
+        ...fallbackBest.reasoning,
+        strategy: fallbackBest.evidence_origin?.persistedAfterFallback ? 'fallback_persisted' : 'fallback_transient',
+        threshold: {
+          minScore: options.minScore,
+          minConfidence: options.minConfidence,
+        },
+        persistedRejected: Boolean(persistedBest),
+      },
+      sourceInfo: {
+        strategyUsed: fallbackBest.evidence_origin?.persistedAfterFallback ? 'fallback_persisted' : 'fallback_transient',
+        persistedTried: true,
+        fallbackTried: true,
+        persistedAfterFallback: persistedFallback.persistedCount,
+        persistedCount: persistedBest ? 1 + persistedAlternatives.length : 0,
+        transientCount: transientRanked.length,
+      },
+    };
   }
 
   async function backfillEvidenceForEntity(args = {}) {
@@ -437,6 +721,7 @@ function createEvidenceService(deps = {}) {
     indexEvidence,
     searchEvidence,
     findBestEvidenceForContext,
+    findBestEvidenceForContextWithFallback,
     backfillEvidenceForEntity,
     backfillEvidenceForTenant,
   };
