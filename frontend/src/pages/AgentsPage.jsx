@@ -13,6 +13,7 @@ import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
 import { isSuperAdmin } from '../utils/menuPermissions';
 import { formatDateTime } from '../utils/dateFormatter';
+import { CrudPageBase, useCrudFilters, useCrudList } from '../modules/crud-base';
 
 export function AgentsPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -27,8 +28,6 @@ export function AgentsPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const [allAgents, setAllAgents] = useState([]); // Lista completa para filtros
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null);
   const [formData, setFormData] = useState({
@@ -47,10 +46,19 @@ export function AgentsPage() {
     name: '',
   });
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
-  const [filters, setFilters] = useState({
+  const { filters, setFilter, resetFilters } = useCrudFilters({
     search: '',
     role: '',
     status: '',
+  });
+  const {
+    allItems: allAgents,
+    loading,
+    error: agentsLoadError,
+    loadItems: loadAgents,
+  } = useCrudList(async () => {
+    const result = await authApi.listAgents();
+    return result?.agents || [];
   });
 
   // Verifica se pode gerenciar agentes: super-admin, admin ou supervisor
@@ -58,21 +66,14 @@ export function AgentsPage() {
 
   useEffect(() => {
     loadAgents();
-  }, []);
+  }, [loadAgents]);
 
-  const loadAgents = async () => {
-    try {
-      setLoading(true);
-      const result = await authApi.listAgents();
-      const agentsList = result.agents || [];
-      setAllAgents(agentsList);
-    } catch (err) {
-      logger.error('Erro ao carregar agentes', err);
-      showToast('Erro ao carregar agentes', 'error');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (agentsLoadError) {
+      logger.error('Erro ao carregar agentes', agentsLoadError);
+      showToast(agentsLoadError, 'error');
     }
-  };
+  }, [agentsLoadError, showToast]);
 
   // Aplica filtros usando useMemo para performance
   const agents = useMemo(() => {
@@ -102,14 +103,6 @@ export function AgentsPage() {
 
     return filtered;
   }, [allAgents, filters]);
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ search: '', role: '', status: '' });
-  };
 
   const handleCreate = () => {
     if (!canManageAgents) {
@@ -219,43 +212,37 @@ export function AgentsPage() {
 
   if (loading) {
     return (
-      <div className="support-page">
-        <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>👥 Gerenciamento de Agentes</h1>
-          </div>
-        </div>
+      <CrudPageBase title="👥 Gerenciamento de Agentes">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
             <p className="text-text-secondary">Carregando agentes...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
-      <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>👥 Gerenciamento de Agentes</h1>
-        </div>
-        <div className="support-controls">
-          <Button 
-            onClick={handleCreate} 
-            style={{ backgroundColor: '#25D366', color: 'white', marginRight: '10px' }}
+    <CrudPageBase
+      title="👥 Gerenciamento de Agentes"
+      actions={(
+        <>
+          <Button
+            onClick={handleCreate}
+            style={{ backgroundColor: '#25D366', color: 'white' }}
           >
             ➕ Novo Agente
           </Button>
-          <Button 
-            onClick={() => setShowInviteForm(true)} 
+          <Button
+            onClick={() => setShowInviteForm(true)}
             style={{ backgroundColor: '#6366f1', color: 'white' }}
           >
             ✉️ Convidar Usuário
           </Button>
-        </div>
-      </div>
+        </>
+      )}
+    >
 
       {/* Filtros */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
@@ -271,7 +258,7 @@ export function AgentsPage() {
             <input
               type="text"
               value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
+              onChange={(e) => setFilter('search', e.target.value)}
               placeholder="Nome, username ou email..."
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
             />
@@ -283,7 +270,7 @@ export function AgentsPage() {
             </label>
             <select
               value={filters.role}
-              onChange={(e) => handleFilterChange('role', e.target.value)}
+              onChange={(e) => setFilter('role', e.target.value)}
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
@@ -305,7 +292,7 @@ export function AgentsPage() {
             </label>
             <select
               value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
+              onChange={(e) => setFilter('status', e.target.value)}
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
@@ -316,7 +303,7 @@ export function AgentsPage() {
 
           <div className="flex items-end">
             <Button
-              onClick={clearFilters}
+              onClick={resetFilters}
               variant="secondary"
               className="w-full"
               disabled={!filters.search && !filters.role && !filters.status}
@@ -702,7 +689,7 @@ export function AgentsPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }
 

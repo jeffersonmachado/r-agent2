@@ -18,6 +18,7 @@ import { listFlows } from '../api/flows';
 import { getCurrentTenantPlanUsage } from '../api/tenants';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const PROVIDER_OPTIONS = [
   { value: 'whatsapp-qr', label: 'WhatsApp QR' },
@@ -298,11 +299,11 @@ export function WhatsAppConnectionsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
@@ -319,7 +320,7 @@ export function WhatsAppConnectionsPage() {
     : null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
 
       <div className="support-header">
@@ -561,6 +562,6 @@ export function WhatsAppConnectionsPage() {
           </div>
         )}
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

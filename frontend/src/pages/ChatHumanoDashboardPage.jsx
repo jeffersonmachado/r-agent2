@@ -1,7 +1,8 @@
 import React, { useMemo, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { buildApiUrl } from '../api/client';
-import { DashboardKpiCard, DashboardSection, DashboardFeatureGrid } from '../components/DashboardBase';
+import { DashboardKpiCard, DashboardSection, DashboardFeatureGrid } from '../modules/dashboard-base';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function ChatHumanoDashboardPage() {
   const { navigate } = useRouter();
@@ -62,7 +63,7 @@ export function ChatHumanoDashboardPage() {
   );
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Dashboard Chat Humano</h1>
         <p>Pilar 1: cockpit operacional para atendimento omnichannel.</p>
@@ -121,6 +122,6 @@ export function ChatHumanoDashboardPage() {
       )}
 
       <DashboardFeatureGrid features={features} onNavigate={navigate} />
-    </div>
+    </CrudPageBase>
   );
 }

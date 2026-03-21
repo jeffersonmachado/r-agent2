@@ -3,6 +3,18 @@
 ## Fonte de dados
 Levantamento estatico por imports/requires locais (`api/**` e `frontend/src/**`).
 
+## Snapshot estrutural atual (2026-03-20)
+- Hotspot backend principal deixou de ser apenas `api/server.js`; `api/app/registerRoutes.js` caiu para 355 linhas e sem builders centralizados.
+- `api/server.js` permanece como entrypoint estavel em 962 linhas com composicao Express consolidada.
+- Composition roots de dominio cobrem todos os blocos antes montados por `build*RouteDeps` no registro central.
+- Builders centralizados em `registerRoutes.js` foram reduzidos de 17 para 0.
+- `api/modules/shared/legacyExpressBridge.js` e a unica ponte residual explicita de backend e esta documentada como excecao transitiva.
+- `frontend/src/modules/dashboard-base/index.js` centraliza os exports compartilhados de dashboard.
+- `DataGrid` foi removido do frontend; `PlatformGrid` e o unico grid ativo.
+
+Observacao:
+- As metricas de fan-in/fan-out abaixo permanecem como baseline historico de inventario estatico; o plano corrente prioriza o hotspot real observado no wiring atual (`registerRoutes.js`).
+
 ## Backend (`api/**`)
 - Arquivos analisados: 553
 - Arestas locais: 1729
@@ -50,9 +62,10 @@ Levantamento estatico por imports/requires locais (`api/**` e `frontend/src/**`)
 - `frontend/src/hooks/useRouter.js`: 63
 
 ### Conclusoes frontend
-- `main.jsx` concentra roteamento e cresce como roteador monolitico.
+- `main.jsx` continua concentrando roteamento e permanece como principal hotspot estrutural do frontend.
 - `api/client.js` e `logger.js` sao dependencias transversais centrais.
-- Paginas grandes concentram regra e estado (ex.: `GenerateSystemPage.jsx`, `SupportPage.jsx`, `RAGDocumentsPage.jsx`).
+- `frontend/src/modules/dashboard-base/index.js` e `frontend/src/modules/crud-base/index.js` reduzem ambiguidade nos dois shells canonicos compartilhados.
+- Paginas grandes continuam concentrando regra e estado (ex.: `GenerateSystemPage.jsx`, `SupportPage.jsx`, `RAGDocumentsPage.jsx`, `OperationsDashboardPage.jsx`).
 
 ## Pontos de acoplamento critico
 1. Bootstrap e roteamento central no backend (`api/server.js`).

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CrmCard, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea, CrmBadge } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function CampaignsPage() {
   const statusLabel = (status) => {
@@ -18,7 +19,7 @@ export function CampaignsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📢 Campanhas</h1>
@@ -65,6 +66,6 @@ export function CampaignsPage() {
           <CrmInput label="Público-alvo" value="" onChange={() => {}} />
         </CrmForm>
       </CrmModal>
-    </div>
+    </CrudPageBase>
   );
 }

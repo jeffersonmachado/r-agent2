@@ -10,6 +10,7 @@ import {
   assignRbacRole,
 } from '../api/rbac';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function RbacPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -104,18 +105,18 @@ export function RbacPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🔐 RBAC</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
@@ -242,6 +243,6 @@ export function RbacPage() {
         </div>
       </div>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

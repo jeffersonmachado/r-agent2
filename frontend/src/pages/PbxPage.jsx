@@ -62,6 +62,29 @@ import logger from '../utils/logger';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { Button } from '../styles/Button';
 import { useRouter } from '../hooks/useRouter';
+import { CrudPageBase } from '../modules/crud-base';
+import { PbxDashboardShell } from './pbx/PbxDashboardShell';
+import { PbxExtensionsAclsTabs } from './pbx/PbxExtensionsAclsTabs';
+import { PbxOverviewLegacyTabs } from './pbx/PbxOverviewLegacyTabs';
+import { PbxRoutingTabs } from './pbx/PbxRoutingTabs';
+import { PbxOperationsTabs } from './pbx/PbxOperationsTabs';
+import { PbxContactCenterGovernanceTabs } from './pbx/PbxContactCenterGovernanceTabs';
+import {
+  AGENTS_FIELD_CLASS,
+  AGENTS_SELECT_CLASS,
+  INITIAL_EXTENSION_FORM,
+  LEGACY_CONTEXT_OPTIONS,
+  LEGACY_DASHBOARD_ITEMS,
+  LEGACY_MENU_TAB_MAP,
+  LEGACY_PROTOCOL_OPTIONS,
+  LEGACY_TIPO_OPTIONS,
+  PBX_STATIC_TAB_ROUTES,
+  PbxDashboardIcon,
+  QUEUE_STRATEGY_OPTIONS,
+  getDashboardIconName,
+  getDashboardIconPalette,
+  normalizeLegacyLabel,
+} from './pbx/pbxPageShared';
 
 function safeJsonParse(text, fallback) {
   try {
@@ -87,258 +110,6 @@ function formatDateTime(value, fallback = '—') {
   if (Number.isNaN(date.getTime())) return fallback;
   return date.toLocaleString();
 }
-
-const LEGACY_CONTEXT_OPTIONS = [
-  ['senha', 'Senha'],
-  ['ramal', 'Ramal'],
-  ['local', 'Local'],
-  ['local-cel', 'Local Celulares'],
-  ['interurbano', 'Interurbano'],
-  ['internacional', 'Internacional'],
-];
-
-const LEGACY_PROTOCOL_OPTIONS = [
-  ['PJSIP', 'SIP (PJSIP)'],
-  ['IAX2', 'IAX2'],
-];
-
-const LEGACY_TIPO_OPTIONS = [
-  ['Livre', 'Livre'],
-  ['Controle', 'Controle'],
-  ['Senha', 'Senha'],
-];
-
-const QUEUE_STRATEGY_OPTIONS = [
-  ['ringall', 'Todos'],
-  ['leastrecent', 'Ultimo'],
-  ['random', 'Randomico'],
-  ['linear', 'Linear'],
-  ['rrmemory', 'LinearMemoria'],
-];
-
-const LEGACY_MENU_TAB_ITEMS = [
-  { key: 'legacyPainel', label: 'Legado: Painel', section: 'Dashboards', href: 'app/painel.html', mappedTab: 'overview', status: 'coberto' },
-  { key: 'legacyDdr', label: 'Legado: DDR', section: 'Manutenção', href: 'app/ddr.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyGrupos', label: 'Legado: Grupos', section: 'Manutenção', href: 'app/grupo.html', mappedTab: 'extensions', status: 'parcial' },
-  { key: 'legacyRamais', label: 'Legado: Ramais', section: 'Manutenção', href: 'app/ramais.html', mappedTab: 'extensions', status: 'coberto' },
-  { key: 'legacyDesvio', label: 'Legado: Desvio', section: 'Manutenção', href: 'app/desvio.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyTransbordo', label: 'Legado: Transbordo', section: 'Manutenção', href: 'app/transbordo.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyBloqueio', label: 'Legado: Bloqueio', section: 'Manutenção', href: 'app/bloqueio.html', mappedTab: 'extensions', status: 'parcial' },
-  { key: 'legacyRetorno', label: 'Legado: Retorno', section: 'Manutenção', href: 'app/retorno.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyRecusa', label: 'Legado: Recusa', section: 'Manutenção', href: 'app/recusa.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyFeriado', label: 'Legado: Feriado', section: 'Manutenção', href: 'app/feriado.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyTransferencia', label: 'Legado: Transferência', section: 'Manutenção', href: 'app/transferencia.html', mappedTab: 'routes', status: 'parcial' },
-  { key: 'legacyAudioEspera', label: 'Legado: Áudios Espera', section: 'Áudios', href: 'app/upload.html?dir=espera', mappedTab: 'media', status: 'coberto' },
-  { key: 'legacyAudioSons', label: 'Legado: Áudios Sons', section: 'Áudios', href: 'app/upload.html?dir=sons', mappedTab: 'media', status: 'coberto' },
-  { key: 'legacyRelLigacoes', label: 'Legado: Relatório Ligações', section: 'Relatórios', href: 'app/cdr.html', mappedTab: 'cdr', status: 'coberto' },
-  { key: 'legacyRelFax', label: 'Legado: Relatório Fax', section: 'Relatórios', href: 'app/fax_rel.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyRelGravacoes', label: 'Legado: Relatório Gravações', section: 'Relatórios', href: 'app/sac.html', mappedTab: 'recordings', status: 'coberto' },
-  { key: 'legacyRelResumo', label: 'Legado: Relatório Resumo', section: 'Relatórios', href: 'app/resumo.html', mappedTab: 'cdr', status: 'parcial' },
-  { key: 'legacyRelHora', label: 'Legado: Relatório Hora', section: 'Relatórios', href: 'app/hora.html', mappedTab: 'cdr', status: 'parcial' },
-  { key: 'legacyRelOrigem', label: 'Legado: Relatório Origem', section: 'Relatórios', href: 'app/origem.html', mappedTab: 'cdr', status: 'parcial' },
-  { key: 'legacyRelDestino', label: 'Legado: Relatório Destino', section: 'Relatórios', href: 'app/destino.html', mappedTab: 'cdr', status: 'parcial' },
-  { key: 'legacyCfgConfiguracoes', label: 'Legado: Configurações', section: 'Configurações', href: 'app/configuracoes.html', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgOperadoras', label: 'Legado: Operadoras', section: 'Configurações', href: 'app/operadoras.html', mappedTab: 'trunks', status: 'parcial' },
-  { key: 'legacyCfgRotas', label: 'Legado: Rotas', section: 'Configurações', href: 'app/rotas.html', mappedTab: 'routes', status: 'coberto' },
-  { key: 'legacyCfgCategoria', label: 'Legado: Categoria', section: 'Configurações', href: 'app/categoria.html', mappedTab: 'extensions', status: 'parcial' },
-  { key: 'legacyCfgFax', label: 'Legado: Fax', section: 'Configurações', href: 'app/fax.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgFacilidades', label: 'Legado: Facilidades', section: 'Configurações', href: 'app/facilidades.html', mappedTab: 'extensions', status: 'parcial' },
-  { key: 'legacyCfgUra', label: 'Legado: URA', section: 'Configurações', href: 'app/ura.html', mappedTab: 'ivr', status: 'coberto' },
-  { key: 'legacyCfgSala', label: 'Legado: Sala', section: 'Configurações', href: 'app/sala.html', mappedTab: 'queues', status: 'parcial' },
-  { key: 'legacyCfgInterconexao', label: 'Legado: Interconexão', section: 'Configurações', href: 'app/interconexao.html', mappedTab: 'trunks', status: 'parcial' },
-  { key: 'legacyCfgUsuarios', label: 'Legado: Usuários', section: 'Configurações', href: 'app/usuarios.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgRede', label: 'Legado: Rede', section: 'Configurações', href: 'config/net', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgDhcp', label: 'Legado: DHCP', section: 'Configurações', href: 'config/dhcpd', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgFirewall', label: 'Legado: Firewall', section: 'Configurações', href: 'config/firewalld', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgVpn', label: 'Legado: VPN', section: 'Configurações', href: 'config/ipsec', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCfgLicenca', label: 'Legado: Licença', section: 'Configurações', href: 'app/licenca.php', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgAtualizacao', label: 'Legado: Atualização', section: 'Configurações', href: 'app/update.php', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgAssistencia', label: 'Legado: Assistência', section: 'Configurações', href: '/cgi/ripabx/assistencia.cgi', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgRecarga', label: 'Legado: Recarga', section: 'Configurações', href: 'app/recarga.php', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgServicos', label: 'Legado: Serviços', section: 'Configurações', href: 'app/servicos.html', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgProcessos', label: 'Legado: Processos', section: 'Configurações', href: '/pm2', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCcFila', label: 'Legado: CC Fila', section: 'Contact Center', href: 'app/fila.html', mappedTab: 'queues', status: 'coberto' },
-  { key: 'legacyCcMotivoPausa', label: 'Legado: CC Motivo Pausa', section: 'Contact Center', href: 'app/motivo.html', mappedTab: 'ccPauseReasons', status: 'coberto' },
-  { key: 'legacyCcMotivoContato', label: 'Legado: CC Motivo Contato', section: 'Contact Center', href: 'app/motivo1.html', mappedTab: 'ccContactReasons', status: 'coberto' },
-  { key: 'legacyCcCampanhas', label: 'Legado: CC Campanhas', section: 'Contact Center', href: 'app/campanha.html', mappedTab: 'ccCampaigns', status: 'coberto' },
-  { key: 'legacyCcCallbackAgendado', label: 'Legado: CC Callback Agendado', section: 'Contact Center', href: 'app/agendado.html', mappedTab: 'ccScheduled', status: 'coberto' },
-  { key: 'legacyCcRelAtendidas', label: 'Legado: CC Relatório Atendidas', section: 'Contact Center', href: 'app/fila_atendidas.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcRelAbandonadas', label: 'Legado: CC Relatório Abandonadas', section: 'Contact Center', href: 'app/fila_abandonadas.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcRelAgentes', label: 'Legado: CC Relatório Agentes', section: 'Contact Center', href: 'app/fila_agentes.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcRelHora', label: 'Legado: CC Relatório por Hora', section: 'Contact Center', href: 'app/fila_hora.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcRelResumoCampanha', label: 'Legado: CC Resumo por Campanha', section: 'Contact Center', href: 'app/filas_resumo.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcRelPesquisa', label: 'Legado: CC Pesquisa', section: 'Contact Center', href: 'app/pesquisa.html', mappedTab: null, status: 'pendente' },
-  { key: 'legacyCcClick2Call', label: 'Legado: CC Click2Call', section: 'Contact Center', href: 'app/click2call.php', mappedTab: 'ccClick2Call', status: 'coberto' },
-];
-
-const LEGACY_MENU_TAB_MAP = Object.fromEntries(LEGACY_MENU_TAB_ITEMS.map((item) => [item.key, item]));
-const LEGACY_DASHBOARD_ITEMS = LEGACY_MENU_TAB_ITEMS.filter((item) => item.status !== 'pendente' && item.mappedTab);
-
-function normalizeLegacyLabel(label) {
-  return String(label || '')
-    .replace(/^Legado:\s*/i, '')
-    .replace(/^CC\s*/i, '')
-    .trim();
-}
-
-const AGENTS_FIELD_CLASS =
-  'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
-
-const AGENTS_SELECT_CLASS =
-  'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover';
-
-const PBX_DASHBOARD_ICONS = {
-  overview: 'chart',
-  extensions: 'phone',
-  acls: 'shield',
-  trunks: 'network',
-  routes: 'route',
-  dids: 'hash',
-  ivr: 'sliders',
-  queues: 'inbox',
-  queueMembers: 'users',
-  dialplan: 'branch',
-  media: 'music',
-  recordings: 'mic',
-  cdr: 'file',
-  governance: 'building',
-  ccPauseReasons: 'pause',
-  ccContactReasons: 'tag',
-  ccCampaigns: 'megaphone',
-  ccCampaignList: 'list',
-  ccScheduled: 'calendar',
-  ccClick2Call: 'mobile',
-  legacyXml: 'database',
-};
-
-const PBX_DASHBOARD_EMOJIS = {
-  layout: '🧩',
-  chart: '📊',
-  phone: '📞',
-  shield: '🛡️',
-  network: '🌐',
-  route: '🧭',
-  hash: '#️⃣',
-  sliders: '🎛️',
-  inbox: '📥',
-  users: '👥',
-  branch: '🔀',
-  music: '🎵',
-  mic: '🎙️',
-  file: '📄',
-  building: '🏢',
-  pause: '⏸️',
-  tag: '🏷️',
-  megaphone: '📢',
-  list: '📋',
-  calendar: '📅',
-  mobile: '📱',
-  database: '🗄️',
-};
-
-const PBX_SECTION_ICON_ROTATION = {
-  Dashboards: ['chart', 'layout'],
-  'Manutenção': ['sliders', 'route', 'phone'],
-  'Áudios': ['music', 'mic'],
-  'Relatórios': ['file', 'chart'],
-  'Configurações': ['building', 'shield', 'network'],
-  'Contact Center': ['users', 'calendar', 'mobile'],
-  default: ['tag', 'list', 'database'],
-};
-
-const PBX_ICON_COLOR_ROTATION = {
-  'PBX: Operação': [
-    'bg-cyan-500 text-white',
-    'bg-emerald-500 text-white',
-    'bg-violet-500 text-white',
-    'bg-orange-500 text-white',
-  ],
-  'PBX: Plataforma': [
-    'bg-teal-500 text-white',
-    'bg-indigo-500 text-white',
-    'bg-pink-500 text-white',
-    'bg-blue-500 text-white',
-  ],
-  'Contact Center': [
-    'bg-amber-500 text-white',
-    'bg-cyan-600 text-white',
-    'bg-purple-500 text-white',
-    'bg-rose-500 text-white',
-  ],
-  default: [
-    'bg-slate-500 text-white',
-    'bg-blue-500 text-white',
-    'bg-teal-500 text-white',
-  ],
-};
-
-const PBX_STATIC_TAB_ROUTES = {
-  overview: '/pbx',
-  extensions: '/pbx/extensions',
-  acls: '/pbx/acls',
-  trunks: '/pbx/trunks',
-  routes: '/pbx/routes',
-  dids: '/pbx/dids',
-  ivr: '/pbx/ivr',
-  queues: '/pbx/queues',
-  queueMembers: '/pbx/queue-members',
-  dialplan: '/pbx/dialplan',
-  media: '/pbx/media',
-  recordings: '/pbx/recordings',
-  cdr: '/pbx/cdr',
-  governance: '/pbx/governance',
-  ccPauseReasons: '/pbx/cc/pause-reasons',
-  ccContactReasons: '/pbx/cc/contact-reasons',
-  ccCampaigns: '/pbx/cc/campaigns',
-  ccCampaignList: '/pbx/cc/campaign-list',
-  ccScheduled: '/pbx/cc/callbacks',
-  ccClick2Call: '/pbx/cc/click2call',
-  legacyXml: '/pbx/referencia/xml',
-};
-
-function getDashboardIconName(item, sectionTitle, index) {
-  if (item?.key && PBX_DASHBOARD_ICONS[item.key]) return PBX_DASHBOARD_ICONS[item.key];
-  const rotation = PBX_SECTION_ICON_ROTATION[sectionTitle] || PBX_SECTION_ICON_ROTATION.default;
-  return rotation[index % rotation.length];
-}
-
-function getDashboardIconPalette(sectionTitle, index) {
-  const rotation = PBX_ICON_COLOR_ROTATION[sectionTitle] || PBX_ICON_COLOR_ROTATION.default;
-  return rotation[index % rotation.length];
-}
-
-function PbxDashboardIcon({ name }) {
-  return <span aria-hidden>{PBX_DASHBOARD_EMOJIS[name] || '📌'}</span>;
-}
-
-const INITIAL_EXTENSION_FORM = {
-  extension: '',
-  displayName: '',
-  authUsername: '',
-  authPassword: '',
-  calleridName: '',
-  calleridNumber: '',
-  calleridExternal: '',
-  contexto: 'ramal',
-  grupo: '',
-  gsm: false,
-  g729: false,
-  correio: false,
-  webfone: false,
-  gravar: false,
-  protocolo: 'PJSIP',
-  bloqueio: '0.0.0.0/0',
-  permissao: '0.0.0.0/0',
-  tipo: 'Livre',
-  senhad: '',
-  chamadas: '10',
-  tempo: '60',
-  aclId: '',
-  provisioningEnabled: false,
-  provisioningVendor: 'grandstream',
-  provisioningMac: '',
-  provisioningModel: '',
-};
 
 export function PbxPage() {
   const { currentPath, navigate } = useRouter();
@@ -2225,7 +1996,7 @@ export function PbxPage() {
 
   if (isBulkProvisioningScreen) {
     return (
-      <div className="support-page pbx-page">
+      <CrudPageBase className="pbx-page">
         <div className="pbx-header">
           <div className="pbx-title">
             <h1>PBX: Provisionamento em Lote</h1>
@@ -2298,12 +2069,12 @@ export function PbxPage() {
             ) : null}
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page pbx-page">
+    <CrudPageBase className="pbx-page">
       <div className="pbx-header support-header">
         <div className="pbx-title">
           {isSectionMode ? (
@@ -2558,1572 +2329,206 @@ export function PbxPage() {
           </>
         ) : null}
 
-        {tab === 'extensions' ? (
-          <>
-            <div className="flex items-center justify-between gap-3 mb-6">
-              <h3 className="text-xl font-semibold text-text-primary" style={{ marginTop: 0, marginBottom: 0 }}>Ramais</h3>
-              <Button onClick={handleNewExtension} disabled={loading} variant="primary">➕ Incluir</Button>
-            </div>
-            {showExtensionEditModal ? (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                  <h4 className="text-2xl font-bold text-text-primary mb-6">
-                    {isEditingExtension ? 'Editar Ramal' : 'Incluir Ramal'}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ramal" value={formExt.extension} disabled={isEditingExtension} onChange={(e) => setFormExt((s) => ({ ...s, extension: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Nome" value={formExt.displayName} onChange={(e) => setFormExt((s) => ({ ...s, displayName: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Usuário" value={formExt.authUsername} onChange={(e) => setFormExt((s) => ({ ...s, authUsername: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Senha" value={formExt.authPassword} onChange={(e) => setFormExt((s) => ({ ...s, authPassword: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="CallerID interno" value={formExt.calleridName} onChange={(e) => setFormExt((s) => ({ ...s, calleridName: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="CallerID número" value={formExt.calleridNumber} onChange={(e) => setFormExt((s) => ({ ...s, calleridNumber: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="CallerID externo" value={formExt.calleridExternal} onChange={(e) => setFormExt((s) => ({ ...s, calleridExternal: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Grupo(s) ex: 1,2" value={formExt.grupo} onChange={(e) => setFormExt((s) => ({ ...s, grupo: e.target.value }))} />
-                    <select className={AGENTS_SELECT_CLASS} value={formExt.contexto} onChange={(e) => setFormExt((s) => ({ ...s, contexto: e.target.value }))}>
-                      {LEGACY_CONTEXT_OPTIONS.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                    <select className={AGENTS_SELECT_CLASS} value={formExt.protocolo} onChange={(e) => setFormExt((s) => ({ ...s, protocolo: e.target.value }))}>
-                      {LEGACY_PROTOCOL_OPTIONS.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                    <select className={AGENTS_SELECT_CLASS} value={formExt.tipo} onChange={(e) => setFormExt((s) => ({ ...s, tipo: e.target.value }))}>
-                      {LEGACY_TIPO_OPTIONS.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Senha D (tipo=Senha)" value={formExt.senhad} onChange={(e) => setFormExt((s) => ({ ...s, senhad: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Chamadas" type="number" value={formExt.chamadas} onChange={(e) => setFormExt((s) => ({ ...s, chamadas: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Tempo" type="number" value={formExt.tempo} onChange={(e) => setFormExt((s) => ({ ...s, tempo: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Bloqueio (CIDR)" value={formExt.bloqueio} onChange={(e) => setFormExt((s) => ({ ...s, bloqueio: e.target.value }))} />
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Permissão (CIDR)" value={formExt.permissao} onChange={(e) => setFormExt((s) => ({ ...s, permissao: e.target.value }))} />
-                    <label className="flex items-center gap-2 md:col-span-2">
-                      ACL
-                      <select className={AGENTS_SELECT_CLASS} value={formExt.aclId} onChange={(e) => setFormExt((s) => ({ ...s, aclId: e.target.value }))} disabled={loading}>
-                        <option value="">(nenhuma)</option>
-                        {(acls || []).map((a) => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!formExt.gsm} onChange={(e) => setFormExt((s) => ({ ...s, gsm: e.target.checked }))} />
-                      GSM
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!formExt.g729} onChange={(e) => setFormExt((s) => ({ ...s, g729: e.target.checked }))} />
-                      G729
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!formExt.correio} onChange={(e) => setFormExt((s) => ({ ...s, correio: e.target.checked }))} />
-                      Correio
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!formExt.webfone} onChange={(e) => setFormExt((s) => ({ ...s, webfone: e.target.checked }))} />
-                      WebFone
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input type="checkbox" checked={!!formExt.gravar} onChange={(e) => setFormExt((s) => ({ ...s, gravar: e.target.checked }))} />
-                      Gravar
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={!!formExt.provisioningEnabled}
-                        onChange={(e) => setFormExt((s) => ({ ...s, provisioningEnabled: e.target.checked }))}
-                      />
-                      Provisionamento
-                    </label>
-                    <select
-                      className={AGENTS_SELECT_CLASS}
-                      value={formExt.provisioningVendor}
-                      disabled={!formExt.provisioningEnabled}
-                      onChange={(e) => setFormExt((s) => ({ ...s, provisioningVendor: e.target.value }))}
-                    >
-                      <option value="grandstream">grandstream</option>
-                      <option value="avaya">avaya</option>
-                    </select>
-                    <input
-                      className={AGENTS_FIELD_CLASS}
-                      placeholder="MAC (12 hex, ex: 001122AABBCC)"
-                      value={formExt.provisioningMac}
-                      disabled={!formExt.provisioningEnabled}
-                      onChange={(e) => setFormExt((s) => ({ ...s, provisioningMac: e.target.value }))}
-                    />
-                    <input
-                      className={AGENTS_FIELD_CLASS}
-                      placeholder="Modelo (opcional)"
-                      value={formExt.provisioningModel}
-                      disabled={!formExt.provisioningEnabled}
-                      onChange={(e) => setFormExt((s) => ({ ...s, provisioningModel: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <Button onClick={handleSaveExtension} disabled={!canSaveExt || loading} variant="primary" className="flex-1">Salvar</Button>
-                    <Button
-                      onClick={() => {
-                        setShowExtensionEditModal(false);
-                        setIsEditingExtension(false);
-                      }}
-                      disabled={loading}
-                      variant="ghost"
-                      className="flex-1"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <strong>Token de Provisionamento</strong>
-                <span style={{ opacity: 0.75 }}>{provisioningToken || '—'}</span>
-                <span style={{ opacity: 0.85 }}>
-                  status: {tokenGovernance.message}
-                  {tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}
-                </span>
-                {provisioningTokenExpiresAt ? (
-                  <span style={{ opacity: 0.75 }}>expira: {formatDateTime(provisioningTokenExpiresAt)}</span>
-                ) : null}
-                {provisioningTokenUpdatedAt ? (
-                  <span style={{ opacity: 0.7 }}>atualizado: {formatDateTime(provisioningTokenUpdatedAt)}</span>
-                ) : null}
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <input
-                  className={AGENTS_FIELD_CLASS}
-                  placeholder="expiresInSec (opcional)"
-                  value={rotateExpiresInSec}
-                  onChange={(e) => setRotateExpiresInSec(e.target.value)}
-                  style={{ maxWidth: 220 }}
-                />
-                <Button onClick={handleRotateProvisioningToken} disabled={loading} size="sm">Rotacionar token</Button>
-                <Button onClick={() => handleQuickRotate(24 * 60 * 60)} disabled={loading} size="sm" variant="ghost">Rotação 24h</Button>
-                <Button onClick={() => handleQuickRotate(7 * 24 * 60 * 60)} disabled={loading} size="sm" variant="ghost">Rotação 7d</Button>
-                <Button onClick={() => handleQuickRotate(30 * 24 * 60 * 60)} disabled={loading} size="sm" variant="ghost">Rotação 30d</Button>
-                <Button onClick={() => handleQuickRotate(0)} disabled={loading} size="sm" variant="ghost">Sem expiração</Button>
-                <Button onClick={handleRevokeProvisioningToken} disabled={loading} size="sm" variant="danger">Revogar token</Button>
-                {rotatedToken ? (
-                  <span style={{ opacity: 0.9 }}>Novo token: <code>{rotatedToken}</code></span>
-                ) : null}
-              </div>
-              <div style={{ marginTop: 6, opacity: 0.7 }}>
-                URL: <code>{buildApiUrl('/provision/<tenant>/<token>/<vendor>/<mac>')}</code>
-              </div>
-            </div>
-            <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <strong>Provisionamento em Lote</strong>
-                <p style={{ opacity: 0.75, marginTop: 4, marginBottom: 0 }}>
-                  O provisionamento em lote foi movido para uma tela dedicada.
-                </p>
-              </div>
-              <Button onClick={() => navigate('/pbx/provisioning-lote')} size="sm" variant="primary">Abrir tela de lote</Button>
-            </div>
-            <div className="bg-bg-elevated rounded-xl border border-border-default overflow-hidden shadow-lg mb-6">
-              <PlatformGrid
-                columns={extensionsColumns}
-                rows={extensionsGrid.rows}
-                sort={extensionsGrid.sort}
-                onSortChange={extensionsGrid.handleSortChange}
-                pagination={{ page: extensionsGrid.page, pageSize: extensionsGrid.pageSize, totalPages: extensionsGrid.totalPages, totalRows: extensionsGrid.totalRows, onPageChange: extensionsGrid.handlePageChange, onPageSizeChange: extensionsGrid.handlePageSizeChange }}
-                emptyState={{ title: 'Sem ramais', description: 'Nenhum ramal encontrado.' }}
-              />
-            </div>
-            <h4 style={{ marginTop: 16 }}>Métricas operacionais de fila</h4>
-            <PlatformGrid
-              columns={queueMetricsColumns}
-              rows={queueMetricsGrid.rows}
-              sort={queueMetricsGrid.sort}
-              onSortChange={queueMetricsGrid.handleSortChange}
-              pagination={{ page: queueMetricsGrid.page, pageSize: queueMetricsGrid.pageSize, totalPages: queueMetricsGrid.totalPages, totalRows: queueMetricsGrid.totalRows, onPageChange: queueMetricsGrid.handlePageChange, onPageSizeChange: queueMetricsGrid.handlePageSizeChange }}
-              emptyState={{ title: 'Sem métricas', description: 'Sem métricas de filas.' }}
-            />
-          </>
-        ) : null}
+        <PbxExtensionsAclsTabs
+          tab={tab}
+          loading={loading}
+          AGENTS_FIELD_CLASS={AGENTS_FIELD_CLASS}
+          AGENTS_SELECT_CLASS={AGENTS_SELECT_CLASS}
+          LEGACY_CONTEXT_OPTIONS={LEGACY_CONTEXT_OPTIONS}
+          LEGACY_PROTOCOL_OPTIONS={LEGACY_PROTOCOL_OPTIONS}
+          LEGACY_TIPO_OPTIONS={LEGACY_TIPO_OPTIONS}
+          handleNewExtension={handleNewExtension}
+          showExtensionEditModal={showExtensionEditModal}
+          isEditingExtension={isEditingExtension}
+          formExt={formExt}
+          setFormExt={setFormExt}
+          acls={acls}
+          handleSaveExtension={handleSaveExtension}
+          canSaveExt={canSaveExt}
+          setShowExtensionEditModal={setShowExtensionEditModal}
+          setIsEditingExtension={setIsEditingExtension}
+          provisioningToken={provisioningToken}
+          tokenGovernance={tokenGovernance}
+          provisioningTokenExpiresAt={provisioningTokenExpiresAt}
+          provisioningTokenUpdatedAt={provisioningTokenUpdatedAt}
+          rotateExpiresInSec={rotateExpiresInSec}
+          setRotateExpiresInSec={setRotateExpiresInSec}
+          handleRotateProvisioningToken={handleRotateProvisioningToken}
+          handleQuickRotate={handleQuickRotate}
+          handleRevokeProvisioningToken={handleRevokeProvisioningToken}
+          rotatedToken={rotatedToken}
+          buildApiUrl={buildApiUrl}
+          navigate={navigate}
+          extensionsColumns={extensionsColumns}
+          extensionsGrid={extensionsGrid}
+          queueMetricsColumns={queueMetricsColumns}
+          queueMetricsGrid={queueMetricsGrid}
+          formAcl={formAcl}
+          setFormAcl={setFormAcl}
+          handleSaveAcl={handleSaveAcl}
+          canSaveAcl={canSaveAcl}
+          refreshCore={refreshCore}
+          aclsColumns={aclsColumns}
+          aclsGrid={aclsGrid}
+          PlatformGrid={PlatformGrid}
+          Button={Button}
+          formatDateTime={formatDateTime}
+        />
 
-        {tab === 'acls' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>ACLs (permit/deny)</h3>
-            <div style={{ opacity: 0.8, marginBottom: 10 }}>
-              Cadastre listas de IP/rede para reutilizar nos ramais. O Asterisk referencia por ID (estável), então renomear não quebra os ramais.
-            </div>
+        <PbxRoutingTabs
+          tab={tab}
+          loading={loading}
+          AGENTS_FIELD_CLASS={AGENTS_FIELD_CLASS}
+          AGENTS_SELECT_CLASS={AGENTS_SELECT_CLASS}
+          formTrunk={formTrunk}
+          setFormTrunk={setFormTrunk}
+          canSaveTrunk={canSaveTrunk}
+          handleSaveTrunk={handleSaveTrunk}
+          filteredTrunks={filteredTrunks}
+          formRoute={formRoute}
+          setFormRoute={setFormRoute}
+          canSaveRoute={canSaveRoute}
+          handleSaveRoute={handleSaveRoute}
+          trunks={trunks}
+          queues={queues}
+          filteredRoutes={filteredRoutes}
+          formDid={formDid}
+          setFormDid={setFormDid}
+          canSaveDid={canSaveDid}
+          handleSaveDid={handleSaveDid}
+          ivrRules={ivrRules}
+          filteredDids={filteredDids}
+          formIvr={formIvr}
+          setFormIvr={setFormIvr}
+          canSaveIvr={canSaveIvr}
+          handleSaveIvr={handleSaveIvr}
+          filteredIvrRules={filteredIvrRules}
+          Button={Button}
+        />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 140px auto', gap: 8, marginBottom: 10 }}>
-              <input
-                placeholder="Nome (ex: Telefones VLAN)"
-                value={formAcl.name}
-                onChange={(e) => setFormAcl((s) => ({ ...s, name: e.target.value }))}
-                disabled={loading}
-              />
-              <input
-                placeholder="Descrição (opcional)"
-                value={formAcl.description}
-                onChange={(e) => setFormAcl((s) => ({ ...s, description: e.target.value }))}
-                disabled={loading}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={formAcl.enabled !== false}
-                  onChange={(e) => setFormAcl((s) => ({ ...s, enabled: e.target.checked }))}
-                  disabled={loading}
-                />
-                ativo
-              </label>
-              <button onClick={handleSaveAcl} disabled={!canSaveAcl || loading} style={{ padding: '8px 12px' }}>
-                Salvar
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-              <textarea
-                rows={6}
-                placeholder={'deny (um por linha, ex):\n0.0.0.0/0'}
-                value={formAcl.deny}
-                onChange={(e) => setFormAcl((s) => ({ ...s, deny: e.target.value }))}
-                disabled={loading}
-                style={{ width: '100%' }}
-              />
-              <textarea
-                rows={6}
-                placeholder={'permit (um por linha, ex):\n10.10.2.0/24'}
-                value={formAcl.permit}
-                onChange={(e) => setFormAcl((s) => ({ ...s, permit: e.target.value }))}
-                disabled={loading}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-              <button
-                onClick={() => setFormAcl({ id: '', name: '', description: '', enabled: true, deny: '', permit: '' })}
-                disabled={loading}
-                style={{ padding: '6px 10px' }}
-              >
-                Limpar formulário
-              </button>
-              <button onClick={refreshCore} disabled={loading} style={{ padding: '6px 10px' }}>
-                Atualizar lista
-              </button>
-            </div>
-
-            <PlatformGrid
-              columns={aclsColumns}
-              rows={aclsGrid.rows}
-              sort={aclsGrid.sort}
-              onSortChange={aclsGrid.handleSortChange}
-              pagination={{ page: aclsGrid.page, pageSize: aclsGrid.pageSize, totalPages: aclsGrid.totalPages, totalRows: aclsGrid.totalRows, onPageChange: aclsGrid.handlePageChange, onPageSizeChange: aclsGrid.handlePageSizeChange }}
-              emptyState={{ title: 'Sem ACLs', description: 'Nenhuma ACL cadastrada.' }}
-            />
-          </>
-        ) : null}
-
-        {tab === 'trunks' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Troncos (PJSIP mínimo)</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 160px 180px 1fr 1fr auto', gap: 8, marginBottom: 12 }}>
-              <input placeholder="Nome" value={formTrunk.name} onChange={(e) => setFormTrunk((s) => ({ ...s, name: e.target.value }))} />
-              <select value={formTrunk.type} onChange={(e) => setFormTrunk((s) => ({ ...s, type: e.target.value }))}>
-                <option value="pjsip">pjsip</option>
-                <option value="iax">iax</option>
-              </select>
-              <input placeholder="Transport" value={formTrunk.transport} onChange={(e) => setFormTrunk((s) => ({ ...s, transport: e.target.value }))} />
-              <input placeholder="Auth username" value={formTrunk.authUsername} onChange={(e) => setFormTrunk((s) => ({ ...s, authUsername: e.target.value }))} />
-              <input placeholder="Auth password" value={formTrunk.authPassword} onChange={(e) => setFormTrunk((s) => ({ ...s, authPassword: e.target.value }))} />
-              <button onClick={handleSaveTrunk} disabled={!canSaveTrunk || loading} style={{ padding: '8px 12px' }}>Salvar</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 8, marginBottom: 12 }}>
-              <input placeholder="AOR contact (ex: sip:provider.com)" value={formTrunk.aorContact} onChange={(e) => setFormTrunk((s) => ({ ...s, aorContact: e.target.value }))} />
-              <input placeholder="Allow codecs" value={formTrunk.endpointAllow} onChange={(e) => setFormTrunk((s) => ({ ...s, endpointAllow: e.target.value }))} />
-            </div>
-
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Tipo</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Transport</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTrunks.map((t) => (
-                    <tr key={t.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.name}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.type}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.transport || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.status}</td>
-                    </tr>
-                  ))}
-                  {!filteredTrunks.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum tronco encontrado.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'routes' ? (
-          <>
-            <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-              <h3 className="text-xl font-semibold text-text-primary mb-2">Rotas (produto)</h3>
-              <p className="text-sm text-text-secondary mb-6">
-                Configure como a discagem deve ser reconhecida e para onde a chamada deve ir.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Direção</label>
-                  <select className={AGENTS_SELECT_CLASS} value={formRoute.direction} onChange={(e) => setFormRoute((s) => ({ ...s, direction: e.target.value }))}>
-                    <option value="inbound">Entrada</option>
-                    <option value="outbound">Saída</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Nome</label>
-                  <input className={AGENTS_FIELD_CLASS} placeholder="Nome" value={formRoute.name} onChange={(e) => setFormRoute((s) => ({ ...s, name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Prioridade</label>
-                  <input className={AGENTS_FIELD_CLASS} placeholder="Prioridade" type="number" value={formRoute.priority} onChange={(e) => setFormRoute((s) => ({ ...s, priority: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Status</label>
-                  <label className="h-[42px] px-3 border border-border-default rounded-lg bg-bg-secondary flex items-center gap-2 text-sm text-text-primary">
-                    <input className="w-auto h-auto" type="checkbox" checked={!!formRoute.enabled} onChange={(e) => setFormRoute((s) => ({ ...s, enabled: e.target.checked }))} />
-                    ativo
-                  </label>
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Discagem</label>
-                  <select className={AGENTS_SELECT_CLASS} value={formRoute.matchMode} onChange={(e) => setFormRoute((s) => ({ ...s, matchMode: e.target.value }))}>
-                    <option value="prefix_any">Discagem com prefixo</option>
-                    <option value="exact">Número exato</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={handleSaveRoute} disabled={!canSaveRoute || loading} variant="primary" className="w-full">
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">{formRoute.matchMode === 'exact' ? 'Número exato' : 'Prefixo da discagem'}</label>
-                  {formRoute.matchMode === 'exact' ? (
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ex: 011" value={formRoute.exactExten} onChange={(e) => setFormRoute((s) => ({ ...s, exactExten: e.target.value }))} />
-                  ) : (
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ex: 9" value={formRoute.dialPrefix} onChange={(e) => setFormRoute((s) => ({ ...s, dialPrefix: e.target.value }))} />
-                  )}
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Destino</label>
-                  <select className={AGENTS_SELECT_CLASS} value={formRoute.actionType} onChange={(e) => setFormRoute((s) => ({ ...s, actionType: e.target.value, actionRef: '' }))}>
-                    <option value="hangup">Desligar</option>
-                    <option value="trunk">Tronco</option>
-                    <option value="extension">Ramal</option>
-                    <option value="queue">Fila</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">Referência</label>
-                  {formRoute.actionType === 'trunk' ? (
-                    <select className={AGENTS_SELECT_CLASS} value={formRoute.actionRef} onChange={(e) => setFormRoute((s) => ({ ...s, actionRef: e.target.value }))}>
-                      <option value="">Selecione…</option>
-                      {(trunks || []).map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
-                    </select>
-                  ) : formRoute.actionType === 'queue' ? (
-                    <select className={AGENTS_SELECT_CLASS} value={formRoute.actionRef} onChange={(e) => setFormRoute((s) => ({ ...s, actionRef: e.target.value }))}>
-                      <option value="">Selecione…</option>
-                      {(queues || []).map((q) => <option key={q.id} value={q.name}>{q.name}</option>)}
-                    </select>
-                  ) : formRoute.actionType === 'hangup' ? (
-                    <input className={AGENTS_FIELD_CLASS} value="(não se aplica)" disabled />
-                  ) : (
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ex: 1001" value={formRoute.actionRef} onChange={(e) => setFormRoute((s) => ({ ...s, actionRef: e.target.value }))} />
-                  )}
-                </div>
-              </div>
-
-              {formRoute.actionType === 'trunk' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-text-primary">Remover prefixo (dígitos)</label>
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ex: 1" type="number" value={formRoute.stripPrefixLen} onChange={(e) => setFormRoute((s) => ({ ...s, stripPrefixLen: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-text-primary">Adicionar prefixo</label>
-                    <input className={AGENTS_FIELD_CLASS} placeholder="Ex: 0" value={formRoute.addPrefix} onChange={(e) => setFormRoute((s) => ({ ...s, addPrefix: e.target.value }))} />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="bg-bg-elevated rounded-xl border border-border-default overflow-hidden shadow-lg">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-bg-secondary border-b border-border-default">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Direção</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Nome</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Discagem</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Destino</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Prioridade</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-text-primary">Enabled</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRoutes.map((r) => (
-                      <tr key={r.id} className="border-b border-border-default hover:bg-bg-hover transition-colors">
-                        <td className="px-4 py-3 text-sm text-text-primary">{r.direction === 'inbound' ? 'Entrada' : r.direction === 'outbound' ? 'Saída' : (r.direction || '—')}</td>
-                        <td className="px-4 py-3 text-sm text-text-primary">{r.name}</td>
-                        <td className="px-4 py-3 text-sm text-text-primary">{r?.match?.exten || r?.match?.pattern || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-text-primary">
-                          {r?.actions?.[0]?.type ? `${r.actions[0].type}${r.actions[0].ref ? `: ${r.actions[0].ref}` : ''}` : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-text-secondary">{r.priority}</td>
-                        <td className="px-4 py-3 text-sm text-text-secondary">{r.enabled ? 'sim' : 'não'}</td>
-                      </tr>
-                    ))}
-                    {!filteredRoutes.length ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-4 text-sm text-text-secondary">Nenhuma rota encontrada.</td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'dids' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>DIDs (entrada)</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 120px 220px 1fr auto', gap: 8, marginBottom: 12 }}>
-              <input placeholder="DID (ex: 551199999999)" value={formDid.did} onChange={(e) => setFormDid((s) => ({ ...s, did: e.target.value }))} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={!!formDid.enabled} onChange={(e) => setFormDid((s) => ({ ...s, enabled: e.target.checked }))} />
-                ativo
-              </label>
-              <select value={formDid.destinationType} onChange={(e) => setFormDid((s) => ({ ...s, destinationType: e.target.value, destinationRef: '' }))}>
-                <option value="extension">Ramal</option>
-                <option value="queue">Fila</option>
-                <option value="ivr">URA</option>
-                <option value="hangup">Desligar</option>
-              </select>
-              {formDid.destinationType === 'queue' ? (
-                <select value={formDid.destinationRef} onChange={(e) => setFormDid((s) => ({ ...s, destinationRef: e.target.value }))}>
-                  <option value="">Selecione…</option>
-                  {(queues || []).map((q) => <option key={q.id} value={q.name}>{q.name}</option>)}
-                </select>
-              ) : formDid.destinationType === 'ivr' ? (
-                <select value={formDid.destinationRef} onChange={(e) => setFormDid((s) => ({ ...s, destinationRef: e.target.value }))}>
-                  <option value="">Selecione…</option>
-                  {(ivrRules || []).map((r) => {
-                    const suffix = String(r?.definition?.contextSuffix || r?.name || r?.id || '').replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 24);
-                    return <option key={r.id} value={suffix}>{r.name || suffix}</option>;
-                  })}
-                </select>
-              ) : formDid.destinationType === 'hangup' ? (
-                <input value="(não se aplica)" disabled />
-              ) : (
-                <input placeholder="Ex: 1001" value={formDid.destinationRef} onChange={(e) => setFormDid((s) => ({ ...s, destinationRef: e.target.value }))} />
-              )}
-              <button onClick={handleSaveDid} disabled={!canSaveDid || loading} style={{ padding: '8px 12px' }}>Salvar</button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>DID</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Destino</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Enabled</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDids.map((d) => (
-                    <tr key={d.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{d.did}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {d?.actions?.[0]?.type ? `${d.actions[0].type}${d.actions[0].ref ? `: ${d.actions[0].ref}` : ''}` : '—'}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{d.enabled ? 'sim' : 'não'}</td>
-                    </tr>
-                  ))}
-                  {!filteredDids.length ? <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum DID encontrado.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ivr' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>IVR (dialplan raw)</h3>
-	            <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 120px auto', gap: 8, marginBottom: 12 }}>
-              <input placeholder="Nome" value={formIvr.name} onChange={(e) => setFormIvr((s) => ({ ...s, name: e.target.value }))} />
-              <input placeholder="Context suffix (opcional)" value={formIvr.contextSuffix} onChange={(e) => setFormIvr((s) => ({ ...s, contextSuffix: e.target.value }))} />
-	              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-	                <input type="checkbox" checked={!!formIvr.enabled} onChange={(e) => setFormIvr((s) => ({ ...s, enabled: e.target.checked }))} />
-	                ativo
-	              </label>
-              <button onClick={handleSaveIvr} disabled={!canSaveIvr || loading} style={{ padding: '8px 12px' }}>Salvar</button>
-            </div>
-            <textarea
-              value={formIvr.dialplanText}
-              onChange={(e) => setFormIvr((s) => ({ ...s, dialplanText: e.target.value }))}
-              rows={10}
-              style={{ width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
-            />
-            <div style={{ marginTop: 12, overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Enabled</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIvrRules.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.name}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(r.enabled)}</td>
-                    </tr>
-                  ))}
-                  {!filteredIvrRules.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhuma regra IVR encontrada.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-		        {tab === 'queues' ? (
-		          <>
-		            <h3 style={{ marginTop: 0 }}>Filas</h3>
-		            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 mb-4 shadow-lg">
-		              <div style={{ display: 'grid', gridTemplateColumns: '140px 220px 160px 110px 110px 110px 110px auto', gap: 8, marginBottom: 8 }}>
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Ramal da fila" value={formQueue.queueNumber} onChange={(e) => setFormQueue((s) => ({ ...s, queueNumber: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Nome interno (fallback)" value={formQueue.name} onChange={(e) => setFormQueue((s) => ({ ...s, name: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Nome da fila" value={formQueue.displayName} onChange={(e) => setFormQueue((s) => ({ ...s, displayName: e.target.value }))} />
-		                <select className={AGENTS_SELECT_CLASS} value={formQueue.strategy} onChange={(e) => setFormQueue((s) => ({ ...s, strategy: e.target.value }))}>
-		                  {QUEUE_STRATEGY_OPTIONS.map(([value, label]) => (
-		                    <option key={value} value={value}>{label}</option>
-		                  ))}
-		                </select>
-		                <input className={AGENTS_FIELD_CLASS} placeholder="timeout" type="number" value={formQueue.timeout} onChange={(e) => setFormQueue((s) => ({ ...s, timeout: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="retry" type="number" value={formQueue.retry} onChange={(e) => setFormQueue((s) => ({ ...s, retry: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="wrapuptime" type="number" value={formQueue.wrapuptime} onChange={(e) => setFormQueue((s) => ({ ...s, wrapuptime: e.target.value }))} />
-		                <Button onClick={handleSaveQueue} disabled={!canSaveQueue || loading} variant="primary">Salvar</Button>
-		              </div>
-		              <div style={{ display: 'grid', gridTemplateColumns: '110px 110px 120px 120px 120px 120px 120px 1fr 110px auto', gap: 8, marginBottom: 12 }}>
-		                <input className={AGENTS_FIELD_CLASS} placeholder="maxlen" type="number" value={formQueue.maxlen} onChange={(e) => setFormQueue((s) => ({ ...s, maxlen: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Inclui" value={formQueue.inclui} onChange={(e) => setFormQueue((s) => ({ ...s, inclui: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Exclui" value={formQueue.exclui} onChange={(e) => setFormQueue((s) => ({ ...s, exclui: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Parar" value={formQueue.parar} onChange={(e) => setFormQueue((s) => ({ ...s, parar: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Retornar" value={formQueue.retornar} onChange={(e) => setFormQueue((s) => ({ ...s, retornar: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="Transferir" value={formQueue.transferir} onChange={(e) => setFormQueue((s) => ({ ...s, transferir: e.target.value }))} />
-		                <input className={AGENTS_FIELD_CLASS} placeholder="URL de atendimento" value={formQueue.url} onChange={(e) => setFormQueue((s) => ({ ...s, url: e.target.value }))} />
-		                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-		                  <input type="checkbox" checked={!!formQueue.tocar} onChange={(e) => setFormQueue((s) => ({ ...s, tocar: e.target.checked }))} />
-		                  Tocar
-		                </label>
-		                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-		                  <input type="checkbox" checked={!!formQueue.anunciar} onChange={(e) => setFormQueue((s) => ({ ...s, anunciar: e.target.checked }))} />
-		                  Anunciar
-		                </label>
-		                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-		                  <input type="checkbox" checked={!!formQueue.autoatendimento} onChange={(e) => setFormQueue((s) => ({ ...s, autoatendimento: e.target.checked }))} />
-		                  Auto Atend.
-		                </label>
-		              </div>
-		            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ramal</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Display</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Strategy</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredQueues.map((q) => (
-                    <tr key={q.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q?.options?.queueNumber || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.name}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.displayName || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.strategy || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <Button onClick={() => handleEditQueue(q)} disabled={loading} size="sm" variant="ghost">Editar</Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredQueues.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhuma fila encontrada.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'queueMembers' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Membros de fila (realtime)</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 1fr 120px 120px auto', gap: 8, marginBottom: 12 }}>
-              <select value={selectedQueueId} onChange={(e) => setSelectedQueueId(e.target.value)}>
-                <option value="">Selecione uma fila…</option>
-                {filteredQueues.map((q) => (
-                  <option key={q.id} value={q.id}>{q.name}</option>
-                ))}
-              </select>
-              <select value={formQm.memberType} onChange={(e) => setFormQm((s) => ({ ...s, memberType: e.target.value }))}>
-                <option value="extension">extension</option>
-                <option value="external">external</option>
-              </select>
-              <input placeholder="memberRef (ex: 1001 ou PJSIP/x)" value={formQm.memberRef} onChange={(e) => setFormQm((s) => ({ ...s, memberRef: e.target.value }))} />
-              <input placeholder="penalty" value={formQm.penalty} onChange={(e) => setFormQm((s) => ({ ...s, penalty: e.target.value }))} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={!!formQm.paused} onChange={(e) => setFormQm((s) => ({ ...s, paused: e.target.checked }))} />
-                paused
-              </label>
-              <button onClick={handleSaveQueueMember} disabled={!canSaveQm || loading} style={{ padding: '8px 12px' }}>Adicionar</button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Tipo</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ref</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Penalty</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Paused</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredQueueMembers.map((m) => (
-                    <tr key={m.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.memberType}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.memberRef}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.penalty ?? '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!m.paused)}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <button onClick={() => handleDeleteQueueMember(m.id)} disabled={loading} style={{ padding: '6px 10px' }}>
-                          Remover
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredQueueMembers.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum membro encontrado.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'dialplan' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Dialplan (realtime)</h3>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <button onClick={handleDialplanPreview} disabled={loading} style={{ padding: '8px 12px' }}>Preview</button>
-              <button onClick={handleDialplanApply} disabled={loading} style={{ padding: '8px 12px' }}>Aplicar</button>
-            </div>
-            <div style={{ opacity: 0.85, marginBottom: 8 }}>
-              {Array.isArray(dialplanRows) ? `Linhas: ${dialplanRows.length}` : 'Clique em Preview para ver o dialplan.'}
-            </div>
-            {Array.isArray(dialplanRows) ? (
-              <pre style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', overflow: 'auto' }}>
-                {dialplanRows.slice(0, 500).map((r, idx) => (
-                  // eslint-disable-next-line react/no-array-index-key
-                  <div key={idx}>
-                    [{r.context}] exten=&gt; {r.exten},{r.priority},{r.app}({r.appdata})
-                  </div>
-                ))}
-                {dialplanRows.length > 500 ? <div>… (truncado)</div> : null}
-              </pre>
-            ) : null}
-            <h4 style={{ marginTop: 16 }}>Histórico de versões</h4>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Versão</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Assinatura</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Data</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {configVersions.map((v) => (
-                    <tr key={v.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.version}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.status || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {formatDateTime(v.createdAt)}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <button
-                          onClick={() => handleRollbackVersion(v.version)}
-                          disabled={loading || !Array.isArray(v?.summary?.dialplan?.rows) || v.summary.dialplan.rows.length === 0}
-                          style={{ padding: '6px 10px' }}
-                        >
-                          Rollback
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!configVersions.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem versões registradas.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'media' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Mídia (áudios)</h3>
-            {audioAssetsError ? (
-              <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
-                <strong>Não foi possível carregar os áudios.</strong>
-                <div style={{ marginTop: 6, opacity: 0.85 }}><code>{audioAssetsError}</code></div>
-              </div>
-            ) : null}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                kind:
-                <input value={audioKind} onChange={(e) => setAudioKind(e.target.value)} style={{ width: 140 }} />
-              </label>
-              <button onClick={handleAudioRefresh} disabled={loading} style={{ padding: '8px 12px' }}>Atualizar</button>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-              <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
-              <button onClick={handleAudioUpload} disabled={loading || !audioFile} style={{ padding: '8px 12px' }}>Upload</button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Download</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAudioAssets.map((a) => (
-                    <tr key={a.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{a.name}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <a href={buildApiUrl(`/api/pbx/audio-assets/file?id=${encodeURIComponent(a.id)}`)}>baixar</a>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredAudioAssets.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhum áudio encontrado.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'recordings' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Gravações</h3>
-            {recordingsError || recordingPolicyError ? (
-              <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
-                <strong>Gravações indisponíveis neste ambiente.</strong>
-                <div style={{ marginTop: 6, opacity: 0.85 }}>
-                  {recordingPolicyError ? <div>Política: <code>{recordingPolicyError}</code></div> : null}
-                  {recordingsError ? <div>Lista: <code>{recordingsError}</code></div> : null}
-                </div>
-                <div style={{ marginTop: 8, opacity: 0.8 }}>
-                  Dica: confirme migrations e o acesso ao banco. Em produção, isso deve estar ok.
-                </div>
-              </div>
-            ) : null}
-            <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
-              <strong>Política de gravação (tenant)</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 220px 220px auto', gap: 8, marginTop: 8, alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={!!recordingPolicy.enabled}
-                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, enabled: e.target.checked }))}
-                  />
-                  Gravação habilitada
-                </label>
-                <input
-                  placeholder="Retenção (dias)"
-                  value={recordingPolicy.retentionDays}
-                  onChange={(e) => setRecordingPolicy((s) => ({ ...s, retentionDays: e.target.value }))}
-                />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={!!recordingPolicy.maskPhoneNumbers}
-                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, maskPhoneNumbers: e.target.checked }))}
-                  />
-                  Mascarar números
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={!!recordingPolicy.requireConsent}
-                    onChange={(e) => setRecordingPolicy((s) => ({ ...s, requireConsent: e.target.checked }))}
-                  />
-                  Exigir consentimento
-                </label>
-                <button onClick={handleSaveRecordingPolicy} disabled={loading} style={{ padding: '8px 12px' }}>Salvar política</button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <button onClick={handleRecordingsRefresh} disabled={loading} style={{ padding: '8px 12px' }}>Atualizar</button>
-              <button onClick={handleRecordingsScan} disabled={loading} style={{ padding: '8px 12px' }}>Scan volume</button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Uniqueid</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Origem</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Destino</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Download</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecordings.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.uniqueid || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.src || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.dst || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <a href={buildApiUrl(`/api/pbx/recordings/file?id=${encodeURIComponent(r.id)}`)}>baixar</a>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredRecordings.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhuma gravação encontrada.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'cdr' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>CDR</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr 1fr 1fr auto', gap: 8, marginBottom: 12 }}>
-              <input placeholder="limit" value={cdrFilters.limit} onChange={(e) => setCdrFilters((s) => ({ ...s, limit: e.target.value }))} />
-              <input placeholder="from (ISO)" value={cdrFilters.from} onChange={(e) => setCdrFilters((s) => ({ ...s, from: e.target.value }))} />
-              <input placeholder="to (ISO)" value={cdrFilters.to} onChange={(e) => setCdrFilters((s) => ({ ...s, to: e.target.value }))} />
-              <input placeholder="src" value={cdrFilters.src} onChange={(e) => setCdrFilters((s) => ({ ...s, src: e.target.value }))} />
-              <input placeholder="dst" value={cdrFilters.dst} onChange={(e) => setCdrFilters((s) => ({ ...s, dst: e.target.value }))} />
-              <input placeholder="uniqueid" value={cdrFilters.uniqueid} onChange={(e) => setCdrFilters((s) => ({ ...s, uniqueid: e.target.value }))} />
-              <button onClick={handleCdrSearch} disabled={loading} style={{ padding: '8px 12px' }}>Buscar</button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Calldate</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Src</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Dst</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Disposition</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Duration</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Uniqueid</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCdrItems.map((c) => (
-                    <tr key={c.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.calldate ? new Date(c.calldate).toISOString() : '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.src || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.dst || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.disposition || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.duration ?? '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.uniqueid}</td>
-                    </tr>
-                  ))}
-                  {!filteredCdrItems.length ? <tr><td colSpan={6} style={{ padding: 8, opacity: 0.75 }}>Nenhum CDR encontrado (ainda).</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccPauseReasons' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Motivos de pausa</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 140px auto', gap: 8, marginBottom: 12 }}>
-              <input
-                placeholder="code (ex: ALMOCO)"
-                value={formPauseReason.code}
-                onChange={(e) => setFormPauseReason((s) => ({ ...s, code: e.target.value }))}
-              />
-              <input
-                placeholder="descricao"
-                value={formPauseReason.description}
-                onChange={(e) => setFormPauseReason((s) => ({ ...s, description: e.target.value }))}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={!!formPauseReason.active}
-                  onChange={(e) => setFormPauseReason((s) => ({ ...s, active: e.target.checked }))}
-                />
-                ativo
-              </label>
-              <button onClick={handleSavePauseReason} disabled={!canSavePauseReason || loading} style={{ padding: '8px 12px' }}>
-                Salvar
-              </button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Code</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ativo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPauseReasons.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.code}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.description}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!r.active)}</td>
-                    </tr>
-                  ))}
-                  {!filteredPauseReasons.length ? (
-                    <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum motivo.</td></tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccContactReasons' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Motivos de contato</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 140px auto', gap: 8, marginBottom: 12 }}>
-              <input
-                placeholder="code (ex: INFO)"
-                value={formContactReason.code}
-                onChange={(e) => setFormContactReason((s) => ({ ...s, code: e.target.value }))}
-              />
-              <input
-                placeholder="descricao"
-                value={formContactReason.description}
-                onChange={(e) => setFormContactReason((s) => ({ ...s, description: e.target.value }))}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={!!formContactReason.active}
-                  onChange={(e) => setFormContactReason((s) => ({ ...s, active: e.target.checked }))}
-                />
-                ativo
-              </label>
-              <button onClick={handleSaveContactReason} disabled={!canSaveContactReason || loading} style={{ padding: '8px 12px' }}>
-                Salvar
-              </button>
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Code</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ativo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredContactReasons.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.code}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.description}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!r.active)}</td>
-                    </tr>
-                  ))}
-                  {!filteredContactReasons.length ? (
-                    <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum motivo.</td></tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccCampaigns' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Campanhas</h3>
-	            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 160px 220px 220px 160px 160px auto', gap: 8, marginBottom: 12 }}>
-              <input
-                placeholder="id (opcional)"
-                value={formCampaign.id}
-                onChange={(e) => setFormCampaign((s) => ({ ...s, id: e.target.value }))}
-              />
-              <input
-                placeholder="nome"
-                value={formCampaign.name}
-                onChange={(e) => setFormCampaign((s) => ({ ...s, name: e.target.value }))}
-              />
-              <input
-                placeholder="status"
-                value={formCampaign.status}
-                onChange={(e) => setFormCampaign((s) => ({ ...s, status: e.target.value }))}
-              />
-              <input
-                type="datetime-local"
-                value={formCampaign.startAt}
-                onChange={(e) => setFormCampaign((s) => ({ ...s, startAt: e.target.value }))}
-                title="inicio (opcional)"
-              />
-              <input
-                type="datetime-local"
-                value={formCampaign.endAt}
-                onChange={(e) => setFormCampaign((s) => ({ ...s, endAt: e.target.value }))}
-                title="fim (opcional)"
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={!!formCampaign.click2callEnabled}
-                  onChange={(e) => setFormCampaign((s) => ({ ...s, click2callEnabled: e.target.checked }))}
-                />
-                click2call
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={!!formCampaign.recordEnabled}
-                  onChange={(e) => setFormCampaign((s) => ({ ...s, recordEnabled: e.target.checked }))}
-                />
-                gravar
-              </label>
-	              <button onClick={handleSaveCampaign} disabled={!canSaveCampaign || loading} style={{ padding: '8px 12px' }}>
-	                Salvar
-	              </button>
-	            </div>
-	            <div style={{ marginBottom: 10, opacity: 0.8 }}>
-	              Configurações avançadas ocultas (sem JSON).
-	            </div>
-            <div style={{ overflow: 'auto', marginTop: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>ID</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Click2Call</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Gravar</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCampaigns.map((c) => (
-                    <tr key={c.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.id}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.name}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.status}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!c.click2callEnabled)}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!c.recordEnabled)}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <button
-                          onClick={() => setCcSelectedCampaignId(String(c.id))}
-                          disabled={loading}
-                          style={{ padding: '6px 10px' }}
-                        >
-                          Abrir lista
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredCampaigns.length ? <tr><td colSpan={6} style={{ padding: 8, opacity: 0.75 }}>Nenhuma campanha.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop: 10, opacity: 0.8 }}>
-              Lista selecionada: <code>{ccSelectedCampaignId || '—'}</code>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccCampaignList' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Lista da campanha</h3>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-              <select value={ccSelectedCampaignId} onChange={(e) => setCcSelectedCampaignId(e.target.value)}>
-                <option value="">Selecione uma campanha…</option>
-                {filteredCampaigns.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <button onClick={() => refreshCampaignList(ccSelectedCampaignId)} disabled={loading || !ccSelectedCampaignId} style={{ padding: '8px 12px' }}>
-                Atualizar lista
-              </button>
-	            </div>
-	            <div style={{ marginBottom: 10, opacity: 0.8 }}>
-	              Adicionar itens (sem JSON):
-	            </div>
-	            <div style={{ display: 'grid', gridTemplateColumns: '120px 240px 1fr auto', gap: 8 }}>
-	              <input
-	                placeholder="DDD (opcional)"
-	                value={campaignListDraftRow.ddd}
-	                onChange={(e) => setCampaignListDraftRow((s) => ({ ...s, ddd: e.target.value }))}
-	              />
-	              <input
-	                placeholder="Telefone"
-	                value={campaignListDraftRow.phone}
-	                onChange={(e) => setCampaignListDraftRow((s) => ({ ...s, phone: e.target.value }))}
-	              />
-	              <input
-	                placeholder="Chave/Identificador (opcional)"
-	                value={campaignListDraftRow.key}
-	                onChange={(e) => setCampaignListDraftRow((s) => ({ ...s, key: e.target.value }))}
-	              />
-	              <button onClick={handleCampaignListDraftAdd} disabled={loading || !ccSelectedCampaignId} style={{ padding: '8px 12px' }}>
-	                Adicionar
-	              </button>
-	            </div>
-	            <div style={{ marginTop: 10 }}>
-	              <PlatformGrid
-	                columns={campaignListDraftColumns}
-	                rows={campaignListDraftGrid.rows}
-	                sort={campaignListDraftGrid.sort}
-	                onSortChange={campaignListDraftGrid.handleSortChange}
-	                pagination={{ page: campaignListDraftGrid.page, pageSize: campaignListDraftGrid.pageSize, totalPages: campaignListDraftGrid.totalPages, totalRows: campaignListDraftGrid.totalRows, onPageChange: campaignListDraftGrid.handlePageChange, onPageSizeChange: campaignListDraftGrid.handlePageSizeChange }}
-	                emptyState={{ title: 'Lista vazia', description: 'Nenhum item pendente.' }}
-	              />
-	            </div>
-	            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-	              <button onClick={handleAddCampaignListItems} disabled={loading || !ccSelectedCampaignId || campaignListDraftItems.length === 0} style={{ padding: '8px 12px' }}>
-	                Adicionar na campanha
-	              </button>
-	              <button onClick={() => setCampaignListDraftItems([])} disabled={loading || campaignListDraftItems.length === 0} style={{ padding: '8px 12px' }}>
-	                Limpar lista
-	              </button>
-	            </div>
-            <div style={{ overflow: 'auto', marginTop: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>DDD</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Key</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Attempts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCampaignList.map((it) => (
-                    <tr key={it.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.phone}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.ddd || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.key || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.attempts ?? 0}</td>
-                    </tr>
-                  ))}
-                  {!filteredCampaignList.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem itens.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccScheduled' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Callbacks agendados</h3>
-	            <div style={{ display: 'grid', gridTemplateColumns: '160px 220px 120px 1fr 140px 1fr auto', gap: 8, marginBottom: 12 }}>
-              <input
-                placeholder="id (opcional)"
-                value={formScheduled.id}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, id: e.target.value }))}
-              />
-              <input
-                type="datetime-local"
-                value={formScheduled.scheduledAt}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, scheduledAt: e.target.value }))}
-              />
-              <input
-                placeholder="DDD"
-                value={formScheduled.ddd}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, ddd: e.target.value }))}
-              />
-              <input
-                placeholder="phone (ex: 5511999999999)"
-                value={formScheduled.phone}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, phone: e.target.value }))}
-              />
-              <input
-                placeholder="status"
-                value={formScheduled.status}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, status: e.target.value }))}
-              />
-              <input
-                placeholder="descricao"
-                value={formScheduled.description}
-                onChange={(e) => setFormScheduled((s) => ({ ...s, description: e.target.value }))}
-              />
-	              <button onClick={handleSaveScheduledCallback} disabled={!canSaveScheduled || loading} style={{ padding: '8px 12px' }}>
-	                Salvar
-	              </button>
-	            </div>
-	            <div style={{ marginBottom: 10, opacity: 0.8 }}>
-	              Configurações avançadas ocultas (sem JSON).
-	            </div>
-            <div style={{ overflow: 'auto', marginTop: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Quando</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredScheduled.map((it) => (
-                    <tr key={it.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {formatDateTime(it.scheduledAt)}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {it.ddd ? `${it.ddd} ` : ''}{it.phone}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.description || '—'}</td>
-                    </tr>
-                  ))}
-                  {!filteredScheduled.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum agendado.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'ccClick2Call' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Contact Center: Click2Call</h3>
-	            <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 120px 1fr auto', gap: 8, marginBottom: 12 }}>
-              <select value={formClick2Call.campaignId} onChange={(e) => setFormClick2Call((s) => ({ ...s, campaignId: e.target.value }))}>
-                <option value="">(sem campanha)</option>
-                {filteredCampaigns.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <input
-                placeholder="target (ramal/fila)"
-                value={formClick2Call.target}
-                onChange={(e) => setFormClick2Call((s) => ({ ...s, target: e.target.value }))}
-              />
-              <input
-                placeholder="DDD"
-                value={formClick2Call.ddd}
-                onChange={(e) => setFormClick2Call((s) => ({ ...s, ddd: e.target.value }))}
-              />
-              <input
-                placeholder="phone (ex: 5511999999999)"
-                value={formClick2Call.phone}
-                onChange={(e) => setFormClick2Call((s) => ({ ...s, phone: e.target.value }))}
-              />
-	              <button onClick={handleCreateClick2Call} disabled={!canCreateClick2Call || loading} style={{ padding: '8px 12px' }}>
-	                Criar
-	              </button>
-	            </div>
-	            <div style={{ marginTop: 8, marginBottom: 10, opacity: 0.8 }}>
-	              Originação (opcional):
-	            </div>
-	            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 120px 160px', gap: 8 }}>
-	              <input
-	                placeholder="channel (opcional)"
-	                value={formClick2Call.channel}
-	                onChange={(e) => setFormClick2Call((s) => ({ ...s, channel: e.target.value }))}
-	              />
-	              <input
-	                placeholder="context (opcional)"
-	                value={formClick2Call.context}
-	                onChange={(e) => setFormClick2Call((s) => ({ ...s, context: e.target.value }))}
-	              />
-	              <input
-	                placeholder="exten (opcional)"
-	                value={formClick2Call.exten}
-	                onChange={(e) => setFormClick2Call((s) => ({ ...s, exten: e.target.value }))}
-	              />
-	              <input
-	                placeholder="priority"
-	                type="number"
-	                value={formClick2Call.priority}
-	                onChange={(e) => setFormClick2Call((s) => ({ ...s, priority: e.target.value }))}
-	              />
-	              <input
-	                placeholder="timeout (ms)"
-	                type="number"
-	                value={formClick2Call.timeoutMs}
-	                onChange={(e) => setFormClick2Call((s) => ({ ...s, timeoutMs: e.target.value }))}
-	              />
-	            </div>
-	            <div style={{ marginTop: 10, opacity: 0.8 }}>Variáveis (opcional):</div>
-	            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginTop: 8 }}>
-	              {(click2CallVars || []).map((row, idx) => (
-	                <React.Fragment key={idx}>
-	                  <input
-	                    placeholder="nome"
-	                    value={row.key}
-	                    onChange={(e) => setClick2CallVars((prev) => prev.map((r, i) => (i === idx ? { ...r, key: e.target.value } : r)))}
-	                  />
-	                  <input
-	                    placeholder="valor"
-	                    value={row.value}
-	                    onChange={(e) => setClick2CallVars((prev) => prev.map((r, i) => (i === idx ? { ...r, value: e.target.value } : r)))}
-	                  />
-	                  <button onClick={() => handleClick2CallVarRemove(idx)} disabled={loading} style={{ padding: '6px 10px' }}>
-	                    Remover
-	                  </button>
-	                </React.Fragment>
-	              ))}
-	            </div>
-	            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-	              <button onClick={handleClick2CallVarAdd} disabled={loading} style={{ padding: '6px 10px' }}>
-	                Adicionar variável
-	              </button>
-	            </div>
-            <div style={{ overflow: 'auto', marginTop: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Quando</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Target</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Campanha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredC2c.map((it) => (
-                    <tr key={it.id}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {formatDateTime(it.createdAt)}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.target}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.campaignId || '—'}</td>
-                    </tr>
-                  ))}
-                  {!filteredC2c.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhuma solicitacao.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-	        {tab === 'legacyXml' ? (
-	          <>
-	            <h3 style={{ marginTop: 0 }}>Legado: cadastros XML</h3>
-	            <div style={{ opacity: 0.8, marginBottom: 10 }}>
-	              Tela para manter compatibilidade com cadastros do RIPABX.
-	            </div>
-            {legacyXmlError ? (
-              <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
-                <strong>Legado (XML) indisponível.</strong>
-                <div style={{ marginTop: 6, opacity: 0.85 }}>{legacyXmlError}</div>
-              </div>
-            ) : null}
-
-	            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                entidade:
-                <select value={legacyXmlEntity} onChange={(e) => setLegacyXmlEntity(e.target.value)} disabled={loading}>
-                  {(legacyXmlSupported.length ? legacyXmlSupported : [
-                    'ddr', 'grupo', 'desvio', 'transbordo', 'bloqueio', 'retorno', 'recusa', 'feriado', 'transferencia',
-                    'operadora', 'rota_base', 'rota', 'tipo', 'categoria', 'fax', 'sala', 'interconexao', 'fila', 'motivo', 'motivo1',
-                  ]).map((k) => (
-                    <option key={k} value={k}>{k}</option>
-                  ))}
-                </select>
-              </label>
-	              <button onClick={() => refreshLegacyXml()} disabled={loading} style={{ padding: '8px 12px' }}>
-	                Atualizar
-	              </button>
-	              <span style={{ opacity: 0.8 }}>
-	                arquivo: {legacyXmlMeta.file || '—'} | item: {legacyXmlMeta.itemTag || '—'}
-	              </span>
-	            </div>
-	
-	            <div style={{ marginBottom: 12 }}>
-	              <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', gap: 8, alignItems: 'center' }}>
-	                <input
-	                  placeholder="ID do item"
-	                  value={legacyXmlDraftId}
-	                  onChange={(e) => setLegacyXmlDraftId(e.target.value)}
-	                  disabled={loading}
-	                />
-	                <div style={{ opacity: 0.8 }}>Campos do item:</div>
-	                <button onClick={handleLegacyXmlUpsert} disabled={loading} style={{ padding: '8px 12px' }}>
-	                  Salvar
-	                </button>
-	              </div>
-	              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginTop: 8 }}>
-	                {(legacyXmlDraftFields || []).map((row, idx) => (
-	                  <React.Fragment key={idx}>
-	                    <input
-	                      placeholder="campo"
-	                      value={row.key}
-	                      onChange={(e) => setLegacyXmlDraftFields((prev) => prev.map((r, i) => (i === idx ? { ...r, key: e.target.value } : r)))}
-	                      disabled={loading}
-	                    />
-	                    <input
-	                      placeholder="valor"
-	                      value={row.value}
-	                      onChange={(e) => setLegacyXmlDraftFields((prev) => prev.map((r, i) => (i === idx ? { ...r, value: e.target.value } : r)))}
-	                      disabled={loading}
-	                    />
-	                    <button onClick={() => handleLegacyXmlRemoveField(idx)} disabled={loading} style={{ padding: '6px 10px' }}>
-	                      Remover
-	                    </button>
-	                  </React.Fragment>
-	                ))}
-	              </div>
-	              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-	                <button onClick={handleLegacyXmlAddField} disabled={loading} style={{ padding: '6px 10px' }}>
-	                  Adicionar campo
-	                </button>
-	              </div>
-	            </div>
-
-            <div style={{ marginTop: 12, opacity: 0.85 }}>
-              Itens: <strong>{legacyXmlItems.length}</strong>
-            </div>
-	            <div style={{ overflow: 'auto', marginTop: 8 }}>
-	              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-	                <thead>
-	                  <tr>
-	                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>ID</th>
-	                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Resumo</th>
-	                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
-	                  </tr>
-	                </thead>
-	                <tbody>
-	                  {filteredLegacyXmlItems.map((it) => (
-	                    <tr key={it.id}>
-	                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-	                        {it.id}
-	                      </td>
-	                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-	                        <span style={{ opacity: 0.9 }}>
-	                          {(Object.keys(it || {})
-	                            .filter((k) => k !== 'id' && k !== '_attrs')
-	                            .slice(0, 6)
-	                            .map((k) => `${k}=${String(it[k]).slice(0, 40)}`)
-	                            .join(' | ')) || '—'}
-	                        </span>
-	                      </td>
-	                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-	                        <button
-	                          onClick={() => handleLegacyXmlEdit(it)}
-	                          disabled={loading}
-	                          style={{ padding: '6px 10px', marginRight: 8 }}
-	                        >
-	                          Editar
-	                        </button>
-                        <button
-                          onClick={() => handleLegacyXmlDelete(it.id)}
-                          disabled={loading}
-                          style={{ padding: '6px 10px' }}
-                        >
-                          Remover
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {!filteredLegacyXmlItems.length ? (
-                    <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Sem itens (ou entidade vazia).</td></tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
-
-        {tab === 'governance' ? (
-          <>
-            <h3 style={{ marginTop: 0 }}>Governança PBX</h3>
-            <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <div><strong>Token:</strong> {provisioningToken || '—'}</div>
-                <div><strong>Status:</strong> {tokenGovernance.message}{tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}</div>
-                <div><strong>Expira em:</strong> {formatDateTime(provisioningTokenExpiresAt, 'sem expiração')}</div>
-                <div><strong>Atualizado em:</strong> {formatDateTime(provisioningTokenUpdatedAt)}</div>
-              </div>
-            </div>
-
-            <h4 style={{ marginTop: 0 }}>Auditoria PBX (ações `pbx.*`)</h4>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
-              <input
-                placeholder="janela em horas"
-                value={pbxAuditHours}
-                onChange={(e) => setPbxAuditHours(e.target.value)}
-                style={{ maxWidth: 180 }}
-              />
-              <button onClick={refreshPbxAudit} disabled={loading} style={{ padding: '8px 12px' }}>
-                Atualizar auditoria
-              </button>
-            </div>
-            <div style={{ marginBottom: 12, opacity: 0.8 }}>
-              {Object.entries(pbxAuditByAction).slice(0, 6).map(([action, count]) => (
-                <span key={action} style={{ marginRight: 14 }}>{action}: <strong>{count}</strong></span>
-              ))}
-              {!Object.keys(pbxAuditByAction).length ? 'Sem eventos na janela selecionada.' : null}
-            </div>
-            <div style={{ overflow: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Timestamp</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ação</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Usuário</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Recurso</th>
-                    <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Detalhes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAuditItems.map((item, idx) => (
-                    <tr key={`${item.timestamp || 't'}-${item.action || 'a'}-${idx}`}>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {formatDateTime(item.timestamp)}
-                      </td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.action || '—'}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.username || item.agentId || '—'}</td>
-	                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.resource || '—'}</td>
-	                      <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-	                        <span style={{ opacity: 0.9 }}>
-	                          {(item.details && typeof item.details === 'object'
-	                            ? Object.entries(item.details).slice(0, 6).map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(' | ')
-	                            : '') || '—'}
-	                        </span>
-	                      </td>
-                    </tr>
-                  ))}
-                  {!filteredAuditItems.length ? (
-                    <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum evento PBX encontrado.</td></tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : null}
+        <PbxOperationsTabs
+          tab={tab}
+          loading={loading}
+          AGENTS_FIELD_CLASS={AGENTS_FIELD_CLASS}
+          AGENTS_SELECT_CLASS={AGENTS_SELECT_CLASS}
+          QUEUE_STRATEGY_OPTIONS={QUEUE_STRATEGY_OPTIONS}
+          formQueue={formQueue}
+          setFormQueue={setFormQueue}
+          canSaveQueue={canSaveQueue}
+          handleSaveQueue={handleSaveQueue}
+          filteredQueues={filteredQueues}
+          handleEditQueue={handleEditQueue}
+          selectedQueueId={selectedQueueId}
+          setSelectedQueueId={setSelectedQueueId}
+          formQm={formQm}
+          setFormQm={setFormQm}
+          canSaveQm={canSaveQm}
+          handleSaveQueueMember={handleSaveQueueMember}
+          filteredQueueMembers={filteredQueueMembers}
+          handleDeleteQueueMember={handleDeleteQueueMember}
+          handleDialplanPreview={handleDialplanPreview}
+          handleDialplanApply={handleDialplanApply}
+          dialplanRows={dialplanRows}
+          configVersions={configVersions}
+          formatDateTime={formatDateTime}
+          handleRollbackVersion={handleRollbackVersion}
+          audioAssetsError={audioAssetsError}
+          audioKind={audioKind}
+          setAudioKind={setAudioKind}
+          handleAudioRefresh={handleAudioRefresh}
+          setAudioFile={setAudioFile}
+          handleAudioUpload={handleAudioUpload}
+          audioFile={audioFile}
+          filteredAudioAssets={filteredAudioAssets}
+          buildApiUrl={buildApiUrl}
+          recordingsError={recordingsError}
+          recordingPolicyError={recordingPolicyError}
+          recordingPolicy={recordingPolicy}
+          setRecordingPolicy={setRecordingPolicy}
+          handleSaveRecordingPolicy={handleSaveRecordingPolicy}
+          handleRecordingsRefresh={handleRecordingsRefresh}
+          handleRecordingsScan={handleRecordingsScan}
+          filteredRecordings={filteredRecordings}
+          cdrFilters={cdrFilters}
+          setCdrFilters={setCdrFilters}
+          handleCdrSearch={handleCdrSearch}
+          filteredCdrItems={filteredCdrItems}
+          Button={Button}
+        />
+        <PbxContactCenterGovernanceTabs
+          tab={tab}
+          loading={loading}
+          formPauseReason={formPauseReason}
+          setFormPauseReason={setFormPauseReason}
+          canSavePauseReason={canSavePauseReason}
+          handleSavePauseReason={handleSavePauseReason}
+          filteredPauseReasons={filteredPauseReasons}
+          formContactReason={formContactReason}
+          setFormContactReason={setFormContactReason}
+          canSaveContactReason={canSaveContactReason}
+          handleSaveContactReason={handleSaveContactReason}
+          filteredContactReasons={filteredContactReasons}
+          formCampaign={formCampaign}
+          setFormCampaign={setFormCampaign}
+          canSaveCampaign={canSaveCampaign}
+          handleSaveCampaign={handleSaveCampaign}
+          filteredCampaigns={filteredCampaigns}
+          setCcSelectedCampaignId={setCcSelectedCampaignId}
+          ccSelectedCampaignId={ccSelectedCampaignId}
+          refreshCampaignList={refreshCampaignList}
+          campaignListDraftRow={campaignListDraftRow}
+          setCampaignListDraftRow={setCampaignListDraftRow}
+          handleCampaignListDraftAdd={handleCampaignListDraftAdd}
+          campaignListDraftColumns={campaignListDraftColumns}
+          campaignListDraftGrid={campaignListDraftGrid}
+          handleAddCampaignListItems={handleAddCampaignListItems}
+          campaignListDraftItems={campaignListDraftItems}
+          setCampaignListDraftItems={setCampaignListDraftItems}
+          filteredCampaignList={filteredCampaignList}
+          formScheduled={formScheduled}
+          setFormScheduled={setFormScheduled}
+          canSaveScheduled={canSaveScheduled}
+          handleSaveScheduledCallback={handleSaveScheduledCallback}
+          filteredScheduled={filteredScheduled}
+          formClick2Call={formClick2Call}
+          setFormClick2Call={setFormClick2Call}
+          canCreateClick2Call={canCreateClick2Call}
+          handleCreateClick2Call={handleCreateClick2Call}
+          click2CallVars={click2CallVars}
+          setClick2CallVars={setClick2CallVars}
+          handleClick2CallVarRemove={handleClick2CallVarRemove}
+          handleClick2CallVarAdd={handleClick2CallVarAdd}
+          filteredC2c={filteredC2c}
+          legacyXmlError={legacyXmlError}
+          legacyXmlEntity={legacyXmlEntity}
+          setLegacyXmlEntity={setLegacyXmlEntity}
+          legacyXmlSupported={legacyXmlSupported}
+          refreshLegacyXml={refreshLegacyXml}
+          legacyXmlMeta={legacyXmlMeta}
+          legacyXmlDraftId={legacyXmlDraftId}
+          setLegacyXmlDraftId={setLegacyXmlDraftId}
+          legacyXmlDraftFields={legacyXmlDraftFields}
+          setLegacyXmlDraftFields={setLegacyXmlDraftFields}
+          handleLegacyXmlUpsert={handleLegacyXmlUpsert}
+          handleLegacyXmlRemoveField={handleLegacyXmlRemoveField}
+          handleLegacyXmlAddField={handleLegacyXmlAddField}
+          legacyXmlItems={legacyXmlItems}
+          filteredLegacyXmlItems={filteredLegacyXmlItems}
+          handleLegacyXmlEdit={handleLegacyXmlEdit}
+          handleLegacyXmlDelete={handleLegacyXmlDelete}
+          provisioningToken={provisioningToken}
+          tokenGovernance={tokenGovernance}
+          provisioningTokenExpiresAt={provisioningTokenExpiresAt}
+          provisioningTokenUpdatedAt={provisioningTokenUpdatedAt}
+          pbxAuditHours={pbxAuditHours}
+          setPbxAuditHours={setPbxAuditHours}
+          refreshPbxAudit={refreshPbxAudit}
+          pbxAuditByAction={pbxAuditByAction}
+          filteredAuditItems={filteredAuditItems}
+          formatDateTime={formatDateTime}
+          PlatformGrid={PlatformGrid}
+        />
       </div>
-    </div>
+      </CrudPageBase>
   );
 }

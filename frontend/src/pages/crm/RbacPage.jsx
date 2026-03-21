@@ -1,5 +1,6 @@
 import React from 'react';
 import { CrmCard } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function RbacPage() {
   const roles = [
@@ -10,7 +11,7 @@ export function RbacPage() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🔐 Permissões CRM (RBAC)</h1>
         <p>Controle de acesso e roles do CRM.</p>
@@ -51,6 +52,6 @@ export function RbacPage() {
           </div>
         </div>
       </CrmCard>
-    </div>
+    </CrudPageBase>
   );
 }

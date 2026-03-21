@@ -13,6 +13,7 @@ import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function SystemStatusPage() {
   const { showToast, ToastContainer } = useToast();
@@ -199,7 +200,7 @@ export function SystemStatusPage() {
 
   if (loading && !status) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>📊 Status dos Serviços</h1>
@@ -217,12 +218,12 @@ export function SystemStatusPage() {
           <div className="text-text-secondary">Carregando...</div>
         </div>
         <ToastContainer />
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📊 Status dos Serviços</h1>
@@ -358,7 +359,7 @@ export function SystemStatusPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

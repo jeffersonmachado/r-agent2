@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CrmCard, CrmButton, CrmTable, CrmBadge } from '../../components/crm/CrmComponents';
 import { buildApiUrl } from '../../api/client';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function WebhooksPage() {
   const [webhooks, setWebhooks] = useState([]);
@@ -41,7 +42,7 @@ export function WebhooksPage() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🔗 Webhooks</h1>
@@ -77,6 +78,6 @@ export function WebhooksPage() {
         <h2 className="text-xl font-semibold mb-4">Webhooks Configurados</h2>
         <CrmTable columns={columns} data={webhooks} isLoading={loading} />
       </CrmCard>
-    </div>
+    </CrudPageBase>
   );
 }

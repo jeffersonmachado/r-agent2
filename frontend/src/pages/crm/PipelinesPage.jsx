@@ -3,6 +3,7 @@ import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function PipelinesPage() {
   const { pipelines: allPipelines, setPipelines } = useCrm();
@@ -121,7 +122,7 @@ export function PipelinesPage() {
   );
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📈 Pipelines</h1>
@@ -208,6 +209,6 @@ export function PipelinesPage() {
         </CrmForm>
       </CrmModal>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

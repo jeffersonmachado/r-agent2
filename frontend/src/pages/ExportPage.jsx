@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { fetchBlob } from '../api/client';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function ExportPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -80,11 +81,11 @@ export function ExportPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -93,7 +94,7 @@ export function ExportPage() {
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📤 Exportação de Dados</h1>
@@ -216,6 +217,6 @@ export function ExportPage() {
           </div>
         </div>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

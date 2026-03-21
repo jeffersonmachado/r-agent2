@@ -4,6 +4,8 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 import { getTenantSetting, upsertTenantSetting } from '../api/tenantSettings';
+import { Button } from '../styles/Button';
+import { CrudPageBase, showCrudError, showCrudSuccess } from '../modules/crud-base';
 
 function safeJsonParse(raw, fallback) {
   try {
@@ -45,7 +47,7 @@ export function SsoScimPage() {
       if (scim?.ok && scim.value) setScimJson(JSON.stringify(scim.value, null, 2));
     } catch (err) {
       logger.error('Erro ao carregar settings:', err);
-      showToast('Erro ao carregar settings', 'error');
+      showCrudError(showToast, err, 'Erro ao carregar settings');
     } finally {
       setLoading(false);
     }
@@ -57,18 +59,18 @@ export function SsoScimPage() {
       const raw = key === 'sso' ? ssoJson : scimJson;
       const value = safeJsonParse(raw, null);
       if (!value || typeof value !== 'object') {
-        showToast('JSON inválido', 'error');
+        showCrudError(showToast, null, 'JSON invalido');
         return;
       }
       const out = await upsertTenantSetting(key, value);
       if (!out?.ok) {
-        showToast('Falha ao salvar setting', 'error');
+        showCrudError(showToast, out, 'Falha ao salvar setting');
         return;
       }
-      showToast('Setting salvo com sucesso', 'success');
+      showCrudSuccess(showToast, 'Setting salvo com sucesso');
     } catch (err) {
       logger.error('Erro ao salvar setting:', err);
-      showToast('Erro ao salvar setting', 'error');
+      showCrudError(showToast, err, 'Erro ao salvar setting');
     } finally {
       setLoading(false);
     }
@@ -76,43 +78,59 @@ export function SsoScimPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase title="SSO / SCIM">
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase
+      title="SSO / SCIM"
+      actions={(
+        <Button onClick={loadSettings} disabled={loading}>
+          🔄 Atualizar
+        </Button>
+      )}
+    >
       <ToastContainer />
       <div style={{ padding: '24px' }}>
-        <h1 style={{ fontSize: '22px', marginBottom: '12px' }}>SSO / SCIM</h1>
         <p style={{ color: '#6b7280', marginBottom: '20px' }}>
           Configurações básicas para identidade e provisionamento.
         </p>
 
         <div style={{ display: 'grid', gap: '16px' }}>
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
-            <h2 style={{ marginBottom: '8px' }}>SSO</h2>
-            <textarea rows={10} value={ssoJson} onChange={(e) => setSsoJson(e.target.value)} style={{ width: '100%' }} />
+          <section className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-text-primary mb-3">SSO</h2>
+            <textarea
+              rows={10}
+              value={ssoJson}
+              onChange={(e) => setSsoJson(e.target.value)}
+              className="w-full p-3 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm"
+            />
             <div style={{ marginTop: '8px' }}>
-              <button onClick={() => handleSave('sso')} disabled={loading}>Salvar SSO</button>
+              <Button onClick={() => handleSave('sso')} disabled={loading}>Salvar SSO</Button>
             </div>
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
-            <h2 style={{ marginBottom: '8px' }}>SCIM</h2>
-            <textarea rows={10} value={scimJson} onChange={(e) => setScimJson(e.target.value)} style={{ width: '100%' }} />
+          <section className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-text-primary mb-3">SCIM</h2>
+            <textarea
+              rows={10}
+              value={scimJson}
+              onChange={(e) => setScimJson(e.target.value)}
+              className="w-full p-3 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm"
+            />
             <div style={{ marginTop: '8px' }}>
-              <button onClick={() => handleSave('scim')} disabled={loading}>Salvar SCIM</button>
+              <Button onClick={() => handleSave('scim')} disabled={loading}>Salvar SCIM</Button>
             </div>
           </section>
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

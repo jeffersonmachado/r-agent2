@@ -6,6 +6,7 @@ import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { createDeveloperKey, getDeveloperUsage, listDeveloperKeys } from '../api/developerKeys';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function DeveloperKeysPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -115,17 +116,17 @@ export function DeveloperKeysPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <h1>🔑 API Keys</h1>
@@ -291,6 +292,6 @@ export function DeveloperKeysPage() {
           )}
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

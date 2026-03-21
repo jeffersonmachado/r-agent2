@@ -16,12 +16,7 @@ const fs = require('fs');
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
-// --- Infra ---
-const { checkRateLimit } = require('../../infra/rate-limit');
-const { clearLimitersCache, clearRedisRateLimitKeys } = require('../../infra/rate-limit');
-
 // --- Middleware ---
-const { requireAuth, requirePermission } = require('../middleware/auth');
 const { tenantRateLimitMiddleware } = require('../middleware/tenantRateLimit');
 const { createTenantRateLimitMiddleware } = require('../middleware/createTenantRateLimitMiddleware');
 
@@ -31,95 +26,33 @@ const {
   badRequest,
   hasJsonContentType,
   parseJsonBody,
-  setCorsHeaders,
   notFound,
 } = require('../express/httpHelpers');
 
-// --- Utils ---
-const { validateInput, ValidationError, schemas } = require('../utils/inputValidator');
-const { sendApiError, buildApiError } = require('../utils/apiError');
-const { parseMultipartFormData } = require('../utils/multipartParser');
-
-// --- Services: auth ---
-const {
-  login: authLogin,
-  logout: authLogout,
-  logoutAllSessions,
-  validateToken,
-  loginWithRpaToken,
-} = require('../services/authService');
-const { logAction } = require('../services/auditService');
-const { isSuperAdmin } = require('../services/superAdminService');
-
-// --- Services: webhooks ---
-const {
-  createWebhook,
-  listWebhooks,
-  getWebhook,
-  updateWebhook,
-  deleteWebhook,
-  getAvailableEvents,
-} = require('../services/webhookService');
-
-// --- Services: QA ---
-const {
-  getLatestQaResult,
-  getQaHistory,
-  getQaResultById,
-  runQaManual,
-  getQaStatistics,
-} = require('../services/qaService');
-
-// --- Services: webscraping ---
-const { scrapeUrl, scrapeUrls } = require('../services/webScrapingService');
-const {
-  getGeneralMetrics,
-  getAgentMetrics,
-  getDepartmentMetrics,
-  getQueueMetrics,
-  getTrendMetrics,
-  getAllMetrics,
-} = require('../services/analyticsService');
-const {
-  listCampaigns,
-  getCampaign,
-  createCampaign,
-  updateCampaign,
-  deleteCampaign,
-  startCampaign,
-  pauseCampaign,
-  resumeCampaign,
-} = require('../services/bulkMessagingService');
-const {
-  listQuickReplies,
-  getQuickReply,
-  createQuickReply,
-  updateQuickReply,
-  deleteQuickReply,
-  incrementUsage,
-  searchByContext,
-} = require('../services/quickRepliesService');
 
 // --- Composition: domínios ---
 const { createTenantExpressRouter } = require('../composition/tenant');
 const { createTicketExpressRouter } = require('../composition/ticket');
+const { createAuthExpressRouter } = require('../composition/auth');
+const { createPbxExpressRouter } = require('../composition/pbx');
+const { createOperationsDashboardExpressRouter } = require('../composition/operations-dashboard');
+const { createPublicSystemExpressRouter } = require('../composition/public-system');
+const { createQaExpressRouter } = require('../composition/qa');
+const { createRpaTestsExpressRouter } = require('../composition/rpa-tests');
+const { createDevManagementExpressRouter } = require('../composition/dev-management');
+const { createIntelligenceExpressRouter } = require('../composition/intelligence');
+const { createMarketIntelligenceExpressRouter } = require('../composition/market-intelligence');
+const { createAccessControlExpressRouter } = require('../composition/access-control');
+const { createAnalyticsExpressRouter } = require('../composition/analytics');
+const { createBulkCampaignsExpressRouter } = require('../composition/bulk-campaigns');
+const { createQuickRepliesExpressRouter } = require('../composition/quick-replies');
+const { createVerticalExpressRouter } = require('../composition/vertical');
+const { createWebScrapingExpressRouter } = require('../composition/web-scraping');
+const { createWebhooksExpressRouter } = require('../composition/webhooks');
+const { createVoiceExpressRouter } = require('../composition/voice');
 
 // --- Routers: módulos ---
-const { createPublicSystemRoutes } = require('../modules/public-system/routes');
 const { createFrontendFallbackRoutes } = require('../modules/frontend-fallback/routes');
-const { createAuthRoutes } = require('../modules/auth/routes');
-const { createPbxRoutes } = require('../modules/pbx/routes');
-const { createVerticalRoutes } = require('../modules/vertical/routes');
-const { createWebhooksRoutes } = require('../modules/webhooks/routes');
-const { createOperationsDashboardRoutes } = require('../modules/operations-dashboard/routes');
-const { createWebScrapingRoutes } = require('../modules/web-scraping/routes');
-const { createQaRoutes } = require('../modules/qa/routes');
-const { createRpaTestsRoutes } = require('../modules/rpa-tests/routes');
-const { createDevManagementRoutes } = require('../modules/dev-management/routes');
-const { createIntelligenceRoutes } = require('../modules/intelligence/routes');
-const { createMarketIntelligenceRoutes } = require('../modules/market-intelligence/routes');
-const { createAccessControlRoutes } = require('../modules/access-control/routes');
-const { createVoiceRoutes } = require('../modules/voice/routes');
 const { createQueueTicketRoutes } = require('../modules/queue-ticket/routes');
 const { createOpsRoutes } = require('../modules/ops/routes');
 const { createExecutionLedgerRoutes } = require('../modules/execution-ledger/routes');
@@ -137,341 +70,13 @@ const { createDomainFlowRoutes } = require('../modules/domain-flow/routes');
 const { createPlatformAdminRoutes } = require('../modules/platform-admin/routes');
 const { createPlatformContentRoutes } = require('../modules/platform-content/routes');
 const { createPlatformPublicRoutes } = require('../modules/platform-public/routes');
-const { createAnalyticsRoutes } = require('../modules/analytics/routes');
-const { createBulkCampaignsRoutes } = require('../modules/bulk-campaigns/routes');
-const { createQuickRepliesRoutes } = require('../modules/quick-replies/routes');
 
 // ---------------------------------------------------------------------------
 // Builders de dependências (domínios sem composition própria ainda)
 // ---------------------------------------------------------------------------
 
-function buildPublicSystemRouteDeps() {
-  return {
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    config,
-    checkRateLimit,
-    setCorsHeaders,
-    requireAuth,
-  };
-}
-
-function buildAuthRouteDeps() {
-  return {
-    sendJson,
-    badRequest,
-    validateInput,
-    schemas,
-    ValidationError,
-    authLogin,
-    loginWithRpaToken,
-    validateToken,
-    authLogout,
-    logoutAllSessions,
-    logAction,
-    logger,
-  };
-}
-
-function buildVerticalRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    logAction,
-  };
-}
-
-function buildPbxRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    parseMultipartFormData,
-    logger,
-    buildApiError,
-    logAction,
-  };
-}
-
-function buildWebhooksRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logAction,
-    logger,
-    getAvailableEvents,
-    listWebhooks,
-    getWebhook,
-    createWebhook,
-    updateWebhook,
-    deleteWebhook,
-  };
-}
-
-function buildOperationsDashboardRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-  };
-}
-
-function buildWebScrapingRouteDeps() {
-  const { requireExecutionId } = require('../middleware/requireExecutionId');
-  const { createPipelineWs } = require('../ws/pipelineEmitter');
-  const { emitPipelineStage } = require('../ws/emitPipelineStage');
-  const { failGeneration } = require('../services/failGeneration');
-  const { GenerationFailureReasons } = require('../constants/GenerationFailureReasons');
-  const { ensureExecutionContext, requireStages, updateStage, updateStatus } = require('../services/pipelineExecutionContext');
-
-  return {
-    requireAuth,
-    requirePermission,
-    sendJson,
-    badRequest,
-    sendApiError,
-    buildApiError,
-    setCorsHeaders,
-    hasJsonContentType,
-    parseJsonBody,
-    isSuperAdmin,
-    logAction,
-    logger,
-    scrapeUrl,
-    scrapeUrls,
-    requireExecutionId,
-    createPipelineWs,
-    emitPipelineStage,
-    ensureExecutionContext,
-    requireStages,
-    updateStage,
-    updateStatus,
-    failGeneration,
-    GenerationFailureReasons,
-  };
-}
-
-function buildQaRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logAction,
-    logger,
-    getLatestQaResult,
-    getQaHistory,
-    getQaStatistics,
-    getQaResultById,
-    runQaManual,
-  };
-}
-
-function buildRpaTestsRouteDeps() {
-  const {
-    listRecordings,
-    executeRecording,
-    getExecutionStatus,
-    cancelExecution,
-    continueExecution,
-    nextStep,
-    deleteRecording,
-    startManualRecording,
-    stopManualRecording,
-    getRecordingStatus,
-  } = require('../services/rpaService');
-
-  return {
-    requireAuth,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    listRecordings,
-    executeRecording,
-    getExecutionStatus,
-    cancelExecution,
-    continueExecution,
-    nextStep,
-    deleteRecording,
-    startManualRecording,
-    stopManualRecording,
-    getRecordingStatus,
-    path,
-    fs,
-  };
-}
-
-function buildDevManagementRouteDeps() {
-  return {
-    requireAuth,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    isSuperAdmin,
-    logAction,
-    logger,
-    path,
-    fs,
-  };
-}
-
-function buildIntelligenceRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-  };
-}
-
-function buildMarketIntelligenceRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-  };
-}
-
-function buildAccessControlRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    logAction,
-  };
-}
-
-function buildVoiceRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-  };
-}
-
-function buildAnalyticsRouteDeps() {
-  return {
-    requireAuth,
-    requirePermission,
-    requireTenant,
-    sendJson,
-    logger,
-    getAllMetrics,
-    getGeneralMetrics,
-    getAgentMetrics,
-    getDepartmentMetrics,
-    getQueueMetrics,
-    getTrendMetrics,
-  };
-}
-
-function buildBulkCampaignsRouteDeps() {
-  return {
-    requireAuth,
-    requireTenant,
-    requirePermission,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    logAction,
-    listCampaigns,
-    getCampaign,
-    createCampaign,
-    updateCampaign,
-    deleteCampaign,
-    startCampaign,
-    pauseCampaign,
-    resumeCampaign,
-  };
-}
-
-function buildQuickRepliesRouteDeps() {
-  return {
-    requireAuth,
-    requireTenant,
-    requirePermission,
-    sendJson,
-    badRequest,
-    hasJsonContentType,
-    parseJsonBody,
-    logger,
-    logAction,
-    listQuickReplies,
-    getQuickReply,
-    createQuickReply,
-    updateQuickReply,
-    deleteQuickReply,
-    incrementUsage,
-    searchByContext,
-  };
-}
-
 function buildFrontendFallbackDeps() {
   return { fs, path, logger };
-}
-
-// ---------------------------------------------------------------------------
-// requireTenant local (espelho do server.js — será unificado em ciclo futuro)
-// ---------------------------------------------------------------------------
-
-function requireTenant(req, res) {
-  const superAdmin = req?.agent ? isSuperAdmin(req.agent) : false;
-  const tenantIdRaw = superAdmin
-    ? (req?.tenantId || null)
-    : (req?.tenantId || req?.agent?.tenantId || null);
-  const tenantId = typeof tenantIdRaw === 'string' ? tenantIdRaw.trim() : null;
-  if (!tenantId) {
-    sendJson(res, 403, { error: 'tenant_required' });
-    return null;
-  }
-  return tenantId;
 }
 
 // ---------------------------------------------------------------------------
@@ -503,23 +108,23 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const platformPublicRouter = createPlatformPublicRoutes({ buildDeps: buildPlatformRoutingContext });
 
   // --- Routers modulares ---
-  const publicSystemRouter = createPublicSystemRoutes({ buildDeps: () => buildPublicSystemRouteDeps() });
-  const authRouter = createAuthRoutes(buildAuthRouteDeps());
-  const pbxRouter = createPbxRoutes({ buildDeps: () => buildPbxRouteDeps() });
-  const verticalRouter = createVerticalRoutes({ buildDeps: () => buildVerticalRouteDeps() });
-  const webhooksRouter = createWebhooksRoutes({ buildDeps: () => buildWebhooksRouteDeps() });
-  const operationsDashboardRouter = createOperationsDashboardRoutes({ buildDeps: () => buildOperationsDashboardRouteDeps() });
-  const webScrapingRouter = createWebScrapingRoutes({ buildDeps: () => buildWebScrapingRouteDeps() });
-  const qaRouter = createQaRoutes({ buildDeps: () => buildQaRouteDeps() });
-  const rpaTestsRouter = createRpaTestsRoutes({ buildDeps: () => buildRpaTestsRouteDeps() });
-  const devManagementRouter = createDevManagementRoutes({ buildDeps: () => buildDevManagementRouteDeps() });
-  const intelligenceRouter = createIntelligenceRoutes({ buildDeps: () => buildIntelligenceRouteDeps() });
-  const marketIntelligenceRouter = createMarketIntelligenceRoutes({ buildDeps: () => buildMarketIntelligenceRouteDeps() });
-  const accessControlRouter = createAccessControlRoutes({ buildDeps: () => buildAccessControlRouteDeps() });
-  const voiceRouter = createVoiceRoutes({ buildDeps: () => buildVoiceRouteDeps() });
-  const analyticsRouter = createAnalyticsRoutes({ buildDeps: () => buildAnalyticsRouteDeps() });
-  const bulkCampaignsRouter = createBulkCampaignsRoutes({ buildDeps: () => buildBulkCampaignsRouteDeps() });
-  const quickRepliesRouter = createQuickRepliesRoutes({ buildDeps: () => buildQuickRepliesRouteDeps() });
+  const publicSystemRouter = createPublicSystemExpressRouter();
+  const authRouter = createAuthExpressRouter();
+  const pbxRouter = createPbxExpressRouter();
+  const verticalRouter = createVerticalExpressRouter();
+  const webhooksRouter = createWebhooksExpressRouter();
+  const operationsDashboardRouter = createOperationsDashboardExpressRouter();
+  const webScrapingRouter = createWebScrapingExpressRouter();
+  const qaRouter = createQaExpressRouter();
+  const rpaTestsRouter = createRpaTestsExpressRouter();
+  const devManagementRouter = createDevManagementExpressRouter();
+  const intelligenceRouter = createIntelligenceExpressRouter();
+  const marketIntelligenceRouter = createMarketIntelligenceExpressRouter();
+  const accessControlRouter = createAccessControlExpressRouter();
+  const voiceRouter = createVoiceExpressRouter();
+  const analyticsRouter = createAnalyticsExpressRouter();
+  const bulkCampaignsRouter = createBulkCampaignsExpressRouter();
+  const quickRepliesRouter = createQuickRepliesExpressRouter();
   const queueTicketRouter = createQueueTicketRoutes({
     buildDeps: (req, res) => {
       const ctx = buildExtendedRoutingContext(req, res);

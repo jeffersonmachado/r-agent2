@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   listAccessDevices,
   createAccessDevice,
@@ -11,6 +11,10 @@ import {
   listAccessEvents,
   createVisitorAccessQr,
 } from '../api/accessControl';
+import { useToast } from '../components/Toast';
+import { Button } from '../styles/Button';
+
+import { CrudPageBase, showCrudError, showCrudSuccess, useCrudList } from '../modules/crud-base';
 
 const TABS = [
   { id: 'devices', label: 'Dispositivos' },
@@ -33,6 +37,7 @@ function Panel({ title, children, action = null }) {
 }
 
 export function AccessControlPage() {
+  const { showToast, ToastContainer } = useToast();
   const initialSearch = (() => {
     try {
       return new URLSearchParams(window.location.search || '');
@@ -41,61 +46,76 @@ export function AccessControlPage() {
     }
   })();
   const [tab, setTab] = useState('devices');
-  const [devices, setDevices] = useState([]);
-  const [credentials, setCredentials] = useState([]);
-  const [policies, setPolicies] = useState([]);
-  const [decisions, setDecisions] = useState([]);
-  const [decisionSummary, setDecisionSummary] = useState(null);
-  const [healthSnapshot, setHealthSnapshot] = useState(null);
-  const [events, setEvents] = useState([]);
   const [decisionStatusFilter, setDecisionStatusFilter] = useState(initialSearch.get('acDecisionStatus') || '');
   const [decisionDeviceFilter, setDecisionDeviceFilter] = useState(initialSearch.get('acDecisionDevice') || '');
   const [decisionSubjectFilter, setDecisionSubjectFilter] = useState(initialSearch.get('acDecisionSubject') || '');
   const [pendingCriticalOnly, setPendingCriticalOnly] = useState(initialSearch.get('acDecisionCritical') === '1');
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [operationError, setOperationError] = useState(null);
   const [visitorQr, setVisitorQr] = useState(null);
+
+  const decisionParams = useMemo(() => ({
+    decisionStatusFilter,
+    decisionDeviceFilter,
+    decisionSubjectFilter,
+    pendingCriticalOnly,
+  }), [decisionStatusFilter, decisionDeviceFilter, decisionSubjectFilter, pendingCriticalOnly]);
+
+  const {
+    allItems,
+    loading,
+    error: loadError,
+    reload: reloadAll,
+  } = useCrudList(async (params = {}) => {
+    const [deviceResp, credentialResp, policyResp, decisionResp, eventResp, healthResp] = await Promise.all([
+      listAccessDevices(),
+      listAccessCredentials(),
+      listAccessPolicies(),
+      listAccessDecisions({
+        limit: 20,
+        include_status: true,
+        execution_status: params.decisionStatusFilter || undefined,
+        device_id: params.decisionDeviceFilter || undefined,
+        subject_id: params.decisionSubjectFilter || undefined,
+        pending_critical_only: params.pendingCriticalOnly ? true : undefined,
+      }),
+      listAccessEvents({ limit: 50 }),
+      getAccessControlHealth({ limit: 50 }),
+    ]);
+
+    return [{
+      devices: deviceResp?.items || [],
+      credentials: credentialResp?.items || [],
+      policies: policyResp?.items || [],
+      decisions: decisionResp?.items || [],
+      decisionSummary: decisionResp?.summary || null,
+      healthSnapshot: healthResp || null,
+      events: eventResp?.items || [],
+    }];
+  }, {
+    params: decisionParams,
+    loadOnMount: true,
+    reloadOnParamsChange: true,
+  });
+
+  const aggregate = allItems[0] || {};
+  const devices = aggregate.devices || [];
+  const credentials = aggregate.credentials || [];
+  const policies = aggregate.policies || [];
+  const decisions = aggregate.decisions || [];
+  const decisionSummary = aggregate.decisionSummary || null;
+  const healthSnapshot = aggregate.healthSnapshot || null;
+  const events = aggregate.events || [];
+  const error = operationError || loadError;
+
+  useEffect(() => {
+    if (loadError) {
+      showCrudError(showToast, loadError, 'Erro ao carregar Access Control');
+    }
+  }, [loadError, showToast]);
 
   const visitorQrImageUrl = visitorQr?.qr_payload
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(visitorQr.qr_payload)}`
     : null;
-
-  const loadAll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [deviceResp, credentialResp, policyResp, decisionResp, eventResp, healthResp] = await Promise.all([
-        listAccessDevices(),
-        listAccessCredentials(),
-        listAccessPolicies(),
-        listAccessDecisions({
-          limit: 20,
-          include_status: true,
-          execution_status: decisionStatusFilter || undefined,
-          device_id: decisionDeviceFilter || undefined,
-          subject_id: decisionSubjectFilter || undefined,
-          pending_critical_only: pendingCriticalOnly ? true : undefined,
-        }),
-        listAccessEvents({ limit: 50 }),
-        getAccessControlHealth({ limit: 50 }),
-      ]);
-      setDevices(deviceResp?.items || []);
-      setCredentials(credentialResp?.items || []);
-      setPolicies(policyResp?.items || []);
-      setDecisions(decisionResp?.items || []);
-      setDecisionSummary(decisionResp?.summary || null);
-      setHealthSnapshot(healthResp || null);
-      setEvents(eventResp?.items || []);
-    } catch (err) {
-      setError(err?.body?.message || err?.message || 'Erro ao carregar Access Control');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadAll();
-  }, [decisionStatusFilter, decisionDeviceFilter, decisionSubjectFilter, pendingCriticalOnly]);
 
   useEffect(() => {
     try {
@@ -118,6 +138,7 @@ export function AccessControlPage() {
 
   const quickCreateDevice = async () => {
     try {
+      setOperationError(null);
       await createAccessDevice({
         name: `Catraca ${devices.length + 1}`,
         type: 'turnstile',
@@ -125,14 +146,17 @@ export function AccessControlPage() {
         status: 'active',
         integration_mode: 'backend_decides',
       });
-      await loadAll();
+      await reloadAll();
+      showCrudSuccess(showToast, 'Dispositivo criado com sucesso');
     } catch (err) {
-      setError(err?.body?.message || err?.message || 'Erro ao criar dispositivo');
+      const message = showCrudError(showToast, err, 'Erro ao criar dispositivo');
+      setOperationError(message);
     }
   };
 
   const quickCreateCredential = async () => {
     try {
+      setOperationError(null);
       await createAccessCredential({
         type: 'qrcode',
         customer_id: `customer-${credentials.length + 1}`,
@@ -141,14 +165,17 @@ export function AccessControlPage() {
         billing_status: 'active',
         credential_value: `qr-${Date.now()}`,
       });
-      await loadAll();
+      await reloadAll();
+      showCrudSuccess(showToast, 'Credencial criada com sucesso');
     } catch (err) {
-      setError(err?.body?.message || err?.message || 'Erro ao criar credencial');
+      const message = showCrudError(showToast, err, 'Erro ao criar credencial');
+      setOperationError(message);
     }
   };
 
   const quickCreatePolicy = async () => {
     try {
+      setOperationError(null);
       await createAccessPolicy({
         name: `Fitness Default ${policies.length + 1}`,
         vertical: 'fitness',
@@ -165,14 +192,17 @@ export function AccessControlPage() {
         grace_policy: { allowGracePeriod: true },
         metadata: { pending_critical_age_ms: 180000 },
       });
-      await loadAll();
+      await reloadAll();
+      showCrudSuccess(showToast, 'Politica criada com sucesso');
     } catch (err) {
-      setError(err?.body?.message || err?.message || 'Erro ao criar política');
+      const message = showCrudError(showToast, err, 'Erro ao criar politica');
+      setOperationError(message);
     }
   };
 
   const quickCreateVisitorQr = async () => {
     try {
+      setOperationError(null);
       const result = await createVisitorAccessQr({
         vertical: 'fitness',
         name: 'Visitante Experimental',
@@ -181,9 +211,11 @@ export function AccessControlPage() {
       });
       setVisitorQr(result);
       setTab('events');
-      await loadAll();
+      await reloadAll();
+      showCrudSuccess(showToast, 'QR visitante emitido com sucesso');
     } catch (err) {
-      setError(err?.body?.message || err?.message || 'Erro ao emitir QR visitante');
+      const message = showCrudError(showToast, err, 'Erro ao emitir QR visitante');
+      setOperationError(message);
     }
   };
 
@@ -195,14 +227,24 @@ export function AccessControlPage() {
   };
 
   return (
-    <div className="support-page">
-      <div className="support-header">
-        <h1>Access Control</h1>
-        <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button onClick={loadAll} disabled={loading}>Atualizar</button>
-          <button onClick={quickCreateVisitorQr}>QR Visitante</button>
-        </div>
-      </div>
+    <CrudPageBase
+      title="Access Control"
+      actions={(
+        <>
+          <Button
+            onClick={() => {
+              setOperationError(null);
+              reloadAll();
+            }}
+            disabled={loading}
+          >
+            Atualizar
+          </Button>
+          <Button onClick={quickCreateVisitorQr}>QR Visitante</Button>
+        </>
+      )}
+    >
+      <ToastContainer />
 
       <Panel title="MVP Operacional">
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -296,7 +338,7 @@ export function AccessControlPage() {
       ) : null}
 
       {tab === 'devices' ? (
-        <Panel title="Dispositivos" action={<button onClick={quickCreateDevice}>Novo dispositivo</button>}>
+        <Panel title="Dispositivos" action={<Button onClick={quickCreateDevice}>Novo dispositivo</Button>}>
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {devices.map((item) => (
@@ -312,7 +354,7 @@ export function AccessControlPage() {
       ) : null}
 
       {tab === 'credentials' ? (
-        <Panel title="Credenciais" action={<button onClick={quickCreateCredential}>Nova credencial</button>}>
+        <Panel title="Credenciais" action={<Button onClick={quickCreateCredential}>Nova credencial</Button>}>
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {credentials.map((item) => (
@@ -328,7 +370,7 @@ export function AccessControlPage() {
       ) : null}
 
       {tab === 'policies' ? (
-        <Panel title="Políticas" action={<button onClick={quickCreatePolicy}>Nova política</button>}>
+        <Panel title="Políticas" action={<Button onClick={quickCreatePolicy}>Nova politica</Button>}>
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {policies.map((item) => (
@@ -396,9 +438,9 @@ export function AccessControlPage() {
                 />
                 Só críticos
               </label>
-              <button type="button" onClick={clearDecisionFilters}>
+              <Button type="button" variant="secondary" onClick={clearDecisionFilters}>
                 Limpar filtros
-              </button>
+              </Button>
             </div>
           )}
         >
@@ -453,6 +495,6 @@ export function AccessControlPage() {
           )}
         </Panel>
       ) : null}
-    </div>
+    </CrudPageBase>
   );
 }

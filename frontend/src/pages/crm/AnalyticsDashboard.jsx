@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CrmCard } from '../../components/crm/CrmComponents';
 import { buildApiUrl } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function AnalyticsDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -27,22 +28,22 @@ export function AnalyticsDashboard() {
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>📊 CRM Analytics</h1>
         </div>
         <div className="text-center text-text-secondary">Carregando dashboard...</div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!dashboard) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>📊 CRM Analytics</h1>
         </div>
         <div className="text-center text-status-error">Erro ao carregar dados</div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -60,7 +61,7 @@ export function AnalyticsDashboard() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>📊 Análises CRM</h1>
         <p>Métricas de performance, conversão e receita.</p>
@@ -169,7 +170,7 @@ export function AnalyticsDashboard() {
         </div>
       </CrmCard>
       </div>
-    </div>
+      </CrudPageBase>
   );
 }
 
@@ -183,7 +184,7 @@ function MetricCard({ title, value, icon, color }) {
         </div>
         <span className="text-3xl">{icon}</span>
       </div>
-    </div>
+      </div>
   );
 }
 

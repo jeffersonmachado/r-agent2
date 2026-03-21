@@ -1,1 +1,0 @@
-export { PlatformGridFilters } from '../PlatformGridFilters';

@@ -13,6 +13,7 @@ import {
   CrmBadge,
 } from '../../components/crm/CrmComponents';
 import { ScheduleModal } from '../../components/ScheduleModal';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function OpportunitiesPage() {
   const { opportunities, setOpportunities, pipelines, setPipelines } = useCrm();
@@ -128,7 +129,7 @@ export function OpportunitiesPage() {
   }));
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>💼 Opportunities</h1>
@@ -438,6 +439,6 @@ export function OpportunitiesPage() {
         />
       ) : null}
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

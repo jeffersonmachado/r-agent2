@@ -10,6 +10,7 @@ import { usePhoneMasking } from '../hooks/usePhoneMasking';
 import { MaskedPhone } from '../components/MaskedPhone';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 /**
  * Página de manutenção de tickets com estatísticas, filtros e ações de limpeza.
@@ -29,9 +30,11 @@ export function TicketMaintenancePage() {
 
   if (authLoading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Carregando...</p>
-      </div>
+      <CrudPageBase title="🔧 Manutenção de Tickets">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Carregando...</p>
+        </div>
+      </CrudPageBase>
     );
   }
 
@@ -377,11 +380,9 @@ export function TicketMaintenancePage() {
   const endIndex = Math.min(pagination.page * pagination.limit, totalTickets);
 
   return (
-    <div className="maintenance-page">
-      <div className="maintenance-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>🔧 Manutenção de Tickets</h1>
-        </div>
+    <CrudPageBase
+      title="🔧 Manutenção de Tickets"
+      actions={(
         <div className="maintenance-controls">
           <label>
             <input
@@ -395,7 +396,9 @@ export function TicketMaintenancePage() {
             {loading ? 'Carregando...' : '🔄 Atualizar'}
           </Button>
         </div>
-      </div>
+      )}
+    >
+      <div className="maintenance-page">
 
       {/* Container principal com layout flexível */}
       <div className="maintenance-content-wrapper">
@@ -828,6 +831,7 @@ export function TicketMaintenancePage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+      </div>
+    </CrudPageBase>
   );
 }

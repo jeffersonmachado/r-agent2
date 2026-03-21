@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 import { getCurrentTenantPlanUsage } from '../api/tenants';
+import { CrudPageBase } from '../modules/crud-base';
 
 function pct(current, limit) {
   const c = Number(current || 0);
@@ -90,18 +91,18 @@ export function PlanUsagePage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   if (!canView) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>📦 Plano e Uso</h1>
         
@@ -134,12 +135,12 @@ export function PlanUsagePage() {
           </div>
         </div>
         <ToastContainer />
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📦 Plano e Uso</h1>
@@ -214,7 +215,7 @@ export function PlanUsagePage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

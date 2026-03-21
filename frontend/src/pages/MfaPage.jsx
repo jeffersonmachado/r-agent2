@@ -4,6 +4,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { mfaSetup, mfaVerify, mfaDisable, mfaRecovery } from '../api/mfa';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function MfaPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
@@ -101,11 +102,11 @@ export function MfaPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -116,7 +117,7 @@ export function MfaPage() {
     : null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🔐 MFA</h1>
       
@@ -259,6 +260,6 @@ export function MfaPage() {
         </div>
       </div>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

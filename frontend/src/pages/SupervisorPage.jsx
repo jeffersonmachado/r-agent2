@@ -9,6 +9,7 @@ import {
   getSupervisorQueuesStatus,
 } from '../api/supervisor';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function SupervisorPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -207,11 +208,11 @@ export function SupervisorPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -220,7 +221,7 @@ export function SupervisorPage() {
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>📊 Painel Supervisor</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
@@ -488,6 +489,6 @@ export function SupervisorPage() {
         </div>
       </div>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

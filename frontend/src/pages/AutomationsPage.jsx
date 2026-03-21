@@ -14,6 +14,7 @@ import {
   getProcessIntelligence,
 } from '../api/processRuntime';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const DEFAULT_DEFINITION = {
   trigger: 'manual',
@@ -366,17 +367,17 @@ export function AutomationsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <h1>🧩 Automações</h1>
@@ -795,6 +796,6 @@ export function AutomationsPage() {
           )}
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

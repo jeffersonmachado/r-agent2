@@ -7,6 +7,7 @@ import { Input } from '../styles/Input';
 import { createTask, listTasks, completeTask, scheduleTaskReminder } from '../api/tasks';
 import { ScheduleModal } from '../components/ScheduleModal';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 
@@ -190,17 +191,17 @@ export function TasksPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <h1>✅ Tarefas & Lembretes</h1>
@@ -433,6 +434,6 @@ export function TasksPage() {
           onCreated={() => showToast('Agendamento criado', 'success')}
         />
       ) : null}
-    </div>
+    </CrudPageBase>
   );
 }

@@ -5,6 +5,7 @@ import { NavigationLink } from '../components/NavigationLink';
 import { getGeneralMetrics, getQueueMetrics } from '../api/analytics';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 /**
  * Página Dashboard - Hub central com todas as funcionalidades
@@ -527,7 +528,7 @@ export function DashboardPage() {
   }, [queuesKpis]);
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📊 Dashboard</h1>
@@ -771,6 +772,6 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
-    </div>
+    </CrudPageBase>
   );
 }

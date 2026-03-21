@@ -1,9 +1,10 @@
 import React from 'react';
 import { CrmCard, CrmButton } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function ReportsPage() {
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>📈 Relatórios CRM</h1>
         <p>Insights de vendas e previsões de receita.</p>
@@ -55,6 +56,6 @@ export function ReportsPage() {
           </div>
         </div>
       </CrmCard>
-    </div>
+    </CrudPageBase>
   );
 }

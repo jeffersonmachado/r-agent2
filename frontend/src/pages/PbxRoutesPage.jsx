@@ -5,6 +5,7 @@ import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -353,7 +354,7 @@ export function PbxRoutesPage() {
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>🧭 PBX • Rotas</h1>
@@ -365,12 +366,12 @@ export function PbxRoutesPage() {
             <p className="text-text-secondary">Carregando rotas...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🧭 PBX • Rotas</h1>
@@ -605,6 +606,6 @@ export function PbxRoutesPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }

@@ -2,22 +2,19 @@
 
 ## Componentes de grid identificados
 
-## 1) `DataGrid` (legado funcional) — DESCONTINUADO ✅
-- Arquivo base: `frontend/src/components/DataGrid.jsx`
-- Perfil: tabela simples com sort local e paginacao local.
-- Caracteristicas:
-  - API direta por props (`columns`, `rows`, `onRowClick`).
-  - Sem camada nativa de filtros, selecao multipla, estado persistido.
-- Referencias externas detectadas (fora da propria implementacao): 0. **Migracao concluida (ARC-010).**
-- Consumidores principais (em uso): **nenhum — todos migrados.**
-- Consumidores migrados (descontinuados):
+## 1) `DataGrid` (legado removido) — ELIMINADO ✅
+- Arquivos removidos em 2026-03-20: `frontend/src/components/DataGrid.jsx` e `frontend/src/components/DataGrid.css`.
+- Status: sem consumidores, sem implementacao ativa e fora do bundle do frontend.
+- Ultima funcao historica: tabela simples com sort local e paginacao local.
+- Migracao concluida por `ARC-010`; remocao final concluida por `ARC-095`.
+- Consumidores migrados (historico de corte):
   - ~~`frontend/src/pages/PbxRoutesPage.jsx`~~ ✅ Migrado (ARC-010 wave 2)
   - ~~`frontend/src/pages/PbxExtensionsPage.jsx`~~ ✅ Migrado (ARC-010 wave 2)
   - ~~`frontend/src/pages/SolutionsPage.jsx`~~ ✅ Migrado (ARC-010 wave 2)
   - ~~`frontend/src/pages/PbxModulePage.jsx`~~ ✅ Migrado (ARC-010 wave 3) — 2x DataGrid
   - ~~`frontend/src/pages/PbxPage.jsx`~~ ✅ Migrado (ARC-010 wave 3) — 5x DataGrid
 
-## 2) `platform-grid` (candidato canonico)
+## 2) `platform-grid` (canonico)
 - Modulo: `frontend/src/modules/platform-grid/`
 - Export principal: `frontend/src/modules/platform-grid/index.js`
 - Recursos presentes:
@@ -37,14 +34,15 @@
   - Uso funcional identificado: `frontend/src/pages/PbxPage.jsx` ✅ (ARC-010 wave 3).
 
 ## Diagnostico
-- **Migracao completa:** `DataGrid` nao possui mais consumidores externos.
+- `DataGrid` foi removido do frontend ativo em 2026-03-20 apos validacao de zero referencias externas.
 - `platform-grid` e o unico componente de grid em uso nas paginas da aplicacao.
+- Imports canonicos permanecem centralizados em `frontend/src/modules/platform-grid/index.js`.
 
 ## Recomendacao de canonizacao
-1. Definir `platform-grid` como padrao para novas telas CRUD.
-2. Criar adapter de compatibilidade para migrar telas `DataGrid` gradualmente.
-3. Migrar por lotes de menor risco primeiro (ex.: `NodeMarketplacePage` e `PbxTrunksPage`) antes dos hotspots maiores da familia PBX.
-4. Congelar criacao de novos usos de `DataGrid` apos publicacao do guideline.
+1. Manter `platform-grid` como padrao obrigatorio para novas telas CRUD.
+2. Preservar `frontend/src/modules/platform-grid/index.js` como unico ponto de import externo.
+3. Tratar qualquer reintroducao de grid paralelo como regressao arquitetural.
+4. Validar via build e guardrails antes de qualquer alteracao estrutural no modulo.
 
 ## Criterios de sucesso da migracao de grid
 - Paridade de comportamento (sort/paginacao/click/estados) por tela migrada.

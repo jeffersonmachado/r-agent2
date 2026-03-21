@@ -6,6 +6,7 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function BulkMessagingPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -152,11 +153,11 @@ export function BulkMessagingPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -165,7 +166,7 @@ export function BulkMessagingPage() {
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📢 Disparos em Massa</h1>
@@ -369,6 +370,6 @@ export function BulkMessagingPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }

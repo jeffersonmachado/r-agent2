@@ -4,6 +4,7 @@ import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput } from '../../components/crm/CrmComponents';
 import { ScheduleModal } from '../../components/ScheduleModal';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function ContactsPage() {
   const { contacts: allContacts, setContacts } = useCrm();
@@ -110,7 +111,7 @@ export function ContactsPage() {
   const endItem = totalContacts === 0 ? 0 : startItem + currentPageCount - 1;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>👤 Contatos</h1>
@@ -227,6 +228,6 @@ export function ContactsPage() {
         />
       ) : null}
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

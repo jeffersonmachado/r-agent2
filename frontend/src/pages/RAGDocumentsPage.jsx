@@ -10,6 +10,7 @@ import { Button } from '../styles/Button';
 import { buildApiUrl } from '../api/client';
 import { getAuthHeaders } from '../api/auth';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function RAGDocumentsPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
@@ -26,11 +27,11 @@ export function RAGDocumentsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase title="📚 Gerenciamento de Documentos RAG">
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -2065,7 +2066,12 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
     : [...new Set([...KNOWN_SOURCES, ...documentsArray.map(doc => doc.metadata?.source).filter(Boolean)])].sort();
 
   return (
-    <div className="support-page w-full h-screen" style={{ paddingTop: '60px' }}>
+    <CrudPageBase
+      title="📚 Gerenciamento de Documentos RAG"
+      hideHeader
+      className="w-full h-screen"
+      style={{ paddingTop: '60px' }}
+    >
       <div className="support-header">
         <div style={{ marginBottom: '10px' }}>
           <h1>📚 Gerenciamento de Documentos RAG</h1>
@@ -4883,6 +4889,6 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
           </div>
         </Dialog>
       )}
-    </div>
+    </CrudPageBase>
   );
 }

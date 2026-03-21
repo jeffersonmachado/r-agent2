@@ -1,1 +1,0 @@
-export { PlatformGridPagination } from '../PlatformGridPagination';

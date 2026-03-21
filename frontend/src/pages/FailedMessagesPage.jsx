@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { fetchJson } from '../api/client';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function FailedMessagesPage() {
   const { navigate } = useRouter();
@@ -276,7 +277,7 @@ export function FailedMessagesPage() {
   const currentPage = Math.floor(pagination.offset / pagination.limit) + 1;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Monitoramento de Mensagens</h1>
         <p>Visualize mensagens falhadas, pendentes e entregues</p>
@@ -618,6 +619,6 @@ export function FailedMessagesPage() {
           </div>
         </div>
       )}
-    </div>
+    </CrudPageBase>
   );
 }

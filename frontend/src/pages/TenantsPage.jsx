@@ -12,6 +12,7 @@ import { useConfirmDialog } from '../components/ConfirmDialog';
 import { PlanSelectionModal } from '../components/PlanSelectionModal';
 import logger from '../utils/logger';
 import { formatDateTime } from '../utils/dateFormatter';
+import { CrudPageBase, useCrudFilters, useCrudList } from '../modules/crud-base';
 
 export function TenantsPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -45,8 +46,6 @@ export function TenantsPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const [allTenants, setAllTenants] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showContextForm, setShowContextForm] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -68,10 +67,19 @@ export function TenantsPage() {
     prioridade: 'HIGH',
     escopo: ['rag', 'chatbot', 'classificacao_intencao'],
   });
-  const [filters, setFilters] = useState({
+  const { filters, setFilter, resetFilters } = useCrudFilters({
     search: '',
     status: '',
     plan: '',
+  });
+  const {
+    allItems: allTenants,
+    loading,
+    error: tenantsLoadError,
+    loadItems: loadTenants,
+  } = useCrudList(async () => {
+    const result = await tenantsApi.listTenants();
+    return result?.tenants || [];
   });
 
   // Apenas super-admin (role super_admin OU owner do tenant system) pode gerenciar tenants
@@ -83,21 +91,14 @@ export function TenantsPage() {
     if (isAuthenticated && canManageTenants) {
       loadTenants();
     }
-  }, [isAuthenticated, canManageTenants]);
+  }, [isAuthenticated, canManageTenants, loadTenants]);
 
-  const loadTenants = async () => {
-    try {
-      setLoading(true);
-      const result = await tenantsApi.listTenants();
-      const tenantsList = result.tenants || [];
-      setAllTenants(tenantsList);
-    } catch (err) {
-      logger.error('Erro ao carregar tenants', err);
-      showToast('Erro ao carregar tenants', 'error');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (tenantsLoadError) {
+      logger.error('Erro ao carregar tenants', tenantsLoadError);
+      showToast(tenantsLoadError, 'error');
     }
-  };
+  }, [tenantsLoadError, showToast]);
 
   const loadTenantContext = async (tenantId) => {
     try {
@@ -149,14 +150,6 @@ export function TenantsPage() {
 
     return filtered;
   }, [allTenants, filters]);
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ search: '', status: '', plan: '' });
-  };
 
   const resetForm = () => {
     setFormData({
@@ -270,60 +263,49 @@ export function TenantsPage() {
 
   if (!canManageTenants) {
     return (
-      <div className="support-page">
-        <div className="support-header">
-          <h1>🏢 Gerenciamento de Tenants</h1>
-        </div>
+      <CrudPageBase title="🏢 Gerenciamento de Tenants">
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">
             Você não tem permissão para gerenciar tenants. Apenas super-admins podem acessar esta página.
           </p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (loading) {
     return (
-      <div className="support-page">
-        <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>🏢 Gerenciamento de Tenants</h1>
-          </div>
-        </div>
+      <CrudPageBase title="🏢 Gerenciamento de Tenants">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
             <p className="text-text-secondary">Carregando tenants...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
-      <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>🏢 Gerenciamento de Tenants</h1>
-        </div>
-        <div className="support-controls" style={{ display: 'flex', gap: '10px' }}>
-          <Button 
-            onClick={handleCreate} 
+    <CrudPageBase
+      title="🏢 Gerenciamento de Tenants"
+      actions={(
+        <>
+          <Button
+            onClick={handleCreate}
             style={{ backgroundColor: '#25D366', color: 'white' }}
           >
             ➕ Novo Tenant
           </Button>
-          <Button 
-            onClick={() => {
-              navigate('/generate-system?mode=tenant');
-            }}
+          <Button
+            onClick={() => navigate('/generate-system?mode=tenant')}
             style={{ backgroundColor: '#8B5CF6', color: 'white' }}
           >
             🤖 Criar por IA
           </Button>
-        </div>
-      </div>
+        </>
+      )}
+    >
 
       {/* Filtros */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
@@ -339,7 +321,7 @@ export function TenantsPage() {
             <input
               type="text"
               value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
+              onChange={(e) => setFilter('search', e.target.value)}
               placeholder="Tenant ID, nome, site, ramo ou objetivo..."
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
             />
@@ -351,7 +333,7 @@ export function TenantsPage() {
             </label>
             <select
               value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
+              onChange={(e) => setFilter('status', e.target.value)}
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
@@ -368,7 +350,7 @@ export function TenantsPage() {
             </label>
             <select
               value={filters.plan}
-              onChange={(e) => handleFilterChange('plan', e.target.value)}
+              onChange={(e) => setFilter('plan', e.target.value)}
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
             >
               <option value="">Todos</option>
@@ -381,7 +363,7 @@ export function TenantsPage() {
 
           <div className="flex items-end">
             <Button
-              onClick={clearFilters}
+              onClick={resetFilters}
               variant="secondary"
               className="w-full"
               disabled={!filters.search && !filters.status && !filters.plan}
@@ -909,7 +891,7 @@ export function TenantsPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }
 

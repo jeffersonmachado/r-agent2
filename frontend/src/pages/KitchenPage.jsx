@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listOrders, updateOrderStatus } from '../api/orders';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function KitchenPage() {
   const [orders, setOrders] = useState([]);
@@ -33,7 +34,7 @@ export function KitchenPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Cozinha</h1>
         <div className="support-controls">
@@ -70,7 +71,7 @@ export function KitchenPage() {
         ))}
         {!loading && orders.length === 0 ? <p style={{ color: '#6b7280' }}>Nenhum pedido aguardando preparo.</p> : null}
       </div>
-    </div>
+    </CrudPageBase>
   );
 }
 

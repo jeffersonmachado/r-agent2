@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { listQuickReplies, createQuickReply, updateQuickReply, deleteQuickReply, getCategories, getTags, searchQuickReplies } from '../api/quickReplies';
+import { listQuickReplies, createQuickReply, updateQuickReply, deleteQuickReply, getCategories, getTags } from '../api/quickReplies';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
+import { CrudPageBase, useCrudFilters } from '../modules/crud-base';
 import logger from '../utils/logger';
 import { formatDateTime } from '../utils/dateFormatter';
 
@@ -57,11 +58,11 @@ export function QuickRepliesPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase title="⚡ Respostas Rápidas">
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -75,7 +76,7 @@ export function QuickRepliesPage() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingReply, setEditingReply] = useState(null);
-  const [filters, setFilters] = useState({
+  const { filters, setFilter } = useCrudFilters({
     category: '',
     tag: '',
     search: '',
@@ -211,22 +212,17 @@ export function QuickRepliesPage() {
   };
 
   return (
-    <div className="support-page">
-      <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>⚡ Respostas Rápidas</h1>
-        </div>
-        <div className="support-controls">
-          <Button 
-            onClick={openCreateModal}
-            style={{ backgroundColor: '#25D366', color: 'white' }}
-          >
-            ➕ Nova Resposta Rápida
-          </Button>
-        </div>
-      </div>
-
-        {/* Filtros */}
+    <CrudPageBase
+      title="⚡ Respostas Rápidas"
+      actions={(
+        <Button
+          onClick={openCreateModal}
+          style={{ backgroundColor: '#25D366', color: 'white' }}
+        >
+          ➕ Nova Resposta Rápida
+        </Button>
+      )}
+      filters={(
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
           <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
             <span>🔍</span>
@@ -239,7 +235,7 @@ export function QuickRepliesPage() {
               </label>
               <select
                 value={filters.category}
-                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                onChange={(e) => setFilter('category', e.target.value)}
                 className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
               >
                 <option value="">Todas</option>
@@ -254,7 +250,7 @@ export function QuickRepliesPage() {
               </label>
               <select
                 value={filters.tag}
-                onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+                onChange={(e) => setFilter('tag', e.target.value)}
                 className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer hover:border-border-hover"
               >
                 <option value="">Todas</option>
@@ -271,15 +267,16 @@ export function QuickRepliesPage() {
                 type="text"
                 placeholder="Buscar por título ou mensagem..."
                 value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                onChange={(e) => setFilter('search', e.target.value)}
                 className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
               />
             </div>
           </div>
         </div>
-
-        {/* Lista */}
-        {loading ? (
+      )}
+    >
+      {/* Lista */}
+      {loading ? (
           <div className="text-center py-12">
             <p className="text-text-secondary">Carregando...</p>
           </div>
@@ -482,6 +479,6 @@ export function QuickRepliesPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }

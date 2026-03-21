@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { PlanSelectionModal } from '../components/PlanSelectionModal';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function SuperAdminPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -187,7 +188,7 @@ export function SuperAdminPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>🔐 Super Admin</h1>
         
@@ -206,13 +207,13 @@ export function SuperAdminPage() {
             Apenas Super Admin pode acessar esta área.
           </p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>🔐 Super Admin</h1>
         </div>
@@ -222,12 +223,12 @@ export function SuperAdminPage() {
             <p className="text-text-secondary">Carregando...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🔐 Super Admin - Gerenciamento Global</h1>
       </div>
@@ -479,6 +480,6 @@ export function SuperAdminPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }

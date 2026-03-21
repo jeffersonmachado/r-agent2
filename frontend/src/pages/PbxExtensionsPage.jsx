@@ -4,6 +4,7 @@ import { Button } from '../styles/Button';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -398,7 +399,7 @@ export function PbxExtensionsPage() {
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>📞 PBX • Ramais</h1>
@@ -410,12 +411,12 @@ export function PbxExtensionsPage() {
             <p className="text-text-secondary">Carregando ramais...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📞 PBX • Ramais</h1>
@@ -675,7 +676,7 @@ export function PbxExtensionsPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

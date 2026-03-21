@@ -8,6 +8,7 @@ import { Input } from '../styles/Input';
 import { Dialog } from '../components/Dialog';
 import logger from '../utils/logger';
 import { listChannelAccounts, createChannelAccount, updateChannelAccount, deleteChannelAccount, testChannelAccount } from '../api/channelAccounts';
+import { CrudPageBase } from '../modules/crud-base';
 
 function safeJsonParse(text) {
   if (!text) return { ok: true, value: null };
@@ -230,17 +231,17 @@ export function ChannelAccountsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🔌 Canais</h1>
@@ -430,7 +431,7 @@ export function ChannelAccountsPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }
 

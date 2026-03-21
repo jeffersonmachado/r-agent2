@@ -6,6 +6,7 @@ import logger from '../utils/logger';
 import { listNodeCatalog } from '../api/nodeMarketplace';
 import { Button } from '../styles/Button';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function NodeMarketplacePage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -57,18 +58,18 @@ export function NodeMarketplacePage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+        </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+      <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -111,6 +112,6 @@ export function NodeMarketplacePage() {
           }}
         />
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

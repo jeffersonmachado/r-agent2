@@ -1,1 +1,0 @@
-export { PlatformGridToolbar } from '../PlatformGridToolbar';

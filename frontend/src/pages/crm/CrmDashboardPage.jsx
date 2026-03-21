@@ -3,6 +3,7 @@ import { useRouter } from '../../hooks/useRouter';
 import { CrmPage } from './CrmPage';
 import { buildApiUrl } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function CrmDashboardPage() {
   const { currentPath } = useRouter();
@@ -221,7 +222,7 @@ function CrmDashboardContent() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🚀 Dashboard CRM</h1>
         <p>Pilar de Relacionamento com Cliente: gestão comercial end-to-end.</p>
@@ -425,6 +426,6 @@ function CrmDashboardContent() {
           </div>
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

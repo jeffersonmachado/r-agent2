@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function WhatsAppTemplatesPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -224,7 +225,7 @@ export function WhatsAppTemplatesPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>💬 Templates WhatsApp Business API</h1>
@@ -236,7 +237,7 @@ export function WhatsAppTemplatesPage() {
             <p className="text-text-secondary">Carregando...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -247,7 +248,7 @@ export function WhatsAppTemplatesPage() {
   const templateVariables = selectedTemplate ? extractVariables(selectedTemplate) : [];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>💬 Templates WhatsApp Business API</h1>
@@ -752,6 +753,6 @@ export function WhatsAppTemplatesPage() {
         )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

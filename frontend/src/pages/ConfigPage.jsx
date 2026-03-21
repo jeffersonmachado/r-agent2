@@ -10,6 +10,7 @@ import { useTheme } from '../styles/themeContext';
 import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { CrudPageBase } from '../modules/crud-base';
 
 /**
  * Página de gerenciamento de configuração do sistema.
@@ -31,9 +32,11 @@ export function ConfigPage() {
 
   if (authLoading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <p>Carregando...</p>
-      </div>
+      <CrudPageBase title="⚙️ Configuração do Sistema">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Carregando...</p>
+        </div>
+      </CrudPageBase>
     );
   }
 
@@ -856,17 +859,19 @@ export function ConfigPage() {
 
   if (loading && !config) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
-          <p className="text-text-secondary">Carregando configuração...</p>
+      <CrudPageBase title="⚙️ Configuração do Sistema">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
+            <p className="text-text-secondary">Carregando configuração...</p>
+          </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <>
+    <CrudPageBase title="⚙️ Configuração do Sistema">
       <style>{`
         .config-page-scroll::-webkit-scrollbar {
           width: 8px;
@@ -2223,6 +2228,6 @@ export function ConfigPage() {
         <ConfirmDialog />
         </div>
       </div>
-    </>
+    </CrudPageBase>
   );
 }

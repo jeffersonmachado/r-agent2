@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function ProductDocsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -22,11 +23,11 @@ export function ProductDocsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -224,7 +225,7 @@ export function ProductDocsPage() {
   const productIds = [...new Set(documentsArray.map(doc => doc.metadata?.productId).filter(Boolean))];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📖 Documentação de Produtos</h1>
@@ -450,6 +451,6 @@ export function ProductDocsPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }

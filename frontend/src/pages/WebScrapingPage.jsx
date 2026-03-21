@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import { toastError, toastWarn } from '../utils/toastHelpers';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function WebScrapingPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -21,11 +22,11 @@ export function WebScrapingPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -301,7 +302,7 @@ export function WebScrapingPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🕷️ Raspagem de Sites</h1>
@@ -798,7 +799,7 @@ export function WebScrapingPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

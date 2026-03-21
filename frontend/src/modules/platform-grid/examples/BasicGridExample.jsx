@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlatformGrid } from '../components/PlatformGrid';
+import { PlatformGrid } from '../PlatformGrid';
 import { usePlatformGridState } from '../hooks/usePlatformGridState';
 
 const demoRows = [

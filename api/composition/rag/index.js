@@ -19,6 +19,7 @@ const {
   parseJsonBody,
   setCorsHeaders,
 } = require('../../express/httpHelpers');
+const { requireTenant } = require('../shared/requireTenant');
 const logger = require('../../utils/logger');
 const { logAction } = require('../../services/auditService');
 const { parseMultipartFormData } = require('../../utils/multipartParser');
@@ -68,24 +69,6 @@ function buildRagRouteDeps() {
     scrapeUrl,
     scrapeUrls,
   });
-}
-
-/**
- * requireTenant — injetado via server.js no momento de uso.
- * Como requireTenant depende de isSuperAdmin e sendJson (já importados aqui),
- * definimos uma cópia local idêntica à do server.js para desacoplar completamente.
- */
-function requireTenant(req, res) {
-  const superAdmin = req?.agent ? isSuperAdmin(req.agent) : false;
-  const tenantIdRaw = superAdmin
-    ? (req?.tenantId || null)
-    : (req?.tenantId || req?.agent?.tenantId || null);
-  const tenantId = typeof tenantIdRaw === 'string' ? tenantIdRaw.trim() : null;
-  if (!tenantId) {
-    sendJson(res, 403, { error: 'tenant_required' });
-    return null;
-  }
-  return tenantId;
 }
 
 module.exports = {

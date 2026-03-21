@@ -2,12 +2,41 @@
 
 ## Visao geral
 - Entry point principal: `api/server.js`
-- Tamanho atual: 1611 linhas
+- Tamanho atual: 962 linhas
 - Handlers em `api/serverHandlers`: 69 arquivos
 - Handlers wired no dispatcher principal: 69
 - Handlers nao wired detectados: 0
 
+## Hotspot atual de wiring
+- Arquivo principal de acoplamento atual: `api/app/registerRoutes.js`.
+- Tamanho atual: 355 linhas.
+- Builders centralizados remanescentes: 0.
+- Builders extraidos no ciclo atual para composition roots dedicados:
+  - `api/composition/public-system/index.js`
+  - `api/composition/auth/index.js`
+  - `api/composition/pbx/index.js`
+  - `api/composition/vertical/index.js`
+  - `api/composition/webhooks/index.js`
+  - `api/composition/operations-dashboard/index.js`
+  - `api/composition/qa/index.js`
+  - `api/composition/voice/index.js`
+  - `api/composition/web-scraping/index.js`
+  - `api/composition/rpa-tests/index.js`
+  - `api/composition/dev-management/index.js`
+  - `api/composition/intelligence/index.js`
+  - `api/composition/market-intelligence/index.js`
+  - `api/composition/access-control/index.js`
+  - `api/composition/analytics/index.js`
+  - `api/composition/bulk-campaigns/index.js`
+  - `api/composition/quick-replies/index.js`
+
+## Bridges residuais explicitas
+- `api/modules/shared/legacyExpressBridge.js` concentra a ponte residual intencional entre handlers legados e rotas Express.
+- Nao ha mais bridge generica distribuida por dominio nem builders centralizados paralelos no wiring principal.
+- Excecoes residuais permanecem documentadas para evitar ambiguidade estrutural.
+
 ## Dispatcher principal (status de extracao)
+Nota: esta secao registra o historico de decomposicao por dispatchers. No estado atual, o gargalo principal de wiring esta concentrado em `api/app/registerRoutes.js`.
 - Primeira fatia extraida para modulo dedicado: `api/routing/dispatchCoreRoutes.js`.
 - Cobertura da fatia: `systemAdmin`, `auth`, `tenant`, `systemGeneration`, `superAdmin`, `onboarding`, `agent`, `audit`, `flowCrud`, `flowExecution`, `conversation`.
 - Segunda fatia extraida para modulo dedicado: `api/routing/dispatchPlatformRoutes.js`.

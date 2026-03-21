@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listOrders, updateOrderStatus } from '../api/orders';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function DispatchPage() {
   const [orders, setOrders] = useState([]);
@@ -33,7 +34,7 @@ export function DispatchPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Expedição</h1>
         <div className="support-controls">
@@ -70,7 +71,7 @@ export function DispatchPage() {
         ))}
         {!loading && orders.length === 0 ? <p style={{ color: '#6b7280' }}>Nenhum pedido pronto para expedição.</p> : null}
       </div>
-    </div>
+    </CrudPageBase>
   );
 }
 

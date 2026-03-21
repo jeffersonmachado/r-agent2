@@ -10,6 +10,7 @@ import * as onboardingApi from '../api/onboarding';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function OnboardingPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -136,7 +137,7 @@ export function OnboardingPage() {
 
   if (!onboarding) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <h1>🚀 Onboarding</h1>
         
@@ -161,12 +162,12 @@ export function OnboardingPage() {
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">Carregando onboarding...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🚀 Onboarding - Configuração Inicial</h1>
       </div>
@@ -304,6 +305,6 @@ export function OnboardingPage() {
       </div>
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

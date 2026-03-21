@@ -6,6 +6,7 @@ import { Button } from '../styles/Button';
 import { Input } from '../styles/Input';
 import { listSlaPolicies, upsertSlaPolicy, listSlaBreaches } from '../api/sla';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 function parseDate(value) {
   const date = value ? new Date(value) : null;
@@ -224,17 +225,17 @@ export function SlaPoliciesPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <h1>⏱️ SLA por Cliente</h1>
@@ -435,6 +436,6 @@ export function SlaPoliciesPage() {
           )}
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

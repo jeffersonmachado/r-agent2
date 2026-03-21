@@ -38,6 +38,7 @@ import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -611,7 +612,7 @@ export function PbxModulePage() {
   const showLegacyXmlPicker = moduleConfig.key === 'legacyXml';
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>{moduleConfig.emoji} PBX • {moduleConfig.title}</h1>
@@ -824,7 +825,7 @@ export function PbxModulePage() {
       ) : null}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

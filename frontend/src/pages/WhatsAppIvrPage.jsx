@@ -12,6 +12,7 @@ import {
 } from '../api/whatsappIvr';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function WhatsAppIvrPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -123,18 +124,18 @@ export function WhatsAppIvrPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <h1>💬 URA WhatsApp</h1>
@@ -253,6 +254,6 @@ export function WhatsAppIvrPage() {
           </div>
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

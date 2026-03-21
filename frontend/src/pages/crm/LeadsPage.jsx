@@ -3,6 +3,7 @@ import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, CrmBadge } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 const LEAD_STATUS_LABELS = {
   new: 'Novo',
@@ -131,7 +132,7 @@ export function LeadsPage() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🎯 Leads</h1>
@@ -249,6 +250,6 @@ export function LeadsPage() {
         </CrmForm>
       </CrmModal>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

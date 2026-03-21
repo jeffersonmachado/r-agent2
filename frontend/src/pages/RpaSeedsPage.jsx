@@ -8,6 +8,7 @@ import { Dialog } from '../components/Dialog';
 import { Button } from '../styles/Button';
 import { listRpaRecordings, executeRpaRecording, getRpaExecutionStatus, cancelRpaExecution, deleteRpaRecording, startManualRecording, stopManualRecording, getRecordingStatus } from '../api/rpa';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 /**
  * Página para visualizar e reproduzir seeds RPA.
@@ -293,11 +294,11 @@ export function RpaSeedsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -306,7 +307,7 @@ export function RpaSeedsPage() {
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div style={{ marginBottom: '30px' }}>
         <h1 className="text-3xl font-bold text-text-primary mb-2">🌱 Seeds RPA</h1>
         <p className="text-text-secondary">
@@ -761,7 +762,7 @@ export function RpaSeedsPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

@@ -67,6 +67,7 @@ const { validateVoiceFlow } = require('../../utils/voiceFlowValidator');
 const { simulateFlow } = require('../../../engine/flowSimulation');
 const { buildConversationReplay } = require('../../../engine/replay');
 const rpaDependencyResolver = require('../../../engine/rpaDependencyResolver');
+const { requireTenant } = require('../shared/requireTenant');
 
 function getRequestMethod(req) {
   return (req.method || 'GET').toUpperCase();
@@ -193,17 +194,6 @@ function createBuildCoreRoutingContext(localDeps) {
       listConversationMessages,
     };
   };
-}
-
-function requireTenant(req, res) {
-  const superAdmin = req?.agent ? isSuperAdmin(req.agent) : false;
-  const tenantIdRaw = superAdmin ? (req?.tenantId || null) : (req?.tenantId || req?.agent?.tenantId || null);
-  const tenantId = typeof tenantIdRaw === 'string' ? tenantIdRaw.trim() : null;
-  if (!tenantId) {
-    sendJson(res, 403, { error: 'tenant_required' });
-    return null;
-  }
-  return tenantId;
 }
 
 module.exports = {

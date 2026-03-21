@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useRouter } from '../hooks/useRouter';
-import { DashboardKpiCard, DashboardFeatureGrid } from '../components/DashboardBase';
+import { DashboardKpiCard, DashboardFeatureGrid } from '../modules/dashboard-base';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function QueuePhysicalDashboardPage() {
   const { navigate } = useRouter();
@@ -23,7 +24,7 @@ export function QueuePhysicalDashboardPage() {
   );
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Dashboard Fila Física</h1>
         <p>Pilar 2: operação fast-service de ponta a ponta (kiosk, station e panel).</p>
@@ -42,6 +43,6 @@ export function QueuePhysicalDashboardPage() {
       </div>
 
       <DashboardFeatureGrid features={features} onNavigate={navigate} />
-    </div>
+    </CrudPageBase>
   );
 }

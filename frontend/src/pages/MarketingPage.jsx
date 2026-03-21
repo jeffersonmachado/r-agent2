@@ -17,6 +17,7 @@ import {
 } from '../api/marketing';
 import { buildApiUrl } from '../api/client';
 import { Button } from '../styles/Button';
+import { CrudPageBase } from '../modules/crud-base';
 
 const STAGE_ORDER = ['visitor', 'lead', 'mql', 'sql', 'customer'];
 
@@ -369,18 +370,18 @@ export function MarketingPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -732,6 +733,6 @@ export function MarketingPage() {
           </section>
         </div>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

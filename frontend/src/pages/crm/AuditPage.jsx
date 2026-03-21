@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CrmCard, CrmTable } from '../../components/crm/CrmComponents';
 import { buildApiUrl } from '../../api/client';
+import { CrudPageBase } from '../../modules/crud-base';
 
 function getAuditDate(log) {
   return log?.timestamp || log?.created_at || log?.createdAt || null;
@@ -60,7 +61,7 @@ export function AuditPage() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>📋 Auditoria CRM</h1>
         <p>Logs de ações e compliance.</p>
@@ -105,6 +106,6 @@ export function AuditPage() {
           </ul>
         </CrmCard>
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

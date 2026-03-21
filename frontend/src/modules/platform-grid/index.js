@@ -1,9 +1,9 @@
-export { PlatformGrid } from './components/PlatformGrid';
-export { PlatformGridToolbar } from './components/PlatformGridToolbar';
-export { PlatformGridFilters } from './components/PlatformGridFilters';
-export { PlatformGridPagination } from './components/PlatformGridPagination';
-export { PlatformGridEmptyState } from './components/PlatformGridEmptyState';
-export { PlatformGridLoadingState } from './components/PlatformGridLoadingState';
+export { PlatformGrid } from './PlatformGrid';
+export { PlatformGridToolbar } from './PlatformGridToolbar';
+export { PlatformGridFilters } from './PlatformGridFilters';
+export { PlatformGridPagination } from './PlatformGridPagination';
+export { PlatformGridEmptyState } from './PlatformGridEmptyState';
+export { PlatformGridLoadingState } from './PlatformGridLoadingState';
 export { usePlatformGridState } from './hooks/usePlatformGridState';
 export { usePlatformGridFilters } from './hooks/usePlatformGridFilters';
 export { usePlatformGridSelection } from './hooks/usePlatformGridSelection';

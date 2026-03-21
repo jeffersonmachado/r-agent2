@@ -16,6 +16,7 @@ import { RbacPage } from './RbacPage';
 import { AuditPage } from './AuditPage';
 import { buildApiUrl } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import { CrudPageBase } from '../../modules/crud-base';
 
 export function CrmPage() {
   const { currentPath, navigate } = useRouter();
@@ -91,7 +92,7 @@ function DashboardSection() {
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>📊 Dashboard CRM</h1>
@@ -104,7 +105,7 @@ function DashboardSection() {
           </div>
         </div>
         <ToastContainer />
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -122,7 +123,7 @@ function DashboardSection() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📊 Dashboard CRM</h1>
@@ -182,7 +183,7 @@ function DashboardSection() {
       </div>
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

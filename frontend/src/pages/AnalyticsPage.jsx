@@ -16,6 +16,7 @@ import { useToast } from '../components/Toast';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function AnalyticsPage() {
   const ORDER_HOUR_METRICS = ['created_count', 'confirmed_count', 'preparing_count', 'ready_count', 'dispatched_count', 'delivered_count', 'cancelled_count'];
@@ -471,11 +472,11 @@ export function AnalyticsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -485,7 +486,7 @@ export function AnalyticsPage() {
 
   if (loading && !metrics) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>📈 Analytics & Métricas</h1>
@@ -504,7 +505,7 @@ export function AnalyticsPage() {
         <div className="text-center py-12">
           <p className="text-text-secondary">Carregando métricas...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -596,7 +597,7 @@ export function AnalyticsPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📈 Analytics & Métricas</h1>
@@ -1694,6 +1695,6 @@ export function AnalyticsPage() {
           </>
         )}
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

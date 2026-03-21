@@ -1,9 +1,92 @@
 # Status de Execucao por Onda
 
 ## Ciclo atual
-- Ciclo: ONDA 4 (decomposicao de hotspots)
+- Ciclo: ONDA 13 (fechamento final e consolidacao documental)
 - Estado: concluida
-- Data de referencia: 2026-03-19
+- Data de referencia: 2026-03-20
+
+## Progresso ONDA 8 (ciclos continuos recentes)
+- Extracoes concluidas de `api/app/registerRoutes.js` para composition roots dedicados:
+  - `public-system` -> `api/composition/public-system/index.js`
+  - `auth` -> `api/composition/auth/index.js`
+  - `pbx` -> `api/composition/pbx/index.js`
+  - `vertical` -> `api/composition/vertical/index.js`
+  - `webhooks` -> `api/composition/webhooks/index.js`
+  - `operations-dashboard` -> `api/composition/operations-dashboard/index.js`
+  - `qa` -> `api/composition/qa/index.js`
+  - `voice` -> `api/composition/voice/index.js`
+  - `web-scraping` -> `api/composition/web-scraping/index.js`
+  - `rpa-tests` -> `api/composition/rpa-tests/index.js`
+  - `dev-management` -> `api/composition/dev-management/index.js`
+  - `intelligence` -> `api/composition/intelligence/index.js`
+  - `market-intelligence` -> `api/composition/market-intelligence/index.js`
+  - `access-control` -> `api/composition/access-control/index.js`
+  - `analytics` -> `api/composition/analytics/index.js`
+  - `bulk-campaigns` -> `api/composition/bulk-campaigns/index.js`
+  - `quick-replies` -> `api/composition/quick-replies/index.js`
+- Resultado estrutural:
+  - `registerRoutes.js`: 750 -> 355 linhas.
+  - Builders centralizados: 17 -> 0.
+  - `requireTenant` em composition roots: 11 definicoes locais -> 1 helper compartilhado (`api/composition/shared/requireTenant.js`).
+  - `server.js` permanece estavel em 962 linhas.
+- Validacoes executadas em cada ciclo:
+  - `node --check` nos arquivos alterados.
+  - suites de wiring dedicadas (`authCompositionCutoverWiring`, `pbxCompositionCutoverWiring`, `verticalCompositionCutoverWiring`, `webhooksCompositionCutoverWiring`, `publicSystemCompositionCutoverWiring`, `operationsDashboardCompositionCutoverWiring`, `qaCompositionCutoverWiring`, `voiceCompositionCutoverWiring`, `webScrapingCompositionCutoverWiring`, `rpaTestsCompositionCutoverWiring`, `devManagementCompositionCutoverWiring`, `intelligenceCompositionCutoverWiring`, `marketIntelligenceCompositionCutoverWiring`, `accessControlCompositionCutoverWiring`, `analyticsCompositionCutoverWiring`, `bulkCampaignsCompositionCutoverWiring`, `quickRepliesCompositionCutoverWiring`).
+  - `npm exec -- jest --runTestsByPath tests/unit/pbxCompositionCutoverWiring.test.js tests/unit/verticalCompositionCutoverWiring.test.js tests/unit/operationsDashboardCompositionCutoverWiring.test.js tests/unit/intelligenceCompositionCutoverWiring.test.js tests/unit/marketIntelligenceCompositionCutoverWiring.test.js tests/unit/accessControlCompositionCutoverWiring.test.js tests/unit/analyticsCompositionCutoverWiring.test.js tests/unit/bulkCampaignsCompositionCutoverWiring.test.js tests/unit/quickRepliesCompositionCutoverWiring.test.js --runInBand --no-coverage` (9 suites, 18 testes, 100% pass).
+  - `npm exec -- jest --runTestsByPath api/server.test.js --runInBand --no-coverage` com 28/28 testes passando apos cada onda.
+- Frente frontend concluida (ONDA 9 piloto):
+- Frente frontend concluida (ONDA 9 — todas 6 paginas):
+  - `frontend/src/modules/crud-base/CrudPageBase.jsx` criado como shell reutilizavel de CRUD.
+  - `frontend/src/modules/crud-base/hooks/useCrudFilters.js` criado para padronizar estado de filtros.
+  - `frontend/src/pages/QuickRepliesPage.jsx` migrada para a base nova (ARC-080).
+  - `frontend/src/pages/TenantsPage.jsx` migrada para `CrudPageBase` + `useCrudFilters` (ARC-081).
+  - `frontend/src/pages/AgentsPage.jsx` migrada para `CrudPageBase` + `useCrudFilters` (ARC-081).
+  - `frontend/src/pages/AccessControlPage.jsx` migrada para `CrudPageBase` (ARC-082).
+  - `frontend/src/pages/BackupPage.jsx` migrada para `CrudPageBase` (ARC-082).
+  - `frontend/src/pages/SsoScimPage.jsx` migrada para `CrudPageBase` (ARC-082).
+  - validacao: `cd frontend && npm run build` concluido sem erros (849 modulos, zero support-page inline).
+
+- Frente frontend ONDA 10 (hooks e testes):
+  - `frontend/src/modules/crud-base/hooks/useCrudList.js` criado (ARC-083).
+  - `frontend/src/modules/crud-base/hooks/useCrudForm.js` criado (ARC-084).
+  - `frontend/src/modules/crud-base/index.js` exporta 4 membros: `CrudPageBase`, `useCrudFilters`, `useCrudList`, `useCrudForm`.
+  - 3 suites Vitest para modulo `crud-base` criadas (ARC-086): 29/29 testes passando.
+  - 2 suites Jest de guardrail de wiring criadas (ARC-085): `requireTenantSharedWiring` + `crudBaseModuleWiring`, 10/10 testes passando.
+  - `frontend/src/pages/QuickRepliesPage.jsx` corrigida: guard `authLoading` usava `support-page` inline — substituido por `CrudPageBase`.
+
+- Frente frontend ONDA 11 (concluida):
+  - `useCrudList` evoluido com `params`, `loadOnMount` e `reloadOnParamsChange` (ARC-088).
+  - testes Vitest do hook atualizados: 18/18 passando no arquivo `useCrudList.useCrudForm.test.js`.
+  - `frontend/src/pages/TenantsPage.jsx` adotou `useCrudList` para carregamento principal da lista de tenants (remocao de boilerplate de loading/list).
+  - `frontend/src/pages/AgentsPage.jsx` adotou `useCrudList` para carregamento principal da lista de agentes (mantendo fluxo de CRUD e recarga pos-operacao).
+  - `frontend/src/pages/ConfigPage.jsx` migrada para shell `CrudPageBase` sem alterar sub-abas internas (ARC-087).
+  - `frontend/src/pages/FaqManagementPage.jsx` e `frontend/src/pages/TicketMaintenancePage.jsx` migradas para `CrudPageBase` (ARC-089).
+  - guardrail extra no Jest: `crudBaseModuleWiring` valida que `TenantsPage` e `AgentsPage` continuam consumindo `useCrudList`.
+  - guardrail de shell expandido: `crudBaseModuleWiring` agora cobre tambem `ConfigPage`, `FaqManagementPage` e `TicketMaintenancePage`.
+  - validacao: `cd frontend && npm run build` concluido sem erros (851 modulos).
+
+- Frente frontend ONDA 12 (concluida):
+  - `frontend/src/pages/SupportPage.jsx` migrou wrapper raiz para `CrudPageBase` (classe mobile preservada via `className`).
+  - `frontend/src/pages/RAGDocumentsPage.jsx` migrou wrapper raiz para `CrudPageBase` com `hideHeader` para manter header interno complexo.
+  - `frontend/src/pages/AccessControlPage.jsx` adotou `useCrudList` com `params` + `reloadOnParamsChange`, preservando URL-sync dos filtros de decisao.
+  - `frontend/src/modules/crud-base/CrudPageBase.jsx` evoluiu com `className`, `style` e `hideHeader` para suportar shells complexos.
+  - `frontend/src/modules/crud-base/utils/crudFeedback.js` criado para padronizar tratamento de erro/sucesso em toasts CRUD (ARC-093).
+  - `BackupPage`, `SsoScimPage` e `AccessControlPage` passaram a usar feedback unificado (`showCrudError`/`showCrudSuccess`) e botoes padronizados (ARC-093/094).
+  - guardrail de wiring atualizado para incluir `SupportPage`, `RAGDocumentsPage` e uso de `useCrudList` em `AccessControlPage`.
+  - validacao: `vitest` (CrudPageBase + hooks + crudFeedback) e `jest` (crudBaseModuleWiring) passando; `npm run build` sem erros (852 modulos).
+
+## Progresso ONDA 13 (fechamento final)
+- `frontend/src/components/DataGrid.jsx` e `frontend/src/components/DataGrid.css` foram removidos apos confirmacao de zero referencias ativas no frontend.
+- `frontend/src/modules/dashboard-base/index.js` foi criado como barrel canonico para exports compartilhados de dashboard.
+- `frontend/src/pages/ChatHumanoDashboardPage.jsx` e `frontend/src/pages/QueuePhysicalDashboardPage.jsx` passaram a consumir o barrel canonico novo.
+- Documentacao obrigatoria consolidada e alinhada ao estado atual: plano, backlog, mapa de dependencias, riscos, inventarios e legado.
+- Validacao executada:
+  - `cd frontend && npm run build` — build OK com 853 modulos.
+  - `npm exec -- jest --runTestsByPath tests/unit/dashboardBaseModuleWiring.test.js tests/unit/crudBaseModuleWiring.test.js api/server.test.js --runInBand --no-coverage` — 3 suites, 38 testes, 100% pass.
+- Resultado arquitetural:
+  - backend: `api/server.js` estavel em 962 linhas; `api/app/registerRoutes.js` em 355 linhas; builders centralizados = 0.
+  - bridges residuais: `api/modules/shared/legacyExpressBridge.js` documentado como excecao explicita.
+  - frontend: `PlatformGrid` e o unico grid ativo; `CrudPageBase` cobre os fluxos CRUD principais; dashboards compartilhados possuem path canonico.
 
 ## Entregas ONDA 1
 - `docs/architecture-modernization-plan.md`
@@ -19,15 +102,15 @@
 
 ## Evidencias quantitativas
 - Backend:
-  - `api/server.js`: 1611 linhas (apos extracoes de bootstrap/workers/shutdown + consolidacao do dispatcher em registries)
-  - handlers: 69 total, 66 wired, 3 nao wired
-  - arestas locais (`api/**`): 1729
-  - condicoes de metodo em handlers: 556
+  - `api/server.js`: 962 linhas.
+  - `api/app/registerRoutes.js`: 355 linhas.
+  - handlers: 69 total, 69 wired, 0 nao wired.
+  - builders centralizados em `registerRoutes.js`: 0.
 - Frontend:
-  - paginas `frontend/src/pages/**/*.jsx`: 91
-  - paginas importadas no `main.jsx`: 71
-  - arestas locais (`frontend/src/**`): 1086
-  - variantes DevDashboard: 3
+  - build de producao: 853 modulos transformados.
+  - `DataGrid`: 0 arquivos ativos no frontend apos remocao final.
+  - dashboards pilares com import canonico via `frontend/src/modules/dashboard-base/index.js`: 2.
+  - guardrails executados nesta onda: 3 suites, 38 testes, 100% pass.
 
 ## Gate de saida ONDA 1
 - Inventario real da base: OK

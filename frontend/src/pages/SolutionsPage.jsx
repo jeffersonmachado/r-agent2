@@ -6,6 +6,7 @@ import logger from '../utils/logger';
 import { listSolutionPacks, installSolutionPack } from '../api/solutions';
 import { Button } from '../styles/Button';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
+import { CrudPageBase } from '../modules/crud-base';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -111,18 +112,18 @@ export function SolutionsPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+        </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+      <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -192,6 +193,6 @@ export function SolutionsPage() {
           }}
         />
       </div>
-    </div>
+    </CrudPageBase>
   );
 }

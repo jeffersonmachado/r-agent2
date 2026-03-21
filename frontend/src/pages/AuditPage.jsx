@@ -12,6 +12,7 @@ import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
 import { ConversationHistoryModal } from '../components/ConversationHistoryModal';
 import { hasPermission, isSuperAdmin } from '../utils/menuPermissions';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function AuditPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -154,7 +155,7 @@ export function AuditPage() {
 
   if (!canViewAudit) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-text-primary mb-4">🚫 Acesso Negado</h1>
@@ -165,12 +166,12 @@ export function AuditPage() {
           </div>
         </div>
         <ToastContainer />
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🔍 Auditoria</h1>
@@ -482,7 +483,7 @@ export function AuditPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

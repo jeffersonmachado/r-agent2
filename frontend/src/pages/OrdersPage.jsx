@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listOrders, updateOrderStatus } from '../api/orders';
+import { CrudPageBase } from '../modules/crud-base';
 
 const NEXT_STATUS = {
   created: 'confirmed',
@@ -45,7 +46,7 @@ export function OrdersPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Pedidos</h1>
         <div className="support-controls" style={{ display: 'flex', gap: '0.5rem' }}>
@@ -105,7 +106,7 @@ export function OrdersPage() {
           </div>
         )}
       </div>
-    </div>
+    </CrudPageBase>
   );
 }
 

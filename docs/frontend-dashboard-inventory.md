@@ -26,18 +26,24 @@ Componentes importados e roteados diretamente no roteador principal:
 - Canonico atual de desenvolvimento: `frontend/src/pages/DevDashboardPage.jsx` (importado em `main.jsx`).
 - Variantes paralelas removidas neste ciclo: `.refactored.jsx` e `.jsx.backup`.
 
+Checkpoint 2026-03-20:
+- `frontend/src/main.jsx` segue importando exclusivamente `DevDashboardPage` como dashboard de desenvolvimento.
+- `frontend/src/modules/dashboard-base/index.js` passa a ser o ponto canonico de export para `DashboardFeatureGrid`, `DashboardKpiCard` e `DashboardSection`.
+- `frontend/src/pages/ChatHumanoDashboardPage.jsx` e `frontend/src/pages/QueuePhysicalDashboardPage.jsx` ja consomem o modulo canonico novo.
+- `frontend/src/pages/DevDashboardPage.jsx` continua modularizado em `components/DevDashboard/*`.
+
 ## Padroes comuns observados
-- Blocos repetidos de filtros + cards + tabelas/listas + toasts/alerts.
-- Estados de loading/erro/empty implementados por pagina (sem base unificada).
-- Acoplamento direto pagina->API em boa parte dos dashboards.
+- Dashboards "hub" ja compartilham cards e sections por meio de `components/DashboardBase/*`, agora expostos tambem por `modules/dashboard-base`.
+- Estados de loading/erro/empty ainda permanecem inline nos hotspots maiores.
+- O acoplamento mais relevante restante esta em `DashboardPage.jsx` e `OperationsDashboardPage.jsx`.
 
 ## Oportunidades de consolidacao
-1. Criar `DashboardBase` com layout, cabecalho e secoes reutilizaveis.
-2. Extrair componentes comuns para KPI cards, filter bars e section states.
-3. Padronizar estrategia de polling/refresh e erro por aba/secao.
-4. Continuar convergencia do dashboard canonico sobre a nova base (`DevDashboardLayout`, `DevDashboardSection`, `DevDashboardKpiCard`).
+1. Continuar extraindo `DashboardPage.jsx` para a base canonica de dashboard.
+2. Decompor `OperationsDashboardPage.jsx` em secoes/hooks menores mantendo o contrato atual.
+3. Padronizar filter bars, refresh e section states sobre o modulo `modules/dashboard-base`.
+4. Manter `DevDashboardPage.jsx` e `components/DevDashboard/*` como trilha canonica para dashboards operacionais mais complexos.
 
 ## Prioridade de migracao sugerida
-1. `OperationsDashboardPage.jsx` (alto volume e multipla responsabilidade).
-2. `DashboardPage.jsx` (hub de navegacao com grande superficie de links).
-3. `DevDashboardPage.jsx` (continuar extracao de secoes apos consolidacao canonica).
+1. `DashboardPage.jsx` (hub de navegacao com grande superficie de links).
+2. `OperationsDashboardPage.jsx` (alto volume de estado e multiplas abas).
+3. `crm/CrmDashboardPage.jsx` e `crm/AnalyticsDashboard.jsx` para convergencia de CRM.

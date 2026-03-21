@@ -21,6 +21,7 @@ import {
   searchTenantIntelligence,
   updateTenantGoal,
 } from '../api/intelligence';
+import { CrudPageBase } from '../modules/crud-base';
 
 function formatNumber(value, digits = 0) {
   const n = Number(value);
@@ -434,18 +435,18 @@ export function TenantIntelligencePage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>🧠 Tenant Intelligence</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
@@ -835,6 +836,6 @@ export function TenantIntelligencePage() {
       </div>
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

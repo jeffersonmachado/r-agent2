@@ -3,6 +3,7 @@ import { useCrm } from '../../context/crm/CrmContext';
 import { useCrmApi } from '../../hooks/crm/useCrmApi';
 import { useToast } from '../../components/Toast';
 import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmTextarea } from '../../components/crm/CrmComponents';
+import { CrudPageBase } from '../../modules/crud-base';
 
 function getActivityDate(activity) {
   return activity?.created_at || activity?.createdAt || activity?.occurredAt || null;
@@ -96,7 +97,7 @@ export function ActivitiesPage() {
   ];
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📝 Atividades</h1>
@@ -145,6 +146,6 @@ export function ActivitiesPage() {
         </CrmForm>
       </CrmModal>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

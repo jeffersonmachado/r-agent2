@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 import { Button } from '../styles/Button';
 import { getChannelHealth } from '../api/channelHealth';
+import { CrudPageBase } from '../modules/crud-base';
 
 function formatPct(x) {
   if (!Number.isFinite(x)) return '-';
@@ -82,11 +83,11 @@ export function ChannelHealthPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -98,7 +99,7 @@ export function ChannelHealthPage() {
   const waCredsOk = health?.whatsapp?.areCredentialsValid;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>📡 Saúde de Canais</h1>
@@ -299,7 +300,7 @@ export function ChannelHealthPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

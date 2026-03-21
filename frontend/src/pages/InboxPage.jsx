@@ -14,6 +14,7 @@ import {
 } from '../api/inbox';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function InboxPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
@@ -200,11 +201,11 @@ export function InboxPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -408,7 +409,7 @@ export function InboxPage() {
   };
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>📥 Inbox</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
@@ -631,6 +632,6 @@ export function InboxPage() {
         </div>
       </div>
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

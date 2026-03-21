@@ -18,6 +18,7 @@ import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 export function QaPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -158,7 +159,7 @@ export function QaPage() {
 
   if (!canViewQa) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-text-primary mb-4">🚫 Acesso Negado</h1>
@@ -169,12 +170,12 @@ export function QaPage() {
           </div>
         </div>
         <ToastContainer />
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>✅ Painel de Qualidade (QA)</h1>
@@ -447,7 +448,7 @@ export function QaPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

@@ -24,6 +24,7 @@ import {
 } from '../api/verticalPilot';
 import { markScheduleDone, markScheduleNoShow } from '../api/scheduling';
 import logger from '../utils/logger';
+import { CrudPageBase } from '../modules/crud-base';
 
 const TABS = [
   { id: 'beauty-agenda', label: 'Agenda Beauty' },
@@ -617,7 +618,7 @@ export function OperationsDashboardPage() {
   const system = summary?.summary?.system;
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <h1>Painel Operacional Beauty + Fitness</h1>
         <div className="support-controls">
@@ -1513,6 +1514,6 @@ export function OperationsDashboardPage() {
       ) : null}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }

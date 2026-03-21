@@ -7,6 +7,7 @@ import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 import { listDocuments, createDocument, updateDocument, deleteDocument, reindexDocument } from '../api/ragDocuments';
 import { generateFaqAnswers, generateFaqSuggestions } from '../api/faq';
+import { CrudPageBase } from '../modules/crud-base';
 
 function safeString(v) {
   if (v === null || v === undefined) return '';
@@ -49,11 +50,11 @@ export function FaqManagementPage() {
 
   if (authLoading) {
     return (
-      <div className="support-page">
+      <CrudPageBase title="❓ FAQ">
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
@@ -485,20 +486,17 @@ export function FaqManagementPage() {
   };
 
   return (
-    <div className="support-page">
-      <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>❓ FAQ</h1>
-        </div>
-        <div className="support-controls">
-          <Button
-            onClick={openCreateModal}
-            style={{ backgroundColor: '#25D366', color: 'white' }}
-          >
-            ➕ Novo item
-          </Button>
-        </div>
-      </div>
+    <CrudPageBase
+      title="❓ FAQ"
+      actions={(
+        <Button
+          onClick={openCreateModal}
+          style={{ backgroundColor: '#25D366', color: 'white' }}
+        >
+          ➕ Novo item
+        </Button>
+      )}
+    >
 
       {/* IA: sugerir perguntas + gerar respostas + importar */}
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
@@ -908,7 +906,7 @@ export function FaqManagementPage() {
 
       <ToastContainer />
       <ConfirmDialog />
-    </div>
+    </CrudPageBase>
   );
 }
 

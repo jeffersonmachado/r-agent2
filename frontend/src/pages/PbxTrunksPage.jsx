@@ -4,6 +4,7 @@ import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
+import { CrudPageBase } from '../modules/crud-base';
 
 const FIELD_CLASS =
   'w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all';
@@ -230,7 +231,7 @@ export function PbxTrunksPage() {
 
   if (loading) {
     return (
-      <div className="support-page">
+      <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>🌐 PBX • Troncos</h1>
@@ -242,12 +243,12 @@ export function PbxTrunksPage() {
             <p className="text-text-secondary">Carregando troncos...</p>
           </div>
         </div>
-      </div>
+      </CrudPageBase>
     );
   }
 
   return (
-    <div className="support-page">
+    <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>🌐 PBX • Troncos</h1>
@@ -417,7 +418,7 @@ export function PbxTrunksPage() {
       )}
 
       <ToastContainer />
-    </div>
+    </CrudPageBase>
   );
 }
 

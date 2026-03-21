@@ -8,14 +8,14 @@ Modernizar backend e frontend de forma incremental, sem reescrita total, preserv
 - Frontend: consolidar componentes canonicos para grid, dashboard e CRUD.
 - Legado: remover sobreposicoes, wrappers e variantes nao roteadas somente apos fase de convivencia controlada.
 
-## Estado atual (baseline ONDA 1)
-- `api/server.js`: 2674 linhas.
-- `api/serverHandlers/*.js`: 69 arquivos, 66 wired em `server.js`, 3 nao wired.
-- Dependencias locais no backend (`api/**`): 1729 arestas entre 553 arquivos.
-- Dependencias locais no frontend (`frontend/src/**`): 1086 arestas entre 430 arquivos.
-- Paginas frontend (`frontend/src/pages/**/*.jsx`): 91.
-- Paginas importadas em `frontend/src/main.jsx`: 71.
-- Variantes de DevDashboard: 3 (`.jsx`, `.refactored.jsx`, `.jsx.backup`).
+## Estado atual (snapshot 2026-03-20, fechamento arquitetural)
+- `api/server.js`: 962 linhas como entrypoint unico, funcional e estavel.
+- `api/app/registerRoutes.js`: 355 linhas, sem builders centralizados relevantes.
+- Builders centralizados em `registerRoutes.js`: 0.
+- Composition roots ativos em `api/composition/`: `tenant`, `ticket`, `rag`, `auth`, `pbx`, `vertical`, `webhooks`, `public-system`, `operations-dashboard`, `qa`, `voice`, `web-scraping`, `rpa-tests`, `dev-management`, `intelligence`, `market-intelligence`, `access-control`, `analytics`, `bulk-campaigns`, `quick-replies` (+ `core`, `platform`, `extended` apenas para contexto compartilhado).
+- Bridge residual explicito: `api/modules/shared/legacyExpressBridge.js` centraliza a ponte remanescente e documentada para handlers ainda nao reescritos em modulo nativo.
+- Frontend: `PlatformGrid` e o unico grid ativo; `DataGrid` foi removido do frontend em 2026-03-20.
+- Dashboard canonico: `frontend/src/pages/DevDashboardPage.jsx`; exports compartilhados de dashboard passam por `frontend/src/modules/dashboard-base/index.js`.
 
 ## Principios de execucao
 - Nao quebrar contratos HTTP existentes.
@@ -36,30 +36,30 @@ Modernizar backend e frontend de forma incremental, sem reescrita total, preserv
 - Extrair pipeline de startup de workers para `api/runtime/*`.
 - Manter `createServer()` e `requestHandler()` com mesma semantica de resposta.
 
-### ONDA 3 - Roteamento incremental
-- Introduzir composer de rotas por dominio sem trocar stack HTTP.
-- Substituir sequencia longa de `await handle*Routes(...)` por registry ordenado e testavel.
-- Cobrir wiring por testes de contrato HTTP.
+### ONDA 3 - Roteamento incremental (concluida)
+- Composer de rotas por dominio introduzido no runtime Express.
+- Sequencias legacy foram migradas para routers modulares e registradores declarativos.
+- Wiring protegido por testes de contrato e suites de cutover.
 
-### ONDA 4 - Modulos de dominio backend
-- Consolidar dominios de alto churn (PBX, ticket, RAG docs, tenant) com fronteiras explicitas.
-- Reduzir dependencias cruzadas handler->service utilitarias.
-- Evoluir wrappers `api/routes/*` para camada clara (ou remover se redundantes).
+### ONDA 4 - Modulos de dominio backend (em execucao continua)
+- Consolidacao de dominios de alto churn em modulos/composition roots dedicados.
+- Reducao progressiva de dependencias cruzadas e builders centralizados em `registerRoutes.js`.
+- Wrappers redundantes removidos; foco atual em extrair wiring de dominio restante para `api/composition/<domain>/index.js`.
 
-### ONDA 5 - Grid canonico frontend
-- Definir `platform-grid` como base canonica para novos CRUDs.
-- Criar adapter para migracao progressiva de usos atuais de `DataGrid`.
-- Migrar paginas prioritarias (PBX family + marketplace/solutions).
+### ONDA 5 - Grid canonico frontend (concluida)
+- `platform-grid` foi consolidado como base canonica para grids.
+- As paginas prioritarias foram migradas.
+- `DataGrid` foi aposentado e removido do frontend ativo.
 
-### ONDA 6 - Dashboard/base page canonica
-- Criar base reutilizavel para filtros, cards, estados de loading/erro/empty.
-- Aplicar primeiro em dashboards com maior duplicacao de padrao.
-- Manter compatibilidade visual e de navegacao.
+### ONDA 6 - Dashboard/base page canonica (concluida)
+- Componentes compartilhados de dashboard existem em `frontend/src/components/DashboardBase/*`.
+- O barrel canonico `frontend/src/modules/dashboard-base/index.js` centraliza os exports reutilizaveis.
+- `DevDashboardPage.jsx` segue como dashboard operacional canonico e modularizado.
 
-### ONDA 7 - Limpeza de legado
-- Remover variantes nao usadas (`.backup`, `.refactored`) apos congelamento.
-- Remover wrappers sem valor e codigo morto identificado nas ondas anteriores.
-- Registrar changelog de remocoes e plano de rollback.
+### ONDA 7 - Limpeza de legado (concluida)
+- Variantes nao usadas do dashboard de desenvolvimento foram removidas.
+- Codigo morto de grid foi removido.
+- Bridges residuais ficaram reduzidas a uma ponte explicita e documentada.
 
 ## Criterios de passagem entre ondas
 - Build/test baseline sem regressao funcional relevante.
@@ -71,6 +71,11 @@ Modernizar backend e frontend de forma incremental, sem reescrita total, preserv
 1. Extrair bloco de inicializacao (`startInitialization`) para `api/bootstrap/startInitialization.js` mantendo assinatura atual.
 2. Extrair startup de workers (outbound/assignment/execution queue/vertical scheduler/channel health) para `api/runtime/startWorkers.js`.
 3. Extrair shutdown hooks (`SIGINT`/`SIGTERM`/`beforeExit`) para `api/runtime/registerShutdownHooks.js`.
+
+## Fechamento atual
+1. Backend principal fechado: `registerRoutes.js` deixou de ser hotspot estrutural e a composicao por dominio esta completa.
+2. Frontend principal fechado: `PlatformGrid` e o unico grid ativo, `CrudPageBase` cobre os fluxos CRUD principais e dashboards compartilham um path canonico de base.
+3. Legado residual ficou restrito a pontos explicitos, documentados e sem ambiguidade operacional relevante.
 
 ## Fora de escopo imediato
 - Reescrever backend para outro framework HTTP em bloco unico.

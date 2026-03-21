@@ -3,6 +3,13 @@
 ## Objetivo
 Registrar artefatos paralelos, wrappers e sinais de codigo morto para limpeza controlada nas ondas finais.
 
+## Atualizacao de consolidacao (2026-03-20)
+- `api/app/registerRoutes.js` reduziu de 750 para 355 linhas e deixou de concentrar builders centralizados.
+- Builders centralizados no arquivo reduziram de 17 para 0 com extracoes de dominio para composition roots.
+- `frontend/src/components/DataGrid.jsx` e `frontend/src/components/DataGrid.css` foram removidos do frontend ativo.
+- `frontend/src/modules/dashboard-base/index.js` passa a ser o barrel canonico para exports compartilhados de dashboard.
+- `api/modules/shared/legacyExpressBridge.js` permanece como unica bridge residual explicita e documentada.
+
 ## Itens encontrados
 
 ## 1) Variantes de dashboard em paralelo
