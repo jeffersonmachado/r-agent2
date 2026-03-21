@@ -1,14 +1,27 @@
 'use strict';
 
 const express = require('express');
-const { mountExpressHandler } = require('../shared/expressHandlerBridge');
+const { handleMarketIntelligenceRoutes } = require('./handleMarketIntelligenceRoutes');
 
 function createMarketIntelligenceRoutes({ buildDeps }) {
   const router = express.Router();
 
-  mountExpressHandler(router, {
-    handler: require('../../serverHandlers/marketIntelligenceRoutes').handleMarketIntelligenceRoutes,
-    buildDeps,
+  router.use(async (req, res, next) => {
+    try {
+      const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+      const handled = await handleMarketIntelligenceRoutes({
+        req,
+        res,
+        method: (req.method || 'GET').toUpperCase(),
+        pathname,
+        deps: buildDeps(req, res),
+      });
+      if (!handled && !res.writableEnded) {
+        next();
+      }
+    } catch (err) {
+      next(err);
+    }
   });
 
   return router;

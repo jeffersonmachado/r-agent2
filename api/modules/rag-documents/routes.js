@@ -1,12 +1,11 @@
 'use strict';
 
 const express = require('express');
-const { mountExpressHandler } = require('../shared/expressHandlerBridge');
-const { handleRagOperationsRoutes } = require('../../serverHandlers/rag/ragOperationsRoutes');
-const { handleRagIngestionRoutes } = require('../../serverHandlers/rag/ragIngestionRoutes');
-const { handleRagCoreRoutes } = require('../../serverHandlers/rag/ragCoreRoutes');
-const { handleRagQueryRoutes } = require('../../serverHandlers/rag/ragQueryRoutes');
-const { handleRagLearningRoutes } = require('../../serverHandlers/rag/ragLearningRoutes');
+const { handleRagOperationsRoutes } = require('./rag/ragOperationsRoutes');
+const { handleRagIngestionRoutes } = require('./rag/ragIngestionRoutes');
+const { handleRagCoreRoutes } = require('./rag/ragCoreRoutes');
+const { handleRagQueryRoutes } = require('./rag/ragQueryRoutes');
+const { handleRagLearningRoutes } = require('./rag/ragLearningRoutes');
 
 function createRagDocumentsRoutes({ buildDeps }) {
   const router = express.Router();
@@ -18,9 +17,22 @@ function createRagDocumentsRoutes({ buildDeps }) {
     handleRagQueryRoutes,
     handleRagLearningRoutes,
   ].forEach((handler) => {
-    mountExpressHandler(router, {
-      handler,
-      buildDeps,
+    router.use(async (req, res, next) => {
+      try {
+        const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+        const handled = await handler({
+          req,
+          res,
+          method: (req.method || 'GET').toUpperCase(),
+          pathname,
+          deps: buildDeps(req, res),
+        });
+        if (!handled && !res.writableEnded) {
+          next();
+        }
+      } catch (err) {
+        next(err);
+      }
     });
   });
 

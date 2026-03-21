@@ -1,124 +1,109 @@
 'use strict';
 
 const express = require('express');
-const { mountExpressHandler } = require('../shared/expressHandlerBridge');
 const { createConfigRoutes } = require('../config/routes');
 const { createQueueRoutes } = require('../queue/routes');
-const { handleChannelAccountRoutes } = require('../../serverHandlers/channelAccountRoutes');
-const { handleDepartmentRoutes } = require('../../serverHandlers/departmentRoutes');
-const { handleExportRoutes } = require('../../serverHandlers/exportRoutes');
-const { handleSegmentationRoutes } = require('../../serverHandlers/segmentationRoutes');
-const { handleConfigAdminRoutes } = require('../../serverHandlers/configAdminRoutes');
+const { handleChannelAccountRoutes } = require('./handleChannelAccountRoutes');
+const { handleDepartmentRoutes } = require('./handleDepartmentRoutes');
+const { handleExportRoutes } = require('./handleExportRoutes');
+const { handleSegmentationRoutes } = require('./handleSegmentationRoutes');
+const { handleConfigAdminRoutes } = require('./handleConfigAdminRoutes');
 
 function createPlatformAdminRoutes({ buildDeps }) {
   const router = express.Router();
 
-  mountExpressHandler(router, {
-    handler: handleChannelAccountRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
+  function runHandled(handler, selectDeps) {
+    return async (req, res, next) => {
+      try {
+        const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+        const ctx = buildDeps(req, res);
+        const handled = await handler({
+          req,
+          res,
+          method: (req.method || 'GET').toUpperCase(),
+          pathname,
+          deps: selectDeps(ctx),
+        });
+        if (!handled && !res.writableEnded) {
+          next();
+        }
+      } catch (err) {
+        next(err);
+      }
+    };
+  }
 
-      return {
-        requireAuth: ctx.requireAuth,
-        requirePermission: ctx.requirePermission,
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-      };
-    },
-  });
+  router.use(runHandled(handleChannelAccountRoutes, (ctx) => ({
+    requireAuth: ctx.requireAuth,
+    requirePermission: ctx.requirePermission,
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+  })));
 
-  mountExpressHandler(router, {
-    handler: handleDepartmentRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
+  router.use(runHandled(handleDepartmentRoutes, (ctx) => ({
+    requireAuth: ctx.requireAuth,
+    requireTenant: ctx.requireTenant,
+    requirePermission: ctx.requirePermission,
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    logAction: ctx.logAction,
+    listDepartments: ctx.listDepartments,
+    getDepartment: ctx.getDepartment,
+    createDepartment: ctx.createDepartment,
+    updateDepartment: ctx.updateDepartment,
+    deleteDepartment: ctx.deleteDepartment,
+    addAgentToDepartment: ctx.addAgentToDepartment,
+    removeAgentFromDepartment: ctx.removeAgentFromDepartment,
+  })));
 
-      return {
-        requireAuth: ctx.requireAuth,
-        requireTenant: ctx.requireTenant,
-        requirePermission: ctx.requirePermission,
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        logAction: ctx.logAction,
-        listDepartments: ctx.listDepartments,
-        getDepartment: ctx.getDepartment,
-        createDepartment: ctx.createDepartment,
-        updateDepartment: ctx.updateDepartment,
-        deleteDepartment: ctx.deleteDepartment,
-        addAgentToDepartment: ctx.addAgentToDepartment,
-        removeAgentFromDepartment: ctx.removeAgentFromDepartment,
-      };
-    },
-  });
+  router.use(runHandled(handleExportRoutes, (ctx) => ({
+    requireAuth: ctx.requireAuth,
+    requirePermission: ctx.requirePermission,
+    requireTenant: ctx.requireTenant,
+    sendJson: ctx.sendJson,
+    logger: ctx.logger,
+    exportTicketsCSV: ctx.exportTicketsCSV,
+    exportMetricsCSV: ctx.exportMetricsCSV,
+    exportConversationsJSON: ctx.exportConversationsJSON,
+    exportFullReportJSON: ctx.exportFullReportJSON,
+  })));
 
-  mountExpressHandler(router, {
-    handler: handleExportRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
+  router.use(runHandled(handleSegmentationRoutes, (ctx) => ({
+    requireAuth: ctx.requireAuth,
+    requirePermission: ctx.requirePermission,
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    getAllTags: ctx.getAllTags,
+    getAllCategories: ctx.getAllCategories,
+    filterTickets: ctx.filterTickets,
+    getSegmentationStats: ctx.getSegmentationStats,
+    getTicket: ctx.getTicket,
+    addTagToTicket: ctx.addTagToTicket,
+    removeTagFromTicket: ctx.removeTagFromTicket,
+    setTicketCategory: ctx.setTicketCategory,
+  })));
 
-      return {
-        requireAuth: ctx.requireAuth,
-        requirePermission: ctx.requirePermission,
-        requireTenant: ctx.requireTenant,
-        sendJson: ctx.sendJson,
-        logger: ctx.logger,
-        exportTicketsCSV: ctx.exportTicketsCSV,
-        exportMetricsCSV: ctx.exportMetricsCSV,
-        exportConversationsJSON: ctx.exportConversationsJSON,
-        exportFullReportJSON: ctx.exportFullReportJSON,
-      };
-    },
-  });
-
-  mountExpressHandler(router, {
-    handler: handleSegmentationRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
-
-      return {
-        requireAuth: ctx.requireAuth,
-        requirePermission: ctx.requirePermission,
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        getAllTags: ctx.getAllTags,
-        getAllCategories: ctx.getAllCategories,
-        filterTickets: ctx.filterTickets,
-        getSegmentationStats: ctx.getSegmentationStats,
-        getTicket: ctx.getTicket,
-        addTagToTicket: ctx.addTagToTicket,
-        removeTagFromTicket: ctx.removeTagFromTicket,
-        setTicketCategory: ctx.setTicketCategory,
-      };
-    },
-  });
-
-  mountExpressHandler(router, {
-    handler: handleConfigAdminRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
-
-      return {
-        requireAuth: ctx.requireAuth,
-        requirePermission: ctx.requirePermission,
-        requireTenant: ctx.requireTenant,
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        logAction: ctx.logAction,
-        flows: ctx.flows,
-      };
-    },
-  });
+  router.use(runHandled(handleConfigAdminRoutes, (ctx) => ({
+    requireAuth: ctx.requireAuth,
+    requirePermission: ctx.requirePermission,
+    requireTenant: ctx.requireTenant,
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    logAction: ctx.logAction,
+    flows: ctx.flows,
+  })));
 
   router.use(createConfigRoutes({
     buildDeps: (req, res) => {

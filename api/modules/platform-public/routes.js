@@ -1,65 +1,64 @@
 'use strict';
 
 const express = require('express');
-const { mountExpressHandler } = require('../shared/expressHandlerBridge');
 const { createPublicTokenRoutes } = require('../public-token/routes');
-const { handleStorefrontRoutes } = require('../../serverHandlers/storefrontRoutes');
-const { handlePhysicalPublicRoutes } = require('../../serverHandlers/physicalPublicRoutes');
-const { handlePhysicalStationRoutes } = require('../../serverHandlers/physicalStationRoutes');
+const { handleStorefrontRoutes } = require('./handleStorefrontRoutes');
+const { handlePhysicalPublicRoutes } = require('./handlePhysicalPublicRoutes');
+const { handlePhysicalStationRoutes } = require('./handlePhysicalStationRoutes');
 
 function createPlatformPublicRoutes({ buildDeps }) {
   const router = express.Router();
 
-  mountExpressHandler(router, {
-    handler: handleStorefrontRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
+  function runHandled(handler, selectDeps) {
+    return async (req, res, next) => {
+      try {
+        const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+        const ctx = buildDeps(req, res);
+        const handled = await handler({
+          req,
+          res,
+          method: (req.method || 'GET').toUpperCase(),
+          pathname,
+          deps: selectDeps(ctx),
+        });
+        if (!handled && !res.writableEnded) {
+          next();
+        }
+      } catch (err) {
+        next(err);
+      }
+    };
+  }
 
-      return {
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        checkRateLimit: ctx.checkRateLimit,
-      };
-    },
-  });
+  router.use(runHandled(handleStorefrontRoutes, (ctx) => ({
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    checkRateLimit: ctx.checkRateLimit,
+  })));
 
-  mountExpressHandler(router, {
-    handler: handlePhysicalPublicRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
+  router.use(runHandled(handlePhysicalPublicRoutes, (ctx) => ({
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    checkRateLimit: ctx.checkRateLimit,
+    logAction: ctx.logAction,
+  })));
 
-      return {
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        checkRateLimit: ctx.checkRateLimit,
-        logAction: ctx.logAction,
-      };
-    },
-  });
-
-  mountExpressHandler(router, {
-    handler: handlePhysicalStationRoutes,
-    buildDeps: (req, res) => {
-      const ctx = buildDeps(req, res);
-
-      return {
-        sendJson: ctx.sendJson,
-        badRequest: ctx.badRequest,
-        hasJsonContentType: ctx.hasJsonContentType,
-        parseJsonBody: ctx.parseJsonBody,
-        logger: ctx.logger,
-        checkRateLimit: ctx.checkRateLimit,
-        logAction: ctx.logAction,
-        createTicket: ctx.createTicket,
-      };
-    },
-  });
+  router.use(runHandled(handlePhysicalStationRoutes, (ctx) => ({
+    sendJson: ctx.sendJson,
+    badRequest: ctx.badRequest,
+    hasJsonContentType: ctx.hasJsonContentType,
+    parseJsonBody: ctx.parseJsonBody,
+    logger: ctx.logger,
+    checkRateLimit: ctx.checkRateLimit,
+    logAction: ctx.logAction,
+    createTicket: ctx.createTicket,
+  })));
 
   router.use(createPublicTokenRoutes({
     buildDeps: (req, res) => {

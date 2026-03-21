@@ -1,34 +1,38 @@
 'use strict';
 
 const express = require('express');
-const { mountExpressHandler } = require('../shared/expressHandlerBridge');
-const { handleTicketCoreRoutes } = require('../../serverHandlers/tickets/ticketCoreRoutes');
-const { handleTicketLifecycleRoutes } = require('../../serverHandlers/tickets/ticketLifecycleRoutes');
-const { handleTicketCommunicationRoutes } = require('../../serverHandlers/tickets/ticketCommunicationRoutes');
-const { handleTicketOperationsRoutes } = require('../../serverHandlers/tickets/ticketOperationsRoutes');
+const { handleTicketCoreRoutes } = require('./tickets/ticketCoreRoutes');
+const { handleTicketLifecycleRoutes } = require('./tickets/ticketLifecycleRoutes');
+const { handleTicketCommunicationRoutes } = require('./tickets/ticketCommunicationRoutes');
+const { handleTicketOperationsRoutes } = require('./tickets/ticketOperationsRoutes');
 
 function createTicketRoutes({ buildDeps }) {
   const router = express.Router();
 
-  mountExpressHandler(router, {
-    handler: handleTicketCoreRoutes,
-    buildDeps,
-  });
+  function runHandled(handler) {
+    return async (req, res, next) => {
+      try {
+        const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+        const handled = await handler({
+          req,
+          res,
+          method: (req.method || 'GET').toUpperCase(),
+          pathname,
+          deps: buildDeps(req, res),
+        });
+        if (!handled && !res.writableEnded) {
+          next();
+        }
+      } catch (err) {
+        next(err);
+      }
+    };
+  }
 
-  mountExpressHandler(router, {
-    handler: handleTicketLifecycleRoutes,
-    buildDeps,
-  });
-
-  mountExpressHandler(router, {
-    handler: handleTicketCommunicationRoutes,
-    buildDeps,
-  });
-
-  mountExpressHandler(router, {
-    handler: handleTicketOperationsRoutes,
-    buildDeps,
-  });
+  router.use(runHandled(handleTicketCoreRoutes));
+  router.use(runHandled(handleTicketLifecycleRoutes));
+  router.use(runHandled(handleTicketCommunicationRoutes));
+  router.use(runHandled(handleTicketOperationsRoutes));
 
   return router;
 }

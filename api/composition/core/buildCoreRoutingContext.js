@@ -1,73 +1,9 @@
 'use strict';
 
-const config = require('../../utils/config');
-const logger = require('../../utils/logger');
-const { clearLimitersCache, clearRedisRateLimitKeys } = require('../../../infra/rate-limit');
-const { requireAuth, requirePermission } = require('../../middleware/auth');
-const { sendJson, badRequest, hasJsonContentType, parseJsonBody } = require('../../express/httpHelpers');
-const { validateInput, ValidationError, schemas } = require('../../utils/inputValidator');
-const {
-  login: authLogin,
-  logout: authLogout,
-  logoutAllSessions,
-  validateToken,
-  loginWithRpaToken,
-  createAgent,
-  listAgents,
-  getAgent,
-  updateAgent,
-  deleteAgent,
-  inviteUser,
-  acceptInvitation,
-  requestPasswordReset,
-  resetPassword,
-} = require('../../services/authService');
-const {
-  createTenant,
-  updateTenant,
-  listTenants,
-  getTenant,
-  deleteTenant,
-  suspendTenant,
-  reactivateTenant,
-  changePlan,
-  getTenantUsage,
-  getTenantContext,
-  updateTenantContext,
-} = require('../../services/tenantService');
-const { logAction, queryLogs, getAuditStats, registerGeneration, generateAuditReport } = require('../../services/auditService');
-const {
-  isSuperAdmin,
-  listAllTenants,
-  getTenantMetrics,
-  impersonateUser,
-  blockTenant,
-  unblockTenant,
-  adjustTenantPlan,
-} = require('../../services/superAdminService');
-const {
-  getOnboardingStatus,
-  completeOnboardingStep,
-  startOnboarding,
-  createInitialTemplates,
-  completeOnboarding,
-} = require('../../services/onboardingService');
-const { setupMfa, verifyMfa, disableMfa, consumeRecoveryCode } = require('../../services/mfaService');
-const { triggerWebhooks } = require('../../services/webhookService');
-const { emitEvent } = require('../../services/websocketService');
-const { generateAiResponse } = require('../../services/aiProviderService');
-const { getAIConfig, getDecryptedAPIKey } = require('../../services/tenantAIService');
-const ragService = require('../../services/ragService');
-const { generateAndValidate } = require('../../services/generate-and-validate');
-const { orchestrateGeneration } = require('../../services/generationOrchestrator');
-const { executeRpaFlowPipeline, previewRpaFlowPipeline } = require('../../services/rpaFlowPipelineService');
-const { listConversations: listChannelConversations, listConversationMessages } = require('../../services/channelConversationService');
-const { validateFlow, addUiMessage } = require('../../../engine/validator');
-const { validateVoiceFlow } = require('../../utils/voiceFlowValidator');
-const { simulateFlow } = require('../../../engine/flowSimulation');
-const { buildConversationReplay } = require('../../../engine/replay');
-const rpaDependencyResolver = require('../../../engine/rpaDependencyResolver');
-const { requireTenant } = require('../shared/requireTenant');
+const { buildCoreCommonDeps } = require('./buildCoreCommonDeps');
+const { buildCoreAdminDeps } = require('./buildCoreAdminDeps');
+const { buildCoreIdentityDeps } = require('./buildCoreIdentityDeps');
+const { buildCoreFlowDeps } = require('./buildCoreFlowDeps');
 
 function getRequestMethod(req) {
   return (req.method || 'GET').toUpperCase();
@@ -106,92 +42,18 @@ function createBuildCoreRoutingContext(localDeps) {
       res,
       method: getRequestMethod(req),
       pathname: getRequestPathname(req),
-      clearLimitersCache,
-      clearRedisRateLimitKeys,
-      config,
-      requireAuth,
-      requirePermission,
-      sendJson,
-      logger,
-      badRequest,
-      hasJsonContentType,
-      parseJsonBody,
-      validateInput,
-      schemas,
-      ValidationError,
-      authLogin,
-      loginWithRpaToken,
-      validateToken,
-      authLogout,
-      logoutAllSessions,
-      logAction,
-      isSuperAdmin,
-      createTenant,
-      getTenant,
-      updateTenant,
-      deleteTenant,
-      listTenants,
-      getTenantContext,
-      updateTenantContext,
-      getTenantUsage,
-      suspendTenant,
-      reactivateTenant,
-      changePlan,
-      generateAiResponse,
-      registerGeneration,
-      requireTenant,
-      getAIConfig,
-      getDecryptedAPIKey,
-      ragService,
-      STRICT_TENANT_MODE: strictTenantMode,
-      generateAndValidate,
-      listAllTenants,
-      getTenantMetrics,
-      impersonateUser,
-      blockTenant,
-      unblockTenant,
-      adjustTenantPlan,
-      getOnboardingStatus,
-      startOnboarding,
-      completeOnboardingStep,
-      completeOnboarding,
-      createInitialTemplates,
-      listAgents,
-      createAgent,
-      getAgent,
-      updateAgent,
-      deleteAgent,
-      inviteUser,
-      acceptInvitation,
-      requestPasswordReset,
-      resetPassword,
-      setupMfa,
-      verifyMfa,
-      disableMfa,
-      consumeRecoveryCode,
-      queryLogs,
-      getAuditStats,
-      validateFlow,
-      validateVoiceFlow,
-      validateFlowStructure,
-      ensureFlowHasMeta,
-      flows,
-      persistFlowBestEffort,
-      deleteFlowBestEffort,
-      triggerWebhooks,
-      emitEvent,
-      addUiMessage,
-      orchestrateGeneration,
-      generateAuditReport,
-      rpaDependencyResolver,
-      previewRpaFlowPipeline,
-      executeRpaFlowPipeline,
-      simulateFlow,
-      sessionEvents,
-      saveSessionEventsToFile,
-      buildConversationReplay,
-      listChannelConversations,
-      listConversationMessages,
+      ...buildCoreCommonDeps({ req, res, strictTenantMode }),
+      ...buildCoreAdminDeps(),
+      ...buildCoreIdentityDeps(),
+      ...buildCoreFlowDeps({
+        validateFlowStructure,
+        ensureFlowHasMeta,
+        flows,
+        persistFlowBestEffort,
+        deleteFlowBestEffort,
+        sessionEvents,
+        saveSessionEventsToFile,
+      }),
     };
   };
 }
