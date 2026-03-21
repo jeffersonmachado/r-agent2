@@ -2,6 +2,7 @@
 
 const express = require('express');
 const evidenceService = require('../../services/evidenceService');
+const { getEvidenceMetricsSnapshot } = require('../../services/evidenceService');
 const { safeString } = require('../../services/evidenceUtils');
 
 function toList(value) {
@@ -53,6 +54,9 @@ function buildSearchArgs(tenantId, payload = {}) {
       persistFallback: boolValue(payload.options?.persistFallback ?? payload.persistFallback, true),
       minScore: numberValue(payload.options?.minScore || payload.minScore, 54, { min: 1, max: 200 }),
       minConfidence: Math.max(0, Math.min(0.99, Number(payload.options?.minConfidence ?? payload.minConfidence) || 0.58)),
+      maxTimelineItems: numberValue(payload.options?.maxTimelineItems || payload.maxTimelineItems, 120, { min: 10, max: 500 }),
+      maxTransientCandidates: numberValue(payload.options?.maxTransientCandidates || payload.maxTransientCandidates, 80, { min: 10, max: 300 }),
+      fallbackTimeWindowDays: numberValue(payload.options?.fallbackTimeWindowDays || payload.fallbackTimeWindowDays, 365, { min: 1, max: 3650 }),
     },
   };
 }
@@ -221,6 +225,22 @@ function createEvidenceRoutes({ buildDeps }) {
         });
       }
       deps.sendJson(res, 200, result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get('/api/evidence/metrics', async (req, res, next) => {
+    const deps = buildDeps(req, res);
+    const tenantId = requireAuthenticatedTenant(req, res, deps);
+    if (!tenantId) return;
+
+    try {
+      deps.sendJson(res, 200, {
+        ok: true,
+        tenantId,
+        metrics: typeof getEvidenceMetricsSnapshot === 'function' ? getEvidenceMetricsSnapshot() : null,
+      });
     } catch (err) {
       next(err);
     }

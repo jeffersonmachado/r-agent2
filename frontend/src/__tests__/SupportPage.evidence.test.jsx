@@ -4,6 +4,7 @@ import { vi, beforeEach } from 'vitest';
 import { SupportPage } from '../pages/SupportPage';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useAuth } from '../context/authContext';
+import * as evidenceApi from '../api/evidence';
 
 vi.mock('../context/WebSocketContext');
 vi.mock('../context/authContext');
@@ -124,6 +125,14 @@ vi.mock('../api/evidence', () => ({
       confidence: 0.92,
       strength: 'strong',
       source_ref: { ticketId: 't1', conversationId: 'c1' },
+      origin_locator: {
+        sourceType: 'channel_message',
+        sourceId: 'msg-1',
+        ticketId: 't1',
+        conversationId: 'c1',
+        channelMessageId: 'msg-1',
+        canOpenDirectly: true,
+      },
       evidence_origin: { kind: 'fallback_persisted', label: 'fallback_indexado' },
       reasoning: { matchedBy: ['theme_exact', 'text_overlap'], score: 92 },
     },
@@ -137,6 +146,14 @@ vi.mock('../api/evidence', () => ({
         text: 'Informamos anteriormente o reajuste previsto em contrato.',
         ticketId: 't1',
         conversationId: 'c1',
+        originLocator: {
+          sourceType: 'channel_message',
+          sourceId: 'msg-1',
+          ticketId: 't1',
+          conversationId: 'c1',
+          channelMessageId: 'msg-1',
+          canOpenDirectly: true,
+        },
       },
     ],
     reasoning: { matchedBy: ['theme_exact', 'text_overlap'], score: 92, strategy: 'fallback_persisted' },
@@ -176,6 +193,47 @@ describe('SupportPage evidence integration', () => {
       expect(screen.getByText(/fallback indexado/i)).toBeInTheDocument();
       expect(screen.getByText(/Histórico consolidado/i)).toBeInTheDocument();
       expect(screen.getByText(/Resposta sugerida/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renderiza fallback estável quando não há evidência forte', async () => {
+    evidenceApi.contextualSearchEvidence.mockResolvedValueOnce({
+      ok: true,
+      identity: {
+        entityType: 'customer',
+        entityId: 'cust-123',
+        confidence: 0.76,
+        sources: [],
+        relatedEntities: [],
+      },
+      best: null,
+      alternatives: [],
+      timeline: [],
+      reasoning: { matchedBy: [], score: 0, reason: 'no_relevant_evidence_from_timeline' },
+      sourceInfo: { strategyUsed: 'fallback_exhausted' },
+    });
+
+    render(<SupportPage />);
+    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('tr');
+    fireEvent.click(ticketCard);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Nenhuma evidência forte foi encontrada/i)).toBeInTheDocument();
+      expect(screen.getByText(/Quando houver uma evidência forte/i)).toBeInTheDocument();
+    });
+  });
+
+  it('mostra origem e mantém ação de abrir origem operacional', async () => {
+    render(<SupportPage />);
+    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('tr');
+    fireEvent.click(ticketCard);
+
+    const buttons = await screen.findAllByRole('button', { name: /Abrir origem/i });
+    fireEvent.click(buttons[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/abertura direta/i).length).toBeGreaterThan(0);
+      expect(screen.getByText(/source msg-1/i)).toBeInTheDocument();
     });
   });
 });

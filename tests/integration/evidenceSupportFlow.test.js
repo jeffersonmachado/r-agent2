@@ -80,6 +80,11 @@ describe('evidence support flow integration', () => {
     expect(result.best.id).toBe('evd-persisted');
     expect(result.best.evidence_origin.kind).toBe('persisted');
     expect(result.sourceInfo.strategyUsed).toBe('persisted');
+    expect(result.best.origin_locator).toEqual(expect.objectContaining({
+      sourceType: 'event_ledger',
+      sourceId: 'evt-1',
+      ticketId: 't1',
+    }));
   });
 
   test('quando não há persistido, extrai fallback em tempo real e pode persistir', async () => {
@@ -132,6 +137,10 @@ describe('evidence support flow integration', () => {
     expect(result.sourceInfo.fallbackTried).toBe(true);
     expect(result.timeline.length).toBeGreaterThan(0);
     expect(model.create).toHaveBeenCalled();
+    expect(result.best.origin_locator).toEqual(expect.objectContaining({
+      sourceType: 'channel_message',
+      conversationId: 'c2',
+    }));
   });
 
   test('não força best ruim quando o fallback não encontra evidência boa', async () => {
@@ -221,5 +230,44 @@ describe('evidence support flow integration', () => {
     });
 
     expect(result.best).toBeNull();
+  });
+
+  test('aplica limites previsíveis no fallback e sinaliza truncamento', async () => {
+    const model = makeEvidenceModel();
+    const timelineItems = Array.from({ length: 12 }, (_, index) => ({
+      id: `message:m${index}`,
+      timestamp: `2026-02-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`,
+      source: 'channel_message',
+      sourceType: 'channel_message',
+      direction: 'outbound',
+      title: 'whatsapp outbound',
+      text: `Informamos o reajuste previsto em contrato ${index}.`,
+      relatedEntities: [],
+      conversationId: 'c-limit',
+    }));
+    const service = createEvidenceService({
+      Evidence: getter(model),
+      identityService: {
+        resolveIdentity: jest.fn(async () => ({
+          ok: true,
+          identity: { entityType: 'customer', entityId: 'cust-limit', confidence: 0.96, relatedEntities: [] },
+        })),
+      },
+      timelineService: {
+        getTimeline: jest.fn(async () => ({ ok: true, items: timelineItems })),
+      },
+      ChannelConversation: getter({ findAll: jest.fn(async () => []) }),
+      EventLedger: getter({ findAll: jest.fn(async () => []) }),
+    });
+
+    const result = await service.findBestEvidenceForContextWithFallback({
+      tenantId: 'tenant1',
+      context: { ticketId: 't-limit' },
+      query: 'cliente questiona aumento',
+      options: { maxTimelineItems: 5, maxTransientCandidates: 3, persistFallback: false },
+    });
+
+    expect(result.timeline).toHaveLength(10);
+    expect(result.reasoning.truncated.timeline).toBe(true);
   });
 });

@@ -652,10 +652,19 @@ export function SupportPage() {
     return formatEvidenceLabel(kind);
   }
 
+  function formatOriginLocator(locator) {
+    if (!locator) return 'origem não mapeada';
+    const mode = locator.canOpenDirectly ? 'abertura direta' : 'abertura contextual';
+    return `${formatEvidenceLabel(locator.sourceType || 'origem')} • ${mode}`;
+  }
+
   function buildEvidenceSuggestedReply(evidence) {
     if (!evidence) return '';
     const occurredAt = evidence.occurred_at ? formatDate(evidence.occurred_at) : 'data anterior';
     const sourceLabel = formatEvidenceLabel(evidence.source_type || evidence.sourceType || 'origem anterior');
+    if ((evidence.confidence || 0) < 0.72 || evidence.strength === 'weak') {
+      return `Encontramos um indício anterior em ${occurredAt}, através de ${sourceLabel}. Posso conferir o contexto completo antes de responder de forma definitiva.\n\nTrecho de apoio: ${evidence.excerpt || evidence.summary || ''}`.trim();
+    }
     return `Identificamos que essa informação já foi comunicada anteriormente em ${occurredAt}, através de ${sourceLabel}. Posso reenviar o trecho ou documento relacionado.\n\nTrecho de apoio: ${evidence.excerpt || evidence.summary || ''}`.trim();
   }
 
@@ -681,34 +690,39 @@ export function SupportPage() {
   }, [showToast]);
 
   const handleOpenEvidenceSource = useCallback((evidence) => {
-    const ticketId = evidence?.source_ref?.ticketId || evidence?.ticketId || null;
+    const origin = evidence?.origin_locator || null;
+    const ticketId = origin?.ticketId || evidence?.source_ref?.ticketId || evidence?.ticketId || null;
     if (ticketId) {
       const ticket = tickets.find((item) => item.id === ticketId);
       if (ticket) {
         setSelectedTicket(ticket);
-        showToast('Origem aberta no ticket relacionado', 'info');
+        showToast(origin?.canOpenDirectly ? 'Origem aberta diretamente no ticket relacionado' : 'Origem aberta no melhor contexto disponível', 'info');
         return;
       }
     }
-    const conversationId = evidence?.source_ref?.conversationId || evidence?.conversationId || null;
+    const conversationId = origin?.conversationId || evidence?.source_ref?.conversationId || evidence?.conversationId || null;
     if (conversationId) {
+      if (selectedTicket?.conversationId === conversationId) {
+        showToast(origin?.channelMessageId ? `Origem localizada na conversa atual (${origin.channelMessageId})` : 'Origem localizada na conversa atual', 'info');
+        return;
+      }
       const relatedTicket = tickets.find((item) => item.conversationId === conversationId);
       if (relatedTicket) {
         setSelectedTicket(relatedTicket);
-        showToast('Origem aberta pela conversa relacionada', 'info');
+        showToast(origin?.canOpenDirectly ? 'Origem aberta pela conversa relacionada' : 'Origem aberta no contexto mais próximo da conversa', 'info');
         return;
       }
     }
     const sourceText = [
-      evidence?.source_type ? `source_type=${evidence.source_type}` : '',
-      evidence?.source_id ? `source_id=${evidence.source_id}` : '',
+      origin?.sourceType ? `source_type=${origin.sourceType}` : '',
+      origin?.sourceId ? `source_id=${origin.sourceId}` : '',
       ticketId ? `ticket=${ticketId}` : '',
       conversationId ? `conversation=${conversationId}` : '',
-      safeStringify(evidence?.source_ref || {}, 1200),
+      origin?.locator ? `locator=${origin.locator}` : '',
     ].filter(Boolean).join('\n');
     copyToClipboard(sourceText);
-    showToast('Origem rastreável copiada para consulta', 'info');
-  }, [tickets, showToast]);
+    showToast('Origem copiada com o melhor locator disponível', 'info');
+  }, [selectedTicket?.conversationId, tickets, showToast]);
 
   const handleOpenTimelineItem = useCallback((item) => {
     if (!item) return;
@@ -1805,6 +1819,9 @@ export function SupportPage() {
                             <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                               <div>{formatEvidenceLabel(evidence.category)} • origem {formatEvidenceLabel(evidence.source_type)} • força {formatEvidenceLabel(evidence.strength)}</div>
                               <div>Modo {formatEvidenceOrigin(evidence.evidence_origin)}</div>
+                              {evidence.origin_locator ? (
+                                <div>{formatOriginLocator(evidence.origin_locator)}</div>
+                              ) : null}
                               <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • score {evidence.reasoning?.score || 0}</div>
                               {evidence.reasoning?.matchedBy?.length ? (
                                 <div>Match: {evidence.reasoning.matchedBy.join(', ')}</div>
@@ -1866,7 +1883,7 @@ export function SupportPage() {
                     </div>
                     {(evidenceHistory.timeline || []).length > 0 ? (
                       (evidenceHistory.timeline || []).slice(0, 6).map((item) => (
-                        <div key={item.id} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
+                          <div key={item.id} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
                             <div>
                               <strong>{item.title || formatEvidenceLabel(item.type)}</strong>
@@ -1877,6 +1894,11 @@ export function SupportPage() {
                           <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
                             {item.text || 'Sem conteúdo textual disponível.'}
                           </div>
+                          {item.originLocator ? (
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginTop: '6px' }}>
+                              {formatOriginLocator(item.originLocator)}
+                            </div>
+                          ) : null}
                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                             <Button type="button" onClick={() => handleOpenTimelineItem(item)} style={{ width: 'auto' }}>
                               Abrir origem

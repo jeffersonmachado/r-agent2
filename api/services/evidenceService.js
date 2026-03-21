@@ -2,6 +2,7 @@
 
 const { Op } = require('sequelize');
 const { Evidence, ChannelConversation, EventLedger } = require('../db/models');
+const logger = require('../utils/logger');
 const { createEvidenceIdentityService } = require('./evidenceIdentityService');
 const { createEvidenceTimelineService } = require('./evidenceTimelineService');
 const { createEvidenceExtractionService } = require('./evidenceExtractionService');
@@ -16,10 +17,45 @@ const {
   toArray,
 } = require('./evidenceUtils');
 
+const evidenceMetricsStore = {
+  contextualSearches: 0,
+  persistedHits: 0,
+  fallbackHits: 0,
+  emptyResults: 0,
+  persistedAfterFallback: 0,
+  durationSamples: [],
+};
+
+function recordEvidenceDuration(durationMs) {
+  evidenceMetricsStore.durationSamples.push(Number(durationMs) || 0);
+  if (evidenceMetricsStore.durationSamples.length > 200) {
+    evidenceMetricsStore.durationSamples.shift();
+  }
+}
+
+function getEvidenceMetricsSnapshot() {
+  const samples = [...evidenceMetricsStore.durationSamples].sort((a, b) => a - b);
+  const avg = samples.length ? Math.round(samples.reduce((sum, item) => sum + item, 0) / samples.length) : 0;
+  const p95 = samples.length ? samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))] : 0;
+  return {
+    contextualSearches: evidenceMetricsStore.contextualSearches,
+    persistedHits: evidenceMetricsStore.persistedHits,
+    fallbackHits: evidenceMetricsStore.fallbackHits,
+    emptyResults: evidenceMetricsStore.emptyResults,
+    persistedAfterFallback: evidenceMetricsStore.persistedAfterFallback,
+    averageDurationMs: avg,
+    p95DurationMs: p95,
+    samples: samples.length,
+  };
+}
+
 function createEvidenceService(deps = {}) {
   const DEFAULT_MIN_SCORE = Number(deps.minScore) || 54;
   const DEFAULT_MIN_CONFIDENCE = Number(deps.minConfidence) || 0.58;
   const DEFAULT_FALLBACK_PERSIST_LIMIT = Number(deps.fallbackPersistLimit) || 3;
+  const DEFAULT_MAX_TIMELINE_ITEMS = Number(deps.maxTimelineItems) || 120;
+  const DEFAULT_MAX_TRANSIENT_CANDIDATES = Number(deps.maxTransientCandidates) || 80;
+  const DEFAULT_FALLBACK_TIME_WINDOW_DAYS = Number(deps.fallbackTimeWindowDays) || 365;
   const EvidenceModel = deps.Evidence || Evidence;
   const ChannelConversationModel = deps.ChannelConversation || ChannelConversation;
   const EventLedgerModel = deps.EventLedger || EventLedger;
@@ -38,7 +74,54 @@ function createEvidenceService(deps = {}) {
     if (!identityResult.ok) {
       return { ok: false, identity: null, items: [] };
     }
-    return timelineService.getTimeline({ ...args, identity: identityResult.identity });
+    return timelineService.getTimeline({
+      ...args,
+      identity: identityResult.identity,
+      options: normalizeOptions(args.options || {}),
+    });
+  }
+
+  function buildOriginLocator(sourceItem = {}, sourceRef = null) {
+    const sourceType = safeString(sourceItem.sourceType || sourceItem.source || sourceRef?.sourceType || 'system');
+    const sourceId = safeString(sourceItem.id || sourceRef?.sourceId || sourceRef?.source_id);
+    const ticketId = safeString(sourceItem.ticketId || sourceRef?.ticketId || sourceRef?.ticket_id) || null;
+    const conversationId = safeString(sourceItem.conversationId || sourceRef?.conversationId || sourceRef?.conversation_id) || null;
+    const channelMessageId = sourceType === 'channel_message' ? sourceId : (safeString(sourceRef?.channelMessageId) || null);
+    const eventId = sourceType === 'event_ledger' ? sourceId : (safeString(sourceRef?.eventId) || null);
+    let locator = 'source';
+    let openTarget = 'details';
+    let canOpenDirectly = false;
+
+    if (ticketId) {
+      locator = `ticket:${ticketId}`;
+      openTarget = 'ticket';
+      canOpenDirectly = true;
+    } else if (conversationId) {
+      locator = `conversation:${conversationId}`;
+      openTarget = 'conversation';
+      canOpenDirectly = true;
+    } else if (channelMessageId) {
+      locator = conversationId ? `conversation:${conversationId}:message:${channelMessageId}` : `message:${channelMessageId}`;
+      openTarget = conversationId ? 'conversation' : 'details';
+      canOpenDirectly = Boolean(conversationId);
+    } else if (eventId) {
+      locator = `event:${eventId}`;
+      openTarget = 'event';
+    } else if (sourceId) {
+      locator = `${sourceType}:${sourceId}`;
+    }
+
+    return {
+      sourceType,
+      sourceId: sourceId || null,
+      ticketId,
+      conversationId,
+      channelMessageId,
+      eventId,
+      locator,
+      openTarget,
+      canOpenDirectly,
+    };
   }
 
   function buildEvidenceRecord({ tenantId, identity, sourceItem, evidence }) {
@@ -68,7 +151,11 @@ function createEvidenceService(deps = {}) {
       source_ref: {
         ticketId: sourceItem.ticketId || null,
         conversationId: sourceItem.conversationId || null,
+        channelMessageId: safeString(sourceItem.sourceType || sourceItem.source) === 'channel_message' ? safeString(sourceItem.id) : null,
+        eventId: safeString(sourceItem.sourceType || sourceItem.source) === 'event_ledger' ? safeString(sourceItem.id) : null,
         source: sourceItem.source || null,
+        sourceType: sourceItem.sourceType || sourceItem.source || null,
+        sourceId: safeString(sourceItem.id) || null,
         metadata: sourceItem.metadata || {},
       },
       category: evidence.category,
@@ -87,6 +174,7 @@ function createEvidenceService(deps = {}) {
       metadata: {
         ...evidence.metadata,
         title: sourceItem.title || null,
+        originLocator: buildOriginLocator(sourceItem),
       },
       idempotency_key: idempotencyKey,
     };
@@ -171,6 +259,9 @@ function createEvidenceService(deps = {}) {
       includeTimeline: options.includeTimeline !== false,
       persistFallback: options.persistFallback !== false,
       fallbackPersistLimit: Math.max(Number(options.fallbackPersistLimit) || DEFAULT_FALLBACK_PERSIST_LIMIT, 1),
+      maxTimelineItems: Math.max(Number(options.maxTimelineItems) || DEFAULT_MAX_TIMELINE_ITEMS, 10),
+      maxTransientCandidates: Math.max(Number(options.maxTransientCandidates) || DEFAULT_MAX_TRANSIENT_CANDIDATES, 10),
+      fallbackTimeWindowDays: Math.max(Number(options.fallbackTimeWindowDays) || DEFAULT_FALLBACK_TIME_WINDOW_DAYS, 1),
     };
   }
 
@@ -205,6 +296,12 @@ function createEvidenceService(deps = {}) {
       ...item,
       source_ref: item.source_ref || {},
       reasoning: reasoning || item.reasoning || { matchedBy: [], score: 0 },
+      origin_locator: item.origin_locator || buildOriginLocator({
+        sourceType: item.source_type || item.sourceType,
+        id: item.source_id || item.sourceId,
+        ticketId: item.source_ref?.ticketId || item.ticketId,
+        conversationId: item.source_ref?.conversationId || item.conversationId,
+      }, item.source_ref || {}),
       evidence_origin: buildEvidenceOrigin(originKind, sourceInfo || {}),
     };
     return evidence;
@@ -222,7 +319,7 @@ function createEvidenceService(deps = {}) {
     return strengthRank(evidence.strength) >= strengthRank('strong');
   }
 
-  function buildNoEvidenceResult({ ok = true, identity = null, timeline = [], options = {}, reason = 'no_good_evidence_found', persistedTried = false, fallbackTried = false } = {}) {
+  function buildNoEvidenceResult({ ok = true, identity = null, timeline = [], options = {}, reason = 'no_good_evidence_found', persistedTried = false, fallbackTried = false, truncated = null } = {}) {
     return {
       ok,
       identity,
@@ -238,6 +335,7 @@ function createEvidenceService(deps = {}) {
           minScore: normalizeOptions(options).minScore,
           minConfidence: normalizeOptions(options).minConfidence,
         },
+        truncated,
       },
       sourceInfo: {
         strategyUsed: fallbackTried ? 'fallback_exhausted' : (persistedTried ? 'persisted_only' : 'none'),
@@ -246,6 +344,7 @@ function createEvidenceService(deps = {}) {
         persistedAfterFallback: 0,
         persistedCount: 0,
         transientCount: 0,
+        origin: null,
       },
     };
   }
@@ -392,7 +491,7 @@ function createEvidenceService(deps = {}) {
         }
       }
     }
-    return Array.from(deduped.values());
+    return Array.from(deduped.values()).slice(0, options.maxTransientCandidates);
   }
 
   function rankTransientEvidence({ identity, queryText, filters, records }) {
@@ -446,11 +545,21 @@ function createEvidenceService(deps = {}) {
   async function findBestEvidenceForContextWithFallback(args = {}) {
     const tenantId = ensureTenantId(args.tenantId);
     const options = normalizeOptions(args.options);
+    const startedAt = Date.now();
+    evidenceMetricsStore.contextualSearches += 1;
+    logger.event('evidence_contextual_search_started', {
+      tenantId,
+      ticketId: safeString(args.context?.ticketId || args.ticketId) || null,
+      conversationId: safeString(args.context?.conversationId || args.conversationId) || null,
+      entityType: safeString(args.context?.entityType || args.entityType) || null,
+      entityId: safeString(args.context?.entityId || args.entityId) || null,
+    });
     const identityResult = args.identity
       ? { ok: true, identity: args.identity }
       : await resolveIdentity({ tenantId, ...(args.context || {}), ...args });
 
     if (!identityResult.ok) {
+      evidenceMetricsStore.emptyResults += 1;
       return buildNoEvidenceResult({
         ok: false,
         identity: null,
@@ -460,6 +569,12 @@ function createEvidenceService(deps = {}) {
     }
 
     const identity = identityResult.identity;
+    logger.info('[EvidenceEngine] contextual identity resolved', {
+      tenantId,
+      entityType: identity.entityType,
+      entityId: identity.entityId,
+      confidence: identity.confidence,
+    });
     const persistedResult = await searchEvidence({
       tenantId,
       identity,
@@ -479,6 +594,20 @@ function createEvidenceService(deps = {}) {
     }
 
     if (persistedGood) {
+      const durationMs = Date.now() - startedAt;
+      recordEvidenceDuration(durationMs);
+      evidenceMetricsStore.persistedHits += 1;
+      logger.event('evidence_contextual_search_completed', {
+        tenantId,
+        strategy: 'persisted',
+        durationMs,
+        entityType: identity.entityType,
+        entityId: identity.entityId,
+        bestType: persistedBest.type || null,
+        bestTheme: persistedBest.theme || null,
+        bestCategory: persistedBest.category || null,
+        bestSourceType: persistedBest.source_type || null,
+      });
       return {
         ok: true,
         identity,
@@ -500,12 +629,16 @@ function createEvidenceService(deps = {}) {
           persistedAfterFallback: 0,
           persistedCount: persistedBest ? 1 + persistedAlternatives.length : 0,
           transientCount: 0,
+          origin: persistedBest.origin_locator,
+          durationMs,
         },
       };
     }
 
     const timeline = await getTimeline({ tenantId, identity, ...(args.context || {}), ...args });
-    timelineItems = timeline.items || [];
+    const originalTimelineCount = (timeline.items || []).length;
+    timelineItems = (timeline.items || []).slice(0, options.maxTimelineItems);
+    const timelineTruncated = originalTimelineCount > timelineItems.length;
     const transientRecords = extractTransientEvidenceFromTimeline({
       tenantId,
       identity,
@@ -532,6 +665,18 @@ function createEvidenceService(deps = {}) {
     const fallbackGood = isEvidenceStrongEnough(fallbackBest, options);
 
     if (!fallbackGood) {
+      const durationMs = Date.now() - startedAt;
+      recordEvidenceDuration(durationMs);
+      evidenceMetricsStore.emptyResults += 1;
+      logger.event('evidence_contextual_search_completed', {
+        tenantId,
+        strategy: 'fallback_empty',
+        durationMs,
+        entityType: identity.entityType,
+        entityId: identity.entityId,
+        timelineItems: timelineItems.length,
+        transientCandidates: transientRanked.length,
+      });
       return buildNoEvidenceResult({
         identity,
         timeline: timelineItems,
@@ -539,9 +684,33 @@ function createEvidenceService(deps = {}) {
         reason: persistedBest ? 'persisted_evidence_below_threshold' : 'no_relevant_evidence_from_timeline',
         persistedTried: true,
         fallbackTried: true,
+        truncated: {
+          timeline: timelineTruncated,
+          originalTimelineCount,
+          returnedTimelineCount: timelineItems.length,
+          transientCandidates: transientRanked.length,
+        },
       });
     }
 
+    const durationMs = Date.now() - startedAt;
+    recordEvidenceDuration(durationMs);
+    evidenceMetricsStore.fallbackHits += 1;
+    evidenceMetricsStore.persistedAfterFallback += persistedFallback.persistedCount;
+    logger.event('evidence_contextual_search_completed', {
+      tenantId,
+      strategy: fallbackBest.evidence_origin?.persistedAfterFallback ? 'fallback_persisted' : 'fallback_transient',
+      durationMs,
+      entityType: identity.entityType,
+      entityId: identity.entityId,
+      timelineItems: timelineItems.length,
+      transientCandidates: transientRanked.length,
+      persistedAfterFallback: persistedFallback.persistedCount,
+      bestType: fallbackBest.type || null,
+      bestTheme: fallbackBest.theme || null,
+      bestCategory: fallbackBest.category || null,
+      bestSourceType: fallbackBest.source_type || null,
+    });
     return {
       ok: true,
       identity,
@@ -556,6 +725,12 @@ function createEvidenceService(deps = {}) {
           minConfidence: options.minConfidence,
         },
         persistedRejected: Boolean(persistedBest),
+        truncated: {
+          timeline: timelineTruncated,
+          originalTimelineCount,
+          returnedTimelineCount: timelineItems.length,
+          transientCandidates: transientRanked.length,
+        },
       },
       sourceInfo: {
         strategyUsed: fallbackBest.evidence_origin?.persistedAfterFallback ? 'fallback_persisted' : 'fallback_transient',
@@ -564,6 +739,8 @@ function createEvidenceService(deps = {}) {
         persistedAfterFallback: persistedFallback.persistedCount,
         persistedCount: persistedBest ? 1 + persistedAlternatives.length : 0,
         transientCount: transientRanked.length,
+        origin: fallbackBest.origin_locator,
+        durationMs,
       },
     };
   }
@@ -729,3 +906,4 @@ function createEvidenceService(deps = {}) {
 
 module.exports = createEvidenceService();
 module.exports.createEvidenceService = createEvidenceService;
+module.exports.getEvidenceMetricsSnapshot = getEvidenceMetricsSnapshot;

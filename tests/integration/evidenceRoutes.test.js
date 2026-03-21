@@ -12,14 +12,31 @@ describe('evidence routes integration', () => {
       findBestEvidenceForContextWithFallback: jest.fn(async () => ({
         ok: true,
         identity: { entityType: 'customer', entityId: 'cust-1', confidence: 0.96 },
-        best: { id: 'evd-1' },
+        best: {
+          id: 'evd-1',
+          origin_locator: {
+            sourceType: 'channel_message',
+            sourceId: 'msg-1',
+            ticketId: 't1',
+            conversationId: 'c1',
+            channelMessageId: 'msg-1',
+            locator: 'conversation:c1:message:msg-1',
+            canOpenDirectly: true,
+          },
+        },
         alternatives: [],
         timeline: [],
         reasoning: { matchedBy: ['text_overlap'], score: 88, strategy: 'fallback_transient' },
-        sourceInfo: { strategyUsed: 'fallback_transient' },
+        sourceInfo: { strategyUsed: 'fallback_transient', origin: { sourceType: 'channel_message' } },
       })),
       backfillEvidenceForEntity: jest.fn(async () => ({ ok: true, extracted: 2 })),
       backfillEvidenceForTenant: jest.fn(async () => ({ ok: true, processed: 4 })),
+      getEvidenceMetricsSnapshot: jest.fn(() => ({
+        contextualSearches: 3,
+        persistedHits: 1,
+        fallbackHits: 1,
+        emptyResults: 1,
+      })),
     };
     jest.doMock('../../api/services/evidenceService', () => serviceMock);
     ({ createEvidenceRoutes } = require('../../api/modules/evidence/routes'));
@@ -123,5 +140,16 @@ describe('evidence routes integration', () => {
     expect(serviceMock.getEntityHistory).toHaveBeenCalled();
     expect(backfill.statusCode).toBe(200);
     expect(serviceMock.backfillEvidenceForEntity).toHaveBeenCalled();
+  });
+
+  test('GET /api/evidence/metrics expõe snapshot operacional', async () => {
+    const res = await invokeRoute({
+      method: 'GET',
+      path: '/api/evidence/metrics',
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.payload.ok).toBe(true);
+    expect(res.payload.metrics).toBeTruthy();
   });
 });

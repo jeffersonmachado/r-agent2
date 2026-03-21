@@ -81,7 +81,8 @@ function createEvidenceExtractionService() {
     if (sourceType === 'ticket_note') return confidence >= 0.8 ? 'formal' : 'strong';
     if (toArray(attachments).length > 0) return 'strong';
     if (actorType === 'agent' || actorType === 'system') return confidence >= 0.8 ? 'strong' : 'moderate';
-    return confidence >= 0.75 ? 'moderate' : 'weak';
+    if (confidence >= 0.82) return 'moderate';
+    return confidence >= 0.68 ? 'weak' : 'weak';
   }
 
   function extractEvidenceFromSource(item = {}, options = {}) {
@@ -111,9 +112,14 @@ function createEvidenceExtractionService() {
     if (sourceType === 'ticket_note') confidence += 0.12;
     if (safeString(item.direction).toLowerCase() === 'outbound') confidence += 0.08;
     if (safeString(item.direction).toLowerCase() === 'inbound' && baseType === 'instruction_acknowledged') confidence += 0.1;
+    if (combinedText.includes('reenviado') || combinedText.includes('reenviamos')) confidence += 0.06;
+    if (combinedText.includes('confirmamos') || combinedText.includes('confirmado')) confidence += 0.06;
+    if (combinedText.includes('questiona') || combinedText.includes('questionou')) confidence -= 0.08;
+    if (combinedText.includes('nao confirma') || combinedText.includes('não confirma')) confidence -= 0.12;
 
     const actorType = inferActorType(item);
-    const strength = inferStrength({ sourceType, actorType, attachments, confidence });
+    const normalizedConfidence = Math.min(0.99, Math.max(0.2, Number(confidence.toFixed(2))));
+    const strength = inferStrength({ sourceType, actorType, attachments, confidence: normalizedConfidence });
     const excerpt = compactText(rawText, 420);
     const types = new Set([baseType]);
 
@@ -138,6 +144,10 @@ function createEvidenceExtractionService() {
       types.delete('policy_notice');
       types.delete('price_notice');
       confidence = Math.min(confidence, 0.45);
+    }
+    if (combinedText.includes('cliente questiona') || combinedText.includes('cliente questionou')) {
+      types.delete('confirmation');
+      types.delete('consent_given');
     }
     if (combinedText.includes('nao aceitou') || combinedText.includes('não aceitou')) {
       types.delete('consent_given');
@@ -173,7 +183,7 @@ function createEvidenceExtractionService() {
         summary,
         excerpt,
         normalizedText: normalized,
-        confidence: Math.min(0.99, Number(confidence.toFixed(2))),
+        confidence: normalizedConfidence,
         strength,
         actorType,
         actorId: safeString(item.actorId || item.actor_id) || null,

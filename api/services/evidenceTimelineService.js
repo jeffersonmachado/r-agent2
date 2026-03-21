@@ -28,6 +28,37 @@ function createEvidenceTimelineService(deps = {}) {
   const queue = deps.queueService || queueService;
   const ledger = deps.eventLedgerService || eventLedgerService;
 
+  function buildTimelineOrigin({ sourceType, sourceId, ticketId = null, conversationId = null, channelMessageId = null, eventId = null }) {
+    let locator = `${safeString(sourceType) || 'source'}:${safeString(sourceId) || 'unknown'}`;
+    let openTarget = 'details';
+    let canOpenDirectly = false;
+    if (ticketId) {
+      locator = `ticket:${ticketId}`;
+      openTarget = 'ticket';
+      canOpenDirectly = true;
+    } else if (conversationId) {
+      locator = `conversation:${conversationId}`;
+      openTarget = 'conversation';
+      canOpenDirectly = true;
+    } else if (channelMessageId) {
+      locator = `message:${channelMessageId}`;
+    } else if (eventId) {
+      locator = `event:${eventId}`;
+      openTarget = 'event';
+    }
+    return {
+      sourceType: safeString(sourceType) || null,
+      sourceId: safeString(sourceId) || null,
+      ticketId: safeString(ticketId) || null,
+      conversationId: safeString(conversationId) || null,
+      channelMessageId: safeString(channelMessageId) || null,
+      eventId: safeString(eventId) || null,
+      locator,
+      openTarget,
+      canOpenDirectly,
+    };
+  }
+
   async function resolveTicket(tenantId, ticketId) {
     if (!ticketId) return null;
     const inMemory = typeof queue.getTicket === 'function' ? queue.getTicket(ticketId) : null;
@@ -224,6 +255,10 @@ function createEvidenceTimelineService(deps = {}) {
       return { ok: false, identity, items: [] };
     }
 
+    const options = input.options || {};
+    const maxTimelineItems = Math.max(Number(options.maxTimelineItems) || 120, 10);
+    const fallbackTimeWindowDays = Math.max(Number(options.fallbackTimeWindowDays) || 365, 1);
+    const cutoffTs = Date.now() - (fallbackTimeWindowDays * 86400000);
     const explicitContext = input.context || {};
     const explicitConversationId = safeString(input.conversationId || explicitContext.conversationId).trim();
     const ticket = await resolveTicket(tenantId, safeString(input.ticketId || explicitContext.ticketId).trim());
@@ -292,6 +327,12 @@ function createEvidenceTimelineService(deps = {}) {
         ticketId: conversation.current_ticket_id || null,
         conversationId: conversation.id,
         metadata: conversation,
+        originLocator: buildTimelineOrigin({
+          sourceType: 'channel_conversation',
+          sourceId: conversation.id,
+          ticketId: conversation.current_ticket_id || null,
+          conversationId: conversation.id,
+        }),
       });
     }
 
@@ -316,6 +357,13 @@ function createEvidenceTimelineService(deps = {}) {
         conversationId: message.conversation_id,
         metadata: message,
         attachments: toArray(message.body?.attachments || message.body?.files || []),
+        channelMessageId: message.id,
+        originLocator: buildTimelineOrigin({
+          sourceType: 'channel_message',
+          sourceId: message.id,
+          conversationId: message.conversation_id,
+          channelMessageId: message.id,
+        }),
       });
     }
 
@@ -341,6 +389,12 @@ function createEvidenceTimelineService(deps = {}) {
         ticketId: item.id,
         conversationId: item.conversationId || item.conversation_id || null,
         metadata: item,
+        originLocator: buildTimelineOrigin({
+          sourceType: 'ticket',
+          sourceId: item.id,
+          ticketId: item.id,
+          conversationId: item.conversationId || item.conversation_id || null,
+        }),
       });
 
       for (const message of toArray(item.messages)) {
@@ -359,6 +413,12 @@ function createEvidenceTimelineService(deps = {}) {
           conversationId: item.conversationId || item.conversation_id || null,
           metadata: { ticketId: item.id, sender: message.sender },
           actorType: message.sender === 'agent' ? 'agent' : message.sender === 'system' ? 'system' : 'customer',
+          originLocator: buildTimelineOrigin({
+            sourceType: message.sender === 'system' ? 'ticket_note' : 'ticket_message',
+            sourceId: safeString(message.id || message.timestamp || items.length),
+            ticketId: item.id,
+            conversationId: item.conversationId || item.conversation_id || null,
+          }),
         });
       }
     }
@@ -385,16 +445,28 @@ function createEvidenceTimelineService(deps = {}) {
         actorType: safeString(event.actor_type) || null,
         actorId: safeString(event.actor_id) || null,
         metadata: event.payload || {},
+        eventId: event.id,
+        originLocator: buildTimelineOrigin({
+          sourceType: 'event_ledger',
+          sourceId: event.id,
+          ticketId: safeString(event.payload?.ticketId) || null,
+          conversationId: safeString(event.payload?.conversationId) || null,
+          eventId: event.id,
+        }),
       });
     }
 
     items.push(...domainLinks);
     items.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    const filtered = items.filter((item) => {
+      const ts = new Date(item.timestamp || 0).getTime();
+      return !Number.isFinite(ts) || ts >= cutoffTs;
+    }).slice(0, maxTimelineItems);
 
     return {
       ok: true,
       identity,
-      items,
+      items: filtered,
     };
   }
 
