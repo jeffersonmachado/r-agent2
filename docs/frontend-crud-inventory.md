@@ -7,12 +7,12 @@
 
 ## Paginas de maior tamanho (proxy de complexidade)
 - `GenerateSystemPage.jsx`: 6267 linhas
-- `SupportPage.jsx`: 5418 linhas
-- `RAGDocumentsPage.jsx`: 4888 linhas
-- `FlowEditorPage.jsx`: 4432 linhas
-- `PbxPage.jsx`: 4128 linhas
-- `ConfigPage.jsx`: 2228 linhas
-- `AnalyticsPage.jsx`: 1699 linhas
+- `RAGDocumentsPage.jsx`: 3099 linhas
+- `FlowEditorPage.jsx`: 3965 linhas
+- `PbxPage.jsx`: 2350 linhas
+- `SupportPage.jsx`: 1863 linhas
+- `ConfigPage.jsx`: 1156 linhas
+- `AnalyticsPage.jsx`: 698 linhas
 - `OperationsDashboardPage.jsx`: 1518 linhas
 
 ## Clusters de CRUD
@@ -65,9 +65,51 @@ Sinais:
 - A proxima frente e reducao incremental de hotspots internos, nao criacao de uma nova base CRUD.
 
 ## Lacunas atuais
-- Hotspots de volume ainda existem em paginas especializadas como `PbxPage.jsx`, `GenerateSystemPage.jsx` e `AnalyticsPage.jsx`.
+- Hotspots de volume ainda existem em paginas especializadas como `GenerateSystemPage.jsx`, `FlowEditorPage.jsx` e `RAGDocumentsPage.jsx`.
 - Ha variacao de UX em paginas fora dos fluxos CRUD principais.
 - Extracoes futuras devem mirar reducao de tamanho/estado, nao reabertura do padrao canonico.
+
+### ONDA 14 (progresso incremental em decomposicao)
+- `RAGDocumentsPage.jsx`: extracao de modais dedicados (`rag-documents/*`) e reducao para 3099 linhas.
+- `ConfigPage.jsx`: extracao das 12 abas para `pages/config/*` e reducao para 1156 linhas.
+- `SupportPage.jsx`: extracao dos modais de atendimento para `pages/support/*` e reducao para 1863 linhas.
+- `PbxPage.jsx`: consolidacao do shell com `PbxDashboardShell` e reducao para 2350 linhas.
+- `AnalyticsPage.jsx`: extracao de secoes para `pages/analytics/*` e reducao para 698 linhas.
+- `FlowEditorPage.jsx`: extracao dos overlays/dialogs para `pages/flow-editor/FlowEditorOverlays.jsx`, do painel direito para `pages/flow-editor/FlowEditorRightPanel.jsx`, da paleta para `pages/flow-editor/FlowEditorPalettePanel.jsx` e do canvas para `pages/flow-editor/FlowEditorCanvasSection.jsx`, com reducao para 3965 linhas.
+
+### ONDA 15 (em andamento)
+- `FlowEditorPage.jsx`: extracao da barra de ferramentas completa (Toolbar + dialogs associados + FlowCurrentDisplay) para `pages/flow-editor/FlowEditorToolbarSection.jsx`, com reducao para 3870 linhas.
+- `FlowEditorPage.jsx`: extracao das helpers e handlers de zoom/viewport BPMN+engine para hook `pages/flow-editor/useFlowEditorBpmnZoom.js`, com reducao para 3672 linhas.
+- `FlowEditorPage.jsx`: extracao do pipeline de exportacao (SVG/PNG/PDF e geracao de view model/markup) para hook `pages/flow-editor/useFlowEditorExport.js`, com reducao para 3614 linhas.
+- `FlowEditorPage.jsx`: limpeza do bloco legado duplicado de exportacao (agora atendido somente por `useFlowEditorExport`), com reducao adicional para 3369 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de selecao/alinhamento/distribuicao de nos para hook `pages/flow-editor/useFlowEditorSelectionLayout.js`, com reducao para 3139 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de busca e navegacao (buscar/ir para/proximo/anterior) para hook `pages/flow-editor/useFlowEditorSearchNavigation.js`, com reducao para 2974 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de importacao/exportacao de arquivo (JSON/BPMN) para hook `pages/flow-editor/useFlowEditorFileIO.js`, com reducao para 2601 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de manutencao/replay (carregar replay, seek, simplify graph e validate-and-fix) para hook `pages/flow-editor/useFlowEditorMaintenance.js`, com reducao para 2451 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de controles de UI (showErrors, debug, estatisticas, optimize e minimap) para hook `pages/flow-editor/useFlowEditorUiControls.js`, com reducao para 2410 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de clipboard (copiar, colar e duplicar no modo engine) para hook `pages/flow-editor/useFlowEditorClipboard.js`, com reducao para 2324 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de canvas/historico (auto-arrange com fallback, undo/redo e toggle de reroute) para hook `pages/flow-editor/useFlowEditorCanvasHistory.js`, com reducao para 1928 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de workflow do editor (salvar, salvar template, validar, limpar, simular, testar, trocar ambiente e remover fluxo) para hook `pages/flow-editor/useFlowEditorWorkflowActions.js`, com reducao para 1721 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de ciclo de vida do fluxo (troca de tipo, selecao de fluxo, fluxo gerado por IA e selecao de template) para hook `pages/flow-editor/useFlowEditorLifecycle.js`, com reducao para 1208 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de interacao de no/historico (snapshot, selecao, troca de modo e atualizacao de config) para hook `pages/flow-editor/useFlowEditorNodeInteraction.js`, com reducao para 978 linhas.
+- `FlowEditorPage.jsx`: extracao do cluster de realtime WebSocket (listener de eventos e status de conexao) para hook `pages/flow-editor/useFlowEditorRealtimeStatus.js`, com reducao para 931 linhas.
+- `FlowEditorPage.jsx`: remocao do handler residual de importacao de template (`handleImportTemplate`) com acionamento direto via toolbar, reduzindo para 929 linhas.
+- `GenerateSystemPage.jsx`: extracao do cluster de realtime do pipeline (listener `pipeline.status` + guarda de autenticacao WS) para hook `pages/generate-system/useGenerateSystemPipelineRealtime.js`, com reducao para 1358 linhas.
+- `GenerateSystemPage.jsx`: extracao da configuracao visual do pipeline (labels + mensagens por etapa) para `pages/generate-system/generateSystemPipelineUiConfig.js`, com reducao para 1254 linhas.
+- `GenerateSystemPage.jsx`: extracao da logica de validacao do formulario (pre-validacao e mensagens de erro) para `pages/generate-system/generateSystemValidationUtils.js`, com reducao para 1192 linhas.
+- `GenerateSystemPage.jsx`: extracao da montagem de payload de execucao para `pages/generate-system/generateSystemPayloadUtils.js`, com reducao para 1180 linhas.
+- `GenerateSystemPage.jsx`: extracao da atualizacao de status/detalhes do pipeline para hook `pages/generate-system/useGenerateSystemPipelineDetailsUpdater.js`, com reducao para 1078 linhas.
+- `GenerateSystemPage.jsx`: extracao da logica de rate limit (estado, contador e clear) para hook `pages/generate-system/useGenerateSystemRateLimit.js`, com reducao para 1034 linhas.
+- `GenerateSystemPage.jsx`: extracao do preenchimento automatico de objetivo inicial do fluxo para hook `pages/generate-system/useGenerateSystemInitialFlowObjective.js`, com reducao para 1004 linhas.
+- `GenerateSystemPage.jsx`: extracao do helper de metadados de sugestao de descricao para `pages/generate-system/generateSystemDescriptionSuggestionUtils.js`, com reducao para 993 linhas.
+- `GenerateSystemPage.jsx`: extracao do toast global de erro deduplicado para hook `pages/generate-system/useGenerateSystemErrorToast.js`, com reducao para 984 linhas.
+- `GenerateSystemPage.jsx`: extracao da automacao do modo bootstrap (flags e fontes iniciais) para hook `pages/generate-system/useGenerateSystemBootstrapMode.js`, com reducao para 977 linhas.
+- `GenerateSystemPage.jsx`: extracao da protecao de autenticacao/redirecionamento para hook `pages/generate-system/useGenerateSystemAuthGuard.js`, com reducao para 973 linhas.
+- `GenerateSystemPage.jsx`: extracao da sincronizacao de estado de execucao para ref (`executingRef`) para hook `pages/generate-system/useGenerateSystemExecutingRefSync.js`, com reducao para 972 linhas.
+- `GenerateSystemPage.jsx`: extracao do reset de estado visual do fluxo inicial para hook `pages/generate-system/useGenerateSystemInitialFlowUiReset.js`, mantendo contrato do orquestrador e preparando cortes maiores.
+- `GenerateSystemPage.jsx`: extracao do bloco de validacao (`getValidationError` + `isValid`) para hook `pages/generate-system/useGenerateSystemValidationGate.js`, com reducao para 954 linhas.
+- `GenerateSystemPage.jsx`: extracao da fabrica de payload para hook `pages/generate-system/useGenerateSystemPayloadBuilder.js`, com reducao para 951 linhas.
+- `GenerateSystemPage.jsx`: extracao da montagem completa do contexto do orquestrador (7 objetos + buildOrchestratorBuilderContext) para hook `pages/generate-system/useGenerateSystemOrchestratorContext.js`, com reducao para 863 linhas.
 
 ## Proposta de evolucao
 1. Manter `CrudPageBase` como shell obrigatorio para novos CRUDs administrativos e operacionais.
@@ -114,6 +156,6 @@ Sinais:
 - Validacao: `vitest` (29/29 nos arquivos alvo), `jest` (7/7 no wiring), `npm run build` OK.
 
 ## Proximos candidatos de reducao de hotspot (pos-fechamento)
-1. Extrair blocos internos de `SupportPage.jsx` e `RAGDocumentsPage.jsx` em componentes menores.
-2. Modularizar trechos de `PbxPage.jsx` e `OperationsDashboardPage.jsx` com foco em estado e render.
+1. Reduzir `GenerateSystemPage.jsx` e `FlowEditorPage.jsx` com extracoes por secao e hooks de estado.
+2. Continuar modularizacao interna de `RAGDocumentsPage.jsx` e `PbxPage.jsx` (estado/fetch/acoes).
 3. Harmonizar filtros visuais em paginas especializadas sem reintroduzir base paralela.

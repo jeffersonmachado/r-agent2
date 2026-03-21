@@ -1,83 +1,60 @@
 # Plano de Modernizacao Arquitetural
 
 ## Objetivo
-Modernizar backend e frontend de forma incremental, sem reescrita total, preservando contratos publicos e mantendo deploy seguro em cada onda.
+Fechar a consolidacao final do backend sem reescrita total, preservando contratos HTTP, flags de ambiente e comportamento operacional.
 
-## Escopo
-- Backend: reduzir concentracao de responsabilidades em `api/server.js` e evoluir para modulo de bootstrap + modulo de roteamento.
-- Frontend: consolidar componentes canonicos para grid, dashboard e CRUD.
-- Legado: remover sobreposicoes, wrappers e variantes nao roteadas somente apos fase de convivencia controlada.
+## Estado atual real (snapshot 2026-03-21)
+- `api/server.js`: 212 linhas. Agora atua como entrypoint fino, expondo factories e delegando startup para `api/runtime/startServerRuntime.js`.
+- `api/app/registerRoutes.js`: 210 linhas. Agora usa registry declarativo em `api/app/routeRegistry.js` e nao possui mais `buildDeps` inline.
+- Bootstrap dedicado:
+  - `api/bootstrap/startInitialization.js`
+  - `api/bootstrap/systemAdminBootstrap.js`
+- Runtime dedicado:
+  - `api/runtime/startServerRuntime.js`
+  - `api/runtime/startWorkers.js`
+  - `api/runtime/registerShutdownHooks.js`
+  - `api/runtime/processManager.js`
+  - `api/runtime/flowRuntimeState.js`
+- Composition roots ativas em `api/composition/`: 34 diretorios. Foram adicionadas roots locais para `queue-ticket`, `ops`, `execution-ledger`, `support-debug`, `public-api`, `channel-webhook`, `whatsapp-connection`, `whatsapp-ivr`, `whatsapp-qr-webhook` e `frontend-fallback`.
+- Agregadores `domain-admin`, `domain-identity`, `domain-flow`, `platform-admin`, `platform-content` e `platform-public` tambem passaram a subir por composition roots dedicadas.
+- Os builders centrais foram quebrados em slices menores:
+  - `api/composition/core/buildCoreRoutingContext.js`: 63 linhas
+  - `api/composition/platform/buildPlatformRoutingContext.js`: 60 linhas
+  - `api/composition/extended/buildExtendedRoutingContext.js`: 47 linhas
+- Bridges residuais reais: nenhuma; o bridge compartilhado tambem foi removido, e nenhum modulo em `api/modules` importa `serverHandlers`.
 
-## Estado atual (snapshot 2026-03-20, fechamento arquitetural)
-- `api/server.js`: 962 linhas como entrypoint unico, funcional e estavel.
-- `api/app/registerRoutes.js`: 355 linhas, sem builders centralizados relevantes.
-- Builders centralizados em `registerRoutes.js`: 0.
-- Composition roots ativos em `api/composition/`: `tenant`, `ticket`, `rag`, `auth`, `pbx`, `vertical`, `webhooks`, `public-system`, `operations-dashboard`, `qa`, `voice`, `web-scraping`, `rpa-tests`, `dev-management`, `intelligence`, `market-intelligence`, `access-control`, `analytics`, `bulk-campaigns`, `quick-replies` (+ `core`, `platform`, `extended` apenas para contexto compartilhado).
-- Bridge residual explicito: `api/modules/shared/legacyExpressBridge.js` centraliza a ponte remanescente e documentada para handlers ainda nao reescritos em modulo nativo.
-- Frontend: `PlatformGrid` e o unico grid ativo; `DataGrid` foi removido do frontend em 2026-03-20.
-- Dashboard canonico: `frontend/src/pages/DevDashboardPage.jsx`; exports compartilhados de dashboard passam por `frontend/src/modules/dashboard-base/index.js`.
+## O que foi fechado neste ciclo
+- `server.js` deixou de concentrar:
+  - startup `require.main`
+  - bootstrap de `systemadmin`
+  - cache/estado de flows e sessions
+  - deteccao de process manager
+  - helpers mortos como `validateProviderTokenDirect`
+- `registerRoutes.js` deixou de concentrar:
+  - os 9 `buildDeps` inline remanescentes
+  - a ordem de montagem codificada como sequencia aberta de `app.use(...)`
+- A reducao mais recente de bridges tambem absorveu:
+  - `platform-content`
+  - `rag-documents`
+- O budget estrutural de imports para `serverHandlers` em `api/modules/*` caiu para `0`.
+- O caminho legado `api/serverHandlers/*` foi removido do backend; nao restam arquivos produtivos nem diretorio residual.
+- Guardrails adicionados:
+  - `tests/unit/serverRuntimeModules.test.js`
+  - `tests/unit/registerRoutesRegistry.test.js`
+  - `tests/unit/backendArchitectureGuardrails.test.js`
+  - `tests/unit/expressHandlerBridgeBudget.test.js`
+  - `tests/unit/expressHandlerBridgeAllowlist.test.js`
 
-## Principios de execucao
-- Nao quebrar contratos HTTP existentes.
-- Extrair com feature parity (sem mudar comportamento observavel na mesma onda).
-- Validar a cada onda com checagem tecnica minima.
-- Definir componente/camada canonica antes de remover legado.
-- Priorizar mudancas de baixo risco e alta reducao de acoplamento.
+## Excecoes aceitas apos o fechamento
+1. `api/serverHandlers/*` foi totalmente removido do caminho produtivo e do filesystem do backend.
+2. Nao existe mais `expressHandlerBridge.js`; qualquer readocao de adaptador generico quebra os guardrails estruturais.
+3. Podas adicionais agora recaem apenas sobre refinamentos internos de modulos, nao sobre compatibilidade historica.
+4. Documentacao e guardrails passam a ser a fonte de controle para evitar regressao.
 
-## Ondas (macro)
-
-### ONDA 1 - Inventario e diagnostico (concluida neste ciclo)
-- Inventario backend: bootstrap, roteamento, handlers, workers, wrappers.
-- Inventario frontend: grids, dashboards, CRUD e variantes legacy.
-- Mapa de dependencia, riscos e backlog inicial.
-
-### ONDA 2 - Extracoes seguras de `api/server.js`
-- Extrair bootstrap para `api/bootstrap/*` (apenas organizacao interna).
-- Extrair pipeline de startup de workers para `api/runtime/*`.
-- Manter `createServer()` e `requestHandler()` com mesma semantica de resposta.
-
-### ONDA 3 - Roteamento incremental (concluida)
-- Composer de rotas por dominio introduzido no runtime Express.
-- Sequencias legacy foram migradas para routers modulares e registradores declarativos.
-- Wiring protegido por testes de contrato e suites de cutover.
-
-### ONDA 4 - Modulos de dominio backend (em execucao continua)
-- Consolidacao de dominios de alto churn em modulos/composition roots dedicados.
-- Reducao progressiva de dependencias cruzadas e builders centralizados em `registerRoutes.js`.
-- Wrappers redundantes removidos; foco atual em extrair wiring de dominio restante para `api/composition/<domain>/index.js`.
-
-### ONDA 5 - Grid canonico frontend (concluida)
-- `platform-grid` foi consolidado como base canonica para grids.
-- As paginas prioritarias foram migradas.
-- `DataGrid` foi aposentado e removido do frontend ativo.
-
-### ONDA 6 - Dashboard/base page canonica (concluida)
-- Componentes compartilhados de dashboard existem em `frontend/src/components/DashboardBase/*`.
-- O barrel canonico `frontend/src/modules/dashboard-base/index.js` centraliza os exports reutilizaveis.
-- `DevDashboardPage.jsx` segue como dashboard operacional canonico e modularizado.
-
-### ONDA 7 - Limpeza de legado (concluida)
-- Variantes nao usadas do dashboard de desenvolvimento foram removidas.
-- Codigo morto de grid foi removido.
-- Bridges residuais ficaram reduzidas a uma ponte explicita e documentada.
-
-## Criterios de passagem entre ondas
-- Build/test baseline sem regressao funcional relevante.
-- Rotas criticas respondendo 2xx/4xx esperados.
-- Sem aumento de arquivos orphan/duplicados.
-- Evidencias publicadas em `docs/execution-wave-status.md`.
-
-## Primeiras extracoes recomendadas (baixo risco)
-1. Extrair bloco de inicializacao (`startInitialization`) para `api/bootstrap/startInitialization.js` mantendo assinatura atual.
-2. Extrair startup de workers (outbound/assignment/execution queue/vertical scheduler/channel health) para `api/runtime/startWorkers.js`.
-3. Extrair shutdown hooks (`SIGINT`/`SIGTERM`/`beforeExit`) para `api/runtime/registerShutdownHooks.js`.
-
-## Fechamento atual
-1. Backend principal fechado: `registerRoutes.js` deixou de ser hotspot estrutural e a composicao por dominio esta completa.
-2. Frontend principal fechado: `PlatformGrid` e o unico grid ativo, `CrudPageBase` cobre os fluxos CRUD principais e dashboards compartilham um path canonico de base.
-3. Legado residual ficou restrito a pontos explicitos, documentados e sem ambiguidade operacional relevante.
-
-## Fora de escopo imediato
-- Reescrever backend para outro framework HTTP em bloco unico.
-- Troca ampla de design system frontend na mesma janela das extracoes arquiteturais.
-- Mudancas de contrato de API sem camada de compatibilidade.
+## Direcao canonicamente aceita
+- Entrypoint fino em `api/server.js`.
+- Startup operacional em `api/runtime/*`.
+- Bootstrap de inicializacao em `api/bootstrap/*`.
+- Registro de rotas declarativo em `api/app/registerRoutes.js` + `api/app/routeRegistry.js`.
+- Wiring local por dominio em `api/composition/*`.
+- Adaptadores genericos compartilhados tratados como anti-pattern para este backend.

@@ -207,11 +207,11 @@ async function handleFlowExecutionRoutes(ctx) {
 
 | Arquivo | Status | Impacto |
 |---------|--------|--------|
-| `api/serverHandlers/flowExecutionRoutes.js` | ✏️ Modificado | Orchestrador thin (31 linhas) |
-| `api/serverHandlers/flow-execution/flowValidationRoutes.js` | ✨ Novo | 212 linhas |
-| `api/serverHandlers/flow-execution/flowGenerationRoutes.js` | ✨ Novo | 173 linhas |
-| `api/serverHandlers/flow-execution/flowExecutionRoutes.js` | ✨ Novo | 244 linhas |
-| `api/serverHandlers/flow-execution/rpaTestGenerationRoutes.js` | ✨ Novo | 293 linhas |
+| `api/modules/domain-flow/handleFlowExecutionRoutes.js` | ✏️ Modificado | Orchestrador thin (31 linhas) |
+| `api/modules/domain-flow/flow-execution/flowValidationRoutes.js` | ✨ Novo | 212 linhas |
+| `api/modules/domain-flow/flow-execution/flowGenerationRoutes.js` | ✨ Novo | 173 linhas |
+| `api/modules/domain-flow/flow-execution/flowExecutionRoutes.js` | ✨ Novo | 244 linhas |
+| `api/modules/domain-flow/flow-execution/rpaTestGenerationRoutes.js` | ✨ Novo | 293 linhas |
 
 ---
 
