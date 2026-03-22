@@ -21,7 +21,6 @@ import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as g
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
 import { queryAuditLogs } from '../api/audit';
-import { contextualSearchEvidence } from '../api/evidence';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -44,6 +43,16 @@ import logger from '../utils/logger';
 import { SupportDeliveryFailuresModal } from './support/SupportDeliveryFailuresModal';
 import { SupportCloseTicketModal } from './support/SupportCloseTicketModal';
 import { SupportNewConversationModal } from './support/SupportNewConversationModal';
+import { useSupportEvidence } from '../hooks/useSupportEvidence';
+import { SupportPageLayout } from '../components/support/SupportPageLayout';
+import { SupportSidebarMenu } from '../components/support/SupportSidebarMenu';
+import { SupportConversationCard } from '../components/support/SupportConversationCard';
+import { SupportTicketWorkspaceCard } from '../components/support/SupportTicketWorkspaceCard';
+import { SupportResolvedEntityCard } from '../components/support/SupportResolvedEntityCard';
+import { SupportEvidenceCard } from '../components/support/SupportEvidenceCard';
+import { SupportSuggestedReplyCard } from '../components/support/SupportSuggestedReplyCard';
+import { SupportHistoryCard } from '../components/support/SupportHistoryCard';
+import { SupportCard } from '../components/support/SupportCard';
 
 /**
  * Página de atendimento para gerenciar tickets.
@@ -100,8 +109,6 @@ export function SupportPage() {
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
-  const [evidenceHistory, setEvidenceHistory] = useState({ identity: null, evidence: null, timeline: [] });
-  const [evidenceLoading, setEvidenceLoading] = useState(false);
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
 
   const applyTemplateVariables = useCallback((text, variables) => {
@@ -483,36 +490,6 @@ export function SupportPage() {
   };
 
   useEffect(() => {
-    if (!selectedTicket?.id) {
-      setEvidenceHistory({ identity: null, evidence: null, timeline: [] });
-      return;
-    }
-    const context = {
-      ticketId: selectedTicket.id,
-      conversationId: selectedTicket.conversationId || null,
-      phone: selectedTicket.phoneNumber || null,
-    };
-    setEvidenceLoading(true);
-    contextualSearchEvidence({
-      context,
-      query: selectedTicket.lastUserMessage || '',
-      options: { limit: 5, includeWeak: false, includeTimeline: true, persistFallback: true },
-    })
-      .then((searchResp) => {
-        setEvidenceHistory({
-          identity: searchResp?.identity || null,
-          timeline: searchResp?.timeline || [],
-          evidence: searchResp?.ok ? searchResp : null,
-        });
-      })
-      .catch((error) => {
-        logger.error('Erro ao carregar Evidence Engine', error);
-        setEvidenceHistory({ identity: null, evidence: null, timeline: [] });
-      })
-      .finally(() => setEvidenceLoading(false));
-  }, [selectedTicket?.id, selectedTicket?.conversationId, selectedTicket?.phoneNumber, selectedTicket?.lastUserMessage]);
-
-  useEffect(() => {
     if (!showCloseModal) return;
     listCloseReasons({ activeOnly: true })
       .then((resp) => setCloseReasons(resp?.closeReasons || []))
@@ -628,116 +605,6 @@ export function SupportPage() {
       return '';
     }
   }
-
-  async function copyToClipboard(text) {
-    const content = String(text || '').trim();
-    if (!content) return false;
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(content);
-        return true;
-      }
-    } catch {}
-    return false;
-  }
-
-  function formatEvidenceLabel(value) {
-    if (!value) return 'n/a';
-    return String(value).replace(/_/g, ' ');
-  }
-
-  function formatEvidenceOrigin(origin) {
-    const kind = origin?.label || origin?.kind;
-    if (!kind) return 'desconhecida';
-    return formatEvidenceLabel(kind);
-  }
-
-  function formatOriginLocator(locator) {
-    if (!locator) return 'origem não mapeada';
-    const mode = locator.canOpenDirectly ? 'abertura direta' : 'abertura contextual';
-    return `${formatEvidenceLabel(locator.sourceType || 'origem')} • ${mode}`;
-  }
-
-  function buildEvidenceSuggestedReply(evidence) {
-    if (!evidence) return '';
-    const occurredAt = evidence.occurred_at ? formatDate(evidence.occurred_at) : 'data anterior';
-    const sourceLabel = formatEvidenceLabel(evidence.source_type || evidence.sourceType || 'origem anterior');
-    if ((evidence.confidence || 0) < 0.72 || evidence.strength === 'weak') {
-      return `Encontramos um indício anterior em ${occurredAt}, através de ${sourceLabel}. Posso conferir o contexto completo antes de responder de forma definitiva.\n\nTrecho de apoio: ${evidence.excerpt || evidence.summary || ''}`.trim();
-    }
-    return `Identificamos que essa informação já foi comunicada anteriormente em ${occurredAt}, através de ${sourceLabel}. Posso reenviar o trecho ou documento relacionado.\n\nTrecho de apoio: ${evidence.excerpt || evidence.summary || ''}`.trim();
-  }
-
-  const handleCopyEvidence = useCallback(async (evidence) => {
-    const text = [
-      evidence?.summary || '',
-      evidence?.excerpt || '',
-      evidence?.source_ref?.ticketId ? `ticket=${evidence.source_ref.ticketId}` : '',
-      evidence?.source_ref?.conversationId ? `conversation=${evidence.source_ref.conversationId}` : '',
-    ].filter(Boolean).join('\n');
-    const copied = await copyToClipboard(text);
-    showToast(copied ? 'Evidência copiada' : 'Não foi possível copiar a evidência', copied ? 'success' : 'error');
-  }, [showToast]);
-
-  const handleUseEvidenceAsReply = useCallback((evidence) => {
-    const suggestion = buildEvidenceSuggestedReply(evidence);
-    setMessageText((prev) => {
-      if (!prev) return suggestion;
-      if (prev.includes(suggestion)) return prev;
-      return `${prev}\n\n${suggestion}`.trim();
-    });
-    showToast('Sugestão adicionada ao composer', 'success');
-  }, [showToast]);
-
-  const handleOpenEvidenceSource = useCallback((evidence) => {
-    const origin = evidence?.origin_locator || null;
-    const ticketId = origin?.ticketId || evidence?.source_ref?.ticketId || evidence?.ticketId || null;
-    if (ticketId) {
-      const ticket = tickets.find((item) => item.id === ticketId);
-      if (ticket) {
-        setSelectedTicket(ticket);
-        showToast(origin?.canOpenDirectly ? 'Origem aberta diretamente no ticket relacionado' : 'Origem aberta no melhor contexto disponível', 'info');
-        return;
-      }
-    }
-    const conversationId = origin?.conversationId || evidence?.source_ref?.conversationId || evidence?.conversationId || null;
-    if (conversationId) {
-      if (selectedTicket?.conversationId === conversationId) {
-        showToast(origin?.channelMessageId ? `Origem localizada na conversa atual (${origin.channelMessageId})` : 'Origem localizada na conversa atual', 'info');
-        return;
-      }
-      const relatedTicket = tickets.find((item) => item.conversationId === conversationId);
-      if (relatedTicket) {
-        setSelectedTicket(relatedTicket);
-        showToast(origin?.canOpenDirectly ? 'Origem aberta pela conversa relacionada' : 'Origem aberta no contexto mais próximo da conversa', 'info');
-        return;
-      }
-    }
-    const sourceText = [
-      origin?.sourceType ? `source_type=${origin.sourceType}` : '',
-      origin?.sourceId ? `source_id=${origin.sourceId}` : '',
-      ticketId ? `ticket=${ticketId}` : '',
-      conversationId ? `conversation=${conversationId}` : '',
-      origin?.locator ? `locator=${origin.locator}` : '',
-    ].filter(Boolean).join('\n');
-    copyToClipboard(sourceText);
-    showToast('Origem copiada com o melhor locator disponível', 'info');
-  }, [selectedTicket?.conversationId, tickets, showToast]);
-
-  const handleOpenTimelineItem = useCallback((item) => {
-    if (!item) return;
-    handleOpenEvidenceSource({
-      source_type: item.sourceType || item.source,
-      source_id: item.id,
-      source_ref: {
-        ticketId: item.ticketId || null,
-        conversationId: item.conversationId || null,
-        source: item.source || null,
-      },
-      ticketId: item.ticketId || null,
-      conversationId: item.conversationId || null,
-    });
-  }, [handleOpenEvidenceSource]);
 
   function summarizeChannelMessage(channelMsg) {
     const type = String(channelMsg?.type || '').toLowerCase();
@@ -1080,6 +947,23 @@ export function SupportPage() {
     return { emails, cpfs, cnpjs, phones, urls };
   }, [timelineMessages]);
 
+  const {
+    evidenceHistory,
+    evidenceLoading,
+    suggestedReply,
+    handleCopyEvidence,
+    handleUseEvidenceAsReply,
+    handleOpenEvidenceSource,
+    handleOpenTimelineItem,
+  } = useSupportEvidence({
+    selectedTicket,
+    tickets,
+    setSelectedTicket,
+    setMessageText,
+    showToast,
+    formatDate,
+  });
+
   // Carrega mensagens quando ticket é selecionado
   useEffect(() => {
     if (selectedTicket) {
@@ -1386,11 +1270,11 @@ export function SupportPage() {
     }
   };
 
-  const formatDate = (dateString) => {
+  function formatDate(dateString) {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR');
-  };
+  }
 
   const formatPhoneNumber = (phone) => {
     if (!phone) return '-';
@@ -1621,488 +1505,322 @@ export function SupportPage() {
         setShowNewConversationModal={setShowNewConversationModal}
       />
 
-      <div className={`support-grid${isMobile ? ' is-mobile' : ''}${isMobile && !isRightPanelCollapsed ? ' right-open' : ''}`}>
-        <div className="support-left-column">
-          <SupportFiltersBar
-            uiSearch={uiSearch}
-            setUiSearch={setUiSearch}
-            ticketQueueOptions={ticketQueueOptions}
-            uiQueue={uiQueue}
-            setUiQueue={setUiQueue}
-            onClear={clearTicketFilters}
-          />
-          <SupportTicketList
+      <SupportPageLayout
+        isMobile={isMobile}
+        isRightPanelCollapsed={isRightPanelCollapsed}
+        hasSelection={Boolean(selectedTicket)}
+        left={(
+          <>
+            <SupportFiltersBar
+              uiSearch={uiSearch}
+              setUiSearch={setUiSearch}
+              ticketQueueOptions={ticketQueueOptions}
+              uiQueue={uiQueue}
+              setUiQueue={setUiQueue}
+              onClear={clearTicketFilters}
+            />
+            <SupportTicketList
+              isMobile={isMobile}
+              loading={loading}
+              ticketsView={ticketsView}
+              handleSelectTicket={handleSelectTicket}
+              selectedTicket={selectedTicket}
+              uiSearchDebounced={uiSearchDebounced}
+              highlightText={highlightText}
+              getContactName={getContactName}
+              getPhoneNode={getPhoneNode}
+              formatTicketMode={formatTicketMode}
+              getStatusClass={getStatusClass}
+              formatTicketStatus={formatTicketStatus}
+              formatTime={formatTime}
+              formatBadgeCount={formatBadgeCount}
+              getTicketPreview={getTicketPreview}
+              getAssignedLabel={getAssignedLabel}
+              getQueueLabel={getQueueLabel}
+              supportGridColumns={supportGridColumns}
+            />
+          </>
+        )}
+        main={selectedTicket ? (
+          <SupportConversationCard selectedTicket={selectedTicket}>
+            <SupportConversationPane
+              isMobile={isMobile}
+              selectedTicket={selectedTicket}
+              setSelectedTicket={setSelectedTicket}
+              setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+              handoverLoading={handoverLoading}
+              handleTakeOver={handleTakeOver}
+              handleReturnToBot={handleReturnToBot}
+              handlePause={handlePause}
+              handleResume={handleResume}
+              deliveryFailuresLoading={deliveryFailuresLoading}
+              openDeliveryFailures={openDeliveryFailures}
+              formatDate={formatDate}
+              messagesContainerRef={messagesContainerRef}
+              timelineMessages={timelineMessages}
+              renderTimelineMessageContent={renderTimelineMessageContent}
+              getDeliveryStatusBadge={getDeliveryStatusBadge}
+              assignedTo={assignedTo}
+              setAssignedTo={setAssignedTo}
+              agent={agent}
+              handleAssign={handleAssign}
+              quickReplySelectedCategory={quickReplySelectedCategory}
+              setQuickReplySelectedCategory={setQuickReplySelectedCategory}
+              quickReplyCategories={quickReplyCategories}
+              quickReplyCategoryItems={quickReplyCategoryItems}
+              quickReplySuggestions={quickReplySuggestions}
+              insertQuickReply={insertQuickReply}
+              messageText={messageText}
+              setMessageText={setMessageText}
+              quickReplySlashOpen={quickReplySlashOpen}
+              quickReplySlashResults={quickReplySlashResults}
+              handleSendMessage={handleSendMessage}
+              handleClose={handleClose}
+            />
+          </SupportConversationCard>
+        ) : (
+          <div className="support-details-empty">
+            <p>Selecione um ticket para ver detalhes e ações</p>
+          </div>
+        )}
+        right={selectedTicket ? (
+          <SupportDetailsSidebar
             isMobile={isMobile}
-            loading={loading}
-            ticketsView={ticketsView}
-            handleSelectTicket={handleSelectTicket}
-            selectedTicket={selectedTicket}
-            uiSearchDebounced={uiSearchDebounced}
-            highlightText={highlightText}
-            getContactName={getContactName}
-            getPhoneNode={getPhoneNode}
-            formatTicketMode={formatTicketMode}
-            getStatusClass={getStatusClass}
-            formatTicketStatus={formatTicketStatus}
-            formatTime={formatTime}
-            formatBadgeCount={formatBadgeCount}
-            getTicketPreview={getTicketPreview}
-            getAssignedLabel={getAssignedLabel}
-            getQueueLabel={getQueueLabel}
-            supportGridColumns={supportGridColumns}
-          />
-        </div>
+            isRightPanelCollapsed={isRightPanelCollapsed}
+            setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+          >
+            <SupportSidebarMenu items={[
+              { id: 'support-section-ticket', label: 'Atendimento', description: 'Resumo do ticket atual' },
+              { id: 'support-section-entity', label: 'Entidade', description: 'Entidade resolvida e correlações' },
+              { id: 'support-section-evidence', label: 'Evidências', description: 'Melhores evidências para o contexto' },
+              { id: 'support-section-reply', label: 'Resposta', description: 'Sugestão pronta para o atendimento' },
+              { id: 'support-section-history', label: 'Histórico', description: 'Timeline consolidada' },
+            ]} />
 
-        <div className="support-details-panel">
-          {selectedTicket ? (
-            <>
-              <div style={{ display: 'flex', gap: '14px', minHeight: 0 }}>
-                <SupportConversationPane
-                  isMobile={isMobile}
-                  selectedTicket={selectedTicket}
-                  setSelectedTicket={setSelectedTicket}
-                  setIsRightPanelCollapsed={setIsRightPanelCollapsed}
-                  handoverLoading={handoverLoading}
-                  handleTakeOver={handleTakeOver}
-                  handleReturnToBot={handleReturnToBot}
-                  handlePause={handlePause}
-                  handleResume={handleResume}
-                  deliveryFailuresLoading={deliveryFailuresLoading}
-                  openDeliveryFailures={openDeliveryFailures}
-                  formatDate={formatDate}
-                  messagesContainerRef={messagesContainerRef}
-                  timelineMessages={timelineMessages}
-                  renderTimelineMessageContent={renderTimelineMessageContent}
-                  getDeliveryStatusBadge={getDeliveryStatusBadge}
-                  assignedTo={assignedTo}
-                  setAssignedTo={setAssignedTo}
-                  agent={agent}
-                  handleAssign={handleAssign}
-                  quickReplySelectedCategory={quickReplySelectedCategory}
-                  setQuickReplySelectedCategory={setQuickReplySelectedCategory}
-                  quickReplyCategories={quickReplyCategories}
-                  quickReplyCategoryItems={quickReplyCategoryItems}
-                  quickReplySuggestions={quickReplySuggestions}
-                  insertQuickReply={insertQuickReply}
-                  messageText={messageText}
-                  setMessageText={setMessageText}
-                  quickReplySlashOpen={quickReplySlashOpen}
-                  quickReplySlashResults={quickReplySlashResults}
-                  handleSendMessage={handleSendMessage}
-                  handleClose={handleClose}
-                />
+            <SupportTicketWorkspaceCard
+              ticket={selectedTicket}
+              phoneMaskingEnabled={phoneMaskingEnabled}
+              formatDate={formatDate}
+              modeLabel={getModeLabel(selectedTicket.mode)}
+            />
 
-                <SupportDetailsSidebar
-                  isMobile={isMobile}
-                  isRightPanelCollapsed={isRightPanelCollapsed}
-                  setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ fontWeight: 700 }}>Resumo IA</div>
+                <Button
+                  onClick={handleGenerateAiSummary}
+                  disabled={aiSummaryLoading}
+                  style={{ width: 'auto' }}
+                  title="Gerar ou atualizar resumo do ticket"
                 >
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ fontWeight: 700 }}>Contato</div>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        border: '1px solid #ddd',
-                        background: getModeLabel(selectedTicket.mode).bg,
-                        color: getModeLabel(selectedTicket.mode).fg,
-                      }}>
-                        {getModeLabel(selectedTicket.mode).label}
-                      </span>
-                    </div>
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      <div>📞 <strong><MaskedPhone phone={selectedTicket.phoneNumber} mask={phoneMaskingEnabled} /></strong></div>
-                      <div>Fila: <strong>{selectedTicket.queue}</strong></div>
-                      <div>Status: <strong>{selectedTicket.status}</strong></div>
-                      {selectedTicket.pauseReason ? (
-                        <div>Motivo: <strong>{selectedTicket.pauseReason}</strong></div>
-                      ) : null}
-                      {selectedTicket?.context?.closeReasonName ? (
-                        <div>Close reason: <strong>{selectedTicket.context.closeReasonName}</strong></div>
-                      ) : null}
-                      {selectedTicket.channelType ? <div>Canal: <strong>{selectedTicket.channelType}</strong></div> : null}
-                      {selectedTicket.conversationId ? <div>ConversationId: <code>{selectedTicket.conversationId}</code></div> : null}
-                      <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
-                    </div>
+                  {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
+                </Button>
+              </div>
+              {aiSummary ? (
+                typeof aiSummary === 'string' ? (
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                    {aiSummary}
                   </div>
+                ) : (
+                  <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                    {safeStringify(aiSummary, 3000)}
+                  </pre>
+                )
+              ) : (
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                  Sem resumo gerado para este ticket.
+                </div>
+              )}
+            </div>
 
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontWeight: 700 }}>Resumo IA</div>
-                      <Button
-                        onClick={handleGenerateAiSummary}
-                        disabled={aiSummaryLoading}
-                        style={{ width: 'auto' }}
-                        title="Gerar ou atualizar resumo do ticket"
-                      >
-                        {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
-                      </Button>
-                    </div>
-                    {aiSummary ? (
-                      typeof aiSummary === 'string' ? (
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                          {aiSummary}
-                        </div>
-                      ) : (
-                        <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                          {safeStringify(aiSummary, 3000)}
-                        </pre>
-                      )
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        Sem resumo gerado para este ticket.
-                      </div>
-                    )}
-                  </div>
+            <SupportResolvedEntityCard identity={evidenceHistory.identity} loading={evidenceLoading} />
 
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontWeight: 700 }}>Entidade resolvida</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {evidenceLoading ? 'Carregando…' : (evidenceHistory.identity ? `${Math.round((evidenceHistory.identity.confidence || 0) * 100)}%` : 'sem match')}
-                      </div>
-                    </div>
-                    {evidenceHistory.identity ? (
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                        <div>Tipo: <strong>{evidenceHistory.identity.entityType}</strong></div>
-                        <div>ID: <code>{evidenceHistory.identity.entityId}</code></div>
-                        <div style={{ marginTop: '8px' }}>
-                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Fontes</div>
-                          {(evidenceHistory.identity.sources || []).slice(0, 4).map((source, index) => (
-                            <div key={`${source.type || 'src'}-${index}`}>
-                              {formatEvidenceLabel(source.type || 'source')}
-                              {source.id ? ` • ${source.id}` : ''}
-                              {source.field ? ` • ${source.field}` : ''}
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ marginTop: '8px' }}>
-                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Relacionados</div>
-                          {(evidenceHistory.identity.relatedEntities || []).length === 0 ? (
-                            <div style={{ color: 'var(--color-text-tertiary)' }}>Sem entidades relacionadas detectadas.</div>
-                          ) : (
-                            (evidenceHistory.identity.relatedEntities || []).slice(0, 8).map((entity) => (
-                              <div key={`${entity.type}:${entity.id}`}>
-                                {entity.type}: <code>{entity.id}</code>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        Nenhuma entidade foi resolvida com confiança suficiente para este atendimento.
-                      </div>
-                    )}
-                  </div>
+            <SupportEvidenceCard
+              evidenceResult={evidenceHistory.evidence}
+              loading={evidenceLoading}
+              formatDate={formatDate}
+              onOpenSource={handleOpenEvidenceSource}
+              onCopyEvidence={handleCopyEvidence}
+              onUseAsReply={handleUseEvidenceAsReply}
+            />
 
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontWeight: 700 }}>Evidências relacionadas</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {evidenceLoading ? 'Carregando…' : `${(evidenceHistory.evidence?.best ? 1 : 0) + (evidenceHistory.evidence?.alternatives?.length || 0)} item(ns)`}
-                      </div>
-                    </div>
-                    {evidenceHistory.evidence?.best || (evidenceHistory.evidence?.alternatives || []).length > 0 ? (
-                      [evidenceHistory.evidence?.best, ...(evidenceHistory.evidence?.alternatives || [])]
-                        .filter(Boolean)
-                        .map((evidence, index) => (
-                          <div key={evidence.id || index} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
-                              <div>
-                                <strong>{formatEvidenceLabel(evidence.type)}</strong>
-                                {evidence.theme ? ` • ${formatEvidenceLabel(evidence.theme)}` : ''}
-                              </div>
-                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(evidence.occurred_at)}</div>
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
-                              <div>{formatEvidenceLabel(evidence.category)} • origem {formatEvidenceLabel(evidence.source_type)} • força {formatEvidenceLabel(evidence.strength)}</div>
-                              <div>Modo {formatEvidenceOrigin(evidence.evidence_origin)}</div>
-                              {evidence.origin_locator ? (
-                                <div>{formatOriginLocator(evidence.origin_locator)}</div>
-                              ) : null}
-                              <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • score {evidence.reasoning?.score || 0}</div>
-                              {evidence.reasoning?.matchedBy?.length ? (
-                                <div>Match: {evidence.reasoning.matchedBy.join(', ')}</div>
-                              ) : null}
-                              {evidence.source_ref?.ticketId || evidence.source_ref?.conversationId || evidence.source_id ? (
-                                <div>
-                                  {evidence.source_ref?.ticketId ? `ticket ${evidence.source_ref.ticketId}` : null}
-                                  {evidence.source_ref?.ticketId && evidence.source_ref?.conversationId ? ' • ' : null}
-                                  {evidence.source_ref?.conversationId ? `conversation ${evidence.source_ref.conversationId}` : null}
-                                  {(evidence.source_ref?.ticketId || evidence.source_ref?.conversationId) && evidence.source_id ? ' • ' : null}
-                                  {evidence.source_id ? `source ${evidence.source_id}` : null}
-                                </div>
-                              ) : null}
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                              {evidence.excerpt || evidence.summary}
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                              <Button type="button" onClick={() => handleOpenEvidenceSource(evidence)} style={{ width: 'auto' }}>
-                                Abrir origem
-                              </Button>
-                              <Button type="button" onClick={() => handleCopyEvidence(evidence)} style={{ width: 'auto' }}>
-                                Copiar evidência
-                              </Button>
-                              <Button type="button" onClick={() => handleUseEvidenceAsReply(evidence)} style={{ width: 'auto' }}>
-                                Usar na resposta
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        {evidenceHistory.evidence?.reasoning?.reason
-                          ? `Nenhuma evidência forte foi encontrada: ${formatEvidenceLabel(evidenceHistory.evidence.reasoning.reason)}.`
-                          : 'Nenhuma evidência histórica relevante foi encontrada para o contexto atual.'}
-                      </div>
-                    )}
-                  </div>
+            <SupportSuggestedReplyCard suggestedReply={suggestedReply} />
 
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Resposta sugerida</div>
-                    {evidenceHistory.evidence?.best ? (
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                        {buildEvidenceSuggestedReply(evidenceHistory.evidence.best)}
-                      </div>
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        Quando houver uma evidência forte, a sugestão aparecerá aqui sem interromper o fluxo atual.
-                      </div>
-                    )}
-                  </div>
+            <SupportHistoryCard
+              timeline={evidenceHistory.timeline || []}
+              loading={evidenceLoading}
+              formatDate={formatDate}
+              onOpenItem={handleOpenTimelineItem}
+            />
 
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontWeight: 700 }}>Histórico consolidado</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {evidenceLoading ? 'Carregando…' : `${(evidenceHistory.timeline || []).length} item(ns)`}
+            <SupportCard id="support-section-entities" title="Entidades" subtitle="Itens extraídos automaticamente da conversa">
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                {(extractedEntities.emails.length === 0
+                  && extractedEntities.cpfs.length === 0
+                  && extractedEntities.cnpjs.length === 0
+                  && extractedEntities.phones.length === 0
+                  && extractedEntities.urls.length === 0) ? (
+                  <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
+                ) : (
+                  <>
+                    {extractedEntities.emails.length > 0 ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
+                        {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
                       </div>
-                    </div>
-                    {(evidenceHistory.timeline || []).length > 0 ? (
-                      (evidenceHistory.timeline || []).slice(0, 6).map((item) => (
-                          <div key={item.id} style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
-                            <div>
-                              <strong>{item.title || formatEvidenceLabel(item.type)}</strong>
-                              {item.source ? ` • ${formatEvidenceLabel(item.source)}` : ''}
-                            </div>
-                            <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>{formatDate(item.timestamp)}</div>
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                            {item.text || 'Sem conteúdo textual disponível.'}
-                          </div>
-                          {item.originLocator ? (
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginTop: '6px' }}>
-                              {formatOriginLocator(item.originLocator)}
-                            </div>
-                          ) : null}
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                            <Button type="button" onClick={() => handleOpenTimelineItem(item)} style={{ width: 'auto' }}>
-                              Abrir origem
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        O histórico consolidado aparecerá aqui quando o contexto atual puder ser relacionado a conversas, tickets ou eventos anteriores.
+                    ) : null}
+                    {extractedEntities.phones.length > 0 ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
+                        {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
                       </div>
-                    )}
-                  </div>
-
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      {(extractedEntities.emails.length === 0
-                        && extractedEntities.cpfs.length === 0
-                        && extractedEntities.cnpjs.length === 0
-                        && extractedEntities.phones.length === 0
-                        && extractedEntities.urls.length === 0) ? (
-                          <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
-                        ) : (
-                          <>
-                            {extractedEntities.emails.length > 0 ? (
-                              <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
-                                {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
-                              </div>
-                            ) : null}
-                            {extractedEntities.phones.length > 0 ? (
-                              <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
-                                {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
-                              </div>
-                            ) : null}
-                            {extractedEntities.cpfs.length > 0 ? (
-                              <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
-                                {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
-                              </div>
-                            ) : null}
-                            {extractedEntities.cnpjs.length > 0 ? (
-                              <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
-                                {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
-                              </div>
-                            ) : null}
-                            {extractedEntities.urls.length > 0 ? (
-                              <div style={{ marginBottom: '0px' }}>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
-                                {extractedEntities.urls.map((u) => (
-                                  <div key={u}>
-                                    <a href={u} target="_blank" rel="noreferrer">{u}</a>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
-                          </>
-                        )}
-                    </div>
-                  </div>
-
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                      {(selectedTicket.tags || []).length === 0 ? (
-                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
-                      ) : (
-                        (selectedTicket.tags || []).map((t) => (
-                          <span
-                            key={t}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '4px 10px',
-                              borderRadius: '999px',
-                              border: '1px solid var(--color-border-default)',
-                              background: 'var(--color-bg-secondary)',
-                              fontSize: '12px',
-                            }}
-                          >
-                            {t}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTag(t)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                color: 'var(--color-text-tertiary)',
-                              }}
-                              aria-label={`Remover tag ${t}`}
-                              title="Remover"
-                            >
-                              ✕
-                            </button>
-                          </span>
-                        ))
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        placeholder="Adicionar tag (ex: cobrança)"
-                        className="support-form-input"
-                        list="support-known-tags"
-                      />
-                      <Button onClick={handleAddTag} style={{ width: 'auto' }}>
-                        Adicionar
-                      </Button>
-                    </div>
-                  </div>
-
-                  {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
-                    <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Handover & atribuições</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                        {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
-                          <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
-                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
-                            <div>
-                              <strong>{h.type}</strong> • {h.mode}
-                              {h.actorUsername ? ` • ${h.actorUsername}` : ''}
-                              {h.reason ? ` • ${h.reason}` : ''}
-                            </div>
+                    ) : null}
+                    {extractedEntities.cpfs.length > 0 ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
+                        {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
+                      </div>
+                    ) : null}
+                    {extractedEntities.cnpjs.length > 0 ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
+                        {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
+                      </div>
+                    ) : null}
+                    {extractedEntities.urls.length > 0 ? (
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
+                        {extractedEntities.urls.map((u) => (
+                          <div key={u}>
+                            <a href={u} target="_blank" rel="noreferrer">{u}</a>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : null}
-
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                      {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
-                        ticketEvents.slice(0, 20).map((ev) => (
-                          <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                              <div style={{ fontWeight: 600 }}>{ev.type}</div>
-                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
-                            </div>
-                            {ev?.payload ? (
-                              <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>
-                                {typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}
-                              </div>
-                            ) : null}
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ color: 'var(--color-text-tertiary)' }}>
-                          Sem eventos registrados para este ticket.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ fontWeight: 700 }}>Auditoria</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
-                      </div>
-                    </div>
-                    <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                      {ticketAuditLoading ? (
-                        <div>Carregando…</div>
-                      ) : (ticketAuditLogs.length === 0 ? (
-                        <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
-                      ) : (
-                        ticketAuditLogs.map((l, idx) => (
-                          <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                              <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
-                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
-                            </div>
-                            <div style={{ marginTop: '4px' }}>
-                              {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
-                              {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
-                            </div>
-                          </div>
-                        ))
-                      ))}
-                    </div>
-                  </div>
-                </SupportDetailsSidebar>
+                    ) : null}
+                  </>
+                )}
               </div>
-            </>
-          ) : (
-            <div className="support-details-empty">
-              <p>Selecione um ticket para ver detalhes e ações</p>
+            </SupportCard>
+
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+              <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                {(selectedTicket.tags || []).length === 0 ? (
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
+                ) : (
+                  (selectedTicket.tags || []).map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        border: '1px solid var(--color-border-default)',
+                        background: 'var(--color-bg-secondary)',
+                        fontSize: '12px',
+                      }}
+                    >
+                      {t}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(t)}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}
+                        aria-label={`Remover tag ${t}`}
+                        title="Remover"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Adicionar tag (ex: cobrança)"
+                  className="support-form-input"
+                  list="support-known-tags"
+                />
+                <Button onClick={handleAddTag} style={{ width: 'auto' }}>Adicionar</Button>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+
+            {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+              <SupportCard id="support-section-handover" title="Handover & atribuições" subtitle="Transições recentes do atendimento">
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                  {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
+                    <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
+                      <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
+                      <div>
+                        <strong>{h.type}</strong> • {h.mode}
+                        {h.actorUsername ? ` • ${h.actorUsername}` : ''}
+                        {h.reason ? ` • ${h.reason}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SupportCard>
+            ) : null}
+
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                  {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
+                </div>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
+                  ticketEvents.slice(0, 20).map((ev) => (
+                    <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ fontWeight: 600 }}>{ev.type}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
+                      </div>
+                      {ev?.payload ? <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>{typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}</div> : null}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: 'var(--color-text-tertiary)' }}>Sem eventos registrados para este ticket.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                <div style={{ fontWeight: 700 }}>Auditoria</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                  {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
+                </div>
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                {ticketAuditLoading ? (
+                  <div>Carregando…</div>
+                ) : (ticketAuditLogs.length === 0 ? (
+                  <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
+                ) : (
+                  ticketAuditLogs.map((l, idx) => (
+                    <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
+                        <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
+                      </div>
+                      <div style={{ marginTop: '4px' }}>
+                        {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
+                        {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
+                      </div>
+                    </div>
+                  ))
+                ))}
+              </div>
+            </div>
+          </SupportDetailsSidebar>
+        ) : null}
+      />
 
       <ToastContainer />
       <ConfirmDialog />
