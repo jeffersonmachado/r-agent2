@@ -5,22 +5,15 @@ import {
   assignTicket,
   closeTicket,
   sendTicketMessage,
-  getTicketMessages,
-  markTicketAsRead,
-  createTicket,
   takeOverTicket,
   returnToBotTicket,
   pauseTicket,
   resumeTicket,
   getTicketDeliveryFailures,
-  getTicketAiSummary,
-  generateTicketAiSummary,
 } from '../api/tickets';
-import { getConversationMessages } from '../api/conversations';
 import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as getQuickReplyCategories } from '../api/quickReplies';
 import { listCloseReasons } from '../api/closeReasons';
-import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
-import { queryAuditLogs } from '../api/audit';
+import { addTagToTicket, removeTagFromTicket } from '../api/segmentation';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -53,6 +46,7 @@ import { SupportEvidenceCard } from '../components/support/SupportEvidenceCard';
 import { SupportSuggestedReplyCard } from '../components/support/SupportSuggestedReplyCard';
 import { SupportHistoryCard } from '../components/support/SupportHistoryCard';
 import { SupportCard } from '../components/support/SupportCard';
+import { useSupportTicketContext } from '../hooks/useSupportTicketContext';
 
 /**
  * Página de atendimento para gerenciar tickets.
@@ -69,7 +63,6 @@ export function SupportPage() {
   const [queues, setQueues] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [ticketMessages, setTicketMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -98,14 +91,6 @@ export function SupportPage() {
   const [closeTagsInput, setCloseTagsInput] = useState('');
   const [closing, setClosing] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [knownTags, setKnownTags] = useState([]);
-  const [aiSummary, setAiSummary] = useState(null);
-  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
-  const [conversationMessages, setConversationMessages] = useState([]);
-  const [timelineMessages, setTimelineMessages] = useState([]);
-  const [ticketEvents, setTicketEvents] = useState([]);
-  const [ticketAuditLogs, setTicketAuditLogs] = useState([]);
-  const [ticketAuditLoading, setTicketAuditLoading] = useState(false);
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
@@ -290,7 +275,6 @@ export function SupportPage() {
         setTickets(prevTickets => prevTickets.filter(t => t.id !== data.ticketId));
         if (selectedTicketIdRef.current === data.ticketId) {
           setSelectedTicket(null);
-          setTicketMessages([]);
         }
         break;
         
@@ -370,6 +354,27 @@ export function SupportPage() {
     }
   }, []);
 
+  const {
+    timelineMessages,
+    ticketEvents,
+    ticketAuditLogs,
+    ticketAuditLoading,
+    aiSummary,
+    aiSummaryLoading,
+    knownTags,
+    extractedEntities,
+    messagesContainerRef,
+    loadTicketMessages,
+    loadTicketMessagesRef,
+    handleGenerateAiSummary,
+    safeGetBodyText,
+  } = useSupportTicketContext({
+    selectedTicket,
+    setSelectedTicket,
+    setTickets,
+    showToast,
+  });
+
   // Sugestões automáticas de quick replies com base na última msg do usuário
   useEffect(() => {
     const context = selectedTicket?.lastUserMessage || '';
@@ -433,19 +438,6 @@ export function SupportPage() {
       .catch(() => setQuickReplyCategoryItems([]));
   }, [selectedTicket?.id, selectedTicket?.status, quickReplySelectedCategory]);
 
-  useEffect(() => {
-    // Auditoria do ticket (visível no console)
-    if (!selectedTicket?.id) {
-      setTicketAuditLogs([]);
-      return;
-    }
-    setTicketAuditLoading(true);
-    queryAuditLogs({ resource: 'ticket', resourceId: selectedTicket.id, limit: 50, offset: 0 })
-      .then((resp) => setTicketAuditLogs(resp?.items || resp?.logs || []))
-      .catch(() => setTicketAuditLogs([]))
-      .finally(() => setTicketAuditLoading(false));
-  }, [selectedTicket?.id]);
-
   const updateTicketLocal = useCallback((ticket) => {
     if (!ticket?.id) return;
     setTickets((prev) => {
@@ -457,37 +449,6 @@ export function SupportPage() {
     });
     setSelectedTicket((prev) => (prev?.id === ticket.id ? ticket : prev));
   }, []);
-
-  useEffect(() => {
-    // Best-effort: lista tags existentes para sugestão
-    getAllTags()
-      .then((resp) => setKnownTags((resp?.tags || []).map(t => t.tag || t).filter(Boolean)))
-      .catch(() => setKnownTags([]));
-  }, []);
-
-  useEffect(() => {
-    if (!selectedTicket?.id) {
-      setAiSummary(null);
-      return;
-    }
-    getTicketAiSummary(selectedTicket.id)
-      .then((resp) => setAiSummary(resp?.summary || null))
-      .catch(() => setAiSummary(null));
-  }, [selectedTicket?.id]);
-
-  const handleGenerateAiSummary = async () => {
-    if (!selectedTicket?.id) return;
-    setAiSummaryLoading(true);
-    try {
-      const resp = await generateTicketAiSummary(selectedTicket.id);
-      setAiSummary(resp?.summary || null);
-    } catch (err) {
-      logger.error('Erro ao gerar resumo IA', err);
-      showToast('Erro ao gerar resumo IA', 'error');
-    } finally {
-      setAiSummaryLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (!showCloseModal) return;
@@ -536,10 +497,7 @@ export function SupportPage() {
         if (!prevSelected) return null;
         const updatedTicket = uniqueTickets.find(t => t.id === prevSelected.id);
         // Se não encontrou na lista, o ticket foi removido ou mudou de status
-        if (!updatedTicket) {
-          setTicketMessages([]);
-          return null;
-        }
+        if (!updatedTicket) return null;
         // Atualiza com os dados mais recentes do ticket
         return updatedTicket;
       });
@@ -583,19 +541,6 @@ export function SupportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Apenas no mount inicial
 
-  function safeGetBodyText(body) {
-    if (!body) return '';
-    if (typeof body === 'string') return body;
-    if (typeof body.text === 'string') return body.text;
-    if (typeof body.caption === 'string') return body.caption;
-    if (body.text && typeof body.text === 'object' && typeof body.text.body === 'string') return body.text.body;
-    // WhatsApp: caption pode vir em body.image.caption / body.document.caption / etc.
-    if (body.image && typeof body.image === 'object' && typeof body.image.caption === 'string') return body.image.caption;
-    if (body.document && typeof body.document === 'object' && typeof body.document.caption === 'string') return body.document.caption;
-    if (body.video && typeof body.video === 'object' && typeof body.video.caption === 'string') return body.video.caption;
-    return '';
-  }
-
   function safeStringify(obj, maxLen = 2000) {
     try {
       const s = JSON.stringify(obj, null, 2);
@@ -603,30 +548,6 @@ export function SupportPage() {
       return s.length > maxLen ? `${s.slice(0, maxLen)}\n…` : s;
     } catch {
       return '';
-    }
-  }
-
-  function summarizeChannelMessage(channelMsg) {
-    const type = String(channelMsg?.type || '').toLowerCase();
-    const body = channelMsg?.body || {};
-    const text = safeGetBodyText(body);
-    if (text) return text;
-
-    if (type === 'image') return '[imagem]';
-    if (type === 'audio' || type === 'voice') return '[áudio]';
-    if (type === 'video') return '[vídeo]';
-    if (type === 'document') return '[documento]';
-    if (type === 'sticker') return '[sticker]';
-    if (type === 'location') return '[localização]';
-    if (type === 'contacts') return '[contatos]';
-    if (type === 'interactive') return '[interativo]';
-    if (type) return `[${type}]`;
-
-    try {
-      const s = JSON.stringify(body);
-      return s.length > 280 ? `${s.slice(0, 280)}…` : s;
-    } catch {
-      return '[mensagem]';
     }
   }
 
@@ -801,152 +722,6 @@ export function SupportPage() {
     );
   }
 
-  function buildTimelineMessages(ticketMsgs = [], channelMsgs = []) {
-    const byExternal = new Map();
-    const items = [];
-
-    const pushItem = (it) => {
-      items.push(it);
-      if (it.externalMessageId) byExternal.set(it.externalMessageId, it);
-    };
-
-    for (const m of (Array.isArray(ticketMsgs) ? ticketMsgs : [])) {
-      pushItem({
-        key: `t:${m?.id || Math.random().toString(36).slice(2)}`,
-        source: 'ticket',
-        sender: m?.sender || 'system',
-        text: m?.text || '',
-        timestamp: m?.timestamp || null,
-        externalMessageId: m?.externalMessageId || null,
-        deliveryStatus: m?.deliveryStatus || null,
-        raw: m,
-      });
-    }
-
-    for (const cm of (Array.isArray(channelMsgs) ? channelMsgs : [])) {
-      const ext = cm?.externalMessageId || null;
-      const existing = ext ? byExternal.get(ext) : null;
-      const normalizedSender = (cm?.direction === 'in')
-        ? 'user'
-        : (cm?.direction === 'out' ? 'agent' : 'system');
-
-      if (existing) {
-        existing.channel = cm;
-        if (!existing.deliveryStatus && cm?.status) existing.deliveryStatus = cm.status;
-        if ((!existing.text || existing.text === '') && (cm?.type || cm?.body)) {
-          existing.text = summarizeChannelMessage(cm);
-        }
-        continue;
-      }
-
-      pushItem({
-        key: `c:${cm?.id || ext || Math.random().toString(36).slice(2)}`,
-        source: 'channel',
-        sender: normalizedSender,
-        text: summarizeChannelMessage(cm),
-        timestamp: cm?.createdAt || null,
-        externalMessageId: ext,
-        deliveryStatus: cm?.status || null,
-        channel: cm,
-        raw: cm,
-      });
-    }
-
-    items.sort((a, b) => {
-      const ta = a?.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const tb = b?.timestamp ? new Date(b.timestamp).getTime() : 0;
-      if (ta !== tb) return ta - tb;
-      return String(a.key).localeCompare(String(b.key));
-    });
-
-    return items;
-  }
-
-  // Carrega mensagens do ticket selecionado
-  const loadTicketMessages = useCallback(async (ticketId, conversationId) => {
-    if (!ticketId) {
-      setTicketMessages([]);
-      setConversationMessages([]);
-      setTimelineMessages([]);
-      setTicketEvents([]);
-      return;
-    }
-
-    try {
-      const result = await getTicketMessages(ticketId);
-      setTicketMessages(result.messages || []);
-      setTicketEvents(Array.isArray(result?.events) ? result.events : []);
-
-      let convMsgs = [];
-      if (conversationId) {
-        try {
-          const convResult = await getConversationMessages(conversationId, { limit: 300, offset: 0 });
-          convMsgs = convResult?.messages || [];
-          setConversationMessages(convMsgs);
-        } catch (err) {
-          logger.error('Erro ao carregar mensagens omnichannel (channels)', err);
-          setConversationMessages([]);
-          convMsgs = [];
-        }
-      } else {
-        setConversationMessages([]);
-      }
-
-      setTimelineMessages(buildTimelineMessages(result.messages || [], convMsgs));
-      
-      // Marca como lidas se ticket está atribuído e em progresso
-      setTickets(prevTickets => {
-        const ticket = prevTickets.find(t => t.id === ticketId);
-        if (ticket && ticket.status === 'in_progress' && ticket.unreadCount > 0) {
-          markTicketAsRead(ticketId).catch(err => {
-            logger.error('Erro ao marcar ticket como lido', err);
-          });
-          // Atualiza ticket na lista
-          const updatedTickets = prevTickets.map(t => 
-            t.id === ticketId ? { ...t, unreadCount: 0 } : t
-          );
-          // Atualiza ticket selecionado se for o mesmo
-          setSelectedTicket(prevSelected => 
-            prevSelected?.id === ticketId ? { ...prevSelected, unreadCount: 0 } : prevSelected
-          );
-          return updatedTickets;
-        }
-        return prevTickets;
-      });
-    } catch (error) {
-      // Se for 404, o ticket não existe mais no backend - limpa seleção e remove da lista
-      if (error.status === 404 || (error.body && error.body.error === 'ticket_not_found')) {
-        // Remove o ticket da lista local também
-        setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
-        setSelectedTicket(null);
-        setTicketMessages([]);
-        return;
-      }
-      // Para outros erros, loga normalmente
-      logger.error('Erro ao carregar mensagens', error);
-    }
-  }, []); // Sem dependências - usa state setters funcionais
-
-  const extractedEntities = React.useMemo(() => {
-    const texts = [];
-    for (const m of (Array.isArray(timelineMessages) ? timelineMessages : [])) {
-      if (!m) continue;
-      if (typeof m.text === 'string' && m.text.trim()) texts.push(m.text);
-      const bodyText = m?.channel?.body?.text;
-      if (typeof bodyText === 'string' && bodyText.trim()) texts.push(bodyText);
-    }
-    const blob = texts.join('\n');
-    if (!blob) return { emails: [], cpfs: [], cnpjs: [], phones: [], urls: [] };
-
-    const emails = Array.from(new Set((blob.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(s => s.toLowerCase()))).slice(0, 10);
-    const urls = Array.from(new Set((blob.match(/https?:\/\/[^\s)]+/gi) || []))).slice(0, 10);
-    const cpfs = Array.from(new Set((blob.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
-    const cnpjs = Array.from(new Set((blob.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
-    const phones = Array.from(new Set((blob.match(/\b\+?55\s*\(?\d{2}\)?\s*\d{4,5}-?\d{4}\b/g) || []).map(s => s.replace(/\s+/g, ' ').trim()))).slice(0, 10);
-
-    return { emails, cpfs, cnpjs, phones, urls };
-  }, [timelineMessages]);
-
   const {
     evidenceHistory,
     evidenceLoading,
@@ -964,26 +739,16 @@ export function SupportPage() {
     formatDate,
   });
 
-  // Carrega mensagens quando ticket é selecionado
   useEffect(() => {
-    if (selectedTicket) {
-      loadTicketMessages(selectedTicket.id, selectedTicket.conversationId);
-      
-      // Preenche automaticamente o campo de atribuição se o ticket estiver waiting
-      if (selectedTicket.status === 'waiting' && !assignedTo) {
-        const defaultAssignee = agent?.username || agent?.id || '';
-        if (defaultAssignee) {
-          setAssignedTo(defaultAssignee);
-        }
-      }
-    } else {
-      setTicketMessages([]);
-      setConversationMessages([]);
-      setTimelineMessages([]);
-      setAssignedTo(''); // Limpa o campo quando nenhum ticket está selecionado
+    if (selectedTicket?.status === 'waiting' && !assignedTo) {
+      const defaultAssignee = agent?.username || agent?.id || '';
+      if (defaultAssignee) setAssignedTo(defaultAssignee);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTicket?.id]); // Apenas quando o ID do ticket muda
+    if (!selectedTicket) {
+      setAssignedTo('');
+    }
+  }, [agent?.id, agent?.username, assignedTo, selectedTicket?.id, selectedTicket?.status]);
 
   // Auto-refresh a cada 5 segundos - usa refs para evitar recriação do intervalo
   const selectedTicketIdRef = React.useRef(null);
@@ -991,21 +756,6 @@ export function SupportPage() {
   React.useEffect(() => {
     selectedTicketIdRef.current = selectedTicket?.id || null;
   }, [selectedTicket?.id]);
-
-  const loadTicketMessagesRef = React.useRef();
-  React.useEffect(() => {
-    loadTicketMessagesRef.current = loadTicketMessages;
-  }, [loadTicketMessages]);
-
-  // Ref para o container de mensagens para scroll automático
-  const messagesContainerRef = React.useRef(null);
-
-  // Scroll automático para o final quando novas mensagens são carregadas
-  useEffect(() => {
-    if (messagesContainerRef.current && timelineMessages.length > 0) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [timelineMessages]);
 
   // Atualiza métricas de status WebSocket
   useEffect(() => {
@@ -1092,7 +842,6 @@ export function SupportPage() {
       showToastRef.current('Ticket fechado com sucesso', 'success');
       if (selectedTicket?.id === closingTicketId) {
         setSelectedTicket(null);
-        setTicketMessages([]);
       }
       setShowCloseModal(false);
       setClosingTicketId(null);
