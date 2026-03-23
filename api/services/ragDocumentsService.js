@@ -12,32 +12,16 @@
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 const ragDeduplicationService = require('./ragDeduplicationService');
+const ragService = require('./ragService');
 const { getSequelize } = require('../db/sequelize');
 const { RagDocument: RagDocumentGetter, RagDocumentFile: RagDocumentFileGetter } = require('../db/models');
 const postgresVectorStore = require('./vectorStore/postgresVectorStore');
-
-// Lazy loading do ragService para evitar dependência circular
-let ragService = null;
-function getRagService() {
-  if (!ragService) {
-    try {
-      ragService = require('./ragService');
-      if (!ragService || typeof ragService.indexDocument !== 'function') {
-        logger.error('[RAGDocuments] ERRO CRÍTICO: ragService não foi carregado corretamente', {
-          ragServiceType: typeof ragService,
-          ragServiceKeys: ragService ? Object.keys(ragService) : 'null',
-          hasIndexDocument: ragService && 'indexDocument' in ragService,
-          indexDocumentType: ragService && typeof ragService.indexDocument
-        });
-        throw new Error('ragService não foi carregado corretamente. Verifique se o módulo api/services/ragService.js existe e exporta indexDocument.');
-      }
-    } catch (error) {
-      logger.error('[RAGDocuments] Erro ao carregar ragService:', error);
-      throw error;
-    }
-  }
-  return ragService;
-}
+const {
+  safeToString,
+  safeTrim,
+  safeTrimLower,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 // Cache em memória
 let documents = new Map();
@@ -47,26 +31,6 @@ let documents = new Map();
 
 function dbAvailable() {
   return !!getSequelize();
-}
-
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeTrimLower(value, fallback = '') {
-  const str = safeTrim(value, fallback);
-  try { return str.toLowerCase(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (err == null) return fallback;
-  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
 }
 
 function toDbPayload(doc) {
@@ -513,7 +477,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 persistDocumentBestEffort(existingDoc);
               }
               
-              const ragServiceInstance = getRagService();
+              const ragServiceInstance = ragService;
               setIndexState(existingDoc, 'indexing');
               documents.set(existingDoc.id, existingDoc);
               persistDocumentBestEffort(existingDoc);
@@ -604,7 +568,7 @@ async function createDocument(documentData, tenantId, options = {}) {
                 persistDocumentBestEffort(existingDoc);
               }
               
-              const ragServiceInstance = getRagService();
+              const ragServiceInstance = ragService;
               setIndexState(existingDoc, 'indexing');
               documents.set(existingDoc.id, existingDoc);
               persistDocumentBestEffort(existingDoc);
@@ -737,7 +701,7 @@ async function createDocument(documentData, tenantId, options = {}) {
           contentHash: document.metadata?.content_hash ? document.metadata.content_hash.substring(0, 16) + '...' : null
         });
         
-        const ragServiceInstance = getRagService();
+        const ragServiceInstance = ragService;
         setIndexState(document, 'indexing');
         documents.set(document.id, document);
         persistDocumentBestEffort(document);
@@ -879,7 +843,7 @@ async function updateDocument(documentId, updates) {
     // Reindexa se solicitado e conteúdo mudou
     if (updates.reindex && updates.content !== undefined) {
       try {
-        const ragServiceInstance = getRagService();
+        const ragServiceInstance = ragService;
         setIndexState(document, 'indexing');
         persistDocumentBestEffort(document);
 
@@ -1020,7 +984,7 @@ async function reindexDocument(documentId) {
     }
 
     // Valida que a função existe
-    const ragServiceInstance = getRagService();
+    const ragServiceInstance = ragService;
     if (typeof ragServiceInstance.indexDocument !== 'function') {
       logger.error('[RAGDocuments] ragService.indexDocument não é uma função', {
         documentId,
@@ -1126,7 +1090,7 @@ async function reindexDocument(documentId) {
  */
 async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false) {
   try {
-    const ragServiceInstance = getRagService();
+    const ragServiceInstance = ragService;
     let docs = Array.from(documents.values());
     
     // Filtra por tenant se fornecido
@@ -1496,7 +1460,7 @@ async function reindexAllTenant(tenantId) {
  * @returns {Object} Estatísticas
  */
 async function getDocumentsStats(tenantId = null) {
-  const ragServiceInstance = getRagService();
+  const ragServiceInstance = ragService;
   let docs = Array.from(documents.values());
   
   if (tenantId) {

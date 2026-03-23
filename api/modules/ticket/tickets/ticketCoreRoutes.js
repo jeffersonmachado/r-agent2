@@ -6,6 +6,8 @@ const {
   logTicketAction,
   parseTicketRouteId,
 } = require('./ticketRouteUtils');
+const { parseMultipartFormData } = require('../../../utils/multipartParser');
+const { storeTicketMedia, getTicketMediaById } = require('../../../services/ticketMediaService');
 
 async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
   const respondInternalError = createInternalErrorResponder(req, res, deps, 'Erro ao processar rota core de tickets');
@@ -364,6 +366,87 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
       deps.logger.error('Erro ao obter delivery-failures:', err);
       deps.sendJson(res, 500, { error: 'internal_error', message: err.message });
     }
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/tickets/media/upload') {
+    if (!ensureTicketPermission({ req, res, deps, permission: 'create' })) return true;
+
+    try {
+      const contentType = String(req.headers['content-type'] || '').toLowerCase();
+      if (!contentType.includes('multipart/form-data')) {
+        deps.badRequest(res, 'Content-Type deve ser multipart/form-data');
+        return true;
+      }
+
+      const { files } = await parseMultipartFormData(req);
+      const file = Array.isArray(files) ? (files.find((f) => f.fieldname === 'file') || files[0]) : null;
+      if (!file || !file.buffer || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
+        deps.badRequest(res, 'Arquivo não enviado');
+        return true;
+      }
+
+      const stored = await storeTicketMedia({
+        tenantId: req.tenantId,
+        fileName: file.filename || 'upload.bin',
+        mimeType: file.mimeType || 'application/octet-stream',
+        sizeBytes: file.size || file.buffer.length,
+        buffer: file.buffer,
+        createdBy: req.agent?.id || req.agent?.username || 'agent-upload',
+      });
+
+      deps.sendJson(res, 201, {
+        id: stored.id,
+        url: `/tickets/media/${encodeURIComponent(stored.id)}`,
+        fileName: stored.fileName,
+        mimeType: stored.mimeType,
+        sizeBytes: stored.sizeBytes,
+      });
+    } catch (err) {
+      deps.logger.error('[Ticket] Erro ao fazer upload de mídia', {
+        error: err?.message || String(err),
+      });
+      deps.sendJson(res, 500, {
+        error: 'internal_error',
+        message: 'Erro ao salvar mídia',
+      });
+    }
+
+    return true;
+  }
+
+  if (method === 'GET' && pathname.startsWith('/tickets/media/')) {
+    if (!ensureTicketPermission({ req, res, deps, permission: 'read' })) return true;
+
+    try {
+      const mediaId = decodeURIComponent(pathname.slice('/tickets/media/'.length));
+      if (!mediaId) {
+        deps.badRequest(res, 'mediaId é obrigatório');
+        return true;
+      }
+
+      const media = await getTicketMediaById(mediaId, req.tenantId);
+      if (!media || !media.data) {
+        deps.sendJson(res, 404, { error: 'media_not_found' });
+        return true;
+      }
+
+      const safeName = String(media.fileName || `${media.id}`).replace(/[\r\n"]/g, '_');
+      res.statusCode = 200;
+      res.setHeader('Content-Type', media.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Length', String(media.data.length || 0));
+      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+      res.end(media.data);
+    } catch (err) {
+      deps.logger.error('[Ticket] Erro ao recuperar mídia', {
+        error: err?.message || String(err),
+      });
+      deps.sendJson(res, 500, {
+        error: 'internal_error',
+        message: 'Erro ao recuperar mídia',
+      });
+    }
+
     return true;
   }
 

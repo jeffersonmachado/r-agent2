@@ -20,8 +20,14 @@ const path = require('path');
 const { spawn } = require('child_process');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
+const ragDocumentsService = require('./ragDocumentsService');
 const webScrapingService = require('./webScrapingService');
 const { getSequelize } = require('../db/sequelize');
+const {
+  safeToString,
+  safeTrim,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 // Função auxiliar para verificar se está conectado
 function isConnected() {
@@ -52,26 +58,6 @@ function getModels() {
   };
 }
 
-// Defensive helpers para coerções seguras
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  try {
-    const message = err && typeof err === 'object' ? err.message : null;
-    return safeToString(message) || safeToString(err, fallback);
-  } catch (_) {
-    return safeToString(err, fallback);
-  }
-}
-
 function safeIsoDate(value, fallback = null) {
   if (!value) return fallback;
   try {
@@ -81,15 +67,6 @@ function safeIsoDate(value, fallback = null) {
   } catch (_) {
     return fallback;
   }
-}
-
-// Lazy loading do ragDocumentsService para evitar dependência circular
-let ragDocumentsService = null;
-function getRagDocumentsService() {
-  if (!ragDocumentsService) {
-    ragDocumentsService = require('./ragDocumentsService');
-  }
-  return ragDocumentsService;
 }
 
 /**
@@ -325,7 +302,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
 
   try {
     // Verifica se já existe documento com este site para este tenant
-    const ragDocsService = getRagDocumentsService();
+    const ragDocsService = ragDocumentsService;
     if (!ragDocsService) {
       logger.error('[TenantService] ragDocumentsService não foi carregado corretamente');
       return;
@@ -360,7 +337,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
 
     if (scrapeResult.success && scrapeResult.documentId) {
       // Atualiza metadados do documento para marcar como fonte institucional canônica
-      const ragDocsService = getRagDocumentsService();
+      const ragDocsService = ragDocumentsService;
       const updateResult = await ragDocsService.updateDocument(scrapeResult.documentId, {
         metadata: {
           source: 'site_institucional',

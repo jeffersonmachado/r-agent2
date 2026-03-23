@@ -41,7 +41,6 @@ async function handleTicketOperationsRoutes({ req, res, method, pathname, deps }
       const result = await deps.ticketInsightService.generateAiSummary({
         ticketId: id,
         tenantId: req.tenantId,
-        agent: req.agent,
       });
 
       if (!result.success) {

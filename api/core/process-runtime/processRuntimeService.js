@@ -15,108 +15,39 @@ const { InMemoryProcessIdempotencyService } = require('./processIdempotencyServi
 const { InMemoryProcessCompiledDefinitionRepository, SequelizeProcessCompiledDefinitionRepository } = require('./processCompiledDefinitionRepository');
 const { ProcessPayloadValidator } = require('./processPayloadValidator');
 const { PROCESS_INSTANCE_STATUSES } = require('./processInstanceTypes');
-
-function looksLikeCompiledProcessDefinition(definition) {
-  return !!(definition && typeof definition === 'object' && definition.executionGraph && definition.nodes);
-}
-
-function looksLikeCanonicalProcessDefinition(definition) {
-  return !!(definition && typeof definition === 'object' && Array.isArray(definition.nodes) && Array.isArray(definition.edges));
-}
-
-function looksLikeEngineFlow(definition) {
-  return !!(
-    definition
-    && typeof definition === 'object'
-    && Array.isArray(definition.nodes)
-    && definition.nodes.every((node) => node && typeof node.type === 'string' && Object.prototype.hasOwnProperty.call(node, 'next'))
-  );
-}
-
-function clone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
-}
-
-function safeGet(value, key, fallbackValue = undefined) {
-  try {
-    const result = value?.[key];
-    return result === undefined ? fallbackValue : result;
-  } catch (_) {
-    return fallbackValue;
-  }
-}
-
-function safeIsArray(value) {
-  try {
-    return Array.isArray(value);
-  } catch (_) {
-    return false;
-  }
-}
-
-function isSafeObjectRecord(value) {
-  if (!value || typeof value !== 'object') return false;
-  return !safeIsArray(value);
-}
-
-function safeShallowCloneRecord(value) {
-  if (!isSafeObjectRecord(value)) return {};
-  try {
-    return { ...value };
-  } catch (_) {
-    return {};
-  }
-}
-
-function safeCloneArray(value) {
-  if (!safeIsArray(value)) return [];
-  try {
-    return value.slice();
-  } catch (_) {
-    return [];
-  }
-}
-
-function safeToString(value, fallbackValue = '') {
-  try {
-    return String(value);
-  } catch (_) {
-    return fallbackValue;
-  }
-}
-
-function safeFiniteNumber(value, fallbackValue = 0) {
-  try {
-    const coerced = Number(value);
-    return Number.isFinite(coerced) ? coerced : fallbackValue;
-  } catch (_) {
-    return fallbackValue;
-  }
-}
-
-function sanitizeRuntimeInput(input) {
-  const source = safeShallowCloneRecord(input);
-  const sanitized = { ...source };
-  sanitized.metadata = safeShallowCloneRecord(safeGet(source, 'metadata'));
-  sanitized.variables = safeShallowCloneRecord(safeGet(source, 'variables'));
-  sanitized.history = safeCloneArray(safeGet(source, 'history'));
-
-  const executionId = safeGet(source, 'executionId');
-  if (executionId != null && executionId !== '') {
-    sanitized.executionId = safeToString(executionId, '');
-  }
-
-  const tenantId = safeGet(source, 'tenantId');
-  if (tenantId != null && tenantId !== '') {
-    sanitized.tenantId = safeToString(tenantId, null);
-  }
-
-  return sanitized;
-}
-
-function buildProcessRegistryKey(processId, processVersion) {
-  return `${String(processId || '')}:${Number.isFinite(Number(processVersion)) ? Number(processVersion) : 1}`;
-}
+const {
+  looksLikeCompiledProcessDefinition,
+  looksLikeCanonicalProcessDefinition,
+  looksLikeEngineFlow,
+  clone,
+  safeGet,
+  safeShallowCloneRecord,
+  safeCloneArray,
+  safeToString,
+  safeFiniteNumber,
+  sanitizeRuntimeInput,
+  buildProcessRegistryKey,
+} = require('./processRuntimeHelpers');
+const { buildExecutionResult, recoverRuntimeTimers } = require('./processRuntimeResult');
+const { loadRuntimeExecutionContext } = require('./processRuntimeContextLoader');
+const { getNodeTimeoutMs, executeWithTimeout } = require('./processRuntimeTimeoutPolicy');
+const { executeNodeWithIdempotency } = require('./processRuntimeIdempotency');
+const { handleMissingNodeFailure } = require('./processRuntimeMissingNodeFailure');
+const { setupNextNodeExecution } = require('./processRuntimeNextNodeSetup');
+const { executeRuntimeNodeStep } = require('./processRuntimeNodeStep');
+const {
+  resolveCalledElement,
+  isSubprocessResumeInput,
+  isAsyncSubprocessNode,
+  buildChildExecutionId,
+  buildResolvedSubprocessResult,
+  buildSubprocessMissingChildResult,
+  buildSubprocessChildInput,
+  applyAsyncSubprocessMetadata,
+  buildAsyncSubprocessResult,
+  buildSyncSubprocessResult,
+  buildParentResumePayload,
+} = require('./processRuntimeSubprocess');
 
 class ProcessRuntimeService {
   constructor(options = {}) {
@@ -372,40 +303,15 @@ class ProcessRuntimeService {
   }
 
   async loadContextForExecution(executionId) {
-    const key = String(executionId || '');
-    let context = this._contexts.get(key) || null;
-    const compiledProcess = this._processes.get(key) || null;
-    if (context && compiledProcess) {
-      return { context, compiledProcess };
-    }
-    const instance = await this.instanceStore.loadInstance(key);
-    if (!instance) {
-      throw new Error(`Execution not found: ${executionId}`);
-    }
-    const resolvedProcess = compiledProcess || await this.resolveCompiledProcessForInstance(instance);
-    const events = await this.executionRepository.listEventsByExecution(key);
-    context = resolvedProcess && events.length > 0
-      ? this.replayService.rebuildContextFromEvents(resolvedProcess, events)
-      : this.replayService.rebuildContextFromInstance(instance);
-    context.processId = instance.processId;
-    context.processVersion = instance.processVersion || context.processVersion || 1;
-    context.executionId = instance.executionId;
-    context.startTime = instance.startedAt || context.startTime;
-    context.metadata = {
-      ...(context.metadata || {}),
-      ...(instance.metadata || {}),
-    };
-    context.recovery = {
-      ...(context.recovery || {}),
-      from: resolvedProcess && events.length > 0 ? 'event-log' : 'instance',
-      executionId: instance.executionId,
-      updatedAt: instance.updatedAt || null,
-    };
-    this._contexts.set(key, context);
-    if (resolvedProcess) {
-      this._processes.set(key, resolvedProcess);
-    }
-    return { context, compiledProcess: resolvedProcess || this._processes.get(key) || null, instance };
+    return loadRuntimeExecutionContext({
+      executionId,
+      contexts: this._contexts,
+      processes: this._processes,
+      instanceStore: this.instanceStore,
+      executionRepository: this.executionRepository,
+      replayService: this.replayService,
+      resolveCompiledProcessForInstance: (instance) => this.resolveCompiledProcessForInstance(instance),
+    });
   }
 
   async resumeProcess(executionId, input = {}) {
@@ -472,39 +378,13 @@ class ProcessRuntimeService {
     return timerPayload;
   }
 
-  getNodeTimeoutMs(node, compiledProcess) {
-    const nodeTimeout = node?.timeoutPolicy;
-    if (nodeTimeout?.enabled === true && Number(nodeTimeout.timeoutMs) > 0) {
-      return Number(nodeTimeout.timeoutMs);
-    }
-    const processTimeout = compiledProcess?.policies?.timeout;
-    if (processTimeout?.enabled === true && Number(processTimeout.timeoutMs) > 0) {
-      return Number(processTimeout.timeoutMs);
-    }
-    return 0;
-  }
-
   async executeNodeWithPolicies(node, context, compiledProcess, input) {
-    const timeoutMs = this.getNodeTimeoutMs(node, compiledProcess);
-    if (!timeoutMs) {
-      return this.executeNodeWithIdempotency(node, context, compiledProcess, input);
-    }
-    let timeoutId = null;
-    try {
-      return await Promise.race([
-        this.executeNodeWithIdempotency(node, context, compiledProcess, input),
-        new Promise((_, reject) => {
-          timeoutId = setTimeout(() => {
-            const error = new Error(`node_timeout:${node.id}`);
-            error.code = 'NODE_TIMEOUT';
-            error.timeoutMs = timeoutMs;
-            reject(error);
-          }, timeoutMs);
-        }),
-      ]);
-    } finally {
-      if (timeoutId) clearTimeout(timeoutId);
-    }
+    const timeoutMs = getNodeTimeoutMs(node, compiledProcess);
+    return executeWithTimeout({
+      timeoutMs,
+      nodeId: node.id,
+      execute: () => this.executeNodeWithIdempotency(node, context, compiledProcess, input),
+    });
   }
 
   async resolveSubprocessDefinition(calledElement, context) {
@@ -526,96 +406,41 @@ class ProcessRuntimeService {
   }
 
   async executeSubprocessNode(node, context, input = {}) {
-    const calledElement = node.config?.flowId || node.config?.calledElement || null;
-    if (input?.resumeType === 'subprocess' || input?.childExecutionId || input?.childStatus) {
-      context.setVariable(`${node.id}_subprocess`, {
-        executionId: input?.childExecutionId || null,
-        status: input?.childStatus || 'completed',
-        output: clone(input?.output || null),
-      });
-      return {
-        nextState: context.toSnapshot(),
-        events: [],
-        output: {
-          type: 'subprocess_resolved',
-          calledElement,
-          childExecutionId: input?.childExecutionId || null,
-          childStatus: input?.childStatus || 'completed',
-        },
-      };
-    }
-    const compiledChild = await this.resolveSubprocessDefinition(calledElement, context);
-    const childExecutionId = input?.childExecutionId
-      || `${context.executionId}:${String(node.id)}:child:${Date.now()}`;
-    if (!compiledChild) {
-      return {
-        nextState: context.toSnapshot(),
-        events: [],
-        output: {
-          type: node.config?.async === true || node.config?.waitForCompletion === false ? 'subprocess_wait' : 'subprocess',
-          calledElement,
-          waitForInput: node.config?.async === true || node.config?.waitForCompletion === false,
-          childExecutionId,
-        },
-      };
+    const calledElement = resolveCalledElement(node);
+    if (isSubprocessResumeInput(input)) {
+      return buildResolvedSubprocessResult({ node, context, input, calledElement, clone });
     }
 
-    const childInput = {
-      executionId: childExecutionId,
-      variables: clone(input?.variables || context.variables || {}),
-      tenantId: context.metadata?.tenantId || null,
-      metadata: {
-        parentExecutionId: context.executionId,
-        parentNodeId: node.id,
-        parentCorrelationKey: `${context.executionId}:${node.id}:subprocess`,
-        calledElement,
-      },
-    };
+    const compiledChild = await this.resolveSubprocessDefinition(calledElement, context);
+    const childExecutionId = buildChildExecutionId({ context, node, input });
+
+    if (!compiledChild) {
+      return buildSubprocessMissingChildResult({ node, context, calledElement, childExecutionId });
+    }
+
+    const childInput = buildSubprocessChildInput({
+      context,
+      node,
+      input,
+      childExecutionId,
+      calledElement,
+      clone,
+    });
+
     const childResult = await this.startProcess(compiledChild, childInput, { allowEngineFlow: false });
 
-    if (node.config?.async === true || node.config?.waitForCompletion === false) {
-      context.metadata = {
-        ...(context.metadata || {}),
-        childProcesses: {
-          ...((context.metadata && context.metadata.childProcesses) || {}),
-          [String(node.id)]: {
-            executionId: childExecutionId,
-            processId: compiledChild.id,
-            processVersion: compiledChild.version || 1,
-          },
-        },
-      };
-      return {
-        nextState: context.toSnapshot(),
-        events: [],
-        output: {
-          type: 'subprocess_wait',
-          calledElement,
-          childExecutionId,
-          deferredSubprocessStart: {
-            compiledChild,
-            childInput,
-          },
-          waitForInput: true,
-        },
-      };
-    }
-
-    context.setVariable(`${node.id}_subprocess`, {
-      executionId: childExecutionId,
-      status: childResult.status,
-      output: childResult.output || null,
-    });
-    return {
-      nextState: context.toSnapshot(),
-      events: [],
-      output: {
-        type: 'subprocess',
+    if (isAsyncSubprocessNode(node)) {
+      applyAsyncSubprocessMetadata({ context, node, compiledChild, childExecutionId });
+      return buildAsyncSubprocessResult({
+        context,
         calledElement,
         childExecutionId,
-        childStatus: childResult.status,
-      },
-    };
+        compiledChild,
+        childInput,
+      });
+    }
+
+    return buildSyncSubprocessResult({ node, context, calledElement, childExecutionId, childResult });
   }
 
   async notifyParentIfNeeded(context, compiledProcess, output) {
@@ -623,15 +448,10 @@ class ProcessRuntimeService {
     const parentCorrelationKey = context.metadata?.parentCorrelationKey || null;
     if (!parentExecutionId || !parentCorrelationKey) return null;
     try {
-      return await this.resumeService.resumeExternalEvent(parentCorrelationKey, {
-        resumeType: 'subprocess',
-        parentExecutionId,
-        childExecutionId: context.executionId,
-        childProcessId: compiledProcess?.id || context.processId,
-        childProcessVersion: compiledProcess?.version || context.processVersion || 1,
-        childStatus: context.status,
-        output: output || null,
-      });
+      return await this.resumeService.resumeExternalEvent(
+        parentCorrelationKey,
+        buildParentResumePayload({ context, compiledProcess, output: output || null }),
+      );
     } catch (_) {
       return null;
     }
@@ -679,143 +499,34 @@ class ProcessRuntimeService {
   }
 
   async executeNodeWithIdempotency(node, context, compiledProcess, input) {
-    const sideEffectTypes = new Set(['task.service', 'task.ai', 'task.message.send', 'call.subprocess']);
-    const sequence = Number(context.lastProcessedSequence || 0);
-    if (!sideEffectTypes.has(String(node.type))) {
-      return this.stateMachine.executeNode(node, context, compiledProcess, input);
-    }
-    const run = await this.idempotencyService.runOnce(
-      {
-        executionId: context.executionId,
-        nodeId: node.id,
-        sequence,
-      },
-      async () => {
-        const result = await this.stateMachine.executeNode(node, context, compiledProcess, input);
-        return {
-          output: clone(result.output || null),
-          nextNodeId: result.nextNodeId,
-          completed: result.completed,
-          waiting: result.waiting,
-          contextSnapshot: context.toSnapshot(),
-        };
-      },
-    );
-
-    context.metadata = {
-      ...(context.metadata || {}),
-      idempotencyRecords: {
-        ...((context.metadata && context.metadata.idempotencyRecords) || {}),
-        [run.key]: clone(run.value),
-      },
-    };
-
-    if (run.reused) {
-      const restored = ProcessExecutionContext.fromSnapshot(run.value.contextSnapshot);
-      restored.metadata = {
-        ...(restored.metadata || {}),
-        idempotencyRecords: {
-          ...((restored.metadata && restored.metadata.idempotencyRecords) || {}),
-          [run.key]: clone(run.value),
-        },
-      };
-      this._contexts.set(context.executionId, restored);
-      return {
-        output: run.value.output,
-        nextNodeId: run.value.nextNodeId,
-        completed: run.value.completed,
-        waiting: run.value.waiting,
-      };
-    }
-    return run.value;
-  }
-
-  deriveWaitingState(node, context, result, input) {
-    if (!result?.waiting) return null;
-    const outputType = result?.output?.type || null;
-    if (outputType === 'timer_wait') {
-      return {
-        type: 'timer',
-        resumeAt: context.metadata?.waitingTimer?.resumeAt || null,
-        correlationKey: input?.correlationKey || `${context.executionId}:${node.id}`,
-        externalRef: context.metadata?.waitingTimer?.timerId || null,
-        nodeId: node.id,
-        metadata: {
-          timerId: context.metadata?.waitingTimer?.timerId || null,
-          durationMs: result.output?.durationMs || null,
-        },
-      };
-    }
-    if (node.type === 'task.message.receive') {
-      return {
-        type: 'message',
-        resumeAt: null,
-        correlationKey: input?.correlationKey || context.metadata?.correlationKey || `${context.executionId}:${node.id}:message`,
-        externalRef: null,
-        nodeId: node.id,
-        metadata: {
-          variable: result.output?.variable || node.config?.variable || 'user_input',
-        },
-      };
-    }
-    if (node.type === 'task.user') {
-      return {
-        type: 'human',
-        resumeAt: null,
-        correlationKey: input?.correlationKey || `${context.executionId}:${node.id}:human`,
-        externalRef: context.metadata?.handoffQueue || null,
-        nodeId: node.id,
-        metadata: {
-          queue: context.metadata?.handoffQueue || null,
-        },
-      };
-    }
-    if (node.type === 'call.subprocess') {
-      return {
-        type: 'subprocess',
-        resumeAt: null,
-        correlationKey: input?.correlationKey || `${context.executionId}:${node.id}:subprocess`,
-        externalRef: result.output?.childExecutionId || result.output?.calledElement || null,
-        nodeId: node.id,
-        metadata: {
-          calledElement: result.output?.calledElement || null,
-          childExecutionId: result.output?.childExecutionId || null,
-          resumeSchema: node.inputSchema || node.config?.resumeSchema || null,
-        },
-      };
-    }
-    return {
-      type: 'external_event',
-      resumeAt: null,
-      correlationKey: input?.correlationKey || `${context.executionId}:${node.id}:external`,
-      externalRef: null,
-      nodeId: node.id,
-      metadata: {
-        resumeSchema: node.inputSchema || node.config?.resumeSchema || null,
-      },
-    };
+    return executeNodeWithIdempotency({
+      node,
+      context,
+      compiledProcess,
+      input,
+      stateMachine: this.stateMachine,
+      idempotencyService: this.idempotencyService,
+      contexts: this._contexts,
+      ProcessExecutionContext,
+      clone,
+    });
   }
 
   async executeNextNode(contextOrExecutionId, input = {}) {
-    input = sanitizeRuntimeInput(input);
-    const executionId = typeof contextOrExecutionId === 'string'
-      ? String(contextOrExecutionId)
-      : String(contextOrExecutionId?.executionId || '');
-    const loaded = typeof contextOrExecutionId === 'string'
-      ? await this.loadContextForExecution(executionId)
-      : {
-        context: contextOrExecutionId,
-        compiledProcess: this._processes.get(executionId) || null,
-      };
-    const context = loaded.context;
-    const compiledProcess = loaded.compiledProcess || this._processes.get(executionId) || null;
+    const prepared = await setupNextNodeExecution({
+      contextOrExecutionId,
+      input,
+      sanitizeRuntimeInput,
+      loadContextForExecution: (executionId) => this.loadContextForExecution(executionId),
+      processes: this._processes,
+      buildResult: (executionId, compiledProcess, context, output) => this.buildResult(executionId, compiledProcess, context, output),
+      PROCESS_INSTANCE_STATUSES,
+    });
 
-    if (!context || !compiledProcess) {
-      throw new Error(`Execution not found: ${executionId}`);
-    }
-
-    if (context.status === PROCESS_INSTANCE_STATUSES.WAITING && context.waitingState) {
-      return this.buildResult(executionId, compiledProcess, context, null);
+    input = prepared.input;
+    const { executionId, context, compiledProcess, earlyResult } = prepared;
+    if (earlyResult) {
+      return earlyResult;
     }
 
     let lastOutput = null;
@@ -824,180 +535,35 @@ class ProcessRuntimeService {
       safety += 1;
       const node = context.getCurrentNode(compiledProcess);
       if (!node) {
-        context.status = PROCESS_INSTANCE_STATUSES.FAILED;
-        await this.instanceStore.markFailed(context.executionId, new Error('node_not_found'));
-        await this.emitProcessEvent('PROCESS_FAILED', {
+        await handleMissingNodeFailure({
           context,
           compiledProcess,
-          payload: { reason: 'node_not_found', currentNodeId: context.currentNodeId },
+          instanceStore: this.instanceStore,
+          emitProcessEvent: (eventType, payload) => this.emitProcessEvent(eventType, payload),
         });
         break;
       }
 
-      context.metadata = {
-        ...(context.metadata || {}),
-        nodeAttempts: {
-          ...((context.metadata && context.metadata.nodeAttempts) || {}),
-          [String(node.id)]: Number(context.metadata?.nodeAttempts?.[String(node.id)] || 0) + 1,
-        },
-      };
-
-      await this.emitProcessEvent('NODE_ENTER', {
+      const step = await executeRuntimeNodeStep({
+        node,
         context,
         compiledProcess,
-        node,
-        payload: {
-          currentNodeId: context.currentNodeId,
-          variablesSnapshot: clone(context.variables),
-          historySnapshot: clone(context.history),
+        input,
+        lastOutput,
+        runtime: {
+          executeNodeWithPolicies: (currentNode, currentContext, currentProcess, stepInput) => this.executeNodeWithPolicies(currentNode, currentContext, currentProcess, stepInput),
+          instanceStore: this.instanceStore,
+          emitProcessEvent: (eventType, payload) => this.emitProcessEvent(eventType, payload),
+          notifyParentIfNeeded: (ctx, proc, output) => this.notifyParentIfNeeded(ctx, proc, output),
+          persistContextSnapshot: (ctx) => this.persistContextSnapshot(ctx),
+          startDeferredSubprocess: (output) => this.startDeferredSubprocess(output),
+          timerService: this.timerService,
         },
       });
 
-      let result;
-      const stepInput = input;
-      try {
-        result = await this.executeNodeWithPolicies(node, context, compiledProcess, stepInput);
-      } catch (error) {
-        context.status = PROCESS_INSTANCE_STATUSES.FAILED;
-        if (error?.code === 'NODE_TIMEOUT') {
-          await this.emitProcessEvent('NODE_TIMEOUT', {
-            context,
-            compiledProcess,
-            node,
-            payload: {
-              currentNodeId: context.currentNodeId,
-              timeoutMs: error.timeoutMs || null,
-              variablesSnapshot: clone(context.variables),
-              historySnapshot: clone(context.history),
-            },
-          });
-        }
-        await this.emitProcessEvent('NODE_ERROR', {
-          context,
-          compiledProcess,
-          node,
-          payload: {
-            error: { message: error.message || String(error), code: error.code || null },
-            currentNodeId: context.currentNodeId,
-            variablesSnapshot: clone(context.variables),
-            historySnapshot: clone(context.history),
-          },
-        });
-        await this.instanceStore.markFailed(context.executionId, error);
-        await this.emitProcessEvent('PROCESS_FAILED', {
-          context,
-          compiledProcess,
-          node,
-          payload: { error: { message: error.message || String(error), code: error.code || null } },
-        });
-        await this.notifyParentIfNeeded(context, compiledProcess, {
-          error: { message: error.message || String(error), code: error.code || null },
-        });
-        break;
-      }
-
-      lastOutput = result.output || null;
-      input = null;
-
-      if (node.type === 'gateway.exclusive') {
-        await this.emitProcessEvent('GATEWAY_DECISION', {
-          context,
-          compiledProcess,
-          node,
-          payload: {
-            chosenNext: result.output?.chosenNext || result.nextNodeId || null,
-            currentNodeId: context.currentNodeId,
-          },
-        });
-      }
-
-      if (node.type === 'call.subprocess') {
-        await this.emitProcessEvent('SUBPROCESS_ENTER', {
-          context,
-          compiledProcess,
-          node,
-          payload: { calledElement: result.output?.calledElement || null },
-        });
-      }
-
-      if (node.type === 'task.user') {
-        await this.emitProcessEvent('HUMAN_HANDOFF', {
-          context,
-          compiledProcess,
-          node,
-          payload: { queue: result.output?.queue || null },
-        });
-      }
-
-      if (node.type === 'fallback') {
-        await this.emitProcessEvent('NODE_FALLBACK', {
-          context,
-          compiledProcess,
-          node,
-          payload: { mode: result.output?.mode || null, target: result.output?.target || null },
-        });
-      }
-
-      if (result.waiting) {
-        const waitingState = this.deriveWaitingState(node, context, result, stepInput);
-        context.setWaitingState(waitingState);
-        await this.instanceStore.markWaiting(context.executionId, waitingState);
-        await this.emitProcessEvent('NODE_WAITING', {
-          context,
-          compiledProcess,
-          node,
-          payload: {
-            currentNodeId: context.currentNodeId,
-            variablesSnapshot: clone(context.variables),
-            historySnapshot: clone(context.history),
-            waitingState,
-          },
-        });
-        await this.persistContextSnapshot(context);
-        if (node.type === 'call.subprocess' && result.output?.deferredSubprocessStart) {
-          this.startDeferredSubprocess(result.output).catch(() => null);
-        }
-        break;
-      }
-
-      await this.emitProcessEvent('NODE_EXIT', {
-        context,
-        compiledProcess,
-        node,
-        payload: {
-          currentNodeId: context.currentNodeId,
-          nextNodeId: result.nextNodeId || context.currentNodeId,
-          output: clone(result.output || null),
-          variablesSnapshot: clone(context.variables),
-          historySnapshot: clone(context.history),
-        },
-      });
-      await this.persistContextSnapshot(context);
-
-      if (node.type === 'call.subprocess') {
-        await this.emitProcessEvent('SUBPROCESS_EXIT', {
-          context,
-          compiledProcess,
-          node,
-          payload: { currentNodeId: context.currentNodeId },
-        });
-      }
-
-      if (result.completed) {
-        context.status = PROCESS_INSTANCE_STATUSES.COMPLETED;
-        await this.instanceStore.markCompleted(context.executionId, clone(context.metadata));
-        await this.emitProcessEvent('PROCESS_COMPLETED', {
-          context,
-          compiledProcess,
-          node,
-          payload: {
-            currentNodeId: null,
-            output: clone(lastOutput || null),
-            variablesSnapshot: clone(context.variables),
-          },
-        });
-        this.timerService.cancelByExecutionId(context.executionId);
-        await this.notifyParentIfNeeded(context, compiledProcess, lastOutput);
+      lastOutput = step.lastOutput;
+      input = step.nextInput;
+      if (step.shouldBreak) {
         break;
       }
     }
@@ -1006,29 +572,18 @@ class ProcessRuntimeService {
   }
 
   async buildResult(executionId, compiledProcess, context, output) {
-    const instance = await this.instanceStore.loadInstance(executionId);
-    const events = await this.executionRepository.listEventsByExecution(executionId);
-    return {
-      ok: context.status !== PROCESS_INSTANCE_STATUSES.FAILED,
-      runtime: 'durable-canonical',
-      executionId: context.executionId,
-      status: context.status,
-      currentNodeId: context.currentNodeId,
-      context: context.toSnapshot(),
-      instance,
-      output: output || null,
-      events,
-      observability: this.observability.getRecords({ executionId: context.executionId }),
-    };
+    return buildExecutionResult({
+      executionId,
+      context,
+      output,
+      instanceStore: this.instanceStore,
+      executionRepository: this.executionRepository,
+      observability: this.observability,
+    });
   }
 
   async recoverRuntimeState() {
-    const recoveredTimers = await this.timerService.recoverPendingTimers();
-    const resumedTimers = await this.timerService.resumeExpiredTimers();
-    return {
-      recoveredTimers,
-      resumedTimers,
-    };
+    return recoverRuntimeTimers(this.timerService);
   }
 }
 

@@ -33,3 +33,13 @@
   - 0 arquivos produtivos ainda canonicamente implementados, porque a pasta legada foi removida
   - reintroducao acidental de bridge compartilhado em vez de wiring local por modulo
 - A remocao do caminho legado agora ficou congelada por guardrail em `tests/unit/backendArchitectureGuardrails.test.js`.
+
+## Atualizacao 2026-03-22
+- Duplicacao eliminada nesta onda:
+  - helpers de coercao defensiva duplicados em hotspots de service passaram para `api/utils/defensiveCoercion.js`.
+- Duplicacao residual relevante ainda aberta:
+  - padroes `handle*Routes` de grande porte com responsabilidade mista em varios modulos `api/modules/*`;
+  - concentracao de responsabilidades em `api/services/queueService.js` (orquestracao principal ainda no arquivo base, apesar das extrações de persistence/index/messaging/query/mode/lifecycle/order-incident).
+- Proximo cleanup canonico:
+  - reduzir `handle*Routes` por subdominio;
+  - concluir decomposicao de `queueService` e manter composicao por colaboradores coesos.

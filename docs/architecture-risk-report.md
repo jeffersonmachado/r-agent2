@@ -20,3 +20,12 @@
 - Risco em `registerRoutes.js` caiu de hotspot de wiring para registry declarativo.
 - O risco principal deslocou-se para evitar a reintroducao de bridge compartilhado ou novo caminho concorrente de wiring fora dos modulos.
 - O risco de bootstrap/runtime caiu mais um degrau com testes diretos de idempotencia de `startInitialization()` e de `registerShutdownHooks()`.
+
+## Atualizacao 2026-03-22 (consolidacao fina)
+
+| ID | Risco | Severidade | Probabilidade | Evidencia | Mitigacao |
+|---|---|---|---|---|---|
+| RSK-007 | Dependencias circulares mascaradas por lazy loading entre services RAG/Tenant | alta | baixa | risco mitigado em 2026-03-22 com remocao de `getTenantService/getRagService/getRagDocumentsService` e guardrail dedicado | manter `tests/unit/ragTenantCycleGuardrail.test.js` e evitar reintroducao de lazy loading cruzado |
+| RSK-008 | Hotspots de service com responsabilidades excessivas dificultam mudancas seguras | alta | alta | `queueService`, `operationsDashboardService`, `processRuntimeService` acima de 1k linhas | decompor por responsabilidade e cobrir slices com testes unitarios |
+| RSK-009 | Variacao de padrao entre modulos `handle*Routes` gera assimetria de manutencao | media | media | varios arquivos `handle*Routes` em `api/modules/*` acima de 300 linhas | padronizar convencao de rotas/controladores e dividir handlers extensos |
+| RSK-010 | Divergencia entre docs de fechamento macro e pendencias reais de consolidacao fina | media | media | docs marcando backend como totalmente fechado enquanto hotspots internos seguem ativos | manter backlog vivo por fase e registrar status por ciclo |

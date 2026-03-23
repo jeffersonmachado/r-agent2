@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '../../styles/Button';
 import { SupportCard } from './SupportCard';
 
@@ -13,7 +13,34 @@ function formatOriginLocator(locator) {
   return `${formatEvidenceLabel(locator.sourceType || 'origem')} • ${mode}`;
 }
 
+function normalizeText(text) {
+  return String(text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export function SupportHistoryCard({ timeline = [], loading, formatDate, onOpenItem }) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTimeline = useMemo(() => {
+    if (!searchQuery.trim()) return timeline;
+    const query = normalizeText(searchQuery);
+    return timeline.filter((item) => {
+      const searchableText = [
+        item.title,
+        item.type,
+        item.source,
+        item.text,
+        item.sourceType,
+      ]
+        .filter(Boolean)
+        .map((v) => normalizeText(v))
+        .join(' ');
+      return searchableText.includes(query);
+    });
+  }, [timeline, searchQuery]);
   return (
     <SupportCard
       id="support-section-history"
@@ -21,12 +48,35 @@ export function SupportHistoryCard({ timeline = [], loading, formatDate, onOpenI
       subtitle="Linha do tempo consolidada por entidade e contexto"
       badge={(
         <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-          {loading ? 'Carregando…' : `${timeline.length} item(ns)`}
+          {loading ? 'Carregando…' : `${filteredTimeline.length}/${timeline.length} item(ns)`}
         </div>
       )}
     >
       {timeline.length > 0 ? (
-        timeline.slice(0, 6).map((item, index) => (
+        <>
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="🔍 Buscar na timeline…"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--color-border-default)',
+                background: 'var(--color-bg-default)',
+                color: 'var(--color-text-primary)',
+                fontSize: '12px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--color-primary)')}
+              onBlur={(e) => (e.target.style.borderColor = 'var(--color-border-default)')}
+            />
+          </div>
+          {filteredTimeline.length > 0 ? (
+            filteredTimeline.slice(0, 6).map((item, index) => (
           <div
             key={item.id}
             style={{ padding: '10px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: index === Math.min(timeline.length, 6) - 1 ? 0 : '10px' }}
@@ -50,7 +100,13 @@ export function SupportHistoryCard({ timeline = [], loading, formatDate, onOpenI
               <Button type="button" onClick={() => onOpenItem(item)} style={{ width: 'auto' }}>Abrir origem</Button>
             </div>
           </div>
-        ))
+            ))
+          ) : (
+            <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px', padding: '8px' }}>
+              Nenhum item encontrado com "{searchQuery}".
+            </div>
+          )}
+        </>
       ) : (
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
           O histórico consolidado aparecerá aqui quando o contexto atual puder ser relacionado a conversas, tickets ou eventos anteriores.

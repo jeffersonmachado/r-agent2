@@ -11,7 +11,7 @@ import {
   resumeTicket,
   getTicketDeliveryFailures,
 } from '../api/tickets';
-import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as getQuickReplyCategories } from '../api/quickReplies';
+import { listQuickReplies, useQuickReply, getCategories as getQuickReplyCategories } from '../api/quickReplies';
 import { listCloseReasons } from '../api/closeReasons';
 import { addTagToTicket, removeTagFromTicket } from '../api/segmentation';
 import { useAuth } from '../context/authContext';
@@ -36,17 +36,17 @@ import logger from '../utils/logger';
 import { SupportDeliveryFailuresModal } from './support/SupportDeliveryFailuresModal';
 import { SupportCloseTicketModal } from './support/SupportCloseTicketModal';
 import { SupportNewConversationModal } from './support/SupportNewConversationModal';
+import { ScheduleModal } from '../components/ScheduleModal';
 import { useSupportEvidence } from '../hooks/useSupportEvidence';
-import { SupportPageLayout } from '../components/support/SupportPageLayout';
-import { SupportSidebarMenu } from '../components/support/SupportSidebarMenu';
-import { SupportConversationCard } from '../components/support/SupportConversationCard';
-import { SupportTicketWorkspaceCard } from '../components/support/SupportTicketWorkspaceCard';
 import { SupportResolvedEntityCard } from '../components/support/SupportResolvedEntityCard';
 import { SupportEvidenceCard } from '../components/support/SupportEvidenceCard';
 import { SupportSuggestedReplyCard } from '../components/support/SupportSuggestedReplyCard';
 import { SupportHistoryCard } from '../components/support/SupportHistoryCard';
 import { SupportCard } from '../components/support/SupportCard';
 import { useSupportTicketContext } from '../hooks/useSupportTicketContext';
+import { isWebPushSupported, subscribeCurrentUserWebPush } from '../api/webPush';
+import { buildApiUrl } from '../api/client';
+import { getBasePath } from '../utils';
 
 /**
  * Página de atendimento para gerenciar tickets.
@@ -68,6 +68,9 @@ export function SupportPage() {
   const [loading, setLoading] = useState(false);
   const [uiSearch, setUiSearch] = useState('');
   const [uiQueue, setUiQueue] = useState('');
+  const [ticketViewFilter, setTicketViewFilter] = useState('all');
+  const [showOtherAgents, setShowOtherAgents] = useState(false);
+  const [showClosedTickets, setShowClosedTickets] = useState(false);
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
   // Auto-refresh sempre ativo quando WebSocket não está disponível
@@ -77,12 +80,14 @@ export function SupportPage() {
   const [newConversationMessage, setNewConversationMessage] = useState('');
   const [newConversationQueue, setNewConversationQueue] = useState('');
   const [handoverLoading, setHandoverLoading] = useState(false);
-  const [quickReplySuggestions, setQuickReplySuggestions] = useState([]);
+  const [scheduleContextTicket, setScheduleContextTicket] = useState(null);
   const [quickReplySlashResults, setQuickReplySlashResults] = useState([]);
   const [quickReplySlashOpen, setQuickReplySlashOpen] = useState(false);
+  const [slashCommandResults, setSlashCommandResults] = useState([]);
+  const [slashMenuMode, setSlashMenuMode] = useState('commands');
+  const [slashMenuCursorIndex, setSlashMenuCursorIndex] = useState(-1);
   const [quickReplyCategories, setQuickReplyCategories] = useState([]);
   const [quickReplySelectedCategory, setQuickReplySelectedCategory] = useState('');
-  const [quickReplyCategoryItems, setQuickReplyCategoryItems] = useState([]);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingTicketId, setClosingTicketId] = useState(null);
   const [closeReasons, setCloseReasons] = useState([]);
@@ -94,6 +99,15 @@ export function SupportPage() {
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
+  const [mediaModal, setMediaModal] = useState({
+    isOpen: false,
+    type: 'document',
+    title: 'Mídia',
+    mimeType: '',
+    urls: [],
+    index: 0,
+    failed: false,
+  });
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
 
   const applyTemplateVariables = useCallback((text, variables) => {
@@ -150,6 +164,16 @@ export function SupportPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const basePath = getBasePath() || '';
+    const faviconHref = `${basePath}/favicon.ico`.replace(/\/\/{2,}/g, '/');
+    const icon = document.querySelector("link[rel='icon']");
+    if (icon && icon.getAttribute('href') !== faviconHref) {
+      icon.setAttribute('href', faviconHref);
+    }
+  }, []);
+
   // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
   // DEVE ser definido ANTES de handleWebSocketEvent para evitar erro de inicialização
   const { debouncedFn: debouncedLoadTickets } = useDebounce(() => {
@@ -158,20 +182,19 @@ export function SupportPage() {
     }
   }, 500); // 500ms de debounce
 
-  // Debounce para quick replies via "/atalho"
-  const { debouncedFn: debouncedSearchSlashQuickReplies } = useDebounce(() => {
-    const txt = (messageText || '').trim();
-    if (!txt.startsWith('/') || txt.length < 2) {
+  // Debounce para quick replies via menu "/"
+  const { debouncedFn: debouncedSearchSlashQuickReplies } = useDebounce((query) => {
+    if (!query || String(query).trim().length < 2) {
       setQuickReplySlashOpen(false);
       setQuickReplySlashResults([]);
       return;
     }
-    const q = txt.slice(1);
-    listQuickReplies({ search: q, activeOnly: true, category: quickReplySelectedCategory || undefined })
+    listQuickReplies({ search: String(query).trim(), activeOnly: true, category: quickReplySelectedCategory || undefined })
       .then((resp) => {
         const list = resp?.quickReplies || [];
         setQuickReplySlashResults(list.slice(0, 8));
-        setQuickReplySlashOpen(true);
+        setSlashMenuMode('quick_replies');
+        setQuickReplySlashOpen(list.length > 0);
       })
       .catch(() => {
         setQuickReplySlashOpen(false);
@@ -375,24 +398,6 @@ export function SupportPage() {
     showToast,
   });
 
-  // Sugestões automáticas de quick replies com base na última msg do usuário
-  useEffect(() => {
-    const context = selectedTicket?.lastUserMessage || '';
-    if (!selectedTicket?.id || !context) {
-      setQuickReplySuggestions([]);
-      return;
-    }
-    searchQuickReplies(context, 5)
-      .then((resp) => setQuickReplySuggestions(resp?.quickReplies || []))
-      .catch(() => setQuickReplySuggestions([]));
-  }, [selectedTicket?.id, selectedTicket?.lastUserMessage]);
-
-  // Atualiza dropdown do "/atalho" conforme digita
-  useEffect(() => {
-    if (!selectedTicket || selectedTicket.status !== 'in_progress') return;
-    debouncedSearchSlashQuickReplies();
-  }, [messageText, selectedTicket?.id, selectedTicket?.status, debouncedSearchSlashQuickReplies]);
-
   const insertQuickReply = useCallback(async (reply) => {
     if (!reply) return;
     const baseVars = selectedTicket?.context?.variables || {};
@@ -413,8 +418,32 @@ export function SupportPage() {
 
     setQuickReplySlashOpen(false);
     setQuickReplySlashResults([]);
+    setSlashCommandResults([]);
+    setSlashMenuMode('commands');
+    setSlashMenuCursorIndex(-1);
     try { await useQuickReply(reply.id); } catch {}
   }, [applyTemplateVariables, selectedTicket]);
+
+  const closeSlashMenu = useCallback(() => {
+    setQuickReplySlashOpen((prev) => (prev ? false : prev));
+    setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
+    setSlashCommandResults((prev) => (prev.length > 0 ? [] : prev));
+    setSlashMenuMode((prev) => (prev !== 'commands' ? 'commands' : prev));
+    setSlashMenuCursorIndex((prev) => (prev !== -1 ? -1 : prev));
+  }, []);
+
+  const openQuickReplyBrowser = useCallback(async () => {
+    const resp = await listQuickReplies({
+      activeOnly: true,
+      category: quickReplySelectedCategory || undefined,
+    });
+    const list = (resp?.quickReplies || []).slice(0, 8);
+    setQuickReplySlashResults(list);
+    setSlashCommandResults([]);
+    setSlashMenuMode('quick_replies');
+    setQuickReplySlashOpen(list.length > 0);
+    return list;
+  }, [quickReplySelectedCategory]);
 
   useEffect(() => {
     // Carrega categorias (best-effort) para quick replies
@@ -423,20 +452,6 @@ export function SupportPage() {
       .then((resp) => setQuickReplyCategories(resp?.categories || []))
       .catch(() => setQuickReplyCategories([]));
   }, []);
-
-  useEffect(() => {
-    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
-      setQuickReplyCategoryItems([]);
-      return;
-    }
-    // Carrega quick replies da categoria escolhida (best-effort)
-    listQuickReplies({
-      category: quickReplySelectedCategory || undefined,
-      activeOnly: true,
-    })
-      .then((resp) => setQuickReplyCategoryItems((resp?.quickReplies || []).slice(0, 12)))
-      .catch(() => setQuickReplyCategoryItems([]));
-  }, [selectedTicket?.id, selectedTicket?.status, quickReplySelectedCategory]);
 
   const updateTicketLocal = useCallback((ticket) => {
     if (!ticket?.id) return;
@@ -475,13 +490,14 @@ export function SupportPage() {
     try {
       // Carrega tickets waiting e in_progress
       // A API já filtra automaticamente: agents só veem seus tickets ou sem atribuição
-      const [waitingResult, inProgressResult] = await Promise.all([
+      const [waitingResult, inProgressResult, closedResult] = await Promise.all([
         listAllTickets({ status: 'waiting', limit: 1000 }),
         listAllTickets({ status: 'in_progress', limit: 1000 }),
+        showClosedTickets ? listAllTickets({ status: 'closed', limit: 1000 }) : Promise.resolve({ tickets: [] }),
       ]);
       
       // Combina os tickets e remove duplicatas
-      const allTickets = [...(waitingResult.tickets || []), ...(inProgressResult.tickets || [])];
+      const allTickets = [...(waitingResult.tickets || []), ...(inProgressResult.tickets || []), ...(closedResult.tickets || [])];
       const uniqueTickets = Array.from(
         new Map(allTickets.map(ticket => [ticket.id, ticket])).values()
       );
@@ -518,11 +534,16 @@ export function SupportPage() {
       setLoading(false);
       isLoadingTicketsRef.current = false;
     }
-  }, []); // Sem dependências - usa refs e state setters funcionais
+  }, [showClosedTickets]); // Refaz a carga ao incluir/excluir fechados
 
   // Atualiza ref quando loadTickets muda
   React.useEffect(() => {
     loadTicketsRef.current = loadTickets;
+  }, [loadTickets]);
+
+  useEffect(() => {
+    if (!hasLoadedInitialDataRef.current) return;
+    loadTickets();
   }, [loadTickets]);
 
   // Flag para garantir que os dados iniciais sejam carregados apenas uma vez
@@ -551,8 +572,242 @@ export function SupportPage() {
     }
   }
 
+  function firstNonEmptyString(values = []) {
+    for (const value of values) {
+      if (typeof value !== 'string') continue;
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+    return null;
+  }
+
+  function normalizeDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  function isPhoneLikeValue(value, phoneNumber) {
+    const raw = String(value || '').trim();
+    if (!raw) return false;
+    const compact = raw.replace(/[^\d+]/g, '');
+    if (/^\+?\d{10,15}$/.test(compact)) return true;
+    const valueDigits = normalizeDigits(raw);
+    const phoneDigits = normalizeDigits(phoneNumber);
+    return !!(valueDigits && phoneDigits && valueDigits === phoneDigits);
+  }
+
+  function pickFirstMediaUrl(...values) {
+    return getMediaCandidates(...values)[0] || null;
+  }
+
+  function getMediaCandidates(...values) {
+    const basePath = getBasePath() || '';
+    const candidates = [];
+    const seen = new Set();
+
+    const addCandidate = (url) => {
+      if (typeof url !== 'string') return;
+      const normalized = url.trim();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      candidates.push(normalized);
+    };
+
+    const withBasePath = (path) => {
+      if (typeof path !== 'string' || !path.startsWith('/')) return path;
+      if (!basePath || path.startsWith(`${basePath}/`)) return path;
+      return `${basePath}${path}`;
+    };
+
+    const isApiRoute = (path) => {
+      if (typeof path !== 'string') return false;
+      return path.startsWith('/api/')
+        || path.startsWith('/tickets/')
+        || path.startsWith('/queues/')
+        || path.startsWith('/flows/')
+        || path.startsWith('/auth/')
+        || path.startsWith('/conversations/');
+    };
+
+    const looksLikeFileName = (value) => /^[\w.-]+\.[a-z0-9]{2,5}$/i.test(value);
+
+    const normalizeRawMediaUrl = (raw) => {
+      if (typeof raw !== 'string') return [];
+      const value = raw.trim();
+      if (!value) return [];
+
+      if (/^data:/i.test(value) || /^blob:/i.test(value) || /^https?:\/\//i.test(value)) {
+        return [value];
+      }
+
+      if (value.startsWith('//')) {
+        const protocol = (typeof window !== 'undefined' && window.location?.protocol) || 'https:';
+        return [`${protocol}${value}`];
+      }
+
+      if (value.startsWith('/')) {
+        if (isApiRoute(value)) {
+          return [buildApiUrl(value)];
+        }
+        return [withBasePath(value)];
+      }
+
+      if (value.startsWith('public/')) {
+        return [withBasePath(`/${value}`)];
+      }
+
+      if (value.startsWith('r-agent2/')) {
+        return [`/${value}`];
+      }
+
+      if (looksLikeFileName(value)) {
+        return [
+          withBasePath(`/public/whatsapp-media/${value}`),
+          withBasePath(`/public/support-media/system/${value}`),
+        ];
+      }
+
+      if (value.includes('/')) {
+        return [withBasePath(`/${value.replace(/^\/+/, '')}`)];
+      }
+
+      return [withBasePath(`/public/whatsapp-media/${value}`)];
+    };
+
+    const attachmentCandidates = [];
+    for (const value of values) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (!item || typeof item !== 'object') continue;
+          attachmentCandidates.push(
+            item?.payload?.url,
+            item?.url,
+            item?.href,
+            item?.link,
+            item?.src,
+            item?.mediaUrl,
+          );
+        }
+      }
+    }
+
+    const rawCandidates = [...values, ...attachmentCandidates].filter((value) => typeof value === 'string');
+    for (const raw of rawCandidates) {
+      const normalized = normalizeRawMediaUrl(raw);
+      normalized.forEach(addCandidate);
+    }
+
+    return candidates;
+  }
+
+  function openMediaModal({ urls, type = 'document', title = 'Mídia', mimeType = '' }) {
+    const validUrls = Array.isArray(urls) ? urls.filter((u) => typeof u === 'string' && u.trim()) : [];
+    if (validUrls.length === 0) return;
+    setMediaModal({
+      isOpen: true,
+      type,
+      title: title || 'Mídia',
+      mimeType: mimeType || '',
+      urls: validUrls,
+      index: 0,
+      failed: false,
+    });
+  }
+
+  function closeMediaModal() {
+    setMediaModal((prev) => ({ ...prev, isOpen: false }));
+  }
+
+  function handleMediaRenderError() {
+    setMediaModal((prev) => {
+      if (!prev.isOpen) return prev;
+      if (prev.index < prev.urls.length - 1) {
+        return { ...prev, index: prev.index + 1, failed: false };
+      }
+      return { ...prev, failed: true };
+    });
+  }
+
+  const activeMediaUrl = mediaModal.urls[mediaModal.index] || '';
+
+  useEffect(() => {
+    if (!mediaModal.isOpen || typeof window === 'undefined') return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeMediaModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mediaModal.isOpen]);
+
+  function renderOpenMediaAction({ label = 'Abrir mídia', type = 'document', urls = [], title = 'Mídia', mimeType = '' }) {
+    if (!Array.isArray(urls) || urls.length === 0) {
+      return null;
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => openMediaModal({ urls, type, title, mimeType })}
+        style={{
+          border: '1px solid var(--color-border-default)',
+          borderRadius: '8px',
+          padding: '6px 10px',
+          background: 'var(--color-bg-secondary)',
+          color: 'var(--color-text-primary)',
+          cursor: 'pointer',
+        }}
+      >
+        {label}
+      </button>
+    );
+  }
+
   function renderTimelineMessageContent(msg) {
-    if (!msg || msg.source !== 'channel' || !msg.channel) {
+    if (!msg) {
+      return null;
+    }
+
+    if (msg.source !== 'channel' || !msg.channel) {
+      const rawMessage = msg?.raw || {};
+      const rawMedia = rawMessage?.media || {};
+      const mediaType = String(rawMessage?.type || rawMedia?.type || rawMessage?.mediaKind || '').toLowerCase();
+      const mediaUrls = getMediaCandidates(
+        rawMessage?.mediaUrl,
+        rawMedia?.url,
+        rawMessage?.url,
+      );
+      const mediaUrl = mediaUrls[0] || null;
+      const fileName = firstNonEmptyString([rawMessage?.fileName, rawMedia?.fileName]);
+      const mimeType = firstNonEmptyString([rawMessage?.mimeType, rawMedia?.mimeType]);
+      const documentId = firstNonEmptyString([rawMessage?.documentId, rawMedia?.documentId]);
+
+      if (mediaUrl) {
+        const typeLabel = mediaType || 'arquivo';
+        return (
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>
+              {typeLabel === 'image' ? 'Imagem' : typeLabel === 'audio' || typeLabel === 'voice' ? 'Áudio' : typeLabel === 'video' ? 'Vídeo' : 'Arquivo'}
+            </div>
+            {fileName ? <div style={{ marginBottom: '4px' }}><strong>{fileName}</strong></div> : null}
+            {msg?.text ? <div style={{ marginBottom: '6px' }}>{msg.text}</div> : null}
+            {renderOpenMediaAction({
+              label: 'Abrir mídia',
+              type: mediaType || 'document',
+              urls: mediaUrls,
+              title: fileName || msg?.text || 'Mídia do ticket',
+              mimeType,
+            })}
+            {(mimeType || documentId) ? (
+              <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
+                {mimeType ? <span>{mimeType}</span> : null}
+                {mimeType && documentId ? <span> • </span> : null}
+                {documentId ? <span>document_id: <code>{documentId}</code></span> : null}
+              </div>
+            ) : null}
+          </div>
+        );
+      }
+
       return <>{msg?.text}</>;
     }
 
@@ -562,13 +817,18 @@ export function SupportPage() {
     const text = safeGetBodyText(body);
 
     const commonMeta = (() => {
-      // Instagram: attachments normalmente têm payload.url
-      if (Array.isArray(body.attachments) && body.attachments[0]?.payload?.url) {
-        return { url: String(body.attachments[0].payload.url) };
-      }
-      // Outbound Instagram que persistimos: body.url
-      if (typeof body.url === 'string') return { url: body.url };
-      return {};
+      const urls = getMediaCandidates(
+        body.url,
+        body.mediaUrl,
+        body?.media?.url,
+        body?.raw?.url,
+        body?.raw?.mediaUrl,
+        body.attachments,
+        body?.raw?.attachments,
+        body.files,
+        body?.raw?.files,
+      );
+      return urls.length > 0 ? { urls, url: urls[0] } : {};
     })();
 
     if (type === 'text') {
@@ -604,7 +864,8 @@ export function SupportPage() {
     if (type === 'image') {
       const image = body.image || body.raw?.image || {};
       const caption = safeGetBodyText(body) || '';
-      const url = commonMeta.url || image?.link || null;
+      const urls = getMediaCandidates(commonMeta.url, image?.url, image?.link, image?.href, image?.src);
+      const url = urls[0] || null;
       const mime = image?.mime_type || null;
       const id = image?.id || null;
       return (
@@ -613,10 +874,7 @@ export function SupportPage() {
           {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
             <div style={{ marginTop: '6px' }}>
-              <a href={url} target="_blank" rel="noreferrer">Abrir imagem</a>
-              <div style={{ marginTop: '8px' }}>
-                <img src={url} alt={caption || 'imagem'} style={{ maxWidth: '260px', borderRadius: '8px', border: '1px solid #eee' }} />
-              </div>
+              {renderOpenMediaAction({ label: 'Abrir imagem', type: 'image', urls, title: caption || 'Imagem', mimeType: mime || '' })}
             </div>
           ) : (
             <div style={{ fontSize: '12px', color: '#666' }}>
@@ -632,7 +890,8 @@ export function SupportPage() {
     if (type === 'document') {
       const doc = body.document || body.raw?.document || {};
       const caption = safeGetBodyText(body) || '';
-      const url = commonMeta.url || doc?.link || null;
+      const urls = getMediaCandidates(commonMeta.url, doc?.url, doc?.link, doc?.href, doc?.src);
+      const url = urls[0] || null;
       const filename = doc?.filename || null;
       const mime = doc?.mime_type || null;
       const id = doc?.id || null;
@@ -642,7 +901,7 @@ export function SupportPage() {
           {filename ? <div style={{ marginBottom: '4px' }}><strong>{String(filename)}</strong></div> : null}
           {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
-            <a href={url} target="_blank" rel="noreferrer">Abrir documento</a>
+            renderOpenMediaAction({ label: 'Abrir documento', type: 'document', urls, title: filename || 'Documento', mimeType: mime || '' })
           ) : (
             <div style={{ fontSize: '12px', color: '#666' }}>
               {mime ? <span>{String(mime)}</span> : null}
@@ -656,19 +915,15 @@ export function SupportPage() {
 
     if (type === 'audio' || type === 'voice') {
       const audio = body.audio || body.raw?.audio || {};
-      const url = commonMeta.url || audio?.link || null;
+      const urls = getMediaCandidates(commonMeta.url, audio?.url, audio?.link, audio?.href, audio?.src);
+      const url = urls[0] || null;
       const mime = audio?.mime_type || null;
       const id = audio?.id || null;
       return (
         <div>
           <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Áudio</div>
           {url ? (
-            <div>
-              <a href={url} target="_blank" rel="noreferrer">Abrir áudio</a>
-              <div style={{ marginTop: '8px' }}>
-                <audio controls src={url} style={{ width: '260px' }} />
-              </div>
-            </div>
+            renderOpenMediaAction({ label: 'Abrir áudio', type: 'audio', urls, title: 'Áudio', mimeType: mime || '' })
           ) : (
             <div style={{ fontSize: '12px', color: '#666' }}>
               {mime ? <span>{String(mime)}</span> : null}
@@ -683,7 +938,8 @@ export function SupportPage() {
     if (type === 'video') {
       const video = body.video || body.raw?.video || {};
       const caption = safeGetBodyText(body) || '';
-      const url = commonMeta.url || video?.link || null;
+      const urls = getMediaCandidates(commonMeta.url, video?.url, video?.link, video?.href, video?.src);
+      const url = urls[0] || null;
       const mime = video?.mime_type || null;
       const id = video?.id || null;
       return (
@@ -691,12 +947,7 @@ export function SupportPage() {
           <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Vídeo</div>
           {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
-            <div>
-              <a href={url} target="_blank" rel="noreferrer">Abrir vídeo</a>
-              <div style={{ marginTop: '8px' }}>
-                <video controls src={url} style={{ maxWidth: '260px', borderRadius: '8px' }} />
-              </div>
-            </div>
+            renderOpenMediaAction({ label: 'Abrir vídeo', type: 'video', urls, title: caption || 'Vídeo', mimeType: mime || '' })
           ) : (
             <div style={{ fontSize: '12px', color: '#666' }}>
               {mime ? <span>{String(mime)}</span> : null}
@@ -1019,6 +1270,257 @@ export function SupportPage() {
     }
   };
 
+  const slashCommands = React.useMemo(() => {
+    const commands = [
+      {
+        id: 'resposta-rapida',
+        label: '/resposta-rapida',
+        description: 'Abrir lista de respostas rápidas',
+        run: async () => {
+          await openQuickReplyBrowser();
+          setMessageText('/resposta-rapida');
+        },
+      },
+      {
+        id: 'agendar',
+        label: '/agendar',
+        description: 'Abrir agendamento para este ticket',
+        run: async () => {
+          if (!selectedTicket) return;
+          setScheduleContextTicket(selectedTicket);
+          setMessageText('');
+          closeSlashMenu();
+        },
+      },
+      {
+        id: 'falhas-entrega',
+        label: '/falhas-entrega',
+        description: 'Abrir falhas de entrega do ticket',
+        run: async () => {
+          await openDeliveryFailures();
+          setMessageText('');
+          closeSlashMenu();
+        },
+      },
+      {
+        id: 'fechar-ticket',
+        label: '/fechar-ticket',
+        description: 'Fechar o ticket atual',
+        run: async () => {
+          if (!selectedTicket) return;
+          handleClose(selectedTicket.id);
+          setMessageText('');
+          closeSlashMenu();
+        },
+      },
+    ];
+
+    if ((selectedTicket?.mode || 'bot') === 'bot') {
+      commands.unshift({
+        id: 'assumir',
+        label: '/assumir',
+        description: 'Assumir atendimento humano',
+        run: async () => {
+          await handleTakeOver();
+          setMessageText('');
+          closeSlashMenu();
+        },
+      });
+    }
+
+    if ((selectedTicket?.mode || 'bot') === 'human') {
+      commands.unshift(
+        {
+          id: 'devolver-bot',
+          label: '/devolver-bot',
+          description: 'Devolver atendimento ao bot',
+          run: async () => {
+            await handleReturnToBot();
+            setMessageText('');
+            closeSlashMenu();
+          },
+        },
+        {
+          id: 'pausar',
+          label: '/pausar',
+          description: 'Pausar atendimento humano',
+          run: async () => {
+            await handlePause();
+            setMessageText('');
+            closeSlashMenu();
+          },
+        },
+      );
+    }
+
+    if ((selectedTicket?.mode || 'bot') === 'paused') {
+      commands.unshift({
+        id: 'retomar',
+        label: '/retomar',
+        description: 'Retomar atendimento humano',
+        run: async () => {
+          await handleResume();
+          setMessageText('');
+          closeSlashMenu();
+        },
+      });
+    }
+
+    return commands;
+  }, [
+    selectedTicket,
+    openQuickReplyBrowser,
+    openDeliveryFailures,
+    handleClose,
+    handleTakeOver,
+    handleReturnToBot,
+    handlePause,
+    handleResume,
+    closeSlashMenu,
+  ]);
+
+  const setSlashCommandsIfChanged = useCallback((nextCommands) => {
+    setSlashCommandResults((prev) => {
+      if (
+        prev.length === nextCommands.length
+        && prev.every((item, index) => item.id === nextCommands[index]?.id)
+      ) {
+        return prev;
+      }
+      return nextCommands;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
+      closeSlashMenu();
+      return;
+    }
+
+    const txt = String(messageText || '').trim();
+    if (!txt.startsWith('/')) {
+      closeSlashMenu();
+      return;
+    }
+
+    if (slashMenuMode === 'quick_replies' && /^\/resposta-rapida\b/i.test(txt)) {
+      setQuickReplySlashOpen(true);
+      return;
+    }
+
+    const query = txt.slice(1).toLowerCase();
+    const matchingCommands = slashCommands.filter((command) => {
+      const haystack = `${command.label} ${command.description}`.toLowerCase();
+      return haystack.includes(query);
+    });
+
+    if (matchingCommands.length > 0) {
+      setSlashCommandsIfChanged(matchingCommands);
+      setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
+      setSlashMenuMode('commands');
+      setQuickReplySlashOpen(true);
+      return;
+    }
+
+    if (query.length >= 2) {
+      setSlashCommandResults([]);
+      debouncedSearchSlashQuickReplies(query);
+      return;
+    }
+
+    setSlashCommandsIfChanged(slashCommands);
+    setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
+    setSlashMenuMode('commands');
+    setQuickReplySlashOpen(true);
+  }, [
+    selectedTicket,
+    messageText,
+    slashMenuMode,
+    slashCommands,
+    setSlashCommandsIfChanged,
+    debouncedSearchSlashQuickReplies,
+    closeSlashMenu,
+  ]);
+
+  const handleSelectSlashItem = useCallback(async (item) => {
+    if (!item) return;
+    if (item.kind === 'quick_reply') {
+      await insertQuickReply(item.reply);
+      return;
+    }
+    if (typeof item.run === 'function') {
+      await item.run();
+    }
+  }, [insertQuickReply]);
+
+  useEffect(() => {
+    if (!quickReplySlashOpen) {
+      setSlashMenuCursorIndex(-1);
+      return;
+    }
+
+    const totalItems = slashMenuMode === 'commands'
+      ? slashCommandResults.length
+      : quickReplySlashResults.length;
+
+    if (totalItems <= 0) {
+      setSlashMenuCursorIndex(-1);
+      return;
+    }
+
+    setSlashMenuCursorIndex((prev) => {
+      if (prev < 0 || prev >= totalItems) return 0;
+      return prev;
+    });
+  }, [quickReplySlashOpen, slashMenuMode, slashCommandResults, quickReplySlashResults]);
+
+  const handleComposerKeyDown = useCallback(async (event) => {
+    const txt = String(messageText || '').trim();
+    const isSlashInputOpen = txt.startsWith('/') && quickReplySlashOpen;
+    const slashItems = slashMenuMode === 'commands'
+      ? slashCommandResults
+      : quickReplySlashResults.map((reply) => ({ kind: 'quick_reply', reply }));
+
+    if (isSlashInputOpen && slashItems.length > 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      const delta = event.key === 'ArrowDown' ? 1 : -1;
+      setSlashMenuCursorIndex((prev) => {
+        if (prev < 0 || prev >= slashItems.length) return delta > 0 ? 0 : slashItems.length - 1;
+        return (prev + delta + slashItems.length) % slashItems.length;
+      });
+      return;
+    }
+
+    if (event.key === 'Enter' && !event.ctrlKey && !event.metaKey && !event.shiftKey && txt.startsWith('/')) {
+      event.preventDefault();
+      if (slashItems.length > 0) {
+        const selectedIndex = slashMenuCursorIndex >= 0 && slashMenuCursorIndex < slashItems.length
+          ? slashMenuCursorIndex
+          : 0;
+        await handleSelectSlashItem(slashItems[selectedIndex]);
+      }
+      return;
+    }
+
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      handleSendMessage();
+    }
+  }, [
+    messageText,
+    slashMenuMode,
+    quickReplySlashOpen,
+    slashCommandResults,
+    quickReplySlashResults,
+    slashMenuCursorIndex,
+    handleSelectSlashItem,
+    handleSendMessage,
+  ]);
+
+  const handleHoverSlashItem = useCallback((index) => {
+    setSlashMenuCursorIndex(index);
+  }, []);
+
   function formatDate(dateString) {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -1096,12 +1598,45 @@ export function SupportPage() {
   }, [wsUiStatus.phase]);
 
   function getContactName(ticket) {
-    return ticket?.contactName
-      || ticket?.contact?.name
-      || ticket?.context?.contactName
-      || ticket?.context?.contact?.name
-      || ticket?.phoneNumber
-      || 'Sem contato';
+    const variables = ticket?.context?.variables || {};
+    const candidates = [
+      ticket?.contactName,
+      ticket?.customerName,
+      ticket?.displayName,
+      ticket?.name,
+      ticket?.contact?.name,
+      ticket?.contact?.displayName,
+      ticket?.contact?.profile?.name,
+      ticket?.context?.contactName,
+      ticket?.context?.customerName,
+      ticket?.context?.displayName,
+      ticket?.context?.name,
+      ticket?.context?.contact?.name,
+      ticket?.context?.metadata?.contactName,
+      ticket?.context?.metadata?.customerName,
+      ticket?.context?.metadata?.profileName,
+      ticket?.context?.metadata?.senderName,
+      variables?.contactName,
+      variables?.customerName,
+      variables?.displayName,
+      variables?.name,
+      variables?.nome,
+      variables?.fullName,
+      variables?.nomeCompleto,
+      variables?.customer?.name,
+      variables?.contact?.name,
+      variables?.profile?.name,
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string') continue;
+      const name = candidate.trim();
+      if (!name) continue;
+      if (isPhoneLikeValue(name, ticket?.phoneNumber)) continue;
+      return name;
+    }
+
+    return ticket?.phoneNumber || 'Sem contato';
   }
 
   function formatTicketStatus(status) {
@@ -1163,7 +1698,19 @@ export function SupportPage() {
 
   const ticketsView = React.useMemo(() => {
     return (tickets || []).filter((ticket) => {
+      if (!showClosedTickets && ticket?.status === 'closed') return false;
+      if (!showOtherAgents) {
+        const assigned = ticket?.assignedTo;
+        const selfAgentId = agent?.id;
+        const selfAgentUsername = agent?.username;
+        if (assigned && assigned !== selfAgentId && assigned !== selfAgentUsername) return false;
+      }
       if (uiQueue && ticket?.queue !== uiQueue) return false;
+      if (ticketViewFilter === 'unread' && !(Number(ticket?.unreadCount || 0) > 0)) return false;
+      if (ticketViewFilter === 'waiting' && ticket?.status !== 'waiting') return false;
+      if (ticketViewFilter === 'in_progress' && ticket?.status !== 'in_progress') return false;
+      if (ticketViewFilter === 'closed' && ticket?.status !== 'closed') return false;
+      if (ticketViewFilter === 'unassigned' && ticket?.assignedTo) return false;
       if (!uiSearchDebounced) return true;
       const haystack = [
         ticket?.id,
@@ -1175,71 +1722,33 @@ export function SupportPage() {
       ].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(uiSearchDebounced.toLowerCase());
     });
-  }, [tickets, uiQueue, uiSearchDebounced]);
-
-  const supportGridColumns = React.useMemo(() => ([
-    {
-      id: 'contact',
-      header: 'Contato',
-      render: (ticket) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{highlightText(getContactName(ticket), uiSearchDebounced)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{getPhoneNode(ticket)}</div>
-        </div>
-      ),
-      sortValue: (ticket) => getContactName(ticket),
-    },
-    {
-      id: 'status',
-      header: 'Status',
-      render: (ticket) => (
-        <div>
-          <span className={`support-ticket-status ${getStatusClass(ticket.status)}`}>{formatTicketStatus(ticket.status)}</span>
-          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{formatTicketMode(ticket.mode)}</div>
-        </div>
-      ),
-      sortValue: (ticket) => ticket?.status,
-      width: '160px',
-    },
-    {
-      id: 'preview',
-      header: 'Ultima mensagem',
-      render: (ticket) => (
-        <div>
-          <div>{getTicketPreview(ticket, uiSearchDebounced)}</div>
-          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-            {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
-          </div>
-        </div>
-      ),
-    },
-    {
-      id: 'updatedAt',
-      header: 'Atualizacao',
-      render: (ticket) => (
-        <div>
-          <div>{formatTime(ticket.updatedAt || ticket.createdAt)}</div>
-          {ticket.unreadCount > 0 ? (
-            <div style={{ marginTop: '6px', fontSize: '12px', color: '#e74c3c', fontWeight: 700 }}>
-              {formatBadgeCount(ticket.unreadCount)} nao lida(s)
-            </div>
-          ) : null}
-        </div>
-      ),
-      sortValue: (ticket) => ticket?.updatedAt || ticket?.createdAt,
-      width: '120px',
-    },
-  ]), [phoneMaskingEnabled, uiSearchDebounced]);
+  }, [tickets, showClosedTickets, showOtherAgents, agent?.id, agent?.username, uiQueue, ticketViewFilter, uiSearchDebounced]);
 
   function clearTicketFilters() {
     setUiSearch('');
     setUiQueue('');
+    setTicketViewFilter('all');
   }
 
   function handleSelectTicket(ticket) {
     setSelectedTicket(ticket);
     if (isMobile) {
       setIsRightPanelCollapsed(true);
+    }
+  }
+
+  async function handleEnableNotifications() {
+    if (!isWebPushSupported()) {
+      showToast('Notificações web não são suportadas neste navegador', 'warning');
+      return;
+    }
+    try {
+      await subscribeCurrentUserWebPush({ deviceName: 'support-workspace' });
+      showToast('Notificações web ativadas', 'success');
+    } catch (error) {
+      logger.error('Erro ao ativar notificações web', error);
+      const message = error?.message || 'Não foi possível ativar notificações web.';
+      showToast(message, 'error');
     }
   }
 
@@ -1252,324 +1761,379 @@ export function SupportPage() {
         queues={queues}
         setNewConversationQueue={setNewConversationQueue}
         setShowNewConversationModal={setShowNewConversationModal}
+        onEnableNotifications={handleEnableNotifications}
+      />
+      <SupportFiltersBar
+        uiSearch={uiSearch}
+        setUiSearch={setUiSearch}
+        ticketQueueOptions={ticketQueueOptions}
+        uiQueue={uiQueue}
+        setUiQueue={setUiQueue}
+        ticketViewFilter={ticketViewFilter}
+        setTicketViewFilter={setTicketViewFilter}
+        showClosedTickets={showClosedTickets}
+        onClear={clearTicketFilters}
       />
 
-      <SupportPageLayout
-        isMobile={isMobile}
-        isRightPanelCollapsed={isRightPanelCollapsed}
-        hasSelection={Boolean(selectedTicket)}
-        left={(
-          <>
-            <SupportFiltersBar
-              uiSearch={uiSearch}
-              setUiSearch={setUiSearch}
-              ticketQueueOptions={ticketQueueOptions}
-              uiQueue={uiQueue}
-              setUiQueue={setUiQueue}
-              onClear={clearTicketFilters}
-            />
-            <SupportTicketList
-              isMobile={isMobile}
-              loading={loading}
-              ticketsView={ticketsView}
-              handleSelectTicket={handleSelectTicket}
-              selectedTicket={selectedTicket}
-              uiSearchDebounced={uiSearchDebounced}
-              highlightText={highlightText}
-              getContactName={getContactName}
-              getPhoneNode={getPhoneNode}
-              formatTicketMode={formatTicketMode}
-              getStatusClass={getStatusClass}
-              formatTicketStatus={formatTicketStatus}
-              formatTime={formatTime}
-              formatBadgeCount={formatBadgeCount}
-              getTicketPreview={getTicketPreview}
-              getAssignedLabel={getAssignedLabel}
-              getQueueLabel={getQueueLabel}
-              supportGridColumns={supportGridColumns}
-            />
-          </>
-        )}
-        main={selectedTicket ? (
-          <SupportConversationCard selectedTicket={selectedTicket}>
-            <SupportConversationPane
-              isMobile={isMobile}
-              selectedTicket={selectedTicket}
-              setSelectedTicket={setSelectedTicket}
-              setIsRightPanelCollapsed={setIsRightPanelCollapsed}
-              handoverLoading={handoverLoading}
-              handleTakeOver={handleTakeOver}
-              handleReturnToBot={handleReturnToBot}
-              handlePause={handlePause}
-              handleResume={handleResume}
-              deliveryFailuresLoading={deliveryFailuresLoading}
-              openDeliveryFailures={openDeliveryFailures}
-              formatDate={formatDate}
-              messagesContainerRef={messagesContainerRef}
-              timelineMessages={timelineMessages}
-              renderTimelineMessageContent={renderTimelineMessageContent}
-              getDeliveryStatusBadge={getDeliveryStatusBadge}
-              assignedTo={assignedTo}
-              setAssignedTo={setAssignedTo}
-              agent={agent}
-              handleAssign={handleAssign}
-              quickReplySelectedCategory={quickReplySelectedCategory}
-              setQuickReplySelectedCategory={setQuickReplySelectedCategory}
-              quickReplyCategories={quickReplyCategories}
-              quickReplyCategoryItems={quickReplyCategoryItems}
-              quickReplySuggestions={quickReplySuggestions}
-              insertQuickReply={insertQuickReply}
-              messageText={messageText}
-              setMessageText={setMessageText}
-              quickReplySlashOpen={quickReplySlashOpen}
-              quickReplySlashResults={quickReplySlashResults}
-              handleSendMessage={handleSendMessage}
-              handleClose={handleClose}
-            />
-          </SupportConversationCard>
-        ) : (
-          <div className="support-details-empty">
-            <p>Selecione um ticket para ver detalhes e ações</p>
-          </div>
-        )}
-        right={selectedTicket ? (
-          <SupportDetailsSidebar
-            isMobile={isMobile}
-            isRightPanelCollapsed={isRightPanelCollapsed}
-            setIsRightPanelCollapsed={setIsRightPanelCollapsed}
-          >
-            <SupportSidebarMenu items={[
-              { id: 'support-section-ticket', label: 'Atendimento', description: 'Resumo do ticket atual' },
-              { id: 'support-section-entity', label: 'Entidade', description: 'Entidade resolvida e correlações' },
-              { id: 'support-section-evidence', label: 'Evidências', description: 'Melhores evidências para o contexto' },
-              { id: 'support-section-reply', label: 'Resposta', description: 'Sugestão pronta para o atendimento' },
-              { id: 'support-section-history', label: 'Histórico', description: 'Timeline consolidada' },
-            ]} />
+      <div
+        className={[
+          'support-grid',
+          isMobile ? 'is-mobile' : '',
+          isMobile && !isRightPanelCollapsed ? 'right-open' : '',
+          isMobile && selectedTicket ? 'has-selected' : '',
+        ].filter(Boolean).join(' ')}
+      >
+        <SupportTicketList
+          loading={loading}
+          ticketsView={ticketsView}
+          handleSelectTicket={handleSelectTicket}
+          selectedTicket={selectedTicket}
+          uiSearchDebounced={uiSearchDebounced}
+          highlightText={highlightText}
+          getContactName={getContactName}
+          getPhoneNode={getPhoneNode}
+          formatTicketMode={formatTicketMode}
+          getStatusClass={getStatusClass}
+          formatTicketStatus={formatTicketStatus}
+          formatTime={formatTime}
+          formatBadgeCount={formatBadgeCount}
+          getTicketPreview={getTicketPreview}
+          getAssignedLabel={getAssignedLabel}
+          getQueueLabel={getQueueLabel}
+          showOtherAgents={showOtherAgents}
+          setShowOtherAgents={setShowOtherAgents}
+          showClosedTickets={showClosedTickets}
+          setShowClosedTickets={setShowClosedTickets}
+        />
 
-            <SupportTicketWorkspaceCard
-              ticket={selectedTicket}
-              phoneMaskingEnabled={phoneMaskingEnabled}
-              formatDate={formatDate}
-              modeLabel={getModeLabel(selectedTicket.mode)}
-            />
-
-            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <div style={{ fontWeight: 700 }}>Resumo IA</div>
-                <Button
-                  onClick={handleGenerateAiSummary}
-                  disabled={aiSummaryLoading}
-                  style={{ width: 'auto' }}
-                  title="Gerar ou atualizar resumo do ticket"
-                >
-                  {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
-                </Button>
-              </div>
-              {aiSummary ? (
-                typeof aiSummary === 'string' ? (
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                    {aiSummary}
-                  </div>
-                ) : (
-                  <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                    {safeStringify(aiSummary, 3000)}
-                  </pre>
-                )
-              ) : (
-                <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                  Sem resumo gerado para este ticket.
-                </div>
-              )}
-            </div>
-
-            <SupportResolvedEntityCard identity={evidenceHistory.identity} loading={evidenceLoading} />
-
-            <SupportEvidenceCard
-              evidenceResult={evidenceHistory.evidence}
-              loading={evidenceLoading}
-              formatDate={formatDate}
-              onOpenSource={handleOpenEvidenceSource}
-              onCopyEvidence={handleCopyEvidence}
-              onUseAsReply={handleUseEvidenceAsReply}
-            />
-
-            <SupportSuggestedReplyCard suggestedReply={suggestedReply} />
-
-            <SupportHistoryCard
-              timeline={evidenceHistory.timeline || []}
-              loading={evidenceLoading}
-              formatDate={formatDate}
-              onOpenItem={handleOpenTimelineItem}
-            />
-
-            <SupportCard id="support-section-entities" title="Entidades" subtitle="Itens extraídos automaticamente da conversa">
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                {(extractedEntities.emails.length === 0
-                  && extractedEntities.cpfs.length === 0
-                  && extractedEntities.cnpjs.length === 0
-                  && extractedEntities.phones.length === 0
-                  && extractedEntities.urls.length === 0) ? (
-                  <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
-                ) : (
-                  <>
-                    {extractedEntities.emails.length > 0 ? (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
-                        {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
-                      </div>
-                    ) : null}
-                    {extractedEntities.phones.length > 0 ? (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
-                        {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
-                      </div>
-                    ) : null}
-                    {extractedEntities.cpfs.length > 0 ? (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
-                        {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
-                      </div>
-                    ) : null}
-                    {extractedEntities.cnpjs.length > 0 ? (
-                      <div style={{ marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
-                        {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
-                      </div>
-                    ) : null}
-                    {extractedEntities.urls.length > 0 ? (
-                      <div>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
-                        {extractedEntities.urls.map((u) => (
-                          <div key={u}>
-                            <a href={u} target="_blank" rel="noreferrer">{u}</a>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </SupportCard>
-
-            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-              <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                {(selectedTicket.tags || []).length === 0 ? (
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
-                ) : (
-                  (selectedTicket.tags || []).map((t) => (
-                    <span
-                      key={t}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '4px 10px',
-                        borderRadius: '999px',
-                        border: '1px solid var(--color-border-default)',
-                        background: 'var(--color-bg-secondary)',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {t}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(t)}
-                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}
-                        aria-label={`Remover tag ${t}`}
-                        title="Remover"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="Adicionar tag (ex: cobrança)"
-                  className="support-form-input"
-                  list="support-known-tags"
+        <div className="support-details-panel">
+          {selectedTicket ? (
+            <div className="support-details-split">
+              <div className="support-main-column">
+                <SupportConversationPane
+                  isMobile={isMobile}
+                  selectedTicket={selectedTicket}
+                  setSelectedTicket={setSelectedTicket}
+                  setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+                  handoverLoading={handoverLoading}
+                  handleTakeOver={handleTakeOver}
+                  handleReturnToBot={handleReturnToBot}
+                  handlePause={handlePause}
+                  handleResume={handleResume}
+                  deliveryFailuresLoading={deliveryFailuresLoading}
+                  openDeliveryFailures={openDeliveryFailures}
+                  formatDate={formatDate}
+                  messagesContainerRef={messagesContainerRef}
+                  timelineMessages={timelineMessages}
+                  renderTimelineMessageContent={renderTimelineMessageContent}
+                  getDeliveryStatusBadge={getDeliveryStatusBadge}
+                  assignedTo={assignedTo}
+                  setAssignedTo={setAssignedTo}
+                  agent={agent}
+                  handleAssign={handleAssign}
+                  quickReplySelectedCategory={quickReplySelectedCategory}
+                  setQuickReplySelectedCategory={setQuickReplySelectedCategory}
+                  quickReplyCategories={quickReplyCategories}
+                  insertQuickReply={insertQuickReply}
+                  messageText={messageText}
+                  setMessageText={setMessageText}
+                  quickReplySlashOpen={quickReplySlashOpen}
+                  quickReplySlashResults={quickReplySlashResults}
+                  slashMenuMode={slashMenuMode}
+                  slashCommandResults={slashCommandResults}
+                  slashMenuCursorIndex={slashMenuCursorIndex}
+                  onSelectSlashItem={handleSelectSlashItem}
+                  onHoverSlashItem={handleHoverSlashItem}
+                  onComposerKeyDown={handleComposerKeyDown}
+                  formatTicketStatus={formatTicketStatus}
+                  handleSendMessage={handleSendMessage}
+                  handleClose={handleClose}
                 />
-                <Button onClick={handleAddTag} style={{ width: 'auto' }}>Adicionar</Button>
               </div>
-            </div>
 
-            {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
-              <SupportCard id="support-section-handover" title="Handover & atribuições" subtitle="Transições recentes do atendimento">
-                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                  {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
-                    <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
-                      <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
-                      <div>
-                        <strong>{h.type}</strong> • {h.mode}
-                        {h.actorUsername ? ` • ${h.actorUsername}` : ''}
-                        {h.reason ? ` • ${h.reason}` : ''}
-                      </div>
-                    </div>
-                  ))}
+              <SupportDetailsSidebar
+                isMobile={isMobile}
+                isRightPanelCollapsed={isRightPanelCollapsed}
+                setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+              >
+                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontWeight: 700 }}>Contato</div>
+                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', border: '1px solid rgb(221, 221, 221)', background: getModeLabel(selectedTicket.mode).bg, color: getModeLabel(selectedTicket.mode).fg }}>
+                      {getModeLabel(selectedTicket.mode).label}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    <div>👤 <strong>{getContactName(selectedTicket)}</strong></div>
+                    <div>📞 <strong>{getPhoneNode(selectedTicket)}</strong></div>
+                    <div>Fila: <strong>{selectedTicket.queue || 'default'}</strong></div>
+                    <div>Status: <strong>{formatTicketStatus(selectedTicket.status)}</strong></div>
+                    <div>Canal: <strong>{selectedTicket.channel || 'whatsapp'}</strong></div>
+                    <div>ID da conversa: <code>{selectedTicket.conversationId || '—'}</code></div>
+                    <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
+                  </div>
                 </div>
-              </SupportCard>
-            ) : null}
 
-            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                  {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
-                </div>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
-                  ticketEvents.slice(0, 20).map((ev) => (
-                    <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                        <div style={{ fontWeight: 600 }}>{ev.type}</div>
-                        <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
+                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 700 }}>Resumo IA</div>
+                    <Button
+                      onClick={handleGenerateAiSummary}
+                      disabled={aiSummaryLoading}
+                      style={{ width: 'auto' }}
+                      title="Gerar ou atualizar resumo do ticket"
+                    >
+                      {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
+                    </Button>
+                  </div>
+                  {aiSummary ? (
+                    typeof aiSummary === 'string' ? (
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                        {aiSummary}
                       </div>
-                      {ev?.payload ? <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>{typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}</div> : null}
+                    ) : (
+                      (() => {
+                        const summaryText = typeof aiSummary?.text === 'string' ? aiSummary.text : '';
+                        const generatedAt = aiSummary?.generatedAt ? formatDate(aiSummary.generatedAt) : null;
+                        const generatedBy = aiSummary?.generatedBy?.username || aiSummary?.generatedBy?.id || 'IA';
+
+                        if (!summaryText) {
+                          return (
+                            <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                              {safeStringify(aiSummary, 3000)}
+                            </pre>
+                          );
+                        }
+
+                        return (
+                          <>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                              {summaryText}
+                            </div>
+                            {(generatedAt || generatedBy) ? (
+                              <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
+                                {generatedAt ? `Gerado em ${generatedAt}` : ''}
+                                {generatedAt && generatedBy ? ' • ' : ''}
+                                {generatedBy ? `por ${generatedBy}` : ''}
+                              </div>
+                            ) : null}
+                          </>
+                        );
+                      })()
+                    )
+                  ) : (
+                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                      Sem resumo gerado para este ticket.
                     </div>
-                  ))
+                  )}
+                </div>
+
+                <SupportResolvedEntityCard identity={evidenceHistory.identity} loading={evidenceLoading} />
+
+                <SupportEvidenceCard
+                  evidenceResult={evidenceHistory.evidence}
+                  loading={evidenceLoading}
+                  formatDate={formatDate}
+                  onOpenSource={handleOpenEvidenceSource}
+                  onCopyEvidence={handleCopyEvidence}
+                  onUseAsReply={handleUseEvidenceAsReply}
+                />
+
+                <SupportSuggestedReplyCard suggestedReply={suggestedReply} />
+
+                <SupportHistoryCard
+                  timeline={evidenceHistory.timeline || []}
+                  loading={evidenceLoading}
+                  formatDate={formatDate}
+                  onOpenItem={handleOpenTimelineItem}
+                />
+
+                <SupportCard id="support-section-entities" title="Entidades" subtitle="Itens extraídos automaticamente da conversa">
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    {(extractedEntities.emails.length === 0
+                      && extractedEntities.cpfs.length === 0
+                      && extractedEntities.cnpjs.length === 0
+                      && extractedEntities.phones.length === 0
+                      && extractedEntities.urls.length === 0) ? (
+                      <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
+                    ) : (
+                      <>
+                        {extractedEntities.emails.length > 0 ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
+                            {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
+                          </div>
+                        ) : null}
+                        {extractedEntities.phones.length > 0 ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
+                            {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
+                          </div>
+                        ) : null}
+                        {extractedEntities.cpfs.length > 0 ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
+                            {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
+                          </div>
+                        ) : null}
+                        {extractedEntities.cnpjs.length > 0 ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
+                            {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
+                          </div>
+                        ) : null}
+                        {extractedEntities.urls.length > 0 ? (
+                          <div>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
+                            {extractedEntities.urls.map((u) => (
+                              <div key={u}>
+                                <a href={u} target="_blank" rel="noreferrer">{u}</a>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </SupportCard>
+
+                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                  <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                    {(selectedTicket.tags || []).length === 0 ? (
+                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
+                    ) : (
+                      (selectedTicket.tags || []).map((t) => (
+                        <span
+                          key={t}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '4px 10px',
+                            borderRadius: '999px',
+                            border: '1px solid var(--color-border-default)',
+                            background: 'var(--color-bg-secondary)',
+                            fontSize: '12px',
+                          }}
+                        >
+                          {t}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(t)}
+                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}
+                            aria-label={`Remover tag ${t}`}
+                            title="Remover"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="Adicionar tag (ex: cobrança)"
+                      className="support-form-input"
+                      list="support-known-tags"
+                    />
+                    <Button onClick={handleAddTag} style={{ width: 'auto' }}>Adicionar</Button>
+                  </div>
+                </div>
+
+                {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+                  <SupportCard id="support-section-handover" title="Handover & atribuições" subtitle="Transições recentes do atendimento">
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
+                        <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
+                          <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
+                          <div>
+                            <strong>{h.type}</strong> • {h.mode}
+                            {h.actorUsername ? ` • ${h.actorUsername}` : ''}
+                            {h.reason ? ` • ${h.reason}` : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </SupportCard>
                 ) : (
-                  <div style={{ color: 'var(--color-text-tertiary)' }}>Sem eventos registrados para este ticket.</div>
+                  null
                 )}
-              </div>
-            </div>
 
-            <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                <div style={{ fontWeight: 700 }}>Auditoria</div>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                  {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
-                </div>
-              </div>
-              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                {ticketAuditLoading ? (
-                  <div>Carregando…</div>
-                ) : (ticketAuditLogs.length === 0 ? (
-                  <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
-                ) : (
-                  ticketAuditLogs.map((l, idx) => (
-                    <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                        <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
-                        <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
-                      </div>
-                      <div style={{ marginTop: '4px' }}>
-                        {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
-                        {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
-                      </div>
+                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                      {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
                     </div>
-                  ))
-                ))}
-              </div>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                    {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
+                      ticketEvents.slice(0, 20).map((ev) => (
+                        <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                            <div style={{ fontWeight: 600 }}>{ev.type}</div>
+                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
+                          </div>
+                          {ev?.payload ? <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>{typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}</div> : null}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: 'var(--color-text-tertiary)' }}>Sem eventos registrados para este ticket.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ fontWeight: 700 }}>Auditoria</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                      {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                    {ticketAuditLoading ? (
+                      <div>Carregando…</div>
+                    ) : (ticketAuditLogs.length === 0 ? (
+                      <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
+                    ) : (
+                      ticketAuditLogs.map((l, idx) => (
+                        <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                            <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
+                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
+                          </div>
+                          <div style={{ marginTop: '4px' }}>
+                            {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
+                            {l.details ? (
+                              <span style={{ color: 'var(--color-text-tertiary)' }}>
+                                {' • '}
+                                {typeof l.details === 'string'
+                                  ? l.details
+                                  : Object.entries(l.details)
+                                      .filter(([, v]) => v != null)
+                                      .map(([k, v]) => `${k}: ${v}`)
+                                      .join(' • ')}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))
+                    ))}
+                  </div>
+                </div>
+              </SupportDetailsSidebar>
             </div>
-          </SupportDetailsSidebar>
-        ) : null}
-      />
+          ) : (
+            <div className="support-details-empty">
+              <p>Selecione um ticket para ver detalhes e ações</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ToastContainer />
       <ConfirmDialog />
@@ -1625,6 +2189,100 @@ export function SupportPage() {
           setSelectedTicket(ticket);
         }}
       />
+
+      {scheduleContextTicket?.id ? (
+        <ScheduleModal
+          isOpen={!!scheduleContextTicket}
+          onClose={() => setScheduleContextTicket(null)}
+          contextType="ticket"
+          contextId={String(scheduleContextTicket.id)}
+          contactId={String(scheduleContextTicket.contactId || '')}
+          conversationId={String(scheduleContextTicket.conversationId || '')}
+          defaultPurpose="retorno"
+          defaultChannel="internal"
+          title={`Agendar para ticket: ${scheduleContextTicket.id}`}
+          lockReferences
+          onCreated={() => showToast('Agendamento criado', 'success')}
+        />
+      ) : null}
+
+      {mediaModal.isOpen ? (
+        <div
+          className="support-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="support-media-modal-title"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closeMediaModal();
+            }
+          }}
+        >
+          <div className="support-modal-content" onClick={(event) => event.stopPropagation()}>
+            <h2 id="support-media-modal-title" style={{ marginTop: 0 }}>Abrir mídia</h2>
+            <div style={{ marginBottom: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              <strong>{mediaModal.title || 'Mídia'}</strong>
+              {mediaModal.mimeType ? <span>{` • ${mediaModal.mimeType}`}</span> : null}
+            </div>
+
+            {mediaModal.failed ? (
+              <div style={{ padding: '12px', border: '1px solid var(--color-border-default)', borderRadius: '10px', marginBottom: '12px' }}>
+                Não foi possível carregar a mídia com os caminhos disponíveis.
+              </div>
+            ) : null}
+
+            {!mediaModal.failed && activeMediaUrl ? (
+              <div style={{ marginBottom: '12px' }}>
+                {mediaModal.type === 'image' ? (
+                  <img
+                    src={activeMediaUrl}
+                    alt={mediaModal.title || 'Imagem'}
+                    onError={handleMediaRenderError}
+                    style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '10px', border: '1px solid var(--color-border-default)' }}
+                  />
+                ) : null}
+                {mediaModal.type === 'audio' || mediaModal.type === 'voice' ? (
+                  <audio controls src={activeMediaUrl} onError={handleMediaRenderError} style={{ width: '100%' }} />
+                ) : null}
+                {mediaModal.type === 'video' ? (
+                  <video controls src={activeMediaUrl} onError={handleMediaRenderError} style={{ width: '100%', maxHeight: '65vh', borderRadius: '10px' }} />
+                ) : null}
+                {mediaModal.type !== 'image' && mediaModal.type !== 'audio' && mediaModal.type !== 'voice' && mediaModal.type !== 'video' ? (
+                  <iframe
+                    title="Visualização do documento"
+                    src={activeMediaUrl}
+                    onError={handleMediaRenderError}
+                    style={{ width: '100%', minHeight: '65vh', border: '1px solid var(--color-border-default)', borderRadius: '10px' }}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              {activeMediaUrl ? (
+                <a
+                  href={activeMediaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    border: '1px solid var(--color-border-default)',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    textDecoration: 'none',
+                    color: 'var(--color-text-primary)',
+                    background: 'var(--color-bg-secondary)',
+                  }}
+                >
+                  Abrir em nova aba
+                </a>
+              ) : null}
+              <Button type="button" onClick={closeMediaModal} style={{ width: 'auto' }}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </CrudPageBase>
   );
 }

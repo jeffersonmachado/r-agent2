@@ -15,36 +15,14 @@ const ragDeduplicationService = require('./ragDeduplicationService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
-
-// Lazy loading do tenantService para evitar dependência circular
-let tenantService = null;
-function getTenantService() {
-  if (!tenantService) {
-    tenantService = require('./tenantService');
-  }
-  return tenantService;
-}
-
-// Defensive coercion helpers
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeTrimLower(value, fallback = '') {
-  const str = safeTrim(value, fallback);
-  try { return str.toLowerCase(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (err == null) return fallback;
-  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
-}
+const { getSequelize } = require('../db/sequelize');
+const { TenantContext: TenantContextGetter } = require('../db/models');
+const {
+  safeToString,
+  safeTrim,
+  safeTrimLower,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 // URL padrão do serviço Python RAG
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
@@ -54,6 +32,34 @@ function normalizeTenantId(tenantId) {
   if (tenantId === null || tenantId === undefined) return null;
   const tid = safeTrim(tenantId);
   return tid || null;
+}
+
+async function getTenantContextForRag(tenantId) {
+  const finalTenantId = normalizeTenantId(tenantId);
+  if (!finalTenantId) return null;
+  if (!getSequelize()) return null;
+
+  try {
+    const TenantContextModel = typeof TenantContextGetter === 'function' ? TenantContextGetter() : TenantContextGetter;
+    if (!TenantContextModel) return null;
+    const row = await TenantContextModel.findByPk(finalTenantId);
+    if (!row) return null;
+    const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+    return {
+      tenantId: base.tenant_key,
+      ramo_atividade: base.ramo_atividade || '',
+      objetivo: base.objetivo || '',
+      site_oficial: base.site_oficial || '',
+      prioridade: base.prioridade || 'HIGH',
+      escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
+    };
+  } catch (err) {
+    logger.warn('[RAGService] Erro ao consultar tenant_context no PostgreSQL', {
+      tenantId: finalTenantId,
+      error: safeErrorMessage(err),
+    });
+    return null;
+  }
 }
 
 /**
@@ -360,21 +366,14 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
 
   try {
     // Carrega tenant_context para injetar contexto cognitivo
-    let tenantContext = null;
-    try {
-      const tenantServiceInstance = getTenantService();
-      tenantContext = tenantServiceInstance.getTenantContext(tenantId);
-      if (tenantContext) {
-        logger.debug('[RAGService] Tenant context carregado', {
-          tenantId,
-          ramo_atividade: tenantContext.ramo_atividade?.substring(0, 50),
-          objetivo: tenantContext.objetivo?.substring(0, 50),
-          escopo: tenantContext.escopo,
-        });
-      }
-    } catch (contextError) {
-      logger.warn('[RAGService] Erro ao carregar tenant context', { error: safeErrorMessage(contextError) });
-      // Continua sem contexto se falhar
+    const tenantContext = await getTenantContextForRag(tenantId);
+    if (tenantContext) {
+      logger.debug('[RAGService] Tenant context carregado', {
+        tenantId,
+        ramo_atividade: tenantContext.ramo_atividade?.substring(0, 50),
+        objetivo: tenantContext.objetivo?.substring(0, 50),
+        escopo: tenantContext.escopo,
+      });
     }
 
     // Pré-processa query com NLP (opcional, não bloqueia se falhar)

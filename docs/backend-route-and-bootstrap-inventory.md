@@ -9,6 +9,7 @@
 - Composition roots em `api/composition/`: 34 diretorios
 - Modulos bridgeados que ainda importam `serverHandlers`: 0
 - Guardrail de budget para bridges: `tests/unit/expressHandlerBridgeBudget.test.js`
+- Guardrail de coercoes compartilhadas em hotspots: `tests/unit/defensiveCoercion.shared.test.js`
 - Builders de contexto central apos decomposicao:
   - `api/composition/core/buildCoreRoutingContext.js` + slices de `core/*Deps.js`
   - `api/composition/platform/buildPlatformRoutingContext.js` + slices de `platform/*Deps.js`
@@ -24,6 +25,19 @@
   - `api/runtime/registerShutdownHooks.js`
   - `api/runtime/processManager.js`
   - `api/runtime/flowRuntimeState.js`
+
+## Atualizacao 2026-03-22
+- `api/server.js` passou a reutilizar `requireTenant` compartilhado (`api/composition/shared/requireTenant.js`) e removeu duplicacao local.
+- `api/utils/defensiveCoercion.js` foi introduzido como utilitario canonico para `safeToString`, `safeTrim`, `safeTrimLower`, `safeErrorMessage` e `safeGet`.
+- Servicos migrados para helper compartilhado nesta onda:
+  - `api/services/rpaService.js`
+  - `api/services/ragDocumentsService.js`
+  - `api/services/flowGeneratorService.js`
+  - `api/services/tenantService.js`
+  - `api/services/queueService.js`
+  - `api/services/rpaTestGeneratorService.js`
+  - `api/services/generationOrchestrator.js`
+  - `api/services/ragService.js`
 
 ## O que saiu do entrypoint neste ciclo
 - startup principal (`require.main`, `listen`, `startWorkers`)

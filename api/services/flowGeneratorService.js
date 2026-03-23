@@ -18,34 +18,15 @@ const webScrapingService = require('./webScrapingService');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
 const { validateFlow } = require('../../engine/validator');
-
-// Defensive coercion helpers
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeTrimLower(value, fallback = '') {
-  const str = safeTrim(value, fallback);
-  try { return str.toLowerCase(); } catch (_) { return fallback; }
-}
+const {
+  safeToString,
+  safeTrim,
+  safeTrimLower,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 function isObject(v) {
   return !!v && typeof v === 'object' && !Array.isArray(v);
-}
-
-function safeErrorMessage(err, fallback = '') {
-  try {
-    const message = err && typeof err === 'object' ? err.message : null;
-    return safeToString(message) || safeToString(err, fallback);
-  } catch (_) {
-    return safeToString(err, fallback);
-  }
 }
 
 function extractTargetsFromNext(next) {

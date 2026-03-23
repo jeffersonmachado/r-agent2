@@ -67,7 +67,7 @@ function heuristicSummary(ticket, messages) {
   return parts.join('\n');
 }
 
-async function generateAiSummary({ ticketId, tenantId, agent }) {
+async function generateAiSummary({ ticketId, tenantId }) {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
   const messages = getTicketMessages(ticketId) || [];
@@ -91,7 +91,7 @@ async function generateAiSummary({ ticketId, tenantId, agent }) {
   const summary = {
     text,
     generatedAt: new Date().toISOString(),
-    generatedBy: agent ? { id: agent.id, username: agent.username } : null,
+    generatedBy: { id: 'ai-summary-service', username: 'IA' },
   };
 
   updateTicket(ticketId, {

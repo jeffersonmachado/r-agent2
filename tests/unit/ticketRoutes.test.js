@@ -160,4 +160,108 @@ describe('ticketRoutes handler', () => {
     );
     expect(deps.createTicket).not.toHaveBeenCalled();
   });
+
+  test('POST /tickets/:id/message rejeita payload sem message e sem media', async () => {
+    const res = {};
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({})),
+      getTicket: jest.fn(() => ({
+        id: 't-1',
+        tenantId: 'tenant-1',
+        status: 'in_progress',
+        phoneNumber: '5511999999999',
+        conversationId: 'conv-1',
+        messages: [],
+        assignedTo: 'agent-1',
+      })),
+    });
+
+    const handled = await handleTicketRoutes({
+      req: makeReq({ url: '/tickets/t-1/message' }),
+      res,
+      method: 'POST',
+      pathname: '/tickets/t-1/message',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.badRequest).toHaveBeenCalledWith(
+      res,
+      'Campo "message" ou "media" é obrigatório e não pode estar vazio'
+    );
+    expect(deps.addAgentMessage).not.toHaveBeenCalled();
+    expect(deps.outboundQueueService.enqueueOutbound).not.toHaveBeenCalled();
+  });
+
+  test('POST /tickets/:id/message aceita media sem message e enfileira fallback textual', async () => {
+    const res = {};
+    const ticket = {
+      id: 't-1',
+      tenantId: 'tenant-1',
+      status: 'in_progress',
+      phoneNumber: '5511999999999',
+      conversationId: 'conv-1',
+      messages: [
+        { sender: 'user', text: 'oi' },
+      ],
+      assignedTo: 'agent-1',
+    };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        media: {
+          type: 'image',
+          url: 'https://cdn.example.com/a.png',
+          fileName: 'a.png',
+        },
+      })),
+      getTicket: jest.fn(() => ticket),
+      addAgentMessage: jest.fn((id, message, agentId, options) => {
+        ticket.messages.push({ sender: 'agent', text: message, deliveryStatus: 'pending', clientMessageId: options.clientMessageId, agentId });
+        return ticket;
+      }),
+    });
+
+    const handled = await handleTicketRoutes({
+      req: makeReq({ url: '/tickets/t-1/message' }),
+      res,
+      method: 'POST',
+      pathname: '/tickets/t-1/message',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.addAgentMessage).toHaveBeenCalledWith(
+      't-1',
+      '[image] a.png',
+      'agent-1',
+      expect.objectContaining({
+        clientMessageId: expect.stringMatching(/^outq-/),
+        deliveryStatus: 'pending',
+      })
+    );
+    expect(deps.outboundQueueService.enqueueOutbound).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        conversationId: 'conv-1',
+        message: expect.objectContaining({
+          to: '5511999999999',
+          type: 'text',
+          body: { text: '[image] a.png\nhttps://cdn.example.com/a.png' },
+          meta: expect.objectContaining({
+            ticketId: 't-1',
+            clientMessageId: expect.stringMatching(/^outq-/),
+          }),
+        }),
+      })
+    );
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      res,
+      200,
+      expect.objectContaining({
+        success: true,
+        ticketId: 't-1',
+        message: '[image] a.png',
+      })
+    );
+  });
 });

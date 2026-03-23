@@ -10,6 +10,7 @@
 
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, ChannelMessage, Ticket } = require('../db/models');
+const { backfillPersistedMessageMedia } = require('./channelGatewayService');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -22,6 +23,37 @@ function safeToString(value, fallback = '') {
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+function buildInternalMediaUrl(mediaId) {
+  const id = safeToString(mediaId).trim();
+  if (!id) return null;
+  return `/tickets/media/${encodeURIComponent(id)}`;
+}
+
+function enrichBodyMediaUrl(body) {
+  if (!body || typeof body !== 'object') return body;
+
+  const next = { ...body };
+  const mediaId =
+    next?.media?.id
+    || next?.ticketMediaId
+    || next?.ticket_media_id
+    || null;
+
+  const mediaUrl = buildInternalMediaUrl(mediaId);
+  if (!next.mediaUrl && mediaUrl) {
+    next.mediaUrl = mediaUrl;
+  }
+
+  for (const key of ['audio', 'image', 'video', 'document']) {
+    if (!next[key] || typeof next[key] !== 'object') continue;
+    if (!next[key].url && next.mediaUrl) {
+      next[key] = { ...next[key], url: next.mediaUrl };
+    }
+  }
+
+  return next;
 }
 
 async function listConversations({ tenantId, status = null, channelType = null, queue = null, limit = 100, offset = 0 } = {}) {
@@ -104,12 +136,23 @@ async function listConversationMessages({ tenantId, conversationId, limit = 200,
     offset: safeOffset,
   });
 
+  for (const row of rows) {
+    try {
+      await backfillPersistedMessageMedia({
+        tenantId,
+        messageRow: row,
+      });
+    } catch (_) {
+      // best-effort: não falhar a listagem por backfill de mídia legado.
+    }
+  }
+
   const items = rows.map(r => ({
     id: r.id,
     conversationId: r.conversation_id,
     direction: r.direction,
     type: r.type,
-    body: r.body || {},
+    body: enrichBodyMediaUrl(r.body || {}),
     externalMessageId: r.external_message_id || null,
     status: r.status,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),

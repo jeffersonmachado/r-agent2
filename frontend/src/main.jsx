@@ -140,6 +140,17 @@ function setupAutoCollapsibleFilters(root) {
   const controls = root.querySelector('.support-controls');
   if (!(controls instanceof HTMLElement) || sections.length === 0) return;
 
+  const bindToggleHandler = (button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    if (button.dataset.autoFilterBound === '1') return;
+    button.dataset.autoFilterBound = '1';
+    button.addEventListener('click', () => {
+      const expanded = root.dataset.autoFilterExpanded === '1';
+      const liveSections = collectFilterSections(root);
+      applyGlobalFilterToggleState(root, liveSections, !expanded);
+    });
+  };
+
   let toggleButton = controls.querySelector('.auto-filter-toggle-btn');
   if (!(toggleButton instanceof HTMLButtonElement)) {
     toggleButton = document.createElement('button');
@@ -148,12 +159,9 @@ function setupAutoCollapsibleFilters(root) {
     toggleButton.textContent = '🔍';
     toggleButton.setAttribute('aria-label', 'Mostrar ou ocultar filtros');
     controls.prepend(toggleButton);
-    toggleButton.addEventListener('click', () => {
-      const expanded = root.dataset.autoFilterExpanded === '1';
-      const liveSections = collectFilterSections(root);
-      applyGlobalFilterToggleState(root, liveSections, !expanded);
-    });
   }
+
+  bindToggleHandler(toggleButton);
 
   const shouldExpand = root.dataset.autoFilterExpanded === '1';
   applyGlobalFilterToggleState(root, sections, shouldExpand);

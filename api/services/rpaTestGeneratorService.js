@@ -19,31 +19,11 @@ const config = require('../utils/config');
 const { generateAiResponse } = require('./aiProviderService');
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value).trim(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (!err) return fallback;
-  let message;
-  try {
-    message = err?.message;
-  } catch (_) {
-    message = null;
-  }
-  if (message !== null && message !== undefined) return safeToString(message, fallback);
-  if (typeof err === 'string' || typeof err === 'number' || typeof err === 'boolean' || typeof err === 'bigint') {
-    return safeToString(err, fallback);
-  }
-  return fallback;
-}
+const {
+  safeToString,
+  safeTrim,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 // Cache dos prompts carregados
 let cachedPrompts = null;

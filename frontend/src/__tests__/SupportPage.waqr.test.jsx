@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { vi, beforeEach } from 'vitest';
+import { vi, beforeEach, describe, it } from 'vitest';
 import { SupportPage } from '../pages/SupportPage';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useAuth } from '../context/authContext';
@@ -136,7 +136,7 @@ async function setup({ wsEvents = [] } = {}) {
 }
 
 function getTicketRow() {
-  return screen.getByText(/5511999999999/i).closest('tr');
+  return screen.getByText(/5511999999999/i).closest('.support-ticket-card');
 }
 
 describe('SupportPage WhatsApp QR message flow', () => {
@@ -171,7 +171,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     fireEvent.change(composer, { target: { value: '/agendar' } });
     fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
 
@@ -189,7 +189,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     if (button) {
       fireEvent.click(button);
     } else {
-      const composer = await screen.findByLabelText(/Enviar mensagem/i);
+      const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
       fireEvent.change(composer, { target: { value: '/agendar' } });
       fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
     }
@@ -204,7 +204,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     fireEvent.change(composer, { target: { value: '/resposta-rapida' } });
     fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
 
@@ -219,7 +219,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     fireEvent.change(composer, { target: { value: '/re' } });
 
     const command = screen.queryByText('/resposta-rapida');
@@ -234,6 +234,26 @@ describe('SupportPage WhatsApp QR message flow', () => {
       expect(listQuickRepliesMock).toHaveBeenCalled();
       expect(screen.getByText('Saudação')).toBeInTheDocument();
       expect(screen.getByText('Aguardo')).toBeInTheDocument();
+    });
+  });
+
+  it('navega no menu slash com seta para baixo e executa item selecionado no Enter', async () => {
+    await setup({ wsEvents: ['ticket.message.received'] });
+    fireEvent.click(getTicketRow());
+
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
+    fireEvent.change(composer, { target: { value: '/' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('/devolver-bot')).toBeInTheDocument();
+      expect(screen.getByText('/pausar')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(composer, { key: 'ArrowDown', code: 'ArrowDown' });
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
+
+    await waitFor(() => {
+      expect(ticketsApi.pauseTicket).toHaveBeenCalledWith('t1', 'outside_window');
     });
   });
 
@@ -264,7 +284,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     const imageFile = new File(['fake-image'], 'print.png', { type: 'image/png' });
     const getAsFile = vi.fn(() => imageFile);
 
@@ -295,7 +315,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     const imageFile = new File(['fake-image'], 'print.png', { type: 'image/png' });
     const getAsFile = vi.fn(() => imageFile);
 
@@ -330,7 +350,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     await setup({ wsEvents: ['ticket.message.received'] });
     fireEvent.click(getTicketRow());
 
-    const composer = await screen.findByLabelText(/Enviar mensagem/i);
+    const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     fireEvent.change(composer, { target: { value: 'Resposta teste' } });
     fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13, ctrlKey: true });
 

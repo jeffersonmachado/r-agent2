@@ -1,67 +1,50 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="29" failures="0" errors="0" time="4.78">
-    <testsuite name="src/modules/crud-base/CrudPageBase.test.jsx" timestamp="2026-03-20T09:20:59.742Z" hostname="jmachado-Precision-5530" tests="7" failures="0" errors="0" skipped="0" time="0.792177566">
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; renderiza o título informado" time="0.141496579">
+<testsuites name="vitest tests" tests="17" failures="0" errors="0" time="7.953">
+    <testsuite name="src/__tests__/SupportModals.test.jsx" timestamp="2026-03-22T22:22:28.462Z" hostname="jmachado-Precision-5530" tests="4" failures="0" errors="0" skipped="0" time="0.562489184">
+        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportCloseTicketModal dispara onClose por overlay, ESC e Cancelar" time="0.216359288">
         </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; renderiza children dentro do container" time="0.105503366">
+        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportCloseTicketModal bloqueia fechamento quando closing=true" time="0.119080706">
         </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; renderiza actions quando fornecido" time="0.110307036">
+        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportDeliveryFailuresModal dispara onClose por overlay, ESC e botão Fechar" time="0.11491053">
         </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; não renderiza bloco de actions quando omitido" time="0.108386325">
-        </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; renderiza filters quando fornecido" time="0.113830829">
-        </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; mantém support-page e aceita className adicional no elemento raiz" time="0.107368005">
-        </testcase>
-        <testcase classname="src/modules/crud-base/CrudPageBase.test.jsx" name="modules/crud-base/CrudPageBase &gt; oculta header quando hideHeader=true" time="0.100721644">
+        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportDeliveryFailuresModal exibe estado de loading" time="0.10858649">
         </testcase>
     </testsuite>
-    <testsuite name="src/modules/crud-base/useCrudList.useCrudForm.test.js" timestamp="2026-03-20T09:20:59.745Z" hostname="jmachado-Precision-5530" tests="18" failures="0" errors="0" skipped="0" time="2.042812875">
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; inicia com allItems vazio e loading false" time="0.130543567">
+    <testsuite name="src/__tests__/SupportPage.evidence.test.jsx" timestamp="2026-03-22T22:22:28.467Z" hostname="jmachado-Precision-5530" tests="3" failures="0" errors="0" skipped="0" time="1.056924939">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza blocos de entidade e evidência sem quebrar o fluxo atual" time="0.5327122">
         </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; loadItems popula allItems com o array retornado diretamente" time="0.107837098">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza fallback estável quando não há evidência forte" time="0.21266759">
         </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; loadItems usa itemsKey para extrair array do objeto retornado" time="0.103258578">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; loadItems usa a chave padrão &quot;items&quot; quando não especificada" time="0.103529243">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; captura erro e expõe message em error" time="0.106848327">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; captura erro via body.message quando disponível" time="0.105924803">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; reload chama loadItems sem argumentos" time="0.106498362">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; usa params padrão quando loadItems é chamado sem argumentos" time="0.101868359">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; carrega automaticamente ao montar quando loadOnMount=true" time="0.154934645">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudList &gt; recarrega automaticamente quando params muda e reloadOnParamsChange=true" time="0.205225231">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; inicia com os dados iniciais fornecidos" time="0.10133232">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; setField atualiza um campo sem perder os demais" time="0.10252113">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; isDirty é false quando formData igual ao estado inicial" time="0.10196895">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; isDirty é true após setField alterar um campo" time="0.101143779">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; resetForm restaura os dados para o valor inicial padrão" time="0.101579643">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; resetForm aceita nextData e atualiza o baseline de isDirty" time="0.101391579">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; suporta initialData como factory function" time="0.100966799">
-        </testcase>
-        <testcase classname="src/modules/crud-base/useCrudList.useCrudForm.test.js" name="modules/crud-base/useCrudForm &gt; setFormData substitui o formData por completo" time="0.101208267">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; mostra origem e mantém ação de abrir origem operacional" time="0.305139464">
+            <system-out>
+[2026-03-22T22:22:25.274Z] [INFO] Toast [info]: Origem aberta diretamente no ticket relacionado {
+  &quot;type&quot;: &quot;info&quot;,
+  &quot;duration&quot;: 6000
+}
+
+            </system-out>
         </testcase>
     </testsuite>
-    <testsuite name="src/modules/crud-base/utils/crudFeedback.test.js" timestamp="2026-03-20T09:20:59.749Z" hostname="jmachado-Precision-5530" tests="4" failures="0" errors="0" skipped="0" time="0.415902861">
-        <testcase classname="src/modules/crud-base/utils/crudFeedback.test.js" name="modules/crud-base/utils/crudFeedback &gt; resolveCrudErrorMessage prioriza body.message" time="0.106088138">
+    <testsuite name="src/__tests__/SupportPage.waqr.test.jsx" timestamp="2026-03-22T22:22:28.470Z" hostname="jmachado-Precision-5530" tests="10" failures="0" errors="0" skipped="0" time="2.265108032">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; renders and subscribes to ticket.message.received" time="0.399232878">
         </testcase>
-        <testcase classname="src/modules/crud-base/utils/crudFeedback.test.js" name="modules/crud-base/utils/crudFeedback &gt; resolveCrudErrorMessage usa fallback quando não há mensagem útil" time="0.101877625">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; displays incoming WhatsApp QR message in timeline" time="0.308900579">
         </testcase>
-        <testcase classname="src/modules/crud-base/utils/crudFeedback.test.js" name="modules/crud-base/utils/crudFeedback &gt; showCrudError envia toast de erro com mensagem resolvida" time="0.102095568">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; processa o comando /agendar sem quebrar o fluxo do ticket" time="0.268456048">
         </testcase>
-        <testcase classname="src/modules/crud-base/utils/crudFeedback.test.js" name="modules/crud-base/utils/crudFeedback &gt; showCrudSuccess envia toast de sucesso" time="0.101454832">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o fluxo estável ao tentar agendamento pelo ticket" time="0.239942356">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas com comando /resposta-rapida" time="0.190750511">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash" time="0.187237768">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém estabilidade quando há dados de agendamento disponíveis" time="0.162868691">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o composer estável ao receber paste de imagem" time="0.158001563">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia texto normalmente mesmo após paste de imagem sem suporte a anexo" time="0.174423709">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia mensagem normalmente quando nao ha acao explicita de reply" time="0.167834625">
         </testcase>
     </testsuite>
 </testsuites>

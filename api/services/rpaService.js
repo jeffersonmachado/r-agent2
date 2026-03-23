@@ -3,31 +3,14 @@ const { ActionRecorder } = require('../../rpa/actionRecorder');
 // Usa versão de produção do normalizador, que vive em `api/utils`
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 const logger = require('../utils/logger');
+const {
+  safeToString,
+  safeTrim,
+  safeTrimLower,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 const path = require('path');
 const fs = require('fs');
-
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeTrimLower(value, fallback = '') {
-  const str = safeTrim(value, fallback);
-  try { return str.toLowerCase(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (err == null) return fallback;
-  let message = '';
-  try { message = err.message; } catch (_) { message = ''; }
-  if (message) return safeToString(message, fallback);
-  return safeToString(err, fallback);
-}
 
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
 let INJECTABLE_SCRIPT = null;

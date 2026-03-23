@@ -3519,6 +3519,7 @@ div:has(svg[data-testid="connection"]) {
   cursor: pointer;
   transition: background-color var(--transition-fast);
   background-color: var(--color-bg-elevated);
+  position: relative;
 }
 
 .support-ticket-card:hover {
@@ -3710,6 +3711,10 @@ div:has(svg[data-testid="connection"]) {
   scrollbar-color: var(--color-border-default) transparent;
 }
 
+.support-details-panel > .support-details-split {
+  flex: 1;
+}
+
 .support-details-panel::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -3887,16 +3892,23 @@ div:has(svg[data-testid="connection"]) {
   height: 30px;
   min-width: 30px;
   border-radius: 999px;
+  border: none;
   padding: 0;
   margin: 0;
   background: var(--color-accent-primary);
   color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
   position: static;
 }
 
 .support-send-icon-button svg {
   width: 16px;
   height: 16px;
+  display: block;
   fill: currentColor;
 }
 

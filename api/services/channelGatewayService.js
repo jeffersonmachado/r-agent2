@@ -19,6 +19,7 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelAccount, ChannelConversation, ChannelMessage } = require('../db/models');
 const { encrypt, decrypt } = require('../utils/crypto');
+const { storeTicketMedia } = require('./ticketMediaService');
 const { getTicketBySession } = require('./queueService');
 const { getTicketByConversationId, updateOutboundMessageMeta } = require('./queueService');
 const outboundQueueService = require('./outboundQueueService');
@@ -50,6 +51,15 @@ function safeTrimLower(value, fallback = '') {
   }
 }
 
+function safeTrim(value, fallback = '') {
+  const str = safeToString(value, fallback);
+  try {
+    return str.trim();
+  } catch (_) {
+    return fallback;
+  }
+}
+
 function safeJsonParse(text, fallback = null) {
   try {
     return JSON.parse(text);
@@ -73,6 +83,251 @@ function decryptConfig(configEncrypted) {
 function encryptConfig(configObj) {
   if (!configObj) return null;
   return encrypt(JSON.stringify(configObj));
+}
+
+function getAny(obj, keys = []) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  for (const key of keys) {
+    const value = obj[key];
+    if (value !== undefined && value !== null && safeTrim(value) !== '') return value;
+  }
+  return undefined;
+}
+
+function normalizeMimeToExtension(mimeType) {
+  const mime = safeTrimLower(mimeType || '');
+  if (!mime) return 'bin';
+  if (mime === 'audio/mpeg') return 'mp3';
+  if (mime === 'audio/ogg') return 'ogg';
+  if (mime === 'audio/webm') return 'webm';
+  if (mime === 'video/mp4') return 'mp4';
+  if (mime === 'image/jpeg') return 'jpg';
+  if (mime === 'image/png') return 'png';
+  if (mime === 'application/pdf') return 'pdf';
+
+  if (mime.includes('/')) {
+    const ext = mime.split('/')[1] || 'bin';
+    return ext.split(';')[0].trim() || 'bin';
+  }
+  return 'bin';
+}
+
+function extractInboundMediaRef(messageNormalized) {
+  const type = safeTrimLower(messageNormalized?.type || '');
+  const body = messageNormalized?.body && typeof messageNormalized.body === 'object'
+    ? messageNormalized.body
+    : {};
+
+  if (type === 'audio' && body.audio && typeof body.audio === 'object') {
+    return {
+      kind: 'audio',
+      mediaId: safeTrim(body.audio.id || ''),
+      mimeType: safeTrim(body.audio.mime_type || body.audio.mimeType || ''),
+      fileName: safeTrim(body.audio.filename || ''),
+    };
+  }
+  if (type === 'image' && body.image && typeof body.image === 'object') {
+    return {
+      kind: 'image',
+      mediaId: safeTrim(body.image.id || ''),
+      mimeType: safeTrim(body.image.mime_type || body.image.mimeType || ''),
+      fileName: safeTrim(body.image.filename || ''),
+    };
+  }
+  if (type === 'video' && body.video && typeof body.video === 'object') {
+    return {
+      kind: 'video',
+      mediaId: safeTrim(body.video.id || ''),
+      mimeType: safeTrim(body.video.mime_type || body.video.mimeType || ''),
+      fileName: safeTrim(body.video.filename || ''),
+    };
+  }
+  if (type === 'document' && body.document && typeof body.document === 'object') {
+    return {
+      kind: 'document',
+      mediaId: safeTrim(body.document.id || ''),
+      mimeType: safeTrim(body.document.mime_type || body.document.mimeType || ''),
+      fileName: safeTrim(body.document.filename || ''),
+    };
+  }
+  return null;
+}
+
+async function getWhatsAppMediaBinary({ mediaId, accessToken }) {
+  const metaUrl = `https://graph.facebook.com/v18.0/${encodeURIComponent(mediaId)}`;
+  const metaResp = await fetch(metaUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!metaResp.ok) {
+    const errText = await metaResp.text().catch(() => '');
+    throw new Error(`Falha ao consultar metadata da midia (${metaResp.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const meta = await metaResp.json().catch(() => ({}));
+  const downloadUrl = safeTrim(meta?.url || '');
+  const mimeType = safeTrim(meta?.mime_type || '');
+  if (!downloadUrl) {
+    throw new Error('Metadata de midia sem URL de download');
+  }
+
+  const mediaResp = await fetch(downloadUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!mediaResp.ok) {
+    const errText = await mediaResp.text().catch(() => '');
+    throw new Error(`Falha ao baixar midia (${mediaResp.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const arrBuffer = await mediaResp.arrayBuffer();
+  const buffer = Buffer.from(arrBuffer);
+  const responseMimeType = safeTrim(mediaResp.headers.get('content-type') || '');
+  return {
+    buffer,
+    mimeType: responseMimeType || mimeType || 'application/octet-stream',
+  };
+}
+
+async function persistInboundMediaIfNeeded({ tenantId, channelType, account, messageNormalized }) {
+  if (safeTrimLower(channelType) !== 'whatsapp') return;
+  if (!messageNormalized || typeof messageNormalized !== 'object') return;
+  if (messageNormalized.direction !== 'in') return;
+
+  const mediaRef = extractInboundMediaRef(messageNormalized);
+  if (!mediaRef || !mediaRef.mediaId) return;
+
+  const body = messageNormalized.body && typeof messageNormalized.body === 'object'
+    ? messageNormalized.body
+    : {};
+
+  if (safeTrim(body.mediaUrl || body.url || '')) {
+    return;
+  }
+
+  const cfg = account ? decryptConfig(account.config_encrypted) : null;
+  const accessToken = safeTrim(getAny(cfg, ['accessToken', 'token', 'whatsappAccessToken', 'pageAccessToken']) || '');
+  if (!accessToken) {
+    logger.warn('[ChannelGateway] Midia inbound sem accessToken configurado', { tenantId, channelType, mediaId: mediaRef.mediaId });
+    return;
+  }
+
+  const { buffer, mimeType } = await getWhatsAppMediaBinary({ mediaId: mediaRef.mediaId, accessToken });
+  if (!buffer || buffer.length === 0) {
+    throw new Error('Download de midia retornou buffer vazio');
+  }
+
+  const finalMimeType = safeTrim(mimeType || mediaRef.mimeType || 'application/octet-stream');
+  const ext = normalizeMimeToExtension(finalMimeType);
+  const fallbackName = `${mediaRef.kind || 'media'}-${mediaRef.mediaId}.${ext}`;
+  const fileName = safeTrim(mediaRef.fileName || '') || fallbackName;
+
+  const stored = await storeTicketMedia({
+    tenantId,
+    fileName,
+    mimeType: finalMimeType,
+    sizeBytes: buffer.length,
+    buffer,
+    createdBy: 'channel-gateway',
+  });
+
+  body.mediaUrl = `/tickets/media/${encodeURIComponent(stored.id)}`;
+  body.media = {
+    ...(body.media && typeof body.media === 'object' ? body.media : {}),
+    id: stored.id,
+    mimeType: stored.mimeType,
+    fileName: stored.fileName,
+    sizeBytes: stored.sizeBytes,
+    source: 'ticket_media',
+    externalMediaId: mediaRef.mediaId,
+  };
+
+  const slot = body[mediaRef.kind];
+  if (slot && typeof slot === 'object') {
+    slot.url = body.mediaUrl;
+    slot.mime_type = safeTrim(slot.mime_type || finalMimeType) || finalMimeType;
+    slot.mimeType = safeTrim(slot.mimeType || finalMimeType) || finalMimeType;
+  }
+
+  messageNormalized.body = body;
+}
+
+async function resolveWhatsAppAccountForBackfill(tenantId) {
+  if (!dbAvailable()) return null;
+
+  const AccountModel = typeof ChannelAccount === 'function' ? ChannelAccount() : ChannelAccount;
+  const rows = await AccountModel.findAll({
+    where: {
+      tenant_key: tenantId,
+      type: 'whatsapp',
+      status: 'active',
+    },
+    order: [['created_at', 'DESC']],
+    limit: 2,
+  });
+
+  if (!Array.isArray(rows) || rows.length !== 1) {
+    return null;
+  }
+
+  return rows[0];
+}
+
+async function backfillPersistedMessageMedia({ tenantId, messageRow }) {
+  if (!tenantId || !messageRow) return false;
+  if (!dbAvailable()) return false;
+
+  const body = messageRow.body && typeof messageRow.body === 'object'
+    ? { ...messageRow.body }
+    : {};
+
+  if (safeTrim(body.mediaUrl || body.url || '') !== '') {
+    return false;
+  }
+
+  const normalized = {
+    direction: messageRow.direction,
+    type: messageRow.type,
+    body,
+  };
+
+  const mediaRef = extractInboundMediaRef(normalized);
+  if (!mediaRef || !mediaRef.mediaId) {
+    return false;
+  }
+
+  if (safeTrimLower(messageRow.channel_type || '') !== 'whatsapp') {
+    return false;
+  }
+
+  const account = await resolveWhatsAppAccountForBackfill(tenantId);
+  if (!account) {
+    return false;
+  }
+
+  await persistInboundMediaIfNeeded({
+    tenantId,
+    channelType: 'whatsapp',
+    account,
+    messageNormalized: normalized,
+  });
+
+  if (!normalized.body || !normalized.body.mediaUrl) {
+    return false;
+  }
+
+  await messageRow.update({
+    body: normalized.body,
+    updated_at: new Date(),
+  });
+
+  return true;
 }
 
 async function resolveTenantForWebhook(channelType, payload) {
@@ -418,6 +673,21 @@ async function ingestIncoming(channelType, payload, options = {}) {
     return { tenantId: null, account: null, normalized, persist: { persisted: false, reason: 'tenant_unresolved' } };
   }
 
+  try {
+    await persistInboundMediaIfNeeded({
+      tenantId,
+      channelType,
+      account,
+      messageNormalized: normalized.message,
+    });
+  } catch (err) {
+    logger.warn('[ChannelGateway] Falha ao persistir midia inbound (best-effort)', {
+      channelType,
+      tenantId,
+      error: safeToString(err?.message || err),
+    });
+  }
+
   const persist = await persistIncoming({
     tenantId,
     channelType,
@@ -534,6 +804,7 @@ module.exports = {
   ingestIncoming,
   sendMessage,
   updateStatus,
+  backfillPersistedMessageMedia,
   // utilidades (para futuras UIs)
   encryptConfig,
   decryptConfig,

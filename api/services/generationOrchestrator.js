@@ -27,21 +27,11 @@ const { validateFlow } = require('../../engine/validator');
 const { executeRecording, getExecutionStatus } = require('./rpaService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-
-function safeToString(value, fallback = '') {
-  if (value == null) return fallback;
-  try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeTrim(value, fallback = '') {
-  const str = safeToString(value, fallback);
-  try { return str.trim(); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (err == null) return fallback;
-  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
-}
+const {
+  safeToString,
+  safeTrim,
+  safeErrorMessage,
+} = require('../utils/defensiveCoercion');
 
 /**
  * Calcula hash do contrato para versionamento.

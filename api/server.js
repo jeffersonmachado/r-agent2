@@ -13,7 +13,6 @@ const express = require('express');
 const http = require('http');
 const config = require('./utils/config');
 const { initializeAiProviders } = require('./services/aiProviderService');
-const { isSuperAdmin } = require('./services/superAdminService');
 const logger = require('./utils/logger');
 const { createTenant, getTenant } = require('./services/tenantService');
 const { startAutoCleanup } = require('./services/queueService');
@@ -29,6 +28,7 @@ const { createFlowRuntimeState } = require('./runtime/flowRuntimeState');
 const { createBuildCoreRoutingContext } = require('./composition/core/buildCoreRoutingContext');
 const { createBuildPlatformRoutingContext } = require('./composition/platform/buildPlatformRoutingContext');
 const { createBuildExtendedRoutingContext } = require('./composition/extended/buildExtendedRoutingContext');
+const { requireTenant } = require('./composition/shared/requireTenant');
 const {
   parseJsonBody,
   sendJson,
@@ -58,17 +58,6 @@ const STRICT_TENANT_MODE = parseBooleanEnv(
   process.env.STRICT_TENANT_MODE,
   process.env.NODE_ENV === 'production'
 );
-
-function requireTenant(req, res) {
-  const superAdmin = req?.agent ? isSuperAdmin(req.agent) : false;
-  const tenantIdRaw = superAdmin ? (req?.tenantId || null) : (req?.tenantId || req?.agent?.tenantId || null);
-  const tenantId = typeof tenantIdRaw === 'string' ? tenantIdRaw.trim() : null;
-  if (!tenantId) {
-    sendJson(res, 403, { error: 'tenant_required' });
-    return null;
-  }
-  return tenantId;
-}
 
 function ensureRequestTracing(req) {
   if (!req.id && req.headers && req.headers['x-request-id']) {

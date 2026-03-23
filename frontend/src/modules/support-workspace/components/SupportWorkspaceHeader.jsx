@@ -7,6 +7,7 @@ export function SupportWorkspaceHeader({
   queues = [],
   setNewConversationQueue,
   setShowNewConversationModal,
+  onEnableNotifications,
 }) {
   return (
     <div className="support-header">
@@ -14,6 +15,15 @@ export function SupportWorkspaceHeader({
         <h1>💬 Atendimento</h1>
       </div>
       <div className="support-controls">
+        <button
+          type="button"
+          className="btn-default px-4 py-2 text-sm auto-filter-toggle-btn"
+          aria-label="Mostrar ou ocultar filtros"
+          aria-pressed="false"
+          title="Mostrar filtros"
+        >
+          🔍
+        </button>
         <div
           className="support-ws-status-control"
           title={wsStatus?.title}
@@ -29,10 +39,11 @@ export function SupportWorkspaceHeader({
               animation: wsStatus?.animated ? 'pulse 2s ease 0s infinite normal none running pulse' : 'none',
             }}
           />
-          <span className="support-ws-status-label">{wsStatus?.label || 'Desconectado'}</span>
+          <span className="support-ws-status-label text-sm text-text-secondary">{wsStatus?.label || 'Desconectado'}</span>
         </div>
-        <Button onClick={() => loadTickets?.()} disabled={loading} className="support-refresh-control">
-          {loading ? 'Carregando...' : 'Atualizar'}
+        <Button onClick={() => loadTickets?.()} disabled={loading} className="support-refresh-control" title="Atualizar chamados" aria-label="Atualizar chamados">
+          <span className="support-refresh-icon" aria-hidden="true">🔄</span>
+          <span className="support-refresh-label">{loading ? 'Carregando...' : 'Atualizar'}</span>
         </Button>
         <Button
           onClick={() => {
@@ -42,6 +53,14 @@ export function SupportWorkspaceHeader({
           style={{ backgroundColor: '#25D366', color: 'white' }}
         >
           ➕ Iniciar Conversa
+        </Button>
+        <Button
+          type="button"
+          title="Ativar notificações web"
+          aria-label="Ativar notificações web"
+          onClick={() => onEnableNotifications?.()}
+        >
+          🔔 Ativar notificações
         </Button>
       </div>
     </div>

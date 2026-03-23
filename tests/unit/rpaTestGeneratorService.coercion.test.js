@@ -83,10 +83,8 @@ describe('rpaTestGeneratorService coercion hardening', () => {
       'utf-8'
     );
 
-    // Verify safe helpers are defined
-    expect(content).toMatch(/function safeToString\(value, fallback = ''\)/);
-    expect(content).toMatch(/function safeTrim\(value, fallback = ''\)/);
-    expect(content).toMatch(/function safeErrorMessage\(err, fallback = ''\)/);
+    // Verify helper is imported from shared utility
+    expect(content).toMatch(/require\('\.\.\/utils\/defensiveCoercion'\)/);
 
     // Verify safe pattern is in place for aiResponse
     expect(content).toMatch(/safeToString\(aiResponse\)/);

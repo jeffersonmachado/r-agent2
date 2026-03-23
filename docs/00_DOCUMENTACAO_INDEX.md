@@ -54,6 +54,7 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 Este repositório já contém documentação detalhada por área. Alguns pontos de entrada úteis:
 
 - **Atendimento (análise e gaps BLIP-like)**: `BLIP_GAP_ANALYSIS.md`
+- **Padrões do workspace `/support` (layout, cards, compositor, handover, IA)**: `SUPORTE_PADRAO_WORKSPACE.md`
 - **Templates/marketplace de flows**: `ARCHITECTURE_TEMPLATE_MARKETPLACE_PHASE5.md`
 - **Replay**: `COMO_USAR_REPLAY.md`
 - **Multi-tenant (arquitetura e contexto cognitivo)**: `TENANT_MULTI_TENANT_ARCHITECTURE.md`

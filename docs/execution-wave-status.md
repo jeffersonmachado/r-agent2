@@ -1,9 +1,97 @@
 # Status de Execucao por Onda
 
 ## Ciclo atual
-- Ciclo: ONDA 15
-- Estado: concluida
-- Data de referencia: 2026-03-21
+- Ciclo: ONDA 16
+- Estado: em andamento
+- Data de referencia: 2026-03-22
+
+## Entregas parciais ONDA 16
+- Criado utilitario compartilhado: `api/utils/defensiveCoercion.js`.
+- Padronizacao de coercao defensiva aplicada em:
+  - `api/services/rpaService.js`
+  - `api/services/ragDocumentsService.js`
+  - `api/services/flowGeneratorService.js`
+  - `api/services/tenantService.js`
+  - `api/services/queueService.js`
+  - `api/services/rpaTestGeneratorService.js`
+  - `api/services/generationOrchestrator.js`
+  - `api/services/ragService.js`
+- `api/server.js` passou a reutilizar `api/composition/shared/requireTenant.js` (removida duplicacao local).
+- Novo guardrail adicionado: `tests/unit/defensiveCoercion.shared.test.js`.
+- Ciclo RAG/Tenant eliminado:
+  - `api/services/ragService.js` deixou de depender de `tenantService` para `tenant_context` (agora consulta model/DB);
+  - `api/services/ragDocumentsService.js` deixou de usar `getRagService()` lazy;
+  - `api/services/tenantService.js` deixou de usar `getRagDocumentsService()` lazy.
+- Novo guardrail de ciclo: `tests/unit/ragTenantCycleGuardrail.test.js`.
+- `queueService` iniciou decomposicao real com extração de mapper de persistência para `api/services/queue/queueTicketPersistenceMapper.js`.
+- `queueService` avancou na decomposicao com extração do indice de filas para `api/services/queue/queueIndexStore.js` (add/remove/move/stats de filas centralizados).
+- `queueService` avancou na decomposicao com extração do slice de mensagens para `api/services/queue/queueTicketMessaging.js` (mensagens user/agent/note + metadata outbound + unread).
+- `queueService` avancou na decomposicao com extração de retenção para `api/services/queue/queueTicketRetention.js` (cleanup e auto-cleanup).
+- `queueService` avancou na decomposicao com extração de métricas para `api/services/queue/queueTicketMetrics.js`.
+- `operationsDashboardService` iniciou decomposicao com extração de normalizadores/helpers para `api/services/operations/operationsDashboardHelpers.js`.
+- `operationsDashboardService` avancou na decomposicao com extração dos coletores de candidatos de insights para `api/services/operations/operationsDashboardCandidates.js`.
+- `operationsDashboardService` avancou na decomposicao com extração do slice de notificacoes para `api/services/operations/operationsDashboardNotifications.js`.
+- `operationsDashboardService` avancou na decomposicao com extração do slice de insights para `api/services/operations/operationsDashboardInsights.js`.
+- `processRuntimeService` iniciou decomposicao com extração de helpers para `api/core/process-runtime/processRuntimeHelpers.js`.
+- `processRuntimeService` avancou com extração da derivacao de waiting state para `api/core/process-runtime/processRuntimeWaitingState.js`.
+- `processRuntimeService` avancou com extração de montagem de resultado e recovery para `api/core/process-runtime/processRuntimeResult.js`.
+- `processRuntimeService` avancou com extração do slice de subprocesso para `api/core/process-runtime/processRuntimeSubprocess.js`.
+- `processRuntimeService` avancou com extração da politica de timeout para `api/core/process-runtime/processRuntimeTimeoutPolicy.js`.
+- `processRuntimeService` avancou com extração da politica de idempotencia para `api/core/process-runtime/processRuntimeIdempotency.js`.
+- `processRuntimeService` avancou com extração do fluxo de transicao para waiting em `api/core/process-runtime/processRuntimeWaitingFlow.js`.
+- `processRuntimeService` avancou com extração dos sinais de evento por tipo de no para `api/core/process-runtime/processRuntimeNodeSignals.js`.
+- `processRuntimeService` avancou com extração do tratamento de falha de no para `api/core/process-runtime/processRuntimeNodeFailure.js`.
+- `processRuntimeService` avancou com extração da transicao de conclusao para `api/core/process-runtime/processRuntimeCompletionFlow.js`.
+- `processRuntimeService` avancou com extração da transicao de saida de no para `api/core/process-runtime/processRuntimeNodeExitFlow.js`.
+- `processRuntimeService` avancou com extração da emissao de entrada de no para `api/core/process-runtime/processRuntimeNodeEntryFlow.js`.
+- `processRuntimeService` avancou com extração do contador de tentativas por no para `api/core/process-runtime/processRuntimeNodeAttempts.js`.
+- `processRuntimeService` avancou com extração do tratamento de no ausente para `api/core/process-runtime/processRuntimeMissingNodeFailure.js`.
+- `processRuntimeService` avancou com extração do setup de `executeNextNode` para `api/core/process-runtime/processRuntimeNextNodeSetup.js`.
+- `processRuntimeService` avancou com consolidação do passo de execucao de no para `api/core/process-runtime/processRuntimeNodeStep.js`.
+- `queueService` avancou com extração da query/paginacao de listagem para `api/services/queue/queueTicketQuery.js`.
+- `queueService` avancou com extração de modo de atendimento para `api/services/queue/queueTicketMode.js`.
+- `queueService` avancou com extração de lifecycle (assign/close/transfer/update) para `api/services/queue/queueTicketLifecycle.js`.
+- `queueService` avancou com extração da integração de fechamento de incidente para `api/services/queue/queueTicketOrderIncident.js`.
+- `queueService` avancou com extração de lookup de tickets para `api/services/queue/queueTicketLookup.js`.
+- `queueService` avancou com extração da sincronizacao de `channel_conversation` para `api/services/queue/queueTicketConversationSync.js`.
+- `queueService` avancou com extração de persistencia/bootstrapping runtime para `api/services/queue/queueTicketPersistenceRuntime.js`.
+- `queueService` avancou com extração da factory de criacao de ticket para `api/services/queue/queueTicketFactory.js`.
+- `queueService` avancou com extração de operacoes admin de filas (createQueue/deleteQueue/getQueueInfo) para `api/services/queue/queueAdminOperations.js` — servico reduziu de 805 para 657 linhas (−148).
+- `queueService` avancou com extração de operacoes de leitura/listagem (listQueue/listQueues/getTicket/getTicketBySession/getTicketByConversationId/getTicketMessages/listAllTickets) para `api/services/queue/queueTicketReadOperations.js` — servico reduziu de 657 para 642 linhas (−15).
+- `queueService` avancou com extração de operacoes de mutacao (assign/close/update/message/note/transfer/outbound-meta/mark-read/mode) para `api/services/queue/queueTicketMutationOperations.js` — servico reduziu de 642 para 595 linhas (−47).
+- BE-022 iniciado: `handleAgentRoutes` avancou com extração do bloco MFA (`setup/verify/disable/recovery`) para `api/modules/domain-identity/handleAgentMfaRoutes.js` — modulo principal reduziu de 567 para 436 linhas (−131).
+- BE-022 avancou: `handleAgentRoutes` extraiu bloco de onboarding/password (`/auth/invite`, `/auth/accept-invitation`, `/auth/request-password-reset`, `/auth/reset-password`) para `api/modules/domain-identity/handleAgentOnboardingRoutes.js` — modulo principal reduziu de 436 para 299 linhas (−137).
+- BE-022 avancou: `handleAgentRoutes` extraiu bloco CRUD de agentes para `api/modules/domain-identity/handleAgentCrudRoutes.js` (`GET/POST /auth/agents`, `GET/PUT/DELETE /auth/agents/:id`) — modulo principal reduziu de 299 para 107 linhas (−192).
+- BE-022 avancou: `handlePhysicalPublicRoutes` extraiu bloco kiosk/panel para `api/modules/platform-public/handlePhysicalKioskPanelRoutes.js` com utilitarios compartilhados em `api/modules/platform-public/handlePhysicalPublicRouteUtils.js` — modulo principal reduziu de 517 para 307 linhas (−210).
+- BE-022 avancou: `handlePhysicalPublicRoutes` extraiu bloco de access-control (`/physical/access/resolve`, `/physical/access/events`, `/physical/access/ack`) para `api/modules/platform-public/handlePhysicalAccessControlPublicRoutes.js` — modulo principal reduziu de 307 para 45 linhas (−262).
+- BE-022 avancou: `handleSchedulingSupportRoutes` extraiu bloco de calendario (`/api/calendar/me`, `/api/calendar/resource/*`, `POST/DELETE .../blocks`) para `api/modules/scheduling-support/handleSchedulingSupportCalendarRoutes.js` — modulo principal reduziu de 435 para 267 linhas (−168).
+- BE-022 avancou: `handleFitnessRoutes` extraiu bloco de membership (`detail`, `billing`, `details`, `grace-period`, `renew`, `billing-history`) para `api/modules/vertical/handleFitnessMembershipRoutes.js` — modulo principal reduziu de 581 para 504 linhas (−77).
+- BE-022 avancou: `handleFitnessRoutes` extraiu bloco de attendance (`subject attendance`, `check-in`, `check-out`, `attendance/open`) para `api/modules/vertical/handleFitnessAttendanceRoutes.js` — modulo principal reduziu de 504 para 462 linhas (−42).
+- BE-022 avancou: `handleIntelligenceRoutes` extraiu bloco de analytics read (`GET /insights`, `GET /insights/:id/evidence`, `GET /recommendations`, `POST /metrics/snapshots`) para `api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js` — modulo principal reduziu de 357 para 280 linhas (−77).
+- BE-022 avancou: `handleIntelligenceRoutes` extraiu bloco de goals (`GET/POST /goals`, `PUT /goals/:id`) para `api/modules/intelligence/handleIntelligenceGoalRoutes.js` — modulo principal reduziu de 280 para 214 linhas (−66).
+- BE-022 avancou: `handleFlowCrudRoutes` extraiu bloco de leitura (`GET /flows`, `GET /flows/:id`) para `api/modules/domain-flow/handleFlowCrudReadRoutes.js` — modulo principal reduziu de 561 para 479 linhas (−82).
+- BE-022 avancou: `handleFlowCrudRoutes` extraiu endpoint de environment (`PUT /flows/:id/environment`) para `api/modules/domain-flow/handleFlowCrudEnvironmentRoute.js` — modulo principal reduziu de 479 para 442 linhas (−37).
+- BE-022 avancou: `handleFlowCrudRoutes` extraiu bloco de delete (`DELETE /flows/:id`) para `api/modules/domain-flow/handleFlowCrudDeleteRoute.js` — modulo principal reduziu de 442 para 411 linhas (−31).
+- BE-022 avancou: `handleFitnessRoutes` extraiu bloco de student (`GET /students/search` + `GET /student/:id/detail`) para `api/modules/vertical/handleFitnessStudentRoutes.js` — modulo principal reduziu de 462 para 228 linhas (−234).
+- BE-022 avancou: `handleTemplatesRoutes` extraiu bloco de marketplace de flow-templates (`GET/POST/DELETE /flow-templates` + `POST /flow-templates/:id/install`) para `api/modules/platform-content/handleFlowTemplateMarketplaceRoutes.js` — modulo principal reduziu de 495 para 249 linhas (−246).
+- BE-022 avancou: `handleChannelWebhookRoutes` decomposto em `handleWhatsAppWebhookRoutes.js` + `handleMessengerWebhookRoutes.js` + `handleInstagramWebhookRoutes.js` — modulo principal tornou-se delegador puro de 14 linhas (reduzido de 478).
+- BE-022 avancou: `handleChannelWebhookRoutes` decomposto em `handleWhatsAppWebhookRoutes.js` + `handleMessengerWebhookRoutes.js` + `handleInstagramWebhookRoutes.js` — modulo principal tornou-se delegador puro de 14 linhas (reduzido de 478).
+- BE-022 avancou: `handleAccessControlRoutes` decomposto em `handleAccessControlCatalogRoutes.js` (devices/credentials/policies CRUD) + `handleAccessControlDecisionRoutes.js` (decisions/qrcode/events/health) — modulo principal reduziu de 345 para 14 linhas (−331); 9/9 testes passing.
+- BE-022 avancou: `handleAccessControlRoutes` decomposto em `handleAccessControlCatalogRoutes.js` (devices/credentials/policies CRUD) + `handleAccessControlDecisionRoutes.js` (decisions/qrcode/events/health) — modulo principal reduziu de 345 para 14 linhas (−331); 9/9 testes passing.
+- BE-022 avancou: `handleProcessRuntimeRoutes` decomposto em `handleProcessRuntimeControlRoutes.js` (start/analytics/simulate/intelligence) + `handleProcessInstanceRoutes.js` (list/detail/history/cancel/resume/external-resume) — modulo principal reduziu de 333 para 19 linhas (−314); 4/4 testes passing.
+- BE-022 avancou: `handleProcessRuntimeRoutes` decomposto em `handleProcessRuntimeControlRoutes.js` (start/analytics/simulate/intelligence) + `handleProcessInstanceRoutes.js` (list/detail/history/cancel/resume/external-resume) — modulo principal reduziu de 333 para 19 linhas (−314); 4/4 testes passing.
+- BE-022 avancou: `handlePublicTokenRoutes` decomposto em `handlePublicTokenCrudRoutes.js` (list/stats/create) + `handlePublicTokenLifecycleRoutes.js` (revoke/rotate/resolve) — modulo principal reduziu de 321 para 13 linhas (−308); 9/9 testes passing.
+- BE-022 avancou: `handlePublicTokenRoutes` decomposto em `handlePublicTokenCrudRoutes.js` (list/stats/create) + `handlePublicTokenLifecycleRoutes.js` (revoke/rotate/resolve) — modulo principal reduziu de 321 para 13 linhas (−308); 9/9 testes passing.
+- BE-022 avancou: `handleAiRoutes` decomposto em `handleAiChatbotOrchestratorRoutes.js` (chatbot/generate + rpa/generate via orchestrateGeneration) + `handleAiGenerateRoute.js` (/api/ai/generate com pipeline WS) — modulo principal reduziu de 372 para 13 linhas (−359); 5/5 wiring testes passing.
+- `operationsDashboardService` avancou com extração dos mapeadores de timeline (journey/attendance/membership rows) para `api/services/operations/operationsDashboardTimelineMapper.js` e do mapeamento+agregacao de jobs para `api/services/operations/operationsDashboardJobsAggregator.js` — servico reduziu de 711 para 570 linhas (−141).
+- `operationsDashboardService` avancou com extração de `computeSummary` para `api/services/operations/operationsDashboardSummary.js` — servico reduziu de 570 para 412 linhas (−158).
+- `operationsDashboardService` avancou com extração de `listNotifications` para `api/services/operations/operationsDashboardNotificationsListing.js` — servico reduziu de 412 para 366 linhas (−46).
+- `operationsDashboardService` avancou com extração de `listJobs` para `api/services/operations/operationsDashboardJobsListing.js` — servico reduziu de 366 para 334 linhas (−32).
+- `operationsDashboardService` avancou com extração de `listTimeline` para `api/services/operations/operationsDashboardTimelineListing.js` — servico reduziu de 334 para 264 linhas (−70).
+
+## Pendencias ONDA 16
+- continuar decomposicao de `queueService` e atacar `operationsDashboardService`/`processRuntimeService`;
+- padronizar modulos `handle*Routes` de maior volume em `api/modules/*`.
 
 ## Entregas concluidas nesta onda
 - `api/server.js` reduzido de 962 para 212 linhas.
@@ -29,7 +117,85 @@
 - `node --check api/server.js`
 - `node --check api/app/registerRoutes.js`
 - `node --check` nos novos modulos de runtime/bootstrap/composition
+- `node --check api/core/process-runtime/processRuntimeTimeoutPolicy.js`
+- `node --check api/core/process-runtime/processRuntimeService.js`
+- `node --check api/core/process-runtime/processRuntimeIdempotency.js`
+- `node --check api/core/process-runtime/processRuntimeWaitingFlow.js`
+- `node --check api/core/process-runtime/processRuntimeNodeSignals.js`
+- `node --check api/core/process-runtime/processRuntimeNodeFailure.js`
+- `node --check api/core/process-runtime/processRuntimeCompletionFlow.js`
+- `node --check api/core/process-runtime/processRuntimeNodeExitFlow.js`
+- `node --check api/core/process-runtime/processRuntimeNodeEntryFlow.js`
+- `node --check api/core/process-runtime/processRuntimeNodeAttempts.js`
+- `node --check api/core/process-runtime/processRuntimeMissingNodeFailure.js`
+- `node --check api/core/process-runtime/processRuntimeNextNodeSetup.js`
+- `node --check api/core/process-runtime/processRuntimeNodeStep.js`
+- `node --check api/services/queue/queueTicketPersistenceRuntime.js`
+- `node --check api/services/queue/queueAdminOperations.js`
+- `node --check api/services/queue/queueTicketReadOperations.js`
+- `node --check api/services/queue/queueTicketMutationOperations.js`
+- `node --check api/modules/domain-identity/handleAgentMfaRoutes.js`
+- `node --check api/modules/domain-identity/handleAgentOnboardingRoutes.js`
+- `node --check api/modules/domain-identity/handleAgentCrudRoutes.js`
+- `node --check api/modules/domain-identity/handleAgentRoutes.js`
+- `node --check api/modules/platform-public/handlePhysicalPublicRouteUtils.js`
+- `node --check api/modules/platform-public/handlePhysicalKioskPanelRoutes.js`
+- `node --check api/modules/platform-public/handlePhysicalAccessControlPublicRoutes.js`
+- `node --check api/modules/platform-public/handlePhysicalPublicRoutes.js`
+- `node --check api/modules/scheduling-support/handleSchedulingSupportCalendarRoutes.js`
+- `node --check api/modules/scheduling-support/handleSchedulingSupportRoutes.js`
+- `node --check api/modules/vertical/handleFitnessMembershipRoutes.js`
+- `node --check api/modules/vertical/handleFitnessRoutes.js`
+- `node --check api/modules/vertical/handleFitnessAttendanceRoutes.js`
+- `node --check api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js`
+- `node --check api/modules/intelligence/handleIntelligenceRoutes.js`
+- `node --check api/modules/intelligence/handleIntelligenceGoalRoutes.js`
+- `node --check api/modules/domain-flow/handleFlowCrudReadRoutes.js`
+- `node --check api/modules/domain-flow/handleFlowCrudEnvironmentRoute.js`
+- `node --check api/modules/domain-flow/handleFlowCrudDeleteRoute.js`
+- `node --check api/modules/domain-flow/handleFlowCrudRoutes.js`
+- `node --check api/modules/vertical/handleFitnessStudentRoutes.js`
+- `node --check api/modules/vertical/handleFitnessRoutes.js`
+- `node --check api/modules/platform-content/handleFlowTemplateMarketplaceRoutes.js`
+- `node --check api/modules/platform-content/handleTemplatesRoutes.js`
+- `node --check api/modules/channel-webhook/handleWhatsAppWebhookRoutes.js`
+- `node --check api/modules/channel-webhook/handleMessengerWebhookRoutes.js`
+- `node --check api/modules/channel-webhook/handleInstagramWebhookRoutes.js`
+- `node --check api/modules/channel-webhook/handleChannelWebhookRoutes.js`
+- `node --check api/modules/channel-webhook/handleChannelWebhookRoutes.js`
+- `node --check api/modules/access-control/handleAccessControlCatalogRoutes.js`
+- `node --check api/modules/access-control/handleAccessControlDecisionRoutes.js`
+- `node --check api/modules/access-control/handleAccessControlRoutes.js`
+- `node --check api/modules/access-control/handleAccessControlRoutes.js`
+- `node --check api/modules/process-runtime/handleProcessRuntimeControlRoutes.js`
+- `node --check api/modules/process-runtime/handleProcessInstanceRoutes.js`
+- `node --check api/modules/process-runtime/handleProcessRuntimeRoutes.js`
+- `node --check api/modules/process-runtime/handleProcessRuntimeRoutes.js`
+- `node --check api/modules/public-token/handlePublicTokenCrudRoutes.js`
+- `node --check api/modules/public-token/handlePublicTokenLifecycleRoutes.js`
+- `node --check api/modules/public-token/handlePublicTokenRoutes.js`
+- `node --check api/modules/public-token/handlePublicTokenRoutes.js`
+- `node --check api/modules/platform-content/handleAiChatbotOrchestratorRoutes.js`
+- `node --check api/modules/platform-content/handleAiGenerateRoute.js`
+- `node --check api/modules/platform-content/handleAiRoutes.js`
+- `node --check api/services/operations/operationsDashboardTimelineMapper.js`
+- `node --check api/services/operations/operationsDashboardJobsAggregator.js`
+- `node --check api/services/operations/operationsDashboardSummary.js`
+- `node --check api/services/operations/operationsDashboardNotificationsListing.js`
+- `node --check api/services/operations/operationsDashboardJobsListing.js`
+- `node --check api/services/operations/operationsDashboardTimelineListing.js`
+- `node --check api/services/operationsDashboardService.js`
+- `node --check api/services/queueService.js`
 - `npm exec -- jest --runTestsByPath api/server.test.js tests/unit/serverRuntimeModules.test.js tests/unit/registerRoutesRegistry.test.js tests/unit/backendArchitectureGuardrails.test.js tests/unit/expressHandlerBridgeBudget.test.js tests/unit/expressHandlerBridgeAllowlist.test.js tests/unit/platformResidualEliminationWiring.test.js tests/unit/ragDocumentsModuleRoutes.test.js tests/unit/ticketRoutes.test.js tests/unit/verticalBeautyRoutes.test.js --runInBand --no-coverage`
+- `npx jest tests/unit/processDurableRuntime.test.js --runInBand`
+- `npx jest tests/unit/queueService.test.js --runInBand`
+- `npx jest tests/unit/operationsDashboardService.test.js --runInBand`
+- `npx jest tests/unit/agentRoutes.test.js --runInBand`
+- `npx jest tests/unit/physicalPublicRoutes.test.js --runInBand`
+- `npx jest tests/unit/schedulingSupportRoutes.test.js tests/unit/schedulingSupportModuleRoutes.test.js --runInBand --silent`
+- `npx jest tests/unit/verticalFitnessRoutes.test.js --runInBand --silent`
+- `npx jest tests/unit/intelligenceRoutes.test.js tests/unit/tenantIntelligenceRoutesExpanded.test.js --runInBand --silent`
+- `npx jest tests/unit/domainAdminIdentityFlowCutoverWiring.test.js --runInBand --silent`
 - Resultado consolidado do gate final: 10 suites, 61 testes, 100% pass
 
 ## Estado arquitetural apos a onda

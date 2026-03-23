@@ -594,6 +594,27 @@ if [ "$BUILD" = true ]; then
                 # (diretório REMOTE_DIR) e não './frontend'.
                 BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "api" ]; then
+                # Build API Base Image first (required dependency for API)
+                info "Construindo imagem base da API (dependência necessária)..."
+                API_BASE_BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base ."
+                echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagem base da API"
+                echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD\""
+                echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD"
+                echo ""
+                echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER BUILD - BASE]${NC}"
+                echo ""
+                $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD" 2>&1 | tee /tmp/api_base_build.log | grep -vE "(Warning|Permanently)" || true
+                API_BASE_BUILD_EXIT=${PIPESTATUS[0]}
+                echo ""
+                if [ $API_BASE_BUILD_EXIT -ne 0 ]; then
+                    error "❌ Build da imagem base da API FALHOU"
+                    error "Verifique os erros acima"
+                    exit 1
+                fi
+                echo -e "${GREEN}[RESULTADO]${NC} Build da imagem base concluído (exit code: $API_BASE_BUILD_EXIT)"
+                info "✅ Imagem base da API construída com sucesso"
+                echo ""
+                
                 BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
             elif [ "$BUILD_SERVICE" = "rag-service" ]; then
                 BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
@@ -605,6 +626,17 @@ if [ "$BUILD" = true ]; then
             # docker compose build só constrói serviços com 'build:', então precisamos construir manualmente
             # as imagens que só têm 'image:' definido (api e rag-service)
             info "Construindo imagens que não têm build no compose (API e RAG Service)..."
+            
+            # Build API Base Image first (required dependency for API)
+            info "Construindo imagem base da API..."
+            API_BASE_BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base ."
+            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD"
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            API_BASE_BUILD_EXIT=${PIPESTATUS[0]}
+            if [ $API_BASE_BUILD_EXIT -ne 0 ]; then
+                error "❌ Build da imagem base da API FALHOU"
+                exit 1
+            fi
             
             # Build API
             info "Construindo imagem da API..."

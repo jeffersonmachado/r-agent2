@@ -3,6 +3,10 @@
  * GET /flows, GET /flows/:id, POST /flows, PUT /flows/:id, DELETE /flows/:id
  */
 
+const { handleFlowCrudReadRoutes } = require('./handleFlowCrudReadRoutes');
+const { handleFlowCrudEnvironmentRoute } = require('./handleFlowCrudEnvironmentRoute');
+const { handleFlowCrudDeleteRoute } = require('./handleFlowCrudDeleteRoute');
+
 async function handleFlowCrudRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const {
@@ -39,104 +43,20 @@ async function handleFlowCrudRoutes(ctx) {
     return false;
   }
 
-  // -----------------------------------------------------------------------
-  // GET /flows
-  // -----------------------------------------------------------------------
-  
-  if (method === 'GET' && pathname === '/flows') {
-    const authResult = requireAuth(req);
-    const urlObj = new URL(req.url || '/', 'http://localhost');
-    const envFilter = urlObj.searchParams.get('environment');
-    if (STRICT_TENANT_MODE) {
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return true;
-      }
-      const tenantId = requireTenant(req, res);
-      if (!tenantId) return true;
-      const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === tenantId);
-      const filtered = envFilter
-        ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
-        : tenantFlows;
-      sendJson(res, 200, filtered);
-    } else {
-      // DEV/compatibilidade: se autenticado, filtra por tenant do agente; caso contrário, retorna todos
-      if (authResult.valid && req.tenantId) {
-        const tenantFlows = Array.from(flows.values()).filter(flow => flow.tenantId === req.tenantId);
-        const filtered = envFilter
-          ? tenantFlows.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
-          : tenantFlows;
-        sendJson(res, 200, filtered);
-      } else {
-        const all = Array.from(flows.values());
-        const filtered = envFilter
-          ? all.filter((flow) => String(flow?.metadata?.environment || '') === String(envFilter))
-          : all;
-        sendJson(res, 200, filtered);
-      }
-    }
-    return true;
-  }
-
-  // -----------------------------------------------------------------------
-  // GET /flows/:id
-  // -----------------------------------------------------------------------
-  
-  if (method === 'GET' && pathname.startsWith('/flows/') && !pathname.endsWith('/environment')) {
-    const id = decodeURIComponent(pathname.slice('/flows/'.length));
-    let flow = flows.get(id);
-    
-    // Fallback DB: se não estiver no cache em memória, tenta buscar no PostgreSQL.
-    if (!flow) {
-      try {
-        const { getSequelize } = require('../../db/sequelize');
-        const sequelize = getSequelize();
-        if (sequelize) {
-          const { Flow } = require('../../db/models');
-          const FlowModel = Flow();
-          const row = await FlowModel.findByPk(id);
-          if (row) {
-            const data = row.data && typeof row.data === 'object' ? row.data : {};
-            const flowObj = { ...data, id: row.id };
-            if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
-            if (row.name && !flowObj.name) flowObj.name = row.name;
-            flows.set(row.id, flowObj);
-            flow = flowObj;
-          }
-        }
-      } catch (e) {
-        // best-effort: se falhar, mantém comportamento anterior (404)
-      }
-    }
-    
-    if (!flow) {
-      sendJson(res, 404, { error: 'flow_not_found' });
-      return true;
-    }
-    
-    const authResult = requireAuth(req);
-    if (STRICT_TENANT_MODE) {
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return true;
-      }
-      const tenantId = requireTenant(req, res);
-      if (!tenantId) return true;
-      if (flow.tenantId !== tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return true;
-      }
-    } else {
-      // DEV/compatibilidade: valida tenant apenas se autenticado
-      if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return true;
-      }
-    }
-    
-    sendJson(res, 200, flow);
-    return true;
-  }
+  const readHandled = await handleFlowCrudReadRoutes({
+    req,
+    res,
+    method,
+    pathname,
+    deps: {
+      requireAuth,
+      requireTenant,
+      sendJson,
+      flows,
+      STRICT_TENANT_MODE,
+    },
+  });
+  if (readHandled) return true;
 
   // -----------------------------------------------------------------------
   // POST /flows
@@ -276,63 +196,25 @@ async function handleFlowCrudRoutes(ctx) {
     return true;
   }
 
-  // -----------------------------------------------------------------------
-  // PUT /flows/:id/environment
-  // -----------------------------------------------------------------------
-  
-  if (method === 'PUT' && pathname.startsWith('/flows/') && pathname.endsWith('/environment')) {
-    const id = decodeURIComponent(pathname.slice('/flows/'.length).replace(/\/environment$/, ''));
-    if (!id) {
-      badRequest(res, 'ID do fluxo é obrigatório');
-      return true;
-    }
-    if (!hasJsonContentType(req)) {
-      badRequest(res, 'Content-Type deve ser application/json');
-      return true;
-    }
-    try {
-      const body = await parseJsonBody(req);
-      const env = body && body.environment ? String(body.environment).trim() : '';
-      if (!env || !['dev', 'stage', 'prod'].includes(env)) {
-        badRequest(res, 'Campo "environment" inválido. Use: dev|stage|prod');
-        return true;
-      }
-
-      const existingFlow = flows.get(id);
-      if (!existingFlow) {
-        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
-        return true;
-      }
-
-      const authResult = requireAuth(req);
-      if (STRICT_TENANT_MODE) {
-        if (!authResult.valid) {
-          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-          return true;
-        }
-        const tenantId = requireTenant(req, res);
-        if (!tenantId) return true;
-        if (existingFlow.tenantId !== tenantId) {
-          sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-          return true;
-        }
-      } else if (authResult.valid && req.tenantId && existingFlow.tenantId !== req.tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return true;
-      }
-
-      const next = { ...existingFlow };
-      next.metadata = next.metadata && typeof next.metadata === 'object' ? { ...next.metadata } : {};
-      next.metadata.environment = env;
-      flows.set(id, next);
-      persistFlowBestEffort(next);
-      sendJson(res, 200, { ok: true, flow: next });
-    } catch (err) {
-      logger.error('[Flows] Erro ao atualizar environment', err);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar environment' });
-    }
-    return true;
-  }
+  const environmentHandled = await handleFlowCrudEnvironmentRoute({
+    req,
+    res,
+    method,
+    pathname,
+    deps: {
+      requireAuth,
+      requireTenant,
+      sendJson,
+      badRequest,
+      hasJsonContentType,
+      parseJsonBody,
+      logger,
+      flows,
+      persistFlowBestEffort,
+      STRICT_TENANT_MODE,
+    },
+  });
+  if (environmentHandled) return true;
 
   // -----------------------------------------------------------------------
   // PUT /flows/:id
@@ -501,58 +383,26 @@ async function handleFlowCrudRoutes(ctx) {
   }
 
   // -----------------------------------------------------------------------
-  // DELETE /flows/:id
+  // DELETE /flows/:id  →  handleFlowCrudDeleteRoute
   // -----------------------------------------------------------------------
-  
-  if (method === 'DELETE' && pathname.startsWith('/flows/')) {
-    const id = decodeURIComponent(pathname.slice('/flows/'.length));
-    const flow = flows.get(id);
-    if (!flow) {
-      sendJson(res, 404, { error: 'flow_not_found' });
-      return true;
-    }
-    
-    const authResult = requireAuth(req);
-    if (STRICT_TENANT_MODE) {
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return true;
-      }
-      const tenantId = requireTenant(req, res);
-      if (!tenantId) return true;
-      if (flow.tenantId !== tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return true;
-      }
-    } else {
-      // DEV/compatibilidade: valida tenant se autenticado
-      if (authResult.valid && req.tenantId && flow.tenantId !== req.tenantId) {
-        sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
-        return true;
-      }
-    }
-    
-    flows.delete(id);
-    await deleteFlowBestEffort(id);
-    
-    // Dispara webhooks e WebSocket
-    triggerWebhooks(flow.tenantId, 'flow.deleted', {
-      flowId: flow.id,
-      flowName: flow.name,
-      agentId: req.agent?.id,
-    }).catch((err) => {
-      logger.error('[Webhook] Erro ao disparar webhook para flow.deleted:', err);
-    });
-
-    emitEvent('flow.deleted', {
-      flowId: flow.id,
-      flowName: flow.name,
-      agentId: req.agent?.id,
-    }, { tenantId: flow.tenantId });
-    
-    sendJson(res, 200, { success: true, deletedId: id });
-    return true;
-  }
+  const deleteHandled = await handleFlowCrudDeleteRoute({
+    req,
+    res,
+    method,
+    pathname,
+    deps: {
+      requireAuth,
+      requireTenant,
+      sendJson,
+      logger,
+      flows,
+      deleteFlowBestEffort,
+      triggerWebhooks,
+      emitEvent,
+      STRICT_TENANT_MODE,
+    },
+  });
+  if (deleteHandled) return true;
 
   // No route handled
   return false;

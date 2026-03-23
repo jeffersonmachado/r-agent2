@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Button } from '../../../styles/Button';
 
 export function SupportConversationPane({
@@ -24,142 +25,204 @@ export function SupportConversationPane({
   quickReplySelectedCategory,
   setQuickReplySelectedCategory,
   quickReplyCategories,
-  quickReplyCategoryItems,
-  quickReplySuggestions,
-  insertQuickReply,
   messageText,
   setMessageText,
   quickReplySlashOpen,
   quickReplySlashResults,
+  slashMenuMode,
+  slashCommandResults,
+  slashMenuCursorIndex,
+  onSelectSlashItem,
+  onHoverSlashItem,
+  onComposerKeyDown,
+  formatTicketStatus,
   handleSendMessage,
   handleClose,
 }) {
+  const slashMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!quickReplySlashOpen) return;
+    if (slashMenuCursorIndex < 0) return;
+    const menuEl = slashMenuRef.current;
+    if (!menuEl) return;
+
+    const activeItem = menuEl.querySelector('.support-slash-menu-item.is-active');
+    if (activeItem && typeof activeItem.scrollIntoView === 'function') {
+      activeItem.scrollIntoView({ block: 'nearest' });
+    }
+  }, [quickReplySlashOpen, slashMenuCursorIndex, slashMenuMode]);
+
+  const isWaitingTicket = selectedTicket.status === 'waiting';
+  const isInProgressTicket = selectedTicket.status === 'in_progress';
+  const showConversationComposer = selectedTicket.status === 'in_progress';
+  const showAssignForm = false;
+  const shouldRenderHistory =
+    selectedTicket.status === 'in_progress'
+    || selectedTicket.status === 'paused';
+
   return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flexShrink: 0 }}>
-        <h3 className="support-details-title">
-          {isMobile ? (
-            <button
-              type="button"
-              className="support-mobile-back-button"
-              onClick={() => setSelectedTicket(null)}
-              aria-label="Voltar para lista de chamados"
-            >
-              ‹
-            </button>
-          ) : null}
-          Ticket #{selectedTicket.id.slice(0, 12)}
-          {isMobile ? (
-            <button
-              type="button"
-              className="support-mobile-panel-button"
-              onClick={() => setIsRightPanelCollapsed(false)}
-              aria-label="Abrir painel lateral"
-            >
-              ☰
-            </button>
-          ) : null}
-          {selectedTicket.unreadCount > 0 ? (
-            <span style={{ marginLeft: '10px', background: '#e74c3c', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'normal' }}>
-              {selectedTicket.unreadCount} nova(s)
-            </span>
-          ) : null}
-        </h3>
-      </div>
-
-      <div style={{ flexShrink: 0, display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        {(selectedTicket.mode || 'bot') === 'bot' ? (
-          <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-button-full">Assumir atendimento</Button>
-        ) : null}
-        {(selectedTicket.mode || 'bot') === 'human' ? (
-          <>
-            <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">Devolver ao bot</Button>
-            <Button onClick={handlePause} disabled={handoverLoading} className="support-button-full">Pausar</Button>
-          </>
-        ) : null}
-        {(selectedTicket.mode || 'bot') === 'paused' ? (
-          <>
-            <Button onClick={handleResume} disabled={handoverLoading} className="support-button-full">Retomar (humano)</Button>
-            <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-button-full">Devolver ao bot</Button>
-          </>
-        ) : null}
-        <Button
-          onClick={openDeliveryFailures}
-          disabled={deliveryFailuresLoading}
-          className="support-button-full"
-          style={{ background: 'var(--color-bg-secondary)' }}
-          title="Ver falhas de entrega do outbound"
-        >
-          {deliveryFailuresLoading ? 'Carregando falhas...' : 'Falhas de entrega'}
-        </Button>
-      </div>
-
-      {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
-        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#555' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Historico de handover</div>
-          {selectedTicket.context.handoverHistory.slice(-5).map((item, index) => (
-            <div key={`${item.timestamp}-${index}`}>
-              {formatDate(item.timestamp)} • {item.mode === 'human' ? 'Humano' : 'Bot'}
-              {item.actorUsername ? ` • ${item.actorUsername}` : ''}
-              {item.reason ? ` • ${item.reason}` : ''}
-            </div>
-          ))}
+    <div style={{ flex: '1 1 0%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: '1 1 0%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flexShrink: 0 }}>
+          <h3 className="support-details-title">
+            {isMobile ? (
+              <button
+                type="button"
+                className="support-mobile-back-button"
+                onClick={() => setSelectedTicket(null)}
+                aria-label="Voltar para lista de chamados"
+              >
+                ‹
+              </button>
+            ) : null}
+            <span className="support-ticket-title-number">#{selectedTicket.id}</span>
+            {isMobile ? (
+              <button
+                type="button"
+                className="support-mobile-panel-button"
+                onClick={() => setIsRightPanelCollapsed(false)}
+                aria-label="Abrir painel lateral"
+              >
+                ☰
+              </button>
+            ) : null}
+            {selectedTicket.unreadCount > 0 ? (
+              <span className="support-ticket-unread-badge" role="status" aria-label={`${selectedTicket.unreadCount} mensagens não lidas`}>
+                {selectedTicket.unreadCount}
+              </span>
+            ) : null}
+          </h3>
         </div>
-      ) : null}
 
-      {selectedTicket.status === 'in_progress' ? (
-        <div style={{ marginTop: '20px', marginBottom: '20px', borderTop: '1px solid #ddd', paddingTop: '20px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <h4 style={{ marginBottom: '10px', fontSize: '14px', fontWeight: 'bold', flexShrink: 0 }}>Historico de Mensagens</h4>
+        {!isWaitingTicket && !isInProgressTicket ? (
           <div
-            ref={messagesContainerRef}
-            style={{ flex: 1, overflowY: 'auto', border: '1px solid #ddd', borderRadius: '8px', padding: '10px', backgroundColor: '#f9f9f9', minHeight: 0 }}
-            role="log"
-            aria-label="Historico de mensagens do ticket"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+              marginBottom: '12px',
+              padding: '10px 12px',
+              border: '1px solid var(--color-border-default)',
+              borderRadius: '12px',
+              background: 'var(--color-bg-elevated)',
+              flexWrap: 'wrap',
+              fontSize: '12px',
+              color: 'var(--color-text-secondary)',
+            }}
           >
-            {timelineMessages.length === 0 ? (
-              <p style={{ color: '#999', fontSize: '12px', textAlign: 'center' }}>Nenhuma mensagem ainda</p>
-            ) : (
-              timelineMessages.map((msg) => (
-                <div
-                  key={msg.key}
-                  style={{
-                    marginBottom: '12px',
-                    padding: '8px',
-                    borderRadius: '8px',
-                    backgroundColor: msg.sender === 'user' ? '#dcf8c6' : '#ffffff',
-                    border: msg.sender === 'user' ? 'none' : '1px solid #ddd',
-                    textAlign: msg.sender === 'user' ? 'right' : 'left',
-                  }}
-                >
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                    {msg.sender === 'user' ? '👤 Usuario' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'}
-                    {msg.source === 'channel' ? <span style={{ marginLeft: '6px', color: '#999' }}>(canal)</span> : null}
-                    {' • '}
-                    {formatDate(msg.timestamp)}
-                    {(() => {
-                      const isOutbound = msg.sender === 'agent' || msg.sender === 'bot';
-                      if (!isOutbound) return null;
-                      const badge = getDeliveryStatusBadge(msg.deliveryStatus);
-                      if (!badge) return null;
-                      return (
-                        <span style={{ marginLeft: '8px', color: badge.color, fontWeight: 700 }} title={badge.title} aria-label={`Status de entrega: ${badge.title}`}>
-                          {badge.text}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
-                    {renderTimelineMessageContent(msg)}
-                  </div>
-                </div>
-              ))
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <span>Status: <strong>{formatTicketStatus ? formatTicketStatus(selectedTicket.status) : selectedTicket.status}</strong></span>
+              <span>Modo: <strong>{selectedTicket.mode || 'bot'}</strong></span>
+              <span>Fila: <strong>{selectedTicket.queue || 'default'}</strong></span>
+            </div>
+            <div style={{ color: 'var(--color-text-tertiary)' }}>
+              Atualizado: {formatDate(selectedTicket.updatedAt || selectedTicket.createdAt)}
+            </div>
           </div>
+        ) : null}
+
+        <div className="support-ticket-actions" style={{ flexShrink: 0 }}>
+          {isWaitingTicket ? (
+            <Button onClick={handleAssign} className="support-ticket-action-btn">Atribuir Chamado</Button>
+          ) : null}
+          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'bot' ? (
+            <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-ticket-action-btn">Assumir atendimento</Button>
+          ) : null}
+          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'human' ? (
+            <>
+              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
+              <Button onClick={handlePause} disabled={handoverLoading} className="support-ticket-action-btn">Pausar</Button>
+            </>
+          ) : null}
+          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'paused' ? (
+            <>
+              <Button onClick={handleResume} disabled={handoverLoading} className="support-ticket-action-btn">Retomar (humano)</Button>
+              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
+            </>
+          ) : null}
+          {!isWaitingTicket && !isInProgressTicket ? (
+            <>
+              <Button
+                onClick={openDeliveryFailures}
+                disabled={deliveryFailuresLoading}
+                className="support-ticket-action-btn"
+                style={{ background: 'var(--color-bg-secondary)' }}
+                title="Ver falhas de entrega do outbound"
+              >
+                {deliveryFailuresLoading ? 'Carregando falhas...' : 'Falhas de entrega'}
+              </Button>
+              <Button onClick={() => handleClose(selectedTicket.id)} className="support-ticket-action-btn support-button-danger" aria-label="Fechar ticket">
+                Fechar ticket
+              </Button>
+            </>
+          ) : null}
         </div>
-      ) : null}
+
+        {!isWaitingTicket && !isInProgressTicket && Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+          <div style={{ marginBottom: '10px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Histórico de handover</div>
+            {selectedTicket.context.handoverHistory.slice(-5).map((item, index) => (
+              <div key={`${item.timestamp}-${index}`}>
+                {formatDate(item.timestamp)} • {item.mode === 'human' ? 'Humano' : 'Bot'}
+                {item.actorUsername ? ` • ${item.actorUsername}` : ''}
+                {item.reason ? ` • ${item.reason}` : ''}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div style={{ marginTop: isWaitingTicket ? 0 : '8px', marginBottom: isWaitingTicket ? 0 : '12px', flex: '1 1 0%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {shouldRenderHistory ? (
+            <div
+              ref={messagesContainerRef}
+              className="support-history-log"
+              role="log"
+              aria-label="Histórico de mensagens do chamado"
+            >
+              {timelineMessages.length === 0 ? (
+                <p className="support-history-empty">Nenhuma mensagem ainda</p>
+              ) : (
+                timelineMessages.map((msg) => (
+                  <div key={msg.key} className={`support-message ${msg.sender === 'user' ? 'is-user' : 'is-other'}`}>
+                    <div className="support-message-meta">
+                      {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'} • {formatDate(msg.timestamp)}
+                      {(() => {
+                        const isOutbound = msg.sender === 'agent' || msg.sender === 'bot';
+                        if (!isOutbound) return null;
+                        const badge = getDeliveryStatusBadge(msg.deliveryStatus);
+                        if (!badge) return null;
+                        return (
+                          <span style={{ marginLeft: '8px', color: badge.color, fontWeight: 700 }} title={badge.title} aria-label={`Status de entrega: ${badge.title}`}>
+                            {badge.text}
+                          </span>
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        className="support-reply-action"
+                        title="Responder esta mensagem"
+                        aria-label="Responder esta mensagem"
+                      >
+                        ↩
+                      </button>
+                    </div>
+                    <div className="support-message-text">
+                      {renderTimelineMessageContent(msg)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }} />
+          )}
+        </div>
+      </div>
 
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {selectedTicket.status === 'waiting' ? (
+        {showAssignForm ? (
           <div className="support-form-group">
             <label htmlFor="assign-ticket-input" className="support-form-label">Atribuir para:</label>
             <input
@@ -176,115 +239,92 @@ export function SupportConversationPane({
                 }
               }}
             />
-            <Button onClick={handleAssign} className="support-button-full">Atribuir Ticket</Button>
+            <Button onClick={handleAssign} className="support-button-full">Atribuir ticket</Button>
           </div>
         ) : null}
 
-        {selectedTicket.status === 'in_progress' ? (
+        {showConversationComposer ? (
           <div className="support-form-group">
-            <label htmlFor="send-message-textarea" className="support-form-label">Enviar mensagem:</label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Quick Replies</div>
-              <select
-                value={quickReplySelectedCategory}
-                onChange={(event) => setQuickReplySelectedCategory(event.target.value)}
-                className="support-form-select"
-                style={{ maxWidth: '280px' }}
-                aria-label="Filtrar quick replies por categoria"
-              >
-                <option value="">Todas as categorias</option>
-                {quickReplyCategories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
+            <div className="support-message-compose">
+              <textarea
+                id="send-message-textarea"
+                value={messageText}
+                onChange={(event) => setMessageText(event.target.value)}
+                placeholder="Digite / para abrir comandos e respostas rápidas."
+                rows={1}
+                className="support-form-textarea support-message-compose-textarea"
+                aria-label="Campo para digitar mensagem"
+                onKeyDown={onComposerKeyDown}
+              />
+              <div className="support-compose-actions">
+                <button type="button" className="support-compose-action-button" title="Inserir emoji" aria-label="Inserir emoji">🙂</button>
+                <button type="button" className="support-compose-action-button" title="Anexar mídia/arquivo" aria-label="Anexar mídia ou arquivo">📎</button>
+                <button type="button" className="support-compose-action-button" title="Gravar áudio do microfone" aria-label="Gravar áudio do microfone">🎙️</button>
+                <button type="button" className="support-compose-action-button" title="Anexar do RAG" aria-label="Anexar documento do RAG">🧠</button>
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  className="support-send-icon-button"
+                  aria-label="Enviar"
+                  title="Enviar mensagem"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3.4 20.2L21.3 12 3.4 3.8l.8 6.8 9.4 1.4-9.4 1.4-.8 6.8z" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {quickReplyCategoryItems.length > 0 ? (
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>Atalhos por categoria</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {quickReplyCategoryItems.map((qr) => (
-                    <button
-                      key={qr.id}
-                      type="button"
-                      onClick={() => insertQuickReply(qr)}
-                      style={{ padding: '6px 10px', borderRadius: '999px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '12px' }}
-                      title={qr.message}
-                    >
-                      {qr.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {quickReplySuggestions.length > 0 ? (
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>Sugestoes (Respostas Rapidas)</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {quickReplySuggestions.map((qr) => (
-                    <button
-                      key={qr.id}
-                      type="button"
-                      onClick={() => insertQuickReply(qr)}
-                      style={{ padding: '6px 10px', borderRadius: '999px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '12px' }}
-                      title={qr.message}
-                    >
-                      {qr.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <textarea
-              id="send-message-textarea"
-              value={messageText}
-              onChange={(event) => setMessageText(event.target.value)}
-              placeholder="Digite sua mensagem..."
-              rows={4}
-              className="support-form-textarea"
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                  event.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            {quickReplySlashOpen && quickReplySlashResults.length > 0 ? (
-              <div style={{ marginTop: '8px', border: '1px solid var(--color-border-default)', borderRadius: '10px', background: 'var(--color-bg-elevated)', padding: '8px', maxHeight: '220px', overflow: 'auto' }}>
+            {quickReplySlashOpen ? (
+              <div className="support-slash-menu" ref={slashMenuRef}>
                 <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>
-                  Resultados para <code>{(messageText || '').trim()}</code>
-                </div>
-                {quickReplySlashResults.map((qr) => (
-                  <div
-                    key={qr.id}
-                    style={{ padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
-                    onClick={() => insertQuickReply(qr)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') insertQuickReply(qr);
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{qr.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                      {String(qr.message || '').slice(0, 120)}{String(qr.message || '').length > 120 ? '…' : ''}
+                {slashMenuMode === 'commands' ? 'Comandos do workspace' : <>Resultados para <code>{(messageText || '').trim()}</code></>}
+              </div>
+              {slashMenuMode === 'commands' ? (
+                slashCommandResults.map((command, index) => (
+                    <div
+                      key={command.id}
+                      className={`support-slash-menu-item ${slashMenuCursorIndex === index ? 'is-active' : ''}`}
+                      onMouseEnter={() => onHoverSlashItem(index)}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        onSelectSlashItem(command);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{command.label}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>{command.description}</div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  quickReplySlashResults.map((qr, index) => (
+                    <div
+                      key={qr.id}
+                      className={`support-slash-menu-item ${slashMenuCursorIndex === index ? 'is-active' : ''}`}
+                      onMouseEnter={() => onHoverSlashItem(index)}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        onSelectSlashItem({ kind: 'quick_reply', reply: qr });
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{qr.title}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {String(qr.message || '').slice(0, 120)}{String(qr.message || '').length > 120 ? '…' : ''}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             ) : null}
-            <Button onClick={handleSendMessage} className="support-button-full">Enviar Mensagem</Button>
+
             <small style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-              Pressione Ctrl+Enter (ou Cmd+Enter no Mac) para enviar
+              Use <code>/</code> para comandos e respostas r&aacute;pidas. Pressione Ctrl+Enter (ou Cmd+Enter no Mac) para enviar.
             </small>
           </div>
         ) : null}
-
-        <Button onClick={() => handleClose(selectedTicket.id)} className="support-button-danger" aria-label="Fechar ticket">
-          Fechar Ticket
-        </Button>
       </div>
     </div>
   );

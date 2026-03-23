@@ -181,7 +181,7 @@ describe('SupportPage evidence integration', () => {
 
   it('renderiza blocos de entidade e evidência sem quebrar o fluxo atual', async () => {
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('tr');
+    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
     fireEvent.click(ticketCard);
 
     await waitFor(() => {
@@ -214,7 +214,7 @@ describe('SupportPage evidence integration', () => {
     });
 
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('tr');
+    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
     fireEvent.click(ticketCard);
 
     await waitFor(() => {
@@ -225,7 +225,7 @@ describe('SupportPage evidence integration', () => {
 
   it('mostra origem e mantém ação de abrir origem operacional', async () => {
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('tr');
+    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
     fireEvent.click(ticketCard);
 
     const buttons = await screen.findAllByRole('button', { name: /Abrir origem/i });

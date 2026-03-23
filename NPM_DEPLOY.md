@@ -46,6 +46,9 @@ npm run deploy:test
 # Deploy usando docker-compose (recomendado)
 npm run deploy:remote -- --host 10.10.2.30 --user root --dir /opt/results/ria/r-agent2
 
+# Deploy remoto via SSH (somente frontend)
+npm run deploy:remote:ssh:frontend
+
 # Deploy usando save/load (alternativa)
 npm run deploy:remote:save-load -- --host 10.10.2.30 --user root --dir /opt/results/ria/r-agent2
 
@@ -109,6 +112,39 @@ npm run deploy:remote:save-load -- \
   --user root \
   --dir /opt/results/ria/r-agent2
 ```
+
+### 3.1. Deploy Remoto SSH Somente Frontend
+
+Use este fluxo quando apenas o frontend precisa ser atualizado em produção.
+
+```bash
+# Pré-requisito: senha SSH no ambiente
+export SSHPASS='***'
+
+# Deploy remoto somente do frontend
+npm run deploy:remote:ssh:frontend
+```
+
+Validação sugerida após o deploy:
+
+```bash
+# Teste HTTP externo
+curl -i -sS -m 12 http://10.10.2.30:8086/ | head -n 20
+
+# Logs remotos do frontend
+sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@10.10.2.30 \
+  'cd /opt/results/ria/r-agent2 && docker compose -f docker-compose.prod.yml logs -f frontend'
+```
+
+Resultado esperado:
+- `HTTP/1.1 200 OK`
+- HTML contendo assets com prefixo `/r-agent2/assets/...`
+
+Registro de execução:
+- Data: `2026-03-23`
+- Comando: `npm run deploy:remote:ssh:frontend`
+- Status: `sucesso`
+- Evidência: build remoto do `frontend` concluído, serviço `r-agent2-frontend-prod` recriado e endpoint `http://10.10.2.30:8086/` respondendo `200 OK`.
 
 ### 4. Workflow Completo
 

@@ -5,36 +5,41 @@ import logger from '../../utils/logger';
 
 export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures, selectedTicket, showToast, showToastRef, onClose }) {
   if (!isOpen) return null;
+
+  const safeClose = () => {
+    if (typeof onClose === 'function') onClose();
+  };
+
   return (
-<div
-  className="support-modal-overlay"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="delivery-failures-title"
-  onClick={(e) => {
-    if (e.target === e.currentTarget) {
-      setShowDeliveryFailuresModal(false);
-    }
-  }}
-  onKeyDown={(e) => {
-    if (e.key === 'Escape') {
-      setShowDeliveryFailuresModal(false);
-    }
-  }}
->
-  <div className="support-modal-content" onClick={(e) => e.stopPropagation()}>
-    <h2 id="delivery-failures-title" style={{ marginTop: 0 }}>
-      Falhas de entrega
-    </h2>
+    <div
+      className="support-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delivery-failures-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          safeClose();
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          safeClose();
+        }
+      }}
+    >
+      <div className="support-modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2 id="delivery-failures-title" style={{ marginTop: 0 }}>
+          Falhas de entrega
+        </h2>
 
     <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
       Mostra itens com erro no outbound e mensagens do canal marcadas como <strong>failed</strong>.
     </div>
 
-    {deliveryFailuresLoading ? (
-      <div style={{ padding: '12px 0' }}>Carregando...</div>
-    ) : (
-      <>
+        {loading ? (
+          <div style={{ padding: '12px 0' }}>Carregando...</div>
+        ) : (
+          <>
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Outbound queue</div>
           {deliveryFailures.outboundQueue.length === 0 ? (
@@ -111,17 +116,17 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <Button
-            onClick={() => setShowDeliveryFailuresModal(false)}
-            style={{ background: 'var(--color-bg-secondary)' }}
-          >
-            Fechar
-          </Button>
-        </div>
-      </>
-    )}
-  </div>
-</div>
-);
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={safeClose}
+                style={{ background: 'var(--color-bg-secondary)' }}
+              >
+                Fechar
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
