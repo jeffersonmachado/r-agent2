@@ -70,7 +70,8 @@ describe('tenantSettingsService coercion guards', () => {
   test('getSetting: hostile tenantId/key do not throw', async () => {
     model.findOne.mockResolvedValue(null);
     const out = await getSetting({ tenantId: hostileToString(), key: hostileToString() });
-    expect(out.ok).toBe(true);
+    expect(out.ok).toBe(false);
+    expect(out.error).toBe('tenant_not_found');
   });
 
   test('getSetting: hostile err.message in catch does not throw', async () => {
@@ -91,7 +92,8 @@ describe('tenantSettingsService coercion guards', () => {
     model.findOne.mockResolvedValue(null);
     model.create.mockResolvedValue({ toJSON: () => ({ value: {} }) });
     const out = await upsertSetting({ tenantId: hostileToString(), key: hostileToString(), value: {} });
-    expect(out.ok).toBe(true);
+    expect(out.ok).toBe(false);
+    expect(out.error).toBe('tenant_not_found');
   });
 
   test('static guard: no direct err/error.message outside helper', () => {

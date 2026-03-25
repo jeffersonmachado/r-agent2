@@ -111,6 +111,44 @@ describe('QueueService - Defensive Coercions', () => {
         });
       }).not.toThrow();
     });
+
+    it('should persist and clear failure details on status transitions', () => {
+      const ticket = createTicket({ tenantId: 'tenant1', sessionId: 'sess123', queue: 'queue1' });
+      addAgentMessage(ticket.id, 'test msg', 'agent123', { clientMessageId: 'cli-1' });
+
+      const failed = updateOutboundMessageMeta(ticket.id, {
+        clientMessageId: 'cli-1',
+        deliveryStatus: 'failed',
+        reasonCode: 'outside_window_24h',
+        lastError: 'Template required',
+        errorCode: '131047',
+        errorType: 'window_violation',
+        failedAt: '2026-03-24T10:20:30.000Z',
+        attempts: 2,
+      });
+
+      const failedMsg = failed.messages[failed.messages.length - 1];
+      expect(failedMsg.deliveryStatus).toBe('failed');
+      expect(failedMsg.reasonCode).toBe('outside_window_24h');
+      expect(failedMsg.lastError).toBe('Template required');
+      expect(failedMsg.errorCode).toBe('131047');
+      expect(failedMsg.errorType).toBe('window_violation');
+      expect(failedMsg.failedAt).toBe('2026-03-24T10:20:30.000Z');
+      expect(failedMsg.attempts).toBe(2);
+
+      const sent = updateOutboundMessageMeta(ticket.id, {
+        clientMessageId: 'cli-1',
+        deliveryStatus: 'sent',
+      });
+      const sentMsg = sent.messages[sent.messages.length - 1];
+      expect(sentMsg.deliveryStatus).toBe('sent');
+      expect(sentMsg.reasonCode).toBeUndefined();
+      expect(sentMsg.lastError).toBeUndefined();
+      expect(sentMsg.errorCode).toBeUndefined();
+      expect(sentMsg.errorType).toBeUndefined();
+      expect(sentMsg.failedAt).toBeUndefined();
+      expect(sentMsg.attempts).toBeUndefined();
+    });
   });
 
   describe('addAgentMessage - hostile media coercions', () => {

@@ -2,6 +2,8 @@ ARG API_BASE_IMAGE=r-agent2-api-base:test
 
 FROM node:22-bookworm-slim AS builder
 
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
+
 WORKDIR /app
 
 # Instala dependências do sistema necessárias (build)
@@ -16,8 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copia arquivos de dependências primeiro (para cache de layers)
 COPY package.json package-lock.json* ./
 
-# Instala dependências (inclui dev deps no builder)
-RUN npm ci && \
+# Instala apenas dependências de produção no builder
+RUN npm ci --omit=dev && \
+    npm exec -- puppeteer browsers install chrome && \
     npm cache clean --force
 
 # Copia apenas o código necessário (sem tests)
@@ -35,12 +38,14 @@ FROM ${API_BASE_IMAGE} AS runtime
 
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 WORKDIR /app
 
 # Copia apenas artefatos do builder
 COPY --from=builder /app/package.json /app/package-lock.json* ./
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.cache ./.cache
 COPY --from=builder /app/engine ./engine
 COPY --from=builder /app/api ./api
 COPY --from=builder /app/rpa ./rpa
@@ -63,7 +68,7 @@ COPY tests/helpers/errorClassifier.js ./tests/helpers/errorClassifier.js
 # Remove dependências de desenvolvimento no runtime
 RUN npm prune --omit=dev && \
     npm cache clean --force && \
-    mkdir -p /app/api/data /app/tests/rpa/reports /app/tests/rpa/replay
+    mkdir -p /app/api/data /app/tests/rpa/reports /app/tests/rpa/replay /app/.cache/puppeteer
 
 # Mantém entrypoint
 RUN chmod +x ./api/entrypoint.sh

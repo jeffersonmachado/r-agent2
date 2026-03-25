@@ -200,10 +200,11 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       context: {
         channelType,
         conversationId: null,
-        mode: 'bot',
+        mode: 'human',
         metadata: {
           externalConversationId,
           contactId,
+          ...(contactRef.name ? { customerName: contactRef.name } : {}),
         },
       },
     });
@@ -292,10 +293,11 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     context: {
       channelType,
       conversationId: conversation.id,
-      mode: 'bot',
+      mode: 'human',
       metadata: {
         externalConversationId,
         contactId,
+        ...(contactRef.name ? { customerName: contactRef.name } : {}),
       },
     },
   });
@@ -328,18 +330,42 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
   const text = normalizedMessage.text ? safeToString(normalizedMessage.text) : '';
   const externalMessageId = normalizedMessage.externalMessageId ? safeToString(normalizedMessage.externalMessageId) : null;
   const timestamp = normalizedMessage.timestamp ? safeToString(normalizedMessage.timestamp) : null;
+  const mediaUrl = normalizedMessage.mediaUrl || null;
+  const mediaType = normalizedMessage.mediaType || null;
+  const mimeType = normalizedMessage.mimeType || null;
+  const fileName = normalizedMessage.fileName || null;
 
   const ticket = queueService.getTicket(ticketId);
   if (!ticket) return null;
 
   // Idempotência por externalMessageId no ledger do ticket
   if (externalMessageId && Array.isArray(ticket.messages)) {
-    const already = ticket.messages.some((m) => m && m.externalMessageId && m.externalMessageId === externalMessageId);
-    if (already) return ticket;
+    const existingIdx = ticket.messages.findIndex((m) => m && m.externalMessageId && m.externalMessageId === externalMessageId);
+    if (existingIdx >= 0) {
+      const incomingHasMedia = Boolean(mediaUrl || mediaType || mimeType || fileName);
+      if (!incomingHasMedia) return ticket;
+
+      const existing = ticket.messages[existingIdx] || {};
+      const shouldBackfillMedia = !existing.mediaUrl && !existing.type && !existing.mimeType && !existing.fileName;
+      if (!shouldBackfillMedia) return ticket;
+
+      ticket.messages[existingIdx] = {
+        ...existing,
+        ...(mediaUrl ? { mediaUrl } : {}),
+        ...(mediaType ? { type: mediaType } : {}),
+        ...(mimeType ? { mimeType } : {}),
+        ...(fileName ? { fileName } : {}),
+      };
+      ticket.updatedAt = new Date().toISOString();
+      return queueService.updateTicket(ticketId, { messages: ticket.messages, updatedAt: ticket.updatedAt }) || ticket;
+    }
   }
 
   if (dir === 'in') {
-    const updated = queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp);
+    const mediaFields = (mediaUrl || mediaType || mimeType || fileName)
+      ? { mediaUrl, mediaType, mimeType, fileName }
+      : null;
+    const updated = queueService.updateLastMessage(ticketId, text, externalMessageId, timestamp, mediaFields);
     touchConversation({ tenantId: ticket.tenantId, conversationId: ticket.conversationId }).catch(() => {});
     return updated;
   }

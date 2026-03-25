@@ -3964,18 +3964,58 @@ div:has(svg[data-testid="connection"]) {
   border-radius: 10px;
   background: var(--color-bg-elevated);
   padding: 8px;
+}
+
+.support-emoji-picker-tabs {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.support-emoji-picker-tab {
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.support-emoji-picker-tab.is-active {
+  border-color: var(--color-accent-primary);
+  box-shadow: inset 0 0 0 1px var(--color-accent-primary);
+}
+
+.support-emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .support-emoji-item {
   border: 1px solid var(--color-border-default);
   background: var(--color-bg-secondary);
   border-radius: 8px;
-  width: 34px;
-  height: 34px;
+  min-height: 34px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.support-emoji-item:hover {
+  background: var(--color-bg-surface-hover, var(--color-bg-secondary));
 }
 
 .support-attachment-preview {
@@ -4066,6 +4106,98 @@ div:has(svg[data-testid="connection"]) {
 .support-slash-menu-item.is-active {
   background: var(--color-bg-secondary);
   outline: 1px solid var(--color-border-default);
+}
+
+.support-rag-picker {
+  margin-top: 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+  background: var(--color-bg-elevated);
+  padding: 8px;
+}
+
+.support-rag-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.support-rag-picker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.support-rag-picker-refresh {
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
+
+.support-rag-picker-search {
+  width: 100%;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.support-rag-picker-list {
+  max-height: 230px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.support-rag-picker-item {
+  text-align: left;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.support-rag-picker-item:hover {
+  background: var(--color-bg-surface-hover, var(--color-bg-secondary));
+}
+
+.support-rag-picker-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.support-rag-picker-item-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.support-rag-picker-empty {
+  border: 1px dashed var(--color-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
 .support-ticket-actions {
@@ -6530,6 +6662,10 @@ body.flow-editor-active .user-menu-dropdown {
     width: 34px;
     height: 34px;
     min-width: 34px;
+  }
+
+  .support-emoji-picker-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .support-table th,

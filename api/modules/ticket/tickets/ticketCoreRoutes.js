@@ -425,7 +425,9 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const media = await getTicketMediaById(mediaId, req.tenantId);
+      // Super-admin consegue acessar mídia de qualquer tenant; agente acessa do seu tenant
+      const tenantScope = req.agent?.role === 'super_admin' ? null : req.tenantId;
+      const media = await getTicketMediaById(mediaId, tenantScope);
       if (!media || !media.data) {
         deps.sendJson(res, 404, { error: 'media_not_found' });
         return true;

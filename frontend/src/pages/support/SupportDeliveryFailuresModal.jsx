@@ -96,25 +96,46 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
           )}
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Channel messages (failed)</div>
-          {deliveryFailures.channelMessages.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma mensagem do canal marcada como failed.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
-              {deliveryFailures.channelMessages.map((m) => (
-                <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
-                    <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
-                  </div>
-                  <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
-                    {m?.body?.text ? String(m.body.text) : JSON.stringify(m.body || {})}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Channel messages (failed)</div>
+            {deliveryFailures.channelMessages.length === 0 ? (
+              <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma mensagem do canal marcada como failed.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                {deliveryFailures.channelMessages.map((m) => {
+                  // Tenta encontrar motivo no outbound_queue pelo external_message_id
+                  const matchedOut = Array.isArray(deliveryFailures.outboundQueue)
+                    ? deliveryFailures.outboundQueue.find(
+                        (o) => o.external_message_id && m.external_message_id &&
+                          String(o.external_message_id) === String(m.external_message_id)
+                      )
+                    : null;
+                  const reasonCode = m?.reason_code || matchedOut?.reason_code || null;
+                  const lastError = m?.last_error || matchedOut?.last_error || null;
+                  return (
+                    <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                        <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
+                      </div>
+                      {reasonCode ? (
+                        <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '6px' }}>
+                          reason_code: <strong>{String(reasonCode)}</strong>
+                        </div>
+                      ) : null}
+                      <div style={{ fontSize: '13px', whiteSpace: 'pre-wrap', marginBottom: '6px' }}>
+                        {m?.body?.text ? String(m.body.text) : JSON.stringify(m.body || {})}
+                      </div>
+                      {lastError ? (
+                        <div style={{ fontSize: '12px', color: '#b91c1c' }}>
+                          {String(lastError).slice(0, 500)}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <Button

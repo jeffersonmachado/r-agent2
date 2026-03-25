@@ -762,15 +762,30 @@ if [ -n "$BUILD_SERVICE" ]; then
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$UP_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $UP_CMD"
     echo ""
-    $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$UP_CMD" 2>&1 | while IFS= read -r line; do
+    TEMP_SERVICE_UP_OUTPUT=$(mktemp)
+    $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$UP_CMD" 2>&1 | tee "$TEMP_SERVICE_UP_OUTPUT" | while IFS= read -r line; do
         if echo "$line" | grep -qE "(Creating|Starting|Started|Recreating|Up|healthy|Container)"; then
             echo "  $line"
         fi
     done
     UP_EXIT=${PIPESTATUS[0]}
     echo ""
-    echo -e "${GREEN}[RESULTADO]${NC} Serviço recriado (exit code: $UP_EXIT)"
-    info "✅ Serviço '$BUILD_SERVICE' recriado"
+    if [ $UP_EXIT -eq 0 ]; then
+        echo -e "${GREEN}[RESULTADO]${NC} Serviço recriado (exit code: $UP_EXIT)"
+        info "✅ Serviço '$BUILD_SERVICE' recriado"
+    else
+        echo -e "${RED}[RESULTADO]${NC} Falha ao recriar serviço (exit code: $UP_EXIT)"
+        error "❌ Erro ao recriar serviço '$BUILD_SERVICE'"
+        echo ""
+        info "Saída completa do comando:"
+        cat "$TEMP_SERVICE_UP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
+        echo ""
+        info "Status atual dos containers relacionados:"
+        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker ps -a --filter 'name=r-agent2' --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true
+        rm -f "$TEMP_SERVICE_UP_OUTPUT"
+        exit 1
+    fi
+    rm -f "$TEMP_SERVICE_UP_OUTPUT"
     echo ""
 else
     # Modo padrão: derruba e sobe todo o stack

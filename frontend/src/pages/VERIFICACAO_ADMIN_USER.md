@@ -358,7 +358,7 @@ export function WhatsAppConnectionsPage() {
             <label className="support-form-label">Tipo de conexão <span style={{color:'#e11d48'}}>*</span></label>
             <select value={connectionType} onChange={e => setConnectionType(e.target.value)} style={{width:'100%',padding:'8px',borderRadius:'4px',border:'1px solid #ccc'}}>
               <option value="cloud">Cloud API</option>
-              <option value="qr">QR Code (Baileys)</option>
+              <option value="qr">QR Code (WhatsApp Web)</option>
             </select>
           </div>
           <div className="support-form-group">
@@ -429,7 +429,7 @@ export function WhatsAppConnectionsPage() {
         </div>
 
         <div className="support-details-panel">
-          <div className="support-details-title">Conexões WhatsApp QR (Baileys)</div>
+          <div className="support-details-title">Conexões WhatsApp QR</div>
           {loadingQr ? (
             <div className="text-text-tertiary">Carregando...</div>
           ) : waConnections.length === 0 ? (

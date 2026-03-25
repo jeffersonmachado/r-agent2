@@ -10,6 +10,20 @@ function startWorkers({
   startAssignmentWorker,
   processRef = process,
 }) {
+  // WhatsApp QR Bridge initialization (best-effort).
+  if (processRef.env.ENABLE_WHATSAPP_QR_BRIDGE !== 'false') {
+    try {
+      const { startWhatsAppQrBridge } = require('../services/whatsappQrBridgeService');
+      startWhatsAppQrBridge().then(result => {
+        if (result?.ok) logger.info('[WhatsAppQRBridge] ✅ Iniciado', result);
+      }).catch((err) => {
+        logger.warn('[WhatsAppQRBridge] Falha', { error: err?.message });
+      });
+    } catch (err) {
+      logger.warn('[WhatsAppQRBridge] Erro', { error: err?.message });
+    }
+  }
+
   // Worker outbound (best-effort) - inicia após DB + migrations.
   if (processRef.env.ENABLE_OUTBOUND_WORKER !== 'false') {
     try {

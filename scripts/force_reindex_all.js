@@ -8,14 +8,14 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
 const TENANT_ID = process.env.TENANT_ID;
 if (!TENANT_ID) {
   console.error('❌ TENANT_ID é obrigatório (export TENANT_ID=<tenant-id>)');
   process.exit(1);
 }
 const USERNAME = process.env.USERNAME || 'admin';
-const PASSWORD = process.env.PASSWORD || 'admin123';
+const PASSWORD = process.env.PASSWORD || 'Admin123!';
 
 let authToken = null;
 

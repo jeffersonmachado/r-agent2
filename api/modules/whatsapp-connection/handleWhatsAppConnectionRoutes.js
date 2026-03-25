@@ -91,7 +91,32 @@ async function handleWhatsAppConnectionRoutes(ctx) {
         sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
         return true;
       }
-      sendJson(res, 200, { ok: true, connection: out.connection, qr: out.qr });
+
+      let providerSync = null;
+      if (!out.qr?.text || out.isTestQr === true) {
+        try {
+          const bridge = require('../../services/whatsappQrBridgeService');
+          if (typeof bridge.requestConnectionQr === 'function') {
+            providerSync = await bridge.requestConnectionQr(tenantId, id);
+          }
+        } catch (bridgeErr) {
+          const bridgeMessage = bridgeErr?.message || String(bridgeErr);
+          logger.warn('[WhatsAppQR] Falha ao disparar bridge para gerar QR real', {
+            connectionId: id,
+            error: bridgeMessage,
+          });
+          providerSync = { ok: false, error: 'bridge_request_failed', message: bridgeMessage };
+        }
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        connection: out.connection,
+        qr: out.qr || null,
+        pending: out.pending === true,
+        isTestQr: out.isTestQr === true,
+        providerSync,
+      });
     } catch (err) {
       logger.error('[WhatsAppQR] Erro ao gerar QR:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar QR' });

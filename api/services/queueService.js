@@ -360,7 +360,8 @@ function updateLastMessage(ticketId, message) {
   // Compatibilidade: aceita externalMessageId e timestamp como argumentos opcionais
   const externalMessageId = arguments.length > 2 ? (arguments[2] || null) : null;
   const timestampOverride = arguments.length > 3 ? (arguments[3] || null) : null;
-  return _updateLastMessage(ticketId, message, externalMessageId, timestampOverride, {
+  const mediaFields = arguments.length > 4 ? (arguments[4] || null) : null;
+  return _updateLastMessage(ticketId, message, externalMessageId, timestampOverride, mediaFields, {
     tickets,
     appendUserMessage,
     persistTicketBestEffort,

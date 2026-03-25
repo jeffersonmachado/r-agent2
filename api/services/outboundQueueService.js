@@ -17,9 +17,12 @@ const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../db/models');
 const { TicketEvent } = require('../db/models');
-const { sendTextMessage } = require('./whatsappService');
+const whatsappService = require('./whatsappService');
+const { sendTextMessage, sendMediaMessage } = whatsappService;
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
 const { sendMessengerMessage } = require('./messengerService');
+const { sendTextViaConnection, sendMediaViaConnection } = require('./whatsappQrBridgeService');
+const { getTicketMediaById } = require('./ticketMediaService');
 const { updateOutboundMessageMeta, getTicket } = require('./queueService');
 const { emitEvent } = require('./websocketService');
 const { logAction } = require('./auditService');
@@ -46,6 +49,21 @@ function safeErrorMessage(err, fallback = '') {
   } catch (_) {
     return safeToString(err, fallback);
   }
+}
+
+function resolveMediaKind(kind, mimeType) {
+  const normalized = safeTrimLower(kind);
+  if (normalized === 'image' || normalized === 'video' || normalized === 'audio' || normalized === 'document') {
+    return normalized;
+  }
+  if (normalized === 'media') {
+    const mime = safeTrimLower(mimeType);
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime.startsWith('audio/')) return 'audio';
+    return 'document';
+  }
+  return '';
 }
 
 function safeGet(obj, path, fallback = null) {
@@ -83,6 +101,9 @@ function computeBackoffSeconds(attempts) {
   const jitter = Math.random() * Math.min(5, base * 0.2);
   return Math.max(2, Math.round(base + jitter));
 }
+
+// Mensagens que atingem este limite de tentativas são abandonadas definitivamente.
+const MAX_ATTEMPTS = 50;
 
 function getProcessingBy() {
   return `${os.hostname()}:${process.pid}`;
@@ -211,8 +232,30 @@ async function deliverOutbound({ tenantId, channelType, message }) {
     if (kind === 'text') {
       const text = message.body?.text || message.body?.body || message.text;
       if (!to || !text) throw new Error('Outbound WhatsApp requer {to, body.text}');
-      const result = await sendTextMessage(to, text);
-      const externalMessageId = result?.messages?.[0]?.id || null;
+      let externalMessageId = null;
+
+      const hasCloudCreds = typeof whatsappService.areCredentialsValid === 'function'
+        ? whatsappService.areCredentialsValid()
+        : true;
+
+      if (hasCloudCreds) {
+        const result = await sendTextMessage(to, text);
+        externalMessageId = result?.messages?.[0]?.id || null;
+      } else {
+        const qrSend = await sendTextViaConnection({
+          tenantId,
+          to,
+          text,
+          connectionId: message?.meta?.connectionId || message?.meta?.channelAccountId || null,
+        });
+        if (!qrSend?.ok) {
+          const qrErr = new Error(safeToString(qrSend?.message || qrSend?.error || 'WhatsApp credentials não configuradas'));
+          qrErr.code = safeToString(qrSend?.error || qrSend?.code || 'qr_send_failed', 'qr_send_failed');
+          throw qrErr;
+        }
+        externalMessageId = qrSend.externalMessageId || null;
+      }
+
       await persistOutboundMessage({
         tenantId,
         channelType,
@@ -224,6 +267,87 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       }).catch((err) => {
         logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
       });
+      return { success: true, externalMessageId };
+    }
+
+    if (['image', 'video', 'audio', 'document', 'media'].includes(kind)) {
+      const mediaId = safeToString(message.body?.mediaId || '').trim();
+      const mimeType = safeToString(message.body?.mimeType || '').trim();
+      const fileName = safeToString(message.body?.fileName || '').trim();
+      const caption = safeToString(message.body?.caption || '').trim();
+      const mediaUrl = safeToString(message.body?.url || message.body?.mediaUrl || '').trim();
+      const resolvedKind = resolveMediaKind(kind, mimeType);
+      if (!to || !resolvedKind) throw new Error('Outbound WhatsApp mídia requer {to, type válido}');
+
+      let externalMessageId = null;
+      const hasCloudCreds = typeof whatsappService.areCredentialsValid === 'function'
+        ? whatsappService.areCredentialsValid()
+        : true;
+
+      if (hasCloudCreds) {
+        let buffer = null;
+        let effectiveMimeType = mimeType;
+        let effectiveFileName = fileName;
+
+        if (mediaId) {
+          const mediaRecord = await getTicketMediaById(mediaId, null);
+          if (!mediaRecord?.data) {
+            throw new Error(`Mídia não encontrada para mediaId=${mediaId}`);
+          }
+          buffer = Buffer.isBuffer(mediaRecord.data) ? mediaRecord.data : Buffer.from(mediaRecord.data);
+          if (!effectiveMimeType) effectiveMimeType = safeToString(mediaRecord.mimeType || 'application/octet-stream');
+          if (!effectiveFileName) effectiveFileName = safeToString(mediaRecord.fileName || mediaId);
+        }
+
+        const result = await sendMediaMessage(to, {
+          type: resolvedKind,
+          mimeType: effectiveMimeType,
+          fileName: effectiveFileName,
+          caption,
+          buffer,
+          link: mediaUrl || undefined,
+        });
+        externalMessageId = result?.messages?.[0]?.id || null;
+      } else {
+        if (!mediaId) {
+          throw new Error('Outbound WhatsApp QR mídia requer body.mediaId quando Cloud API não está configurada');
+        }
+        const qrSend = await sendMediaViaConnection({
+          tenantId,
+          to,
+          mediaId,
+          mimeType,
+          fileName,
+          caption,
+          connectionId: message?.meta?.connectionId || message?.meta?.channelAccountId || null,
+        });
+        if (!qrSend?.ok) {
+          const qrErr = new Error(safeToString(qrSend?.message || qrSend?.error || 'qr_send_failed'));
+          qrErr.code = safeToString(qrSend?.error || qrSend?.code || 'qr_send_failed', 'qr_send_failed');
+          throw qrErr;
+        }
+        externalMessageId = qrSend.externalMessageId || null;
+      }
+
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: resolvedKind,
+        body: {
+          ...(mediaId ? { mediaId } : {}),
+          ...(mimeType ? { mimeType } : {}),
+          ...(fileName ? { fileName } : {}),
+          ...(caption ? { caption } : {}),
+          ...(mediaUrl ? { url: mediaUrl } : {}),
+          ...(meta ? { meta } : {}),
+        },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
+      });
+
       return { success: true, externalMessageId };
     }
 
@@ -298,6 +422,83 @@ async function deliverOutbound({ tenantId, channelType, message }) {
     }
 
     throw new Error(`Outbound WhatsApp: type "${kind}" ainda não suportado`);
+  }
+
+  if (channelType === 'whatsapp-qr') {
+    const to = message.to;
+    const kind = message.type || 'text';
+    if (kind === 'text') {
+      const text = message.body?.text || message.body?.body || message.text;
+      if (!to || !text) throw new Error('Outbound WhatsApp QR requer {to, body.text}');
+
+      const qrSend = await sendTextViaConnection({
+        tenantId,
+        to,
+        text,
+        connectionId: message?.meta?.connectionId || message?.meta?.channelAccountId || null,
+      });
+      if (!qrSend?.ok) {
+        const qrErr = new Error(safeToString(qrSend?.message || qrSend?.error || 'qr_send_failed'));
+        qrErr.code = safeToString(qrSend?.error || qrSend?.code || 'qr_send_failed', 'qr_send_failed');
+        throw qrErr;
+      }
+
+      const externalMessageId = qrSend.externalMessageId || null;
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: 'text',
+        body: { text, ...(meta ? { meta } : {}) },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
+      });
+      return { success: true, externalMessageId };
+    }
+
+    if (['image', 'video', 'audio', 'document'].includes(kind)) {
+      const mediaId = message.body?.mediaId;
+      if (!to || !mediaId) throw new Error('Outbound WhatsApp QR mídia requer {to, body.mediaId}');
+
+      const mediaSend = await sendMediaViaConnection({
+        tenantId,
+        to,
+        mediaId,
+        mimeType: message.body?.mimeType || '',
+        fileName: message.body?.fileName || '',
+        caption: message.body?.caption || '',
+        connectionId: message?.meta?.connectionId || message?.meta?.channelAccountId || null,
+      });
+      if (!mediaSend?.ok) {
+        const qrErr = new Error(safeToString(mediaSend?.message || mediaSend?.error || 'qr_send_failed'));
+        qrErr.code = safeToString(mediaSend?.error || 'qr_send_failed', 'qr_send_failed');
+        throw qrErr;
+      }
+
+      const externalMessageId = mediaSend.externalMessageId || null;
+      await persistOutboundMessage({
+        tenantId,
+        channelType,
+        to,
+        type: kind,
+        body: {
+          mediaId,
+          mimeType: message.body?.mimeType || undefined,
+          fileName: message.body?.fileName || undefined,
+          caption: message.body?.caption || undefined,
+          ...(meta ? { meta } : {}),
+        },
+        externalMessageId,
+        status: 'sent',
+      }).catch((err) => {
+        logger.warn('[OutboundQueue] Falha ao persistir outbound (best-effort)', { tenantId, channelType, error: safeErrorMessage(err) });
+      });
+      return { success: true, externalMessageId };
+    }
+
+    throw new Error(`Outbound WhatsApp QR: type "${kind}" ainda não suportado`);
   }
 
   if (channelType === 'instagram') {
@@ -405,8 +606,14 @@ async function deliverOutbound({ tenantId, channelType, message }) {
 function computeReasonCode(err) {
   if (!err) return null;
   const code = safeGet(err, 'code', null) ? safeToString(safeGet(err, 'code', null)) : null;
-  if (code) return code;
+  if (code) {
+    if (code === 'qr_send_failed_after_recycle') return 'qr_send_failed_after_recycle';
+    if (code === 'qr_client_reinitialize_failed') return 'qr_client_reinitialize_failed';
+    return code;
+  }
   const msg = safeTrimLower(safeGet(err, 'message', ''));
+  if (msg.includes("reading 'getchat'")) return 'qr_send_getchat';
+  if (msg.includes('ainda não suportado') || msg.includes('ainda nao suportado') || msg.includes('not supported')) return 'not_supported';
   if (msg.includes('outside_window_24h')) return 'outside_window_24h';
   if (msg.includes('outside the allowed window') || msg.includes('24 hour') || msg.includes('requires a template')) return 'outside_window_24h';
   if (msg.includes('credentials')) return 'credentials_invalid';
@@ -556,6 +763,7 @@ async function processDue({ limit = 25 } = {}) {
         status: ['pending', 'failed'],
         next_attempt_at: { [Op.lte]: now },
         external_message_id: { [Op.is]: null },
+        attempts: { [Op.lt]: MAX_ATTEMPTS },
       },
       order: [['next_attempt_at', 'ASC']],
       limit,
@@ -608,7 +816,11 @@ async function processDue({ limit = 25 } = {}) {
         const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
         const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
         if (ticketId) {
-          const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, externalMessageId, deliveryStatus: 'sent' });
+          const updatedTicket = updateOutboundMessageMeta(ticketId, {
+            clientMessageId,
+            externalMessageId,
+            deliveryStatus: 'sent',
+          });
           if (updatedTicket) {
             emitEvent('ticket.updated', {
               ticketId: updatedTicket.id,
@@ -621,8 +833,11 @@ async function processDue({ limit = 25 } = {}) {
     } catch (err) {
       failed++;
       const reasonCode = computeReasonCode(err);
-      const attempts = (row.attempts || 0) + 1;
-      const backoffSeconds = computeBackoffSeconds(attempts);
+      const rawAttempts = (row.attempts || 0) + 1;
+      // Falhas permanentes: tipo não suportado ou excesso de tentativas (abandona sem novo retry)
+      const isPermanentFailure = reasonCode === 'not_supported' || rawAttempts >= MAX_ATTEMPTS;
+      const attempts = isPermanentFailure ? MAX_ATTEMPTS : rawAttempts;
+      const backoffSeconds = isPermanentFailure ? 86400 : computeBackoffSeconds(attempts);
       const nextAttemptAt = new Date(Date.now() + backoffSeconds * 1000);
 
       // Fallback 24h (WhatsApp): se texto falhar por janela, tenta enfileirar template (best-effort)
@@ -698,7 +913,14 @@ async function processDue({ limit = 25 } = {}) {
         const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
         const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
         if (ticketId) {
-          const updatedTicket = updateOutboundMessageMeta(ticketId, { clientMessageId, deliveryStatus: 'failed' });
+          const updatedTicket = updateOutboundMessageMeta(ticketId, {
+            clientMessageId,
+            deliveryStatus: 'failed',
+            reasonCode,
+            lastError: safeErrorMessage(err, 'send_failed'),
+            failedAt: new Date().toISOString(),
+            attempts,
+          });
           if (updatedTicket) {
             emitEvent('ticket.updated', {
               ticketId: updatedTicket.id,

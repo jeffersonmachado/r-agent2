@@ -58,12 +58,20 @@ async function handleTicketCommunicationRoutes({ req, res, method, pathname, dep
       }
 
       const agentId = req.agent.id;
+      const mediaFileName2 = media && media.fileName ? String(media.fileName).trim() : '';
+      const mediaMimeType = media && media.mimeType ? String(media.mimeType).trim() : '';
       const messageForStorage = hasText
         ? trimmedMessage
         : `[${mediaType}] ${mediaFileName || mediaUrl}`;
       try {
         const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        const updatedTicket = deps.addAgentMessage(id, messageForStorage, agentId, { clientMessageId, deliveryStatus: 'pending' });
+        const mediaOptions = hasMedia ? {
+          mediaType: mediaType || undefined,
+          mediaUrl: mediaUrl || undefined,
+          fileName: mediaFileName2 || mediaFileName || undefined,
+          mimeType: mediaMimeType || undefined,
+        } : {};
+        const updatedTicket = deps.addAgentMessage(id, messageForStorage, agentId, { clientMessageId, deliveryStatus: 'pending', ...mediaOptions });
         if (!updatedTicket) {
           deps.logger.warn('[Ticket] Não foi possível adicionar mensagem ao histórico (ticket não encontrado)', { ticketId: id });
           deps.sendJson(res, 404, { error: 'ticket_not_found' });
@@ -87,6 +95,11 @@ async function handleTicketCommunicationRoutes({ req, res, method, pathname, dep
         deps.logger.warn('[Ticket] Número de telefone não encontrado no ticket, mensagem salva apenas no histórico', { ticketId: id });
       } else {
         try {
+          const outboundChannelType = String(ticket.channelType || 'whatsapp').trim() || 'whatsapp';
+          const outboundConnectionId =
+            ticket?.context?.metadata?.connectionId
+            || ticket?.context?.metadata?.whatsappConnectionId
+            || null;
           const lastAgent = Array.isArray(ticket.messages)
             ? [...ticket.messages].reverse().find((m) => m && m.sender === 'agent' && m.deliveryStatus === 'pending')
             : null;
@@ -95,19 +108,36 @@ async function handleTicketCommunicationRoutes({ req, res, method, pathname, dep
             deps.updateOutboundMessageMeta(id, { clientMessageId, deliveryStatus: 'pending' });
           }
 
-          // O worker outbound atual suporta envio textual.
-          // Para mídia sem texto, rebaixamos para mensagem textual com URL do anexo.
-          const outboundText = hasText
-            ? trimmedMessage
-            : `${mediaFileName ? `[${mediaType}] ${mediaFileName}\n` : `[${mediaType}]\n`}${mediaUrl}`;
+          // Envia o tipo correto — mídia como mídia, texto como texto
+          const outboundMessageType = hasMedia ? mediaType : 'text';
+          const outboundMessageBody = hasMedia
+            ? {
+                // extrai o ID da mídia de "/tickets/media/tm-XXXX" → "tm-XXXX"
+                mediaId: mediaUrl.split('/').pop(),
+                mimeType: mediaMimeType || undefined,
+                fileName: mediaFileName2 || mediaFileName || undefined,
+                caption: hasText ? trimmedMessage : undefined,
+              }
+            : { text: trimmedMessage };
 
           await deps.outboundQueueService.enqueueOutbound({
             tenantId: req.tenantId,
-            channelType: 'whatsapp',
+            channelType: outboundChannelType,
+            channelAccountId: outboundConnectionId,
             conversationId: ticket.conversationId || null,
-            message: { to: phoneNumber, type: 'text', body: { text: outboundText }, meta: { ticketId: id, clientMessageId } },
+            message: {
+              to: phoneNumber,
+              type: outboundMessageType,
+              body: outboundMessageBody,
+              meta: { ticketId: id, clientMessageId, ...(outboundConnectionId ? { connectionId: outboundConnectionId } : {}) },
+            },
           });
-          deps.logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', { ticketId: id, phoneNumber });
+          deps.logger.info('[Ticket] Mensagem enfileirada (Outbound Queue)', {
+            ticketId: id,
+            phoneNumber,
+            channelType: outboundChannelType,
+            connectionId: outboundConnectionId || null,
+          });
         } catch (whatsappError) {
           if (whatsappError.message && whatsappError.message.includes('credentials')) {
             deps.logger.warn('[Ticket] Mensagem salva no histórico, mas não foi enviada via WhatsApp (credenciais inválidas)', {

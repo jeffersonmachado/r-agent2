@@ -124,6 +124,7 @@ export function useSupportTicketContext({
   const [knownTags, setKnownTags] = useState([]);
   const messagesContainerRef = useRef(null);
   const loadTicketMessagesRef = useRef();
+  const autoSummaryRequestedRef = useRef(new Set());
 
   const loadTicketMessages = useCallback(async (ticketId, conversationId) => {
     if (!ticketId) {
@@ -215,7 +216,7 @@ export function useSupportTicketContext({
       .catch(() => setAiSummary(null));
   }, [selectedTicket?.id]);
 
-  const handleGenerateAiSummary = useCallback(async () => {
+  const handleGenerateAiSummary = useCallback(async ({ silent = false } = {}) => {
     if (!selectedTicket?.id) return;
     setAiSummaryLoading(true);
     try {
@@ -223,11 +224,25 @@ export function useSupportTicketContext({
       setAiSummary(resp?.summary || null);
     } catch (err) {
       logger.error('Erro ao gerar resumo IA', err);
-      showToast('Erro ao gerar resumo IA', 'error');
+      if (!silent) showToast('Erro ao gerar resumo IA', 'error');
     } finally {
       setAiSummaryLoading(false);
     }
   }, [selectedTicket?.id, showToast]);
+
+  useEffect(() => {
+    const ticketId = selectedTicket?.id;
+    if (!ticketId) return;
+    if (aiSummaryLoading) return;
+    if (aiSummary) {
+      autoSummaryRequestedRef.current.add(ticketId);
+      return;
+    }
+    if (autoSummaryRequestedRef.current.has(ticketId)) return;
+
+    autoSummaryRequestedRef.current.add(ticketId);
+    handleGenerateAiSummary({ silent: true });
+  }, [selectedTicket?.id, aiSummary, aiSummaryLoading, handleGenerateAiSummary]);
 
   useEffect(() => {
     if (selectedTicket) {

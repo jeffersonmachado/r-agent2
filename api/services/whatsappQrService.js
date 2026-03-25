@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const tenantSettingsService = require('./tenantSettingsService');
 
 const SETTINGS_KEY = 'whatsapp_connections';
-const memoryStoreByTenant = new Map();
+let emitEventRef = null;
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -58,6 +58,8 @@ function normalizeConnection(conn) {
     name: conn.name ? safeToString(conn.name) : '',
     provider: conn.provider ? safeToString(conn.provider) : 'whatsapp-qr',
     status: conn.status ? safeToString(conn.status) : 'disconnected',
+    botEnabled: conn.botEnabled === true,
+    botFlowId: conn.botEnabled === true && conn.botFlowId ? safeToString(conn.botFlowId) : null,
     createdAt: conn.createdAt || null,
     updatedAt: conn.updatedAt || null,
     lastQrAt: conn.lastQrAt || null,
@@ -66,6 +68,20 @@ function normalizeConnection(conn) {
     metadata: conn.metadata && typeof conn.metadata === 'object' ? conn.metadata : {},
     qr: conn.qr && typeof conn.qr === 'object' ? conn.qr : null,
   };
+}
+
+function hasQrText(conn) {
+  return Boolean(safeTrim(conn?.qr?.text || ''));
+}
+
+function isTestQrText(qrText) {
+  return typeof qrText === 'string' && qrText.startsWith('test:');
+}
+
+function generateTestQrText(connectionId, token = '') {
+  const t = safeTrim(token);
+  const gen = crypto.randomBytes(8).toString('hex');
+  return `test:${safeToString(connectionId)}:${t || gen}:${Date.now()}`;
 }
 
 function isQrExpired(conn, now = new Date()) {
@@ -85,16 +101,53 @@ function normalizeStatus(inputStatus) {
   return null;
 }
 
+function persistenceRequiredError(reason) {
+  return {
+    ok: false,
+    error: 'persistence_required',
+    details: safeToString(reason || 'settings_unavailable', 'settings_unavailable'),
+  };
+}
+
+function getEmitEvent() {
+  if (emitEventRef) return emitEventRef;
+  try {
+    // Lazy-load para evitar acoplamento de inicializacao e facilitar testes.
+    // eslint-disable-next-line global-require
+    const websocketService = require('./websocketService');
+    emitEventRef = typeof websocketService.emitEvent === 'function' ? websocketService.emitEvent : null;
+  } catch (_) {
+    emitEventRef = null;
+  }
+  return emitEventRef;
+}
+
+function emitConnectionUpdated(tenantId, connection, context = {}) {
+  const emitEvent = getEmitEvent();
+  if (!emitEvent || !connection || !connection.id) return;
+  try {
+    emitEvent('whatsapp.connection.updated', {
+      connection,
+      context: {
+        source: safeToString(context.source || 'whatsappQrService', 'whatsappQrService'),
+        action: safeToString(context.action || 'update', 'update'),
+        eventType: safeToString(context.eventType || '', ''),
+      },
+    }, {
+      tenantId: safeToString(tenantId),
+    });
+  } catch (_) {
+    // Best-effort: falha de websocket nao deve quebrar persistencia.
+  }
+}
+
 async function getStore(tenantId) {
   const out = await tenantSettingsService.getSetting({ tenantId, key: SETTINGS_KEY });
   if (!out.ok) {
-    const mem = memoryStoreByTenant.get(safeToString(tenantId)) || { connections: [] };
-    return {
-      ok: true,
-      store: normalizeStore(mem),
-      storage: 'memory',
-      warning: out.error || 'settings_unavailable',
-    };
+    return persistenceRequiredError(out.error || 'settings_unavailable');
+  }
+  if (out.warning) {
+    return persistenceRequiredError(out.warning);
   }
   const store = normalizeStore(out.value);
   return { ok: true, store, storage: 'db' };
@@ -104,13 +157,10 @@ async function saveStore(tenantId, store) {
   const payload = normalizeStore(store);
   const out = await tenantSettingsService.upsertSetting({ tenantId, key: SETTINGS_KEY, value: payload });
   if (!out.ok) {
-    memoryStoreByTenant.set(safeToString(tenantId), payload);
-    return {
-      ok: true,
-      store: normalizeStore(payload),
-      storage: 'memory',
-      warning: out.error || 'settings_unavailable',
-    };
+    return persistenceRequiredError(out.error || 'settings_unavailable');
+  }
+  if (out.warning) {
+    return persistenceRequiredError(out.warning);
   }
   const nextStore = normalizeStore(out.value);
   return { ok: true, store: nextStore, storage: 'db' };
@@ -133,12 +183,14 @@ async function createConnection(tenantId, input) {
   const out = await getStore(tenantId);
   if (!out.ok) return out;
   const now = new Date().toISOString();
-  const id = input?.id ? safeToString(input.id) : `waqr-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const id = input?.id ? safeToString(input.id) : `waconn-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const next = normalizeConnection({
     id,
     name: input?.name ? safeTrim(input.name) : `WhatsApp QR ${out.store.connections.length + 1}`,
     provider: input?.provider ? safeTrim(input.provider) : 'whatsapp-qr',
     status: input?.status ? safeToString(input.status) : 'disconnected',
+    botEnabled: input?.botEnabled === true,
+    botFlowId: input?.botEnabled === true && input?.botFlowId ? safeToString(input.botFlowId) : null,
     createdAt: now,
     updatedAt: now,
     metadata: input?.metadata && typeof input.metadata === 'object' ? input.metadata : {},
@@ -151,7 +203,45 @@ async function createConnection(tenantId, input) {
   }
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
+  emitConnectionUpdated(tenantId, next, { action: 'create' });
   return { ok: true, connection: next, connections: saved.store.connections.map(normalizeConnection).filter(Boolean) };
+}
+
+async function updateConnection(tenantId, connectionId, input) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return out;
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
+  if (idx < 0) return { ok: false, error: 'not_found' };
+
+  const prev = normalizeConnection(out.store.connections[idx]);
+  const now = new Date().toISOString();
+  const next = normalizeConnection({
+    ...prev,
+    name: input?.name != null ? safeTrim(input.name) : prev.name,
+    provider: input?.provider != null ? safeTrim(input.provider) : prev.provider,
+    botEnabled: input?.botEnabled === true,
+    botFlowId: input?.botEnabled === true && input?.botFlowId ? safeToString(input.botFlowId) : null,
+    updatedAt: now,
+    metadata: input?.metadata && typeof input.metadata === 'object'
+      ? { ...prev.metadata, ...input.metadata }
+      : prev.metadata,
+  });
+  out.store.connections[idx] = next;
+  const saved = await saveStore(tenantId, out.store);
+  if (!saved.ok) return saved;
+  emitConnectionUpdated(tenantId, next, { action: 'update' });
+  return { ok: true, connection: next };
+}
+
+async function deleteConnection(tenantId, connectionId) {
+  const out = await getStore(tenantId);
+  if (!out.ok) return out;
+  const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
+  if (idx < 0) return { ok: false, error: 'not_found' };
+  out.store.connections.splice(idx, 1);
+  const saved = await saveStore(tenantId, out.store);
+  if (!saved.ok) return saved;
+  return { ok: true };
 }
 
 async function generateQr(tenantId, connectionId) {
@@ -159,25 +249,40 @@ async function generateQr(tenantId, connectionId) {
   if (!out.ok) return out;
   const idx = out.store.connections.findIndex((c) => c && safeToString(c.id) === safeToString(connectionId));
   if (idx < 0) return { ok: false, error: 'not_found' };
+
+  const prev = normalizeConnection(out.store.connections[idx]);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 2 * 60 * 1000).toISOString();
-  const token = crypto.randomBytes(12).toString('hex');
-  const qrText = `waqr:${connectionId}:${token}`;
+
+  // Reuse existing valid provider QR (not a test QR) if still valid
+  if (hasQrText(prev) && !isTestQrText(prev.qr.text) && !isQrExpired(prev, now)) {
+    return {
+      ok: true,
+      connection: prev,
+      qr: prev.qr,
+      pending: false,
+      isTestQr: false,
+    };
+  }
+
+  // Set status to pairing so the bridge knows to generate a real QR
   const next = normalizeConnection({
-    ...out.store.connections[idx],
+    ...prev,
     status: 'pairing',
     updatedAt: now.toISOString(),
     lastQrAt: now.toISOString(),
-    qr: {
-      text: qrText,
-      token,
-      expiresAt,
-    },
+    qr: null,
   });
   out.store.connections[idx] = next;
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, connection: next, qr: next.qr };
+  emitConnectionUpdated(tenantId, next, { action: 'generate_qr' });
+  return {
+    ok: true,
+    connection: next,
+    qr: null,
+    pending: true,
+    isTestQr: false,
+  };
 }
 
 async function disconnectConnection(tenantId, connectionId) {
@@ -196,6 +301,7 @@ async function disconnectConnection(tenantId, connectionId) {
   out.store.connections[idx] = next;
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
+  emitConnectionUpdated(tenantId, next, { action: 'disconnect' });
   return { ok: true, connection: next };
 }
 
@@ -229,7 +335,9 @@ async function setConnectionStatus(tenantId, connectionId, input = {}) {
   out.store.connections[idx] = normalizeConnection(next);
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, connection: normalizeConnection(out.store.connections[idx]) };
+  const normalized = normalizeConnection(out.store.connections[idx]);
+  emitConnectionUpdated(tenantId, normalized, { action: 'status', eventType: status });
+  return { ok: true, connection: normalized };
 }
 
 async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
@@ -245,11 +353,21 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
   const now = new Date();
   const nowIso = now.toISOString();
   const metadataPatch = input?.metadata && typeof input.metadata === 'object' ? input.metadata : {};
+  const previousMetadata = prev.metadata && typeof prev.metadata === 'object' ? { ...prev.metadata } : {};
+
+  // Limpa marcadores transitórios de fallback/erro quando o provider emite eventos normais.
+  if (eventType === 'qr' || eventType === 'pairing' || eventType === 'connected' || eventType === 'ready' || eventType === 'disconnected' || eventType === 'logout' || eventType === 'closed') {
+    delete previousMetadata.reason;
+    delete previousMetadata.code;
+    delete previousMetadata.phase;
+    delete previousMetadata.errorCode;
+  }
+
   const next = {
     ...prev,
     updatedAt: nowIso,
     metadata: {
-      ...(prev.metadata || {}),
+      ...previousMetadata,
       ...metadataPatch,
       lastProviderEventType: eventType,
       lastProviderEventAt: nowIso,
@@ -264,7 +382,7 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
     next.status = 'pairing';
     next.lastQrAt = nowIso;
     next.qr = {
-      text: qrText || (prev.qr && prev.qr.text ? prev.qr.text : `waqr:${connectionId}:${token || now.getTime()}`),
+      text: qrText || (prev.qr && prev.qr.text ? prev.qr.text : ''),
       token: token || (prev.qr && prev.qr.token ? prev.qr.token : ''),
       expiresAt,
     };
@@ -286,7 +404,9 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
   out.store.connections[idx] = normalizeConnection(next);
   const saved = await saveStore(tenantId, out.store);
   if (!saved.ok) return saved;
-  return { ok: true, connection: normalizeConnection(out.store.connections[idx]) };
+  const normalized = normalizeConnection(out.store.connections[idx]);
+  emitConnectionUpdated(tenantId, normalized, { action: 'ingest_event', eventType });
+  return { ok: true, connection: normalized };
 }
 
 async function getStatus(tenantId, connectionId) {
@@ -312,6 +432,8 @@ async function getStatus(tenantId, connectionId) {
 module.exports = {
   listConnections,
   createConnection,
+  updateConnection,
+  deleteConnection,
   generateQr,
   disconnectConnection,
   setConnectionStatus,

@@ -147,6 +147,12 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
+  // Tickets criados manualmente para atendimento humano podem desabilitar
+  // qualquer retorno ao bot via context.allowReturnToBot=false.
+  if (ticket?.context?.allowReturnToBot === false) {
+    return { success: false, error: 'return_to_bot_not_allowed' };
+  }
+
   // Se j? est? em bot, idempotente
   if ((ticket.mode || 'bot') === 'bot') {
     await updateConversationStatusBestEffort(ticket);
@@ -275,6 +281,7 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
       for (const t of tickets) {
         if (!t || t.status === 'closed') continue;
         if ((t.mode || 'bot') !== 'human') continue;
+        if (t?.context?.allowReturnToBot === false) continue;
 
         const last = new Date(t.updatedAt || t.createdAt || 0).getTime();
         if (!last) continue;

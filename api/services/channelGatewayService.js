@@ -749,6 +749,15 @@ async function updateStatus(channelType, statusPayload, options = {}) {
     const status = st?.status ? safeToString(st.status) : null;
     if (!externalMessageId || !status) continue;
 
+    const firstError = Array.isArray(st?.errors) && st.errors.length > 0 ? st.errors[0] : null;
+    const reasonCode = status === 'failed'
+      ? (firstError?.code ? safeToString(firstError.code) : 'delivery_failed')
+      : null;
+    const errorType = status === 'failed' && firstError?.title ? safeToString(firstError.title) : null;
+    const lastError = status === 'failed'
+      ? (st?.errors ? JSON.stringify(st.errors).slice(0, 4000) : 'delivery_failed')
+      : null;
+
     const row = await MessageModel.findOne({
       where: { tenant_key: tenantId, channel_type: channelType, external_message_id: externalMessageId },
     });
@@ -768,7 +777,8 @@ async function updateStatus(channelType, statusPayload, options = {}) {
       if (outRow) {
         await outRow.update({
           status,
-          last_error: status === 'failed' ? (st?.errors ? JSON.stringify(st.errors).slice(0, 4000) : (outRow.last_error || 'delivery_failed')) : outRow.last_error,
+          reason_code: status === 'failed' ? reasonCode : outRow.reason_code,
+          last_error: status === 'failed' ? (lastError || outRow.last_error || 'delivery_failed') : outRow.last_error,
           updated_at: new Date(),
         }).catch(() => null);
       }
@@ -780,7 +790,14 @@ async function updateStatus(channelType, statusPayload, options = {}) {
       if (conversationId) {
         const ticket = getTicketByConversationId(conversationId, tenantId);
         if (ticket) {
-          const patched = updateOutboundMessageMeta(ticket.id, { externalMessageId, deliveryStatus: status });
+          const patched = updateOutboundMessageMeta(ticket.id, {
+            externalMessageId,
+            deliveryStatus: status,
+            reasonCode,
+            errorType,
+            lastError,
+            failedAt: status === 'failed' ? new Date().toISOString() : null,
+          });
           if (patched) {
             // Lazy require para evitar ciclos
             // eslint-disable-next-line global-require

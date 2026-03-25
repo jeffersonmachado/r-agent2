@@ -91,7 +91,29 @@ function createWhatsAppConnectionRoutes({ buildDeps }) {
           deps.sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
           return;
         }
-        deps.sendJson(res, 200, { ok: true, connection: out.connection, qr: out.qr });
+        let providerSync = null;
+        if (!out.qr?.text || out.isTestQr === true) {
+          try {
+            const bridge = require('../../services/whatsappQrBridgeService');
+            if (typeof bridge.requestConnectionQr === 'function') {
+              providerSync = await bridge.requestConnectionQr(tenantId, id);
+            }
+          } catch (bridgeErr) {
+            const bridgeMessage = bridgeErr?.message || String(bridgeErr);
+            deps.logger.warn('[WhatsAppQR] Falha ao disparar bridge para gerar QR real', {
+              connectionId: id, error: bridgeMessage,
+            });
+            providerSync = { ok: false, error: 'bridge_request_failed', message: bridgeMessage };
+          }
+        }
+        deps.sendJson(res, 200, {
+          ok: true,
+          connection: out.connection,
+          qr: out.qr || null,
+          pending: out.pending === true,
+          isTestQr: out.isTestQr === true,
+          providerSync,
+        });
         return;
       }
 
@@ -157,6 +179,59 @@ function createWhatsAppConnectionRoutes({ buildDeps }) {
   router.post('/whatsapp/connections/:connectionId/disconnect', (req, res) => handleConnectionAction(req, res, 'disconnect'));
   router.post('/whatsapp/connections/:connectionId/status', (req, res) => handleConnectionAction(req, res, 'status'));
   router.post('/whatsapp/connections/:connectionId/events', (req, res) => handleConnectionAction(req, res, 'events'));
+
+  router.put('/whatsapp/connections/:connectionId', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureConfigPermission(req, res, deps, 'update')) return;
+    const tenantId = deps.requireTenant(req, res);
+    if (!tenantId) return;
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const service = require('../../services/whatsappQrService');
+      const id = decodeURIComponent(req.params.connectionId);
+      const body = await deps.parseJsonBody(req);
+      const out = await service.updateConnection(tenantId, id, body || {});
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          deps.sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        deps.sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      deps.sendJson(res, 200, { ok: true, connection: out.connection });
+    } catch (err) {
+      deps.logger.error('[WhatsAppQR] Erro ao atualizar conexão:', err);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar conexão' });
+    }
+  });
+
+  router.delete('/whatsapp/connections/:connectionId', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureConfigPermission(req, res, deps, 'update')) return;
+    const tenantId = deps.requireTenant(req, res);
+    if (!tenantId) return;
+    try {
+      const service = require('../../services/whatsappQrService');
+      const id = decodeURIComponent(req.params.connectionId);
+      const out = await service.deleteConnection(tenantId, id);
+      if (!out.ok) {
+        if (out.error === 'not_found') {
+          deps.sendJson(res, 404, { error: 'not_found', message: 'Conexão não encontrada' });
+          return;
+        }
+        deps.sendJson(res, 503, { error: 'service_unavailable', message: out.error || 'settings_unavailable' });
+        return;
+      }
+      deps.sendJson(res, 200, { ok: true });
+    } catch (err) {
+      deps.logger.error('[WhatsAppQR] Erro ao remover conexão:', err);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao remover conexão' });
+    }
+  });
 
   router.get('/whatsapp/connections/:connectionId/status', async (req, res) => {
     const deps = buildDeps(req, res);

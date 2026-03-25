@@ -24,6 +24,13 @@ const PROVIDER_OPTIONS = [
   { value: 'whatsapp-qr', label: 'WhatsApp QR' },
 ];
 
+const EMPTY_QR_STATE = {
+  connectionId: null,
+  qr: null,
+  pending: false,
+  note: '',
+};
+
 function statusBadge(status) {
   const value = String(status || 'unknown').toLowerCase();
   if (value === 'connected') return { label: 'Conectado', className: 'bg-status-success/10 text-status-success border border-status-success/20' };
@@ -58,9 +65,63 @@ export function WhatsAppConnectionsPage() {
   const [form, setForm] = useState({ name: '', provider: 'whatsapp-qr', botEnabled: false, botFlowId: null });
   const [availableFlows, setAvailableFlows] = useState([]);
   const [planAllowsWhatsAppBot, setPlanAllowsWhatsAppBot] = useState(false);
-  const [qrState, setQrState] = useState({ connectionId: null, qr: null });
+  const [qrState, setQrState] = useState(EMPTY_QR_STATE);
   const [qrImageError, setQrImageError] = useState(false);
   const [busyId, setBusyId] = useState(null);
+
+  const syncQrStateFromConnections = useCallback((items, previousState = EMPTY_QR_STATE) => {
+    const list = Array.isArray(items) ? items : [];
+    const liveQrConnection = list.find((item) => (
+      String(item?.status || '').toLowerCase() === 'pairing' && String(item?.qr?.text || '').trim()
+    ));
+
+    if (liveQrConnection) {
+      return {
+        connectionId: liveQrConnection.id,
+        qr: liveQrConnection.qr,
+        pending: false,
+        note: '',
+      };
+    }
+
+    if (previousState?.connectionId) {
+      const activeConnection = list.find((item) => item?.id === previousState.connectionId);
+      if (!activeConnection) return EMPTY_QR_STATE;
+
+      if (String(activeConnection?.status || '').toLowerCase() === 'pairing') {
+        return {
+          connectionId: activeConnection.id,
+          qr: null,
+          pending: previousState.pending === true,
+          note: previousState.note || '',
+        };
+      }
+    }
+
+    return EMPTY_QR_STATE;
+  }, []);
+
+  const describePendingQr = useCallback((response) => {
+    const syncError = String(response?.providerSync?.error || '').trim();
+    const syncMessage = String(response?.providerSync?.message || '').trim();
+    if (syncMessage) {
+      const normalized = syncMessage
+        .split(/\n+/)
+        .map((line) => String(line || '').trim())
+        .filter(Boolean)
+        .filter((line) => !/^Require stack:/i.test(line));
+      if (normalized.length > 0) {
+        return normalized.slice(0, 2).join(' ');
+      }
+    }
+    if (syncError === 'bridge_library_missing') {
+      return 'A biblioteca whatsapp-web.js não foi instalada. Contate o administrador.';
+    }
+    if (syncError === 'bridge_initialize_failed') {
+      return 'A bridge não entregou um QR válido do provedor.';
+    }
+    return 'QR aguardando confirmação do provedor.';
+  }, []);
 
   const handleWebSocketEvent = useCallback((event, data) => {
     if (event !== 'whatsapp.connection.updated') return;
@@ -108,11 +169,13 @@ export function WhatsAppConnectionsPage() {
     try {
       const out = await listWhatsAppConnections();
       const nextConnections = Array.isArray(out?.connections) ? out.connections : [];
-      setConnections(nextConnections.map((conn) => ({
+      const normalizedConnections = nextConnections.map((conn) => ({
         ...conn,
         botEnabled: conn?.botEnabled === true,
         botFlowId: conn?.botEnabled === true && conn?.botFlowId ? String(conn.botFlowId) : null,
-      })));
+      }));
+      setConnections(normalizedConnections);
+      setQrState((prev) => syncQrStateFromConnections(normalizedConnections, prev));
     } catch (err) {
       logger.error('[WhatsAppConnections] erro ao carregar', err);
       showToast('Erro ao carregar conexões', 'error');
@@ -219,10 +282,38 @@ export function WhatsAppConnectionsPage() {
     setBusyId(connectionId);
     try {
       const out = await generateWhatsAppQr(connectionId);
-      setQrState({ connectionId, qr: out?.qr || null });
+      const hasRealQr = Boolean(String(out?.qr?.text || '').trim()) && !out?.isTestQr;
+      const isTestQr = out?.isTestQr === true;
+      const nextState = hasRealQr || isTestQr
+        ? { connectionId, qr: out.qr, pending: !hasRealQr, note: isTestQr ? '(QR de teste para desenvolvimento)' : '' }
+        : {
+            connectionId,
+            qr: null,
+            pending: true,
+            note: describePendingQr(out),
+          };
+      setQrState(nextState);
       setQrImageError(false);
       await loadConnections();
-      showToast('QR gerado. Escaneie no WhatsApp.', 'success');
+      if (hasRealQr) {
+        showToast('QR real gerado. Escaneie no WhatsApp.', 'success');
+      } else if (isTestQr) {
+        showToast('QR de teste gerado (para desenvolvimento).', 'info');
+      } else {
+        const syncMessage = String(out?.providerSync?.message || '').trim();
+        if (syncMessage) {
+          const compactSyncMessage = syncMessage
+            .split(/\n+/)
+            .map((line) => String(line || '').trim())
+            .filter(Boolean)
+            .filter((line) => !/^Require stack:/i.test(line))
+            .slice(0, 2)
+            .join(' ');
+          showToast(compactSyncMessage || 'Erro ao inicializar a integração WhatsApp QR.', 'error');
+        } else {
+          showToast('QR solicitado. Aguardando o código real do provedor.', 'warning');
+        }
+      }
     } catch (err) {
       showToast('Erro ao gerar QR', 'error');
     } finally {
@@ -235,7 +326,7 @@ export function WhatsAppConnectionsPage() {
     try {
       await disconnectWhatsAppConnection(connectionId);
       if (qrState.connectionId === connectionId) {
-        setQrState({ connectionId: null, qr: null });
+        setQrState(EMPTY_QR_STATE);
       }
       await loadConnections();
       showToast('Conexão desconectada', 'success');
@@ -251,7 +342,7 @@ export function WhatsAppConnectionsPage() {
     try {
       await deleteWhatsAppConnection(connectionId);
       if (qrState.connectionId === connectionId) {
-        setQrState({ connectionId: null, qr: null });
+        setQrState(EMPTY_QR_STATE);
       }
       await loadConnections();
       showToast('Conexão removida', 'success');
@@ -279,6 +370,9 @@ export function WhatsAppConnectionsPage() {
             }
           : c
       )));
+      if (String(out?.status || '').toLowerCase() === 'connected' && qrState.connectionId === connectionId) {
+        setQrState(EMPTY_QR_STATE);
+      }
       showToast('Status atualizado', 'success');
     } catch (err) {
       showToast('Erro ao atualizar status', 'error');
@@ -531,12 +625,19 @@ export function WhatsAppConnectionsPage() {
           )}
         </div>
 
-        {qrState?.qr?.text && (
+        {qrState?.connectionId && (qrState?.qr?.text || qrState?.pending) && (
           <div className="support-details-panel rounded-lg border border-border-default xl:col-span-12">
             <div className="support-details-title">QR de pareamento</div>
             <div className="text-xs text-text-tertiary">
-              Escaneie este código no WhatsApp. Expira em: {qrState.qr.expiresAt || 'n/a'}
+              {qrState?.qr?.text
+                ? `Escaneie este código no WhatsApp. Expira em: ${qrState.qr.expiresAt || 'n/a'}`
+                : 'Solicitação enviada. Aguardando o QR real do provedor.'}
             </div>
+            {qrState?.pending && !qrState?.qr?.text && (
+              <div className="mt-3 rounded-lg border border-status-warning/30 bg-status-warning/10 p-3 text-sm text-text-primary">
+                {qrState.note || 'Aguardando o QR real do provedor.'}
+              </div>
+            )}
             {waQrImageUrl && !qrImageError && (
               <div style={{ marginTop: '12px', marginBottom: '8px' }}>
                 <img
@@ -554,10 +655,12 @@ export function WhatsAppConnectionsPage() {
                 Não foi possível carregar o QR visual. Use o texto abaixo para cópia/debug.
               </div>
             )}
-            <pre className="mt-3 overflow-x-auto rounded-lg bg-bg-secondary p-3 text-xs">{qrState.qr.text}</pre>
+            {qrState?.qr?.text && (
+              <pre className="mt-3 overflow-x-auto rounded-lg bg-bg-secondary p-3 text-xs">{qrState.qr.text}</pre>
+            )}
             <div className="mt-3 flex justify-end gap-2">
-              <Button onClick={handleCopyQr} style={{ width: 'auto' }}>Copiar QR</Button>
-              <Button onClick={() => setQrState({ connectionId: null, qr: null })} variant="ghost" style={{ width: 'auto' }}>Fechar</Button>
+              {qrState?.qr?.text ? <Button onClick={handleCopyQr} style={{ width: 'auto' }}>Copiar QR</Button> : null}
+              <Button onClick={() => setQrState(EMPTY_QR_STATE)} variant="ghost" style={{ width: 'auto' }}>Fechar</Button>
             </div>
           </div>
         )}

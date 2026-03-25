@@ -58,7 +58,7 @@ function updateTicket(ticketId, patch = {}, {
   return ticket;
 }
 
-function updateLastMessage(ticketId, message, externalMessageId, timestampOverride, {
+function updateLastMessage(ticketId, message, externalMessageId, timestampOverride, mediaFields, {
   tickets,
   appendUserMessage,
   persistTicketBestEffort,
@@ -66,7 +66,7 @@ function updateLastMessage(ticketId, message, externalMessageId, timestampOverri
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
 
-  const { changed } = appendUserMessage(ticket, { message, externalMessageId, timestampOverride });
+  const { changed } = appendUserMessage(ticket, { message, externalMessageId, timestampOverride, ...(mediaFields || {}) });
   if (changed) {
     persistTicketBestEffort(ticket);
   }

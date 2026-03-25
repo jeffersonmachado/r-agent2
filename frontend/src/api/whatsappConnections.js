@@ -1,8 +1,3 @@
-export function deleteWhatsAppConnection(connectionId) {
-  return fetchJson(`/whatsapp/connections/${encodeURIComponent(connectionId)}`, {
-    method: 'DELETE',
-  });
-}
 import { fetchJson } from './client';
 
 export function listWhatsAppConnections() {
@@ -20,6 +15,12 @@ export function updateWhatsAppConnection(connectionId, payload) {
   return fetchJson(`/whatsapp/connections/${encodeURIComponent(connectionId)}`, {
     method: 'PUT',
     body: JSON.stringify(payload || {}),
+  });
+}
+
+export function deleteWhatsAppConnection(connectionId) {
+  return fetchJson(`/whatsapp/connections/${encodeURIComponent(connectionId)}`, {
+    method: 'DELETE',
   });
 }
 

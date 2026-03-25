@@ -15,6 +15,19 @@ const WHATSAPP_PHONE_NUMBER_ID = config.get('whatsapp.phoneNumberId');
 const WHATSAPP_ACCESS_TOKEN = config.get('whatsapp.accessToken');
 const WHATSAPP_VERIFY_TOKEN = config.get('whatsapp.verifyToken');
 
+function normalizeMediaType(type, mimeType) {
+  const t = String(type || '').trim().toLowerCase();
+  if (t === 'image' || t === 'video' || t === 'audio' || t === 'document') return t;
+  if (t === 'media') {
+    const mime = String(mimeType || '').trim().toLowerCase();
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime.startsWith('audio/')) return 'audio';
+    return 'document';
+  }
+  return '';
+}
+
 /**
  * Valida se as credenciais do WhatsApp são válidas (não são placeholders).
  *
@@ -141,6 +154,97 @@ async function sendTextMessage(to, text) {
   });
 }
 
+async function sendMediaMessage(to, { type, mimeType, fileName, caption, buffer, link } = {}) {
+  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+    throw new Error('WhatsApp credentials não configuradas');
+  }
+
+  if (!areCredentialsValid()) {
+    logger.warn('[WhatsApp] Credenciais inválidas ou são placeholders. Não será possível enviar mensagens.');
+    throw new Error('WhatsApp credentials são inválidas ou são placeholders. Configure credenciais reais em config.json');
+  }
+
+  const mediaType = normalizeMediaType(type, mimeType);
+  if (!mediaType) {
+    throw new Error(`Tipo de mídia não suportado: ${String(type || '')}`);
+  }
+
+  let mediaObjectId = null;
+  const normalizedLink = String(link || '').trim();
+
+  if (normalizedLink) {
+    // Usa link diretamente quando o arquivo já está em URL pública acessível pela Meta.
+    mediaObjectId = null;
+  } else {
+    const mediaBuffer = Buffer.isBuffer(buffer) ? buffer : null;
+    if (!mediaBuffer || mediaBuffer.length === 0) {
+      throw new Error('Envio de mídia requer buffer ou link');
+    }
+
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append(
+      'file',
+      new Blob([mediaBuffer], { type: String(mimeType || 'application/octet-stream') }),
+      String(fileName || 'upload.bin')
+    );
+
+    const uploadUrl = `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/media`;
+    const uploadResp = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+      },
+      body: form,
+    });
+
+    const uploadData = await uploadResp.json().catch(() => ({}));
+    if (!uploadResp.ok) {
+      throw new Error(uploadData?.error?.message || `WhatsApp media upload error: ${uploadResp.status}`);
+    }
+    mediaObjectId = uploadData?.id || null;
+    if (!mediaObjectId) {
+      throw new Error('WhatsApp media upload retornou sem id');
+    }
+  }
+
+  const url = `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const mediaPayload = mediaObjectId
+    ? { id: mediaObjectId }
+    : { link: normalizedLink };
+
+  const captionText = String(caption || '').trim();
+  if (captionText && (mediaType === 'image' || mediaType === 'video' || mediaType === 'document')) {
+    mediaPayload.caption = captionText;
+  }
+  if (fileName && mediaType === 'document') {
+    mediaPayload.filename = String(fileName);
+  }
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    to,
+    type: mediaType,
+    [mediaType]: mediaPayload,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `WhatsApp API error: ${response.status}`);
+  }
+
+  return data;
+}
+
 /**
  * Valida token do webhook (verificação inicial do Meta).
  *
@@ -154,6 +258,7 @@ function verifyWebhook(mode, token) {
 
 module.exports = {
   sendTextMessage,
+  sendMediaMessage,
   verifyWebhook,
   areCredentialsValid,
 };

@@ -49,7 +49,6 @@ describe('whatsappQrBridgeService coercion hardening', () => {
   }
 
   test('eventos qr/auth_failure/disconnected toleram payloads hostis', async () => {
-    process.env.ENABLE_WHATSAPP_QR_BRIDGE = 'true';
     process.env.WHATSAPP_QR_BRIDGE_TENANTS = 'tenant-1';
     process.env.WHATSAPP_QR_BRIDGE_SYNC_MS = '60000';
 
@@ -69,7 +68,6 @@ describe('whatsappQrBridgeService coercion hardening', () => {
   });
 
   test('falha hostil em initialize não derruba start', async () => {
-    process.env.ENABLE_WHATSAPP_QR_BRIDGE = 'true';
     process.env.WHATSAPP_QR_BRIDGE_TENANTS = 'tenant-1';
     process.env.WHATSAPP_QR_BRIDGE_SYNC_MS = '60000';
 
@@ -92,8 +90,22 @@ describe('whatsappQrBridgeService coercion hardening', () => {
     await svc.stopWhatsAppQrBridge();
   });
 
+  test('classifica erro de chrome ausente com codigo especifico', async () => {
+    process.env.WHATSAPP_QR_BRIDGE_TENANTS = 'tenant-1';
+    process.env.WHATSAPP_QR_BRIDGE_SYNC_MS = '60000';
+
+    mockBridge({ initializeError: new Error('Could not find Chrome (ver. 146.0.7680.153)') });
+    const svc = require('../../api/services/whatsappQrBridgeService');
+
+    const out = await svc.requestConnectionQr('tenant-1', 'conn-1');
+    expect(out).toEqual(expect.objectContaining({
+      ok: false,
+      error: 'bridge_browser_missing',
+    }));
+    expect(String(out.message || '')).toContain('npx puppeteer browsers install chrome');
+  });
+
   test('tenant ids hostis vindos de listTenants não quebram o sync', async () => {
-    process.env.ENABLE_WHATSAPP_QR_BRIDGE = 'true';
     delete process.env.WHATSAPP_QR_BRIDGE_TENANTS;
     process.env.WHATSAPP_QR_BRIDGE_SYNC_MS = '60000';
 

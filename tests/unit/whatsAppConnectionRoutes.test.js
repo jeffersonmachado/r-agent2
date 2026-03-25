@@ -175,4 +175,46 @@ describe('whatsAppConnectionRoutes handler', () => {
       connection: { id: 'conn id' },
     });
   });
+
+  test('POST /whatsapp/connections/:id/qr retorna pending quando provider não disponível', async () => {
+    const generateQr = jest.fn(async () => ({
+      ok: true,
+      connection: { id: 'c-1', status: 'pairing' },
+      qr: null,
+      pending: true,
+      isTestQr: false,
+    }));
+    const requestConnectionQr = jest.fn(async () => ({ ok: false, error: 'bridge_initialize_failed' }));
+
+    jest.doMock('../../api/services/whatsappQrService', () => ({
+      generateQr,
+    }));
+    jest.doMock('../../api/services/whatsappQrBridgeService', () => ({
+      requestConnectionQr,
+    }));
+    const { handleWhatsAppConnectionRoutes } = require('../../api/modules/whatsapp-connection/handleWhatsAppConnectionRoutes');
+
+    const req = {};
+    const res = {};
+    const deps = makeDeps({ logger: { error: jest.fn(), warn: jest.fn() } });
+
+    const handled = await handleWhatsAppConnectionRoutes({
+      req,
+      res,
+      method: 'POST',
+      pathname: '/whatsapp/connections/c-1/qr',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(generateQr).toHaveBeenCalledWith('tenant-1', 'c-1');
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 200, {
+      ok: true,
+      connection: { id: 'c-1', status: 'pairing' },
+      qr: null,
+      pending: true,
+      isTestQr: false,
+      providerSync: expect.objectContaining({ ok: false }),
+    });
+  });
 });

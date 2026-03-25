@@ -35,9 +35,28 @@ function start({ intervalMs = 1500, batchSize = 25 } = {}) {
 
   // Preferimos um setInterval controlado aqui para permitir stop explícito.
   timer = setInterval(() => {
-    processPending({ batchSize }).catch((err) => {
-      logger.error('[OutboundWorker] Erro ao processar fila outbound', { error: safeErrorMessage(err) });
-    });
+    processPending({ batchSize })
+      .then((result) => {
+        const processed = Number(result?.processed || 0);
+        const sent = Number(result?.sent || 0);
+        const failed = Number(result?.failed || 0);
+        const skipped = Number(result?.skipped || 0);
+
+        // Em produção alguns painéis exibem apenas INFO; este resumo ajuda a
+        // acompanhar retries sem depender de logs WARN/ERROR.
+        if (processed > 0 || sent > 0 || failed > 0 || skipped > 0) {
+          logger.info('[OutboundWorker] Ciclo processado', {
+            processed,
+            sent,
+            failed,
+            skipped,
+            batchSize,
+          });
+        }
+      })
+      .catch((err) => {
+        logger.error('[OutboundWorker] Erro ao processar fila outbound', { error: safeErrorMessage(err) });
+      });
   }, intervalMs);
 
   if (timer && timer.unref) timer.unref();

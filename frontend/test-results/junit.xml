@@ -1,23 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="17" failures="0" errors="0" time="7.953">
-    <testsuite name="src/__tests__/SupportModals.test.jsx" timestamp="2026-03-22T22:22:28.462Z" hostname="jmachado-Precision-5530" tests="4" failures="0" errors="0" skipped="0" time="0.562489184">
-        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportCloseTicketModal dispara onClose por overlay, ESC e Cancelar" time="0.216359288">
+<testsuites name="vitest tests" tests="14" failures="0" errors="0" time="5.029">
+    <testsuite name="src/__tests__/SupportPage.evidence.test.jsx" timestamp="2026-03-23T22:27:32.182Z" hostname="jmachado-Precision-5530" tests="3" failures="0" errors="0" skipped="0" time="0.956278921">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza blocos de entidade e evidência sem quebrar o fluxo atual" time="0.427202819">
         </testcase>
-        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportCloseTicketModal bloqueia fechamento quando closing=true" time="0.119080706">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza fallback estável quando não há evidência forte" time="0.217078256">
         </testcase>
-        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportDeliveryFailuresModal dispara onClose por overlay, ESC e botão Fechar" time="0.11491053">
-        </testcase>
-        <testcase classname="src/__tests__/SupportModals.test.jsx" name="Support modals close behavior &gt; SupportDeliveryFailuresModal exibe estado de loading" time="0.10858649">
-        </testcase>
-    </testsuite>
-    <testsuite name="src/__tests__/SupportPage.evidence.test.jsx" timestamp="2026-03-22T22:22:28.467Z" hostname="jmachado-Precision-5530" tests="3" failures="0" errors="0" skipped="0" time="1.056924939">
-        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza blocos de entidade e evidência sem quebrar o fluxo atual" time="0.5327122">
-        </testcase>
-        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; renderiza fallback estável quando não há evidência forte" time="0.21266759">
-        </testcase>
-        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; mostra origem e mantém ação de abrir origem operacional" time="0.305139464">
+        <testcase classname="src/__tests__/SupportPage.evidence.test.jsx" name="SupportPage evidence integration &gt; mostra origem e mantém ação de abrir origem operacional" time="0.308493942">
             <system-out>
-[2026-03-22T22:22:25.274Z] [INFO] Toast [info]: Origem aberta diretamente no ticket relacionado {
+[2026-03-23T22:27:30.555Z] [INFO] Toast [info]: Origem aberta diretamente no ticket relacionado {
   &quot;type&quot;: &quot;info&quot;,
   &quot;duration&quot;: 6000
 }
@@ -25,26 +15,34 @@
             </system-out>
         </testcase>
     </testsuite>
-    <testsuite name="src/__tests__/SupportPage.waqr.test.jsx" timestamp="2026-03-22T22:22:28.470Z" hostname="jmachado-Precision-5530" tests="10" failures="0" errors="0" skipped="0" time="2.265108032">
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; renders and subscribes to ticket.message.received" time="0.399232878">
+    <testsuite name="src/__tests__/SupportPage.waqr.test.jsx" timestamp="2026-03-23T22:27:32.185Z" hostname="jmachado-Precision-5530" tests="11" failures="0" errors="0" skipped="0" time="2.411211569">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; renders and subscribes to ticket.message.received" time="0.275380546">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; displays incoming WhatsApp QR message in timeline" time="0.308900579">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; displays incoming WhatsApp QR message in timeline" time="0.244551016">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; processa o comando /agendar sem quebrar o fluxo do ticket" time="0.268456048">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; processa o comando /agendar sem quebrar o fluxo do ticket" time="0.252496295">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o fluxo estável ao tentar agendamento pelo ticket" time="0.239942356">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o fluxo estável ao tentar agendamento pelo ticket" time="0.239775645">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas com comando /resposta-rapida" time="0.190750511">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas com comando /resposta-rapida" time="0.215649368">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash" time="0.187237768">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash" time="0.242242712">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém estabilidade quando há dados de agendamento disponíveis" time="0.162868691">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; navega no menu slash com seta para baixo e executa item selecionado no Enter" time="0.226367864">
+            <system-err>
+[2026-03-23T22:27:31.320Z] [WARN] [SupportPage] pauseTicket retornou ticket inválido {
+  &quot;ticketId&quot;: &quot;t1&quot;
+}
+
+            </system-err>
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o composer estável ao receber paste de imagem" time="0.158001563">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém estabilidade quando há dados de agendamento disponíveis" time="0.188179484">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia texto normalmente mesmo após paste de imagem sem suporte a anexo" time="0.174423709">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; mantém o composer estável ao receber paste de imagem" time="0.169165836">
         </testcase>
-        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia mensagem normalmente quando nao ha acao explicita de reply" time="0.167834625">
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia texto normalmente mesmo após paste de imagem sem suporte a anexo" time="0.17942586">
+        </testcase>
+        <testcase classname="src/__tests__/SupportPage.waqr.test.jsx" name="SupportPage WhatsApp QR message flow &gt; envia mensagem normalmente quando nao ha acao explicita de reply" time="0.16976873">
         </testcase>
     </testsuite>
 </testsuites>

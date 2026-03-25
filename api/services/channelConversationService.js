@@ -42,13 +42,17 @@ function enrichBodyMediaUrl(body) {
     || null;
 
   const mediaUrl = buildInternalMediaUrl(mediaId);
-  if (!next.mediaUrl && mediaUrl) {
-    next.mediaUrl = mediaUrl;
+  if (mediaUrl) {
+    const currentMediaUrl = safeToString(next.mediaUrl || '').trim();
+    const isInternal = currentMediaUrl.startsWith('/tickets/media/');
+    if (!isInternal) {
+      next.mediaUrl = mediaUrl;
+    }
   }
 
   for (const key of ['audio', 'image', 'video', 'document']) {
     if (!next[key] || typeof next[key] !== 'object') continue;
-    if (!next[key].url && next.mediaUrl) {
+    if (next.mediaUrl) {
       next[key] = { ...next[key], url: next.mediaUrl };
     }
   }

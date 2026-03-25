@@ -16,7 +16,7 @@ function ensureMessagesArray(ticket) {
   }
 }
 
-function appendUserMessage(ticket, { message, externalMessageId = null, timestampOverride = null } = {}) {
+function appendUserMessage(ticket, { message, externalMessageId = null, timestampOverride = null, mediaUrl = null, mediaType = null, mimeType = null, fileName = null } = {}) {
   ticket.lastUserMessage = message;
   ticket.updatedAt = new Date().toISOString();
   ensureMessagesArray(ticket);
@@ -34,6 +34,10 @@ function appendUserMessage(ticket, { message, externalMessageId = null, timestam
     sender: 'user',
     timestamp: timestampOverride || new Date().toISOString(),
     externalMessageId: externalMessageId || undefined,
+    type: mediaType || undefined,
+    mediaUrl: mediaUrl || undefined,
+    mimeType: mimeType || undefined,
+    fileName: fileName || undefined,
   });
 
   if (ticket.status === 'in_progress' && ticket.assignedTo) {
@@ -131,6 +135,12 @@ function applyOutboundMessageMeta(ticket, patch = {}) {
   const clientMessageId = patch.clientMessageId ? safeToString(patch.clientMessageId) : null;
   const externalMessageId = patch.externalMessageId ? safeToString(patch.externalMessageId) : null;
   const deliveryStatus = patch.deliveryStatus ? safeToString(patch.deliveryStatus) : null;
+  const reasonCode = patch.reasonCode ? safeToString(patch.reasonCode) : null;
+  const lastError = patch.lastError ? safeToString(patch.lastError) : null;
+  const errorCode = patch.errorCode ? safeToString(patch.errorCode) : null;
+  const errorType = patch.errorType ? safeToString(patch.errorType) : null;
+  const failedAt = patch.failedAt ? safeToString(patch.failedAt) : null;
+  const attempts = Number.isFinite(patch.attempts) ? Number(patch.attempts) : null;
 
   let changed = false;
 
@@ -149,6 +159,41 @@ function applyOutboundMessageMeta(ticket, patch = {}) {
     if (deliveryStatus && m.deliveryStatus !== deliveryStatus) {
       m.deliveryStatus = deliveryStatus;
       changed = true;
+    }
+
+    if (reasonCode && m.reasonCode !== reasonCode) {
+      m.reasonCode = reasonCode;
+      changed = true;
+    }
+    if (lastError && m.lastError !== lastError) {
+      m.lastError = lastError;
+      changed = true;
+    }
+    if (errorCode && m.errorCode !== errorCode) {
+      m.errorCode = errorCode;
+      changed = true;
+    }
+    if (errorType && m.errorType !== errorType) {
+      m.errorType = errorType;
+      changed = true;
+    }
+    if (failedAt && m.failedAt !== failedAt) {
+      m.failedAt = failedAt;
+      changed = true;
+    }
+    if (Number.isFinite(attempts) && m.attempts !== attempts) {
+      m.attempts = attempts;
+      changed = true;
+    }
+
+    if (deliveryStatus && deliveryStatus !== 'failed') {
+      // Limpa metadados de erro quando a mensagem avança para estado não-falho.
+      if (m.reasonCode) { m.reasonCode = undefined; changed = true; }
+      if (m.lastError) { m.lastError = undefined; changed = true; }
+      if (m.errorCode) { m.errorCode = undefined; changed = true; }
+      if (m.errorType) { m.errorType = undefined; changed = true; }
+      if (m.failedAt) { m.failedAt = undefined; changed = true; }
+      if (m.attempts !== undefined) { m.attempts = undefined; changed = true; }
     }
     break;
   }

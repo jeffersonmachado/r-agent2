@@ -139,6 +139,22 @@ Para evitar ambiguidades, os termos abaixo são equivalentes neste projeto:
    - **Vite Plugin**: `frontend/vite-plugin-commonjs.js` transforma CommonJS para ES modules em desenvolvimento
    - **Regra**: Backend é a fonte única da verdade; frontend apenas re-exporta
 
+7. **Persistência Obrigatória (sem fallback em memória)**
+   - ✅ Estados de negócio devem ser persistidos em armazenamento durável (ex.: banco)
+   - ✅ Em falha de persistência (`db_unavailable`, `db_error`, `table_missing`), a API deve retornar erro explícito
+   - ✅ Erro canônico recomendado para este cenário: `persistence_required`
+   - ❌ NUNCA usar fallback em memória para dados que precisam sobreviver a restart
+   - ❌ NUNCA mascarar indisponibilidade de persistência como sucesso parcial
+   - **Aplicação imediata**: conexões WhatsApp QR (`whatsapp_connections`) são obrigatoriamente persistentes
+
+8. **Atualização em Tempo Real via WebSocket (sem polling de estado)**
+   - ✅ Atualizações de estado em tempo real devem ser dirigidas por eventos WebSocket
+   - ✅ Backend deve publicar evento quando houver transição de estado relevante (ex.: `pairing` → `connected`)
+   - ✅ Frontend deve refletir estado consumindo eventos WebSocket e payloads oficiais da API
+   - ❌ NUNCA usar polling contínuo (`setInterval`) para sincronizar estado de conexão em telas realtime
+   - ❌ NUNCA introduzir auto-refresh periódico como substituto de evento de domínio
+   - **Aplicação imediata**: status de conexões WhatsApp QR deve evoluir exclusivamente por evento WebSocket
+
 ### Exemplos de Centralização
 
 #### ✅ CORRETO: Mensagens Centralizadas no Backend

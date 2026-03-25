@@ -8,7 +8,7 @@ module.exports = {
   moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
   transformIgnorePatterns: [
-    '/node_modules/(?!(react|@testing-library|@babel|@whiskeysockets/baileys)/)',
+    '/node_modules/(?!(react|@testing-library|@babel)/)',
   ],
   moduleNameMapper: {
     '^../api/client$': '<rootDir>/__mocks__/client.js',

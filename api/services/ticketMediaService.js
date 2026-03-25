@@ -81,11 +81,15 @@ async function storeTicketMedia({ tenantId, fileName, mimeType, sizeBytes, buffe
 
 async function getTicketMediaById(id, tenantId) {
   const TicketMedia = await ensureReady();
-  const normalizedTenant = normalizeTenant(tenantId);
+  
+  // Se tenantId for null, não filtrar por tenant (acesso cross-tenant, ex: super-admin)
+  const query = { id: safeToString(id) };
+  if (tenantId !== null) {
+    const normalizedTenant = normalizeTenant(tenantId);
+    query.tenantKey = normalizedTenant;
+  }
 
-  const row = await TicketMedia.findOne({
-    where: { id: safeToString(id), tenantKey: normalizedTenant },
-  });
+  const row = await TicketMedia.findOne({ where: query });
 
   if (!row) return null;
   const base = typeof row.toJSON === 'function' ? row.toJSON() : row;
