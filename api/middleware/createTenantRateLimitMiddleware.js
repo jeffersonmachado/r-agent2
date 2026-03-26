@@ -15,7 +15,7 @@ function shouldRunTenantRateLimit(pathname, method) {
     '/physical/station',
   ];
   const authRoutes = ['/auth/login', '/auth/rpa/login', '/auth/accept-invitation', '/auth/request-password-reset', '/auth/reset-password'];
-  const providerWebhookRoutes = ['/webhooks/whatsapp', '/webhooks/messenger', '/webhooks/instagram'];
+  const providerWebhookRoutes = ['/webhooks/whatsapp', '/webhooks/messenger', '/webhooks/instagram', '/billing/webhook'];
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`));
   const isAuthRoute = authRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`));
   const isProviderWebhookRoute = providerWebhookRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`));

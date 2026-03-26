@@ -5,16 +5,39 @@ jest.mock('../../api/db/sequelize', () => ({
 }));
 
 jest.mock('../../api/db/models', () => ({
+  NotificationDelivery: jest.fn(),
   VerticalJourneyEvent: jest.fn(),
   VerticalAttendance: jest.fn(),
   VerticalEngagementSignal: jest.fn(),
   AccessMembership: jest.fn(),
   ExecutionJob: jest.fn(),
   EventLedger: jest.fn(),
+  BillingTransaction: jest.fn(),
 }));
 
 jest.mock('../../api/services/vertical/verticalMetricsEngine', () => ({
   computeVerticalMetrics: jest.fn(async ({ vertical }) => ({ vertical, attendance: {}, membership: {} })),
+}));
+
+jest.mock('../../api/services/billingOpsMetricsService', () => ({
+  getBillingOpsMetrics: jest.fn(async () => ({
+    ok: true,
+    metrics: {
+      totalTransactions: 0,
+      confirmedCount: 0,
+      overdueCount: 0,
+      cancelledCount: 0,
+      refundedCount: 0,
+      chargebackCount: 0,
+      pendingCount: 0,
+      grossConfirmedAmount: 0,
+      refundedAmount: 0,
+      chargebackAmount: 0,
+      netRecoveredAmount: 0,
+      byProvider: {},
+      byVertical: {},
+    },
+  })),
 }));
 
 jest.mock('../../api/services/vertical/verticalRecommendationService', () => ({
@@ -33,7 +56,9 @@ const mockVerticalAttendance = { findAll: jest.fn() };
 const mockVerticalEngagementSignal = { findAll: jest.fn() };
 const mockAccessMembership = { findAll: jest.fn() };
 const mockExecutionJob = { findAll: jest.fn() };
-const mockEventLedger = { findAll: jest.fn() };
+const mockEventLedger = { findAll: jest.fn(), findOne: jest.fn() };
+const mockBillingTransaction = { findAll: jest.fn() };
+const mockNotificationDelivery = { findAll: jest.fn() };
 
 const {
   computeSummary,
@@ -41,9 +66,11 @@ const {
   listJobs,
   listNotifications,
   listInsights,
+  listFinancialTransactions,
 } = require('../../api/services/operationsDashboardService');
 const { getSequelize } = require('../../api/db/sequelize');
 const { computeVerticalMetrics } = require('../../api/services/vertical/verticalMetricsEngine');
+const { getBillingOpsMetrics } = require('../../api/services/billingOpsMetricsService');
 const {
   beautyNoShowRisk,
   beautyReengagementSuggestion,
@@ -59,6 +86,8 @@ const {
   AccessMembership,
   ExecutionJob,
   EventLedger,
+  BillingTransaction,
+  NotificationDelivery,
 } = require('../../api/db/models');
 
 describe('operationsDashboardService', () => {
@@ -66,6 +95,24 @@ describe('operationsDashboardService', () => {
     getSequelize.mockReturnValue({});
 
     computeVerticalMetrics.mockImplementation(async ({ vertical }) => ({ vertical, attendance: {}, membership: {} }));
+    getBillingOpsMetrics.mockResolvedValue({
+      ok: true,
+      metrics: {
+        totalTransactions: 0,
+        confirmedCount: 0,
+        overdueCount: 0,
+        cancelledCount: 0,
+        refundedCount: 0,
+        chargebackCount: 0,
+        pendingCount: 0,
+        grossConfirmedAmount: 0,
+        refundedAmount: 0,
+        chargebackAmount: 0,
+        netRecoveredAmount: 0,
+        byProvider: {},
+        byVertical: {},
+      },
+    });
     beautyNoShowRisk.mockResolvedValue({ score: 0.8, action: 'send_confirmation_reminder', reason: 'high risk', evidence: { score: 0.8 } });
     beautyReengagementSuggestion.mockResolvedValue({ suggestion: 'reactivation_campaign', reason: 'inactive', evidence: { score: 0.75 } });
     beautyUpsellSuggestion.mockResolvedValue({ suggestion: 'renew_package', reason: 'bundle low', evidence: {} });
@@ -73,12 +120,14 @@ describe('operationsDashboardService', () => {
     fitnessLowFrequencySuggestion.mockResolvedValue({ suggestion: 'frequency_incentive', reason: 'low frequency', evidence: { score: 0.6 } });
     fitnessBlockFollowUpSuggestion.mockImplementation(() => ({ suggestion: 'automated_payment_reminder', reason: 'delinquent', evidence: { blockCount: 0 } }));
 
+    NotificationDelivery.mockReturnValue(mockNotificationDelivery);
     VerticalJourneyEvent.mockReturnValue(mockVerticalJourneyEvent);
     VerticalAttendance.mockReturnValue(mockVerticalAttendance);
     VerticalEngagementSignal.mockReturnValue(mockVerticalEngagementSignal);
     AccessMembership.mockReturnValue(mockAccessMembership);
     ExecutionJob.mockReturnValue(mockExecutionJob);
     EventLedger.mockReturnValue(mockEventLedger);
+    BillingTransaction.mockReturnValue(mockBillingTransaction);
 
     mockVerticalJourneyEvent.findAll.mockResolvedValue([]);
     mockVerticalAttendance.findAll.mockResolvedValue([]);
@@ -86,6 +135,9 @@ describe('operationsDashboardService', () => {
     mockAccessMembership.findAll.mockResolvedValue([]);
     mockExecutionJob.findAll.mockResolvedValue([]);
     mockEventLedger.findAll.mockResolvedValue([]);
+    mockEventLedger.findOne.mockResolvedValue(null);
+    mockBillingTransaction.findAll.mockResolvedValue([]);
+    mockNotificationDelivery.findAll.mockResolvedValue([]);
   });
 
   it('computeSummary agrega dados reais e aplica escopo tenant/período', async () => {
@@ -141,6 +193,7 @@ describe('operationsDashboardService', () => {
     expect(out.summary.system.jobsError).toBe(1);
     expect(out.summary.system.notificationsSent).toBe(1);
     expect(out.summary.system.notificationFailures).toBe(1);
+    expect(out.summary.system.billing).toEqual(expect.objectContaining({ totalTransactions: 0 }));
 
     expect(mockVerticalJourneyEvent.findAll).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tenant_key: 'tenant-a' }),
@@ -300,6 +353,53 @@ describe('operationsDashboardService', () => {
     expect(out.items[0].status).toBe('provider-dependent');
   });
 
+  it('listNotifications prioriza notification_deliveries quando disponivel', async () => {
+    mockNotificationDelivery.findAll.mockResolvedValueOnce([
+      makeRow({
+        id: 'notif-1',
+        tenant_key: 'tenant-a',
+        vertical: 'beauty',
+        event_type: 'follow_up_sent',
+        channel: 'whatsapp',
+        recipient_masked: '551***99',
+        status: 'sent',
+        attempts: 1,
+        execution_job_id: 'job-1',
+        created_at: '2026-03-19T10:00:00.000Z',
+        last_attempt_at: '2026-03-19T10:00:01.000Z',
+        sent_at: '2026-03-19T10:00:02.000Z',
+      }),
+      makeRow({
+        id: 'notif-2',
+        tenant_key: 'tenant-a',
+        vertical: 'fitness',
+        event_type: 'billing_overdue',
+        channel: 'whatsapp',
+        recipient_masked: '552***11',
+        status: 'failed',
+        attempts: 2,
+        execution_job_id: 'job-2',
+        created_at: '2026-03-19T09:00:00.000Z',
+        last_attempt_at: '2026-03-19T09:02:00.000Z',
+        last_error: 'provider_down',
+      }),
+    ]);
+
+    const out = await listNotifications({
+      tenantId: 'tenant-a',
+      vertical: 'all',
+      limit: 20,
+      page: 1,
+    });
+
+    expect(out.meta.dataSource).toBe('notification_deliveries');
+    expect(out.summary.sent).toBe(1);
+    expect(out.summary.failed).toBe(1);
+    expect(out.items[0]).toEqual(expect.objectContaining({
+      origin: 'notification_deliveries',
+    }));
+  });
+
   it('listInsights gera score+motivo e mantém isolamento por tenant no where', async () => {
     mockVerticalJourneyEvent.findAll.mockResolvedValueOnce([
       makeRow({ subject_id: 'beauty-1', customer_id: 'cb-1', membership_id: null }),
@@ -321,6 +421,107 @@ describe('operationsDashboardService', () => {
 
     expect(mockVerticalJourneyEvent.findAll).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tenant_key: 'tenant-a' }),
+    }));
+  });
+
+  it('listFinancialTransactions lista apenas problemáticos por padrão e agrega resumo financeiro', async () => {
+    mockBillingTransaction.findAll.mockResolvedValueOnce([
+      makeRow({
+        id: 'bt-1',
+        tenant_key: 'tenant-a',
+        vertical: 'fitness',
+        provider: 'asaas',
+        type: 'membership',
+        status: 'chargeback',
+        amount: '199.90',
+        currency: 'BRL',
+        subject_id: 'fit-1',
+        customer_id: 'cust-1',
+        membership_id: 'm-1',
+        external_transaction_id: 'ext-1',
+        metadata: { reason: 'bank_dispute' },
+        created_at: '2026-03-19T10:00:00.000Z',
+        updated_at: '2026-03-19T10:10:00.000Z',
+      }),
+      makeRow({
+        id: 'bt-2',
+        tenant_key: 'tenant-a',
+        vertical: 'beauty',
+        provider: 'mercado_pago',
+        type: 'bundle',
+        status: 'overdue',
+        amount: '89.00',
+        currency: 'BRL',
+        customer_id: 'cust-2',
+        bundle_id: 'bundle-1',
+        external_transaction_id: 'ext-2',
+        metadata: {},
+        created_at: '2026-03-18T10:00:00.000Z',
+        updated_at: '2026-03-18T10:10:00.000Z',
+      }),
+      makeRow({
+        id: 'bt-3',
+        tenant_key: 'tenant-a',
+        vertical: 'beauty',
+        provider: 'asaas',
+        type: 'bundle',
+        status: 'confirmed',
+        amount: '49.00',
+        currency: 'BRL',
+        customer_id: 'cust-3',
+        external_transaction_id: 'ext-3',
+        metadata: {},
+        created_at: '2026-03-17T10:00:00.000Z',
+        updated_at: '2026-03-17T10:10:00.000Z',
+      }),
+    ]);
+    mockEventLedger.findOne.mockResolvedValueOnce(makeRow({
+      occurred_at: '2026-03-20T09:00:00.000Z',
+      source: 'billing.reconciliation.manual',
+      correlation_id: 'corr-1',
+      actor_type: 'agent',
+      actor_id: 'agent-1',
+      payload: {
+        kind: 'billing_reconciliation_manual',
+        limit: 50,
+        transactions: { scanned: 3, updated: 2, unchanged: 1, failed: 0 },
+        subscriptions: { scanned: 2, updated: 1, unchanged: 1, failed: 0 },
+      },
+    }));
+
+    const out = await listFinancialTransactions({
+      tenantId: 'tenant-a',
+      vertical: 'all',
+      problemOnly: true,
+      limit: 20,
+      page: 1,
+    });
+
+    expect(mockBillingTransaction.findAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenant_key: 'tenant-a',
+        status: expect.objectContaining({}),
+      }),
+    }));
+    expect(out.summary.problematicCount).toBe(2);
+    expect(out.summary.chargebackCount).toBe(1);
+    expect(out.summary.overdueCount).toBe(1);
+    expect(out.summary.grossAmount).toBeCloseTo(288.9);
+    expect(out.items).toHaveLength(2);
+    expect(out.items[0]).toEqual(expect.objectContaining({
+      id: 'bt-1',
+      status: 'chargeback',
+      provider: 'asaas',
+    }));
+    expect(out.meta.lastReconciliation).toEqual(expect.objectContaining({
+      source: 'billing.reconciliation.manual',
+      mode: 'manual',
+      correlationId: 'corr-1',
+      actorType: 'agent',
+      actorId: 'agent-1',
+      jobId: null,
+      transactions: expect.objectContaining({ updated: 2 }),
+      subscriptions: expect.objectContaining({ updated: 1 }),
     }));
   });
 

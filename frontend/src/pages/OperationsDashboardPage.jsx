@@ -8,6 +8,10 @@ import {
   getOperationsJobs,
   getOperationsNotifications,
   getOperationsInsights,
+  getOperationsFinance,
+  reconcileBilling,
+  getBillingHealth,
+  getBillingAlerts,
 } from '../api/operationsDashboard';
 import {
   getBeautyAgenda,
@@ -34,6 +38,7 @@ const TABS = [
   { id: 'fitness-student', label: 'Aluno Fitness' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'jobs', label: 'Scheduler / Jobs' },
+  { id: 'finance', label: 'Financeiro' },
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'insights', label: 'Insights Operacionais' },
 ];
@@ -43,6 +48,9 @@ function statusBadgeClass(status) {
   if (value === 'success' || value === 'sent' || value === 'concluido' || value === 'confirmado' || value === 'liberado' || value === 'active') {
     return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
   }
+  if (value === 'refunded') return 'bg-orange-500/20 text-orange-200 border border-orange-500/40';
+  if (value === 'chargeback') return 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-500/40';
+  if (value === 'overdue') return 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
   if (value === 'failed' || value === 'bloqueado' || value === 'blocked' || value === 'cancelado' || value === 'delinquent' || value === 'inativo') {
     return 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
   }
@@ -58,6 +66,16 @@ function cardNumber(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '-';
   return Intl.NumberFormat('pt-BR').format(n);
+}
+
+function currencyNumber(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '-';
+  return Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  }).format(n);
 }
 
 function isoDateToday() {
@@ -83,6 +101,56 @@ function riskLevel(score) {
 
 function parseTimelineDetail(item) {
   return item.details?.reason || item.details?.rawStatus || item.details?.triggeredBy || '-';
+}
+
+function financeVariant(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'chargeback') return 'danger';
+  if (value === 'refunded') return 'danger';
+  if (value === 'overdue' || value === 'pending') return 'warning';
+  if (value === 'confirmed') return 'success';
+  return 'default';
+}
+
+function financeStatusLabel(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'problematic') return 'problematicas';
+  return value || 'all';
+}
+
+function reconcileModeLabel(mode) {
+  return mode === 'scheduler' ? 'scheduler' : 'manual';
+}
+
+function reconcileModeBadge(mode) {
+  if (mode === 'scheduler') return 'bg-indigo-500/10 text-indigo-200 border border-indigo-500/30';
+  return 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30';
+}
+
+function billingHealthBadgeClass(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'healthy') return 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30';
+  if (value === 'degraded') return 'bg-amber-500/10 text-amber-200 border border-amber-500/30';
+  if (value === 'unhealthy') return 'bg-rose-500/10 text-rose-200 border border-rose-500/30';
+  return 'bg-bg-tertiary text-text-secondary border border-border-default';
+}
+
+function reconcileAuditLabel(snapshot) {
+  if (!snapshot) return '-';
+  if (snapshot.mode === 'scheduler') return snapshot.jobId || snapshot.correlationId || snapshot.actorId || '-';
+  return snapshot.actorId || snapshot.correlationId || '-';
+}
+
+function computeWindowDays({ startDate, endDate }) {
+  if (!startDate || !endDate) return 30;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 30;
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+  const ms = end.getTime() - start.getTime();
+  if (!Number.isFinite(ms) || ms < 0) return 30;
+  return Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
 }
 
 function FilterBar({ filters, onChange, onRefresh, loading }) {
@@ -187,7 +255,7 @@ export function OperationsDashboardPage() {
   const [timelineData, setTimelineData] = useState(null);
   const [timelineError, setTimelineError] = useState('');
 
-  const [jobsQuery, setJobsQuery] = useState({ status: '', page: 1, limit: 30 });
+  const [jobsQuery, setJobsQuery] = useState({ jobId: '', status: '', page: 1, limit: 30 });
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsData, setJobsData] = useState(null);
   const [jobsError, setJobsError] = useState('');
@@ -200,6 +268,16 @@ export function OperationsDashboardPage() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsData, setInsightsData] = useState(null);
   const [insightsError, setInsightsError] = useState('');
+
+  const [financeQuery, setFinanceQuery] = useState({ status: 'problematic', provider: '', page: 1, limit: 20 });
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeData, setFinanceData] = useState(null);
+  const [financeError, setFinanceError] = useState('');
+  const [reconcileLoading, setReconcileLoading] = useState(false);
+  const [lastReconcileResult, setLastReconcileResult] = useState(null);
+  const [financeHighlightedJobId, setFinanceHighlightedJobId] = useState('');
+  const [billingHealthData, setBillingHealthData] = useState(null);
+  const [billingAlertsData, setBillingAlertsData] = useState(null);
 
   const [beautyAgendaFilters, setBeautyAgendaFilters] = useState({ date: isoDateToday(), professionalId: '' });
   const [beautyAgendaLoading, setBeautyAgendaLoading] = useState(false);
@@ -234,6 +312,14 @@ export function OperationsDashboardPage() {
       navigate('/login');
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (!financeHighlightedJobId) return undefined;
+    const timeout = setTimeout(() => {
+      setFinanceHighlightedJobId('');
+    }, 7000);
+    return () => clearTimeout(timeout);
+  }, [financeHighlightedJobId]);
 
   function baseParams() {
     return {
@@ -296,6 +382,31 @@ export function OperationsDashboardPage() {
     }
   }
 
+  async function openJobs(jobId = '') {
+    const query = {
+      ...jobsQuery,
+      jobId: jobId || '',
+      page: 1,
+    };
+    setJobsQuery(query);
+    setActiveTab('jobs');
+    setJobsLoading(true);
+    setJobsError('');
+    try {
+      const result = await getOperationsJobs({
+        ...baseParams(),
+        ...query,
+      });
+      setJobsData(result || null);
+    } catch (err) {
+      logger.error('[OperationsDashboardPage] openJobs failed', err);
+      setJobsError('Erro ao carregar jobs do scheduler.');
+      showToast('Erro ao carregar jobs do scheduler', 'error');
+    } finally {
+      setJobsLoading(false);
+    }
+  }
+
   async function loadNotifications() {
     setNotificationsLoading(true);
     setNotificationsError('');
@@ -329,6 +440,69 @@ export function OperationsDashboardPage() {
       showToast('Erro ao carregar insights operacionais', 'error');
     } finally {
       setInsightsLoading(false);
+    }
+  }
+
+  async function loadFinance(queryOverride) {
+    setFinanceLoading(true);
+    setFinanceError('');
+    try {
+      const query = queryOverride || financeQuery;
+      const windowDays = computeWindowDays(filters);
+      const result = await getOperationsFinance({
+        ...baseParams(),
+        status: query.status === 'problematic' ? undefined : query.status,
+        provider: query.provider || undefined,
+        problemOnly: query.status === 'problematic' ? true : undefined,
+        page: query.page,
+        limit: query.limit,
+      });
+
+      const [healthOut, alertsOut] = await Promise.all([
+        getBillingHealth({ windowDays }).catch(() => null),
+        getBillingAlerts({ windowDays, persist: true, historyLimit: 20 }).catch(() => null),
+      ]);
+      setFinanceData(result || null);
+      setLastReconcileResult(result?.meta?.lastReconciliation || null);
+      setBillingHealthData(healthOut || null);
+      setBillingAlertsData(alertsOut || null);
+    } catch (err) {
+      logger.error('[OperationsDashboardPage] loadFinance failed', err);
+      setFinanceError('Erro ao carregar transacoes financeiras.');
+      showToast('Erro ao carregar transacoes financeiras', 'error');
+    } finally {
+      setFinanceLoading(false);
+    }
+  }
+
+  async function handleReconcileBilling() {
+    setReconcileLoading(true);
+    try {
+      const result = await reconcileBilling({
+        limit: Math.max(Number(financeQuery.limit) || 20, 50),
+      });
+      const tx = result?.transactions || {};
+      const subs = result?.subscriptions || {};
+      setLastReconcileResult({
+        executedAt: new Date().toISOString(),
+        source: 'billing.reconciliation.manual',
+        mode: 'manual',
+        correlationId: null,
+        actorId: 'ui_manual',
+        jobId: null,
+        transactions: tx,
+        subscriptions: subs,
+      });
+      showToast(
+        `Reconciliação concluída: transações ${cardNumber(tx.updated || 0)} atualizadas, subscriptions ${cardNumber(subs.updated || 0)} atualizadas.`,
+        'success',
+      );
+      await Promise.all([loadSummary(), loadFinance()]);
+    } catch (err) {
+      logger.error('[OperationsDashboardPage] handleReconcileBilling failed', err);
+      showToast('Erro ao executar reconciliação financeira.', 'error');
+    } finally {
+      setReconcileLoading(false);
     }
   }
 
@@ -431,8 +605,35 @@ export function OperationsDashboardPage() {
     }
     if (activeTab === 'timeline') await loadTimeline();
     if (activeTab === 'jobs') await loadJobs();
+    if (activeTab === 'finance') await loadFinance();
     if (activeTab === 'notifications') await loadNotifications();
     if (activeTab === 'insights') await loadInsights();
+  }
+
+  async function openFinance(status = 'problematic') {
+    const query = {
+      ...financeQuery,
+      status,
+      page: 1,
+    };
+    setFinanceQuery(query);
+    setActiveTab('finance');
+    await loadFinance(query);
+  }
+
+  async function openFinanceFromJob(job) {
+    const next = {
+      ...financeQuery,
+      status: 'problematic',
+      page: 1,
+    };
+    setFinanceQuery(next);
+    setActiveTab('finance');
+    setFinanceHighlightedJobId(job?.id || '');
+    await loadFinance(next);
+    if (job?.id) {
+      showToast(`Drill-down financeiro aberto a partir do job ${job.id}`, 'info');
+    }
   }
 
   async function openTimeline(vertical, subjectId, customerId = '', membershipId = '') {
@@ -595,6 +796,7 @@ export function OperationsDashboardPage() {
     if (activeTab === 'beauty-agenda') loadBeautyAgenda();
     if (activeTab === 'timeline') loadTimeline();
     if (activeTab === 'jobs') loadJobs();
+    if (activeTab === 'finance') loadFinance();
     if (activeTab === 'notifications') loadNotifications();
     if (activeTab === 'insights') loadInsights();
   }, [activeTab, isAuthenticated]);
@@ -602,6 +804,14 @@ export function OperationsDashboardPage() {
   const beauty = summary?.summary?.beauty;
   const fitness = summary?.summary?.fitness;
   const system = summary?.summary?.system;
+  const billing = system?.billing;
+  const billingRiskCount = Number(billing?.overdueCount || 0) + Number(billing?.pendingCount || 0) + Number(billing?.refundedCount || 0) + Number(billing?.chargebackCount || 0);
+  const billingHealthStatus = billingHealthData?.status || 'unknown';
+  const billingViolationsCount = Array.isArray(billingHealthData?.violations) ? billingHealthData.violations.length : 0;
+  const financeSnapshotMatchedJob =
+    !!financeHighlightedJobId
+    && String(lastReconcileResult?.mode || '') === 'scheduler'
+    && String(lastReconcileResult?.jobId || '') === String(financeHighlightedJobId);
 
   return (
     <CrudPageBase>
@@ -657,6 +867,75 @@ export function OperationsDashboardPage() {
             <KpiCard title="Notificacoes enviadas" value={system?.notificationsSent} />
             <KpiCard title="Falhas envio" value={system?.notificationFailures} />
           </div>
+
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium">Billing</h4>
+              <span className="text-xs text-text-secondary">
+                {billing ? `${cardNumber(billing.totalTransactions)} transacoes` : 'sem dados'}
+              </span>
+            </div>
+
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className={`px-2 py-1 rounded text-xs ${billingHealthBadgeClass(billingHealthStatus)}`}>
+                SLO {billingHealthStatus}
+              </span>
+              <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => openFinance('problematic')}>
+                {cardNumber(billingViolationsCount)} violacoes
+              </button>
+            </div>
+
+            {billing ? (
+              <div>
+                {billingRiskCount > 0 ? (
+                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm text-amber-200">Atencao financeira</div>
+                      <div className="text-xs text-text-secondary">
+                        {cardNumber(billingRiskCount)} transacoes exigem acompanhamento no periodo.
+                      </div>
+                    </div>
+                    <button className="rounded bg-amber-500/20 px-3 py-2 text-xs text-amber-100 border border-amber-500/30" onClick={() => openFinance('problematic')}>
+                      Abrir drill-down
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 grid-cols-2">
+                <DashboardKpiCard
+                  label="Receita liquida"
+                  value={currencyNumber(billing.netRecoveredAmount)}
+                  subtitle={`Bruta ${currencyNumber(billing.grossConfirmedAmount)}`}
+                  variant="success"
+                  onClick={() => openFinance('confirmed')}
+                />
+                <DashboardKpiCard
+                  label="Overdue"
+                  value={cardNumber(billing.overdueCount)}
+                  subtitle={`Pendentes ${cardNumber(billing.pendingCount)}`}
+                  variant="warning"
+                  onClick={() => openFinance('overdue')}
+                />
+                <DashboardKpiCard
+                  label="Refunded"
+                  value={cardNumber(billing.refundedCount)}
+                  subtitle={currencyNumber(billing.refundedAmount)}
+                  variant="danger"
+                  onClick={() => openFinance('refunded')}
+                />
+                <DashboardKpiCard
+                  label="Chargeback"
+                  value={cardNumber(billing.chargebackCount)}
+                  subtitle={currencyNumber(billing.chargebackAmount)}
+                  variant="danger"
+                  onClick={() => openFinance('chargeback')}
+                />
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-text-secondary">Metricas de billing indisponiveis para o periodo.</div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -669,7 +948,7 @@ export function OperationsDashboardPage() {
 
         {activeTab === 'beauty-agenda' ? (
           <div>
-            <div className="grid gap-3 md:grid-cols-4 mb-3">
+            <div className="grid gap-3 md:grid-cols-5 mb-3">
               <input
                 type="date"
                 className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm"
@@ -1272,6 +1551,7 @@ export function OperationsDashboardPage() {
         {activeTab === 'jobs' ? (
           <div>
             <div className="grid gap-3 md:grid-cols-4 mb-3">
+              <input className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm" placeholder="jobId" value={jobsQuery.jobId} onChange={(e) => setJobsQuery({ ...jobsQuery, jobId: e.target.value, page: 1 })} />
               <select className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm" value={jobsQuery.status} onChange={(e) => setJobsQuery({ ...jobsQuery, status: e.target.value, page: 1 })}>
                 <option value="">status: all</option>
                 <option value="success">success</option>
@@ -1314,6 +1594,7 @@ export function OperationsDashboardPage() {
                     <th className="text-left p-2">Duracao</th>
                     <th className="text-left p-2">Tentativa</th>
                     <th className="text-left p-2">Erro</th>
+                    <th className="text-left p-2">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1326,15 +1607,243 @@ export function OperationsDashboardPage() {
                       <td className="p-2">{job.durationMs != null ? `${job.durationMs}ms` : '-'}</td>
                       <td className="p-2">{job.attempt}</td>
                       <td className="p-2 text-xs text-text-secondary">{job.error || '-'}</td>
+                      <td className="p-2">
+                        {job.kind === 'billing_reconciliation' ? (
+                          <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => openFinanceFromJob(job)}>
+                            Abrir financeiro
+                          </button>
+                        ) : (
+                          <span className="text-xs text-text-secondary">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                   {!(jobsData?.items || []).length ? (
                     <tr>
-                      <td className="p-3 text-text-secondary" colSpan={7}>Nenhum job encontrado para os filtros.</td>
+                      <td className="p-3 text-text-secondary" colSpan={8}>Nenhum job encontrado para os filtros.</td>
                     </tr>
                   ) : null}
                 </tbody>
               </table>
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === 'finance' ? (
+          <div>
+            <div className="grid gap-3 md:grid-cols-5 mb-3">
+              <select className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm" value={financeQuery.status} onChange={(e) => setFinanceQuery({ ...financeQuery, status: e.target.value, page: 1 })}>
+                <option value="problematic">status: problematicas</option>
+                <option value="confirmed">confirmed</option>
+                <option value="pending">pending</option>
+                <option value="overdue">overdue</option>
+                <option value="refunded">refunded</option>
+                <option value="chargeback">chargeback</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+              <select className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm" value={financeQuery.provider} onChange={(e) => setFinanceQuery({ ...financeQuery, provider: e.target.value, page: 1 })}>
+                <option value="">provider: all</option>
+                <option value="asaas">asaas</option>
+                <option value="mercado_pago">mercado_pago</option>
+              </select>
+              <select className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm" value={financeQuery.limit} onChange={(e) => setFinanceQuery({ ...financeQuery, limit: Number(e.target.value), page: 1 })}>
+                <option value={20}>20</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+              </select>
+              <button className="bg-accent-primary rounded px-2 py-2 text-sm text-white" onClick={() => loadFinance()} disabled={financeLoading || reconcileLoading}>{financeLoading ? 'Carregando...' : 'Aplicar'}</button>
+              <button className="rounded px-2 py-2 text-sm border border-border-default bg-bg-elevated" onClick={handleReconcileBilling} disabled={reconcileLoading || financeLoading}>{reconcileLoading ? 'Reconciliando...' : 'Reconciliar agora'}</button>
+              <div className="text-xs text-text-secondary flex items-center">fonte: {financeData?.meta?.dataSource || '-'}</div>
+            </div>
+
+            <SectionState
+              loading={financeLoading}
+              error={financeError}
+              empty={!financeLoading && !financeError && !(financeData?.items || []).length}
+              emptyMessage="Nenhuma transacao financeira encontrada para os filtros atuais."
+            />
+
+            {lastReconcileResult ? (
+              <div className={`mb-4 rounded-xl border p-4 ${financeSnapshotMatchedJob ? 'border-emerald-400 bg-emerald-500/10 shadow-lg shadow-emerald-900/20' : 'border-border-default bg-bg-tertiary'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div>
+                    <div className="text-sm font-medium text-text-primary">Ultima reconciliação {reconcileModeLabel(lastReconcileResult.mode)}</div>
+                    <div className="text-xs text-text-secondary">
+                      {lastReconcileResult.executedAt ? new Date(lastReconcileResult.executedAt).toLocaleString('pt-BR') : '-'}
+                    </div>
+                    <div className="text-xs text-text-secondary">
+                      {lastReconcileResult.mode === 'scheduler' ? 'job' : 'ator'}: {reconcileAuditLabel(lastReconcileResult)}
+                    </div>
+                    {financeSnapshotMatchedJob ? (
+                      <div className="text-xs text-emerald-200 mt-1">snapshot corresponde ao job selecionado</div>
+                    ) : null}
+                    {lastReconcileResult.mode === 'scheduler' && lastReconcileResult.jobId ? (
+                      <div className="mt-2">
+                        <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => openJobs(lastReconcileResult.jobId)}>
+                          Abrir job no scheduler
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <span className={`px-2 py-1 rounded text-xs ${reconcileModeBadge(lastReconcileResult.mode)}`}>{reconcileModeLabel(lastReconcileResult.mode)}</span>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-text-secondary mb-2">Transacoes</div>
+                    <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+                      <DashboardKpiCard label="Scanned" value={cardNumber(lastReconcileResult.transactions?.scanned)} />
+                      <DashboardKpiCard label="Updated" value={cardNumber(lastReconcileResult.transactions?.updated)} variant="success" />
+                      <DashboardKpiCard label="Unchanged" value={cardNumber(lastReconcileResult.transactions?.unchanged)} />
+                      <DashboardKpiCard label="Failed" value={cardNumber(lastReconcileResult.transactions?.failed)} variant="danger" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-text-secondary mb-2">Subscriptions</div>
+                    <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
+                      <DashboardKpiCard label="Scanned" value={cardNumber(lastReconcileResult.subscriptions?.scanned)} />
+                      <DashboardKpiCard label="Updated" value={cardNumber(lastReconcileResult.subscriptions?.updated)} variant="success" />
+                      <DashboardKpiCard label="Unchanged" value={cardNumber(lastReconcileResult.subscriptions?.unchanged)} />
+                      <DashboardKpiCard label="Failed" value={cardNumber(lastReconcileResult.subscriptions?.failed)} variant="danger" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {billingHealthData ? (
+              <div className="mb-4 rounded-xl border border-border-default bg-bg-tertiary p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium text-text-primary">Saude financeira (SLO)</div>
+                  <span className={`px-2 py-1 rounded text-xs ${billingHealthBadgeClass(billingHealthData.status)}`}>{billingHealthData.status}</span>
+                </div>
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-4 mb-3">
+                  <DashboardKpiCard label="Problematicas" value={`${Number(billingHealthData?.indicators?.problematicRatePct || 0).toFixed(2)}%`} />
+                  <DashboardKpiCard label="Chargeback" value={`${Number(billingHealthData?.indicators?.chargebackRatePct || 0).toFixed(2)}%`} variant="danger" />
+                  <DashboardKpiCard label="Pending lag" value={`${cardNumber(billingHealthData?.indicators?.pendingLagSec || 0)}s`} variant="warning" />
+                  <DashboardKpiCard label="Dead jobs" value={cardNumber(billingHealthData?.indicators?.deadJobs || 0)} variant={(Number(billingHealthData?.indicators?.deadJobs || 0) > 0) ? 'danger' : 'success'} />
+                </div>
+                {(billingHealthData?.violations || []).length ? (
+                  <div className="rounded border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-200">
+                    {(billingHealthData.violations || []).map((v, idx) => (
+                      <div key={`${v.key}-${idx}`}>{v.key}: {v.actual} (target {v.target})</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-text-secondary">Sem violacoes de SLO no periodo.</div>
+                )}
+              </div>
+            ) : null}
+
+            {billingAlertsData ? (
+              <div className="mb-4 rounded-xl border border-border-default bg-bg-tertiary p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium text-text-primary">Alertas financeiros</div>
+                  <span className="text-xs text-text-secondary">ativos {cardNumber((billingAlertsData?.alerts || []).length)}</span>
+                </div>
+                {(billingAlertsData?.alerts || []).length ? (
+                  <div className="space-y-2 mb-3">
+                    {(billingAlertsData.alerts || []).map((alert, idx) => (
+                      <div key={`${alert.code}-${idx}`} className="rounded border border-amber-500/30 bg-amber-500/10 p-2 text-xs">
+                        <div className="font-medium text-amber-100">{alert.title}</div>
+                        <div className="text-amber-200">{alert.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-text-secondary mb-3">Sem alertas ativos no momento.</div>
+                )}
+                <div className="text-xs text-text-secondary">Historico recente: {cardNumber((billingAlertsData?.history || []).length)} eventos</div>
+              </div>
+            ) : null}
+
+            {!!financeData?.meta?.warnings?.length && (
+              <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded p-2 text-xs text-amber-200">
+                {financeData.meta.warnings.join(', ')}
+              </div>
+            )}
+
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-4">
+              <DashboardKpiCard label="Filtradas" value={cardNumber(financeData?.summary?.total)} subtitle={financeStatusLabel(financeQuery.status)} />
+              <DashboardKpiCard label="Problematicas" value={cardNumber(financeData?.summary?.problematicCount)} subtitle={currencyNumber(financeData?.summary?.problematicAmount)} variant="warning" onClick={() => openFinance('problematic')} />
+              <DashboardKpiCard label="Overdue" value={cardNumber(financeData?.summary?.overdueCount)} subtitle="vencidas" variant="warning" onClick={() => openFinance('overdue')} />
+              <DashboardKpiCard label="Refunded" value={cardNumber(financeData?.summary?.refundedCount)} subtitle="estorno" variant="danger" onClick={() => openFinance('refunded')} />
+              <DashboardKpiCard label="Chargeback" value={cardNumber(financeData?.summary?.chargebackCount)} subtitle="disputa" variant="danger" onClick={() => openFinance('chargeback')} />
+            </div>
+
+            <div className="overflow-auto border border-border-default rounded">
+              <table className="w-full text-sm">
+                <thead className="bg-bg-tertiary text-text-secondary">
+                  <tr>
+                    <th className="text-left p-2">Atualizada em</th>
+                    <th className="text-left p-2">Vertical</th>
+                    <th className="text-left p-2">Provider</th>
+                    <th className="text-left p-2">Tipo</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Valor</th>
+                    <th className="text-left p-2">Vencimento</th>
+                    <th className="text-left p-2">Referencia</th>
+                    <th className="text-left p-2">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(financeData?.items || []).map((item) => (
+                    <tr key={item.id} className="border-t border-border-default">
+                      <td className="p-2">{item.updatedAt ? new Date(item.updatedAt).toLocaleString('pt-BR') : '-'}</td>
+                      <td className="p-2">{item.vertical || '-'}</td>
+                      <td className="p-2">{item.provider || '-'}</td>
+                      <td className="p-2">{item.type || '-'}</td>
+                      <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(item.status)}`}>{item.status}</span></td>
+                      <td className="p-2">{currencyNumber(item.amount)}</td>
+                      <td className="p-2">{item.dueAt ? new Date(item.dueAt).toLocaleDateString('pt-BR') : '-'}</td>
+                      <td className="p-2 text-xs text-text-secondary">
+                        <div>{item.externalTransactionId || item.id}</div>
+                        <div>{item.subjectId || item.customerId || item.membershipId || item.bundleId || '-'}</div>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-2">
+                          {(item.subjectId || item.customerId || item.membershipId) ? (
+                            <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => openTimeline(item.vertical, item.subjectId || '', item.customerId || '', item.membershipId || '')}>
+                              Timeline
+                            </button>
+                          ) : null}
+                          <span className={`px-2 py-1 rounded text-xs ${financeVariant(item.status) === 'danger' ? 'bg-rose-500/10 text-rose-200 border border-rose-500/30' : financeVariant(item.status) === 'warning' ? 'bg-amber-500/10 text-amber-200 border border-amber-500/30' : 'bg-bg-tertiary text-text-secondary border border-border-default'}`}>
+                            {item.paidAt ? `Pago ${new Date(item.paidAt).toLocaleDateString('pt-BR')}` : 'Em aberto'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!(financeData?.items || []).length ? (
+                    <tr>
+                      <td className="p-3 text-text-secondary" colSpan={9}>Nenhuma transacao financeira encontrada para os filtros.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-xs text-text-secondary">
+              <div>
+                pagina {cardNumber(financeData?.pagination?.page || 1)} de {cardNumber(financeData?.pagination?.totalPages || 1)} | total {cardNumber(financeData?.pagination?.total || 0)}
+              </div>
+              <div className="flex gap-2">
+                <button className="px-2 py-1 rounded border border-border-default bg-bg-tertiary disabled:opacity-50" disabled={(financeData?.pagination?.page || 1) <= 1 || financeLoading} onClick={() => {
+                  const next = { ...financeQuery, page: Math.max(1, (financeData?.pagination?.page || 1) - 1) };
+                  setFinanceQuery(next);
+                  loadFinance(next);
+                }}>
+                  Anterior
+                </button>
+                <button className="px-2 py-1 rounded border border-border-default bg-bg-tertiary disabled:opacity-50" disabled={(financeData?.pagination?.page || 1) >= (financeData?.pagination?.totalPages || 1) || financeLoading} onClick={() => {
+                  const next = { ...financeQuery, page: (financeData?.pagination?.page || 1) + 1 };
+                  setFinanceQuery(next);
+                  loadFinance(next);
+                }}>
+                  Proxima
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

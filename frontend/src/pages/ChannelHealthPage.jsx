@@ -165,11 +165,11 @@ export function ChannelHealthPage() {
         </div>
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-          <div className="text-sm text-text-secondary">Outbound pendentes (DB)</div>
+          <div className="text-sm text-text-secondary">Outbound em fila (DB)</div>
           <div className="text-xl font-semibold text-text-primary">
-            {outbound?.pendingCount ?? 0}
+            {outbound?.queuedCount ?? 0}
           </div>
-          <div className="text-xs text-text-tertiary">Itens com status <code>pending</code></div>
+          <div className="text-xs text-text-tertiary">Itens com status <code>pending</code> ou <code>failed</code></div>
         </div>
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
@@ -227,7 +227,7 @@ export function ChannelHealthPage() {
                     <strong>Outbound (janela)</strong>: {c.delivery?.outFailed ?? 0} falhas / {c.delivery?.outTotal ?? 0} envios ({formatPct(c.delivery?.failRate || 0)})
                   </div>
                   <div>
-                    <strong>Fila outbound</strong>: {c.outboundQueue?.pending ?? 0} pendentes • {c.outboundQueue?.dueNow ?? 0} vencidos • retrying {c.outboundQueue?.retrying ?? 0} • oldest {formatSeconds(c.outboundQueue?.oldestPendingSeconds)}
+                    <strong>Fila outbound</strong>: {c.outboundQueue?.pending ?? 0} em fila • {c.outboundQueue?.dueNow ?? 0} vencidos • retrying {c.outboundQueue?.retrying ?? 0} • oldest {formatSeconds(c.outboundQueue?.oldestPendingSeconds)}
                   </div>
                   <div className="text-xs text-text-tertiary">
                     attempts: max {c.outboundQueue?.maxAttempts ?? 0} • avg {formatNumber(c.outboundQueue?.avgAttempts, 1)} • overdue max {formatSeconds(c.outboundQueue?.overdueMaxSeconds)} • sending {c.outboundQueue?.sending ?? 0}
@@ -246,7 +246,7 @@ export function ChannelHealthPage() {
           <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg mb-6">
             <div className="text-xl font-semibold text-text-primary mb-2">Fila Outbound (total)</div>
             <div className="text-sm text-text-secondary">
-              Pendentes: <strong>{health?.outboundQueue?.totals?.pending ?? 0}</strong> • Vencidos: <strong>{health?.outboundQueue?.totals?.dueNow ?? 0}</strong> • Oldest: <strong>{formatSeconds(health?.outboundQueue?.totals?.oldestPendingSeconds)}</strong>
+              Em fila: <strong>{health?.outboundQueue?.totals?.pending ?? 0}</strong> • Vencidos: <strong>{health?.outboundQueue?.totals?.dueNow ?? 0}</strong> • Oldest: <strong>{formatSeconds(health?.outboundQueue?.totals?.oldestPendingSeconds)}</strong>
             </div>
           </div>
 

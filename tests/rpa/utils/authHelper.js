@@ -489,12 +489,11 @@ async function ensureAuthenticated(page, options = {}) {
       return { success: true, loggedIn: true };
     }
 
-    // Tenta login via token RPA primeiro (método preferido)
-    const rpaLoginResult = await performRpaLogin(page, options);
-    
-    if (rpaLoginResult.success) {
-      // O app pode não redirecionar automaticamente de /login quando já está autenticado.
-      // Então, após autenticar, força navegação para uma rota autenticada.
+    const strategy = String(options.loginStrategy || 'rpa_then_ui').toLowerCase();
+    const tryRpaFirst = strategy === 'rpa_then_ui' || strategy === 'rpa';
+    const tryUiFirst = strategy === 'ui_then_rpa' || strategy === 'ui';
+
+    const finalizeAuthenticatedState = async () => {
       if (page.url().includes('/login')) {
         const rpaConfig = require('../rpaConfig');
         const frontendBaseUrl = options.frontendBaseUrl ||
@@ -505,38 +504,72 @@ async function ensureAuthenticated(page, options = {}) {
         await page.waitForTimeout(500);
       }
 
-      // Se modal de tenant aparecer por algum motivo, resolve
-      await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 10000, tenantId: options.tenantId }).catch(() => null);
-      return { success: true, loggedIn: true };
-    }
+      await handleTenantSelectorModalIfPresent(page, {
+        timeout: options.timeout || 10000,
+        tenantId: options.tenantId,
+      }).catch(() => null);
 
-    // Se login RPA falhar, tenta login via UI como fallback
-    console.warn(`⚠️  Login RPA falhou: ${rpaLoginResult.error}`);
-    console.warn('   Tentando login via UI como fallback...');
-    
-    const uiLoginResult = await performLogin(page, options);
-    
-    if (uiLoginResult.success) {
-      if (page.url().includes('/login')) {
-        const rpaConfig = require('../rpaConfig');
-        const frontendBaseUrl = options.frontendBaseUrl ||
-          process.env.TEST_FRONTEND_URL ||
-          rpaConfig.urls.frontend ||
-          'http://localhost:5173';
-        await page.goto(`${frontendBaseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: options.timeout || 30000 });
-        await page.waitForTimeout(500);
+      return { success: true, loggedIn: true };
+    };
+
+    let rpaLoginResult = { success: false, error: 'login RPA não executado' };
+    let uiLoginResult = { success: false, error: 'login UI não executado' };
+
+    if (tryUiFirst) {
+      uiLoginResult = await performLogin(page, options);
+      if (uiLoginResult.success) {
+        return finalizeAuthenticatedState();
       }
 
-      // Se modal de tenant aparecer, resolve
-      await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 10000, tenantId: options.tenantId }).catch(() => null);
-      return { success: true, loggedIn: true };
-    } else {
-      return {
-        success: false,
-        loggedIn: false,
-        error: `Login RPA e UI falharam. RPA: ${rpaLoginResult.error}, UI: ${uiLoginResult.error}`
-      };
+      if (strategy === 'ui') {
+        return {
+          success: false,
+          loggedIn: false,
+          error: `Login UI falhou: ${uiLoginResult.error}`,
+        };
+      }
     }
+
+    if (tryRpaFirst || strategy === 'ui_then_rpa') {
+      rpaLoginResult = await performRpaLogin(page, options);
+      if (rpaLoginResult.success) {
+        return finalizeAuthenticatedState();
+      }
+
+      if (strategy === 'rpa') {
+        return {
+          success: false,
+          loggedIn: false,
+          error: `Login RPA falhou: ${rpaLoginResult.error}`,
+        };
+      }
+    }
+
+    if (tryRpaFirst && strategy === 'rpa_then_ui') {
+      console.warn(`⚠️  Login RPA falhou: ${rpaLoginResult.error}`);
+      console.warn('   Tentando login via UI como fallback...');
+      uiLoginResult = await performLogin(page, options);
+      if (uiLoginResult.success) {
+        return finalizeAuthenticatedState();
+      }
+    }
+
+    if (tryUiFirst && strategy === 'ui_then_rpa') {
+      console.warn(`⚠️  Login UI falhou: ${uiLoginResult.error}`);
+      console.warn('   Tentando login via token RPA como fallback...');
+      if (!rpaLoginResult.success) {
+        rpaLoginResult = await performRpaLogin(page, options);
+      }
+      if (rpaLoginResult.success) {
+        return finalizeAuthenticatedState();
+      }
+    }
+
+    return {
+      success: false,
+      loggedIn: false,
+      error: `Login falhou. RPA: ${rpaLoginResult.error}, UI: ${uiLoginResult.error}`,
+    };
   } catch (error) {
     return {
       success: false,
@@ -553,4 +586,3 @@ module.exports = {
   waitForLoginPage,
   ensureAuthenticated,
 };
-

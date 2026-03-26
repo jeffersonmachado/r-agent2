@@ -19,8 +19,31 @@ const { AccessMembership, AccessSubject } = require('../../db/models');
 const { updateBillingStatus, blockMembership, reactivateMembership, computeEffectiveBillingStatus, isAccessAllowedByBilling } = require('./billingOrchestrationService');
 const { emitJourneyEvent } = require('./customerJourneyEngine');
 const { appendEventV1 } = require('../eventLedgerService');
+const { enqueueNotification } = require('../notificationService');
 
 const VERTICAL = 'fitness';
+
+async function queueFitnessNotification({
+  tenantId,
+  channel = 'whatsapp',
+  subjectId = null,
+  membershipId = null,
+  eventType,
+  metadata = {},
+}) {
+  const normalizedChannel = String(channel || '').trim().toLowerCase();
+  if (!normalizedChannel || normalizedChannel === 'internal') return;
+  await enqueueNotification({
+    tenantId,
+    vertical: VERTICAL,
+    channel: normalizedChannel,
+    eventType,
+    subjectId,
+    membershipId,
+    recipient: subjectId || null,
+    metadata: { ...metadata, vertical: VERTICAL },
+  }).catch(() => {});
+}
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(5).toString('hex')}`;
@@ -160,7 +183,7 @@ async function getMembershipAccessStatus({ tenantId, subjectId }) {
 // ── Journey integration ───────────────────────────────────────────────────
 
 async function sendWelcome({ tenantId, subjectId, membershipId, channel = 'internal', metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'welcome_sent',
@@ -171,10 +194,12 @@ async function sendWelcome({ tenantId, subjectId, membershipId, channel = 'inter
     idempotencyKey: membershipId ? `fitness_welcome:${tenantId}:${membershipId}` : null,
     payload: metadata,
   });
+  await queueFitnessNotification({ tenantId, channel, subjectId, membershipId, eventType: 'welcome_sent', metadata });
+  return evt;
 }
 
 async function sendFrequencyAlert({ tenantId, subjectId, membershipId, channel = 'internal', metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'frequency_alert_sent',
@@ -185,10 +210,12 @@ async function sendFrequencyAlert({ tenantId, subjectId, membershipId, channel =
     idempotencyKey: null, // allows repeated alerts
     payload: metadata,
   });
+  await queueFitnessNotification({ tenantId, channel, subjectId, membershipId, eventType: 'frequency_alert_sent', metadata });
+  return evt;
 }
 
 async function sendReturnCampaign({ tenantId, subjectId, membershipId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'return_campaign_sent',
@@ -200,6 +227,8 @@ async function sendReturnCampaign({ tenantId, subjectId, membershipId, channel =
     idempotencyKey: correlationId ? `fitness_return:${tenantId}:${correlationId}` : null,
     payload: metadata,
   });
+  await queueFitnessNotification({ tenantId, channel, subjectId, membershipId, eventType: 'return_campaign_sent', metadata });
+  return evt;
 }
 
 async function detectChurnRisk({ tenantId, subjectId, membershipId, daysSinceLastVisit = 0, frequency30d = 0, billingStatus = 'active', metadata = {} }) {
@@ -263,6 +292,43 @@ async function getMembershipBillingHistory({ tenantId, membershipId, limit = 50 
   return { items, total: items.length };
 }
 
+async function createRecurringMembershipCharge({
+  tenantId,
+  membershipId,
+  subjectId = null,
+  customerId = null,
+  customerName = null,
+  customerEmail = null,
+  customerPhone = null,
+  customerDocument = null,
+  amount,
+  dueDate,
+  cycle = 'MONTHLY',
+  provider = null,
+  idempotencyKey = null,
+  metadata = {},
+}) {
+  const billingService = require('../billingService');
+  return billingService.createCharge({
+    tenantId,
+    vertical: VERTICAL,
+    type: 'subscription',
+    membershipId,
+    subjectId,
+    customerId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    customerDocument,
+    amount,
+    dueDate,
+    cycle,
+    provider,
+    idempotencyKey,
+    metadata,
+  });
+}
+
 module.exports = {
   getMembershipDetail,
   listFitnessMemberships,
@@ -277,6 +343,7 @@ module.exports = {
   sendFrequencyAlert,
   sendReturnCampaign,
   detectChurnRisk,
+  createRecurringMembershipCharge,
   blockMembership,
   reactivateMembership,
 };

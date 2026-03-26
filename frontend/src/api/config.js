@@ -22,6 +22,19 @@ export async function getConfig() {
 }
 
 /**
+ * Obtém diagnóstico de prontidão de integrações a partir do payload de /config.
+ * O backend não bloqueia startup; o frontend usa este método para orientar configuração pendente.
+ */
+export async function getIntegrationConfigReadiness() {
+  const cfg = await getConfig();
+  const integrations = cfg?.configValidation?.integrations;
+  return {
+    ready: Boolean(integrations?.ready),
+    missing: Array.isArray(integrations?.missing) ? integrations.missing : [],
+  };
+}
+
+/**
  * Atualiza a configuração do sistema.
  *
  * @param {Object} configData - Objeto com a configuração completa

@@ -76,7 +76,7 @@ async function handleSystemAdminRoutes(ctx) {
       const health = await getChannelHealth({ tenantId: req.tenantId, windowMinutes });
       const { areCredentialsValid } = require('../../services/whatsappService');
 
-      let outboundPendingCount = 0;
+      let outboundQueuedCount = 0;
       let outboundFailedCount = 0;
       let recentErrors = [];
 
@@ -86,10 +86,10 @@ async function handleSystemAdminRoutes(ctx) {
         const sequelize = Model.sequelize;
 
         const [pending] = await sequelize.query(
-          `SELECT COUNT(*)::int AS c FROM outbound_queue WHERE tenant_key = :t AND status = 'pending'`,
+          `SELECT COUNT(*)::int AS c FROM outbound_queue WHERE tenant_key = :t AND status IN ('pending','failed')`,
           { replacements: { t: req.tenantId } }
         );
-        outboundPendingCount = pending?.[0]?.c ?? 0;
+        outboundQueuedCount = pending?.[0]?.c ?? 0;
 
         const [failed] = await sequelize.query(
           `SELECT COUNT(*)::int AS c FROM outbound_queue WHERE tenant_key = :t AND status = 'failed'`,
@@ -112,7 +112,7 @@ async function handleSystemAdminRoutes(ctx) {
         ...health,
         whatsapp: { areCredentialsValid: areCredentialsValid() },
         outbound: {
-          pendingCount: outboundPendingCount,
+          queuedCount: outboundQueuedCount,
           failedCount: outboundFailedCount,
           recentErrors,
         },

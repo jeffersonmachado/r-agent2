@@ -28,7 +28,7 @@ class RpaTestRunner {
         ? options.screenshotOnFailure 
         : config.playwright.screenshot.onFailure,
       enableReplay: options.enableReplay !== undefined ? options.enableReplay : true,
-      devtools: options.devtools !== undefined ? options.devtools : true,
+      devtools: options.devtools !== undefined ? options.devtools : false,
     };
     this.results = [];
   }
@@ -55,6 +55,7 @@ class RpaTestRunner {
   async close() {
     if (this.executor) {
       await this.executor.close();
+      this.executor = null;
     }
   }
 
@@ -126,6 +127,16 @@ class RpaTestRunner {
         await this.init();
       }
 
+      // Isola a execução atual para não contaminar seeds subsequentes
+      if (this.executor) {
+        this.executor.errors = [];
+        this.executor.consoleLogs = [];
+        this.executor.debugLogs = [];
+        this.executor.httpErrors = [];
+        this.executor.screenshots = [];
+        this.executor.lastBugResolution = null;
+      }
+
       // Tracing (opcional) - inicia no começo da execução do seed
       try {
         if (this.executor?.startTracing) {
@@ -137,6 +148,8 @@ class RpaTestRunner {
       if (this.executor?.page) {
         const authResult = await autoLoginBeforeSteps(this.executor.page, {
           firstStep: recordingData.steps?.[0],
+          autoLogin: recordingData?.metadata?.autoLogin !== false && data.autoLogin !== false,
+          templateData: mergedData,
           // Mantém compatibilidade com o config atual do runner
           frontendBaseUrl: process.env.TEST_FRONTEND_URL || config.urls?.frontend,
         });
@@ -145,6 +158,8 @@ class RpaTestRunner {
           console.warn('   O teste continuará, mas pode falhar se a página requer autenticação.');
         } else if (authResult.loggedIn) {
           console.log('✅ Login automático realizado com sucesso');
+        } else if (authResult.skipped) {
+          console.log(`ℹ️  Auto-login não aplicado (${authResult.skipReason})`);
         }
       }
 
@@ -502,4 +517,3 @@ class RpaTestRunner {
 }
 
 module.exports = { RpaTestRunner };
-

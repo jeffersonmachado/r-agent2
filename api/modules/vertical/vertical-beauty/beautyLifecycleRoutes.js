@@ -1,6 +1,8 @@
 const { listJourneyEvents, getSubjectTimeline, emitJourneyEvent } = require('../../../services/vertical/customerJourneyEngine');
 const beautyJourneyService = require('../../../services/vertical/beautyJourneyService');
 const { createSessionBundle } = require('../../../services/vertical/billingOrchestrationService');
+const { VerticalSessionBundle } = require('../../../db/models');
+const { getSequelize } = require('../../../db/sequelize');
 const { ensureAuth, tenantId, VERTICAL } = require('./beautyRouteHelpers');
 
 async function handleBeautyLifecycleRoutes(ctx) {
@@ -68,6 +70,36 @@ async function handleBeautyLifecycleRoutes(ctx) {
     return true;
   }
 
+  // GET /api/beauty/bundles
+  if (method === 'GET' && pathname === '/api/beauty/bundles') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const subjectId = urlObj.searchParams.get('subjectId') || null;
+    const status = urlObj.searchParams.get('status') || null;
+    const billingStatus = urlObj.searchParams.get('billingStatus') || null;
+    const limit = Math.min(Math.max(Number(urlObj.searchParams.get('limit')) || 100, 1), 500);
+
+    if (!getSequelize()) {
+      sendJson(res, 200, { items: [], total: 0 });
+      return true;
+    }
+
+    const where = { tenant_key: tenantId(req), vertical: VERTICAL };
+    if (subjectId) where.subject_id = subjectId;
+    if (status) where.status = status;
+    if (billingStatus) where.billing_status = billingStatus;
+
+    const rows = await VerticalSessionBundle().findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit,
+    }).catch(() => []);
+
+    const items = rows.map((r) => (r.toJSON ? r.toJSON() : r));
+    sendJson(res, 200, { items, total: items.length });
+    return true;
+  }
+
   // POST /api/beauty/bundle
   if (method === 'POST' && pathname === '/api/beauty/bundle') {
     if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
@@ -89,7 +121,27 @@ async function handleBeautyLifecycleRoutes(ctx) {
       renewalAt: body.renewalAt || null,
       metadata: body.metadata || {},
     });
-    sendJson(res, 201, { item: bundle });
+
+    let charge = null;
+    if (body?.charge && body?.charge?.amount) {
+      charge = await beautyJourneyService.createBeautyOneTimeCharge({
+        tenantId: tenantId(req),
+        bundleId: bundle.id,
+        subjectId: body.subjectId,
+        customerId: body.customerId || null,
+        customerName: body.customerName || null,
+        customerEmail: body.customerEmail || null,
+        customerPhone: body.customerPhone || null,
+        customerDocument: body.customerDocument || null,
+        amount: body.charge.amount,
+        dueDate: body.charge.dueDate || null,
+        provider: body.charge.provider || null,
+        idempotencyKey: body.charge.idempotencyKey || null,
+        metadata: body.charge.metadata || {},
+      }).catch(() => null);
+    }
+
+    sendJson(res, 201, { item: bundle, charge });
     return true;
   }
 
@@ -124,7 +176,7 @@ async function handleBeautyLifecycleRoutes(ctx) {
       customerId: body.customerId || null,
       scheduleId: body.scheduleId || null,
       correlationId: body.correlationId || null,
-      metadata: body.metadata || {},
+      metadata: { ...(body.metadata || {}), channel: body.channel || body.metadata?.channel || 'whatsapp' },
     });
     sendJson(res, 201, { item: evt });
     return true;
@@ -144,7 +196,7 @@ async function handleBeautyLifecycleRoutes(ctx) {
       subjectId: body.subjectId || null,
       customerId: body.customerId || null,
       scheduleId: body.scheduleId || null,
-      channel: body.channel || 'internal',
+      channel: body.channel || 'whatsapp',
       correlationId: body.correlationId || null,
       metadata: body.metadata || { note: body.note || null, triggeredBy: 'manual' },
     });
@@ -163,7 +215,7 @@ async function handleBeautyLifecycleRoutes(ctx) {
       subjectId: body.subjectId,
       customerId: body.customerId || null,
       scheduleId: body.scheduleId || null,
-      channel: body.channel || 'internal',
+      channel: body.channel || 'whatsapp',
       correlationId: body.correlationId || null,
       metadata: body.metadata || {},
     });
@@ -181,7 +233,7 @@ async function handleBeautyLifecycleRoutes(ctx) {
       tenantId: tenantId(req),
       subjectId: body.subjectId,
       customerId: body.customerId || null,
-      channel: body.channel || 'internal',
+      channel: body.channel || 'whatsapp',
       correlationId: body.correlationId || null,
       metadata: body.metadata || {},
     });

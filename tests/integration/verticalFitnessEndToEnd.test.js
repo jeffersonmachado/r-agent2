@@ -51,9 +51,9 @@ jest.mock('../../api/services/eventLedgerService', () => ({
   appendEventV1: (...args) => mockAppendEventV1(...args),
 }));
 
-jest.mock('../../api/services/notifications/notificationAdapter', () => ({
-  sendJourneyNotification: jest.fn().mockResolvedValue({ status: 'stub' }),
-  CHANNEL_STATUS: { STUB: 'stub' },
+jest.mock('../../api/services/notificationService', () => ({
+  enqueueNotification: jest.fn().mockResolvedValue({ queued: true, item: { id: 'notif-1' } }),
+  queueNotification: jest.fn().mockResolvedValue({ queued: true, item: { id: 'notif-1' } }),
 }));
 
 // ── Load services after mocks ────────────────────────────────────────────────
@@ -61,7 +61,7 @@ jest.mock('../../api/services/notifications/notificationAdapter', () => ({
 const fitnessAttendanceService = require('../../api/services/vertical/fitnessAttendanceService');
 const fitnessMembershipService = require('../../api/services/vertical/fitnessMembershipService');
 const { handleFitnessJourneyTick, handleFitnessGraceExpiryScan, handleFitnessInactivityScan } = require('../../api/services/vertical/verticalJourneyJobHandler');
-const notificationAdapter = require('../../api/services/notifications/notificationAdapter');
+const notificationService = require('../../api/services/notificationService');
 
 const TENANT = 'tenant-fitness-e2e';
 const SUBJECT = 'subject-fitness-001';
@@ -103,7 +103,7 @@ describe('Fitness Vertical — End-to-End Journey', () => {
     jest.clearAllMocks();
     mockGetSequelize.mockReturnValue({});
     mockAppendEventV1.mockResolvedValue({ id: 'evt-1' });
-    notificationAdapter.sendJourneyNotification.mockResolvedValue({ status: 'stub' });
+    notificationService.enqueueNotification.mockResolvedValue({ queued: true, item: { id: 'notif-1' } });
     mockFindOne.mockResolvedValue(null);
     mockFindAll.mockResolvedValue([]);
     mockCreate.mockImplementation(async (data) => ({ ...data, toJSON() { return this; } }));
@@ -199,9 +199,10 @@ describe('Fitness Vertical — End-to-End Journey', () => {
         update: jest.fn(async (data) => data),
       }));
 
-      await handleFitnessGraceExpiryScan({ tenantId: TENANT });
+      const result = await handleFitnessGraceExpiryScan({ tenantId: TENANT });
 
       expect(mockFindOne).toHaveBeenCalled();
+      expect(result).toEqual(expect.objectContaining({ scanned: 1, blocked: 1 }));
       // expectation: blockMembership was called (which uses updateBillingStatus internally)
       expect(mockAppendEventV1).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'MembershipBillingStatusChanged' }),

@@ -7,6 +7,7 @@ on:
     paths:
       - 'docker-compose.test.yml'
       - 'package.json'
+      - 'tests/rpa/**'
       - 'scripts/test-stack-*.sh'
       - 'api/**'
       - 'engine/**'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'docker-compose.test.yml'
       - 'package.json'
+      - 'tests/rpa/**'
       - 'scripts/test-stack-*.sh'
       - 'api/**'
       - 'engine/**'
@@ -57,6 +59,20 @@ jobs:
           STACK_KEEP_UP: '1'
         run: npm run test:stack:full
 
+      - name: Run screen catalog RPA on test stack
+        id: rpa_screens
+        env:
+          TEST_FRONTEND_URL: http://localhost:15173
+          TEST_API_URL: http://localhost:13001
+          TEST_BASE_URL: http://localhost:13001
+          TEST_TENANT_ID: system
+          TEST_USERNAME: admin
+          TEST_USER_PASSWORD: admin123
+          TEST_ADMIN_USERNAME: admin
+          TEST_ADMIN_PASSWORD: admin123
+          RPA_IGNORE_API_CONSOLE_ERRORS: 'true'
+        run: npm run test:rpa:screens
+
       - name: Capture docker compose diagnostics
         if: always()
         run: |
@@ -71,6 +87,9 @@ jobs:
           path: |
             /tmp/test-stack-ps.txt
             /tmp/test-stack.log
+            tests/rpa/reports/**/*.json
+            tests/rpa/reports/**/*.md
+            tests/rpa/screenshots/**/*.png
           retention-days: 7
           if-no-files-found: ignore
 
@@ -90,8 +109,10 @@ jobs:
           echo "## Test Stack Smoke" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Outcome: ${{ steps.stack_full.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Screen Catalog RPA: ${{ steps.rpa_screens.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Duration: ${DURATION}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Command: npm run test:stack:full" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Extra command: npm run test:rpa:screens" >> "$GITHUB_STEP_SUMMARY"
           echo "- Non-blocking workflow: enabled" >> "$GITHUB_STEP_SUMMARY"
           echo "- Diagnostics artifact: test-stack-smoke" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cleanup: docker compose down -v" >> "$GITHUB_STEP_SUMMARY"

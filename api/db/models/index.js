@@ -112,6 +112,9 @@ const getVerticalJourneyEvent = require('./VerticalJourneyEvent');
 const getVerticalAttendance = require('./VerticalAttendance');
 const getVerticalSessionBundle = require('./VerticalSessionBundle');
 const getVerticalEngagementSignal = require('./VerticalEngagementSignal');
+const getBillingTransaction = require('./BillingTransaction');
+const getBillingSubscription = require('./BillingSubscription');
+const getNotificationDelivery = require('./NotificationDelivery');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -223,6 +226,9 @@ const VerticalJourneyEvent = () => getVerticalJourneyEvent();
 const VerticalAttendance = () => getVerticalAttendance();
 const VerticalSessionBundle = () => getVerticalSessionBundle();
 const VerticalEngagementSignal = () => getVerticalEngagementSignal();
+const BillingTransaction = () => getBillingTransaction();
+const BillingSubscription = () => getBillingSubscription();
+const NotificationDelivery = () => getNotificationDelivery();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -497,6 +503,9 @@ module.exports = {
   VerticalAttendance,
   VerticalSessionBundle,
   VerticalEngagementSignal,
+  BillingTransaction,
+  BillingSubscription,
+  NotificationDelivery,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -608,4 +617,7 @@ module.exports = {
   getVerticalAttendance,
   getVerticalSessionBundle,
   getVerticalEngagementSignal,
+  getBillingTransaction,
+  getBillingSubscription,
+  getNotificationDelivery,
 };

@@ -123,6 +123,91 @@ function validateRedisUrl(redisUrl) {
   return { valid: true };
 }
 
+function readPath(obj, path) {
+  const parts = String(path || '').split('.').filter(Boolean);
+  let current = obj;
+  for (const part of parts) {
+    if (current && typeof current === 'object' && part in current) {
+      current = current[part];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+function evaluateIntegrationReadiness(configData = {}) {
+  const missing = [];
+  const addMissing = (path, reason) => missing.push({ path, reason });
+
+  const provider = readPath(configData, 'billing.provider');
+  if (!provider || typeof provider !== 'string' || !provider.trim()) {
+    addMissing('billing.provider', 'Provider de billing obrigatório (asaas ou mercado_pago)');
+  }
+
+  const normalizedProvider = String(provider || '').trim().toLowerCase();
+  if (normalizedProvider === 'asaas') {
+    const asaasRequired = [
+      'billing.providers.asaas.baseUrl',
+      'billing.providers.asaas.apiKey',
+      'billing.providers.asaas.webhookSecret',
+    ];
+    for (const path of asaasRequired) {
+      const value = readPath(configData, path);
+      if (value === undefined || value === null || String(value).trim() === '') {
+        addMissing(path, 'Campo obrigatório para provider Asaas');
+      }
+    }
+  } else if (normalizedProvider === 'mercado_pago' || normalizedProvider === 'mercadopago' || normalizedProvider === 'mp') {
+    const mpRequired = [
+      'billing.providers.mercadoPago.baseUrl',
+      'billing.providers.mercadoPago.accessToken',
+      'billing.providers.mercadoPago.webhookSecret',
+    ];
+    for (const path of mpRequired) {
+      const value = readPath(configData, path);
+      if (value === undefined || value === null || String(value).trim() === '') {
+        addMissing(path, 'Campo obrigatório para provider Mercado Pago');
+      }
+    }
+  } else if (provider) {
+    addMissing('billing.provider', `Provider inválido: ${provider}`);
+  }
+
+  const notificationFlags = [
+    'notifications.whatsapp.enabled',
+    'notifications.sms.enabled',
+    'notifications.email.enabled',
+  ];
+  for (const path of notificationFlags) {
+    const value = readPath(configData, path);
+    if (typeof value !== 'boolean') {
+      addMissing(path, 'Flag obrigatória (true/false)');
+    }
+  }
+
+  const whatsappEnabled = readPath(configData, 'notifications.whatsapp.enabled') === true;
+  if (whatsappEnabled) {
+    const whatsappRequired = [
+      'whatsapp.apiUrl',
+      'whatsapp.phoneNumberId',
+      'whatsapp.accessToken',
+      'whatsapp.verifyToken',
+    ];
+    for (const path of whatsappRequired) {
+      const value = readPath(configData, path);
+      if (value === undefined || value === null || String(value).trim() === '') {
+        addMissing(path, 'Campo obrigatório quando notifications.whatsapp.enabled=true');
+      }
+    }
+  }
+
+  return {
+    ready: missing.length === 0,
+    missing,
+  };
+}
+
 async function validateRedisConnection(redisUrl) {
   try {
     const Redis = require('ioredis');
@@ -165,11 +250,15 @@ function createConfigService({ deps }) {
     reloadAndReadConfig() {
       appConfig.reload();
       const configData = appConfig.getAll();
+      const rawConfig = appConfig.loadConfig();
       if (!configData || typeof configData !== 'object' || Array.isArray(configData)) {
         throw new Error('Configuração retornada não é um objeto válido');
       }
       const sanitizedConfig = JSON.parse(JSON.stringify(configData));
       if (sanitizedConfig.ai) delete sanitizedConfig.ai;
+      sanitizedConfig.configValidation = {
+        integrations: evaluateIntegrationReadiness(rawConfig || {}),
+      };
       return sanitizedConfig;
     },
 
@@ -272,7 +361,11 @@ function createConfigService({ deps }) {
 
     async persistConfigUpdate(body, logger) {
       ensureDataDir();
-      fs.writeFileSync(configFile, JSON.stringify(body, null, 2), 'utf8');
+      const payload = JSON.parse(JSON.stringify(body || {}));
+      if (payload && typeof payload === 'object') {
+        delete payload.configValidation;
+      }
+      fs.writeFileSync(configFile, JSON.stringify(payload, null, 2), 'utf8');
       appConfig.reload();
       try {
         deps.initializeAiProviders();

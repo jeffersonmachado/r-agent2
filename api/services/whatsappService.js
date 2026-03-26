@@ -10,10 +10,10 @@ const https = require('https');
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 
-const WHATSAPP_API_URL = config.get('whatsapp.apiUrl', 'https://graph.facebook.com/v18.0');
-const WHATSAPP_PHONE_NUMBER_ID = config.get('whatsapp.phoneNumberId');
-const WHATSAPP_ACCESS_TOKEN = config.get('whatsapp.accessToken');
-const WHATSAPP_VERIFY_TOKEN = config.get('whatsapp.verifyToken');
+const WHATSAPP_API_URL = config.getFromFile('whatsapp.apiUrl');
+const WHATSAPP_PHONE_NUMBER_ID = config.getFromFile('whatsapp.phoneNumberId');
+const WHATSAPP_ACCESS_TOKEN = config.getFromFile('whatsapp.accessToken');
+const WHATSAPP_VERIFY_TOKEN = config.getFromFile('whatsapp.verifyToken');
 
 function normalizeMediaType(type, mimeType) {
   const t = String(type || '').trim().toLowerCase();
@@ -75,8 +75,8 @@ function areCredentialsValid() {
  * @returns {Promise<Object>}
  */
 async function sendTextMessage(to, text) {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
-    throw new Error('WhatsApp credentials não configuradas');
+  if (!WHATSAPP_API_URL || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN || !WHATSAPP_VERIFY_TOKEN) {
+    throw new Error('required_config_missing:whatsapp');
   }
   
   // Valida se as credenciais não são placeholders
@@ -155,8 +155,8 @@ async function sendTextMessage(to, text) {
 }
 
 async function sendMediaMessage(to, { type, mimeType, fileName, caption, buffer, link } = {}) {
-  if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
-    throw new Error('WhatsApp credentials não configuradas');
+  if (!WHATSAPP_API_URL || !WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN || !WHATSAPP_VERIFY_TOKEN) {
+    throw new Error('required_config_missing:whatsapp');
   }
 
   if (!areCredentialsValid()) {

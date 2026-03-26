@@ -9,9 +9,11 @@ export function CrudPageBase({
   hideHeader = false,
   children,
 }) {
+  const shouldRenderHeader = hideHeader !== true && Boolean(title || actions);
+
   return (
     <div className={`support-page ${className}`.trim()} style={style}>
-      {!hideHeader ? (
+      {shouldRenderHeader ? (
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h1>{title}</h1>

@@ -9,7 +9,7 @@ const {
 /**
  * Executes jobs query flow and assembles API payload.
  *
- * @param {{tenantId: string, selectedVertical: string, selectedStatus: string|null, safePage: number, safeLimit: number, period: {startDate: Date, endDate: Date}}} params
+ * @param {{tenantId: string, selectedVertical: string, selectedJobId: string|null, selectedStatus: string|null, safePage: number, safeLimit: number, period: {startDate: Date, endDate: Date}}} params
  * @param {{dbAvailable: Function, Op: Object, models: {ExecutionJob: Function}, applyPagination: Function, helpers: Object}} deps
  * @returns {Promise<Object>}
  */
@@ -17,6 +17,7 @@ async function listDashboardJobs(params, deps) {
   const {
     tenantId,
     selectedVertical,
+    selectedJobId,
     selectedStatus,
     safePage,
     safeLimit,
@@ -48,14 +49,20 @@ async function listDashboardJobs(params, deps) {
 
   const where = {
     tenant_key: tenantId,
-    kind: { [Op.like]: 'vertical_%' },
+    kind: {
+      [Op.or]: [
+        { [Op.like]: 'vertical_%' },
+        { [Op.eq]: 'billing_reconciliation' },
+        { [Op.eq]: 'vertical_notification_dispatch' },
+      ],
+    },
     created_at: { [Op.between]: [period.startDate, period.endDate] },
   };
 
   if (selectedVertical === 'beauty') {
-    where.kind = { [Op.in]: ['vertical_beauty_journey_tick', 'vertical_beauty_noshow_scan', 'vertical_beauty_reactivation_scan', 'vertical_reconciliation'] };
+    where.kind = { [Op.in]: ['vertical_beauty_journey_tick', 'vertical_beauty_noshow_scan', 'vertical_beauty_reactivation_scan', 'vertical_reconciliation', 'billing_reconciliation', 'vertical_notification_dispatch'] };
   } else if (selectedVertical === 'fitness') {
-    where.kind = { [Op.in]: ['vertical_fitness_journey_tick', 'vertical_fitness_inactivity_scan', 'vertical_fitness_grace_expiry_scan', 'vertical_reconciliation'] };
+    where.kind = { [Op.in]: ['vertical_fitness_journey_tick', 'vertical_fitness_inactivity_scan', 'vertical_fitness_grace_expiry_scan', 'vertical_reconciliation', 'billing_reconciliation', 'vertical_notification_dispatch'] };
   }
 
   const rows = await ExecutionJob().findAll({
@@ -65,6 +72,9 @@ async function listDashboardJobs(params, deps) {
   }).catch(() => []);
 
   let jobs = mapJobRows(rows, helpers);
+  if (selectedJobId) {
+    jobs = jobs.filter((job) => String(job.id || '') === selectedJobId);
+  }
   if (selectedStatus) {
     jobs = jobs.filter((job) => job.status === selectedStatus);
   }

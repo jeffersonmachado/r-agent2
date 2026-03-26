@@ -1,6 +1,7 @@
 'use strict';
 
 const {
+  mapNotificationDeliveryItems,
   mapLedgerNotificationItems,
   mapJourneyProxyNotificationItems,
   filterAndSortNotificationItems,
@@ -11,7 +12,7 @@ const {
  * Executes notifications query flow and assembles API payload.
  *
  * @param {{tenantId: string, selectedVertical: string, selectedStatus: string|null, selectedChannel: string|null, safePage: number, safeLimit: number, period: {startDate: Date, endDate: Date}}} params
- * @param {{dbAvailable: Function, Op: Object, models: {EventLedger: Function, VerticalJourneyEvent: Function}, applyPagination: Function, helpers: Object}} deps
+ * @param {{dbAvailable: Function, Op: Object, models: {NotificationDelivery: Function, EventLedger: Function, VerticalJourneyEvent: Function}, applyPagination: Function, helpers: Object}} deps
  * @returns {Promise<Object>}
  */
 async function listDashboardNotifications(params, deps) {
@@ -33,7 +34,7 @@ async function listDashboardNotifications(params, deps) {
     helpers,
   } = deps;
 
-  const { EventLedger, VerticalJourneyEvent } = models;
+  const { NotificationDelivery, EventLedger, VerticalJourneyEvent } = models;
 
   if (!dbAvailable()) {
     return {
@@ -47,19 +48,35 @@ async function listDashboardNotifications(params, deps) {
     };
   }
 
-  const ledgerRows = await EventLedger().findAll({
-    where: {
-      tenant_key: tenantId,
-      type: 'VerticalJourney_Custom',
-      source: { [Op.like]: 'vertical.notification.%' },
-      occurred_at: { [Op.between]: [period.startDate, period.endDate] },
-    },
-    order: [['occurred_at', 'DESC']],
-    limit: 6000,
-  }).catch(() => []);
+  const notificationRows = typeof NotificationDelivery === 'function'
+    ? await NotificationDelivery().findAll({
+      where: {
+        tenant_key: tenantId,
+        created_at: { [Op.between]: [period.startDate, period.endDate] },
+      },
+      order: [['created_at', 'DESC']],
+      limit: 6000,
+    }).catch(() => [])
+    : [];
 
-  let items = mapLedgerNotificationItems(ledgerRows, helpers);
+  let items = mapNotificationDeliveryItems(notificationRows, helpers);
   const warnings = [];
+
+  if (!items.length) {
+    warnings.push('notification_deliveries_not_found_using_legacy_sources');
+    const ledgerRows = await EventLedger().findAll({
+      where: {
+        tenant_key: tenantId,
+        type: 'VerticalJourney_Custom',
+        source: { [Op.like]: 'vertical.notification.%' },
+        occurred_at: { [Op.between]: [period.startDate, period.endDate] },
+      },
+      order: [['occurred_at', 'DESC']],
+      limit: 6000,
+    }).catch(() => []);
+
+    items = mapLedgerNotificationItems(ledgerRows, helpers);
+  }
 
   if (!items.length) {
     warnings.push('notification_delivery_events_not_found_using_journey_proxy');
@@ -89,7 +106,11 @@ async function listDashboardNotifications(params, deps) {
     pagination: paged.pagination,
     meta: {
       warnings,
-      dataSource: warnings.length ? 'vertical_journey_proxy' : 'event_ledger_notification_delivery',
+      dataSource: items.some((item) => item.origin === 'notification_deliveries')
+        ? 'notification_deliveries'
+        : warnings.includes('notification_delivery_events_not_found_using_journey_proxy')
+          ? 'vertical_journey_proxy'
+          : 'event_ledger_notification_delivery',
     },
   };
 }

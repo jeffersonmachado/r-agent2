@@ -1,0 +1,25 @@
+{
+  "id": "seed-platform-create-flow",
+  "name": "seed-platform-create-flow",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "requiresAuth": true,
+    "purpose": "Verificar acesso autenticado ao editor de fluxos"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/editor"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/editor"
+        }
+      }
+    }
+  ],
+  "data": {}
+}

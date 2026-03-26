@@ -1,0 +1,25 @@
+{
+  "id": "seed-platform-create-queue",
+  "name": "seed-platform-create-queue",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "requiresAuth": true,
+    "purpose": "Verificar acesso autenticado à área operacional relacionada a filas"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/support"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/support"
+        }
+      }
+    }
+  ],
+  "data": {}
+}

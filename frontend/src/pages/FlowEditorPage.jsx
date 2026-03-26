@@ -485,49 +485,6 @@ export function FlowEditorPage() {
   });
 
   const {
-    handleLoadReplay,
-    handleSeekNode,
-    handleValidateAndFix,
-    handleSimplifyGraph,
-  } = useFlowEditorMaintenance({
-    sessionId,
-    setLoadingReplay,
-    setReplayError,
-    setReplay,
-    setReplayCollapsed,
-    showToast,
-    editorRef,
-    setSelectedNode,
-    editorMode,
-    handleFlowChanged,
-    captureHistorySnapshot,
-    handleValidate,
-    handleArrange,
-  });
-
-  const {
-    handleShowErrors,
-    handleToggleDebug,
-    handleShowStatistics,
-    handleOptimizeLayout,
-    handleToggleMinimap,
-  } = useFlowEditorUiControls({
-    setRightPanelCollapsed,
-    setValidationCollapsed,
-    validation,
-    showToast,
-    debugModeEnabled,
-    setDebugModeEnabled,
-    editorMode,
-    canRenderBpmn,
-    bpmnViewModel,
-    editorRef,
-    handleArrange,
-    minimapVisible,
-    setMinimapVisible,
-  });
-
-  const {
     handleCopy,
     handlePaste,
     handleDuplicate,
@@ -607,6 +564,49 @@ export function FlowEditorPage() {
     loadFlow,
     setShowDeleteConfirm,
     deleteFlow,
+  });
+
+  const {
+    handleLoadReplay,
+    handleSeekNode,
+    handleValidateAndFix,
+    handleSimplifyGraph,
+  } = useFlowEditorMaintenance({
+    sessionId,
+    setLoadingReplay,
+    setReplayError,
+    setReplay,
+    setReplayCollapsed,
+    showToast,
+    editorRef,
+    setSelectedNode,
+    editorMode,
+    handleFlowChanged,
+    captureHistorySnapshot,
+    handleValidate,
+    handleArrange,
+  });
+
+  const {
+    handleShowErrors,
+    handleToggleDebug,
+    handleShowStatistics,
+    handleOptimizeLayout,
+    handleToggleMinimap,
+  } = useFlowEditorUiControls({
+    setRightPanelCollapsed,
+    setValidationCollapsed,
+    validation,
+    showToast,
+    debugModeEnabled,
+    setDebugModeEnabled,
+    editorMode,
+    canRenderBpmn,
+    bpmnViewModel,
+    editorRef,
+    handleArrange,
+    minimapVisible,
+    setMinimapVisible,
   });
 
   useEffect(() => {

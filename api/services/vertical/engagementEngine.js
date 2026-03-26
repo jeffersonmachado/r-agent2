@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const { getSequelize } = require('../../db/sequelize');
 const { VerticalAttendance, VerticalEngagementSignal } = require('../../db/models');
 const { appendEventV1 } = require('../eventLedgerService');
+const logger = require('../../utils/logger');
 
 // ── defaults (overridable by tenant metadata later) ──────────────────────
 const DEFAULTS = {
@@ -164,7 +165,7 @@ async function computeEngagementSignal({ tenantId, vertical, subjectId, membersh
     const id = makeId('ves');
     const row = await Model.create({ id, ...signalRow }).catch(async (err) => {
       // on error – best effort, return in-memory object
-      console.warn('[EngagementEngine] failed to persist signal', err?.message);
+      logger.warn('[EngagementEngine] failed to persist signal', { error: err?.message });
       return { id, ...signalRow };
     });
     signalRow.id = row.id || id;

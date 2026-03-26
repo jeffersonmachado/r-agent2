@@ -1,0 +1,25 @@
+{
+  "id": "seed-platform-create-department",
+  "name": "seed-platform-create-department",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "requiresAuth": true,
+    "purpose": "Verificar acesso autenticado à tela de departamentos"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/departments"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/departments"
+        }
+      }
+    }
+  ],
+  "data": {}
+}

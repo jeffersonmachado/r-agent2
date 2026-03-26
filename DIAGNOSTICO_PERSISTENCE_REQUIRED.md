@@ -164,3 +164,23 @@ sudo -u postgres psql -d r_agent2 -c "\d tenant_settings"
 - **Database**: [api/db/sequelize.js](api/db/sequelize.js#L98)
 - **WhatsApp Service**: [api/services/whatsappQrService.js](api/services/whatsappQrService.js#L103-L110)
 - **Project Rule**: [PROJECT_RULES.md#Seção-7](PROJECT_RULES.md) - Persistência Obrigatória
+
+## Pendência Futura (Roadmap)
+
+### Limpeza automática das sessões WhatsApp Web
+
+Atualmente, os diretórios de sessão local do WhatsApp Web (`.wwebjs_auth/` e `.wwebjs_cache/`) **não são esvaziados automaticamente**.
+
+Estado atual:
+- A sessão é persistente por design para evitar perda de autenticação entre reinícios.
+- O sistema remove automaticamente apenas arquivos de lock do Chrome quando detecta travamento.
+- A limpeza completa da pasta de sessão ainda depende de ação manual (ou reset operacional controlado).
+
+Decisão:
+- Esta pendência deve ser tratada em evolução futura, com política explícita de retenção/expurgo e opção segura de limpeza por tenant/conexão.
+
+Critérios esperados para solução futura:
+- Limpeza automática com janela de retenção configurável.
+- Operação segura sem quebrar sessões ativas.
+- Logs/auditoria da limpeza executada.
+- Comando/endpoint administrativo para limpeza forçada por conexão.

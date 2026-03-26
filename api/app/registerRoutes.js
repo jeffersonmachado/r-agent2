@@ -50,6 +50,7 @@ const { createPlatformAdminExpressRouter } = require('../composition/platform-ad
 const { createPlatformContentExpressRouter } = require('../composition/platform-content');
 const { createPlatformPublicExpressRouter } = require('../composition/platform-public');
 const { createVerticalExpressRouter } = require('../composition/vertical');
+const { createBillingExpressRouter } = require('../composition/billing');
 const { createWebScrapingExpressRouter } = require('../composition/web-scraping');
 const { createWebhooksExpressRouter } = require('../composition/webhooks');
 const { createVoiceExpressRouter } = require('../composition/voice');
@@ -102,6 +103,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const authRouter = createAuthExpressRouter();
   const pbxRouter = createPbxExpressRouter();
   const verticalRouter = createVerticalExpressRouter();
+  const billingRouter = createBillingExpressRouter();
   const webhooksRouter = createWebhooksExpressRouter();
   const operationsDashboardRouter = createOperationsDashboardExpressRouter();
   const webScrapingRouter = createWebScrapingExpressRouter();
@@ -152,6 +154,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     domainFlowRouter,
     ticketRouter,
     verticalRouter,
+    billingRouter,
     pbxRouter,
     webhooksRouter,
     operationsDashboardRouter,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Hook para gerenciar carregamento de lista em páginas CRUD.
@@ -20,6 +20,11 @@ export function useCrudList(fetchFn, {
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const fetchFnRef = useRef(fetchFn);
+
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
 
   const paramsSignature = useMemo(() => JSON.stringify(params ?? null), [params]);
 
@@ -32,7 +37,7 @@ export function useCrudList(fetchFn, {
         : (params === undefined
             ? []
             : (Array.isArray(params) ? params : [params]));
-      const result = await fetchFn(...resolvedArgs);
+      const result = await fetchFnRef.current(...resolvedArgs);
       const list = Array.isArray(result)
         ? result
         : (result?.[itemsKey] ?? []);
@@ -44,7 +49,7 @@ export function useCrudList(fetchFn, {
     } finally {
       setLoading(false);
     }
-  }, [fetchFn, itemsKey, paramsSignature]);
+  }, [itemsKey, paramsSignature, params]);
 
   useEffect(() => {
     if (loadOnMount || (reloadOnParamsChange && params !== undefined)) {

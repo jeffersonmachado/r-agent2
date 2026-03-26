@@ -10,6 +10,7 @@ function createRouteRegistry(routers) {
     { router: routers.domainFlowRouter },
     { router: routers.ticketRouter },
     { router: routers.verticalRouter },
+    { router: routers.billingRouter },
     { router: routers.pbxRouter },
     { router: routers.webhooksRouter },
     { router: routers.operationsDashboardRouter },

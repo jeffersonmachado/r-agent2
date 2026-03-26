@@ -11,7 +11,7 @@ import { useToast } from './Toast';
 import { TenantSelectorModal } from './TenantSelectorModal';
 import logger from '../utils/logger';
 import { getBasePath, getStaticUrl } from '../utils';
-import { validateTenantAiCredentials } from '../api/config';
+import { validateTenantAiCredentials, getIntegrationConfigReadiness } from '../api/config';
 import { isSuperAdmin as checkIsSuperAdmin } from '../utils/menuPermissions';
 
 export function Login() {
@@ -124,6 +124,47 @@ export function Login() {
           }
           
           console.log('[Login] ✅ Tenant tem provider de IA válido, continuando para /support');
+
+          // Verificação global de integrações (billing/notificações/whatsapp).
+          // O servidor continua carregando normalmente; aqui apenas orientamos configuração pendente.
+          try {
+            const readiness = await getIntegrationConfigReadiness();
+            if (!readiness?.ready) {
+              const missing = (readiness?.missing || []).map((item) => item?.path).filter(Boolean);
+              const preview = missing.slice(0, 4).join(', ');
+              const preferredTab = missing.some((path) => String(path).startsWith('billing.'))
+                ? 'billing'
+                : missing.some((path) => String(path).startsWith('whatsapp.') || String(path).startsWith('notifications.'))
+                  ? 'whatsapp'
+                  : 'general';
+
+              updateAgent(updatedAgent);
+              setIsSuperAdminLogin(false);
+              setShowTenantModal(false);
+
+              showToast(
+                preview
+                  ? `Configurações obrigatórias pendentes: ${preview}${missing.length > 4 ? '...' : ''}`
+                  : 'Configurações obrigatórias de integrações pendentes.',
+                'warning',
+                9000
+              );
+
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  try {
+                    navigate(`/config?tab=${encodeURIComponent(preferredTab)}`);
+                  } catch (_) {
+                    const basePath = getBasePath() || '';
+                    window.location.href = `${basePath}/config?tab=${encodeURIComponent(preferredTab)}`;
+                  }
+                }, 300);
+              });
+              return;
+            }
+          } catch (readinessErr) {
+            logger.warn('Não foi possível validar prontidão de integrações no login', readinessErr);
+          }
         } catch (err) {
           console.error('[Login] Erro ao verificar provider de IA:', err);
           logger.warn('Erro ao verificar provider de IA do tenant, bloqueando fluxo e redirecionando para configuração', err);

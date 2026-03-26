@@ -490,6 +490,82 @@ async function processJob(job) {
     }
     return;
   }
+  if (kind === 'vertical_notification_dispatch' || kind === 'vertical_notification_send') {
+    const { dispatchNotification } = require('./notificationService');
+    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key') || 'system';
+    const notificationId = safeGet(job, 'payload.notificationId', null);
+    const fallbackPayload = notificationId ? null : {
+      tenantId,
+      recipient: safeGet(job, 'payload.recipient', null) || safeGet(job, 'payload.to', null),
+      channel: safeGet(job, 'payload.channel', null) || safeGet(job, 'payload.metadata.channel', null) || 'whatsapp',
+      eventType: safeGet(job, 'payload.eventType', 'unknown_event'),
+      message: safeGet(job, 'payload.message', null),
+      metadata: safeGet(job, 'payload.metadata', {}),
+      vertical: safeGet(job, 'payload.vertical', null) || safeGet(job, 'payload.metadata.vertical', null),
+      subjectId: safeGet(job, 'payload.subjectId', null) || safeGet(job, 'payload.metadata.subjectId', null),
+      customerId: safeGet(job, 'payload.customerId', null) || safeGet(job, 'payload.metadata.customerId', null),
+      membershipId: safeGet(job, 'payload.membershipId', null) || safeGet(job, 'payload.metadata.membershipId', null),
+      bundleId: safeGet(job, 'payload.bundleId', null) || safeGet(job, 'payload.metadata.bundleId', null),
+      transactionId: safeGet(job, 'payload.transactionId', null) || safeGet(job, 'payload.metadata.transactionId', null),
+      appointmentId: safeGet(job, 'payload.appointmentId', null) || safeGet(job, 'payload.metadata.appointmentId', null),
+      scheduleId: safeGet(job, 'payload.scheduleId', null) || safeGet(job, 'payload.metadata.scheduleId', null),
+      maxAttempts: safeGet(job, 'max_attempts', 3),
+    };
+    const result = await dispatchNotification({
+      tenantId,
+      notificationId,
+      jobId: safeGet(job, 'id', null),
+      force: !!safeGet(job, 'payload.force', false),
+      fallbackPayload,
+    });
+    if (!result?.ok) {
+      const err = new Error(result?.error || 'vertical_notification_send_failed');
+      // @ts-ignore
+      err.code = 'vertical_notification_send_failed';
+      throw err;
+    }
+    return;
+  }
+  if (kind === 'billing_reconciliation') {
+    const { reconcileTransactions, reconcileSubscriptions } = require('./billingService');
+    const { appendEventV1 } = require('./eventLedgerService');
+    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key') || null;
+    const limit = Number(safeGet(job, 'payload.limit', 100)) || 100;
+    const [txOut, subOut] = await Promise.all([
+      reconcileTransactions({ tenantId, limit }),
+      reconcileSubscriptions({ tenantId, limit }),
+    ]);
+    if (!txOut?.ok || !subOut?.ok) {
+      const err = new Error('billing_reconciliation_failed');
+      // @ts-ignore
+      err.code = 'billing_reconciliation_failed';
+      throw err;
+    }
+    if (tenantId) {
+      appendEventV1({
+        tenantId,
+        type: 'VerticalJourney_Custom',
+        source: 'billing.reconciliation.scheduler',
+        correlationId: job?.id || null,
+        subject: { type: 'tenant', id: tenantId },
+        actor: { type: 'system', id: 'execution_queue' },
+        payload: {
+          kind: 'billing_reconciliation_scheduled',
+          limit,
+          jobId: job?.id || null,
+          transactions: txOut,
+          subscriptions: subOut,
+        },
+      }).catch((err) => {
+        logger.warn('[ExecutionQueue] billing reconciliation snapshot append failed', {
+          error: err?.message,
+          tenantId,
+          jobId: job?.id || null,
+        });
+      });
+    }
+    return;
+  }
   // Vertical journey kinds (beauty + fitness)
   if (kind.startsWith('vertical_')) {
     const { handleVerticalJob } = require('./vertical/verticalJourneyJobHandler');

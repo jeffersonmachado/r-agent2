@@ -1447,6 +1447,32 @@
   background-color: var(--color-accent-pressed);
 }
 
+.btn-success {
+  background-color: var(--color-status-success);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669; /* emerald-600 */
+}
+
+.btn-success:active:not(:disabled) {
+  background-color: #047857; /* emerald-700 */
+}
+
+.btn-warning {
+  background-color: var(--color-status-warning);
+  color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background-color: #d97706; /* amber-600 */
+}
+
+.btn-warning:active:not(:disabled) {
+  background-color: #b45309; /* amber-700 */
+}
+
 .btn-danger {
   background-color: var(--color-status-error);
   color: white;
@@ -3219,6 +3245,47 @@ div:has(svg[data-testid="connection"]) {
   color: var(--color-text-primary);
   font-size: 24px;
   font-weight: 600;
+}
+
+.support-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.support-header-title-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.support-back-button:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-hover);
+  transform: translateX(-1px);
+}
+
+.support-back-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .support-controls {

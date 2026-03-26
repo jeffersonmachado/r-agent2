@@ -29,6 +29,13 @@ export function sendBeautyFollowUp(payload = {}) {
   });
 }
 
+export function sendBeautyReactivation(payload = {}) {
+  return fetchJson('/api/beauty/reactivation', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export function markBeautyServiceCompleted(payload = {}) {
   return fetchJson('/api/beauty/service-completed', {
     method: 'POST',

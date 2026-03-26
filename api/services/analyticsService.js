@@ -36,6 +36,30 @@ function safeToString(value, fallback = '') {
   try { return String(value); } catch (_) { return fallback; }
 }
 
+function parseStartDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function parseEndDate(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function inDateRange(dateValue, startDate, endDate) {
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return false;
+  if (startDate && d < startDate) return false;
+  if (endDate && d > endDate) return false;
+  return true;
+}
+
 /**
  * Calcula métricas gerais do sistema.
  * @param {Object} options
@@ -45,18 +69,15 @@ function safeToString(value, fallback = '') {
  */
 async function getGeneralMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
+  const startBound = parseStartDate(startDate);
+  const endBound = parseEndDate(endDate);
   
   const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Filtra por período se fornecido
   if (startDate || endDate) {
-    tickets = tickets.filter(ticket => {
-      const ticketDate = new Date(ticket.createdAt);
-      if (startDate && ticketDate < new Date(startDate)) return false;
-      if (endDate && ticketDate > new Date(endDate)) return false;
-      return true;
-    });
+    tickets = tickets.filter((ticket) => inDateRange(ticket.createdAt, startBound, endBound));
   }
   
   const totalTickets = tickets.length;
@@ -215,6 +236,8 @@ async function getGeneralMetrics(options = {}) {
  */
 async function getAgentMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
+  const startBound = parseStartDate(startDate);
+  const endBound = parseEndDate(endDate);
   
   const agentsRaw = await listAgents(tenantId);
   const agents = Array.isArray(agentsRaw)
@@ -225,12 +248,7 @@ async function getAgentMetrics(options = {}) {
   
   // Filtra por período
   if (startDate || endDate) {
-    tickets = tickets.filter(ticket => {
-      const ticketDate = new Date(ticket.createdAt);
-      if (startDate && ticketDate < new Date(startDate)) return false;
-      if (endDate && ticketDate > new Date(endDate)) return false;
-      return true;
-    });
+    tickets = tickets.filter((ticket) => inDateRange(ticket.createdAt, startBound, endBound));
   }
   
   const agentStats = {};
@@ -298,6 +316,8 @@ async function getAgentMetrics(options = {}) {
  */
 function getDepartmentMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
+  const startBound = parseStartDate(startDate);
+  const endBound = parseEndDate(endDate);
   
   const departments = listDepartments({ tenantId });
   const allTickets = listAllTickets({ tenantId });
@@ -305,12 +325,7 @@ function getDepartmentMetrics(options = {}) {
   
   // Filtra por período
   if (startDate || endDate) {
-    tickets = tickets.filter(ticket => {
-      const ticketDate = new Date(ticket.createdAt);
-      if (startDate && ticketDate < new Date(startDate)) return false;
-      if (endDate && ticketDate > new Date(endDate)) return false;
-      return true;
-    });
+    tickets = tickets.filter((ticket) => inDateRange(ticket.createdAt, startBound, endBound));
   }
   
   const deptStats = {};
@@ -370,6 +385,8 @@ function getDepartmentMetrics(options = {}) {
  */
 function getQueueMetrics(options = {}) {
   const { startDate, endDate, tenantId } = options;
+  const startBound = parseStartDate(startDate);
+  const endBound = parseEndDate(endDate);
   
   const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
@@ -397,12 +414,7 @@ function getQueueMetrics(options = {}) {
   
   // Filtra por período
   if (startDate || endDate) {
-    tickets = tickets.filter(ticket => {
-      const ticketDate = new Date(ticket.createdAt);
-      if (startDate && ticketDate < new Date(startDate)) return false;
-      if (endDate && ticketDate > new Date(endDate)) return false;
-      return true;
-    });
+    tickets = tickets.filter((ticket) => inDateRange(ticket.createdAt, startBound, endBound));
   }
   
   const queueStats = {};
@@ -473,20 +485,20 @@ function getQueueMetrics(options = {}) {
  * @returns {Array}
  */
 function getTrendMetrics(options = {}) {
-  const { startDate, endDate, groupBy = 'day' } = options;
+  const { startDate, endDate, groupBy = 'day', tenantId } = options;
+  const startBound = parseStartDate(startDate);
+  const endBound = parseEndDate(endDate);
   
-  const allTickets = listAllTickets();
+  const allTickets = listAllTickets({ tenantId });
   let tickets = allTickets.tickets || [];
   
   // Define período padrão (últimos 30 dias se não especificado)
-  const end = endDate ? new Date(endDate) : new Date();
-  const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const end = endBound || new Date();
+  const start = startBound || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  if (!startBound) start.setHours(0, 0, 0, 0);
   
   // Filtra tickets no período
-  tickets = tickets.filter(ticket => {
-    const ticketDate = new Date(ticket.createdAt);
-    return ticketDate >= start && ticketDate <= end;
-  });
+  tickets = tickets.filter((ticket) => inDateRange(ticket.createdAt, start, end));
   
   // Agrupa por período
   const groups = {};

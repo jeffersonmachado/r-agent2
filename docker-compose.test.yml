@@ -167,6 +167,7 @@ services:
     environment:
       NODE_ENV: test
       FRONTEND_PORT: ${FRONTEND_TEST_PORT:-15173}
+      VITE_PROXY_TARGET: http://api:3001
       # Para o Vite falar com a API do host (Playwright roda no host):
       # o frontend é servido em http://localhost:${FRONTEND_TEST_PORT:-15173},
       # e faz chamadas para http://localhost:${API_TEST_PORT:-13001}

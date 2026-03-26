@@ -15,6 +15,7 @@ import { ConfigApiTab } from './config/ConfigApiTab';
 import { ConfigFrontendTab } from './config/ConfigFrontendTab';
 import { ConfigRagTab } from './config/ConfigRagTab';
 import { ConfigWhatsappTab } from './config/ConfigWhatsappTab';
+import { ConfigBillingTab } from './config/ConfigBillingTab';
 import { ConfigFlowsTab } from './config/ConfigFlowsTab';
 import { ConfigAiTab } from './config/ConfigAiTab';
 import { ConfigFeaturesTab } from './config/ConfigFeaturesTab';
@@ -69,7 +70,7 @@ export function ConfigPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
+      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
         return tabParam;
       }
     }
@@ -96,7 +97,7 @@ export function ConfigPage() {
     }
   }, [getTargetTenantId, targetTenantId]);
   
-  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'
+  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'billing', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   const [validatingRedis, setValidatingRedis] = useState(false);
@@ -169,6 +170,8 @@ export function ConfigPage() {
       // Para exibição na aba IA, filtra para mostrar apenas o tenant atual
       // mas mantém todos os dados no editedConfig para preservar ao salvar
       const filteredData = JSON.parse(JSON.stringify(data)); // Deep copy
+      // Campo somente leitura, calculado no backend para diagnóstico.
+      delete filteredData.configValidation;
       
       // Determina o tenant atual - NUNCA deve ser null quando há um tenant válido
       // Prioridade: targetTenantId (da URL) > agent.tenantId (do agente logado)
@@ -223,6 +226,15 @@ export function ConfigPage() {
   }, [loadConfig, authLoading, isAuthenticated, agent?.tenantId, targetTenantId]);
 
   const flowsLoadedRef = useRef(false);
+
+  const integrationReadiness = useMemo(() => {
+    const integrations = config?.configValidation?.integrations;
+    if (!integrations || typeof integrations !== 'object') return null;
+    return {
+      ready: Boolean(integrations.ready),
+      missing: Array.isArray(integrations.missing) ? integrations.missing : [],
+    };
+  }, [config]);
 
   // Carrega lista de fluxos quando necessário
   const loadFlowsList = useCallback(async () => {
@@ -857,6 +869,7 @@ export function ConfigPage() {
   const tabs = [
     { id: 'frontend', label: 'Frontend', icon: '🖥️' },
     { id: 'rag', label: 'RAG', icon: '🔍' },
+    { id: 'billing', label: 'Billing', icon: '💳' },
     { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
     { id: 'flows', label: 'Fluxos', icon: '🔄' },
     { id: 'ai', label: 'IA', icon: '🤖' },
@@ -995,6 +1008,25 @@ export function ConfigPage() {
           </div>
         )}
 
+        {integrationReadiness && !integrationReadiness.ready && (
+          <div className="mb-6 p-4 bg-status-warning/10 border border-status-warning/30 rounded-xl">
+            <p className="text-text-primary font-medium mb-2">⚠️ Configuração pendente de integrações</p>
+            <p className="text-text-secondary text-sm mb-3">
+              O servidor continua em execução, mas alguns providers obrigatórios não estão configurados.
+            </p>
+            <div className="text-sm text-text-primary space-y-1">
+              {integrationReadiness.missing.slice(0, 8).map((item, index) => (
+                <div key={`${item?.path || 'unknown'}-${index}`}>
+                  • {item?.path || 'campo_desconhecido'}{item?.reason ? ` — ${item.reason}` : ''}
+                </div>
+              ))}
+              {integrationReadiness.missing.length > 8 && (
+                <div>• ...e mais {integrationReadiness.missing.length - 8} item(ns)</div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Abas de navegação (apenas no modo formulário) */}
         {viewMode === 'form' && (
           <div className="mb-6 border-b border-border-default">
@@ -1037,6 +1069,10 @@ export function ConfigPage() {
             {/* Aba: RAG */}
             {activeTab === 'rag' && (
               <ConfigRagTab editedConfig={editedConfig} renderField={renderField} updateValue={updateValue} />
+            )}
+
+            {activeTab === 'billing' && (
+              <ConfigBillingTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: WhatsApp */}

@@ -93,6 +93,7 @@ describe('channelHealthService coercion hardening', () => {
 
     expect(out.channels.whatsapp.delivery.outTotal).toBe(0);
     expect(out.outboundQueue.totals.pending).toBe(0);
+    expect(out.overall.status).toBe('unhealthy');
   });
 
   test('getChannelHealth tolera status/external_id hostis em diagnostico de contas', async () => {

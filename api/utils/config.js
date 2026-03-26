@@ -194,6 +194,29 @@ function get(path, defaultValue = undefined) {
 }
 
 /**
+ * Obtém valor exclusivamente do config.json (sem fallback de env).
+ *
+ * @param {string} path - Caminho da configuração (ex: 'api.port')
+ * @param {any} defaultValue - Valor padrão se não encontrado
+ * @returns {any} Valor da configuração no arquivo
+ */
+function getFromFile(path, defaultValue = undefined) {
+  const config = loadConfig();
+  const parts = String(path || '').split('.').filter(Boolean);
+  let value = config;
+
+  for (const part of parts) {
+    if (value && typeof value === 'object' && part in value) {
+      value = value[part];
+    } else {
+      return defaultValue;
+    }
+  }
+
+  return value === undefined ? defaultValue : value;
+}
+
+/**
  * Remove secrets da configuração antes de retornar
  * 
  * @param {Object} config - Configuração completa
@@ -438,6 +461,7 @@ function parseDatabaseUrlSafe(databaseUrl) {
 
 module.exports = {
   get,
+  getFromFile,
   getAll,
   reload,
   loadConfig,

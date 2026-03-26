@@ -29,3 +29,22 @@ export function getOperationsNotifications(params = {}) {
 export function getOperationsInsights(params = {}) {
   return fetchJson(`/api/operations-dashboard/insights${toQuery(params)}`);
 }
+
+export function getOperationsFinance(params = {}) {
+  return fetchJson(`/api/operations-dashboard/finance${toQuery(params)}`);
+}
+
+export function reconcileBilling(payload = {}) {
+  return fetchJson('/billing/reconcile', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+export function getBillingHealth(params = {}) {
+  return fetchJson(`/api/ops/billing/health${toQuery(params)}`);
+}
+
+export function getBillingAlerts(params = {}) {
+  return fetchJson(`/api/ops/billing/alerts${toQuery(params)}`);
+}

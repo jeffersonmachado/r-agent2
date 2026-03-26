@@ -19,7 +19,7 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
@@ -56,13 +56,14 @@ function frontendRoutesPlugin() {
                           url.startsWith('/queues') || 
                           url.startsWith('/inbox') ||
                           url.startsWith('/public') ||
-                          url.startsWith('/segmentation') ||
+                          (url === '/segmentation' && isApiRequest) ||
+                          (url.startsWith('/segmentation/') && url !== '/segmentation') ||
                           url.startsWith('/quick-replies') ||
                           url.startsWith('/close-reasons') ||
                           url.startsWith('/bulk-campaigns') ||
                           url.startsWith('/channel-accounts') ||
                           (url === '/whatsapp' || url.startsWith('/whatsapp/')) ||
-                          url.startsWith('/ai') ||
+                          (url === '/ai' || url.startsWith('/ai/')) ||
                           url.startsWith('/flow-templates') ||
                           url.startsWith('/flows') || 
                           url.startsWith('/health') || 
@@ -146,6 +147,9 @@ try {
 const pwaBasePath = normalizeBasePath(process.env.VITE_BASE_PATH || '/');
 const viteConfig = defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
+  const apiProxyTarget =
+    process.env.VITE_PROXY_TARGET ||
+    `http://localhost:${config.api?.port || 3000}`;
 
   return {
   base: pwaBasePath,
@@ -247,22 +251,22 @@ const viteConfig = defineConfig(({ mode }) => {
       // Rotas da API que devem ser proxyadas
       // Usa regex explícitas para garantir que rotas aninhadas sejam capturadas
       '^/tickets': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/public': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/queues': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/inbox': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -281,23 +285,34 @@ const viteConfig = defineConfig(({ mode }) => {
           return undefined;
         },
       },
-      '^/segmentation': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+      '^/segmentation(/|$)': {
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+        bypass(req, res, options) {
+          if (req.method === 'GET' && req.url === '/segmentation') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
+          return undefined;
+        },
       },
       '^/quick-replies': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/close-reasons': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/departments': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -315,77 +330,77 @@ const viteConfig = defineConfig(({ mode }) => {
         },
       },
       '^/bulk-campaigns': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/channel-accounts': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/whatsapp': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
-      '^/ai': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+      '^/ai(/|$)': {
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/flow-templates': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/flows': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/health': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/version': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/replay': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/templates': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/server': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/tests': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/api': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/metrics': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/auth': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
@@ -393,7 +408,7 @@ const viteConfig = defineConfig(({ mode }) => {
             console.log('[Vite Proxy] Proxying /auth request:', {
               method: req.method,
               url: req.url,
-              target: `http://localhost:${config.api?.port || 3000}${req.url}`,
+              target: `${apiProxyTarget}${req.url}`,
               headers: req.headers,
             });
           });
@@ -417,12 +432,12 @@ const viteConfig = defineConfig(({ mode }) => {
         },
       },
       '^/system': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/tenants': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
@@ -430,27 +445,27 @@ const viteConfig = defineConfig(({ mode }) => {
       // - /rag-documents é rota de página do frontend (SPA)
       // - /rag e /rag/* são endpoints da API (RAG)
       '^/rag(/|$)': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/super-admin': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/onboarding': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/admin': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/dev': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
@@ -458,7 +473,7 @@ const viteConfig = defineConfig(({ mode }) => {
       // - /analytics (sem barra no final) é página do frontend
       // - /analytics/* são endpoints da API (ex: /analytics/metrics)
       '^/analytics/': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
@@ -466,17 +481,17 @@ const viteConfig = defineConfig(({ mode }) => {
       // - /export é página
       // - /export/* é API
       '^/export/': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/conversations': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
       '^/rpa': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -497,7 +512,7 @@ const viteConfig = defineConfig(({ mode }) => {
         },
       },
       '^/web-scraping': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -518,7 +533,7 @@ const viteConfig = defineConfig(({ mode }) => {
         },
       },
       '^/audit': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -541,7 +556,7 @@ const viteConfig = defineConfig(({ mode }) => {
       // Rota específica para /config da API
       // Faz proxy apenas para requisições de API (não navegação)
       '^/config$': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
@@ -565,7 +580,7 @@ const viteConfig = defineConfig(({ mode }) => {
       // Rota para subcaminhos de /config (ex: /config/validate-provider-token)
       // Sempre faz proxy para subcaminhos, pois são rotas de API
       '^/config/': {
-        target: `http://localhost:${config.api?.port || 3000}`,
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },

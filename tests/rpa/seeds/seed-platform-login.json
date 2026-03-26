@@ -1,0 +1,35 @@
+{
+  "id": "seed-platform-login",
+  "name": "seed-platform-login",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": false,
+    "publicRoute": true,
+    "purpose": "Verificar que a tela de login está acessível"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/login"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/login"
+        },
+        "landmarks": [
+          {
+            "selector": "input[name=\"username\"], input[autocomplete=\"username\"], input[id*=\"username\" i]",
+            "exists": true
+          },
+          {
+            "selector": "input[type=\"password\"], input[name=\"password\"]",
+            "exists": true
+          }
+        ]
+      }
+    }
+  ],
+  "data": {}
+}

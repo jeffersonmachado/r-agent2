@@ -132,11 +132,11 @@ async function setup({ wsEvents = [] } = {}) {
 
   // Aguarda o estado inicial assíncrono para evitar updates fora de act
   await screen.findByRole('heading', { name: /Atendimento/i });
-  await screen.findByText(/5511999999999/i);
+  await screen.findByLabelText(/Telefone:\s*5511999999999/i);
 }
 
 function getTicketRow() {
-  return screen.getByText(/5511999999999/i).closest('.support-ticket-card');
+  return screen.getByLabelText(/Telefone:\s*5511999999999/i).closest('.support-ticket-card');
 }
 
 describe('SupportPage WhatsApp QR message flow', () => {
@@ -362,5 +362,28 @@ describe('SupportPage WhatsApp QR message flow', () => {
     expect(lastCall[0]).toBe('t1');
     expect(lastCall[1]).toBe('Resposta teste');
     expect(lastCall[2] || {}).not.toHaveProperty('replyTo');
+  });
+
+  it('nao renderiza anexo fantasma quando mensagem for apenas texto', async () => {
+    ticketsApi.getTicketMessages.mockResolvedValueOnce({
+      messages: [
+        {
+          id: 'm-text-only',
+          sender: 'user',
+          text: 'Perfeito, Jefferson! Já vou avisar o corretor responsável para entrar em contato com você o quanto antes.',
+          type: 'user',
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    });
+
+    await setup({ wsEvents: ['ticket.message.received'] });
+    fireEvent.click(getTicketRow());
+
+    await waitFor(() => {
+      expect(screen.getByText(/Perfeito, Jefferson!/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText(/Abrir documento:/i)).not.toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@
  * Página de gerenciamento de agentes.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import * as authApi from '../api/auth';
@@ -51,15 +51,16 @@ export function AgentsPage() {
     role: '',
     status: '',
   });
+  const fetchAgents = useCallback(async () => {
+    const result = await authApi.listAgents();
+    return result?.agents || [];
+  }, []);
   const {
     allItems: allAgents,
     loading,
     error: agentsLoadError,
     loadItems: loadAgents,
-  } = useCrudList(async () => {
-    const result = await authApi.listAgents();
-    return result?.agents || [];
-  });
+  } = useCrudList(fetchAgents);
 
   // Verifica se pode gerenciar agentes: super-admin, admin ou supervisor
   const canManageAgents = isSuperAdmin(currentAgent) || currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
@@ -504,10 +505,11 @@ export function AgentsPage() {
                   </td>
                   {canManageAgents && (
                     <td className="px-4 py-3 text-right">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex justify-end gap-2 whitespace-nowrap">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="min-w-[84px]"
                           onClick={() => handleEdit(agent)}
                         >
                           Editar
@@ -515,6 +517,7 @@ export function AgentsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="min-w-[110px]"
                           onClick={() => {
                             setResetPasswordEmail(agent.email);
                             setShowResetPasswordForm(true);
@@ -522,14 +525,19 @@ export function AgentsPage() {
                         >
                           Reset Senha
                         </Button>
-                        {agent.id !== currentAgent?.id && (
+                        {agent.id !== currentAgent?.id ? (
                           <Button
                             variant="danger"
                             size="sm"
+                            className="min-w-[92px]"
                             onClick={() => handleDelete(agent)}
                           >
                             Remover
                           </Button>
+                        ) : (
+                          <span className="inline-flex min-w-[92px] px-3 py-1.5 text-xs opacity-0 select-none pointer-events-none">
+                            Remover
+                          </span>
                         )}
                       </div>
                     </td>
@@ -692,4 +700,3 @@ export function AgentsPage() {
     </CrudPageBase>
   );
 }
-

@@ -1255,16 +1255,31 @@ export function SupportPage() {
     if (!msg.channel) {
       const rawMessage = msg?.raw || {};
       const rawMedia = rawMessage?.media || {};
-      // Os campos podem estar no nível raiz da mensagem (agente) OU em msg.raw (canal)
-      const mediaType = String(msg?.type || rawMessage?.type || rawMedia?.type || msg?.mediaKind || rawMessage?.mediaKind || '').toLowerCase();
+      const isMediaType = (value) => {
+        const normalized = String(value || '').trim().toLowerCase();
+        return ['image', 'audio', 'voice', 'video', 'document', 'sticker'].includes(normalized);
+      };
+      const msgText = msg?.text || '';
+      // Detecta se msg.text é apenas um fallback [mediatype] filename
+      const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(msgText);
+      const mediaTypeCandidate = firstNonEmptyString([
+        msg?.mediaType,
+        rawMessage?.mediaType,
+        rawMedia?.type,
+        rawMedia?.mediaType,
+        msg?.mediaKind,
+        rawMessage?.mediaKind,
+        isMediaType(msg?.type) ? msg?.type : null,
+        isMediaType(rawMessage?.type) ? rawMessage?.type : null,
+      ]);
+      const mediaType = String(mediaTypeCandidate || '').toLowerCase();
       const mediaIdPath = buildTicketMediaPathFromId(
         firstNonEmptyString([
           msg?.mediaId,
           rawMessage?.mediaId,
           rawMedia?.mediaId,
           rawMedia?.id,
-          rawMessage?.id,
-          msg?.id && String(msg?.type || '').toLowerCase() !== 'text' ? msg?.id : null,
+          isMediaType(mediaType) && isFallbackText ? msg?.id : null,
         ]),
       );
       const mediaUrls = getMediaCandidates(
@@ -1284,10 +1299,7 @@ export function SupportPage() {
         const isImage = typeLabel === 'image';
         const isAudio = typeLabel === 'audio' || typeLabel === 'voice';
         const isVideo = typeLabel === 'video';
-        
-        // Detecta se msg.text é apenas um fallback [mediatype] filename
-        const msgText = msg?.text || '';
-        const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(msgText);
+
         const captionText = !isFallbackText ? msgText : '';
         
         return (

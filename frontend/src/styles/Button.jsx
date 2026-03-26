@@ -25,6 +25,9 @@ export const Button = React.forwardRef(function Button({
   // Classes baseadas em variantes - estados :hover e :active são tratados no CSS
   const variantClasses = {
     primary: 'btn-primary',
+    secondary: 'btn-default',
+    success: 'btn-success',
+    warning: 'btn-warning',
     danger: 'btn-danger',
     ghost: 'btn-ghost',
     default: 'btn-default',

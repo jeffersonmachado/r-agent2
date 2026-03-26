@@ -142,6 +142,8 @@ ZIP_EXCLUDES=(
   "${PROJECT_NAME}/.vscode/*"
   "${PROJECT_NAME}/.idea/*"
   "${PROJECT_NAME}/.pm2/*"
+  "${PROJECT_NAME}/.wwebjs_auth/*"
+  "${PROJECT_NAME}/.wwebjs_cache/*"
   "${PROJECT_NAME}/logs/*"
   "${PROJECT_NAME}/recordings/*"
   "${PROJECT_NAME}/replays/*"
@@ -207,7 +209,8 @@ if [[ ${#CUSTOM_EXCLUDES[@]} -gt 0 ]]; then
   ZIP_EXCLUDES+=("${CUSTOM_EXCLUDES[@]}")
 fi
 
-ZIP_CMD=(zip -rq "$ZIP_FILE" "$PROJECT_NAME")
+# -y stores symlinks as symlinks instead of following targets (e.g. /tmp sockets).
+ZIP_CMD=(zip -qry "$ZIP_FILE" "$PROJECT_NAME")
 
 if [[ ${#CUSTOM_INCLUDES[@]} -gt 0 ]]; then
   ZIP_CMD+=(-i "${CUSTOM_INCLUDES[@]}")

@@ -34,6 +34,47 @@ function mapLedgerNotificationItems(ledgerRows, helpers) {
     });
 }
 
+function mapNotificationDeliveryItems(notificationRows, helpers) {
+  const {
+    safeString,
+    inferNotificationVertical,
+    normalizeChannel,
+    normalizeNotificationStatus,
+    toIso,
+    maskDestination,
+  } = helpers;
+
+  return (notificationRows || [])
+    .map((row) => (row.toJSON ? row.toJSON() : row))
+    .map((row) => {
+      const messageType = safeString(row.event_type || '');
+      const inferredVertical = row.vertical || inferNotificationVertical(messageType);
+      const resolvedChannel = normalizeChannel(row.channel) || 'internal';
+      const resolvedStatus = normalizeNotificationStatus(row.status);
+      return {
+        id: row.id,
+        timestamp: toIso(row.sent_at || row.last_attempt_at || row.created_at),
+        channel: resolvedChannel,
+        destination: row.recipient_masked || maskDestination(row.recipient_resolved || row.recipient || ''),
+        status: resolvedStatus,
+        messageType,
+        error: row.last_error || null,
+        isStub: row.status === 'stub',
+        providerStatus: row.provider || null,
+        vertical: inferredVertical,
+        attempts: Number(row.attempts || 0),
+        jobId: row.execution_job_id || null,
+        subjectId: row.subject_id || null,
+        customerId: row.customer_id || null,
+        membershipId: row.membership_id || null,
+        bundleId: row.bundle_id || null,
+        transactionId: row.transaction_id || null,
+        scheduleId: row.schedule_id || null,
+        origin: 'notification_deliveries',
+      };
+    });
+}
+
 function mapJourneyProxyNotificationItems(proxyRows, helpers) {
   const {
     normalizeChannel,
@@ -127,6 +168,7 @@ function summarizeNotificationItems(items) {
 }
 
 module.exports = {
+  mapNotificationDeliveryItems,
   mapLedgerNotificationItems,
   mapJourneyProxyNotificationItems,
   filterAndSortNotificationItems,

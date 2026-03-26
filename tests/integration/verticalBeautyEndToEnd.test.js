@@ -49,9 +49,9 @@ jest.mock('../../api/services/eventLedgerService', () => ({
   appendEventV1: (...args) => mockAppendEventV1(...args),
 }));
 
-jest.mock('../../api/services/notifications/notificationAdapter', () => ({
+jest.mock('../../api/services/notificationService', () => ({
   sendJourneyNotification: jest.fn().mockResolvedValue({ status: 'stub' }),
-  CHANNEL_STATUS: { STUB: 'stub' },
+  enqueueNotification: jest.fn().mockResolvedValue({ status: 'queued' }),
 }));
 
 // ── Load services after mocks ────────────────────────────────────────────────
@@ -59,7 +59,7 @@ jest.mock('../../api/services/notifications/notificationAdapter', () => ({
 const { emitJourneyEvent, listJourneyEvents, getSubjectTimeline } = require('../../api/services/vertical/customerJourneyEngine');
 const beautyJourneyService = require('../../api/services/vertical/beautyJourneyService');
 const { handleBeautyJourneyTick } = require('../../api/services/vertical/verticalJourneyJobHandler');
-const notificationAdapter = require('../../api/services/notifications/notificationAdapter');
+const notificationService = require('../../api/services/notificationService');
 
 const TENANT = 'tenant-beauty-e2e';
 const SUBJECT = 'subject-beauty-001';
@@ -92,7 +92,8 @@ describe('Beauty Vertical — End-to-End Journey', () => {
     jest.clearAllMocks();
     mockGetSequelize.mockReturnValue({});
     mockAppendEventV1.mockResolvedValue({ id: 'evt-1' });
-    notificationAdapter.sendJourneyNotification.mockResolvedValue({ status: 'stub' });
+    notificationService.sendJourneyNotification.mockResolvedValue({ status: 'stub' });
+    notificationService.enqueueNotification.mockResolvedValue({ status: 'queued' });
     // Default: no existing events
     mockFindOne.mockResolvedValue(null);
     mockFindAll.mockResolvedValue([]);
@@ -144,7 +145,7 @@ describe('Beauty Vertical — End-to-End Journey', () => {
       const createCalls = mockCreate.mock.calls;
       const reminder24h = createCalls.find((c) => c[0]?.event_type === 'reminder_24h');
       expect(reminder24h).toBeTruthy();
-      expect(notificationAdapter.sendJourneyNotification).toHaveBeenCalledWith(
+      expect(notificationService.enqueueNotification).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'reminder_24h', tenantId: TENANT }),
       );
     });
@@ -162,6 +163,34 @@ describe('Beauty Vertical — End-to-End Journey', () => {
       const createCalls = mockCreate.mock.calls;
       const reminder24h = createCalls.find((c) => c[0]?.event_type === 'reminder_24h');
       expect(reminder24h).toBeFalsy();
+    });
+
+    test('sends reminder_1h (and not reminder_24h) when appointment is near-time', async () => {
+      const confirmationRow = makeJourneyRow({
+        payload: { scheduled_at: new Date(Date.now() + 50 * 60000).toISOString() }, // 50 min from now
+      });
+
+      mockFindAll
+        .mockResolvedValueOnce([confirmationRow])
+        .mockResolvedValue([]);
+
+      // no existing reminder_24h and no existing reminder_1h
+      mockFindOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(null);
+
+      await handleBeautyJourneyTick({ payload: { tenantId: TENANT }, tenant_key: TENANT });
+
+      const createCalls = mockCreate.mock.calls;
+      const reminder1h = createCalls.find((c) => c[0]?.event_type === 'reminder_1h');
+      const reminder24h = createCalls.find((c) => c[0]?.event_type === 'reminder_24h');
+
+      expect(reminder1h).toBeTruthy();
+      expect(reminder24h).toBeFalsy();
+      expect(notificationService.enqueueNotification).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'reminder_1h', tenantId: TENANT }),
+      );
     });
   });
 

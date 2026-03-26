@@ -7,7 +7,7 @@
 
 /**
  * @param {{tenantId: string, selectedVertical: string, period: {startDate: Date, endDate: Date}}} params
- * @param {{dbAvailable: Function, Op: Object, models: Object, computeVerticalMetrics: Function, safeString: Function, safeDate: Function, startOfDay: Function, endOfDay: Function, normalizeNotificationStatus: Function}} deps
+ * @param {{dbAvailable: Function, Op: Object, models: Object, computeVerticalMetrics: Function, safeString: Function, safeDate: Function, startOfDay: Function, endOfDay: Function, normalizeNotificationStatus: Function, getBillingOpsMetrics?: Function}} deps
  * @returns {Promise<Object>}
  */
 async function computeDashboardSummary({ tenantId, selectedVertical, period }, deps) {
@@ -21,6 +21,7 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
     startOfDay,
     endOfDay,
     normalizeNotificationStatus,
+    getBillingOpsMetrics,
   } = deps;
   const {
     VerticalJourneyEvent,
@@ -29,6 +30,7 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
     AccessMembership,
     ExecutionJob,
     EventLedger,
+    NotificationDelivery,
   } = models;
 
   if (!dbAvailable()) {
@@ -74,6 +76,7 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
     engagementRows,
     membershipsRows,
     jobsRows,
+    notificationRows,
     notificationLedgerRows,
     beautyMetrics,
     fitnessMetrics,
@@ -108,6 +111,16 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
       attributes: ['id', 'status', 'attempts', 'processing_at', 'updated_at'],
       limit: 20000,
     }).catch(() => []),
+    typeof NotificationDelivery === 'function'
+      ? NotificationDelivery().findAll({
+        where: {
+          tenant_key: tenantId,
+          created_at: { [Op.between]: [period.startDate, period.endDate] },
+        },
+        attributes: ['status'],
+        limit: 20000,
+      }).catch(() => [])
+      : [],
     EventLedger().findAll({
       where: {
         tenant_key: tenantId,
@@ -127,6 +140,7 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
   const engagementSignals = engagementRows.map((r) => (r.toJSON ? r.toJSON() : r));
   const memberships = membershipsRows.map((r) => (r.toJSON ? r.toJSON() : r));
   const jobs = jobsRows.map((r) => (r.toJSON ? r.toJSON() : r));
+  const notificationDeliveries = (notificationRows || []).map((r) => (r.toJSON ? r.toJSON() : r));
   const notificationEvents = notificationLedgerRows
     .map((r) => (r.toJSON ? r.toJSON() : r))
     .filter((row) => row?.payload?.kind === 'notification_delivery');
@@ -169,14 +183,32 @@ async function computeDashboardSummary({ tenantId, selectedVertical, period }, d
   const jobsExecuted = jobs.filter((j) => j.status === 'done' || j.status === 'dead').length;
   const jobsError = jobs.filter((j) => j.status === 'dead').length;
 
-  const notificationsSent = notificationEvents.filter((e) => normalizeNotificationStatus(e?.payload?.dashboardStatus) === 'sent').length;
-  const notificationFailures = notificationEvents.filter((e) => normalizeNotificationStatus(e?.payload?.dashboardStatus) === 'failed').length;
+  const notificationsSent = notificationDeliveries.length
+    ? notificationDeliveries.filter((e) => normalizeNotificationStatus(e?.status) === 'sent').length
+    : notificationEvents.filter((e) => normalizeNotificationStatus(e?.payload?.dashboardStatus) === 'sent').length;
+  const notificationFailures = notificationDeliveries.length
+    ? notificationDeliveries.filter((e) => normalizeNotificationStatus(e?.status) === 'failed').length
+    : notificationEvents.filter((e) => normalizeNotificationStatus(e?.payload?.dashboardStatus) === 'failed').length;
+
+  let billingSummary = null;
+  if (typeof getBillingOpsMetrics === 'function') {
+    try {
+      const windowDays = Math.max(1, Math.ceil((period.endDate.getTime() - period.startDate.getTime()) / 86400000));
+      const billingOut = await getBillingOpsMetrics({ tenantId, windowDays });
+      if (billingOut?.ok) {
+        billingSummary = billingOut.metrics;
+      }
+    } catch (_) {
+      // Best-effort: summary should not fail because billing metrics are unavailable.
+    }
+  }
 
   const systemSummary = {
     jobsExecuted,
     jobsError,
     notificationsSent,
     notificationFailures,
+    billing: billingSummary,
   };
 
   const byVertical = {

@@ -24,4 +24,7 @@ bash ./scripts/test-stack-up.sh
 echo "[stack-full] Executando smoke..."
 bash ./scripts/test-stack-smoke.sh
 
+echo "[stack-full] Executando seed/RPA..."
+bash ./scripts/test-stack-rpa-seed.sh
+
 echo "[stack-full] OK"

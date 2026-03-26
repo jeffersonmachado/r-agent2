@@ -33,7 +33,7 @@ const { handleFitnessMembershipRoutes } = require('./handleFitnessMembershipRout
 const { handleFitnessAttendanceRoutes } = require('./handleFitnessAttendanceRoutes');
 const { handleFitnessStudentRoutes } = require('./handleFitnessStudentRoutes');
 const { getSequelize } = require('../../db/sequelize');
-const { AccessSubject, VerticalEngagementSignal } = require('../../db/models');
+const { AccessSubject, VerticalEngagementSignal, VerticalAttendance, BillingTransaction } = require('../../db/models');
 const { Op } = require('sequelize');
 
 const VERTICAL = 'fitness';
@@ -184,6 +184,97 @@ async function handleFitnessRoutes(ctx) {
     const windowDays = Number(urlObj.searchParams.get('windowDays')) || 30;
     const metrics = await computeVerticalMetrics({ tenantId: tenantId(req), vertical: VERTICAL, windowDays });
     sendJson(res, 200, metrics);
+    return true;
+  }
+
+  // ── GET /api/fitness/dashboard ──────────────────────────────────────────
+  if (method === 'GET' && pathname === '/api/fitness/dashboard') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const windowDays = Number(urlObj.searchParams.get('windowDays')) || 30;
+    const since = new Date(Date.now() - windowDays * 86400000);
+
+    const [metrics, riskCount, attendanceToday, revenueRows] = await Promise.all([
+      computeVerticalMetrics({ tenantId: tenantId(req), vertical: VERTICAL, windowDays }).catch(() => null),
+      dbAvailable()
+        ? VerticalEngagementSignal().count({
+          where: {
+            tenant_key: tenantId(req),
+            vertical: VERTICAL,
+            signal_type: 'churn_risk',
+            computed_at: { [Op.gte]: since },
+          },
+        }).catch(() => 0)
+        : 0,
+      dbAvailable()
+        ? VerticalAttendance().count({
+          where: {
+            tenant_key: tenantId(req),
+            vertical: VERTICAL,
+            checked_in_at: { [Op.gte]: new Date(new Date().toISOString().slice(0, 10)) },
+          },
+        }).catch(() => 0)
+        : 0,
+      dbAvailable()
+        ? BillingTransaction().findAll({
+          where: {
+            tenant_key: tenantId(req),
+            vertical: VERTICAL,
+            status: 'confirmed',
+            created_at: { [Op.gte]: since },
+          },
+          attributes: ['amount'],
+          limit: 5000,
+        }).catch(() => [])
+        : [],
+    ]);
+
+    const revenue = (revenueRows || []).reduce((acc, row) => {
+      const d = row.toJSON ? row.toJSON() : row;
+      return acc + Number(d.amount || 0);
+    }, 0);
+
+    sendJson(res, 200, {
+      vertical: VERTICAL,
+      windowDays,
+      metrics,
+      kpis: {
+        churnRiskSubjects: Number(riskCount || 0),
+        attendanceToday: Number(attendanceToday || 0),
+        revenue: Number(revenue.toFixed(2)),
+      },
+    });
+    return true;
+  }
+
+  // ── GET /api/fitness/intelligence/:subjectId ───────────────────────────
+  if (method === 'GET' && pathname.match(/^\/api\/fitness\/intelligence\/([^/]+)$/)) {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    const subjectId = decodeURIComponent(pathname.split('/')[4]);
+
+    const [churnRisk, lowFrequency, memberships] = await Promise.all([
+      fitnessChurnRisk({ tenantId: tenantId(req), subjectId }).catch(() => null),
+      fitnessLowFrequencySuggestion({ tenantId: tenantId(req), subjectId }).catch(() => null),
+      fitnessMembershipService.listFitnessMemberships({ tenantId: tenantId(req), limit: 500 }).catch(() => ({ items: [] })),
+    ]);
+
+    const membership = (memberships.items || []).find((m) => String(m.subject_id || '') === String(subjectId)) || null;
+    const planSuggestion = Number(churnRisk?.score || 0) >= 0.7
+      ? { suggestion: 'downgrade_friendly_plan', reason: 'Alto risco de churn; reduzir fricção financeira pode reter o aluno.' }
+      : Number(churnRisk?.score || 0) >= 0.4
+        ? { suggestion: 'engagement_plan', reason: 'Risco moderado; plano com metas de frequência tende a melhorar retenção.' }
+        : { suggestion: 'keep_current_plan', reason: 'Risco baixo; manter plano atual.' };
+
+    sendJson(res, 200, {
+      subjectId,
+      churnPrediction: churnRisk,
+      frequencySuggestion: lowFrequency,
+      planSuggestion,
+      context: {
+        membershipId: membership?.id || null,
+        billingStatus: membership?.billing_status || null,
+      },
+    });
     return true;
   }
 

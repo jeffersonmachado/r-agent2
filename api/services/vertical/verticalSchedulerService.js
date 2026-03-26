@@ -128,6 +128,17 @@ async function tick() {
       maxAttempts: 2,
       idempotencyKey: `v_reconciliation:${tenantId}:${sixHour}`,
     }).catch(() => {});
+
+    // Billing reconciliation: once per 6 hours (provider status pull for pending/overdue)
+    enqueueJob({
+      tenantId,
+      kind: 'billing_reconciliation',
+      payload: { tenantId, limit: 200 },
+      runAt: new Date(),
+      priority: -1,
+      maxAttempts: 2,
+      idempotencyKey: `billing_reconciliation:${tenantId}:${sixHour}`,
+    }).catch(() => {});
   }
 }
 

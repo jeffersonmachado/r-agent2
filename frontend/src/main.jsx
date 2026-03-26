@@ -64,6 +64,13 @@ import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
 import { MarketingPage } from './pages/MarketingPage';
 import { AccessControlPage } from './pages/AccessControlPage';
 import { OperationsDashboardPage } from './pages/OperationsDashboardPage';
+import { FitnessStudentsPage } from './pages/FitnessStudentsPage';
+import { FitnessMembershipsPage } from './pages/FitnessMembershipsPage';
+import { FitnessAttendancePage } from './pages/FitnessAttendancePage';
+import { BeautySchedulePage } from './pages/BeautySchedulePage';
+import { BeautyCustomersPage } from './pages/BeautyCustomersPage';
+import { BeautyBundlesPage } from './pages/BeautyBundlesPage';
+import { VerticalOperationalDashboardPage } from './pages/VerticalOperationalDashboardPage';
 import { SolutionsPage } from './pages/SolutionsPage';
 import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
 import { SsoScimPage } from './pages/SsoScimPage';
@@ -165,6 +172,39 @@ function setupAutoCollapsibleFilters(root) {
 
   const shouldExpand = root.dataset.autoFilterExpanded === '1';
   applyGlobalFilterToggleState(root, sections, shouldExpand);
+}
+
+function enhanceSupportHeaders({ navigate, currentPath }) {
+  const headers = Array.from(document.querySelectorAll('.support-header'));
+  for (const header of headers) {
+    if (!(header instanceof HTMLElement)) continue;
+    const title = header.querySelector('h1');
+    if (!(title instanceof HTMLElement)) continue;
+    if (title.querySelector('.support-back-button')) continue;
+
+    const titleContent = document.createElement('span');
+    titleContent.className = 'support-header-title-text';
+    while (title.firstChild) {
+      titleContent.appendChild(title.firstChild);
+    }
+
+    const backButton = document.createElement('button');
+    backButton.type = 'button';
+    backButton.className = 'support-back-button';
+    backButton.textContent = '<';
+    backButton.setAttribute('aria-label', 'Voltar para a pagina anterior');
+    backButton.title = 'Voltar';
+    backButton.addEventListener('click', () => {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      navigate(currentPath === '/dashboard' ? '/support' : '/dashboard');
+    });
+
+    title.classList.add('support-header-title');
+    title.replaceChildren(backButton, titleContent);
+  }
 }
 
 /**
@@ -329,6 +369,13 @@ function AppWithAuth() {
   const isMarketing = isRoute('/marketing');
   const isAccessControl = isRoute('/access-control');
   const isOperationsDashboard = isRoute('/operations-dashboard');
+  const isFitnessStudents = isRoute('/fitness/students');
+  const isFitnessMemberships = isRoute('/fitness/memberships');
+  const isFitnessAttendance = isRoute('/fitness/attendance');
+  const isBeautySchedule = isRoute('/beauty/schedule');
+  const isBeautyCustomers = isRoute('/beauty/customers');
+  const isBeautyBundles = isRoute('/beauty/bundles');
+  const isVerticalDashboard = isRoute('/vertical/dashboard');
   const isSolutions = isRoute('/solutions');
   const isNodeMarketplace = isRoute('/node-marketplace');
   const isSsoScim = isRoute('/sso-scim');
@@ -353,7 +400,7 @@ function AppWithAuth() {
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
-      isOperationsDashboard,
+      isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCustomers, isBeautyBundles, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
       isLogin
     ];
@@ -369,7 +416,7 @@ function AppWithAuth() {
     isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-    isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
+    isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCustomers, isBeautyBundles, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -466,6 +513,13 @@ function AppWithAuth() {
       '/marketing': '🧲 Marketing',
       '/access-control': '🚪 Access Control',
       '/operations-dashboard': '🧭 Painel Operacional',
+      '/fitness/students': '🏋️ Fitness • Students',
+      '/fitness/memberships': '🏋️ Fitness • Memberships',
+      '/fitness/attendance': '🏋️ Fitness • Attendance',
+      '/beauty/schedule': '💄 Beauty • Schedule',
+      '/beauty/customers': '💄 Beauty • Customers',
+      '/beauty/bundles': '💄 Beauty • Bundles',
+      '/vertical/dashboard': '📊 Vertical Dashboard',
       '/solutions': '📦 Solutions Packs',
       '/node-marketplace': '🧩 Node Marketplace',
       '/sso-scim': '🔐 SSO / SCIM',
@@ -503,10 +557,12 @@ function AppWithAuth() {
     setupAutoCollapsibleFilters(root);
     const observer = new MutationObserver(() => {
       setupAutoCollapsibleFilters(root);
+      enhanceSupportHeaders({ navigate, currentPath });
     });
     observer.observe(root, { childList: true, subtree: true });
+    enhanceSupportHeaders({ navigate, currentPath });
     return () => observer.disconnect();
-  }, [isAuthenticated, currentPath]);
+  }, [isAuthenticated, currentPath, navigate]);
 
   // Mostra loading enquanto verifica autenticação
   if (loading) {
@@ -523,7 +579,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -705,6 +761,20 @@ function AppWithAuth() {
         <AccessControlPage />
       ) : isOperationsDashboard ? (
         <OperationsDashboardPage />
+      ) : isFitnessStudents ? (
+        <FitnessStudentsPage />
+      ) : isFitnessMemberships ? (
+        <FitnessMembershipsPage />
+      ) : isFitnessAttendance ? (
+        <FitnessAttendancePage />
+      ) : isBeautySchedule ? (
+        <BeautySchedulePage />
+      ) : isBeautyCustomers ? (
+        <BeautyCustomersPage />
+      ) : isBeautyBundles ? (
+        <BeautyBundlesPage />
+      ) : isVerticalDashboard ? (
+        <VerticalOperationalDashboardPage />
       ) : isSolutions ? (
         <SolutionsPage />
       ) : isNodeMarketplace ? (

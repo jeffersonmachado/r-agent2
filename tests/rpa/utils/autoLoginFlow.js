@@ -24,6 +24,37 @@ function resolveTargetUrlFromFirstStep(firstStep) {
   return firstStep.url || firstStep.value || null;
 }
 
+function replaceTemplateVariables(str, data = {}) {
+  if (typeof str !== 'string' || !str.trim()) return str;
+
+  return str.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const keys = String(key || '').trim().split('.');
+    let value = data;
+
+    for (const currentKey of keys) {
+      if (value && typeof value === 'object' && currentKey in value) {
+        value = value[currentKey];
+      } else {
+        return match;
+      }
+    }
+
+    return value !== undefined && value !== null ? String(value) : match;
+  });
+}
+
+function shouldAutoLoginForTarget(targetUrl, baseUrl) {
+  if (!targetUrl) return true;
+
+  try {
+    const parsedBase = new URL(baseUrl);
+    const parsedTarget = new URL(targetUrl, parsedBase);
+    return parsedBase.origin === parsedTarget.origin;
+  } catch (_) {
+    return true;
+  }
+}
+
 /**
  * Executa navegação inicial + auto-login.
  *
@@ -39,9 +70,13 @@ function resolveTargetUrlFromFirstStep(firstStep) {
 async function autoLoginBeforeSteps(page, params = {}) {
   const navigationTimeoutMs = params.navigationTimeoutMs || 30000;
   const waitAfterGotoMs = params.waitAfterGotoMs || 1000;
+  const templateData = params.templateData || {};
 
   const baseUrl = resolveFrontendBaseUrl(params.frontendBaseUrl);
-  const targetUrl = resolveTargetUrlFromFirstStep(params.firstStep);
+  const rawTargetUrl = resolveTargetUrlFromFirstStep(params.firstStep);
+  const targetUrl = replaceTemplateVariables(rawTargetUrl, templateData);
+  const autoLoginEnabled = params.autoLogin !== false;
+  const allowAutoLoginForTarget = shouldAutoLoginForTarget(targetUrl, baseUrl);
 
   if (!page) {
     return {
@@ -67,12 +102,52 @@ async function autoLoginBeforeSteps(page, params = {}) {
 
   await page.waitForTimeout(waitAfterGotoMs);
 
+  if (!autoLoginEnabled) {
+    return {
+      success: true,
+      loggedIn: false,
+      skipped: true,
+      skipReason: 'auto_login_disabled',
+      baseUrl,
+      targetUrl,
+    };
+  }
+
+  if (!allowAutoLoginForTarget) {
+    return {
+      success: true,
+      loggedIn: false,
+      skipped: true,
+      skipReason: 'external_target_url',
+      baseUrl,
+      targetUrl,
+    };
+  }
+
   // Garante autenticação (token RPA -> fallback UI)
   const authResult = await ensureAuthenticated(page, {
     ...(params.authOptions || {}),
     // Ajuda o fluxo de pós-login a navegar corretamente
     frontendBaseUrl: baseUrl,
   });
+
+  if (authResult.success && authResult.loggedIn && targetUrl && allowAutoLoginForTarget) {
+    const currentUrl = typeof page.url === 'function' ? page.url() : null;
+    if (currentUrl !== targetUrl) {
+      try {
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: navigationTimeoutMs });
+        await page.waitForTimeout(Math.min(waitAfterGotoMs, 1000));
+      } catch (error) {
+        return {
+          success: false,
+          loggedIn: true,
+          error: `Login realizado, mas falhou ao retornar para a rota alvo "${targetUrl}": ${error.message}`,
+          baseUrl,
+          targetUrl,
+        };
+      }
+    }
+  }
 
   return {
     ...authResult,
@@ -85,5 +160,6 @@ module.exports = {
   autoLoginBeforeSteps,
   resolveFrontendBaseUrl,
   resolveTargetUrlFromFirstStep,
+  replaceTemplateVariables,
+  shouldAutoLoginForTarget,
 };
-

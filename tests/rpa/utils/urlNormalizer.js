@@ -37,6 +37,12 @@ function normalizeRpaTestUrls(test) {
     if (!url || typeof url !== 'string') {
       return url;
     }
+
+    // Preserva templates Handlebars para que a substituição aconteça
+    // mais tarde com os dados reais do runner (ex.: {{urls.frontend}}/editor).
+    if (/\{\{[^}]+\}\}/.test(url)) {
+      return url;
+    }
     
     // Se já é uma URL absoluta válida (http:// ou https://), verifica se é inválida
     if (url.match(/^https?:\/\//)) {

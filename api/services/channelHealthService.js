@@ -443,7 +443,8 @@ async function getChannelHealth({ tenantId, windowMinutes = 10, now = new Date()
     };
   }
 
-  const severityRank = { healthy: 0, degraded: 1, unhealthy: 2, unknown: 3 };
+  // unknown indica falta de dados e não deve sobrepor estados operacionais piores.
+  const severityRank = { unknown: 0, healthy: 1, degraded: 2, unhealthy: 3 };
   const overallStatus = Object.values(channels).reduce((acc, c) => {
     if (!acc) return c;
     return (severityRank[c.status] > severityRank[acc.status]) ? c : acc;

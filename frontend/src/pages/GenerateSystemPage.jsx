@@ -416,6 +416,13 @@ export function GenerateSystemPage() {
   const executingRef = useRef(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const validatedTenantId = useMemo(() => (
+    targetTenantIdRef.current ||
+    result?.tenant?.id ||
+    result?.tenantId ||
+    agent?.tenantId ||
+    null
+  ), [agent?.tenantId, result]);
   
   const {
     rateLimitUntil,

@@ -18,8 +18,37 @@
 const { emitJourneyEvent } = require('./customerJourneyEngine');
 const { consumeSession, getSessionBalance } = require('./billingOrchestrationService');
 const { appendEventV1 } = require('../eventLedgerService');
+const { enqueueNotification } = require('../notificationService');
 
 const VERTICAL = 'beauty';
+
+async function queueBeautyNotification({
+  tenantId,
+  channel = 'whatsapp',
+  subjectId = null,
+  customerId = null,
+  scheduleId = null,
+  bundleId = null,
+  transactionId = null,
+  eventType,
+  metadata = {},
+}) {
+  const normalizedChannel = String(channel || '').trim().toLowerCase();
+  if (!normalizedChannel || normalizedChannel === 'internal') return;
+  await enqueueNotification({
+    tenantId,
+    vertical: VERTICAL,
+    channel: normalizedChannel,
+    eventType,
+    subjectId,
+    customerId,
+    scheduleId,
+    bundleId,
+    transactionId,
+    recipient: customerId || subjectId || null,
+    metadata: { ...metadata, vertical: VERTICAL },
+  }).catch(() => {});
+}
 
 // ── Confirmation ─────────────────────────────────────────────────────────
 
@@ -27,7 +56,7 @@ const VERTICAL = 'beauty';
  * Send appointment confirmation to customer.
  */
 async function sendConfirmation({ tenantId, subjectId, customerId, scheduleId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'confirmation_sent',
@@ -40,6 +69,8 @@ async function sendConfirmation({ tenantId, subjectId, customerId, scheduleId, c
     idempotencyKey: scheduleId ? `beauty_confirmation:${tenantId}:${scheduleId}` : null,
     payload: { message: 'Appointment confirmation sent', ...metadata },
   });
+  await queueBeautyNotification({ tenantId, channel, subjectId, customerId, scheduleId, eventType: 'confirmation_sent', metadata });
+  return evt;
 }
 
 /**
@@ -64,7 +95,7 @@ async function recordConfirmationReceived({ tenantId, subjectId, customerId, sch
 // ── Reminders ────────────────────────────────────────────────────────────
 
 async function sendReminder24h({ tenantId, subjectId, customerId, scheduleId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'reminder_24h',
@@ -77,10 +108,12 @@ async function sendReminder24h({ tenantId, subjectId, customerId, scheduleId, ch
     idempotencyKey: scheduleId ? `beauty_reminder24h:${tenantId}:${scheduleId}` : null,
     payload: { message: '24h reminder sent', ...metadata },
   });
+  await queueBeautyNotification({ tenantId, channel, subjectId, customerId, scheduleId, eventType: 'reminder_24h', metadata });
+  return evt;
 }
 
 async function sendReminderNearTime({ tenantId, subjectId, customerId, scheduleId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'reminder_1h',
@@ -93,6 +126,8 @@ async function sendReminderNearTime({ tenantId, subjectId, customerId, scheduleI
     idempotencyKey: scheduleId ? `beauty_reminder1h:${tenantId}:${scheduleId}` : null,
     payload: { message: 'Near-time reminder sent', ...metadata },
   });
+  await queueBeautyNotification({ tenantId, channel, subjectId, customerId, scheduleId, eventType: 'reminder_1h', metadata });
+  return evt;
 }
 
 // ── No-show ───────────────────────────────────────────────────────────────
@@ -129,6 +164,16 @@ async function detectNoShow({ tenantId, subjectId, customerId, scheduleId, corre
     idempotencyKey: scheduleId ? `beauty_reoferta:${tenantId}:${scheduleId}` : null,
     payload: { trigger: 'no_show', ...metadata },
   }).catch(() => {});
+
+  await queueBeautyNotification({
+    tenantId,
+    channel: metadata.channel || 'whatsapp',
+    subjectId,
+    customerId,
+    scheduleId,
+    eventType: 'no_show_detected',
+    metadata,
+  });
 
   return evt;
 }
@@ -183,7 +228,7 @@ async function recordServiceCompleted({ tenantId, subjectId, customerId, schedul
 // ── Follow-up and review ─────────────────────────────────────────────────
 
 async function sendFollowUp({ tenantId, subjectId, customerId, scheduleId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'follow_up_sent',
@@ -196,6 +241,8 @@ async function sendFollowUp({ tenantId, subjectId, customerId, scheduleId, chann
     idempotencyKey: scheduleId ? `beauty_followup:${tenantId}:${scheduleId}` : null,
     payload: metadata,
   });
+  await queueBeautyNotification({ tenantId, channel, subjectId, customerId, scheduleId, eventType: 'follow_up_sent', metadata });
+  return evt;
 }
 
 async function requestReview({ tenantId, subjectId, customerId, scheduleId, channel = 'internal', correlationId, metadata = {} }) {
@@ -217,7 +264,7 @@ async function requestReview({ tenantId, subjectId, customerId, scheduleId, chan
 // ── Reactivation ─────────────────────────────────────────────────────────
 
 async function sendReactivation({ tenantId, subjectId, customerId, channel = 'internal', correlationId, metadata = {} }) {
-  return emitJourneyEvent({
+  const evt = await emitJourneyEvent({
     tenantId,
     vertical: VERTICAL,
     eventType: 'reactivation_sent',
@@ -229,6 +276,8 @@ async function sendReactivation({ tenantId, subjectId, customerId, channel = 'in
     idempotencyKey: correlationId ? `beauty_reactivation:${tenantId}:${correlationId}` : null,
     payload: metadata,
   });
+  await queueBeautyNotification({ tenantId, channel, subjectId, customerId, eventType: 'reactivation_sent', metadata });
+  return evt;
 }
 
 // ── Loyalty reversal ─────────────────────────────────────────────────────
@@ -300,6 +349,41 @@ async function getLoyaltyBalance({ tenantId, subjectId }) {
   return { points: Math.max(0, granted - reversed), granted, reversed, lastUpdatedAt };
 }
 
+async function createBeautyOneTimeCharge({
+  tenantId,
+  bundleId,
+  subjectId = null,
+  customerId = null,
+  customerName = null,
+  customerEmail = null,
+  customerPhone = null,
+  customerDocument = null,
+  amount,
+  dueDate,
+  provider = null,
+  idempotencyKey = null,
+  metadata = {},
+}) {
+  const billingService = require('../billingService');
+  return billingService.createCharge({
+    tenantId,
+    vertical: VERTICAL,
+    type: 'one_time',
+    bundleId,
+    subjectId,
+    customerId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    customerDocument,
+    amount,
+    dueDate,
+    provider,
+    idempotencyKey,
+    metadata,
+  });
+}
+
 module.exports = {
   sendConfirmation,
   recordConfirmationReceived,
@@ -313,4 +397,5 @@ module.exports = {
   reverseLoyaltyPoints,
   getCustomerSessionBalance,
   getLoyaltyBalance,
+  createBeautyOneTimeCharge,
 };

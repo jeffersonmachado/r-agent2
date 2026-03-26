@@ -38,10 +38,6 @@ function getEngagementEngine() {
   return require('./engagementEngine');
 }
 
-function getNotificationAdapter() {
-  return require('../notifications/notificationAdapter');
-}
-
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -99,7 +95,6 @@ async function handleBeautyJourneyTick(job) {
 
   const windowHours = Number(job?.payload?.windowHours) || 26; // scan next 26 h
   const beauty = getBeautyService();
-  const notify = getNotificationAdapter();
 
   // ── 1. Find confirmation_sent events without a reminder_24h sent yet ────
   // Proxy: events where event_type = 'confirmation_sent' and scheduled_at within [now, now+windowHours]
@@ -136,37 +131,39 @@ async function handleBeautyJourneyTick(job) {
 
       const now = Date.now();
       const hoursUntil = (apptMs - now) / 3600000;
-      if (hoursUntil > 0 && hoursUntil <= windowHours) {
-        // Send 24h reminder
-        try {
-          const evt = await beauty.sendReminder24h({ tenantId, subjectId, customerId, scheduleId });
-          await notify.sendJourneyNotification({
-            tenantId,
-            channel: row.channel || 'internal',
-            subjectId,
-            customerId,
-            eventType: 'reminder_24h',
-            payload: { scheduleId, scheduledAt },
-          }).catch(() => {});
-          logger.info('[VerticalJourney] beauty reminder_24h sent', { tenantId, scheduleId });
-        } catch (err) {
-          logger.warn('[VerticalJourney] beauty reminder_24h failed', { tenantId, scheduleId, error: err?.message });
-        }
-      } else if (hoursUntil > 0 && hoursUntil <= 1.5) {
+      if (hoursUntil > 0 && hoursUntil <= 1.5) {
         // Near-time: send 1h reminder
         const existing1h = await VerticalJourneyEvent().findOne({
           where: { tenant_key: tenantId, vertical: 'beauty', event_type: 'reminder_1h', schedule_id: scheduleId },
         }).catch(() => null);
         if (!existing1h) {
           try {
-            await beauty.sendReminderNearTime({ tenantId, subjectId, customerId, scheduleId });
-            await notify.sendJourneyNotification({
-              tenantId, channel: row.channel || 'internal', subjectId, customerId,
-              eventType: 'reminder_1h', payload: { scheduleId, scheduledAt },
-            }).catch(() => {});
+            await beauty.sendReminderNearTime({
+              tenantId,
+              subjectId,
+              customerId,
+              scheduleId,
+              channel: row.channel || 'whatsapp',
+              metadata: { scheduleId, scheduledAt, channel: row.channel || 'whatsapp' },
+            });
           } catch (err) {
             logger.warn('[VerticalJourney] beauty reminder_1h failed', { tenantId, scheduleId, error: err?.message });
           }
+        }
+      } else if (hoursUntil > 0 && hoursUntil <= windowHours) {
+        // Send 24h reminder
+        try {
+          await beauty.sendReminder24h({
+            tenantId,
+            subjectId,
+            customerId,
+            scheduleId,
+            channel: row.channel || 'whatsapp',
+            metadata: { scheduleId, scheduledAt, channel: row.channel || 'whatsapp' },
+          });
+          logger.info('[VerticalJourney] beauty reminder_24h sent', { tenantId, scheduleId });
+        } catch (err) {
+          logger.warn('[VerticalJourney] beauty reminder_24h failed', { tenantId, scheduleId, error: err?.message });
         }
       }
     }
@@ -185,7 +182,6 @@ async function handleBeautyNoShowScan({ tenantId, payload } = {}) {
   const tid = safeStr(tenantId || payload?.tenantId || '');
   if (!tid || !dbAvailable()) return;
   const beauty = getBeautyService();
-  const notify = getNotificationAdapter();
 
   try {
     const candidatesSince = hoursAgo(48);
@@ -231,16 +227,8 @@ async function handleBeautyNoShowScan({ tenantId, payload } = {}) {
           subjectId: row.subject_id,
           customerId: row.customer_id,
           scheduleId,
-          metadata: { triggeredBy: 'scheduler', source: 'no_show_scan' },
+          metadata: { triggeredBy: 'scheduler', source: 'no_show_scan', channel: 'whatsapp' },
         });
-        await notify.sendJourneyNotification({
-          tenantId: tid,
-          channel: 'internal',
-          subjectId: row.subject_id,
-          customerId: row.customer_id,
-          eventType: 'no_show_detected',
-          payload: { scheduleId },
-        }).catch(() => {});
         logger.info('[VerticalJourney] beauty no_show_detected', { tenantId: tid, scheduleId });
       } catch (err) {
         logger.warn('[VerticalJourney] beauty noshow detect failed', { tenantId: tid, scheduleId, error: err?.message });
@@ -258,8 +246,6 @@ async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
   const beauty = getBeautyService();
-  const notify = getNotificationAdapter();
-  const { computeEngagementSignal } = getEngagementEngine();
 
   try {
     // Find all subjects with any beauty attendance
@@ -306,12 +292,9 @@ async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}) {
         await beauty.sendReactivation({
           tenantId,
           subjectId,
+          channel: 'whatsapp',
           metadata: { triggeredBy: 'scheduler', source: 'reactivation_scan' },
         });
-        await notify.sendJourneyNotification({
-          tenantId, channel: 'internal', subjectId,
-          eventType: 'reactivation_sent', payload: { triggeredBy: 'scheduler' },
-        }).catch(() => {});
         logger.info('[VerticalJourney] beauty reactivation sent', { tenantId, subjectId });
       } catch (err) {
         logger.warn('[VerticalJourney] beauty reactivation failed', { tenantId, subjectId, error: err?.message });
@@ -357,7 +340,6 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
   if (!tenantId || !dbAvailable()) return;
 
   const fitness = getFitnessService();
-  const notify = getNotificationAdapter();
   const { computeEngagementSignal } = getEngagementEngine();
 
   try {
@@ -411,14 +393,9 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
 
         await fitness.sendReturnCampaign({
           tenantId, subjectId, membershipId,
+          channel: 'whatsapp',
           correlationId: `churn_${tenantId}_${subjectId}_${Date.now()}`,
           metadata: { signal_type: signal.signal_type, score: signal.score, triggeredBy: 'scheduler' },
-        }).catch(() => {});
-
-        await notify.sendJourneyNotification({
-          tenantId, channel: 'internal', subjectId, membershipId,
-          eventType: 'return_campaign_sent',
-          payload: { signalType: signal.signal_type, score: signal.score },
         }).catch(() => {});
 
         logger.info('[VerticalJourney] fitness return_campaign sent', { tenantId, subjectId, score: signal.score });
@@ -438,13 +415,8 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
 
         await fitness.sendFrequencyAlert({
           tenantId, subjectId, membershipId,
+          channel: 'whatsapp',
           metadata: { frequency30d: signal.frequency_last_30d, triggeredBy: 'scheduler' },
-        }).catch(() => {});
-
-        await notify.sendJourneyNotification({
-          tenantId, channel: 'internal', subjectId, membershipId,
-          eventType: 'frequency_alert_sent',
-          payload: { frequency30d: signal.frequency_last_30d },
         }).catch(() => {});
 
         logger.info('[VerticalJourney] fitness frequency_alert sent', { tenantId, subjectId });
@@ -460,9 +432,11 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
  */
 async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
-  if (!tenantId || !dbAvailable()) return;
+  if (!tenantId || !dbAvailable()) return { scanned: 0, blocked: 0 };
 
   const fitness = getFitnessService();
+  let scanned = 0;
+  let blocked = 0;
 
   try {
     const now = new Date();
@@ -476,11 +450,13 @@ async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}) {
       },
       limit: 100,
     }).catch(() => []);
+    scanned = expired.length;
 
     for (const m of expired) {
       const row = m.toJSON ? m.toJSON() : m;
       try {
         await fitness.endGracePeriodWithBlock({ tenantId, membershipId: row.id });
+        blocked += 1;
         logger.info('[VerticalJourney] fitness grace_expired → blocked', { tenantId, membershipId: row.id });
       } catch (err) {
         logger.warn('[VerticalJourney] fitness grace expiry block failed', { tenantId, membershipId: row.id, error: err?.message });
@@ -489,6 +465,8 @@ async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}) {
   } catch (err) {
     logger.warn('[VerticalJourney] fitness grace expiry scan failed', { tenantId, error: err?.message });
   }
+
+  return { scanned, blocked };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -523,7 +501,8 @@ async function handleVerticalReconciliation({ tenantId: tid, payload } = {}) {
 
   // 2. Grace expiry  (idempotent — endGracePeriodWithBlock is no-op if already blocked)
   try {
-    await handleFitnessGraceExpiryScan({ tenantId });
+    const grace = await handleFitnessGraceExpiryScan({ tenantId });
+    summary.graceExpired = Number(grace?.blocked || 0);
   } catch (err) {
     summary.errors.push(`grace_expiry: ${err?.message}`);
     logger.warn('[VerticalJourney] reconciliation: grace expiry error', { tenantId, error: err?.message });
@@ -534,6 +513,7 @@ async function handleVerticalReconciliation({ tenantId: tid, payload } = {}) {
     action: 'reconciliation',
     result: summary.errors.length === 0 ? 'ok' : 'partial',
     staleAttendancesClosed: summary.staleAttendancesClosed,
+    graceExpired: summary.graceExpired,
     errorCount: summary.errors.length,
     durationMs: Date.now() - startMs,
   });

@@ -143,6 +143,48 @@ async function handleFitnessMembershipRoutes(ctx) {
     return true;
   }
 
+  // POST /api/fitness/membership/:membershipId/charge
+  if (method === 'POST' && pathname.match(/^\/api\/fitness\/membership\/([^/]+)\/charge$/)) {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    if (!hasJsonContentType(req)) {
+      badRequest(res, 'Content-Type deve ser application/json');
+      return true;
+    }
+
+    const membershipId = decodeURIComponent(pathname.split('/')[4]);
+    const body = await parseJsonBody(req);
+    if (!body?.amount) {
+      badRequest(res, 'amount required');
+      return true;
+    }
+
+    const detail = await fitnessMembershipService.getMembershipDetail({ tenantId: tenantId(req), membershipId });
+    if (!detail) {
+      sendJson(res, 404, { error: 'membership_not_found' });
+      return true;
+    }
+
+    const out = await fitnessMembershipService.createRecurringMembershipCharge({
+      tenantId: tenantId(req),
+      membershipId,
+      subjectId: detail.subject_id || null,
+      customerId: detail.customer_id || null,
+      customerName: body?.customerName || null,
+      customerEmail: body?.customerEmail || null,
+      customerPhone: body?.customerPhone || null,
+      customerDocument: body?.customerDocument || null,
+      amount: body.amount,
+      dueDate: body?.dueDate || null,
+      cycle: body?.cycle || 'MONTHLY',
+      provider: body?.provider || null,
+      idempotencyKey: body?.idempotencyKey || null,
+      metadata: body?.metadata || {},
+    });
+
+    sendJson(res, out.idempotent ? 200 : 201, out);
+    return true;
+  }
+
   // GET /api/fitness/membership/:membershipId/billing-history
   if (method === 'GET' && pathname.match(/^\/api\/fitness\/membership\/([^/]+)\/billing-history$/)) {
     if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;

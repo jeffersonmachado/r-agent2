@@ -6,6 +6,7 @@ const {
   listJobs,
   listNotifications,
   listInsights,
+  listFinancialTransactions,
 } = require('../../services/operationsDashboardService');
 const { isSuperAdmin } = require('../../services/superAdminService');
 
@@ -35,7 +36,10 @@ function parseQuery(req) {
     subjectId: urlObj.searchParams.get('subjectId') || null,
     customerId: urlObj.searchParams.get('customerId') || null,
     membershipId: urlObj.searchParams.get('membershipId') || null,
+    jobId: urlObj.searchParams.get('jobId') || null,
     status: urlObj.searchParams.get('status') || null,
+    provider: urlObj.searchParams.get('provider') || null,
+    problemOnly: urlObj.searchParams.get('problemOnly') || null,
     channel: urlObj.searchParams.get('channel') || null,
     limit: urlObj.searchParams.get('limit') || null,
     page: urlObj.searchParams.get('page') || null,
@@ -124,6 +128,7 @@ async function handleOperationsDashboardRoutes(ctx) {
         vertical: q.vertical,
         startDate: q.startDate,
         endDate: q.endDate,
+        jobId: q.jobId,
         status: q.status,
         limit: q.limit,
         page: q.page,
@@ -154,6 +159,22 @@ async function handleOperationsDashboardRoutes(ctx) {
         startDate: q.startDate,
         endDate: q.endDate,
         limit: q.limit,
+      });
+      sendJson(res, 200, { ok: true, ...out });
+      return true;
+    }
+
+    if (method === 'GET' && pathname === '/api/operations-dashboard/finance') {
+      const out = await listFinancialTransactions({
+        tenantId,
+        vertical: q.vertical,
+        startDate: q.startDate,
+        endDate: q.endDate,
+        status: q.status,
+        provider: q.provider,
+        problemOnly: String(q.problemOnly || '').toLowerCase() === 'true',
+        limit: q.limit,
+        page: q.page,
       });
       sendJson(res, 200, { ok: true, ...out });
       return true;

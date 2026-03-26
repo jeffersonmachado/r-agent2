@@ -40,21 +40,19 @@ async function seedCompleto() {
   }
 
   try {
-    const results = await seedPlatform();
-    
-    // Estatísticas finais
+    const report = await seedPlatform();
+    const functional = report.functionalResults || {};
     const total = {
-      flows: results.flows.length,
-      agents: results.agents.length,
-      queues: results.queues.length,
-      departments: results.departments.length,
+      flows: Array.isArray(functional.flows) ? functional.flows.length : 0,
+      agents: Array.isArray(functional.agents) ? functional.agents.length : 0,
+      queues: Array.isArray(functional.queues) ? functional.queues.length : 0,
+      departments: Array.isArray(functional.departments) ? functional.departments.length : 0,
     };
-    
     const sucesso = {
-      flows: results.flows.filter(f => f.success).length,
-      agents: results.agents.filter(a => a.success).length,
-      queues: results.queues.filter(q => q.success).length,
-      departments: results.departments.filter(d => d.success).length,
+      flows: Array.isArray(functional.flows) ? functional.flows.filter((item) => item.success !== false).length : 0,
+      agents: Array.isArray(functional.agents) ? functional.agents.filter((item) => item.success !== false).length : 0,
+      queues: Array.isArray(functional.queues) ? functional.queues.filter((item) => item.success !== false).length : 0,
+      departments: Array.isArray(functional.departments) ? functional.departments.filter((item) => item.success !== false).length : 0,
     };
 
     console.log('\n' + '='.repeat(70));
@@ -63,28 +61,33 @@ async function seedCompleto() {
     console.log(`   👤 Agentes: ${sucesso.agents}/${total.agents} criados`);
     console.log(`   📋 Filas: ${sucesso.queues}/${total.queues} criadas`);
     console.log(`   🏢 Departamentos: ${sucesso.departments}/${total.departments} criados`);
-    console.log(`   ❌ Total de erros: ${results.errors.length}\n`);
+    const smokeFailures = (report.smokeResults || []).filter((item) => !item.skipped && !item.success).length;
+    const hasFunctionalSkip = !!functional.skipped;
+    console.log(`   ❌ Falhas de smoke: ${smokeFailures}`);
+    console.log(`   ⚠️  Seed funcional pulado: ${hasFunctionalSkip ? 'SIM' : 'NAO'}\n`);
 
     const taxaSucesso = (
       (sucesso.flows + sucesso.agents + sucesso.queues + sucesso.departments) /
-      (total.flows + total.agents + total.queues + total.departments) * 100
+      Math.max(total.flows + total.agents + total.queues + total.departments, 1) * 100
     ).toFixed(2);
 
     console.log(`   📊 Taxa de sucesso geral: ${taxaSucesso}%\n`);
 
-    if (results.errors.length > 0) {
-      console.log('⚠️  Erros encontrados:');
-      results.errors.forEach((error, index) => {
-        console.log(`   ${index + 1}. [${error.type}] ${error.name || error.error}`);
+    if (Array.isArray(report.remainingLimitations) && report.remainingLimitations.length > 0) {
+      console.log('⚠️  Pendências reais:');
+      report.remainingLimitations.forEach((error, index) => {
+        console.log(`   ${index + 1}. ${error}`);
       });
       console.log('');
     }
 
-    // Exit code baseado em sucesso
-    const todosSucesso = results.errors.length === 0 && 
+    const todosSucesso =
+      smokeFailures === 0 &&
+      !hasFunctionalSkip &&
       sucesso.flows === total.flows &&
       sucesso.queues === total.queues &&
-      sucesso.departments === total.departments;
+      sucesso.departments === total.departments &&
+      sucesso.agents === total.agents;
 
     process.exit(todosSucesso ? 0 : 1);
   } catch (error) {
@@ -99,4 +102,3 @@ if (require.main === module) {
 }
 
 module.exports = { seedCompleto, SEED_DATA_COMPLETO };
-

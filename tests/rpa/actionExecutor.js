@@ -20,6 +20,7 @@ const { StepRepairEngine } = require('./bugResolution/stepRepairEngine');
 const { BugEvidenceGenerator } = require('./bugResolution/bugEvidenceGenerator');
 const { PatchSuggestionEngine } = require('./bugResolution/patchSuggestionEngine');
 const { BugMemoryStore } = require('./bugResolution/bugMemoryStore');
+const { launchChromiumWithFallback } = require('./utils/browserLaunchOptions');
 
 class ActionExecutor {
   constructor(options = {}) {
@@ -78,7 +79,7 @@ class ActionExecutor {
       slowMo: options.slowMo || config.playwright.slowMo,
       timeout: options.timeout || config.playwright.timeout,
       typingSpeedMs: options.typingSpeedMs || 0, // Delay por caractere (0 = preenchimento rápido)
-      devtools: options.devtools !== undefined ? options.devtools : true,
+      devtools: options.devtools !== undefined ? options.devtools : false,
       detailedLogs: options.detailedLogs !== undefined ? options.detailedLogs : (process.env.RPA_DETAILED_LOGS !== '0'),
       maxDebugEntries: options.maxDebugEntries !== undefined
         ? options.maxDebugEntries
@@ -360,11 +361,14 @@ class ActionExecutor {
    * Inicializa browser e página.
    */
   async init() {
-    this.browser = await chromium.launch({
+    const launchResult = await launchChromiumWithFallback(chromium, {
       headless: this.options.headless,
       slowMo: this.options.slowMo,
       devtools: this.options.devtools, // Abre DevTools se solicitado
     });
+    this.browser = launchResult.browser;
+    this.browserSource = launchResult.browserSource;
+    this.browserExecutablePath = launchResult.executablePath;
 
     this.context = await this.browser.newContext({
       viewport: { width: 1280, height: 720 },
@@ -508,13 +512,22 @@ class ActionExecutor {
    */
   async close() {
     if (this.page) {
-      await this.page.close();
+      try {
+        await this.page.close();
+      } catch (_) {}
+      this.page = null;
     }
     if (this.context) {
-      await this.context.close();
+      try {
+        await this.context.close();
+      } catch (_) {}
+      this.context = null;
     }
     if (this.browser) {
-      await this.browser.close();
+      try {
+        await this.browser.close();
+      } catch (_) {}
+      this.browser = null;
     }
   }
 

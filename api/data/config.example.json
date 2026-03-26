@@ -20,6 +20,39 @@
     "enableWebhooks": true,
     "enableBulkMessaging": false
   },
+  "billing": {
+    "provider": "asaas",
+    "providers": {
+      "asaas": {
+        "baseUrl": "https://api.asaas.com/v3",
+        "apiKey": "REPLACE_WITH_ASAAS_API_KEY",
+        "webhookSecret": "REPLACE_WITH_ASAAS_WEBHOOK_SECRET",
+        "billingType": "PIX"
+      },
+      "mercadoPago": {
+        "baseUrl": "https://api.mercadopago.com",
+        "accessToken": "REPLACE_WITH_MP_ACCESS_TOKEN",
+        "webhookSecret": "REPLACE_WITH_MP_WEBHOOK_SECRET"
+      }
+    }
+  },
+  "notifications": {
+    "whatsapp": {
+      "enabled": false
+    },
+    "sms": {
+      "enabled": false
+    },
+    "email": {
+      "enabled": false
+    }
+  },
+  "whatsapp": {
+    "apiUrl": "https://graph.facebook.com/v18.0",
+    "phoneNumberId": "REPLACE_WITH_PHONE_NUMBER_ID",
+    "accessToken": "REPLACE_WITH_WHATSAPP_ACCESS_TOKEN",
+    "verifyToken": "REPLACE_WITH_WHATSAPP_VERIFY_TOKEN"
+  },
   "pbx": {
     "legacy": {
       "root": "/opt/results/telefonia/ripabx",

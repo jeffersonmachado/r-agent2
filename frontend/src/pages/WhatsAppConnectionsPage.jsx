@@ -393,7 +393,7 @@ export function WhatsAppConnectionsPage() {
 
   if (authLoading) {
     return (
-      <CrudPageBase>
+      <CrudPageBase hideHeader>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
@@ -414,7 +414,7 @@ export function WhatsAppConnectionsPage() {
     : null;
 
   return (
-    <CrudPageBase>
+    <CrudPageBase hideHeader>
       <ToastContainer />
 
       <div className="support-header">

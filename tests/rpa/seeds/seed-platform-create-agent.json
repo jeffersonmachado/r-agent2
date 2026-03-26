@@ -1,0 +1,25 @@
+{
+  "id": "seed-platform-create-agent",
+  "name": "seed-platform-create-agent",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "requiresAuth": true,
+    "purpose": "Verificar acesso autenticado à tela de agentes"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/agents"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "url": {
+          "contains": "/agents"
+        }
+      }
+    }
+  ],
+  "data": {}
+}
