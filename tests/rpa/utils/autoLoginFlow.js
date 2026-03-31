@@ -55,6 +55,78 @@ function shouldAutoLoginForTarget(targetUrl, baseUrl) {
   }
 }
 
+function isMaintenanceTarget(targetUrl) {
+  if (!targetUrl || typeof targetUrl !== 'string') return false;
+  return targetUrl.includes('/maintenance');
+}
+
+async function validateMaintenancePostLoginState(page) {
+  const currentUrl = typeof page.url === 'function' ? page.url() : '';
+  const snapshot = await page.evaluate(() => {
+    const bodyText = String(document.body?.innerText || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    const has = (selector) => !!document.querySelector(selector);
+
+    const localKeys = Object.keys(window.localStorage || {});
+    const sessionKeys = Object.keys(window.sessionStorage || {});
+    const keys = [...localKeys, ...sessionKeys].map((k) => String(k).toLowerCase());
+
+    const hasAnyKey = (names) => names.some((name) => keys.some((key) => key === name || key.includes(name)));
+
+    return {
+      hasMaintenancePage: has('[data-testid="ticket-maintenance-page"]'),
+      hasAppShell: has('[data-testid="app-shell"]'),
+      hasLoading: has('[data-testid="ticket-maintenance-loading"]'),
+      hasReady: has('[data-testid="ticket-maintenance-ready"]'),
+      hasAuthRequired: has('[data-testid="ticket-maintenance-auth-required"]'),
+      hasError: has('[data-testid="ticket-maintenance-error"]'),
+      loginFormVisible: has('input[type="password"]') && (has('input[name="username"]') || has('input[name="email"]') || has('input[type="email"]') || has('input[type="text"]')),
+      hasAuthToken: hasAnyKey(['auth_token', 'token', 'auth']),
+      hasTenantContext: hasAnyKey(['tenant', 'selectedtenant', 'tenantid', 'context']),
+      bodyText,
+      localStorageKeys: localKeys,
+      sessionStorageKeys: sessionKeys,
+    };
+  });
+
+  const hasMaintenanceUrl = String(currentUrl).includes('/maintenance');
+  const hasLoginUrl = String(currentUrl).includes('/login');
+  const hasPermissionHint = /sem permiss|acesso negado|forbidden|unauthorized|403/.test(snapshot.bodyText || '');
+
+  let classification = null;
+  if (hasLoginUrl || snapshot.loginFormVisible || !snapshot.hasAuthToken) {
+    classification = 'auth_redirect';
+  } else if (snapshot.hasAuthRequired || hasPermissionHint) {
+    classification = 'permission_block';
+  } else if (!hasMaintenanceUrl || !snapshot.hasMaintenancePage) {
+    classification = snapshot.hasLoading ? 'loading_stuck' : 'maintenance_not_rendered';
+  }
+
+  return {
+    ok: !classification,
+    classification,
+    checks: {
+      hasMaintenanceUrl,
+      hasLoginUrl,
+      hasMaintenancePage: snapshot.hasMaintenancePage,
+      hasAppShell: snapshot.hasAppShell,
+      hasReady: snapshot.hasReady,
+      hasLoading: snapshot.hasLoading,
+      hasAuthRequired: snapshot.hasAuthRequired,
+      hasError: snapshot.hasError,
+      hasAuthToken: snapshot.hasAuthToken,
+      hasTenantContext: snapshot.hasTenantContext,
+    },
+    storage: {
+      localStorageKeys: snapshot.localStorageKeys,
+      sessionStorageKeys: snapshot.sessionStorageKeys,
+    },
+  };
+}
+
 /**
  * Executa navegação inicial + auto-login.
  *
@@ -147,6 +219,27 @@ async function autoLoginBeforeSteps(page, params = {}) {
         };
       }
     }
+  }
+
+  if (authResult.success && authResult.loggedIn && isMaintenanceTarget(targetUrl)) {
+    const gate = await validateMaintenancePostLoginState(page);
+    if (!gate.ok) {
+      return {
+        success: false,
+        loggedIn: true,
+        error: `maintenance_auth_gate_failed:${gate.classification}`,
+        classification: gate.classification,
+        diagnostics: gate,
+        baseUrl,
+        targetUrl,
+      };
+    }
+    return {
+      ...authResult,
+      maintenanceGate: gate,
+      baseUrl,
+      targetUrl,
+    };
   }
 
   return {

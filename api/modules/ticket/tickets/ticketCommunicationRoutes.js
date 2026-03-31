@@ -108,17 +108,31 @@ async function handleTicketCommunicationRoutes({ req, res, method, pathname, dep
             deps.updateOutboundMessageMeta(id, { clientMessageId, deliveryStatus: 'pending' });
           }
 
-          // Envia o tipo correto — mídia como mídia, texto como texto
-          const outboundMessageType = hasMedia ? mediaType : 'text';
-          const outboundMessageBody = hasMedia
-            ? {
-                // extrai o ID da mídia de "/tickets/media/tm-XXXX" → "tm-XXXX"
-                mediaId: mediaUrl.split('/').pop(),
-                mimeType: mediaMimeType || undefined,
-                fileName: mediaFileName2 || mediaFileName || undefined,
-                caption: hasText ? trimmedMessage : undefined,
-              }
-            : { text: trimmedMessage };
+          // Envia o tipo correto — mídia como mídia (se mimeType disponível), texto como texto
+          // Se mimeType não foi informado, envia como fallback textual
+          const shouldSendAsMedia = hasMedia && mediaMimeType;
+          const outboundMessageType = shouldSendAsMedia ? mediaType : 'text';
+          
+          let outboundMessageBody;
+          if (shouldSendAsMedia) {
+            // Enviar como mensagem de mídia
+            outboundMessageBody = {
+              // extrai o ID da mídia de "/tickets/media/tm-XXXX" → "tm-XXXX"
+              mediaId: mediaUrl.split('/').pop(),
+              mimeType: mediaMimeType,
+              fileName: mediaFileName2 || mediaFileName || undefined,
+              caption: hasText ? trimmedMessage : undefined,
+            };
+          } else if (hasMedia) {
+            // Fallback textual se mimeType não foi informado
+            // Usa o mesmo formato da descrição armazenada no histórico
+            const mediaDescription = `[${mediaType}] ${mediaFileName2 || mediaFileName || mediaUrl}`;
+            const mediaText = `${mediaDescription}\n${mediaUrl}`;
+            outboundMessageBody = { text: mediaText };
+          } else {
+            // Mensagem de texto normal
+            outboundMessageBody = { text: trimmedMessage };
+          }
 
           await deps.outboundQueueService.enqueueOutbound({
             tenantId: req.tenantId,

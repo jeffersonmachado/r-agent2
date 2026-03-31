@@ -1,5 +1,6 @@
 'use strict';
 
+const { requireTenant } = require('../shared/requireTenant');
 const { buildCoreCommonDeps } = require('./buildCoreCommonDeps');
 const { buildCoreAdminDeps } = require('./buildCoreAdminDeps');
 const { buildCoreIdentityDeps } = require('./buildCoreIdentityDeps');

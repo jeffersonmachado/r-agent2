@@ -235,6 +235,30 @@ async function createCharge(payload = {}) {
   };
 }
 
+async function listTransactions({ tenantId, vertical = null, status = null, limit = 200, offset = 0 } = {}) {
+  if (!dbAvailable()) return { total: 0, items: [] };
+  const Tx = BillingTransaction();
+  const where = { tenant_key: String(tenantId || '').trim() };
+  if (vertical) where.vertical = String(vertical).trim().toLowerCase();
+  if (status) where.status = String(status).trim().toLowerCase();
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 2000);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const { count, rows } = await Tx.findAndCountAll({
+    where,
+    order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
+    limit: safeLimit,
+    offset: safeOffset,
+  }).catch(() => ({ count: 0, rows: [] }));
+
+  return {
+    total: count,
+    items: rows.map((row) => (row.toJSON ? row.toJSON() : row)),
+    limit: safeLimit,
+    offset: safeOffset,
+  };
+}
+
 async function applyBillingRules({ tenantId, transaction, status }) {
   const vertical = String(transaction?.vertical || '').toLowerCase();
 
@@ -652,6 +676,7 @@ async function reconcileSubscriptions({ tenantId = null, limit = 100 } = {}) {
 
 module.exports = {
   createCharge,
+  listTransactions,
   processWebhook,
   reconcileTransactions,
   reconcileSubscriptions,

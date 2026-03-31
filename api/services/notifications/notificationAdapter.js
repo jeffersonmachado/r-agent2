@@ -11,34 +11,47 @@ async function sendJourneyNotification({
   eventType,
   payload = {},
 }) {
-  const out = await notificationService.sendJourneyNotification({
-    tenantId,
-    channel,
-    subjectId,
-    customerId,
-    membershipId,
-    scheduleId: payload?.scheduleId || null,
-    bundleId: payload?.bundleId || null,
-    transactionId: payload?.transactionId || null,
-    appointmentId: payload?.appointmentId || null,
-    vertical: payload?.vertical || null,
-    metadata: payload || {},
-    message: payload?.message || null,
-    eventType,
-    recipient: payload?.recipient || customerId || subjectId || null,
-  });
-  // Normalize to flat shape so consumers can access .status / .isStub directly.
-  const delivery = out?.delivery || {};
-  const result = out?.result || {};
-  return {
-    ok: out?.ok !== false,
-    status: delivery.status || result.status || (out?.ok === false ? 'failed' : 'unknown'),
-    isStub: !!(result.isStub || delivery.status === 'stub'),
-    deduplicated: !!out?.deduplicated,
-    delivery,
-    result,
-    error: out?.error || null,
-  };
+  try {
+    const out = await notificationService.sendJourneyNotification({
+      tenantId,
+      channel,
+      subjectId,
+      customerId,
+      membershipId,
+      scheduleId: payload?.scheduleId || null,
+      bundleId: payload?.bundleId || null,
+      transactionId: payload?.transactionId || null,
+      appointmentId: payload?.appointmentId || null,
+      vertical: payload?.vertical || null,
+      metadata: payload || {},
+      message: payload?.message || null,
+      eventType,
+      recipient: payload?.recipient || customerId || subjectId || null,
+    });
+    // Normalize to flat shape so consumers can access .status / .isStub directly.
+    const delivery = out?.delivery || {};
+    const result = out?.result || {};
+    return {
+      ok: out?.ok !== false,
+      status: delivery.status || result.status || (out?.ok === false ? 'failed' : 'unknown'),
+      isStub: !!(result.isStub || delivery.status === 'stub'),
+      deduplicated: !!out?.deduplicated,
+      delivery,
+      result,
+      error: out?.error || null,
+    };
+  } catch (err) {
+    // Keep callers stable even when DB/provider dependencies are unavailable.
+    return {
+      ok: false,
+      status: notificationService.DELIVERY_STATUS.FAILED,
+      isStub: false,
+      deduplicated: false,
+      delivery: {},
+      result: {},
+      error: err?.code || err?.message || 'notification_send_failed',
+    };
+  }
 }
 
 async function broadcastJourneyNotification({ tenantId, channels = ['internal'], ...rest }) {

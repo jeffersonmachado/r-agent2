@@ -100,7 +100,7 @@ async function handleFitnessRoutes(ctx) {
     res,
     method,
     pathname,
-    deps: { sendJson, requireAuth, requireTenant },
+    deps: { sendJson, requireAuth, requireTenant, badRequest, hasJsonContentType, parseJsonBody },
     ensureAuth,
     tenantId,
   });

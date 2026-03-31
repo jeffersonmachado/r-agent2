@@ -8,9 +8,10 @@ function runHandled(handler) {
     const ctx = req.routeContext || req.appRouteContext || {};
 
     try {
+      const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
       const handled = await handler({
         method: req.method,
-        pathname: req.originalUrl || req.url,
+        pathname,
         params: req.params || {},
         query: req.query || {},
         body: req.body,

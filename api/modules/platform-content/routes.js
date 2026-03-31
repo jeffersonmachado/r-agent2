@@ -38,6 +38,14 @@ function runHandled(handler, selectDeps) {
 function createPlatformContentRoutes({ buildDeps }) {
   const router = express.Router();
 
+  // Initialize routing context on request (required for route handlers to access dependencies)
+  router.use((req, res, next) => {
+    if (!req.routeContext && !req.appRouteContext) {
+      req.appRouteContext = buildDeps(req, res);
+    }
+    next();
+  });
+
   router.use(runHandled(handleAiRoutes, (ctx) => ({
     requireAuth: ctx.requireAuth,
     requireTenant: ctx.requireTenant,

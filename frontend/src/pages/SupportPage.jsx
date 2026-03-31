@@ -5,17 +5,22 @@ import {
   assignTicket,
   closeTicket,
   sendTicketMessage,
-  uploadSupportMedia,
+  getTicketMessages,
+  markTicketAsRead,
+  createTicket,
   takeOverTicket,
   returnToBotTicket,
   pauseTicket,
   resumeTicket,
   getTicketDeliveryFailures,
+  getTicketAiSummary,
+  generateTicketAiSummary,
 } from '../api/tickets';
-import { listQuickReplies, useQuickReply, getCategories as getQuickReplyCategories } from '../api/quickReplies';
+import { getConversationMessages } from '../api/conversations';
+import { listQuickReplies, searchQuickReplies, useQuickReply, getCategories as getQuickReplyCategories } from '../api/quickReplies';
 import { listCloseReasons } from '../api/closeReasons';
-import { addTagToTicket, removeTagFromTicket } from '../api/segmentation';
-import { listDocuments } from '../api/ragDocuments';
+import { addTagToTicket, removeTagFromTicket, getAllTags } from '../api/segmentation';
+import { queryAuditLogs } from '../api/audit';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -38,17 +43,6 @@ import logger from '../utils/logger';
 import { SupportDeliveryFailuresModal } from './support/SupportDeliveryFailuresModal';
 import { SupportCloseTicketModal } from './support/SupportCloseTicketModal';
 import { SupportNewConversationModal } from './support/SupportNewConversationModal';
-import { ScheduleModal } from '../components/ScheduleModal';
-import { useSupportEvidence } from '../hooks/useSupportEvidence';
-import { SupportResolvedEntityCard } from '../components/support/SupportResolvedEntityCard';
-import { SupportEvidenceCard } from '../components/support/SupportEvidenceCard';
-import { SupportSuggestedReplyCard } from '../components/support/SupportSuggestedReplyCard';
-import { SupportHistoryCard } from '../components/support/SupportHistoryCard';
-import { SupportCard } from '../components/support/SupportCard';
-import { useSupportTicketContext } from '../hooks/useSupportTicketContext';
-import { isWebPushSupported, subscribeCurrentUserWebPush } from '../api/webPush';
-import { buildApiUrl, fetchBlob } from '../api/client';
-import { getBasePath } from '../utils';
 
 /**
  * Página de atendimento para gerenciar tickets.
@@ -65,14 +59,12 @@ export function SupportPage() {
   const [queues, setQueues] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketMessages, setTicketMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [uiSearch, setUiSearch] = useState('');
   const [uiQueue, setUiQueue] = useState('');
-  const [ticketViewFilter, setTicketViewFilter] = useState('all');
-  const [showOtherAgents, setShowOtherAgents] = useState(false);
-  const [showClosedTickets, setShowClosedTickets] = useState(false);
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
   // Auto-refresh sempre ativo quando WebSocket não está disponível
@@ -82,19 +74,12 @@ export function SupportPage() {
   const [newConversationMessage, setNewConversationMessage] = useState('');
   const [newConversationQueue, setNewConversationQueue] = useState('');
   const [handoverLoading, setHandoverLoading] = useState(false);
-  const [scheduleContextTicket, setScheduleContextTicket] = useState(null);
+  const [quickReplySuggestions, setQuickReplySuggestions] = useState([]);
   const [quickReplySlashResults, setQuickReplySlashResults] = useState([]);
   const [quickReplySlashOpen, setQuickReplySlashOpen] = useState(false);
-  const [slashCommandResults, setSlashCommandResults] = useState([]);
-  const [slashMenuMode, setSlashMenuMode] = useState('commands');
-  const [slashMenuCursorIndex, setSlashMenuCursorIndex] = useState(-1);
   const [quickReplyCategories, setQuickReplyCategories] = useState([]);
-  const [ragPickerOpen, setRagPickerOpen] = useState(false);
-  const [ragDocuments, setRagDocuments] = useState([]);
-  const [ragDocumentsLoading, setRagDocumentsLoading] = useState(false);
-  const [ragDocumentsError, setRagDocumentsError] = useState('');
-  const [ragSearch, setRagSearch] = useState('');
   const [quickReplySelectedCategory, setQuickReplySelectedCategory] = useState('');
+  const [quickReplyCategoryItems, setQuickReplyCategoryItems] = useState([]);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closingTicketId, setClosingTicketId] = useState(null);
   const [closeReasons, setCloseReasons] = useState([]);
@@ -103,103 +88,18 @@ export function SupportPage() {
   const [closeTagsInput, setCloseTagsInput] = useState('');
   const [closing, setClosing] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [knownTags, setKnownTags] = useState([]);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [timelineMessages, setTimelineMessages] = useState([]);
+  const [ticketEvents, setTicketEvents] = useState([]);
+  const [ticketAuditLogs, setTicketAuditLogs] = useState([]);
+  const [ticketAuditLoading, setTicketAuditLoading] = useState(false);
   const [showDeliveryFailuresModal, setShowDeliveryFailuresModal] = useState(false);
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
-  const [isComposerBusy, setIsComposerBusy] = useState(false);
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  const [mediaModal, setMediaModal] = useState({
-    isOpen: false,
-    type: 'document',
-    title: 'Mídia',
-    mimeType: '',
-    urls: [],
-    index: 0,
-    failed: false,
-    maximized: false,
-  });
-  const [protectedMediaBlobUrls, setProtectedMediaBlobUrls] = useState({});
-  const protectedMediaBlobPoolRef = React.useRef(new Set());
-  const protectedMediaLoadingRef = React.useRef(new Set());
-  const composerFileInputRef = React.useRef(null);
-  const mediaRecorderRef = React.useRef(null);
-  const mediaRecorderChunksRef = React.useRef([]);
-  const mediaRecorderStreamRef = React.useRef(null);
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
-
-  const extractUrlPathname = useCallback((rawUrl) => {
-    const value = String(rawUrl || '').trim();
-    if (!value) return '';
-    try {
-      if (/^https?:\/\//i.test(value)) {
-        const parsed = new URL(value);
-        return `${parsed.pathname || ''}${parsed.search || ''}`;
-      }
-    } catch {
-      // noop
-    }
-    if (value.startsWith('/')) return value;
-    return `/${value.replace(/^\/+/, '')}`;
-  }, []);
-
-  const isProtectedTicketMediaUrl = useCallback((rawUrl) => {
-    const path = extractUrlPathname(rawUrl).split('?')[0];
-    return path.startsWith('/tickets/media/') || path.includes('/api/tickets/media/');
-  }, [extractUrlPathname]);
-
-  const resolveProtectedMediaUrl = useCallback(async (rawUrl) => {
-    const value = String(rawUrl || '').trim();
-    if (!value || !isProtectedTicketMediaUrl(value)) return;
-    if (protectedMediaBlobUrls[value]) return;
-    if (protectedMediaLoadingRef.current.has(value)) return;
-
-    protectedMediaLoadingRef.current.add(value);
-    try {
-      const response = await fetchBlob(extractUrlPathname(value));
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      protectedMediaBlobPoolRef.current.add(blobUrl);
-      setProtectedMediaBlobUrls((prev) => ({ ...prev, [value]: blobUrl }));
-    } catch (err) {
-      logger.warn('[SupportPage] Falha ao resolver mídia protegida', {
-        mediaUrl: value,
-        error: err?.message || String(err),
-      });
-    } finally {
-      protectedMediaLoadingRef.current.delete(value);
-    }
-  }, [extractUrlPathname, isProtectedTicketMediaUrl, protectedMediaBlobUrls]);
-
-  // Ref para evitar loop infinito no pre-load (resolveProtectedMediaUrl muda identity quando novos blobs chegam)
-  const resolveProtectedMediaUrlRef = React.useRef(resolveProtectedMediaUrl);
-  useEffect(() => { resolveProtectedMediaUrlRef.current = resolveProtectedMediaUrl; });
-
-  useEffect(() => {
-    return () => {
-      for (const blobUrl of protectedMediaBlobPoolRef.current) {
-        try {
-          URL.revokeObjectURL(blobUrl);
-        } catch {
-          // noop
-        }
-      }
-      protectedMediaBlobPoolRef.current.clear();
-      protectedMediaLoadingRef.current.clear();
-      try {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-          mediaRecorderRef.current.stop();
-        }
-      } catch {
-        // noop
-      }
-      if (mediaRecorderStreamRef.current) {
-        for (const track of mediaRecorderStreamRef.current.getTracks()) {
-          try { track.stop(); } catch { /* noop */ }
-        }
-        mediaRecorderStreamRef.current = null;
-      }
-    };
-  }, []);
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -255,16 +155,6 @@ export function SupportPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const basePath = getBasePath() || '';
-    const faviconHref = `${basePath}/favicon.ico`.replace(/\/\/{2,}/g, '/');
-    const icon = document.querySelector("link[rel='icon']");
-    if (icon && icon.getAttribute('href') !== faviconHref) {
-      icon.setAttribute('href', faviconHref);
-    }
-  }, []);
-
   // Debounce para loadTickets - agrupa múltiplos eventos WebSocket
   // DEVE ser definido ANTES de handleWebSocketEvent para evitar erro de inicialização
   const { debouncedFn: debouncedLoadTickets } = useDebounce(() => {
@@ -273,19 +163,20 @@ export function SupportPage() {
     }
   }, 500); // 500ms de debounce
 
-  // Debounce para quick replies via menu "/"
-  const { debouncedFn: debouncedSearchSlashQuickReplies } = useDebounce((query) => {
-    if (!query || String(query).trim().length < 2) {
+  // Debounce para quick replies via "/atalho"
+  const { debouncedFn: debouncedSearchSlashQuickReplies } = useDebounce(() => {
+    const txt = (messageText || '').trim();
+    if (!txt.startsWith('/') || txt.length < 2) {
       setQuickReplySlashOpen(false);
       setQuickReplySlashResults([]);
       return;
     }
-    listQuickReplies({ search: String(query).trim(), activeOnly: true, category: quickReplySelectedCategory || undefined })
+    const q = txt.slice(1);
+    listQuickReplies({ search: q, activeOnly: true, category: quickReplySelectedCategory || undefined })
       .then((resp) => {
         const list = resp?.quickReplies || [];
         setQuickReplySlashResults(list.slice(0, 8));
-        setSlashMenuMode('quick_replies');
-        setQuickReplySlashOpen(list.length > 0);
+        setQuickReplySlashOpen(true);
       })
       .catch(() => {
         setQuickReplySlashOpen(false);
@@ -381,12 +272,6 @@ export function SupportPage() {
           if (loadTicketMessagesRef.current) {
             loadTicketMessagesRef.current(data.ticketId);
           }
-          // Toast de falha de entrega
-          if (data.change?.type === 'message_status' && data.change?.status === 'failed') {
-            const reason = data.change?.error || '';
-            const msg = reason ? `Falha ao entregar mensagem: ${String(reason).slice(0, 120)}` : 'Mensagem falhou na entrega';
-            showToastRef.current(msg, 'error', 6000);
-          }
         }
         break;
         
@@ -395,6 +280,7 @@ export function SupportPage() {
         setTickets(prevTickets => prevTickets.filter(t => t.id !== data.ticketId));
         if (selectedTicketIdRef.current === data.ticketId) {
           setSelectedTicket(null);
+          setTicketMessages([]);
         }
         break;
         
@@ -474,64 +360,23 @@ export function SupportPage() {
     }
   }, []);
 
-  const {
-    timelineMessages,
-    ticketEvents,
-    ticketAuditLogs,
-    ticketAuditLoading,
-    aiSummary,
-    aiSummaryLoading,
-    knownTags,
-    extractedEntities,
-    messagesContainerRef,
-    loadTicketMessages,
-    loadTicketMessagesRef,
-    safeGetBodyText,
-  } = useSupportTicketContext({
-    selectedTicket,
-    setSelectedTicket,
-    setTickets,
-    showToast,
-  });
-
-  // Pré-carrega blob URLs de mídias protegidas quando as mensagens da timeline chegam
+  // Sugestões automáticas de quick replies com base na última msg do usuário
   useEffect(() => {
-    if (!Array.isArray(timelineMessages)) return;
-    const resolve = resolveProtectedMediaUrlRef.current;
-    for (const msg of timelineMessages) {
-      const raw = msg?.raw || {};
-      const mediaIdCandidates = [
-        msg?.mediaId,
-        raw?.mediaId,
-        raw?.media?.mediaId,
-        raw?.media?.id,
-        msg?.channel?.body?.mediaId,
-        msg?.channel?.body?.media?.id,
-        msg?.channel?.body?.raw?.mediaId,
-        msg?.channel?.body?.raw?.media?.id,
-      ]
-        .map((v) => buildTicketMediaPathFromId(v))
-        .filter(Boolean);
-      const candidates = [
-          msg?.mediaUrl,
-          msg?.media?.url,
-        raw?.mediaUrl,
-        raw?.media?.url,
-        raw?.url,
-        msg?.channel?.body?.url,
-        msg?.channel?.body?.mediaUrl,
-        msg?.channel?.body?.media?.url,
-        msg?.channel?.body?.audio?.url,
-        msg?.channel?.body?.video?.url,
-        msg?.channel?.body?.image?.url,
-        msg?.channel?.body?.document?.url,
-        ...mediaIdCandidates,
-      ];
-      for (const u of candidates) {
-        if (u && typeof u === 'string' && u.trim()) resolve(u);
-      }
+    const context = selectedTicket?.lastUserMessage || '';
+    if (!selectedTicket?.id || !context) {
+      setQuickReplySuggestions([]);
+      return;
     }
-  }, [timelineMessages]); // eslint-disable-line react-hooks/exhaustive-deps -- ref-based pattern
+    searchQuickReplies(context, 5)
+      .then((resp) => setQuickReplySuggestions(resp?.quickReplies || []))
+      .catch(() => setQuickReplySuggestions([]));
+  }, [selectedTicket?.id, selectedTicket?.lastUserMessage]);
+
+  // Atualiza dropdown do "/atalho" conforme digita
+  useEffect(() => {
+    if (!selectedTicket || selectedTicket.status !== 'in_progress') return;
+    debouncedSearchSlashQuickReplies();
+  }, [messageText, selectedTicket?.id, selectedTicket?.status, debouncedSearchSlashQuickReplies]);
 
   const insertQuickReply = useCallback(async (reply) => {
     if (!reply) return;
@@ -553,32 +398,8 @@ export function SupportPage() {
 
     setQuickReplySlashOpen(false);
     setQuickReplySlashResults([]);
-    setSlashCommandResults([]);
-    setSlashMenuMode('commands');
-    setSlashMenuCursorIndex(-1);
     try { await useQuickReply(reply.id); } catch {}
   }, [applyTemplateVariables, selectedTicket]);
-
-  const closeSlashMenu = useCallback(() => {
-    setQuickReplySlashOpen((prev) => (prev ? false : prev));
-    setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
-    setSlashCommandResults((prev) => (prev.length > 0 ? [] : prev));
-    setSlashMenuMode((prev) => (prev !== 'commands' ? 'commands' : prev));
-    setSlashMenuCursorIndex((prev) => (prev !== -1 ? -1 : prev));
-  }, []);
-
-  const openQuickReplyBrowser = useCallback(async () => {
-    const resp = await listQuickReplies({
-      activeOnly: true,
-      category: quickReplySelectedCategory || undefined,
-    });
-    const list = (resp?.quickReplies || []).slice(0, 8);
-    setQuickReplySlashResults(list);
-    setSlashCommandResults([]);
-    setSlashMenuMode('quick_replies');
-    setQuickReplySlashOpen(list.length > 0);
-    return list;
-  }, [quickReplySelectedCategory]);
 
   useEffect(() => {
     // Carrega categorias (best-effort) para quick replies
@@ -587,6 +408,33 @@ export function SupportPage() {
       .then((resp) => setQuickReplyCategories(resp?.categories || []))
       .catch(() => setQuickReplyCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
+      setQuickReplyCategoryItems([]);
+      return;
+    }
+    // Carrega quick replies da categoria escolhida (best-effort)
+    listQuickReplies({
+      category: quickReplySelectedCategory || undefined,
+      activeOnly: true,
+    })
+      .then((resp) => setQuickReplyCategoryItems((resp?.quickReplies || []).slice(0, 12)))
+      .catch(() => setQuickReplyCategoryItems([]));
+  }, [selectedTicket?.id, selectedTicket?.status, quickReplySelectedCategory]);
+
+  useEffect(() => {
+    // Auditoria do ticket (visível no console)
+    if (!selectedTicket?.id) {
+      setTicketAuditLogs([]);
+      return;
+    }
+    setTicketAuditLoading(true);
+    queryAuditLogs({ resource: 'ticket', resourceId: selectedTicket.id, limit: 50, offset: 0 })
+      .then((resp) => setTicketAuditLogs(resp?.items || resp?.logs || []))
+      .catch(() => setTicketAuditLogs([]))
+      .finally(() => setTicketAuditLoading(false));
+  }, [selectedTicket?.id]);
 
   const updateTicketLocal = useCallback((ticket) => {
     if (!ticket?.id) return;
@@ -599,6 +447,37 @@ export function SupportPage() {
     });
     setSelectedTicket((prev) => (prev?.id === ticket.id ? ticket : prev));
   }, []);
+
+  useEffect(() => {
+    // Best-effort: lista tags existentes para sugestão
+    getAllTags()
+      .then((resp) => setKnownTags((resp?.tags || []).map(t => t.tag || t).filter(Boolean)))
+      .catch(() => setKnownTags([]));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTicket?.id) {
+      setAiSummary(null);
+      return;
+    }
+    getTicketAiSummary(selectedTicket.id)
+      .then((resp) => setAiSummary(resp?.summary || null))
+      .catch(() => setAiSummary(null));
+  }, [selectedTicket?.id]);
+
+  const handleGenerateAiSummary = async () => {
+    if (!selectedTicket?.id) return;
+    setAiSummaryLoading(true);
+    try {
+      const resp = await generateTicketAiSummary(selectedTicket.id);
+      setAiSummary(resp?.summary || null);
+    } catch (err) {
+      logger.error('Erro ao gerar resumo IA', err);
+      showToast('Erro ao gerar resumo IA', 'error');
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!showCloseModal) return;
@@ -625,14 +504,13 @@ export function SupportPage() {
     try {
       // Carrega tickets waiting e in_progress
       // A API já filtra automaticamente: agents só veem seus tickets ou sem atribuição
-      const [waitingResult, inProgressResult, closedResult] = await Promise.all([
+      const [waitingResult, inProgressResult] = await Promise.all([
         listAllTickets({ status: 'waiting', limit: 1000 }),
         listAllTickets({ status: 'in_progress', limit: 1000 }),
-        showClosedTickets ? listAllTickets({ status: 'closed', limit: 1000 }) : Promise.resolve({ tickets: [] }),
       ]);
       
       // Combina os tickets e remove duplicatas
-      const allTickets = [...(waitingResult.tickets || []), ...(inProgressResult.tickets || []), ...(closedResult.tickets || [])];
+      const allTickets = [...(waitingResult.tickets || []), ...(inProgressResult.tickets || [])];
       const uniqueTickets = Array.from(
         new Map(allTickets.map(ticket => [ticket.id, ticket])).values()
       );
@@ -648,7 +526,10 @@ export function SupportPage() {
         if (!prevSelected) return null;
         const updatedTicket = uniqueTickets.find(t => t.id === prevSelected.id);
         // Se não encontrou na lista, o ticket foi removido ou mudou de status
-        if (!updatedTicket) return null;
+        if (!updatedTicket) {
+          setTicketMessages([]);
+          return null;
+        }
         // Atualiza com os dados mais recentes do ticket
         return updatedTicket;
       });
@@ -669,16 +550,11 @@ export function SupportPage() {
       setLoading(false);
       isLoadingTicketsRef.current = false;
     }
-  }, [showClosedTickets]); // Refaz a carga ao incluir/excluir fechados
+  }, []); // Sem dependências - usa refs e state setters funcionais
 
   // Atualiza ref quando loadTickets muda
   React.useEffect(() => {
     loadTicketsRef.current = loadTickets;
-  }, [loadTickets]);
-
-  useEffect(() => {
-    if (!hasLoadedInitialDataRef.current) return;
-    loadTickets();
   }, [loadTickets]);
 
   // Flag para garantir que os dados iniciais sejam carregados apenas uma vez
@@ -697,6 +573,19 @@ export function SupportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Apenas no mount inicial
 
+  function safeGetBodyText(body) {
+    if (!body) return '';
+    if (typeof body === 'string') return body;
+    if (typeof body.text === 'string') return body.text;
+    if (typeof body.caption === 'string') return body.caption;
+    if (body.text && typeof body.text === 'object' && typeof body.text.body === 'string') return body.text.body;
+    // WhatsApp: caption pode vir em body.image.caption / body.document.caption / etc.
+    if (body.image && typeof body.image === 'object' && typeof body.image.caption === 'string') return body.image.caption;
+    if (body.document && typeof body.document === 'object' && typeof body.document.caption === 'string') return body.document.caption;
+    if (body.video && typeof body.video === 'object' && typeof body.video.caption === 'string') return body.video.caption;
+    return '';
+  }
+
   function safeStringify(obj, maxLen = 2000) {
     try {
       const s = JSON.stringify(obj, null, 2);
@@ -707,628 +596,33 @@ export function SupportPage() {
     }
   }
 
-  function isPublicPathLike(value) {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (!normalized) return false;
-    return normalized.startsWith('/public/')
-      || normalized.startsWith('public/')
-      || normalized.includes('/public/');
-  }
+  function summarizeChannelMessage(channelMsg) {
+    const type = String(channelMsg?.type || '').toLowerCase();
+    const body = channelMsg?.body || {};
+    const text = safeGetBodyText(body);
+    if (text) return text;
 
-  function renderTextWithLinks(value) {
-    const text = String(value || '');
-    if (!text) return null;
+    if (type === 'image') return '[imagem]';
+    if (type === 'audio' || type === 'voice') return '[áudio]';
+    if (type === 'video') return '[vídeo]';
+    if (type === 'document') return '[documento]';
+    if (type === 'sticker') return '[sticker]';
+    if (type === 'location') return '[localização]';
+    if (type === 'contacts') return '[contatos]';
+    if (type === 'interactive') return '[interativo]';
+    if (type) return `[${type}]`;
 
-    const urlRegex = /https?:\/\/[^\s<>"']+/gi;
-    const nodes = [];
-    let cursor = 0;
-    let match;
-
-    while ((match = urlRegex.exec(text)) !== null) {
-      const rawUrl = match[0];
-      const start = match.index;
-      if (start > cursor) {
-        nodes.push(text.slice(cursor, start));
-      }
-
-      // Evita incluir pontuação de fechamento no href.
-      const trailingPunctuationMatch = rawUrl.match(/[),.;!?]+$/);
-      const trailingPunctuation = trailingPunctuationMatch ? trailingPunctuationMatch[0] : '';
-      const href = trailingPunctuation ? rawUrl.slice(0, -trailingPunctuation.length) : rawUrl;
-      const rewrittenHref = href;
-
-      if (rewrittenHref && !isPublicPathLike(rewrittenHref)) {
-        nodes.push(
-          <a
-            key={`${start}-${rewrittenHref}`}
-            href={rewrittenHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(event) => event.stopPropagation()}
-            style={{ color: 'var(--color-accent-primary)', textDecoration: 'underline' }}
-          >
-            {rewrittenHref}
-          </a>,
-        );
-      }
-
-      if (rewrittenHref && isPublicPathLike(rewrittenHref)) {
-        nodes.push('[link de mídia pública removido]');
-      }
-
-      if (trailingPunctuation) {
-        nodes.push(trailingPunctuation);
-      }
-
-      cursor = start + rawUrl.length;
+    try {
+      const s = JSON.stringify(body);
+      return s.length > 280 ? `${s.slice(0, 280)}…` : s;
+    } catch {
+      return '[mensagem]';
     }
-
-    if (nodes.length === 0) {
-      return text;
-    }
-
-    if (cursor < text.length) {
-      nodes.push(text.slice(cursor));
-    }
-
-    return <>{nodes}</>;
-  }
-
-  function firstNonEmptyString(values = []) {
-    for (const value of values) {
-      if (typeof value !== 'string') continue;
-      const trimmed = value.trim();
-      if (trimmed) return trimmed;
-    }
-    return null;
-  }
-
-  function normalizeDigits(value) {
-    return String(value || '').replace(/\D/g, '');
-  }
-
-  function isPhoneLikeValue(value, phoneNumber) {
-    const raw = String(value || '').trim();
-    if (!raw) return false;
-    if (/^[^\s@]+@[^\s@]+$/.test(raw)) return true;
-    const compact = raw.replace(/[^\d+]/g, '');
-    if (/^\+?\d{10,15}$/.test(compact)) return true;
-    const valueDigits = normalizeDigits(raw);
-    const phoneDigits = normalizeDigits(phoneNumber);
-    return !!(valueDigits && phoneDigits && valueDigits === phoneDigits);
-  }
-
-  function pickFirstMediaUrl(...values) {
-    return getMediaCandidates(...values)[0] || null;
-  }
-
-  function buildTicketMediaPathFromId(rawId) {
-    const id = String(rawId || '').trim();
-    if (!id) return null;
-    return `/tickets/media/${encodeURIComponent(id)}`;
-  }
-
-  function getMediaCandidates(...values) {
-    const basePath = getBasePath() || '';
-    const candidates = [];
-    const seen = new Set();
-
-    const addCandidate = (url) => {
-      if (typeof url !== 'string') return;
-      const normalized = url.trim();
-      if (!normalized || seen.has(normalized)) return;
-      seen.add(normalized);
-      candidates.push(normalized);
-    };
-
-    const withBasePath = (path) => {
-      if (typeof path !== 'string' || !path.startsWith('/')) return path;
-      if (!basePath || path.startsWith(`${basePath}/`)) return path;
-      return `${basePath}${path}`;
-    };
-
-    const isApiRoute = (path) => {
-      if (typeof path !== 'string') return false;
-      return path.startsWith('/api/')
-        || path.startsWith('/tickets/')
-        || path.startsWith('/queues/')
-        || path.startsWith('/flows/')
-        || path.startsWith('/auth/')
-        || path.startsWith('/conversations/');
-    };
-
-    const isBlockedPublicMediaRoute = (path) => {
-      if (typeof path !== 'string') return false;
-      const normalized = path.toLowerCase();
-      return normalized.startsWith('/public/whatsapp-media/')
-        || normalized.startsWith('/public/whatsapp--media/');
-    };
-
-    const stripBasePath = (path) => {
-      if (typeof path !== 'string') return path;
-      if (!basePath) return path;
-      if (path === basePath) return '/';
-      if (path.startsWith(`${basePath}/`)) return path.slice(basePath.length);
-      return path;
-    };
-
-    const normalizeRawMediaUrl = (raw) => {
-      if (typeof raw !== 'string') return [];
-      const value = raw.trim();
-      if (!value) return [];
-
-      // Em produção, a mídia pode vir com prefixo (/r-agent2/public/whatsapp-media/...)
-      // e precisa ser normalizada para a mesma origem via buildApiUrl.
-      if (/^https?:\/\//i.test(value)) {
-        try {
-          const parsed = new URL(value);
-          const pathWithQuery = `${parsed.pathname || ''}${parsed.search || ''}`;
-          const normalizedPath = stripBasePath(pathWithQuery);
-          if (isBlockedPublicMediaRoute(normalizedPath)) {
-            return [];
-          }
-          return [value];
-        } catch {
-          return [value];
-        }
-      }
-
-      if (/^data:/i.test(value) || /^blob:/i.test(value)) {
-        return [value];
-      }
-
-      if (value.startsWith('//')) {
-        const protocol = (typeof window !== 'undefined' && window.location?.protocol) || 'https:';
-        return [`${protocol}${value}`];
-      }
-
-      if (value.startsWith('/')) {
-        const normalizedPath = stripBasePath(value);
-        if (isBlockedPublicMediaRoute(normalizedPath)) {
-          return [];
-        }
-        // Protected ticket media: return as-is so isProtectedTicketMediaUrl
-        // detection and the preloader blob-URL lookup key remain consistent.
-        if (normalizedPath.startsWith('/tickets/media/')) {
-          return [normalizedPath];
-        }
-        if (isApiRoute(normalizedPath)) {
-          return [buildApiUrl(normalizedPath)];
-        }
-        return [];
-      }
-
-      if (value.startsWith('r-agent2/')) {
-        const normalizedPath = `/${value.replace(/^\/+/, '')}`;
-        const stripped = stripBasePath(normalizedPath);
-        if (isBlockedPublicMediaRoute(stripped)) return [];
-        if (isApiRoute(stripped)) return [buildApiUrl(stripped)];
-        return [];
-      }
-
-      if (value.includes('/')) {
-        const normalizedPath = `/${value.replace(/^\/+/, '')}`;
-        const stripped = stripBasePath(normalizedPath);
-        if (isBlockedPublicMediaRoute(stripped)) return [];
-        if (isApiRoute(stripped)) {
-          return [buildApiUrl(stripped)];
-        }
-        return [];
-      }
-
-      return [];
-    };
-
-    const attachmentCandidates = [];
-    for (const value of values) {
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          if (!item || typeof item !== 'object') continue;
-          attachmentCandidates.push(
-            item?.payload?.url,
-            item?.url,
-            item?.href,
-            item?.link,
-            item?.src,
-            item?.mediaUrl,
-          );
-        }
-      }
-    }
-
-    const rawCandidates = [...values, ...attachmentCandidates].filter((value) => typeof value === 'string');
-    for (const raw of rawCandidates) {
-      const normalized = normalizeRawMediaUrl(raw);
-      normalized.forEach(addCandidate);
-    }
-
-    return candidates;
-  }
-
-  function openMediaModal({ urls, type = 'document', title = 'Mídia', mimeType = '' }) {
-    const validUrls = Array.isArray(urls) ? urls.filter((u) => typeof u === 'string' && u.trim()) : [];
-    if (validUrls.length === 0) return;
-    setMediaModal({
-      isOpen: true,
-      type,
-      title: title || 'Mídia',
-      mimeType: mimeType || '',
-      urls: validUrls,
-      index: 0,
-      failed: false,
-      maximized: false,
-    });
-  }
-
-  function closeMediaModal() {
-    setMediaModal((prev) => ({ ...prev, isOpen: false, maximized: false }));
-  }
-
-  function toggleMaximizeMediaModal() {
-    setMediaModal((prev) => ({ ...prev, maximized: !prev.maximized }));
-  }
-
-  function handleMediaRenderError() {
-    setMediaModal((prev) => {
-      if (!prev.isOpen) return prev;
-      if (prev.index < prev.urls.length - 1) {
-        return { ...prev, index: prev.index + 1, failed: false };
-      }
-      return { ...prev, failed: true };
-    });
-  }
-
-  const activeMediaUrl = mediaModal.urls[mediaModal.index] || '';
-  const activeMediaIsProtected = isProtectedTicketMediaUrl(activeMediaUrl);
-  const activeMediaIdMatch = activeMediaIsProtected && String(activeMediaUrl).match(/\/tickets\/media\/([^/?#]+)/);
-  const activeMediaBlobKey = activeMediaIdMatch ? `/tickets/media/${activeMediaIdMatch[1]}` : activeMediaUrl;
-  const activeMediaResolvedUrl = activeMediaIsProtected
-    ? (protectedMediaBlobUrls[activeMediaBlobKey] || protectedMediaBlobUrls[activeMediaUrl] || '')
-    : activeMediaUrl;
-
-  useEffect(() => {
-    if (!mediaModal.isOpen || !activeMediaUrl) return;
-    if (!activeMediaIsProtected) return;
-    if (protectedMediaBlobUrls[activeMediaBlobKey] || protectedMediaBlobUrls[activeMediaUrl]) return;
-    resolveProtectedMediaUrl(activeMediaBlobKey);
-  }, [
-    activeMediaUrl,
-    activeMediaIsProtected,
-    activeMediaBlobKey,
-    mediaModal.isOpen,
-    protectedMediaBlobUrls,
-    resolveProtectedMediaUrl,
-  ]);
-
-  useEffect(() => {
-    if (!mediaModal.isOpen || typeof window === 'undefined') return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        closeMediaModal();
-      }
-      if (event.key === 'f' || event.key === 'F') {
-        toggleMaximizeMediaModal();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mediaModal.isOpen]);
-
-  function renderInlineAudioPlayer({ urls = [], mimeType = '' }) {
-    const src = urls[0];
-    if (!src) return null;
-    const isProtected = isProtectedTicketMediaUrl(src);
-    const mediaIdMatch = isProtected && String(src).match(/\/tickets\/media\/([^/?#]+)/);
-    const blobKey = mediaIdMatch ? `/tickets/media/${mediaIdMatch[1]}` : src;
-    const resolvedSrc = isProtected ? (protectedMediaBlobUrls[blobKey] || protectedMediaBlobUrls[src] || '') : src;
-    const containerStyle = {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '6px 10px',
-      background: 'var(--color-bg-secondary)',
-      borderRadius: '12px',
-      border: '1px solid var(--color-border-default)',
-      maxWidth: 'min(300px, 100%)',
-    };
-    if (isProtected && !resolvedSrc) {
-      return (
-        <div style={containerStyle}>
-          <span aria-hidden="true">🎵</span>
-          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Carregando áudio…</span>
-        </div>
-      );
-    }
-    return (
-      <div style={containerStyle}>
-        <span aria-hidden="true">🎵</span>
-        <audio controls src={resolvedSrc || src} style={{ flex: 1, height: '32px', minWidth: 0 }}>
-          <track kind="captions" />
-        </audio>
-      </div>
-    );
-  }
-
-  function renderInlineVideoPlayer({ urls = [], mimeType = '', caption = '' }) {
-    const src = urls[0];
-    if (!src) return null;
-    const isProtected = isProtectedTicketMediaUrl(src);
-    const mediaIdMatch = isProtected && String(src).match(/\/tickets\/media\/([^/?#]+)/);
-    const blobKey = mediaIdMatch ? `/tickets/media/${mediaIdMatch[1]}` : src;
-    const resolvedSrc = isProtected ? (protectedMediaBlobUrls[blobKey] || protectedMediaBlobUrls[src] || '') : src;
-    if (isProtected && !resolvedSrc) {
-      return (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => openMediaModal({ urls, type: 'video', title: caption || 'Vídeo', mimeType })}
-          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openMediaModal({ urls, type: 'video', title: caption || 'Vídeo', mimeType }); } }}
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            minWidth: '160px', minHeight: '90px', maxWidth: 'min(280px, 100%)',
-            borderRadius: '10px', border: '1px solid var(--color-border-default)',
-            cursor: 'pointer', background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-secondary)', padding: '10px', textAlign: 'center',
-          }}
-        >
-          ▶ Clique para carregar vídeo
-        </div>
-      );
-    }
-    return (
-      <video
-        controls
-        src={resolvedSrc || src}
-        onError={() => {}}
-        style={{
-          display: 'block',
-          maxWidth: 'min(280px, 100%)',
-          maxHeight: '200px',
-          borderRadius: '10px',
-          border: '1px solid var(--color-border-default)',
-          background: '#000',
-          cursor: 'pointer',
-        }}
-      >
-        <track kind="captions" />
-      </video>
-    );
-  }
-
-  function renderDocumentCard({ urls = [], fileName = '', mimeType = '', title = '' }) {
-    const raw = String(fileName || title || 'Documento');
-    const ext = (() => {
-      const dotPos = raw.lastIndexOf('.');
-      if (dotPos > 0) return raw.slice(dotPos + 1).toUpperCase();
-      if (mimeType) return mimeType.split('/').pop().toUpperCase();
-      return '';
-    })();
-    const isPdf = mimeType?.includes('pdf') || ext === 'PDF';
-    const isZip = ext === 'ZIP' || ext === 'RAR' || ext === '7Z';
-    const icon = isPdf ? '📄' : isZip ? '🗜️' : '📎';
-    const displayName = fileName || title || 'Documento';
-    const handleOpen = () => openMediaModal({ urls, type: 'document', title: displayName, mimeType });
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleOpen}
-        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleOpen(); } }}
-        aria-label={`Abrir documento: ${displayName}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '10px 12px',
-          background: 'var(--color-bg-secondary)',
-          borderRadius: '12px',
-          border: '1px solid var(--color-border-default)',
-          cursor: 'pointer',
-          maxWidth: 'min(280px, 100%)',
-        }}
-      >
-        <div style={{ fontSize: '30px', lineHeight: 1, flexShrink: 0 }}>{icon}</div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {displayName}
-          </div>
-          {ext ? <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{ext}</div> : null}
-        </div>
-      </div>
-    );
-  }
-
-  function renderMediaOpenSurface({ label = 'Abrir mídia', type = 'document', urls = [], title = 'Mídia', mimeType = '' }) {
-    if (!Array.isArray(urls) || urls.length === 0) {
-      return null;
-    }
-
-    const handleOpen = () => openMediaModal({ urls, type, title, mimeType });
-
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleOpen}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            handleOpen();
-          }
-        }}
-        style={{
-          border: '1px solid var(--color-border-default)',
-          borderRadius: '8px',
-          padding: '6px 10px',
-          background: 'var(--color-bg-secondary)',
-          color: 'var(--color-text-primary)',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
-        aria-label={label}
-        title={label}
-      >
-        <span aria-hidden="true">📎</span>
-        {label}
-      </div>
-    );
-  }
-
-  function renderInlineImagePreview({ urls = [], title = 'Imagem', mimeType = '' }) {
-    if (!Array.isArray(urls) || urls.length === 0) return null;
-    const src = urls[0];
-    if (!src) return null;
-
-    const isProtected = isProtectedTicketMediaUrl(src);
-    // Normalize to canonical /tickets/media/<id> key to match what the preloader stores
-    const mediaIdMatch = isProtected && String(src).match(/\/tickets\/media\/([^/?#]+)/);
-    const blobKey = mediaIdMatch ? `/tickets/media/${mediaIdMatch[1]}` : src;
-    const resolvedSrc = isProtected ? (protectedMediaBlobUrls[blobKey] || protectedMediaBlobUrls[src] || '') : src;
-
-    if (isProtected && !resolvedSrc) {
-      return (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => openMediaModal({ urls, type: 'image', title: title || 'Imagem', mimeType })}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              openMediaModal({ urls, type: 'image', title: title || 'Imagem', mimeType });
-            }
-          }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '180px',
-            minHeight: '80px',
-            maxWidth: 'min(280px, 100%)',
-            borderRadius: '10px',
-            border: '1px solid var(--color-border-default)',
-            marginBottom: '8px',
-            cursor: 'zoom-in',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-secondary)',
-            padding: '10px',
-            textAlign: 'center',
-          }}
-        >
-          Imagem protegida. Clique para abrir.
-        </div>
-      );
-    }
-
-    return (
-      <img
-        src={resolvedSrc || src}
-        alt={title || 'Imagem da conversa'}
-        loading="lazy"
-        onClick={() => openMediaModal({ urls, type: 'image', title: title || 'Imagem', mimeType })}
-        onError={(event) => {
-          event.currentTarget.style.display = 'none';
-        }}
-        style={{
-          display: 'block',
-          maxWidth: 'min(280px, 100%)',
-          maxHeight: '240px',
-          borderRadius: '10px',
-          border: '1px solid var(--color-border-default)',
-          marginBottom: '8px',
-          objectFit: 'cover',
-          cursor: 'zoom-in',
-          background: 'var(--color-bg-secondary)',
-        }}
-      />
-    );
   }
 
   function renderTimelineMessageContent(msg) {
-    if (!msg) {
-      return null;
-    }
-
-    // Prioriza payload de canal sempre que disponível. Em mensagens mescladas
-    // (source=ticket com channel anexado), isso evita cair no fallback "[imagem]".
-    if (!msg.channel) {
-      const rawMessage = msg?.raw || {};
-      const rawMedia = rawMessage?.media || {};
-      const isMediaType = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        return ['image', 'audio', 'voice', 'video', 'document', 'sticker'].includes(normalized);
-      };
-      const msgText = msg?.text || '';
-      // Detecta se msg.text é apenas um fallback [mediatype] filename
-      const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(msgText);
-      const mediaTypeCandidate = firstNonEmptyString([
-        msg?.mediaType,
-        rawMessage?.mediaType,
-        rawMedia?.type,
-        rawMedia?.mediaType,
-        msg?.mediaKind,
-        rawMessage?.mediaKind,
-        isMediaType(msg?.type) ? msg?.type : null,
-        isMediaType(rawMessage?.type) ? rawMessage?.type : null,
-      ]);
-      const mediaType = String(mediaTypeCandidate || '').toLowerCase();
-      const mediaIdPath = buildTicketMediaPathFromId(
-        firstNonEmptyString([
-          msg?.mediaId,
-          rawMessage?.mediaId,
-          rawMedia?.mediaId,
-          rawMedia?.id,
-          isMediaType(mediaType) && isFallbackText ? msg?.id : null,
-        ]),
-      );
-      const mediaUrls = getMediaCandidates(
-        msg?.mediaUrl,
-        rawMessage?.mediaUrl,
-        rawMedia?.url,
-        rawMessage?.url,
-        mediaIdPath,
-      );
-      const mediaUrl = mediaUrls[0] || null;
-      const fileName = firstNonEmptyString([msg?.fileName, rawMessage?.fileName, rawMedia?.fileName]);
-      const mimeType = firstNonEmptyString([msg?.mimeType, rawMessage?.mimeType, rawMedia?.mimeType]);
-      const documentId = firstNonEmptyString([msg?.documentId, rawMessage?.documentId, rawMedia?.documentId]);
-
-      if (mediaUrl) {
-        const typeLabel = mediaType || 'arquivo';
-        const isImage = typeLabel === 'image';
-        const isAudio = typeLabel === 'audio' || typeLabel === 'voice';
-        const isVideo = typeLabel === 'video';
-
-        const captionText = !isFallbackText ? msgText : '';
-        
-        return (
-          <div>
-            {captionText && !isImage && !isAudio && !isVideo ? <div style={{ marginBottom: '6px' }}>{renderTextWithLinks(captionText)}</div> : null}
-            {isImage ? renderInlineImagePreview({
-              urls: mediaUrls,
-              title: fileName || captionText || 'Imagem do ticket',
-              mimeType: mimeType || '',
-            }) : null}
-            {isImage && captionText ? <div style={{ marginTop: '4px', fontSize: '13px' }}>{renderTextWithLinks(captionText)}</div> : null}
-            {isAudio ? renderInlineAudioPlayer({ urls: mediaUrls, mimeType: mimeType || '' }) : null}
-            {isVideo ? renderInlineVideoPlayer({ urls: mediaUrls, mimeType: mimeType || '', caption: captionText || fileName || 'Vídeo' }) : null}
-            {!isImage && !isAudio && !isVideo ? renderDocumentCard({
-              urls: mediaUrls,
-              fileName: fileName || '',
-              mimeType: mimeType || '',
-              title: captionText || fileName || 'Documento',
-            }) : null}
-            {documentId ? (
-              <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                document_id: <code>{documentId}</code>
-              </div>
-            ) : null}
-          </div>
-        );
-      }
-
-      return renderTextWithLinks(msg?.text);
+    if (!msg || msg.source !== 'channel' || !msg.channel) {
+      return <>{msg?.text}</>;
     }
 
     const cm = msg.channel;
@@ -1337,31 +631,17 @@ export function SupportPage() {
     const text = safeGetBodyText(body);
 
     const commonMeta = (() => {
-      const bodyMediaIdPath = buildTicketMediaPathFromId(
-        firstNonEmptyString([
-          body?.mediaId,
-          body?.media?.id,
-          body?.raw?.mediaId,
-          body?.raw?.media?.id,
-        ]),
-      );
-      const urls = getMediaCandidates(
-        body.url,
-        body.mediaUrl,
-        body?.media?.url,
-        body?.raw?.url,
-        body?.raw?.mediaUrl,
-        bodyMediaIdPath,
-        body.attachments,
-        body?.raw?.attachments,
-        body.files,
-        body?.raw?.files,
-      );
-      return urls.length > 0 ? { urls, url: urls[0] } : {};
+      // Instagram: attachments normalmente têm payload.url
+      if (Array.isArray(body.attachments) && body.attachments[0]?.payload?.url) {
+        return { url: String(body.attachments[0].payload.url) };
+      }
+      // Outbound Instagram que persistimos: body.url
+      if (typeof body.url === 'string') return { url: body.url };
+      return {};
     })();
 
     if (type === 'text') {
-      return renderTextWithLinks(text);
+      return <>{text}</>;
     }
 
     if (type === 'interactive') {
@@ -1392,20 +672,20 @@ export function SupportPage() {
 
     if (type === 'image') {
       const image = body.image || body.raw?.image || {};
-      const rawCaption = safeGetBodyText(body) || '';
-      const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(rawCaption);
-      const caption = !isFallbackText ? rawCaption : '';
-      const urls = getMediaCandidates(commonMeta.url, image?.url, image?.link, image?.href, image?.src);
-      const url = urls[0] || null;
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || image?.link || null;
       const mime = image?.mime_type || null;
       const id = image?.id || null;
       return (
         <div>
           <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Imagem</div>
-          {caption ? <div style={{ marginBottom: '6px' }}>{renderTextWithLinks(caption)}</div> : null}
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
             <div style={{ marginTop: '6px' }}>
-              {renderInlineImagePreview({ urls, title: caption || 'Imagem', mimeType: mime || '' })}
+              <a href={url} target="_blank" rel="noreferrer">Abrir imagem</a>
+              <div style={{ marginTop: '8px' }}>
+                <img src={url} alt={caption || 'imagem'} style={{ maxWidth: '260px', borderRadius: '8px', border: '1px solid #eee' }} />
+              </div>
             </div>
           ) : (
             <div style={{ fontSize: '12px', color: '#666' }}>
@@ -1420,22 +700,20 @@ export function SupportPage() {
 
     if (type === 'document') {
       const doc = body.document || body.raw?.document || {};
-      const rawCaption = safeGetBodyText(body) || '';
-      const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(rawCaption);
-      const caption = !isFallbackText ? rawCaption : '';
-      const urls = getMediaCandidates(commonMeta.url, doc?.url, doc?.link, doc?.href, doc?.src);
-      const url = urls[0] || null;
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || doc?.link || null;
       const filename = doc?.filename || null;
       const mime = doc?.mime_type || null;
       const id = doc?.id || null;
       return (
         <div>
-          {caption ? <div style={{ marginBottom: '6px' }}>{renderTextWithLinks(caption)}</div> : null}
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Documento</div>
+          {filename ? <div style={{ marginBottom: '4px' }}><strong>{String(filename)}</strong></div> : null}
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
-            renderDocumentCard({ urls, fileName: filename || '', mimeType: mime || '', title: caption || filename || 'Documento' })
+            <a href={url} target="_blank" rel="noreferrer">Abrir documento</a>
           ) : (
-            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-              {filename ? <div><strong>{String(filename)}</strong></div> : null}
+            <div style={{ fontSize: '12px', color: '#666' }}>
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -1447,21 +725,24 @@ export function SupportPage() {
 
     if (type === 'audio' || type === 'voice') {
       const audio = body.audio || body.raw?.audio || {};
-      const urls = getMediaCandidates(commonMeta.url, audio?.url, audio?.link, audio?.href, audio?.src);
-      const url = urls[0] || null;
+      const url = commonMeta.url || audio?.link || null;
       const mime = audio?.mime_type || null;
       const id = audio?.id || null;
       return (
         <div>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Áudio</div>
           {url ? (
-            renderInlineAudioPlayer({ urls, mimeType: mime || '' })
+            <div>
+              <a href={url} target="_blank" rel="noreferrer">Abrir áudio</a>
+              <div style={{ marginTop: '8px' }}>
+                <audio controls src={url} style={{ width: '260px' }} />
+              </div>
+            </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--color-bg-secondary)', borderRadius: '12px', border: '1px solid var(--color-border-default)' }}>
-              <span aria-hidden="true">🎵</span>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                {mime ? String(mime) : 'Áudio'}
-                {id ? <span> • media_id: <code>{String(id)}</code></span> : null}
-              </span>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              {mime ? <span>{String(mime)}</span> : null}
+              {mime && id ? <span> • </span> : null}
+              {id ? <span>media_id: <code>{String(id)}</code></span> : null}
             </div>
           )}
         </div>
@@ -1470,20 +751,23 @@ export function SupportPage() {
 
     if (type === 'video') {
       const video = body.video || body.raw?.video || {};
-      const rawCaption = safeGetBodyText(body) || '';
-      const isFallbackText = /^\[(image|imagem|audio|video|document|documento|pdf|arquivo|sticker)\](\s|$)/i.test(rawCaption);
-      const caption = !isFallbackText ? rawCaption : '';
-      const urls = getMediaCandidates(commonMeta.url, video?.url, video?.link, video?.href, video?.src);
-      const url = urls[0] || null;
+      const caption = safeGetBodyText(body) || '';
+      const url = commonMeta.url || video?.link || null;
       const mime = video?.mime_type || null;
       const id = video?.id || null;
       return (
         <div>
-          {caption ? <div style={{ marginBottom: '6px' }}>{renderTextWithLinks(caption)}</div> : null}
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Vídeo</div>
+          {caption ? <div style={{ marginBottom: '6px' }}>{caption}</div> : null}
           {url ? (
-            renderInlineVideoPlayer({ urls, mimeType: mime || '', caption })
+            <div>
+              <a href={url} target="_blank" rel="noreferrer">Abrir vídeo</a>
+              <div style={{ marginTop: '8px' }}>
+                <video controls src={url} style={{ maxWidth: '260px', borderRadius: '8px' }} />
+              </div>
+            </div>
           ) : (
-            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+            <div style={{ fontSize: '12px', color: '#666' }}>
               {mime ? <span>{String(mime)}</span> : null}
               {mime && id ? <span> • </span> : null}
               {id ? <span>media_id: <code>{String(id)}</code></span> : null}
@@ -1496,7 +780,7 @@ export function SupportPage() {
     // Fallback: mostra texto resumido e payload em detalhes
     return (
       <div>
-        <div style={{ marginBottom: '6px' }}>{renderTextWithLinks(msg.text)}</div>
+        <div style={{ marginBottom: '6px' }}>{msg.text}</div>
         <details>
           <summary style={{ cursor: 'pointer', color: '#555' }}>Ver payload</summary>
           <pre style={{ marginTop: '8px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
@@ -1507,33 +791,172 @@ export function SupportPage() {
     );
   }
 
-  const {
-    evidenceHistory,
-    evidenceLoading,
-    suggestedReply,
-    handleCopyEvidence,
-    handleUseEvidenceAsReply,
-    handleOpenEvidenceSource,
-    handleOpenTimelineItem,
-  } = useSupportEvidence({
-    selectedTicket,
-    tickets,
-    setSelectedTicket,
-    setMessageText,
-    showToast,
-    formatDate,
-  });
+  function buildTimelineMessages(ticketMsgs = [], channelMsgs = []) {
+    const byExternal = new Map();
+    const items = [];
 
-  useEffect(() => {
-    if (selectedTicket?.status === 'waiting' && !assignedTo) {
-      const defaultAssignee = agent?.username || agent?.id || '';
-      if (defaultAssignee) setAssignedTo(defaultAssignee);
+    const pushItem = (it) => {
+      items.push(it);
+      if (it.externalMessageId) byExternal.set(it.externalMessageId, it);
+    };
+
+    for (const m of (Array.isArray(ticketMsgs) ? ticketMsgs : [])) {
+      pushItem({
+        key: `t:${m?.id || Math.random().toString(36).slice(2)}`,
+        source: 'ticket',
+        sender: m?.sender || 'system',
+        text: m?.text || '',
+        timestamp: m?.timestamp || null,
+        externalMessageId: m?.externalMessageId || null,
+        deliveryStatus: m?.deliveryStatus || null,
+        raw: m,
+      });
+    }
+
+    for (const cm of (Array.isArray(channelMsgs) ? channelMsgs : [])) {
+      const ext = cm?.externalMessageId || null;
+      const existing = ext ? byExternal.get(ext) : null;
+      const normalizedSender = (cm?.direction === 'in')
+        ? 'user'
+        : (cm?.direction === 'out' ? 'agent' : 'system');
+
+      if (existing) {
+        existing.channel = cm;
+        if (!existing.deliveryStatus && cm?.status) existing.deliveryStatus = cm.status;
+        if ((!existing.text || existing.text === '') && (cm?.type || cm?.body)) {
+          existing.text = summarizeChannelMessage(cm);
+        }
+        continue;
+      }
+
+      pushItem({
+        key: `c:${cm?.id || ext || Math.random().toString(36).slice(2)}`,
+        source: 'channel',
+        sender: normalizedSender,
+        text: summarizeChannelMessage(cm),
+        timestamp: cm?.createdAt || null,
+        externalMessageId: ext,
+        deliveryStatus: cm?.status || null,
+        channel: cm,
+        raw: cm,
+      });
+    }
+
+    items.sort((a, b) => {
+      const ta = a?.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b?.timestamp ? new Date(b.timestamp).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      return String(a.key).localeCompare(String(b.key));
+    });
+
+    return items;
+  }
+
+  // Carrega mensagens do ticket selecionado
+  const loadTicketMessages = useCallback(async (ticketId, conversationId) => {
+    if (!ticketId) {
+      setTicketMessages([]);
+      setConversationMessages([]);
+      setTimelineMessages([]);
+      setTicketEvents([]);
       return;
     }
-    if (!selectedTicket) {
-      setAssignedTo('');
+
+    try {
+      const result = await getTicketMessages(ticketId);
+      setTicketMessages(result.messages || []);
+      setTicketEvents(Array.isArray(result?.events) ? result.events : []);
+
+      let convMsgs = [];
+      if (conversationId) {
+        try {
+          const convResult = await getConversationMessages(conversationId, { limit: 300, offset: 0 });
+          convMsgs = convResult?.messages || [];
+          setConversationMessages(convMsgs);
+        } catch (err) {
+          logger.error('Erro ao carregar mensagens omnichannel (channels)', err);
+          setConversationMessages([]);
+          convMsgs = [];
+        }
+      } else {
+        setConversationMessages([]);
+      }
+
+      setTimelineMessages(buildTimelineMessages(result.messages || [], convMsgs));
+      
+      // Marca como lidas se ticket está atribuído e em progresso
+      setTickets(prevTickets => {
+        const ticket = prevTickets.find(t => t.id === ticketId);
+        if (ticket && ticket.status === 'in_progress' && ticket.unreadCount > 0) {
+          markTicketAsRead(ticketId).catch(err => {
+            logger.error('Erro ao marcar ticket como lido', err);
+          });
+          // Atualiza ticket na lista
+          const updatedTickets = prevTickets.map(t => 
+            t.id === ticketId ? { ...t, unreadCount: 0 } : t
+          );
+          // Atualiza ticket selecionado se for o mesmo
+          setSelectedTicket(prevSelected => 
+            prevSelected?.id === ticketId ? { ...prevSelected, unreadCount: 0 } : prevSelected
+          );
+          return updatedTickets;
+        }
+        return prevTickets;
+      });
+    } catch (error) {
+      // Se for 404, o ticket não existe mais no backend - limpa seleção e remove da lista
+      if (error.status === 404 || (error.body && error.body.error === 'ticket_not_found')) {
+        // Remove o ticket da lista local também
+        setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
+        setSelectedTicket(null);
+        setTicketMessages([]);
+        return;
+      }
+      // Para outros erros, loga normalmente
+      logger.error('Erro ao carregar mensagens', error);
     }
-  }, [agent?.id, agent?.username, assignedTo, selectedTicket?.id, selectedTicket?.status]);
+  }, []); // Sem dependências - usa state setters funcionais
+
+  const extractedEntities = React.useMemo(() => {
+    const texts = [];
+    for (const m of (Array.isArray(timelineMessages) ? timelineMessages : [])) {
+      if (!m) continue;
+      if (typeof m.text === 'string' && m.text.trim()) texts.push(m.text);
+      const bodyText = m?.channel?.body?.text;
+      if (typeof bodyText === 'string' && bodyText.trim()) texts.push(bodyText);
+    }
+    const blob = texts.join('\n');
+    if (!blob) return { emails: [], cpfs: [], cnpjs: [], phones: [], urls: [] };
+
+    const emails = Array.from(new Set((blob.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(s => s.toLowerCase()))).slice(0, 10);
+    const urls = Array.from(new Set((blob.match(/https?:\/\/[^\s)]+/gi) || []))).slice(0, 10);
+    const cpfs = Array.from(new Set((blob.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
+    const cnpjs = Array.from(new Set((blob.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g) || []).map(s => s.replace(/\D/g, '')))).slice(0, 10);
+    const phones = Array.from(new Set((blob.match(/\b\+?55\s*\(?\d{2}\)?\s*\d{4,5}-?\d{4}\b/g) || []).map(s => s.replace(/\s+/g, ' ').trim()))).slice(0, 10);
+
+    return { emails, cpfs, cnpjs, phones, urls };
+  }, [timelineMessages]);
+
+  // Carrega mensagens quando ticket é selecionado
+  useEffect(() => {
+    if (selectedTicket) {
+      loadTicketMessages(selectedTicket.id, selectedTicket.conversationId);
+      
+      // Preenche automaticamente o campo de atribuição se o ticket estiver waiting
+      if (selectedTicket.status === 'waiting' && !assignedTo) {
+        const defaultAssignee = agent?.username || agent?.id || '';
+        if (defaultAssignee) {
+          setAssignedTo(defaultAssignee);
+        }
+      }
+    } else {
+      setTicketMessages([]);
+      setConversationMessages([]);
+      setTimelineMessages([]);
+      setAssignedTo(''); // Limpa o campo quando nenhum ticket está selecionado
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTicket?.id]); // Apenas quando o ID do ticket muda
 
   // Auto-refresh a cada 5 segundos - usa refs para evitar recriação do intervalo
   const selectedTicketIdRef = React.useRef(null);
@@ -1541,6 +964,21 @@ export function SupportPage() {
   React.useEffect(() => {
     selectedTicketIdRef.current = selectedTicket?.id || null;
   }, [selectedTicket?.id]);
+
+  const loadTicketMessagesRef = React.useRef();
+  React.useEffect(() => {
+    loadTicketMessagesRef.current = loadTicketMessages;
+  }, [loadTicketMessages]);
+
+  // Ref para o container de mensagens para scroll automático
+  const messagesContainerRef = React.useRef(null);
+
+  // Scroll automático para o final quando novas mensagens são carregadas
+  useEffect(() => {
+    if (messagesContainerRef.current && timelineMessages.length > 0) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [timelineMessages]);
 
   // Atualiza métricas de status WebSocket
   useEffect(() => {
@@ -1627,6 +1065,7 @@ export function SupportPage() {
       showToastRef.current('Ticket fechado com sucesso', 'success');
       if (selectedTicket?.id === closingTicketId) {
         setSelectedTicket(null);
+        setTicketMessages([]);
       }
       setShowCloseModal(false);
       setClosingTicketId(null);
@@ -1666,228 +1105,35 @@ export function SupportPage() {
   };
 
   // Envia mensagem do atendente
-  const refreshAfterSend = useCallback(async (ticketId) => {
-    await loadTicketMessages(ticketId);
-    if (loadTicketsRef.current) {
-      loadTicketsRef.current();
-    }
-  }, [loadTicketMessages]);
-
-  const inferMediaTypeFromFile = useCallback((file) => {
-    const mime = String(file?.type || '').toLowerCase();
-    if (mime.startsWith('image/')) return 'image';
-    if (mime.startsWith('video/')) return 'video';
-    if (mime.startsWith('audio/')) return 'audio';
-    return 'document';
-  }, []);
-
-  const sendMediaFromFile = useCallback(async (file, forcedType = null) => {
-    if (!selectedTicket || !file) return;
-
-    setIsComposerBusy(true);
-    const caption = String(messageText || '').trim();
-    if (caption) setMessageText('');
-
-    try {
-      const uploaded = await uploadSupportMedia(file);
-      const mediaType = forcedType || inferMediaTypeFromFile(file);
-      await sendTicketMessage(selectedTicket.id, caption, {
-        mediaType,
-        mediaUrl: uploaded?.url,
-        fileName: uploaded?.fileName || file.name,
-        mimeType: uploaded?.mimeType || file.type,
-      });
-      showToastRef.current('Mídia enviada com sucesso', 'success');
-      await refreshAfterSend(selectedTicket.id);
-    } catch (error) {
-      logger.error('Erro ao enviar mídia', error);
-      if (caption) setMessageText(caption);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao enviar mídia';
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsComposerBusy(false);
-    }
-  }, [inferMediaTypeFromFile, messageText, refreshAfterSend, selectedTicket, showToast]);
-
   const handleSendMessage = async () => {
-    if (isComposerBusy) return;
     if (!selectedTicket || !messageText.trim()) {
       showToast('Digite uma mensagem', 'warning');
       return;
     }
 
     const messageToSend = messageText.trim();
-    setIsComposerBusy(true);
-
+    
     // Limpa o campo imediatamente para melhor UX
     setMessageText('');
 
     try {
       await sendTicketMessage(selectedTicket.id, messageToSend);
       showToastRef.current('Mensagem enviada com sucesso', 'success');
-      await refreshAfterSend(selectedTicket.id);
+      
+      // Recarrega mensagens para mostrar a nova mensagem
+      await loadTicketMessages(selectedTicket.id);
+      
+      if (loadTicketsRef.current) {
+        loadTicketsRef.current();
+      }
     } catch (error) {
       logger.error('Erro ao enviar mensagem', error);
       // Restaura a mensagem em caso de erro
       setMessageText(messageToSend);
       const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao enviar mensagem. Verifique sua conexão e tente novamente.';
       showToast(errorMessage, 'error');
-    } finally {
-      setIsComposerBusy(false);
     }
   };
-
-  const handleInsertEmoji = useCallback((emoji = '🙂') => {
-    const symbol = String(emoji || '🙂');
-    setMessageText((prev) => `${prev || ''}${symbol}`);
-  }, []);
-
-  const handleAttachMedia = useCallback(() => {
-    if (isComposerBusy) return;
-    const input = composerFileInputRef.current;
-    if (!input) return;
-    input.value = '';
-    input.click();
-  }, [isComposerBusy]);
-
-  const handleComposerFileChange = useCallback(async (event) => {
-    const file = event?.target?.files?.[0] || null;
-    if (!file) return;
-    await sendMediaFromFile(file);
-  }, [sendMediaFromFile]);
-
-  const handleToggleAudioRecording = useCallback(async () => {
-    if (isComposerBusy) return;
-    if (!selectedTicket) return;
-
-    if (isRecordingAudio) {
-      const recorder = mediaRecorderRef.current;
-      if (recorder && recorder.state !== 'inactive') {
-        recorder.stop();
-      }
-      return;
-    }
-
-    if (!navigator?.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      showToast('Gravação de áudio não suportada neste navegador', 'warning');
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderStreamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderChunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e?.data && e.data.size > 0) mediaRecorderChunksRef.current.push(e.data);
-      };
-      recorder.onstop = async () => {
-        setIsRecordingAudio(false);
-        const chunks = mediaRecorderChunksRef.current;
-        mediaRecorderChunksRef.current = [];
-        if (mediaRecorderStreamRef.current) {
-          for (const track of mediaRecorderStreamRef.current.getTracks()) {
-            try { track.stop(); } catch { /* noop */ }
-          }
-          mediaRecorderStreamRef.current = null;
-        }
-        if (!chunks || chunks.length === 0) return;
-        const type = recorder.mimeType || 'audio/webm';
-        const blob = new Blob(chunks, { type });
-        const file = new File([blob], `audio-${Date.now()}.webm`, { type });
-        await sendMediaFromFile(file, 'audio');
-      };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setIsRecordingAudio(true);
-      showToast('Gravação iniciada. Clique novamente para parar e enviar.', 'info');
-    } catch (err) {
-      logger.error('Erro ao iniciar gravação', err);
-      showToast('Não foi possível acessar o microfone', 'error');
-    }
-  }, [isComposerBusy, isRecordingAudio, selectedTicket, sendMediaFromFile, showToast]);
-
-  const handleAttachRagDocument = useCallback(async () => {
-    if (isComposerBusy || !selectedTicket) return;
-    if (!ragPickerOpen && ragDocuments.length === 0 && !ragDocumentsLoading) {
-      try {
-        setRagDocumentsLoading(true);
-        setRagDocumentsError('');
-        const docs = await listDocuments({ status: 'active' });
-        const docsArray = Array.isArray(docs) ? docs : [];
-        setRagDocuments(docsArray);
-      } catch (error) {
-        logger.error('Erro ao listar documentos RAG', error);
-        const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao carregar documentos do RAG';
-        setRagDocumentsError(errorMessage);
-      } finally {
-        setRagDocumentsLoading(false);
-      }
-    }
-    setRagPickerOpen((prev) => !prev);
-  }, [isComposerBusy, selectedTicket, ragPickerOpen, ragDocuments.length, ragDocumentsLoading]);
-
-  const refreshRagDocuments = useCallback(async () => {
-    if (!selectedTicket || ragDocumentsLoading) return;
-    try {
-      setRagDocumentsLoading(true);
-      setRagDocumentsError('');
-      const docs = await listDocuments({ status: 'active' });
-      const docsArray = Array.isArray(docs) ? docs : [];
-      setRagDocuments(docsArray);
-    } catch (error) {
-      logger.error('Erro ao atualizar documentos RAG', error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao carregar documentos do RAG';
-      setRagDocumentsError(errorMessage);
-    } finally {
-      setRagDocumentsLoading(false);
-    }
-  }, [selectedTicket, ragDocumentsLoading]);
-
-  const filteredRagDocuments = React.useMemo(() => {
-    const source = Array.isArray(ragDocuments) ? ragDocuments : [];
-    const q = String(ragSearch || '').trim().toLowerCase();
-    if (!q) return source;
-    return source.filter((doc) => {
-      const title = String(doc?.title || '').toLowerCase();
-      const id = String(doc?.id || '').toLowerCase();
-      const category = String(doc?.metadata?.category || '').toLowerCase();
-      const sourceValue = String(doc?.metadata?.source || '').toLowerCase();
-      return title.includes(q) || id.includes(q) || category.includes(q) || sourceValue.includes(q);
-    });
-  }, [ragDocuments, ragSearch]);
-
-  const handleSelectRagDocument = useCallback(async (doc) => {
-    if (!selectedTicket || !doc?.id || isComposerBusy) return;
-
-    setIsComposerBusy(true);
-    const caption = String(messageText || '').trim();
-    if (caption) setMessageText('');
-    try {
-      await sendTicketMessage(selectedTicket.id, caption, {
-        mediaKind: 'rag',
-        documentId: String(doc.id),
-        mediaType: 'document',
-      });
-      setRagPickerOpen(false);
-      showToastRef.current('Documento RAG anexado com sucesso', 'success');
-      await refreshAfterSend(selectedTicket.id);
-    } catch (error) {
-      logger.error('Erro ao anexar documento RAG', error);
-      if (caption) setMessageText(caption);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao anexar documento do RAG';
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsComposerBusy(false);
-    }
-  }, [isComposerBusy, messageText, refreshAfterSend, selectedTicket, showToast]);
-
-  useEffect(() => {
-    if (!selectedTicket) {
-      setRagPickerOpen(false);
-      setRagSearch('');
-    }
-  }, [selectedTicket?.id]);
 
   // Handover: bot <-> humano
   const handleTakeOver = async () => {
@@ -1895,17 +1141,6 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await takeOverTicket(selectedTicket.id, 'agent_takeover');
-      if (!updated || !updated.id) {
-        logger.warn('[SupportPage] takeOverTicket retornou ticket inválido', { ticketId: selectedTicket.id });
-        if (loadTicketsRef.current) {
-          loadTicketsRef.current();
-        }
-        if (loadTicketMessagesRef.current) {
-          loadTicketMessagesRef.current(selectedTicket.id);
-        }
-        showToastRef.current('Atendimento assumido (modo humano)', 'success', 2500);
-        return;
-      }
       showToastRef.current('Atendimento assumido (modo humano)', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
@@ -1928,17 +1163,6 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await returnToBotTicket(selectedTicket.id, 'user_request');
-      if (!updated || !updated.id) {
-        logger.warn('[SupportPage] returnToBotTicket retornou ticket inválido', { ticketId: selectedTicket.id });
-        if (loadTicketsRef.current) {
-          loadTicketsRef.current();
-        }
-        if (loadTicketMessagesRef.current) {
-          loadTicketMessagesRef.current(selectedTicket.id);
-        }
-        showToastRef.current('Atendimento devolvido ao bot (modo bot)', 'success', 2500);
-        return;
-      }
       showToastRef.current('Atendimento devolvido ao bot (modo bot)', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
@@ -1961,17 +1185,6 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await pauseTicket(selectedTicket.id, 'outside_window');
-      if (!updated || !updated.id) {
-        logger.warn('[SupportPage] pauseTicket retornou ticket inválido', { ticketId: selectedTicket.id });
-        if (loadTicketsRef.current) {
-          loadTicketsRef.current();
-        }
-        if (loadTicketMessagesRef.current) {
-          loadTicketMessagesRef.current(selectedTicket.id);
-        }
-        showToastRef.current('Atendimento pausado', 'success', 2500);
-        return;
-      }
       showToastRef.current('Atendimento pausado', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
@@ -1994,17 +1207,6 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await resumeTicket(selectedTicket.id, 'resume');
-      if (!updated || !updated.id) {
-        logger.warn('[SupportPage] resumeTicket retornou ticket inválido', { ticketId: selectedTicket.id });
-        if (loadTicketsRef.current) {
-          loadTicketsRef.current();
-        }
-        if (loadTicketMessagesRef.current) {
-          loadTicketMessagesRef.current(selectedTicket.id);
-        }
-        showToastRef.current('Atendimento retomado (modo humano)', 'success', 2500);
-        return;
-      }
       showToastRef.current('Atendimento retomado (modo humano)', 'success', 2500);
       setSelectedTicket(updated);
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
@@ -2041,259 +1243,11 @@ export function SupportPage() {
     }
   };
 
-  const slashCommands = React.useMemo(() => {
-    const commands = [
-      {
-        id: 'resposta-rapida',
-        label: '/resposta-rapida',
-        description: 'Abrir lista de respostas rápidas',
-        run: async () => {
-          await openQuickReplyBrowser();
-          setMessageText('/resposta-rapida');
-        },
-      },
-      {
-        id: 'agendar',
-        label: '/agendar',
-        description: 'Abrir agendamento para este ticket',
-        run: async () => {
-          if (!selectedTicket) return;
-          setScheduleContextTicket(selectedTicket);
-          setMessageText('');
-          closeSlashMenu();
-        },
-      },
-      {
-        id: 'falhas-entrega',
-        label: '/falhas-entrega',
-        description: 'Abrir falhas de entrega do ticket',
-        run: async () => {
-          await openDeliveryFailures();
-          setMessageText('');
-          closeSlashMenu();
-        },
-      },
-      {
-        id: 'fechar-ticket',
-        label: '/fechar-ticket',
-        description: 'Fechar o ticket atual',
-        run: async () => {
-          if (!selectedTicket) return;
-          handleClose(selectedTicket.id);
-          setMessageText('');
-          closeSlashMenu();
-        },
-      },
-    ];
-
-    if ((selectedTicket?.mode || 'bot') === 'bot') {
-      commands.unshift({
-        id: 'assumir',
-        label: '/assumir',
-        description: 'Assumir atendimento humano',
-        run: async () => {
-          await handleTakeOver();
-          setMessageText('');
-          closeSlashMenu();
-        },
-      });
-    }
-
-    if ((selectedTicket?.mode || 'bot') === 'human') {
-      commands.unshift(
-        {
-          id: 'devolver-bot',
-          label: '/devolver-bot',
-          description: 'Devolver atendimento ao bot',
-          run: async () => {
-            await handleReturnToBot();
-            setMessageText('');
-            closeSlashMenu();
-          },
-        },
-        {
-          id: 'pausar',
-          label: '/pausar',
-          description: 'Pausar atendimento humano',
-          run: async () => {
-            await handlePause();
-            setMessageText('');
-            closeSlashMenu();
-          },
-        },
-      );
-    }
-
-    if ((selectedTicket?.mode || 'bot') === 'paused') {
-      commands.unshift({
-        id: 'retomar',
-        label: '/retomar',
-        description: 'Retomar atendimento humano',
-        run: async () => {
-          await handleResume();
-          setMessageText('');
-          closeSlashMenu();
-        },
-      });
-    }
-
-    return commands;
-  }, [
-    selectedTicket,
-    openQuickReplyBrowser,
-    openDeliveryFailures,
-    handleClose,
-    handleTakeOver,
-    handleReturnToBot,
-    handlePause,
-    handleResume,
-    closeSlashMenu,
-  ]);
-
-  const setSlashCommandsIfChanged = useCallback((nextCommands) => {
-    setSlashCommandResults((prev) => {
-      if (
-        prev.length === nextCommands.length
-        && prev.every((item, index) => item.id === nextCommands[index]?.id)
-      ) {
-        return prev;
-      }
-      return nextCommands;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
-      closeSlashMenu();
-      return;
-    }
-
-    const txt = String(messageText || '').trim();
-    if (!txt.startsWith('/')) {
-      closeSlashMenu();
-      return;
-    }
-
-    if (slashMenuMode === 'quick_replies' && /^\/resposta-rapida\b/i.test(txt)) {
-      setQuickReplySlashOpen(true);
-      return;
-    }
-
-    const query = txt.slice(1).toLowerCase();
-    const matchingCommands = slashCommands.filter((command) => {
-      const haystack = `${command.label} ${command.description}`.toLowerCase();
-      return haystack.includes(query);
-    });
-
-    if (matchingCommands.length > 0) {
-      setSlashCommandsIfChanged(matchingCommands);
-      setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
-      setSlashMenuMode('commands');
-      setQuickReplySlashOpen(true);
-      return;
-    }
-
-    if (query.length >= 2) {
-      setSlashCommandResults([]);
-      debouncedSearchSlashQuickReplies(query);
-      return;
-    }
-
-    setSlashCommandsIfChanged(slashCommands);
-    setQuickReplySlashResults((prev) => (prev.length > 0 ? [] : prev));
-    setSlashMenuMode('commands');
-    setQuickReplySlashOpen(true);
-  }, [
-    selectedTicket,
-    messageText,
-    slashMenuMode,
-    slashCommands,
-    setSlashCommandsIfChanged,
-    debouncedSearchSlashQuickReplies,
-    closeSlashMenu,
-  ]);
-
-  const handleSelectSlashItem = useCallback(async (item) => {
-    if (!item) return;
-    if (item.kind === 'quick_reply') {
-      await insertQuickReply(item.reply);
-      return;
-    }
-    if (typeof item.run === 'function') {
-      await item.run();
-    }
-  }, [insertQuickReply]);
-
-  useEffect(() => {
-    if (!quickReplySlashOpen) {
-      setSlashMenuCursorIndex(-1);
-      return;
-    }
-
-    const totalItems = slashMenuMode === 'commands'
-      ? slashCommandResults.length
-      : quickReplySlashResults.length;
-
-    if (totalItems <= 0) {
-      setSlashMenuCursorIndex(-1);
-      return;
-    }
-
-    setSlashMenuCursorIndex((prev) => {
-      if (prev < 0 || prev >= totalItems) return 0;
-      return prev;
-    });
-  }, [quickReplySlashOpen, slashMenuMode, slashCommandResults, quickReplySlashResults]);
-
-  const handleComposerKeyDown = useCallback(async (event) => {
-    const txt = String(messageText || '').trim();
-    const isSlashInputOpen = txt.startsWith('/') && quickReplySlashOpen;
-    const slashItems = slashMenuMode === 'commands'
-      ? slashCommandResults
-      : quickReplySlashResults.map((reply) => ({ kind: 'quick_reply', reply }));
-
-    if (isSlashInputOpen && slashItems.length > 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-      event.preventDefault();
-      const delta = event.key === 'ArrowDown' ? 1 : -1;
-      setSlashMenuCursorIndex((prev) => {
-        if (prev < 0 || prev >= slashItems.length) return delta > 0 ? 0 : slashItems.length - 1;
-        return (prev + delta + slashItems.length) % slashItems.length;
-      });
-      return;
-    }
-
-    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      event.preventDefault();
-      if (txt.startsWith('/') && slashItems.length > 0) {
-        const selectedIndex = slashMenuCursorIndex >= 0 && slashMenuCursorIndex < slashItems.length
-          ? slashMenuCursorIndex
-          : 0;
-        await handleSelectSlashItem(slashItems[selectedIndex]);
-        return;
-      }
-      handleSendMessage();
-      return;
-    }
-  }, [
-    messageText,
-    slashMenuMode,
-    quickReplySlashOpen,
-    slashCommandResults,
-    quickReplySlashResults,
-    slashMenuCursorIndex,
-    handleSelectSlashItem,
-    handleSendMessage,
-  ]);
-
-  const handleHoverSlashItem = useCallback((index) => {
-    setSlashMenuCursorIndex(index);
-  }, []);
-
-  function formatDate(dateString) {
+  const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR');
-  }
+  };
 
   const formatPhoneNumber = (phone) => {
     if (!phone) return '-';
@@ -2320,102 +1274,16 @@ export function SupportPage() {
     return { label: 'BOT', bg: '#ecfdf5', fg: '#065f46' };
   };
 
-  const buildFailedDeliveryDetails = (messageItem) => {
-    if (!messageItem || typeof messageItem !== 'object') {
-      return { hasDetails: false, lines: [] };
-    }
-
-    const sources = [
-      messageItem,
-      messageItem.raw,
-      messageItem.channel,
-      messageItem.raw?.body,
-      messageItem.channel?.body,
-      messageItem.raw?.meta,
-      messageItem.channel?.meta,
-      messageItem.raw?.body?.meta,
-      messageItem.channel?.body?.meta,
-      messageItem.raw?.status,
-      messageItem.channel?.status,
-      messageItem.raw?.error,
-      messageItem.channel?.error,
-    ].filter((v) => v && typeof v === 'object');
-
-    const pickValue = (keys) => {
-      for (const source of sources) {
-        for (const key of keys) {
-          const value = source?.[key];
-          if (value !== undefined && value !== null && String(value).trim() !== '') {
-            return value;
-          }
-        }
-      }
-      return null;
-    };
-
-    const reasonCode = pickValue(['reason_code', 'reasonCode', 'failure_reason_code', 'failureReasonCode']);
-    const errorCode = pickValue(['error_code', 'errorCode', 'provider_error_code', 'providerErrorCode']);
-    const errorType = pickValue(['error_type', 'errorType']);
-    const lastError = pickValue(['last_error', 'lastError', 'error_message', 'errorMessage', 'message']);
-    const attempts = pickValue(['attempts', 'attempt_count', 'attemptCount', 'retryCount']);
-    const failedAt = pickValue(['failed_at', 'failedAt', 'updated_at', 'updatedAt', 'timestamp']);
-    const externalMessageId = messageItem.externalMessageId || pickValue(['external_message_id', 'externalMessageId']);
-
-    const lines = ['Falhou na entrega'];
-    if (reasonCode) lines.push(`Motivo: ${String(reasonCode)}`);
-    if (errorCode) lines.push(`Codigo: ${String(errorCode)}`);
-    if (errorType) lines.push(`Tipo: ${String(errorType)}`);
-    if (lastError) {
-      const normalizedError = String(lastError).replace(/\s+/g, ' ').trim();
-      lines.push(`Erro: ${normalizedError.slice(0, 220)}`);
-    }
-    if (attempts !== null && attempts !== undefined && String(attempts).trim() !== '') {
-      lines.push(`Tentativas: ${String(attempts)}`);
-    }
-
-    if (failedAt) {
-      const date = new Date(failedAt);
-      if (!Number.isNaN(date.getTime())) {
-        lines.push(`Atualizado em: ${formatDate(date.toISOString())}`);
-      }
-    }
-
-    if (externalMessageId) {
-      lines.push(`ID externo: ${String(externalMessageId)}`);
-    }
-
-    const hasDetails = lines.length > 1;
-    return { hasDetails, lines };
-  };
-
-  const getDeliveryStatusBadge = (deliveryStatusRaw, messageItem = null) => {
+  const getDeliveryStatusBadge = (deliveryStatusRaw) => {
     const s = deliveryStatusRaw ? String(deliveryStatusRaw).toLowerCase() : '';
-    const internalMessageId = messageItem?.raw?.id || messageItem?.id || null;
-    const externalMessageId = messageItem?.externalMessageId || messageItem?.raw?.externalMessageId || messageItem?.channel?.externalMessageId || null;
-    const idSuffix = [
-      internalMessageId ? `ID sistema: ${String(internalMessageId)}` : null,
-      externalMessageId ? `ID WhatsApp: ${String(externalMessageId)}` : null,
-    ].filter(Boolean).join('\n');
-    const withIds = (baseTitle) => {
-      if (!idSuffix) return baseTitle;
-      return `${baseTitle}\n${idSuffix}`;
-    };
-
     if (!s) return null;
-    if (s === 'pending') return { text: '…', title: withIds('Pendente'), color: '#6b7280' };
-    if (s === 'sent') return { text: '✓✓', title: withIds('Enviado'), color: '#6b7280' };
-    if (s === 'delivered') return { text: '✓✓', title: withIds('Entregue'), color: '#6b7280' };
-    if (s === 'read') return { text: '✓✓', title: withIds('Lido'), color: '#2563eb' };
-    if (s === 'failed') {
-      const details = buildFailedDeliveryDetails(messageItem);
-      const failureTitle = details.hasDetails
-        ? details.lines.join('\n')
-        : 'Falhou na entrega\nSem detalhes no payload da mensagem\nAbra "Falhas de entrega" para diagnostico completo';
-      const title = withIds(failureTitle);
-      return { text: '!', title, color: '#b91c1c' };
-    }
+    if (s === 'pending') return { text: '…', title: 'Pendente', color: '#6b7280' };
+    if (s === 'sent') return { text: '✓', title: 'Enviado', color: '#6b7280' };
+    if (s === 'delivered') return { text: '✓✓', title: 'Entregue', color: '#6b7280' };
+    if (s === 'read') return { text: '✓✓', title: 'Lido', color: '#2563eb' };
+    if (s === 'failed') return { text: '!', title: 'Falhou', color: '#b91c1c' };
     // fallback
-    return { text: s, title: withIds(s), color: '#6b7280' };
+    return { text: s, title: s, color: '#6b7280' };
   };
 
   const wsStatus = React.useMemo(() => {
@@ -2452,45 +1320,12 @@ export function SupportPage() {
   }, [wsUiStatus.phase]);
 
   function getContactName(ticket) {
-    const variables = ticket?.context?.variables || {};
-    const candidates = [
-      ticket?.contactName,
-      ticket?.customerName,
-      ticket?.displayName,
-      ticket?.name,
-      ticket?.contact?.name,
-      ticket?.contact?.displayName,
-      ticket?.contact?.profile?.name,
-      ticket?.context?.contactName,
-      ticket?.context?.customerName,
-      ticket?.context?.displayName,
-      ticket?.context?.name,
-      ticket?.context?.contact?.name,
-      ticket?.context?.metadata?.contactName,
-      ticket?.context?.metadata?.customerName,
-      ticket?.context?.metadata?.profileName,
-      ticket?.context?.metadata?.senderName,
-      variables?.contactName,
-      variables?.customerName,
-      variables?.displayName,
-      variables?.name,
-      variables?.nome,
-      variables?.fullName,
-      variables?.nomeCompleto,
-      variables?.customer?.name,
-      variables?.contact?.name,
-      variables?.profile?.name,
-    ];
-
-    for (const candidate of candidates) {
-      if (typeof candidate !== 'string') continue;
-      const name = candidate.trim();
-      if (!name) continue;
-      if (isPhoneLikeValue(name, ticket?.phoneNumber)) continue;
-      return name;
-    }
-
-    return 'Sem contato';
+    return ticket?.contactName
+      || ticket?.contact?.name
+      || ticket?.context?.contactName
+      || ticket?.context?.contact?.name
+      || ticket?.phoneNumber
+      || 'Sem contato';
   }
 
   function formatTicketStatus(status) {
@@ -2506,13 +1341,7 @@ export function SupportPage() {
 
   function formatTime(timestamp) {
     if (!timestamp) return '—';
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) return '—';
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${day}/${month} ${hours}:${minutes}`;
+    return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   }
 
   function formatBadgeCount(count) {
@@ -2558,19 +1387,7 @@ export function SupportPage() {
 
   const ticketsView = React.useMemo(() => {
     return (tickets || []).filter((ticket) => {
-      if (!showClosedTickets && ticket?.status === 'closed') return false;
-      if (!showOtherAgents) {
-        const assigned = ticket?.assignedTo;
-        const selfAgentId = agent?.id;
-        const selfAgentUsername = agent?.username;
-        if (assigned && assigned !== selfAgentId && assigned !== selfAgentUsername) return false;
-      }
       if (uiQueue && ticket?.queue !== uiQueue) return false;
-      if (ticketViewFilter === 'unread' && !(Number(ticket?.unreadCount || 0) > 0)) return false;
-      if (ticketViewFilter === 'waiting' && ticket?.status !== 'waiting') return false;
-      if (ticketViewFilter === 'in_progress' && ticket?.status !== 'in_progress') return false;
-      if (ticketViewFilter === 'closed' && ticket?.status !== 'closed') return false;
-      if (ticketViewFilter === 'unassigned' && ticket?.assignedTo) return false;
       if (!uiSearchDebounced) return true;
       const haystack = [
         ticket?.id,
@@ -2582,33 +1399,71 @@ export function SupportPage() {
       ].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(uiSearchDebounced.toLowerCase());
     });
-  }, [tickets, showClosedTickets, showOtherAgents, agent?.id, agent?.username, uiQueue, ticketViewFilter, uiSearchDebounced]);
+  }, [tickets, uiQueue, uiSearchDebounced]);
+
+  const supportGridColumns = React.useMemo(() => ([
+    {
+      id: 'contact',
+      header: 'Contato',
+      render: (ticket) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{highlightText(getContactName(ticket), uiSearchDebounced)}</div>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{getPhoneNode(ticket)}</div>
+        </div>
+      ),
+      sortValue: (ticket) => getContactName(ticket),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      render: (ticket) => (
+        <div>
+          <span className={`support-ticket-status ${getStatusClass(ticket.status)}`}>{formatTicketStatus(ticket.status)}</span>
+          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{formatTicketMode(ticket.mode)}</div>
+        </div>
+      ),
+      sortValue: (ticket) => ticket?.status,
+      width: '160px',
+    },
+    {
+      id: 'preview',
+      header: 'Ultima mensagem',
+      render: (ticket) => (
+        <div>
+          <div>{getTicketPreview(ticket, uiSearchDebounced)}</div>
+          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+            {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'updatedAt',
+      header: 'Atualizacao',
+      render: (ticket) => (
+        <div>
+          <div>{formatTime(ticket.updatedAt || ticket.createdAt)}</div>
+          {ticket.unreadCount > 0 ? (
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#e74c3c', fontWeight: 700 }}>
+              {formatBadgeCount(ticket.unreadCount)} nao lida(s)
+            </div>
+          ) : null}
+        </div>
+      ),
+      sortValue: (ticket) => ticket?.updatedAt || ticket?.createdAt,
+      width: '120px',
+    },
+  ]), [phoneMaskingEnabled, uiSearchDebounced]);
 
   function clearTicketFilters() {
     setUiSearch('');
     setUiQueue('');
-    setTicketViewFilter('all');
   }
 
   function handleSelectTicket(ticket) {
     setSelectedTicket(ticket);
     if (isMobile) {
       setIsRightPanelCollapsed(true);
-    }
-  }
-
-  async function handleEnableNotifications() {
-    if (!isWebPushSupported()) {
-      showToast('Notificações web não são suportadas neste navegador', 'warning');
-      return;
-    }
-    try {
-      await subscribeCurrentUserWebPush({ deviceName: 'support-workspace' });
-      showToast('Notificações web ativadas', 'success');
-    } catch (error) {
-      logger.error('Erro ao ativar notificações web', error);
-      const message = error?.message || 'Não foi possível ativar notificações web.';
-      showToast(message, 'error');
     }
   }
 
@@ -2621,55 +1476,44 @@ export function SupportPage() {
         queues={queues}
         setNewConversationQueue={setNewConversationQueue}
         setShowNewConversationModal={setShowNewConversationModal}
-        onEnableNotifications={handleEnableNotifications}
-      />
-      <SupportFiltersBar
-        uiSearch={uiSearch}
-        setUiSearch={setUiSearch}
-        ticketQueueOptions={ticketQueueOptions}
-        uiQueue={uiQueue}
-        setUiQueue={setUiQueue}
-        ticketViewFilter={ticketViewFilter}
-        setTicketViewFilter={setTicketViewFilter}
-        showClosedTickets={showClosedTickets}
-        onClear={clearTicketFilters}
       />
 
-      <div
-        className={[
-          'support-grid',
-          isMobile ? 'is-mobile' : '',
-          isMobile && !isRightPanelCollapsed ? 'right-open' : '',
-          isMobile && selectedTicket ? 'has-selected' : '',
-        ].filter(Boolean).join(' ')}
-      >
-        <SupportTicketList
-          loading={loading}
-          ticketsView={ticketsView}
-          handleSelectTicket={handleSelectTicket}
-          selectedTicket={selectedTicket}
-          uiSearchDebounced={uiSearchDebounced}
-          highlightText={highlightText}
-          getContactName={getContactName}
-          getPhoneNode={getPhoneNode}
-          formatTicketMode={formatTicketMode}
-          getStatusClass={getStatusClass}
-          formatTicketStatus={formatTicketStatus}
-          formatTime={formatTime}
-          formatBadgeCount={formatBadgeCount}
-          getTicketPreview={getTicketPreview}
-          getAssignedLabel={getAssignedLabel}
-          getQueueLabel={getQueueLabel}
-          showOtherAgents={showOtherAgents}
-          setShowOtherAgents={setShowOtherAgents}
-          showClosedTickets={showClosedTickets}
-          setShowClosedTickets={setShowClosedTickets}
-        />
+      <div className={`support-grid${isMobile ? ' is-mobile' : ''}${isMobile && !isRightPanelCollapsed ? ' right-open' : ''}`}>
+        <div className="support-left-column">
+          <SupportFiltersBar
+            uiSearch={uiSearch}
+            setUiSearch={setUiSearch}
+            ticketQueueOptions={ticketQueueOptions}
+            uiQueue={uiQueue}
+            setUiQueue={setUiQueue}
+            onClear={clearTicketFilters}
+          />
+          <SupportTicketList
+            isMobile={isMobile}
+            loading={loading}
+            ticketsView={ticketsView}
+            handleSelectTicket={handleSelectTicket}
+            selectedTicket={selectedTicket}
+            uiSearchDebounced={uiSearchDebounced}
+            highlightText={highlightText}
+            getContactName={getContactName}
+            getPhoneNode={getPhoneNode}
+            formatTicketMode={formatTicketMode}
+            getStatusClass={getStatusClass}
+            formatTicketStatus={formatTicketStatus}
+            formatTime={formatTime}
+            formatBadgeCount={formatBadgeCount}
+            getTicketPreview={getTicketPreview}
+            getAssignedLabel={getAssignedLabel}
+            getQueueLabel={getQueueLabel}
+            supportGridColumns={supportGridColumns}
+          />
+        </div>
 
         <div className="support-details-panel">
           {selectedTicket ? (
-            <div className="support-details-split">
-              <div className="support-main-column">
+            <>
+              <div style={{ display: 'flex', gap: '14px', minHeight: 0 }}>
                 <SupportConversationPane
                   isMobile={isMobile}
                   selectedTicket={selectedTicket}
@@ -2694,310 +1538,264 @@ export function SupportPage() {
                   quickReplySelectedCategory={quickReplySelectedCategory}
                   setQuickReplySelectedCategory={setQuickReplySelectedCategory}
                   quickReplyCategories={quickReplyCategories}
+                  quickReplyCategoryItems={quickReplyCategoryItems}
+                  quickReplySuggestions={quickReplySuggestions}
                   insertQuickReply={insertQuickReply}
                   messageText={messageText}
                   setMessageText={setMessageText}
                   quickReplySlashOpen={quickReplySlashOpen}
                   quickReplySlashResults={quickReplySlashResults}
-                  slashMenuMode={slashMenuMode}
-                  slashCommandResults={slashCommandResults}
-                  slashMenuCursorIndex={slashMenuCursorIndex}
-                  onSelectSlashItem={handleSelectSlashItem}
-                  onHoverSlashItem={handleHoverSlashItem}
-                  onComposerKeyDown={handleComposerKeyDown}
-                  formatTicketStatus={formatTicketStatus}
                   handleSendMessage={handleSendMessage}
-                  handleInsertEmoji={handleInsertEmoji}
-                  handleAttachMedia={handleAttachMedia}
-                  handleToggleAudioRecording={handleToggleAudioRecording}
-                  handleAttachRagDocument={handleAttachRagDocument}
-                  ragPickerOpen={ragPickerOpen}
-                  ragDocuments={filteredRagDocuments}
-                  ragDocumentsLoading={ragDocumentsLoading}
-                  ragDocumentsError={ragDocumentsError}
-                  ragSearch={ragSearch}
-                  setRagSearch={setRagSearch}
-                  onSelectRagDocument={handleSelectRagDocument}
-                  onRefreshRagDocuments={refreshRagDocuments}
-                  isComposerBusy={isComposerBusy}
-                  isRecordingAudio={isRecordingAudio}
-                  composerFileInputRef={composerFileInputRef}
-                  onComposerFileChange={handleComposerFileChange}
                   handleClose={handleClose}
                 />
-              </div>
 
-              <SupportDetailsSidebar
-                isMobile={isMobile}
-                isRightPanelCollapsed={isRightPanelCollapsed}
-                setIsRightPanelCollapsed={setIsRightPanelCollapsed}
-              >
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontWeight: 700 }}>Contato</div>
-                    <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', border: '1px solid rgb(221, 221, 221)', background: getModeLabel(selectedTicket.mode).bg, color: getModeLabel(selectedTicket.mode).fg }}>
-                      {getModeLabel(selectedTicket.mode).label}
-                    </span>
+                <SupportDetailsSidebar
+                  isMobile={isMobile}
+                  isRightPanelCollapsed={isRightPanelCollapsed}
+                  setIsRightPanelCollapsed={setIsRightPanelCollapsed}
+                >
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontWeight: 700 }}>Contato</div>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        border: '1px solid #ddd',
+                        background: getModeLabel(selectedTicket.mode).bg,
+                        color: getModeLabel(selectedTicket.mode).fg,
+                      }}>
+                        {getModeLabel(selectedTicket.mode).label}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      <div>📞 <strong><MaskedPhone phone={selectedTicket.phoneNumber} mask={phoneMaskingEnabled} /></strong></div>
+                      <div>Fila: <strong>{selectedTicket.queue}</strong></div>
+                      <div>Status: <strong>{selectedTicket.status}</strong></div>
+                      {selectedTicket.pauseReason ? (
+                        <div>Motivo: <strong>{selectedTicket.pauseReason}</strong></div>
+                      ) : null}
+                      {selectedTicket?.context?.closeReasonName ? (
+                        <div>Close reason: <strong>{selectedTicket.context.closeReasonName}</strong></div>
+                      ) : null}
+                      {selectedTicket.channelType ? <div>Canal: <strong>{selectedTicket.channelType}</strong></div> : null}
+                      {selectedTicket.conversationId ? <div>ConversationId: <code>{selectedTicket.conversationId}</code></div> : null}
+                      <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
+                    </div>
                   </div>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                    <div>👤 <strong>{getContactName(selectedTicket)}</strong></div>
-                    <div>📞 <strong>{getPhoneNode(selectedTicket)}</strong></div>
-                    <div>Fila: <strong>{selectedTicket.queue || 'default'}</strong></div>
-                    <div>Status: <strong>{formatTicketStatus(selectedTicket.status)}</strong></div>
-                    <div>Canal: <strong>{selectedTicket.channel || 'whatsapp'}</strong></div>
-                    <div>ID da conversa: <code>{selectedTicket.conversationId || '—'}</code></div>
-                    <div>Criado: {formatDate(selectedTicket.createdAt)}</div>
-                  </div>
-                </div>
 
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{ fontWeight: 700 }}>Resumo IA</div>
-                    {aiSummaryLoading ? (
-                      <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>Gerando automaticamente...</span>
-                    ) : null}
-                  </div>
-                  {aiSummary ? (
-                    typeof aiSummary === 'string' ? (
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                        {aiSummary}
-                      </div>
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 700 }}>Resumo IA</div>
+                      <Button
+                        onClick={handleGenerateAiSummary}
+                        disabled={aiSummaryLoading}
+                        style={{ width: 'auto' }}
+                        title="Gerar ou atualizar resumo do ticket"
+                      >
+                        {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
+                      </Button>
+                    </div>
+                    {aiSummary ? (
+                      typeof aiSummary === 'string' ? (
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                          {aiSummary}
+                        </div>
+                      ) : (
+                        <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                          {safeStringify(aiSummary, 3000)}
+                        </pre>
+                      )
                     ) : (
-                      (() => {
-                        const summaryText = typeof aiSummary?.text === 'string' ? aiSummary.text : '';
-                        const generatedAt = aiSummary?.generatedAt ? formatDate(aiSummary.generatedAt) : null;
-                        const generatedBy = aiSummary?.generatedBy?.username || aiSummary?.generatedBy?.id || 'IA';
+                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                        Sem resumo gerado para este ticket.
+                      </div>
+                    )}
+                  </div>
 
-                        if (!summaryText) {
-                          return (
-                            <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                              {safeStringify(aiSummary, 3000)}
-                            </pre>
-                          );
-                        }
-
-                        return (
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                      {(extractedEntities.emails.length === 0
+                        && extractedEntities.cpfs.length === 0
+                        && extractedEntities.cnpjs.length === 0
+                        && extractedEntities.phones.length === 0
+                        && extractedEntities.urls.length === 0) ? (
+                          <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
+                        ) : (
                           <>
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                              {summaryText}
-                            </div>
-                            {(generatedAt || generatedBy) ? (
-                              <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
-                                {generatedAt ? `Gerado em ${generatedAt}` : ''}
-                                {generatedAt && generatedBy ? ' • ' : ''}
-                                {generatedBy ? `por ${generatedBy}` : ''}
+                            {extractedEntities.emails.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
+                                {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.phones.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
+                                {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.cpfs.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
+                                {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.cnpjs.length > 0 ? (
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
+                                {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
+                              </div>
+                            ) : null}
+                            {extractedEntities.urls.length > 0 ? (
+                              <div style={{ marginBottom: '0px' }}>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
+                                {extractedEntities.urls.map((u) => (
+                                  <div key={u}>
+                                    <a href={u} target="_blank" rel="noreferrer">{u}</a>
+                                  </div>
+                                ))}
                               </div>
                             ) : null}
                           </>
-                        );
-                      })()
-                    )
-                  ) : (
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                      Sem resumo gerado para este ticket.
+                        )}
                     </div>
-                  )}
-                </div>
-
-                <SupportResolvedEntityCard identity={evidenceHistory.identity} loading={evidenceLoading} />
-
-                <SupportEvidenceCard
-                  evidenceResult={evidenceHistory.evidence}
-                  loading={evidenceLoading}
-                  formatDate={formatDate}
-                  onOpenSource={handleOpenEvidenceSource}
-                  onCopyEvidence={handleCopyEvidence}
-                  onUseAsReply={handleUseEvidenceAsReply}
-                />
-
-                <SupportSuggestedReplyCard suggestedReply={suggestedReply} />
-
-                <SupportHistoryCard
-                  timeline={evidenceHistory.timeline || []}
-                  loading={evidenceLoading}
-                  formatDate={formatDate}
-                  onOpenItem={handleOpenTimelineItem}
-                />
-
-                <SupportCard id="support-section-entities" title="Entidades" subtitle="Itens extraídos automaticamente da conversa">
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                    {(extractedEntities.emails.length === 0
-                      && extractedEntities.cpfs.length === 0
-                      && extractedEntities.cnpjs.length === 0
-                      && extractedEntities.phones.length === 0
-                      && extractedEntities.urls.length === 0) ? (
-                      <div style={{ color: 'var(--color-text-tertiary)' }}>Nada detectado automaticamente.</div>
-                    ) : (
-                      <>
-                        {extractedEntities.emails.length > 0 ? (
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>E-mails</div>
-                            {extractedEntities.emails.map((e) => <div key={e}><code>{e}</code></div>)}
-                          </div>
-                        ) : null}
-                        {extractedEntities.phones.length > 0 ? (
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Telefones</div>
-                            {extractedEntities.phones.map((p) => <div key={p}><code>{p}</code></div>)}
-                          </div>
-                        ) : null}
-                        {extractedEntities.cpfs.length > 0 ? (
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>CPF</div>
-                            {extractedEntities.cpfs.map((c) => <div key={c}><code>{c}</code></div>)}
-                          </div>
-                        ) : null}
-                        {extractedEntities.cnpjs.length > 0 ? (
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>CNPJ</div>
-                            {extractedEntities.cnpjs.map((c) => <div key={c}><code>{c}</code></div>)}
-                          </div>
-                        ) : null}
-                        {extractedEntities.urls.length > 0 ? (
-                          <div>
-                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>URLs</div>
-                            {extractedEntities.urls.map((u) => (
-                              <div key={u}>
-                                <a href={u} target="_blank" rel="noreferrer">{u}</a>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </>
-                    )}
                   </div>
-                </SupportCard>
 
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-                  <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                    {(selectedTicket.tags || []).length === 0 ? (
-                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
-                    ) : (
-                      (selectedTicket.tags || []).map((t) => (
-                        <span
-                          key={t}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            border: '1px solid var(--color-border-default)',
-                            background: 'var(--color-bg-secondary)',
-                            fontSize: '12px',
-                          }}
-                        >
-                          {t}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTag(t)}
-                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}
-                            aria-label={`Remover tag ${t}`}
-                            title="Remover"
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                    <div style={{ fontWeight: 700, marginBottom: '8px' }}>Tags</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                      {(selectedTicket.tags || []).length === 0 ? (
+                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>Sem tags</span>
+                      ) : (
+                        (selectedTicket.tags || []).map((t) => (
+                          <span
+                            key={t}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              border: '1px solid var(--color-border-default)',
+                              background: 'var(--color-bg-secondary)',
+                              fontSize: '12px',
+                            }}
                           >
-                            ✕
-                          </button>
-                        </span>
-                      ))
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="Adicionar tag (ex: cobrança)"
-                      className="support-form-input"
-                      list="support-known-tags"
-                    />
-                    <Button onClick={handleAddTag} style={{ width: 'auto' }}>Adicionar</Button>
-                  </div>
-                </div>
-
-                {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
-                  <SupportCard id="support-section-handover" title="Handover & atribuições" subtitle="Transições recentes do atendimento">
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                      {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
-                        <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
-                          <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
-                          <div>
-                            <strong>{h.type}</strong> • {h.mode}
-                            {h.actorUsername ? ` • ${h.actorUsername}` : ''}
-                            {h.reason ? ` • ${h.reason}` : ''}
-                          </div>
-                        </div>
-                      ))}
+                            {t}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTag(t)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                              aria-label={`Remover tag ${t}`}
+                              title="Remover"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))
+                      )}
                     </div>
-                  </SupportCard>
-                ) : (
-                  null
-                )}
-
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                      {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        placeholder="Adicionar tag (ex: cobrança)"
+                        className="support-form-input"
+                        list="support-known-tags"
+                      />
+                      <Button onClick={handleAddTag} style={{ width: 'auto' }}>
+                        Adicionar
+                      </Button>
                     </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                    {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
-                      ticketEvents.slice(0, 20).map((ev) => (
-                        <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                            <div style={{ fontWeight: 600 }}>{ev.type}</div>
-                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
-                          </div>
-                          {ev?.payload ? <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>{typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}</div> : null}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)' }}>Sem eventos registrados para este ticket.</div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ fontWeight: 700 }}>Auditoria</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                      {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
-                    {ticketAuditLoading ? (
-                      <div>Carregando…</div>
-                    ) : (ticketAuditLogs.length === 0 ? (
-                      <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
-                    ) : (
-                      ticketAuditLogs.map((l, idx) => (
-                        <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                            <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
-                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
+                  {Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+                    <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+                      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Handover & atribuições</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        {selectedTicket.context.handoverHistory.slice(-8).reverse().map((h, idx) => (
+                          <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
+                            <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</div>
+                            <div>
+                              <strong>{h.type}</strong> • {h.mode}
+                              {h.actorUsername ? ` • ${h.actorUsername}` : ''}
+                              {h.reason ? ` • ${h.reason}` : ''}
+                            </div>
                           </div>
-                          <div style={{ marginTop: '4px' }}>
-                            {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
-                            {l.details ? (
-                              <span style={{ color: 'var(--color-text-tertiary)' }}>
-                                {' • '}
-                                {typeof l.details === 'string'
-                                  ? l.details
-                                  : Object.entries(l.details)
-                                      .filter(([, v]) => v != null)
-                                      .map(([k, v]) => `${k}: ${v}`)
-                                      .join(' • ')}
-                              </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: 700 }}>Eventos do ticket</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {Array.isArray(ticketEvents) ? `${ticketEvents.length} item(ns)` : '0 item(ns)'}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                      {Array.isArray(ticketEvents) && ticketEvents.length > 0 ? (
+                        ticketEvents.slice(0, 20).map((ev) => (
+                          <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                              <div style={{ fontWeight: 600 }}>{ev.type}</div>
+                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(ev.createdAt)}</div>
+                            </div>
+                            {ev?.payload ? (
+                              <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>
+                                {typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}
+                              </div>
                             ) : null}
                           </div>
+                        ))
+                      ) : (
+                        <div style={{ color: 'var(--color-text-tertiary)' }}>
+                          Sem eventos registrados para este ticket.
                         </div>
-                      ))
-                    ))}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </SupportDetailsSidebar>
-            </div>
+
+                  <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg" style={{ minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ fontWeight: 700 }}>Auditoria</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                        {ticketAuditLoading ? 'Carregando…' : `${ticketAuditLogs.length} item(ns)`}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
+                      {ticketAuditLoading ? (
+                        <div>Carregando…</div>
+                      ) : (ticketAuditLogs.length === 0 ? (
+                        <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
+                      ) : (
+                        ticketAuditLogs.map((l, idx) => (
+                          <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                              <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
+                              <div style={{ color: 'var(--color-text-tertiary)' }}>{formatDate(l.timestamp || l.createdAt)}</div>
+                            </div>
+                            <div style={{ marginTop: '4px' }}>
+                              {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
+                              {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
+                            </div>
+                          </div>
+                        ))
+                      ))}
+                    </div>
+                  </div>
+                </SupportDetailsSidebar>
+              </div>
+            </>
           ) : (
             <div className="support-details-empty">
               <p>Selecione um ticket para ver detalhes e ações</p>
@@ -3060,225 +1858,6 @@ export function SupportPage() {
           setSelectedTicket(ticket);
         }}
       />
-
-      {scheduleContextTicket?.id ? (
-        <ScheduleModal
-          isOpen={!!scheduleContextTicket}
-          onClose={() => setScheduleContextTicket(null)}
-          contextType="ticket"
-          contextId={String(scheduleContextTicket.id)}
-          contactId={String(scheduleContextTicket.contactId || '')}
-          conversationId={String(scheduleContextTicket.conversationId || '')}
-          defaultPurpose="retorno"
-          defaultChannel="internal"
-          title={`Agendar para ticket: ${scheduleContextTicket.id}`}
-          lockReferences
-          onCreated={() => showToast('Agendamento criado', 'success')}
-        />
-      ) : null}
-
-      {mediaModal.isOpen ? (
-        <div
-          className="support-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="media-modal-title"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              closeMediaModal();
-            }
-          }}
-          style={mediaModal.maximized ? {
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(0,0,0,0.92)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          } : undefined}
-        >
-          <div
-            className={mediaModal.maximized ? undefined : 'support-modal-content'}
-            onClick={(event) => event.stopPropagation()}
-            style={mediaModal.maximized ? {
-              position: 'fixed', inset: 0,
-              background: 'var(--color-bg-primary, #1a1a1a)',
-              display: 'flex', flexDirection: 'column',
-              overflow: 'hidden',
-            } : undefined}
-          >
-            {/* Header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: mediaModal.maximized ? '10px 16px' : '0 0 8px 0',
-              borderBottom: '1px solid var(--color-border-default)',
-              marginBottom: '10px',
-              flexShrink: 0,
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h2 id="media-modal-title" style={{ margin: 0, fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {mediaModal.title || 'Mídia'}
-                </h2>
-                {mediaModal.mimeType ? (
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>{mediaModal.mimeType}</div>
-                ) : null}
-              </div>
-              {/* Botão maximizar */}
-              <button
-                type="button"
-                title={mediaModal.maximized ? 'Restaurar' : 'Maximizar'}
-                aria-label={mediaModal.maximized ? 'Restaurar modal' : 'Maximizar modal'}
-                onClick={toggleMaximizeMediaModal}
-                style={{
-                  background: 'none', border: '1px solid var(--color-border-default)',
-                  borderRadius: '6px', cursor: 'pointer', padding: '4px 7px',
-                  fontSize: '14px', color: 'var(--color-text-primary)',
-                  flexShrink: 0, lineHeight: 1,
-                }}
-              >
-                {mediaModal.maximized ? '⤡' : '⤢'}
-              </button>
-              {/* Botão fechar */}
-              <button
-                type="button"
-                title="Fechar"
-                aria-label="Fechar modal de mídia"
-                onClick={closeMediaModal}
-                style={{
-                  background: 'none', border: '1px solid var(--color-border-default)',
-                  borderRadius: '6px', cursor: 'pointer', padding: '4px 7px',
-                  fontSize: '16px', color: 'var(--color-text-primary)',
-                  flexShrink: 0, lineHeight: 1,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Corpo */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: mediaModal.maximized ? '12px' : '0',
-              minHeight: 0,
-            }}>
-              {mediaModal.failed ? (
-                <div style={{ padding: '12px', border: '1px solid var(--color-border-default)', borderRadius: '10px' }}>
-                  Não foi possível carregar a mídia com os caminhos disponíveis.
-                </div>
-              ) : null}
-
-              {!mediaModal.failed && activeMediaUrl ? (
-                <>
-                  {isProtectedTicketMediaUrl(activeMediaUrl) && !activeMediaResolvedUrl ? (
-                    <div style={{ padding: '12px', border: '1px solid var(--color-border-default)', borderRadius: '10px' }}>
-                      Carregando mídia protegida...
-                    </div>
-                  ) : null}
-                  {mediaModal.type === 'image' ? (
-                    activeMediaResolvedUrl ? (
-                      <img
-                        src={activeMediaResolvedUrl}
-                        alt={mediaModal.title || 'Imagem'}
-                        onError={handleMediaRenderError}
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: mediaModal.maximized ? 'calc(100vh - 100px)' : '65vh',
-                          borderRadius: '10px',
-                          border: '1px solid var(--color-border-default)',
-                          objectFit: 'contain',
-                        }}
-                      />
-                    ) : null
-                  ) : null}
-                  {mediaModal.type === 'audio' || mediaModal.type === 'voice' ? (
-                    activeMediaResolvedUrl ? (
-                      <audio controls src={activeMediaResolvedUrl} onError={handleMediaRenderError} style={{ width: '100%' }} />
-                    ) : null
-                  ) : null}
-                  {mediaModal.type === 'video' ? (
-                    activeMediaResolvedUrl ? (
-                      <video
-                        controls
-                        src={activeMediaResolvedUrl}
-                        onError={handleMediaRenderError}
-                        style={{
-                          width: '100%',
-                          maxHeight: mediaModal.maximized ? 'calc(100vh - 100px)' : '65vh',
-                          borderRadius: mediaModal.maximized ? '0' : '10px',
-                        }}
-                      />
-                    ) : null
-                  ) : null}
-                  {mediaModal.type !== 'image' && mediaModal.type !== 'audio' && mediaModal.type !== 'voice' && mediaModal.type !== 'video' ? (
-                    activeMediaResolvedUrl ? (
-                      <iframe
-                        title="Visualização do documento"
-                        src={activeMediaResolvedUrl}
-                        onError={handleMediaRenderError}
-                        style={{
-                          width: '100%',
-                          height: mediaModal.maximized ? 'calc(100vh - 100px)' : '65vh',
-                          minHeight: mediaModal.maximized ? undefined : '65vh',
-                          border: '1px solid var(--color-border-default)',
-                          borderRadius: '10px',
-                        }}
-                      />
-                    ) : null
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              display: 'flex', gap: '10px', justifyContent: 'flex-end',
-              padding: mediaModal.maximized ? '10px 16px' : '10px 0 0 0',
-              borderTop: '1px solid var(--color-border-default)',
-              flexShrink: 0,
-            }}>
-              {activeMediaResolvedUrl && (!activeMediaIsProtected || !!protectedMediaBlobUrls[activeMediaBlobKey] || !!protectedMediaBlobUrls[activeMediaUrl]) ? (
-                <a
-                  href={activeMediaResolvedUrl}
-                  download={mediaModal.title || true}
-                  style={{
-                    border: '1px solid var(--color-border-default)',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    textDecoration: 'none',
-                    color: 'var(--color-text-primary)',
-                    background: 'var(--color-bg-secondary)',
-                    fontSize: '13px',
-                  }}
-                >
-                  ⬇ Baixar
-                </a>
-              ) : null}
-              {activeMediaResolvedUrl && (!activeMediaIsProtected || !!protectedMediaBlobUrls[activeMediaBlobKey] || !!protectedMediaBlobUrls[activeMediaUrl]) ? (
-                <a
-                  href={activeMediaResolvedUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    border: '1px solid var(--color-border-default)',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    textDecoration: 'none',
-                    color: 'var(--color-text-primary)',
-                    background: 'var(--color-bg-secondary)',
-                    fontSize: '13px',
-                  }}
-                >
-                  ↗ Abrir em nova aba
-                </a>
-              ) : null}
-              <Button type="button" onClick={closeMediaModal} style={{ width: 'auto' }}>
-                Fechar
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </CrudPageBase>
   );
 }

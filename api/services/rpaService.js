@@ -39,78 +39,77 @@ const activeRecordings = new Map();
  */
 function listRecordings() {
   try {
-    // Tenta múltiplos caminhos possíveis (necessário para diferentes contextos de execução)
-    const possibleBasePaths = [
-      path.join(__dirname, '../../rpa'), // Novo local (root/rpa)
-      path.join(__dirname, '../../tests/rpa'), // De api/services
-      path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
-      path.resolve(__dirname, '../../tests/rpa'), // Resolvido
+    const candidateDirs = [
+      path.join(__dirname, '../../rpa/seeds'),
+      path.join(__dirname, '../../tests/rpa/seeds'),
+      path.join(process.cwd(), 'tests/rpa/seeds'),
+      path.resolve(__dirname, '../../tests/rpa/seeds'),
+      path.join(__dirname, '../../tests/rpa/flows'),
+      path.join(process.cwd(), 'tests/rpa/flows'),
+      path.resolve(__dirname, '../../tests/rpa/flows'),
     ];
-    
-    let basePath = null;
-    for (const dirPath of possibleBasePaths) {
-      try {
-        if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-          basePath = dirPath;
-          break;
-        }
-      } catch (err) {
-        // Ignora erros ao verificar caminho
-        continue;
-      }
+    const recordings = [];
+
+    function pushRecording(filePath, source) {
+      const file = path.basename(filePath);
+      const stats = fs.statSync(filePath);
+      if (!stats.isFile()) return;
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      const recording = JSON.parse(content);
+      const fileNameId = file.replace('.json', '');
+
+      recordings.push({
+        id: recording.id || fileNameId,
+        internalId: recording.id || null,
+        fileNameId,
+        name: recording.name || fileNameId,
+        description: recording.description,
+        version: recording.version,
+        steps: recording.steps || [],
+        data: recording.data || {},
+        source: recording.source || source || 'manual',
+        filePath,
+        recording,
+      });
     }
-    
-    if (!basePath) {
-      logger.warn('Diretório de gravações RPA não encontrado', { 
-        triedPaths: possibleBasePaths,
+
+    const existingDirs = candidateDirs.filter((dirPath) => {
+      try {
+        return fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory();
+      } catch (_) {
+        return false;
+      }
+    });
+
+    if (existingDirs.length === 0) {
+      logger.warn('Diretório de gravações RPA não encontrado', {
+        triedPaths: candidateDirs,
         cwd: process.cwd(),
-        __dirname: __dirname
+        __dirname: __dirname,
       });
       return [];
     }
 
-    const seedsDir = path.join(basePath, 'seeds');
-    const recordings = [];
-
-    // UNIFICADO: Tudo está em /seeds/
-    try {
-      if (fs.existsSync(seedsDir) && fs.statSync(seedsDir).isDirectory()) {
-        const files = fs.readdirSync(seedsDir);
+    for (const dirPath of existingDirs) {
+      try {
+        const files = fs.readdirSync(dirPath);
         for (const file of files) {
           if (file.endsWith('.json')) {
             try {
-              const filePath = path.join(seedsDir, file);
-              const stats = fs.statSync(filePath);
-              if (!stats.isFile()) continue;
-              
-              const content = fs.readFileSync(filePath, 'utf8');
-              const recording = JSON.parse(content);
-              
-              // Usa o nome do arquivo (sem extensão) como ID para garantir consistência com deleteRecording
-              const fileNameId = file.replace('.json', '');
-              
-              recordings.push({
-                id: fileNameId, // Sempre usa o nome do arquivo como ID
-                internalId: recording.id, // Mantém o ID interno do JSON se existir
-                name: recording.name || fileNameId,
-                description: recording.description,
-                version: recording.version,
-                steps: recording.steps || [],
-                data: recording.data || {},
-                source: recording.source || 'manual', // Flag manual/automatic
-              });
+              const source = dirPath.endsWith('/flows') ? 'flow' : 'seed';
+              pushRecording(path.join(dirPath, file), source);
             } catch (error) {
-              // Ignora arquivos inválidos
-              logger.warn(`Erro ao ler gravação ${file}`, { error: safeErrorMessage(error), path: seedsDir });
+              logger.warn(`Erro ao ler gravação ${file}`, { error: safeErrorMessage(error), path: dirPath });
             }
           }
         }
+      } catch (error) {
+        logger.warn('Erro ao ler diretório RPA', { error: safeErrorMessage(error), path: dirPath });
       }
-    } catch (error) {
-      logger.warn('Erro ao ler diretório seeds', { error: safeErrorMessage(error), path: seedsDir });
     }
 
-    logger.debug('Gravações RPA listadas', { count: recordings.length, basePath });
+    logger.debug('Gravações RPA listadas', { count: recordings.length, directories: existingDirs });
     return recordings;
   } catch (error) {
     logger.error('Erro ao listar gravações RPA', { 
@@ -260,34 +259,24 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         // Se não encontrar pelo ID, tenta encontrar pelo nome do arquivo
         // Lista todas as gravações e procura pelo ID
         const recordings = listRecordings();
-        const foundRecording = recordings.find(r => r.id === recordingId);
+        const foundRecording = recordings.find((r) => r.id === recordingId || r.fileNameId === recordingId);
         if (foundRecording) {
-          // Tenta carregar pelo nome do arquivo (que pode ser diferente do ID)
-          // O nome do arquivo geralmente é baseado no nome da gravação ou ID
-          const seedsDir = path.join(__dirname, '../../tests/rpa/seeds');
-          const files = fs.readdirSync(seedsDir);
-          let recordingFile = null;
-          
-          for (const file of files) {
-            if (file.endsWith('.json')) {
-              try {
-                const filePath = path.join(seedsDir, file);
-                const content = fs.readFileSync(filePath, 'utf8');
-                const rec = JSON.parse(content);
-                if (rec.id === recordingId) {
-                  recordingFile = file.replace('.json', '');
-                  break;
-                }
-              } catch (e) {
-                // Continua procurando
-              }
+          if (foundRecording.fileNameId) {
+            try {
+              recording = ActionRecorder.load(foundRecording.fileNameId);
+            } catch (_) {
+              recording = foundRecording.recording || null;
             }
+          } else if (foundRecording.recording) {
+            recording = foundRecording.recording;
           }
-          
-          if (recordingFile) {
-            recording = ActionRecorder.load(recordingFile);
-          } else {
+
+          if (!recording) {
             throw new Error(`Gravação não encontrada: ${recordingId}`);
+          } else {
+            addLog('info', `📦 Gravação resolvida via catálogo: ${foundRecording.filePath || foundRecording.fileNameId}`, {
+              step: 'init',
+            });
           }
         } else {
           throw error;
@@ -1550,4 +1539,3 @@ module.exports = {
   stopManualRecording,
   getRecordingStatus,
 };
-

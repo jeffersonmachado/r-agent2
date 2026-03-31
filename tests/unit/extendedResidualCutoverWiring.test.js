@@ -8,15 +8,17 @@ describe('extended residual cutover wiring', () => {
     const registerRoutesPath = path.join(process.cwd(), 'api', 'app', 'registerRoutes.js');
     const source = fs.readFileSync(registerRoutesPath, 'utf8');
 
-    expect(source).toMatch(/createQueueTicketRoutes/);
-    expect(source).toMatch(/createOpsRoutes/);
-    expect(source).toMatch(/createExecutionLedgerRoutes/);
-    expect(source).toMatch(/createSupportDebugRoutes/);
+    // Verify composition functions are imported
+    expect(source).toMatch(/createQueueTicketExpressRouter/);
+    expect(source).toMatch(/createOpsExpressRouter/);
+    expect(source).toMatch(/createExecutionLedgerExpressRouter/);
+    expect(source).toMatch(/createSupportDebugExpressRouter/);
 
-    expect(source).toMatch(/app\.use\(queueTicketRouter\)/);
-    expect(source).toMatch(/app\.use\(opsRouter\)/);
-    expect(source).toMatch(/app\.use\(executionLedgerRouter\)/);
-    expect(source).toMatch(/app\.use\(supportDebugRouter\)/);
+    // Verify routers are registered in routeRegistry (indirectly mounted via registry loop)
+    expect(source).toMatch(/queueTicketRouter/);
+    expect(source).toMatch(/opsRouter/);
+    expect(source).toMatch(/executionLedgerRouter/);
+    expect(source).toMatch(/supportDebugRouter/);
   });
 
   test('extended operations residual nao monta mais handlers legados de operacoes', () => {

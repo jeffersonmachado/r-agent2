@@ -12,6 +12,27 @@ function resolveTenantId(req, body) {
 }
 
 async function handleBillingRoutes({ req, res, method, pathname }) {
+  if (method === 'GET' && pathname === '/billing/transactions') {
+    const auth = requireAuth(req);
+    if (!auth.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return true;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return true;
+
+    const urlObj = new URL(req.url || '/', 'http://localhost');
+    const out = await billingService.listTransactions({
+      tenantId,
+      vertical: urlObj.searchParams.get('vertical') || null,
+      status: urlObj.searchParams.get('status') || null,
+      limit: urlObj.searchParams.get('limit'),
+      offset: urlObj.searchParams.get('offset'),
+    });
+    sendJson(res, 200, out);
+    return true;
+  }
+
   if (method === 'POST' && pathname === '/billing/create-charge') {
     const auth = requireAuth(req);
     if (!auth.valid) {

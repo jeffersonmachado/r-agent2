@@ -148,6 +148,15 @@ async function setDueDate({ tenantId, membershipId, dueDate, renewalAt = null, a
 async function processMembershipRenewal({ tenantId, membershipId, renewalAt, actor = 'system' }) {
   const fields = { renewal_at: new Date(renewalAt), grace_until: null };
   await updateMembershipDetails({ tenantId, membershipId, fields });
+  const current = await getMembershipDetail({ tenantId, membershipId });
+  if (!current) {
+    const err = new Error('membership_not_found');
+    err.code = 'membership_not_found';
+    throw err;
+  }
+  if (String(current.effectiveBillingStatus || current.billing_status || '').toLowerCase() === 'active') {
+    return current;
+  }
   return reactivateMembership({ tenantId, membershipId, reason: 'renewal', actor, renewalAt });
 }
 

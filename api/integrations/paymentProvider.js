@@ -5,6 +5,11 @@ const config = require('../utils/config');
 
 const PROVIDER_ASAAS = 'asaas';
 const PROVIDER_MERCADO_PAGO = 'mercado_pago';
+const PROVIDER_SANDBOX = 'sandbox';
+
+function sandboxEnabled() {
+  return ['1', 'true', 'yes', 'on'].includes(String(process.env.BILLING_SANDBOX || '').trim().toLowerCase());
+}
 
 function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === '';
@@ -23,6 +28,8 @@ function requireConfig(path) {
 function normalizeProvider(value) {
   const configured = config.getFromFile('billing.provider');
   const raw = String(value || configured || '').trim().toLowerCase();
+  if (!raw && sandboxEnabled()) return PROVIDER_SANDBOX;
+  if (raw === PROVIDER_SANDBOX || raw === 'mock') return PROVIDER_SANDBOX;
   if (!raw) {
     const err = new Error('required_config_missing:billing.provider');
     err.code = 'required_config_missing';
@@ -36,6 +43,14 @@ function normalizeProvider(value) {
 }
 
 function providerConfig(provider) {
+  if (provider === PROVIDER_SANDBOX) {
+    return {
+      provider,
+      baseUrl: 'sandbox://billing',
+      apiKey: 'sandbox',
+      webhookSecret: process.env.BILLING_SANDBOX_WEBHOOK_SECRET || 'sandbox-webhook-secret',
+    };
+  }
   if (provider === PROVIDER_MERCADO_PAGO) {
     return {
       provider,
@@ -118,6 +133,12 @@ function mapMercadoPagoStatus(status) {
 
 async function createCustomer({ provider, tenantId, customer, idempotencyKey }) {
   const cfg = providerConfig(provider);
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    return {
+      id: String(customer?.externalId || customer?.document || customer?.email || customer?.phone || `${tenantId}-sandbox-customer`),
+      raw: { synthetic: true, sandbox: true, idempotencyKey: idempotencyKey || null },
+    };
+  }
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     return {
       id: String(customer?.externalId || customer?.document || customer?.email || customer?.phone || `${tenantId}-anonymous`),
@@ -147,6 +168,23 @@ async function createCustomer({ provider, tenantId, customer, idempotencyKey }) 
 
 async function createSingleCharge({ provider, customerId, amount, dueDate, description, metadata, idempotencyKey }) {
   const cfg = providerConfig(provider);
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    const syntheticId = `sandbox-charge-${Date.now()}`;
+    return {
+      transactionId: syntheticId,
+      status: 'pending',
+      paymentUrl: `https://sandbox.local/pay/${encodeURIComponent(syntheticId)}`,
+      raw: {
+        id: syntheticId,
+        customerId,
+        amount: Number(amount),
+        dueDate: dueDate || null,
+        description: String(description || ''),
+        metadata: metadata || {},
+        sandbox: true,
+      },
+    };
+  }
 
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     const payload = {
@@ -203,6 +241,24 @@ async function createSingleCharge({ provider, customerId, amount, dueDate, descr
 
 async function createRecurringSubscription({ provider, customerId, amount, nextDueDate, cycle = 'MONTHLY', description, metadata, idempotencyKey }) {
   const cfg = providerConfig(provider);
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    const syntheticId = `sandbox-subscription-${Date.now()}`;
+    return {
+      subscriptionId: syntheticId,
+      status: 'pending',
+      raw: {
+        id: syntheticId,
+        customerId,
+        amount: Number(amount),
+        nextDueDate: nextDueDate || null,
+        cycle,
+        description: String(description || ''),
+        metadata: metadata || {},
+        sandbox: true,
+        idempotencyKey: idempotencyKey || null,
+      },
+    };
+  }
 
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     const payload = {
@@ -267,6 +323,14 @@ async function fetchTransactionStatus({ provider, externalTransactionId }) {
     throw err;
   }
 
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    return {
+      status: 'confirmed',
+      providerStatus: 'CONFIRMED',
+      raw: { sandbox: true, id: extId },
+    };
+  }
+
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     const data = await providerRequest({
       cfg,
@@ -303,6 +367,14 @@ async function fetchSubscriptionStatus({ provider, externalSubscriptionId }) {
     throw err;
   }
 
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    return {
+      status: 'confirmed',
+      providerStatus: 'CONFIRMED',
+      raw: { sandbox: true, id: extId },
+    };
+  }
+
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     const data = await providerRequest({
       cfg,
@@ -334,6 +406,17 @@ function normalizeWebhook({ provider, body = {}, headers = {} }) {
   const cfg = providerConfig(provider);
   const rawEventId = body?.eventId || body?.id || headers['x-request-id'] || headers['x-event-id'] || null;
 
+  if (cfg.provider === PROVIDER_SANDBOX) {
+    return {
+      provider: cfg.provider,
+      eventId: rawEventId ? String(rawEventId) : null,
+      externalTransactionId: body?.payment?.id ? String(body.payment.id) : String(body?.id || body?.transactionId || ''),
+      externalSubscriptionId: body?.subscription?.id ? String(body.subscription.id) : null,
+      status: String(body?.payment?.status || body?.status || 'confirmed').trim().toLowerCase(),
+      raw: body,
+    };
+  }
+
   if (cfg.provider === PROVIDER_MERCADO_PAGO) {
     const status = body?.data?.status || body?.status || body?.resource?.status || null;
     return {
@@ -362,6 +445,7 @@ function normalizeWebhook({ provider, body = {}, headers = {} }) {
 function verifyWebhookSignature({ provider, headers = {} }) {
   const cfg = providerConfig(provider);
   if (!cfg.webhookSecret) return true;
+  if (cfg.provider === PROVIDER_SANDBOX) return true;
 
   const token = String(headers['x-webhook-token'] || headers['x-signature'] || '').trim();
   if (!token) return false;
@@ -371,6 +455,7 @@ function verifyWebhookSignature({ provider, headers = {} }) {
 module.exports = {
   PROVIDER_ASAAS,
   PROVIDER_MERCADO_PAGO,
+  PROVIDER_SANDBOX,
   normalizeProvider,
   createCustomer,
   createSingleCharge,

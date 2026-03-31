@@ -128,6 +128,17 @@ const config = {
   credentials: { ...defaultConfig.credentials, ...(configFromFile.credentials || {}) },
 };
 
+// Runtime env vars must win over file-based defaults for CI/stack smoke usage.
+if (process.env.TEST_BASE_URL) {
+  config.urls.base = process.env.TEST_BASE_URL;
+}
+if (process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL) {
+  config.urls.frontend = process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL;
+}
+if (process.env.TEST_API_URL) {
+  config.urls.api = process.env.TEST_API_URL;
+}
+
 /**
  * Obtém configuração para um modo específico.
  * 

@@ -148,6 +148,16 @@ function executeQA() {
     }
   ];
 
+  if (process.env.BUSINESS_QA_VALIDATE === '1') {
+    qaSteps.push({
+      name: 'Business QA PR',
+      command: 'npm run test:business-qa:pr',
+      description: 'Executando Business QA nivel PR...'
+    });
+  } else {
+    logWarning('Business QA PR não habilitado em system:validate (defina BUSINESS_QA_VALIDATE=1 para incluir).');
+  }
+
   let allPassed = true;
 
   for (const step of qaSteps) {

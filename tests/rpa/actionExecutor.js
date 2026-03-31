@@ -10,6 +10,7 @@ const { ErrorDetector } = require('./errorDetection');
 const { ErrorRecovery } = require('./errorRecovery');
 const { DataPopulator } = require('./dataPopulation');
 const path = require('path');
+const fs = require('fs');
 const { BugDetectionEngine } = require('./bugResolution/bugDetectionEngine');
 const { PageStateInspector } = require('./bugResolution/pageStateInspector');
 const { RecoveryPlanner } = require('./bugResolution/recoveryPlanner');
@@ -136,6 +137,229 @@ class ActionExecutor {
     } catch (e) {
       return null;
     }
+  }
+
+  _isMaintenanceToggleSelector(selector) {
+    return typeof selector === 'string' && selector.includes('[data-testid="queue-manager-toggle"]');
+  }
+
+  _classifyMaintenanceState(diag) {
+    const url = String(diag?.url || '');
+    const body = String(diag?.bodyTextSummary || '').toLowerCase();
+    const hasMaintenanceUrl = url.includes('/maintenance');
+    const hasLoginUrl = url.includes('/login');
+    const hasMaintenancePage = !!diag?.selectors?.ticketMaintenancePage?.exists;
+    const hasLoadingMarker = !!diag?.selectors?.loading?.exists;
+    const hasAuthRequiredMarker = !!diag?.selectors?.authRequired?.exists;
+    const hasPermissionHint = /sem permiss|acesso negado|forbidden|unauthorized|403/.test(body);
+    const hasAuthToken = !!diag?.authState?.hasAuthToken;
+
+    if (hasLoginUrl || (!hasAuthToken && !hasMaintenancePage)) {
+      return {
+        ok: false,
+        classification: 'auth_redirect',
+        checks: {
+          hasMaintenanceUrl,
+          hasLoginUrl,
+          hasMaintenancePage,
+        },
+      };
+    }
+
+    if (hasAuthRequiredMarker || hasPermissionHint) {
+      return {
+        ok: false,
+        classification: 'permission_block',
+        checks: {
+          hasMaintenanceUrl,
+          hasLoginUrl,
+          hasMaintenancePage,
+        },
+      };
+    }
+
+    if (!hasMaintenanceUrl || !hasMaintenancePage) {
+      if (hasLoadingMarker) {
+        return {
+          ok: false,
+          classification: 'loading_stuck',
+          checks: {
+            hasMaintenanceUrl,
+            hasLoginUrl,
+            hasMaintenancePage,
+          },
+        };
+      }
+      return {
+        ok: false,
+        classification: 'maintenance_not_rendered',
+        checks: {
+          hasMaintenanceUrl,
+          hasLoginUrl,
+          hasMaintenancePage,
+        },
+      };
+    }
+
+    return {
+      ok: true,
+      classification: null,
+      checks: {
+        hasMaintenanceUrl,
+        hasLoginUrl,
+        hasMaintenancePage,
+      },
+    };
+  }
+
+  async _captureMaintenanceDiagnostics({ selector, phase, reason } = {}) {
+    if (!this.page) {
+      return {
+        phase: phase || 'unknown',
+        reason: reason || null,
+        error: 'page_not_initialized',
+      };
+    }
+
+    const screenshotPath = await this.captureScreenshot(`maintenance-${phase || 'diagnostic'}-${Date.now()}`);
+    const url = await this._safeGetUrl();
+    const title = await this._safeGetTitle();
+
+    const browserSnapshot = await this.page.evaluate((targetSelector) => {
+      const normalizeText = (value, maxLen = 1600) =>
+        String(value || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, maxLen);
+
+      const selectorInfo = (sel) => {
+        const element = document.querySelector(sel);
+        if (!element) {
+          return { selector: sel, exists: false, visible: false, text: null };
+        }
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const visible =
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          style.opacity !== '0';
+        return {
+          selector: sel,
+          exists: true,
+          visible,
+          text: normalizeText(element.textContent || '', 250),
+        };
+      };
+
+      const mainContainer =
+        document.querySelector('[data-testid="ticket-maintenance-page"]') ||
+        document.querySelector('.maintenance-page') ||
+        document.querySelector('main') ||
+        document.querySelector('#root') ||
+        document.body;
+
+      const localKeys = Object.keys(window.localStorage || {});
+      const sessionKeys = Object.keys(window.sessionStorage || {});
+      const presenceFor = (keys, names) => {
+        const lowerKeys = keys.map((key) => String(key).toLowerCase());
+        const result = {};
+        names.forEach((name) => {
+          const lowerName = String(name).toLowerCase();
+          result[name] = lowerKeys.some((key) => key === lowerName || key.includes(lowerName));
+        });
+        return result;
+      };
+
+      const probeNames = [
+        'auth_token',
+        'token',
+        'auth',
+        'auth_agent',
+        'tenant',
+        'tenantid',
+        'selectedtenant',
+        'selectedtenantid',
+        'currenttenantid',
+      ];
+
+      const localPresence = presenceFor(localKeys, probeNames);
+      const sessionPresence = presenceFor(sessionKeys, probeNames);
+
+      const hasAuthToken =
+        !!window.localStorage.getItem('auth_token') ||
+        !!window.localStorage.getItem('token') ||
+        !!window.sessionStorage.getItem('auth_token') ||
+        !!window.sessionStorage.getItem('token');
+
+      const hasAuthAgent =
+        !!window.localStorage.getItem('auth_agent') ||
+        !!window.sessionStorage.getItem('auth_agent');
+
+      const tenantCandidateKey = localKeys.find((key) => /tenant/i.test(String(key))) ||
+        sessionKeys.find((key) => /tenant/i.test(String(key))) ||
+        null;
+
+      return {
+        pageTitle: document.title,
+        htmlPartial: String(mainContainer?.innerHTML || '').slice(0, 6000),
+        bodyTextSummary: normalizeText(document.body?.innerText || '', 1600),
+        selectors: {
+          target: selectorInfo(targetSelector || '[data-testid="queue-manager-toggle"]'),
+          queueManagerToggle: selectorInfo('[data-testid="queue-manager-toggle"]'),
+          ticketMaintenancePage: selectorInfo('[data-testid="ticket-maintenance-page"]'),
+          appShell: selectorInfo('[data-testid="app-shell"]'),
+          loading: selectorInfo('[data-testid="ticket-maintenance-loading"]'),
+          authRequired: selectorInfo('[data-testid="ticket-maintenance-auth-required"]'),
+          ready: selectorInfo('[data-testid="ticket-maintenance-ready"]'),
+          error: selectorInfo('[data-testid="ticket-maintenance-error"]'),
+        },
+        authState: {
+          hasAuthToken,
+          hasAuthAgent,
+          loginFormVisible: !!(
+            document.querySelector('input[type="password"]') &&
+            document.querySelector('input[name="username"], input[name="email"], input[type="email"], input[type="text"]')
+          ),
+          tenantContextKey: tenantCandidateKey,
+        },
+        storage: {
+          localStorageKeys: localKeys,
+          sessionStorageKeys: sessionKeys,
+          localPresence,
+          sessionPresence,
+        },
+      };
+    }, selector || '[data-testid="queue-manager-toggle"]');
+
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      phase: phase || 'unknown',
+      reason: reason || null,
+      url,
+      title,
+      screenshotPath,
+      pageTitleFromDom: browserSnapshot?.pageTitle || null,
+      htmlPartial: browserSnapshot?.htmlPartial || null,
+      bodyTextSummary: browserSnapshot?.bodyTextSummary || null,
+      selectors: browserSnapshot?.selectors || null,
+      authState: browserSnapshot?.authState || null,
+      storage: browserSnapshot?.storage || null,
+    };
+
+    diagnostics.gate = this._classifyMaintenanceState(diagnostics);
+
+    const diagnosticsDir = path.join(__dirname, 'reports', 'diagnostics');
+    fs.mkdirSync(diagnosticsDir, { recursive: true });
+    const artifactPath = path.join(
+      diagnosticsDir,
+      `maintenance-${phase || 'diagnostic'}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}.json`
+    );
+    fs.writeFileSync(artifactPath, JSON.stringify(diagnostics, null, 2), 'utf8');
+    diagnostics.artifactPath = artifactPath;
+
+    return diagnostics;
   }
 
   async diagnoseSelector(selector) {
@@ -786,12 +1010,13 @@ class ActionExecutor {
       const titleAfter = await this._safeGetTitle();
 
       // Diagnóstico adicional em caso de falha (principalmente seletores)
-      let diagnostics = null;
+      let diagnostics = result.diagnostics || null;
       if (!result.success && this.options.detailedLogs) {
         try {
+          let generatedDiagnostics = null;
           if (actionType === 'click' || actionType === 'fill' || actionType === 'select') {
             const selectors = this._splitSelectors(this.replaceVariables(normalizedAction.selector, data));
-            diagnostics = {
+            generatedDiagnostics = {
               kind: 'selector',
               selectorsTried: selectors,
               selectorDiagnostics: await this.collectSelectorDiagnostics(selectors.slice(0, 10)),
@@ -799,7 +1024,7 @@ class ActionExecutor {
           } else if (actionType === 'wait') {
             const condition = normalizedAction.condition || normalizedAction.selector;
             const selectors = this._splitSelectors(this.replaceVariables(condition, data));
-            diagnostics = {
+            generatedDiagnostics = {
               kind: 'wait',
               state: normalizedAction.state || 'visible',
               selectorsTried: selectors,
@@ -807,19 +1032,28 @@ class ActionExecutor {
             };
           } else if (actionType === 'assert') {
             if (normalizedAction.page?.url) {
-              diagnostics = {
+              generatedDiagnostics = {
                 kind: 'assert_url',
                 expected: normalizedAction.page.url,
                 actualUrl: urlAfter,
               };
             } else if (normalizedAction.selector) {
               const selectors = this._splitSelectors(this.replaceVariables(normalizedAction.selector, data));
-              diagnostics = {
+              generatedDiagnostics = {
                 kind: 'assert_selector',
                 selectorsTried: selectors,
                 selectorDiagnostics: await this.collectSelectorDiagnostics(selectors.slice(0, 10)),
               };
             }
+          }
+
+          if (generatedDiagnostics && diagnostics) {
+            diagnostics = {
+              ...generatedDiagnostics,
+              stepSpecific: diagnostics,
+            };
+          } else if (generatedDiagnostics) {
+            diagnostics = generatedDiagnostics;
           }
         } catch (diagError) {
           diagnostics = { kind: 'diagnostics_error', error: diagError.message };
@@ -1073,6 +1307,53 @@ class ActionExecutor {
   async executeClick(action, data) {
     try {
       const selector = this.replaceVariables(action.selector, data);
+      const isMaintenanceQueueToggle = this._isMaintenanceToggleSelector(selector);
+
+      if (isMaintenanceQueueToggle) {
+        const preClickDiagnostics = await this._captureMaintenanceDiagnostics({
+          selector,
+          phase: 'preclick',
+          reason: 'before_queue_manager_toggle_click',
+        });
+
+        if (!preClickDiagnostics.gate?.ok) {
+          const cause = preClickDiagnostics.gate?.classification || 'maintenance_not_rendered';
+          return {
+            success: false,
+            error: `maintenance_precheck_failed:${cause}. URL=${preClickDiagnostics.url || 'unknown'}`,
+            code: `RPA_MAINTENANCE_${String(cause).toUpperCase()}`,
+            diagnostics: {
+              kind: 'maintenance_precheck',
+              classification: cause,
+              maintenance: preClickDiagnostics,
+            },
+          };
+        }
+
+        try {
+          await this.page.waitForSelector('[data-testid="ticket-maintenance-ready"]', {
+            state: 'attached',
+            timeout: action.timeout || this.options.timeout,
+          });
+        } catch (readyError) {
+          const readyDiagnostics = await this._captureMaintenanceDiagnostics({
+            selector,
+            phase: 'ready-timeout',
+            reason: readyError.message,
+          });
+          const cause = readyDiagnostics.gate?.classification || 'loading_stuck';
+          return {
+            success: false,
+            error: `maintenance_ready_wait_failed:${cause}. ${readyError.message}`,
+            code: `RPA_MAINTENANCE_${String(cause).toUpperCase()}`,
+            diagnostics: {
+              kind: 'maintenance_ready_wait',
+              classification: cause,
+              maintenance: readyDiagnostics,
+            },
+          };
+        }
+      }
       
       // Tenta múltiplos seletores se for uma lista separada por vírgula
       const selectors = selector.split(',').map(s => s.trim());
@@ -1126,17 +1407,87 @@ class ActionExecutor {
             await this.page.click(foundSelector, { force: action.force || false });
           }
         } catch (finalError) {
+          if (isMaintenanceQueueToggle) {
+            const failDiagnostics = await this._captureMaintenanceDiagnostics({
+              selector,
+              phase: 'toggle-not-found',
+              reason: finalError.message,
+            });
+            let cause = failDiagnostics.gate?.classification || 'maintenance_not_rendered';
+            if (failDiagnostics.selectors?.queueManagerToggle?.exists && !failDiagnostics.selectors?.queueManagerToggle?.visible) {
+              cause = 'hidden_element';
+            } else if (failDiagnostics.selectors?.loading?.exists) {
+              cause = 'loading_stuck';
+            }
+            return {
+              success: false,
+              error: `maintenance_toggle_click_failed:${cause}. Nenhum seletor encontrado para clique: ${selectors.join(', ')}. Último erro: ${finalError.message}`,
+              code: `RPA_MAINTENANCE_${String(cause).toUpperCase()}`,
+              diagnostics: {
+                kind: 'maintenance_toggle_not_found',
+                classification: cause,
+                selectorsTried: selectors,
+                maintenance: failDiagnostics,
+              },
+            };
+          }
+
           throw new Error(`Nenhum seletor encontrado para clique: ${selectors.join(', ')}. Último erro: ${finalError.message}`);
         }
       } else {
         // Aguarda um pouco para garantir que o elemento está estável
         await this.page.waitForTimeout(300);
 
+        if (isMaintenanceQueueToggle && foundSelector === '[data-testid="queue-manager-toggle"]') {
+          const toggleLocator = this.page.locator(foundSelector).first();
+          let isVisible = await toggleLocator.isVisible().catch(() => false);
+          if (!isVisible) {
+            await toggleLocator.scrollIntoViewIfNeeded().catch(() => null);
+            await this.page.waitForTimeout(250);
+            isVisible = await toggleLocator.isVisible().catch(() => false);
+            if (!isVisible) {
+              const hiddenDiagnostics = await this._captureMaintenanceDiagnostics({
+                selector,
+                phase: 'hidden-before-click',
+                reason: 'toggle_exists_but_hidden',
+              });
+              return {
+                success: false,
+                error: 'maintenance_toggle_hidden:hidden_element. O seletor existe, mas não está visível para clique.',
+                code: 'RPA_MAINTENANCE_HIDDEN_ELEMENT',
+                diagnostics: {
+                  kind: 'maintenance_toggle_hidden',
+                  classification: 'hidden_element',
+                  maintenance: hiddenDiagnostics,
+                },
+              };
+            }
+          }
+        }
+
         // Tenta clicar
         try {
           await this.page.click(foundSelector, { force: action.force || false });
         } catch (clickError) {
           // Se clique normal falhar, tenta com force
+          if (isMaintenanceQueueToggle) {
+            const clickDiagnostics = await this._captureMaintenanceDiagnostics({
+              selector,
+              phase: 'click-failed',
+              reason: clickError.message,
+            });
+            return {
+              success: false,
+              error: `maintenance_toggle_click_failed:render_blocked. ${clickError.message}`,
+              code: 'RPA_MAINTENANCE_RENDER_BLOCKED',
+              diagnostics: {
+                kind: 'maintenance_click_failure',
+                classification: 'render_blocked',
+                maintenance: clickDiagnostics,
+              },
+            };
+          }
+
           await this.page.click(foundSelector, { force: true });
         }
       }

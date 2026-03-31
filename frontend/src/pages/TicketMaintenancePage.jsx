@@ -28,19 +28,6 @@ export function TicketMaintenancePage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  if (authLoading) {
-    return (
-      <CrudPageBase title="🔧 Manutenção de Tickets">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <p>Carregando...</p>
-        </div>
-      </CrudPageBase>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null; // Será redirecionado pelo useEffect
-  }
   const [metrics, setMetrics] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [queues, setQueues] = useState([]);
@@ -61,6 +48,7 @@ export function TicketMaintenancePage() {
   const [newQueueName, setNewQueueName] = useState('');
   const [queueToDelete, setQueueToDelete] = useState(null);
   const [queueInfo, setQueueInfo] = useState({});
+  const [maintenanceError, setMaintenanceError] = useState(null);
 
   // Usa useRef para manter referências estáveis
   const showToastRef = React.useRef(showToast);
@@ -93,9 +81,11 @@ export function TicketMaintenancePage() {
         fullData: data
       });
       setMetrics(data);
+      setMaintenanceError(null);
     } catch (error) {
       logger.error('Erro ao carregar métricas', error);
       showToastRef.current('Erro ao carregar métricas', 'error');
+      setMaintenanceError('Erro ao carregar métricas da manutenção');
       // Define métricas vazias em caso de erro para evitar valores undefined
       setMetrics({
         totalTickets: 0,
@@ -117,9 +107,11 @@ export function TicketMaintenancePage() {
     try {
       const queuesList = await listQueues();
       setQueues(queuesList);
+      setMaintenanceError(null);
     } catch (error) {
       logger.error('Erro ao carregar filas', error);
       showToastRef.current('Erro ao carregar filas', 'error');
+      setMaintenanceError('Erro ao carregar filas da manutenção');
     }
   }, []); // Sem dependências - usa ref
 
@@ -201,9 +193,11 @@ export function TicketMaintenancePage() {
 
       setTickets(finalTickets);
       setTotalTickets(finalTotal);
+      setMaintenanceError(null);
     } catch (error) {
       logger.error('Erro ao carregar tickets', error);
       showToastRef.current('Erro ao carregar tickets', 'error');
+      setMaintenanceError('Erro ao carregar tickets da manutenção');
     } finally {
       setLoading(false);
     }
@@ -378,6 +372,7 @@ export function TicketMaintenancePage() {
   const totalPages = Math.ceil(totalTickets / pagination.limit);
   const startIndex = (pagination.page - 1) * pagination.limit + 1;
   const endIndex = Math.min(pagination.page * pagination.limit, totalTickets);
+  const maintenanceReady = !authLoading && isAuthenticated && !!metrics && !maintenanceError;
 
   return (
     <CrudPageBase
@@ -398,12 +393,29 @@ export function TicketMaintenancePage() {
         </div>
       )}
     >
-      <div className="maintenance-page">
+      <div className="maintenance-page" data-testid="ticket-maintenance-page">
+      {authLoading && (
+        <div data-testid="ticket-maintenance-loading" style={{ display: 'none' }}>loading</div>
+      )}
+      {!authLoading && !isAuthenticated && (
+        <div data-testid="ticket-maintenance-auth-required" style={{ display: 'none' }}>auth_required</div>
+      )}
+      {!authLoading && isAuthenticated && !maintenanceReady && !maintenanceError && (
+        <div data-testid="ticket-maintenance-loading" style={{ display: 'none' }}>loading</div>
+      )}
+      {maintenanceError && (
+        <div data-testid="ticket-maintenance-error" style={{ marginBottom: '12px', color: '#b42318' }}>
+          {maintenanceError}
+        </div>
+      )}
+      {maintenanceReady && (
+        <div data-testid="ticket-maintenance-ready" style={{ display: 'none' }}>ready</div>
+      )}
 
       {/* Container principal com layout flexível */}
       <div className="maintenance-content-wrapper">
         {/* Painel de Métricas */}
-        {metrics && (
+        {maintenanceReady && metrics && (
           <div className="maintenance-metrics">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h2>📊 Estatísticas do Sistema</h2>

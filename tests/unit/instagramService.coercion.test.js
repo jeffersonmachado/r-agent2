@@ -25,6 +25,13 @@ describe('instagramService coercion hardening', () => {
         if (key === 'instagram.pageId') return 'page-1';
         return null;
       }),
+      getFromFile: jest.fn((key) => {
+        if (key === 'whatsapp.apiUrl') return 'https://api.whatsapp.com';
+        if (key === 'whatsapp.phoneNumberId') return '1234567890';
+        if (key === 'whatsapp.accessToken') return 'token-whatsapp';
+        if (key === 'whatsapp.verifyToken') return 'verify-token';
+        return null;
+      }),
     }));
   }
 

@@ -1,4 +1,5 @@
 const { normalizeRpaTestUrls } = require('../rpa/utils/urlNormalizer');
+const config = require('../../api/utils/config');
 
 describe('normalizeRpaTestUrls', () => {
   test('preserva placeholders Handlebars em navigate.url', () => {
@@ -24,6 +25,14 @@ describe('normalizeRpaTestUrls', () => {
 
     normalizeRpaTestUrls(testCase);
 
-    expect(testCase.steps[0].url).toBe('http://localhost:5173/editor');
+    const expectedBaseUrl = (
+      process.env.TEST_FRONTEND_URL
+      || process.env.FRONTEND_URL
+      || config.get('tests.rpa.frontendUrl')
+      || config.get('frontend.url')
+      || 'http://localhost:5173'
+    ).replace(/\/$/, '');
+
+    expect(testCase.steps[0].url).toBe(`${expectedBaseUrl}/editor`);
   });
 });

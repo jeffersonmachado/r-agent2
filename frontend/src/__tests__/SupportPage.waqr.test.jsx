@@ -334,7 +334,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     expect(ticketsApi.uploadSupportMedia).not.toHaveBeenCalled();
 
     fireEvent.change(composer, { target: { value: 'Segue imagem' } });
-    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13, ctrlKey: true });
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
 
     await waitFor(() => {
       expect(ticketsApi.sendTicketMessage).toHaveBeenCalled();
@@ -352,7 +352,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
 
     const composer = await screen.findByLabelText(/(Campo para digitar mensagem|Enviar mensagem)/i);
     fireEvent.change(composer, { target: { value: 'Resposta teste' } });
-    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13, ctrlKey: true });
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
 
     await waitFor(() => {
       expect(ticketsApi.sendTicketMessage).toHaveBeenCalled();

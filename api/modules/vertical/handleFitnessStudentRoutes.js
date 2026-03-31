@@ -8,6 +8,7 @@
 
 const fitnessMembershipService = require('../../services/vertical/fitnessMembershipService');
 const fitnessAttendanceService = require('../../services/vertical/fitnessAttendanceService');
+const accessControlService = require('../access-control/accessControlService');
 const { fitnessChurnRisk, fitnessLowFrequencySuggestion, fitnessBlockFollowUpSuggestion } = require('../../services/vertical/verticalRecommendationService');
 const { getSubjectTimeline } = require('../../services/vertical/customerJourneyEngine');
 const { AccessSubject, VerticalEngagementSignal } = require('../../db/models');
@@ -46,7 +47,74 @@ function normalizeJourneyStatus(statusValue) {
 
 async function handleFitnessStudentRoutes(ctx) {
   const { req, res, method, pathname, deps, ensureAuth, tenantId } = ctx;
-  const { sendJson, requireAuth, requireTenant } = deps;
+  const { sendJson, requireAuth, requireTenant, badRequest, hasJsonContentType, parseJsonBody } = deps;
+
+  // ── POST /api/fitness/student ───────────────────────────────────────────
+  if (method === 'POST' && pathname === '/api/fitness/student') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    if (!hasJsonContentType(req)) { badRequest(res, 'Content-Type deve ser application/json'); return true; }
+    const body = await parseJsonBody(req);
+    if (!body?.subjectId && !body?.customerId) { badRequest(res, 'subjectId or customerId required'); return true; }
+
+    const subject = await accessControlService.ensureSubject({
+      tenantId: tenantId(req),
+      subjectId: body.subjectId || null,
+      customerId: body.customerId || null,
+      membershipId: body.membershipId || null,
+      verticalProfile: 'fitness',
+      metadata: {
+        name: body.name || null,
+        phone: body.phone || null,
+        email: body.email || null,
+        document: body.document || null,
+        code: body.code || null,
+        ...(body.metadata || {}),
+      },
+    });
+
+    let membership = null;
+    if (body.membershipId) {
+      membership = await accessControlService.upsertMembership({
+        tenantId: tenantId(req),
+        subjectId: subject.id,
+        membershipId: body.membershipId,
+        vertical: 'fitness',
+        customerId: body.customerId || null,
+        planName: body.planName || null,
+        billingStatus: body.billingStatus || 'active',
+        status: body.status || 'active',
+        unitScope: body.unitScope || [],
+        metadata: {
+          monthlyAmount: body.monthlyAmount != null ? Number(body.monthlyAmount) : null,
+          phone: body.phone || null,
+          ...(body.membershipMetadata || {}),
+        },
+      });
+
+      if (body.startAt || body.endAt || body.dueDate || body.renewalAt || body.planType) {
+        membership = await fitnessMembershipService.updateMembershipDetails({
+          tenantId: tenantId(req),
+          membershipId: body.membershipId,
+          fields: {
+            start_at: body.startAt || undefined,
+            end_at: body.endAt || undefined,
+            due_date: body.dueDate || undefined,
+            renewal_at: body.renewalAt || undefined,
+            plan_type: body.planType || undefined,
+            plan_name: body.planName || undefined,
+            metadata: {
+              monthlyAmount: body.monthlyAmount != null ? Number(body.monthlyAmount) : null,
+              phone: body.phone || null,
+              ...(body.membershipMetadata || {}),
+            },
+          },
+        }).catch(() => membership);
+      }
+    }
+
+    sendJson(res, 201, { subject, membership });
+    return true;
+  }
 
   // ── GET /api/fitness/students/search ─────────────────────────────────────
   if (method === 'GET' && pathname === '/api/fitness/students/search') {

@@ -165,6 +165,10 @@ vi.mock('../api/auth', () => ({
 }));
 
 describe('SupportPage evidence integration', () => {
+  function getTicketRow() {
+    return screen.getByLabelText(/Telefone:\s*5511999999999/i).closest('.support-ticket-card');
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     useAuth.mockReturnValue({
@@ -181,7 +185,9 @@ describe('SupportPage evidence integration', () => {
 
   it('renderiza blocos de entidade e evidência sem quebrar o fluxo atual', async () => {
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
+    await screen.findByRole('heading', { name: /Atendimento/i });
+    await screen.findByLabelText(/Telefone:\s*5511999999999/i);
+    const ticketCard = getTicketRow();
     fireEvent.click(ticketCard);
 
     await waitFor(() => {
@@ -214,7 +220,9 @@ describe('SupportPage evidence integration', () => {
     });
 
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
+    await screen.findByRole('heading', { name: /Atendimento/i });
+    await screen.findByLabelText(/Telefone:\s*5511999999999/i);
+    const ticketCard = getTicketRow();
     fireEvent.click(ticketCard);
 
     await waitFor(() => {
@@ -225,7 +233,9 @@ describe('SupportPage evidence integration', () => {
 
   it('mostra origem e mantém ação de abrir origem operacional', async () => {
     render(<SupportPage />);
-    const ticketCard = (await screen.findByText(/5511999999999/i)).closest('.support-ticket-card');
+    await screen.findByRole('heading', { name: /Atendimento/i });
+    await screen.findByLabelText(/Telefone:\s*5511999999999/i);
+    const ticketCard = getTicketRow();
     fireEvent.click(ticketCard);
 
     const buttons = await screen.findAllByRole('button', { name: /Abrir origem/i });
