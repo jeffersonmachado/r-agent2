@@ -68,6 +68,8 @@ rag-service/data/adaptive_learning/*_learning.json
 qa/release-evidence/
 qa/*-report.json
 qa/*-evidence.json
+qa/smoke/
+qa/bpmn-smoke-artifacts/
 qa/latest.json
 qa/launch-plan-status.json
 qa/launch-plan-status.md
@@ -76,6 +78,17 @@ qa/release-decision.md
 qa/release-summary.md
 qa/release-manifest.json
 qa/selftest-baseline.json
+
+# Artefatos locais de execução do QA Mesh
+qa-mesh/meshEvidence/*
+qa-mesh/meshHistory/*
+qa-mesh/meshReport.json
+qa-mesh/metrics.json
+qa-mesh/repairPlan.json
+qa-mesh/scheduler-state.json
+
+# Metadados locais de ferramenta
+.codex
 
 # Build outputs
 dist/
