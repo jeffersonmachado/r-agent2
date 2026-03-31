@@ -37,7 +37,7 @@ describe('qaService coercion hardening', () => {
     jest.doMock('../../lib/recordingSystem', () => ({ RecordingSystem: jest.fn() }));
 
     const svc = require('../../api/services/qaService');
-    const out = svc.getQaHistory({ limit: 10 });
+    const out = svc.getQaHistory({ limit: 10, source: 'runtime' });
 
     expect(out).toEqual([]);
   });

@@ -233,7 +233,19 @@ class ActionExecutor {
           .slice(0, maxLen);
 
       const selectorInfo = (sel) => {
-        const element = document.querySelector(sel);
+        let element = null;
+        try {
+          element = document.querySelector(sel);
+        } catch (error) {
+          return {
+            selector: sel,
+            exists: false,
+            visible: false,
+            text: null,
+            invalidSelector: true,
+            error: String(error && error.message ? error.message : error),
+          };
+        }
         if (!element) {
           return { selector: sel, exists: false, visible: false, text: null };
         }
@@ -2385,6 +2397,17 @@ class ActionExecutor {
       return str;
     }
 
+    const fallbackTemplateValue = (rawKey) => {
+      const normalizedKey = String(rawKey || '').trim();
+      if (normalizedKey === 'urls.frontend') {
+        return process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || config.urls?.frontend || 'http://localhost:5173';
+      }
+      if (normalizedKey === 'urls.api') {
+        return process.env.TEST_API_URL || process.env.RPA_API_URL || config.urls?.api || 'http://localhost:3000';
+      }
+      return null;
+    };
+
     return str.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
       const keys = key.trim().split('.');
       let value = data;
@@ -2393,11 +2416,14 @@ class ActionExecutor {
         if (value && typeof value === 'object' && k in value) {
           value = value[k];
         } else {
-          return match; // Retorna original se não encontrar
+          const fallback = fallbackTemplateValue(key);
+          return fallback != null ? String(fallback) : match;
         }
       }
       
-      return value !== undefined && value !== null ? String(value) : match;
+      if (value !== undefined && value !== null) return String(value);
+      const fallback = fallbackTemplateValue(key);
+      return fallback != null ? String(fallback) : match;
     });
   }
 
