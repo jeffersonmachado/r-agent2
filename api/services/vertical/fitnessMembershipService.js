@@ -145,8 +145,9 @@ async function setDueDate({ tenantId, membershipId, dueDate, renewalAt = null, a
   return updateMembershipDetails({ tenantId, membershipId, fields });
 }
 
-async function processMembershipRenewal({ tenantId, membershipId, renewalAt, actor = 'system' }) {
-  const fields = { renewal_at: new Date(renewalAt), grace_until: null };
+async function processMembershipRenewal({ tenantId, membershipId, renewalAt, renewalDate, actor = 'system' }) {
+  const resolvedRenewalAt = renewalAt || renewalDate || new Date();
+  const fields = { renewal_at: new Date(resolvedRenewalAt), grace_until: null };
   await updateMembershipDetails({ tenantId, membershipId, fields });
   const current = await getMembershipDetail({ tenantId, membershipId });
   if (!current) {
@@ -154,10 +155,7 @@ async function processMembershipRenewal({ tenantId, membershipId, renewalAt, act
     err.code = 'membership_not_found';
     throw err;
   }
-  if (String(current.effectiveBillingStatus || current.billing_status || '').toLowerCase() === 'active') {
-    return current;
-  }
-  return reactivateMembership({ tenantId, membershipId, reason: 'renewal', actor, renewalAt });
+  return reactivateMembership({ tenantId, membershipId, reason: 'renewal', actor, renewalAt: resolvedRenewalAt });
 }
 
 // ── Access eligibility ────────────────────────────────────────────────────
