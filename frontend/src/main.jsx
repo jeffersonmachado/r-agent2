@@ -47,6 +47,7 @@ import { RpaReplaysPage } from './pages/RpaReplaysPage';
 import { RpaSeedsPage } from './pages/RpaSeedsPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
+import { QaMeshPage } from './pages/QaMeshPage';
 import { GenerateSystemPage } from './pages/GenerateSystemPage';
 import { SystemStatusPage } from './pages/SystemStatusPage';
 import { ChannelHealthPage } from './pages/ChannelHealthPage';
@@ -68,8 +69,12 @@ import { FitnessStudentsPage } from './pages/FitnessStudentsPage';
 import { FitnessMembershipsPage } from './pages/FitnessMembershipsPage';
 import { FitnessAttendancePage } from './pages/FitnessAttendancePage';
 import { BeautySchedulePage } from './pages/BeautySchedulePage';
+import { BeautyCampaignsPage } from './pages/BeautyCampaignsPage';
+import { BeautyLeadsPage } from './pages/BeautyLeadsPage';
 import { BeautyCustomersPage } from './pages/BeautyCustomersPage';
 import { BeautyBundlesPage } from './pages/BeautyBundlesPage';
+import { BeautyServicesPage } from './pages/BeautyServicesPage';
+import { BeautyPaymentsPage } from './pages/BeautyPaymentsPage';
 import { VerticalOperationalDashboardPage } from './pages/VerticalOperationalDashboardPage';
 import { SolutionsPage } from './pages/SolutionsPage';
 import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
@@ -346,6 +351,7 @@ function AppWithAuth() {
   const isRpaSeeds = isRoute('/rpa-seeds');
   const isChat = isRoute('/chat');
   const isQa = isRoute('/qa');
+  const isQaMesh = isRoute('/qa-mesh');
   const isGenerateSystem = isRoute('/generate-system');
   const isSystemStatus = isRoute('/system-status');
   const isChannelHealth = isRoute('/channel-health');
@@ -373,8 +379,12 @@ function AppWithAuth() {
   const isFitnessMemberships = isRoute('/fitness/memberships');
   const isFitnessAttendance = isRoute('/fitness/attendance');
   const isBeautySchedule = isRoute('/beauty/schedule');
+  const isBeautyCampaigns = isRoute('/beauty/campaigns');
+  const isBeautyLeads = isRoute('/beauty/leads');
   const isBeautyCustomers = isRoute('/beauty/customers');
   const isBeautyBundles = isRoute('/beauty/bundles');
+  const isBeautyServices = isRoute('/beauty/services');
+  const isBeautyPayments = isRoute('/beauty/payments');
   const isVerticalDashboard = isRoute('/vertical/dashboard');
   const isSolutions = isRoute('/solutions');
   const isNodeMarketplace = isRoute('/node-marketplace');
@@ -398,9 +408,9 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
-      isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCustomers, isBeautyBundles, isVerticalDashboard,
+      isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
       isLogin
     ];
@@ -415,8 +425,8 @@ function AppWithAuth() {
   }, [
     isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-    isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCustomers, isBeautyBundles, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -467,6 +477,7 @@ function AppWithAuth() {
       '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
       '/qa': '✅ Painel de Qualidade (QA)',
+      '/qa-mesh': '🕸️ Unified Execution Mesh',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
       '/system-status': '📊 Status dos Serviços',
       '/channel-health': '📡 Saúde de Canais',
@@ -517,8 +528,12 @@ function AppWithAuth() {
       '/fitness/memberships': '🏋️ Fitness • Memberships',
       '/fitness/attendance': '🏋️ Fitness • Attendance',
       '/beauty/schedule': '💄 Beauty • Schedule',
+      '/beauty/campaigns': '💄 Beauty • Campaigns',
+      '/beauty/leads': '💄 Beauty • Leads',
       '/beauty/customers': '💄 Beauty • Customers',
       '/beauty/bundles': '💄 Beauty • Bundles',
+      '/beauty/services': '💄 Beauty • Services',
+      '/beauty/payments': '💄 Beauty • Payments',
       '/vertical/dashboard': '📊 Vertical Dashboard',
       '/solutions': '📦 Solutions Packs',
       '/node-marketplace': '🧩 Node Marketplace',
@@ -721,6 +736,8 @@ function AppWithAuth() {
         <ChatPage />
       ) : isQa ? (
         <QaPage />
+      ) : isQaMesh ? (
+        <QaMeshPage />
       ) : isGenerateSystem ? (
         <GenerateSystemPage />
       ) : isSystemStatus ? (
@@ -769,10 +786,18 @@ function AppWithAuth() {
         <FitnessAttendancePage />
       ) : isBeautySchedule ? (
         <BeautySchedulePage />
+      ) : isBeautyCampaigns ? (
+        <BeautyCampaignsPage />
+      ) : isBeautyLeads ? (
+        <BeautyLeadsPage />
       ) : isBeautyCustomers ? (
         <BeautyCustomersPage />
       ) : isBeautyBundles ? (
         <BeautyBundlesPage />
+      ) : isBeautyServices ? (
+        <BeautyServicesPage />
+      ) : isBeautyPayments ? (
+        <BeautyPaymentsPage />
       ) : isVerticalDashboard ? (
         <VerticalOperationalDashboardPage />
       ) : isSolutions ? (

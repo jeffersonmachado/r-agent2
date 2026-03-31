@@ -22,9 +22,12 @@ function createMarketingRoutes({ buildDeps }) {
   router.get('/api/marketing/links', (req, res) => controllerFor(req, res).listLinks(req, res));
   router.post('/api/marketing/links', (req, res) => controllerFor(req, res).createLink(req, res));
   router.get('/api/marketing/leads', (req, res) => controllerFor(req, res).listLeads(req, res));
+  router.post('/api/marketing/leads', (req, res) => controllerFor(req, res).upsertLead(req, res));
+  router.patch('/api/marketing/leads/:leadId', (req, res) => controllerFor(req, res).updateLead(req, res));
   router.get('/api/marketing/leads/stats', (req, res) => controllerFor(req, res).leadStats(req, res));
   router.get('/api/marketing/scoring-rules', (req, res) => controllerFor(req, res).listScoringRules(req, res));
   router.post('/api/marketing/scoring-rules', (req, res) => controllerFor(req, res).upsertScoringRule(req, res));
+  router.get('/api/marketing/email-campaigns', (req, res) => controllerFor(req, res).listEmailCampaigns(req, res));
   router.post('/api/marketing/email-campaigns', (req, res) => controllerFor(req, res).createEmailCampaign(req, res));
   router.post('/api/marketing/email-campaigns/:campaignId/send', (req, res) => controllerFor(req, res).sendEmailCampaignNow(req, res));
 

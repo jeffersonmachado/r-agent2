@@ -480,6 +480,15 @@ export function DashboardPage() {
       category: 'Qualidade',
     },
     {
+      id: 'qa-mesh',
+      title: 'QA Mesh',
+      description: 'Malha unificada de QA + RPA com replay, evidência e go/no-go',
+      icon: '🕸️',
+      path: '/qa-mesh',
+      color: 'bg-amber-600',
+      category: 'Qualidade',
+    },
+    {
       id: 'generate-system',
       title: 'Gerar Sistema',
       description: 'Gere fluxos, RPA e seeds automaticamente',

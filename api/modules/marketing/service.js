@@ -64,6 +64,30 @@ function createMarketingService({ marketingService, marketingLinkService }) {
       });
     },
 
+    async upsertLead({ tenantId, body }) {
+      return marketingService.upsertLead({
+        tenantId,
+        email: body && body.email ? body.email : null,
+        phone: body && body.phone ? body.phone : null,
+        externalId: body && body.externalId ? body.externalId : (body && body.external_id ? body.external_id : null),
+        name: body && body.name ? body.name : null,
+        attributesPatch: body && body.attributes ? body.attributes : {},
+        stage: body && body.stage ? body.stage : null,
+        lastSeenAt: body && body.lastSeenAt ? body.lastSeenAt : null,
+      });
+    },
+
+    async updateLead({ tenantId, leadId, body }) {
+      return marketingService.updateLead({
+        tenantId,
+        leadId,
+        stage: body && body.stage ? body.stage : null,
+        name: body && body.name ? body.name : null,
+        attributesPatch: body && body.attributes ? body.attributes : {},
+        score: body && body.score != null ? Number(body.score) : null,
+      });
+    },
+
     async getLeadStats({ tenantId }) {
       return marketingService.getLeadStats({ tenantId });
     },
@@ -92,6 +116,17 @@ function createMarketingService({ marketingService, marketingLinkService }) {
         bodyText: body && body.bodyText != null ? body.bodyText : null,
         bodyHtml: body && body.bodyHtml != null ? body.bodyHtml : null,
         minScore: body && body.minScore != null ? Number(body.minScore) : null,
+      });
+    },
+
+    async listEmailCampaigns({ tenantId, url }) {
+      const urlObj = new URL(url || '/', 'http://localhost');
+      const paging = parsePaging(url);
+      const status = urlObj.searchParams.get('status');
+      return marketingService.listEmailCampaigns({
+        tenantId,
+        status: status ? String(status) : null,
+        ...paging,
       });
     },
 

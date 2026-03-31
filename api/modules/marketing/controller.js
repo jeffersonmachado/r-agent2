@@ -96,6 +96,42 @@ function createMarketingController({ service, deps }) {
       }
     },
 
+    async upsertLead(req, res) {
+      if (!ensurePermission(req, res, 'crm', 'create')) return;
+      if (!requireJson(req, res)) return;
+      try {
+        const out = await service.upsertLead({ tenantId: req.tenantId, body: await deps.parseJsonBody(req) });
+        if (!out.ok) {
+          deps.sendJson(res, 400, out);
+          return;
+        }
+        deps.sendJson(res, out.created ? 201 : 200, out);
+      } catch (err) {
+        deps.logger.error('[Marketing] Erro ao upsert lead:', err);
+        deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar lead' });
+      }
+    },
+
+    async updateLead(req, res) {
+      if (!ensurePermission(req, res, 'crm', 'update')) return;
+      if (!requireJson(req, res)) return;
+      try {
+        const out = await service.updateLead({
+          tenantId: req.tenantId,
+          leadId: String(req.params.leadId || ''),
+          body: await deps.parseJsonBody(req),
+        });
+        if (!out.ok) {
+          deps.sendJson(res, out.error === 'lead_not_found' ? 404 : 400, out);
+          return;
+        }
+        deps.sendJson(res, 200, out);
+      } catch (err) {
+        deps.logger.error('[Marketing] Erro ao atualizar lead:', err);
+        deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar lead' });
+      }
+    },
+
     async leadStats(req, res) {
       if (!ensurePermission(req, res, 'analytics', 'read')) return;
       try {
@@ -147,6 +183,17 @@ function createMarketingController({ service, deps }) {
       } catch (err) {
         deps.logger.error('[Marketing] Erro ao criar campanha:', err);
         deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar campanha' });
+      }
+    },
+
+    async listEmailCampaigns(req, res) {
+      if (!ensurePermission(req, res, 'config', 'read')) return;
+      try {
+        const out = await service.listEmailCampaigns({ tenantId: req.tenantId, url: req.url });
+        deps.sendJson(res, 200, { ok: true, ...out });
+      } catch (err) {
+        deps.logger.error('[Marketing] Erro ao listar campanhas:', err);
+        deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar campanhas' });
       }
     },
 

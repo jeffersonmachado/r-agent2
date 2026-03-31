@@ -326,6 +326,49 @@ async function listLeads({ tenantId, stage = null, minScore = null, limit = 200,
   return { total: count, items: rows.map((r) => (r.toJSON ? r.toJSON() : r)), limit: safeLimit, offset: safeOffset };
 }
 
+async function getLeadById({ tenantId, leadId } = {}) {
+  if (!dbAvailable()) return null;
+  const Model = MarketingLead();
+  const row = await Model.findOne({
+    where: {
+      tenant_key: safeStr(tenantId),
+      id: safeStr(leadId),
+    },
+  }).catch(() => null);
+  return row ? (row.toJSON ? row.toJSON() : row) : null;
+}
+
+async function updateLead({ tenantId, leadId, stage = null, name = null, attributesPatch = null, score = null } = {}) {
+  if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
+  const Model = MarketingLead();
+  const row = await Model.findOne({
+    where: {
+      tenant_key: safeStr(tenantId),
+      id: safeStr(leadId),
+    },
+  }).catch(() => null);
+  if (!row) return { ok: false, error: 'lead_not_found' };
+
+  const current = row.toJSON ? row.toJSON() : row;
+  const attributes = current.attributes && typeof current.attributes === 'object'
+    ? { ...current.attributes }
+    : {};
+  if (attributesPatch && typeof attributesPatch === 'object') {
+    Object.assign(attributes, attributesPatch);
+  }
+
+  const payload = {
+    attributes,
+    updated_at: new Date(),
+  };
+  if (stage) payload.stage = safeToString(stage);
+  if (name) payload.name = safeStr(name);
+  if (score != null && Number.isFinite(Number(score))) payload.score = Number(score);
+
+  await row.update(payload);
+  return { ok: true, lead: row.toJSON ? row.toJSON() : row };
+}
+
 async function getLeadStats({ tenantId }) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, error: 'db_unavailable' };
@@ -363,6 +406,30 @@ async function createEmailCampaign({ tenantId, name, subject, bodyText, bodyHtml
     min_score: (minScore != null && Number.isFinite(Number(minScore))) ? Number(minScore) : null,
   });
   return { ok: true, campaign: row.toJSON ? row.toJSON() : row };
+}
+
+async function listEmailCampaigns({ tenantId, status = null, limit = 200, offset = 0 } = {}) {
+  if (!dbAvailable()) return { total: 0, items: [] };
+  const Model = MarketingEmailCampaign();
+  const where = { tenant_key: safeStr(tenantId) };
+  if (status) where.status = safeStr(status);
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 2000);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+
+  const { count, rows } = await Model.findAndCountAll({
+    where,
+    order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
+    limit: safeLimit,
+    offset: safeOffset,
+  });
+
+  return {
+    total: count,
+    items: rows.map((r) => (r.toJSON ? r.toJSON() : r)),
+    limit: safeLimit,
+    offset: safeOffset,
+  };
 }
 
 async function sendEmailCampaignNow({ tenantId, campaignId, limit = 2000 } = {}) {
@@ -454,13 +521,15 @@ module.exports = {
   getFormBySlug,
   submitForm,
   listLeads,
+  getLeadById,
   getLeadStats,
   listScoringRules,
   upsertScoringRule,
   upsertLead,
+  updateLead,
   recordMarketingEvent,
   applyScoring,
   createEmailCampaign,
+  listEmailCampaigns,
   sendEmailCampaignNow,
 };
-

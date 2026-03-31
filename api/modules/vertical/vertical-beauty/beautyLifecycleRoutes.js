@@ -1,9 +1,12 @@
 const { listJourneyEvents, getSubjectTimeline, emitJourneyEvent } = require('../../../services/vertical/customerJourneyEngine');
 const beautyJourneyService = require('../../../services/vertical/beautyJourneyService');
 const { createSessionBundle } = require('../../../services/vertical/billingOrchestrationService');
-const { VerticalSessionBundle } = require('../../../db/models');
+const accessControlService = require('../../access-control/accessControlService');
+const marketingService = require('../../../services/marketing/marketingService');
+const { VerticalSessionBundle, AccessSubject } = require('../../../db/models');
 const { getSequelize } = require('../../../db/sequelize');
 const { ensureAuth, tenantId, VERTICAL } = require('./beautyRouteHelpers');
+const { listBeautyServices, getBeautyServiceByCode } = require('../../../services/vertical/beautyServiceCatalog');
 
 async function handleBeautyLifecycleRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
@@ -100,6 +103,104 @@ async function handleBeautyLifecycleRoutes(ctx) {
     return true;
   }
 
+  // GET /api/beauty/services
+  if (method === 'GET' && pathname === '/api/beauty/services') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    sendJson(res, 200, {
+      items: listBeautyServices(),
+      total: listBeautyServices().length,
+    });
+    return true;
+  }
+
+  // POST /api/beauty/customer
+  if (method === 'POST' && pathname === '/api/beauty/customer') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    if (!hasJsonContentType(req)) { badRequest(res, 'Content-Type deve ser application/json'); return true; }
+    const body = await parseJsonBody(req);
+    if (!body?.subjectId && !body?.customerId) { badRequest(res, 'subjectId or customerId required'); return true; }
+
+    const subject = await accessControlService.ensureSubject({
+      tenantId: tenantId(req),
+      subjectId: body.subjectId || null,
+      customerId: body.customerId || null,
+      verticalProfile: 'beauty',
+      metadata: {
+        name: body.name || null,
+        phone: body.phone || null,
+        email: body.email || null,
+        document: body.document || null,
+        code: body.code || null,
+        ...(body.metadata || {}),
+      },
+    });
+
+    sendJson(res, 201, { item: subject });
+    return true;
+  }
+
+  // POST /api/beauty/lead/convert
+  if (method === 'POST' && pathname === '/api/beauty/lead/convert') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    if (!hasJsonContentType(req)) { badRequest(res, 'Content-Type deve ser application/json'); return true; }
+    const body = await parseJsonBody(req);
+    if (!body?.leadId) { badRequest(res, 'leadId required'); return true; }
+
+    const lead = await marketingService.getLeadById({ tenantId: tenantId(req), leadId: body.leadId });
+    if (!lead) {
+      sendJson(res, 404, { error: 'lead_not_found' });
+      return true;
+    }
+
+    const customerId = body.customerId || lead.external_id || `beauty-customer-${lead.id}`;
+    const subject = await accessControlService.ensureSubject({
+      tenantId: tenantId(req),
+      customerId,
+      verticalProfile: 'beauty',
+      metadata: {
+        name: body.customerName || lead.name || null,
+        phone: body.phone || lead.phone || null,
+        email: body.email || lead.email || null,
+        leadId: lead.id,
+        sourceCampaignId: body.campaignId || lead.attributes?.campaignId || null,
+        ...(body.metadata || {}),
+      },
+    });
+
+    await marketingService.updateLead({
+      tenantId: tenantId(req),
+      leadId: lead.id,
+      stage: body.stage || 'customer',
+      attributesPatch: {
+        convertedSubjectId: subject.id,
+        convertedCustomerId: customerId,
+        campaignId: body.campaignId || lead.attributes?.campaignId || null,
+      },
+    }).catch(() => null);
+
+    const evt = await emitJourneyEvent({
+      tenantId: tenantId(req),
+      vertical: VERTICAL,
+      eventType: 'pre_service',
+      subjectId: subject.id,
+      customerId,
+      channel: body.channel || 'internal',
+      triggeredBy: body.triggeredBy || 'manual',
+      correlationId: body.correlationId || lead.id,
+      idempotencyKey: `beauty_lead_convert:${tenantId(req)}:${lead.id}`,
+      payload: {
+        sourceEvent: 'lead_converted',
+        leadId: lead.id,
+        campaignId: body.campaignId || lead.attributes?.campaignId || null,
+        convertedSubjectId: subject.id,
+      },
+      metadata: body.metadata || {},
+    });
+
+    sendJson(res, 201, { lead, customer: subject, item: evt });
+    return true;
+  }
+
   // POST /api/beauty/bundle
   if (method === 'POST' && pathname === '/api/beauty/bundle') {
     if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
@@ -142,6 +243,64 @@ async function handleBeautyLifecycleRoutes(ctx) {
     }
 
     sendJson(res, 201, { item: bundle, charge });
+    return true;
+  }
+
+  // POST /api/beauty/appointment
+  if (method === 'POST' && pathname === '/api/beauty/appointment') {
+    if (!ensureAuth(req, res, { requireAuth, sendJson, requireTenant })) return true;
+    if (!hasJsonContentType(req)) { badRequest(res, 'Content-Type deve ser application/json'); return true; }
+    const body = await parseJsonBody(req);
+    if (!body?.subjectId) { badRequest(res, 'subjectId required'); return true; }
+    if (!body?.startAt || !body?.endAt) { badRequest(res, 'startAt and endAt required'); return true; }
+
+    const service = body.serviceCode ? getBeautyServiceByCode(body.serviceCode) : null;
+    const scheduleService = require('../../../services/scheduleService');
+    const schedule = scheduleService.createSchedule({
+      tenantId: tenantId(req),
+      payload: {
+        contextType: 'beauty_appointment',
+        contextId: body.customerId || body.subjectId,
+        ownerId: body.professionalId || null,
+        teamId: body.teamId || null,
+        startAt: body.startAt,
+        endAt: body.endAt,
+        purpose: body.purpose || 'atendimento',
+        status: body.status || 'scheduled',
+        metadata: {
+          vertical: 'beauty',
+          subjectId: body.subjectId,
+          customerId: body.customerId || null,
+          customerName: body.customerName || null,
+          professionalId: body.professionalId || null,
+          professionalName: body.professionalName || null,
+          serviceCode: body.serviceCode || null,
+          serviceName: body.serviceName || service?.name || null,
+          price: body.price != null ? Number(body.price) : (service?.promotionalPrice || service?.price || null),
+          campaignId: body.campaignId || null,
+          source: body.source || 'beauty_lifecycle_route',
+          ...(body.metadata || {}),
+        },
+      },
+    });
+
+    const evt = await beautyJourneyService.sendConfirmation({
+      tenantId: tenantId(req),
+      subjectId: body.subjectId,
+      customerId: body.customerId || null,
+      scheduleId: schedule.id,
+      channel: body.channel || 'whatsapp',
+      correlationId: body.correlationId || schedule.id,
+      metadata: {
+        scheduled_at: body.startAt,
+        serviceCode: body.serviceCode || null,
+        serviceName: body.serviceName || service?.name || null,
+        campaignId: body.campaignId || null,
+        ...(body.metadata || {}),
+      },
+    });
+
+    sendJson(res, 201, { schedule, item: evt });
     return true;
   }
 
