@@ -24,8 +24,10 @@ function resolveTargetUrlFromFirstStep(firstStep) {
   return firstStep.url || firstStep.value || null;
 }
 
-function replaceTemplateVariables(str, data = {}) {
+function replaceTemplateVariables(str, data = {}, options = {}) {
   if (typeof str !== 'string' || !str.trim()) return str;
+
+  const frontendBaseUrl = options.frontendBaseUrl || data?.urls?.frontend || null;
 
   return str.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
     const keys = String(key || '').trim().split('.');
@@ -35,6 +37,10 @@ function replaceTemplateVariables(str, data = {}) {
       if (value && typeof value === 'object' && currentKey in value) {
         value = value[currentKey];
       } else {
+        // Fallback explícito para placeholders comuns de URL usados nos seeds RPA.
+        if (String(key || '').trim() === 'urls.frontend' && frontendBaseUrl) {
+          return String(frontendBaseUrl);
+        }
         return match;
       }
     }
@@ -146,7 +152,17 @@ async function autoLoginBeforeSteps(page, params = {}) {
 
   const baseUrl = resolveFrontendBaseUrl(params.frontendBaseUrl);
   const rawTargetUrl = resolveTargetUrlFromFirstStep(params.firstStep);
-  const targetUrl = replaceTemplateVariables(rawTargetUrl, templateData);
+  const resolvedTemplateData = {
+    ...templateData,
+    urls: {
+      ...(templateData.urls || {}),
+      frontend: templateData?.urls?.frontend || baseUrl,
+    },
+  };
+  const maybeTargetUrl = replaceTemplateVariables(rawTargetUrl, resolvedTemplateData, { frontendBaseUrl: baseUrl });
+  const targetUrl = typeof maybeTargetUrl === 'string' && /\{\{[^}]+\}\}/.test(maybeTargetUrl)
+    ? baseUrl
+    : maybeTargetUrl;
   const autoLoginEnabled = params.autoLogin !== false;
   const allowAutoLoginForTarget = shouldAutoLoginForTarget(targetUrl, baseUrl);
 

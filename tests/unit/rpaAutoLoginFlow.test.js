@@ -20,4 +20,12 @@ describe('RPA autoLoginFlow', () => {
       }),
     ).toBe('http://localhost:5173/editor');
   });
+
+  test('aplica fallback de frontendBaseUrl quando urls.frontend não existe', () => {
+    expect(
+      replaceTemplateVariables('{{urls.frontend}}/support', {}, {
+        frontendBaseUrl: 'http://localhost:5173',
+      }),
+    ).toBe('http://localhost:5173/support');
+  });
 });
