@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { runQa } = require('../../qa/qaRunner');
 const { readQaResults, getQaStats } = require('../../engine/qa/qaTelemetry');
+const qaMeshService = require('./qaMeshService');
 const logger = require('../utils/logger');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
@@ -37,6 +38,26 @@ const QA_RESULT_FILE = path.join(QA_RESULTS_DIR, 'qa-result.json');
  */
 function getLatestQaResult() {
   try {
+    const latestMesh = qaMeshService.getLatestExecution();
+    if (latestMesh?.summary) {
+      return {
+        status: latestMesh.summary.goNoGo === 'GO' ? 'PASS' : 'FAIL',
+        scope: [],
+        checks: (latestMesh.results || []).map((item) => ({
+          id: item.id,
+          status: item.status,
+          scope: item.domain,
+          blocking: item.criticality === 'blocking',
+        })),
+        meta: {
+          timestamp: latestMesh.startedAt,
+          source: 'qa-mesh',
+          executionId: latestMesh.executionId,
+        },
+        governance: latestMesh.governance,
+        mesh: latestMesh.summary,
+      };
+    }
     // Tenta ler do arquivo (CI/local)
     if (fs.existsSync(QA_RESULT_FILE)) {
       const content = fs.readFileSync(QA_RESULT_FILE, 'utf8');
@@ -64,6 +85,21 @@ function getQaHistory(options = {}) {
   const { limit = 50, source } = options;
 
   try {
+    const meshHistory = qaMeshService.getMeshHistory({ limit });
+    if (meshHistory.length > 0 && (!source || source === 'qa-mesh')) {
+      return meshHistory.map((item) => ({
+        status: item.summary?.goNoGo === 'GO' ? 'PASS' : 'FAIL',
+        scope: [],
+        checks: item.results || [],
+        meta: {
+          timestamp: item.startedAt,
+          source: 'qa-mesh',
+          executionId: item.executionId,
+        },
+        governance: item.governance,
+        mesh: item.summary,
+      }));
+    }
     let results = readQaResults(limit * 2); // Lê mais para filtrar depois
 
     // Filtra por source se fornecido
@@ -87,6 +123,21 @@ function getQaHistory(options = {}) {
  */
 function getQaResultById(id) {
   try {
+    const meshResult = qaMeshService.getExecutionById(id);
+    if (meshResult) {
+      return {
+        status: meshResult.summary?.goNoGo === 'GO' ? 'PASS' : 'FAIL',
+        scope: [],
+        checks: meshResult.results || [],
+        meta: {
+          timestamp: meshResult.startedAt,
+          source: 'qa-mesh',
+          executionId: meshResult.executionId,
+        },
+        governance: meshResult.governance,
+        mesh: meshResult.summary,
+      };
+    }
     const results = readQaResults(1000); // Busca em mais resultados
 
     // Tenta encontrar por commit
@@ -244,6 +295,21 @@ function runQaManual(options = {}) {
  */
 function getQaStatistics() {
   try {
+    const latestMesh = qaMeshService.getLatestExecution();
+    if (latestMesh?.summary) {
+      return {
+        total: latestMesh.summary.total,
+        byStatus: {
+          PASS: latestMesh.summary.passed,
+          FAIL: latestMesh.summary.failed,
+          WARN: latestMesh.summary.warnings,
+        },
+        byScope: latestMesh.summary.domains,
+        bySource: { 'qa-mesh': latestMesh.summary.total },
+        blockingFailures: (latestMesh.results || []).filter((item) => item.status === 'FAIL' && item.criticality === 'blocking').length,
+        recentResults: qaMeshService.getMeshHistory({ limit: 5 }),
+      };
+    }
     return getQaStats();
   } catch (error) {
     logger.error('[qaService] Erro ao obter estatísticas QA', { error: safeErrorMessage(error) });
@@ -265,4 +331,3 @@ module.exports = {
   runQaManual,
   getQaStatistics
 };
-

@@ -179,14 +179,17 @@ export function QaPage() {
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>✅ Painel de Qualidade (QA)</h1>
-          {canRunQa && (
-            <Button onClick={handleRunQa} disabled={running}>
-              {running ? 'Executando...' : 'Executar QA'}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/qa-mesh')}>Abrir QA Mesh</Button>
+            {canRunQa && (
+              <Button onClick={handleRunQa} disabled={running}>
+                {running ? 'Executando...' : 'Executar QA'}
+              </Button>
+            )}
+          </div>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
-          Visualize e monitore a qualidade do sistema
+          Visualize a compatibilidade legada de QA e navegue para a malha unificada em <code>/qa-mesh</code>
         </p>
       
         <div className="support-controls">
@@ -451,4 +454,3 @@ export function QaPage() {
     </CrudPageBase>
   );
 }
-

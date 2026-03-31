@@ -1,0 +1,66 @@
+'use strict';
+
+const { MIN_EXECUTION_RATIO, evaluateGoNoGo, summarizeResults } = require('../governance');
+
+describe('qa-mesh/governance', () => {
+  test('marca NO_GO quando nenhum cenário é executado', () => {
+    const result = evaluateGoNoGo([], { registryTotal: 0 });
+
+    expect(result.goNoGo).toBe('NO_GO');
+    expect(result.reasons).toContain('NO_SCENARIOS_EXECUTED');
+    expect(result.reasons).toContain('INSUFFICIENT_COVERAGE');
+    expect(result.executionQuality).toBe('invalid');
+    expect(result.executionCoverage).toBe(0);
+  });
+
+  test('marca NO_GO quando cenário blocking falha', () => {
+    const result = evaluateGoNoGo(
+      [
+        { id: 'critical-core', domain: 'core', criticality: 'blocking', status: 'failed' },
+        { id: 'supporting-core', domain: 'core', criticality: 'medium', status: 'passed' },
+      ],
+      { registryTotal: 2 }
+    );
+
+    expect(result.goNoGo).toBe('NO_GO');
+    expect(result.reasons).toContain('BLOCKING_SCENARIO_FAILED');
+    expect(result.reasons).toContain('CRITICAL_DOMAIN_FAILED:core');
+  });
+
+  test('marca NO_GO quando taxa de falha excede o limite', () => {
+    const result = evaluateGoNoGo(
+      [
+        { id: 'ok-1', domain: 'beauty', criticality: 'medium', status: 'passed' },
+        { id: 'fail-1', domain: 'beauty', criticality: 'medium', status: 'failed' },
+        { id: 'fail-2', domain: 'fitness', criticality: 'medium', status: 'infra_error' },
+      ],
+      { registryTotal: 3, maxFailureRate: 0.2, criticalDomains: [] }
+    );
+
+    expect(result.goNoGo).toBe('NO_GO');
+    expect(result.reasons).toContain('FAILURE_RATE_ABOVE_THRESHOLD');
+  });
+
+  test('resume cobertura e qualidade corretamente', () => {
+    const summary = summarizeResults(
+      [
+        { status: 'passed', domain: 'beauty' },
+        { status: 'failed', domain: 'beauty' },
+        { status: 'environment_missing', domain: 'core' },
+        { status: 'infra_error', domain: 'pbx' },
+        { status: 'flaky', domain: 'pbx' },
+      ],
+      5
+    );
+
+    expect(summary.registryTotal).toBe(5);
+    expect(summary.attempted).toBe(5);
+    expect(summary.executed).toBe(5);
+    expect(summary.executionCoverage).toBeCloseTo(1);
+    expect(summary.executionQuality).toBe('valid');
+    expect(summary.domains.beauty.failed).toBe(1);
+    expect(summary.domains.core.environment_missing).toBe(1);
+    expect(summary.domains.pbx.infra_error).toBe(1);
+    expect(summary.domains.pbx.flaky).toBe(1);
+  });
+});
