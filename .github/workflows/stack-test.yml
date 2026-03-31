@@ -97,12 +97,15 @@ jobs:
         env:
           RPA_TRACE: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_trace || '0' }}
           RPA_CAPTURE_HTTP_ERRORS: ${{ github.event_name == 'workflow_dispatch' && inputs.capture_http_errors || '1' }}
+          BUSINESS_QA_MODE: pr
+          BILLING_SANDBOX: '1'
           TEST_IMAGE_PREFIX: ${{ needs.prewarm-images.outputs.test_image_prefix || 'r-agent2' }}
           TEST_IMAGE_TAG: ${{ needs.prewarm-images.outputs.test_image_tag || 'test' }}
           STACK_PULL_IMAGES: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
           STACK_NO_BUILD: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
         run: |
           bash ./scripts/system-autotest-stack.sh
+          npm run qa:mesh
 
       - name: Upload test artifacts (JUnit)
         if: always()
@@ -122,6 +125,7 @@ jobs:
           name: rpa-artifacts-stack
           path: |
             tests/rpa/reports/**/*.json
+            tests/rpa/reports/**/*.md
             tests/rpa/replay/**/*.json
             tests/rpa/screenshots/**/*.png
             tests/rpa/traces/**/*.zip

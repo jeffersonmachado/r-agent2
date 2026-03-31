@@ -51,6 +51,12 @@ jobs:
 
     - name: Run DB migrations
       run: npm run db:migrate
+
+    - name: Refresh QA Mesh registry
+      run: npm run qa:mesh:refresh
+
+    - name: Run QA Mesh self-tests
+      run: npm run test:qa-mesh
     
     - name: Start Frontend (Vite) and run official system validation
       run: |
@@ -73,6 +79,9 @@ jobs:
         TEST_TENANT_ID: tenant-demo
         SMOKE_SKIP_IF_API_UNREACHABLE: 'true'
       run: npm run test:scheduling-support:smoke
+
+    - name: Run QA Mesh gate
+      run: npm run qa:mesh
 
     - name: Upload scheduling support smoke report
       if: always()
@@ -101,3 +110,29 @@ jobs:
         name: rpa-reports-${{ matrix.node-version }}
         path: tests/rpa/reports/
         retention-days: 7
+
+    - name: Upload QA Mesh artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: qa-mesh-${{ matrix.node-version }}
+        path: |
+          qa-mesh/meshEvidence/
+          qa-mesh/meshHistory/
+          qa-mesh/meshReport.json
+          qa-mesh/repairPlan.json
+          qa-mesh/baseline.json
+          qa-mesh/metrics.json
+          qa/go-no-go-report.json
+          qa/release-gate-report.json
+        retention-days: 7
+        if-no-files-found: ignore
+
+    - name: Upload Business QA screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: business-qa-screenshots-${{ matrix.node-version }}
+        path: tests/rpa/screenshots/business-qa/
+        retention-days: 7
+        if-no-files-found: ignore

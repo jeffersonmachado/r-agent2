@@ -99,12 +99,15 @@ jobs:
           RELEASE_WINDOW_RUN_BACKUP: ${{ inputs.release_window_run_backup }}
           RPA_TRACE: ${{ inputs.enable_trace }}
           RPA_CAPTURE_HTTP_ERRORS: ${{ inputs.capture_http_errors }}
+          BUSINESS_QA_MODE: release
+          BILLING_SANDBOX: '1'
           TEST_IMAGE_PREFIX: ${{ needs.prewarm-images.outputs.test_image_prefix || 'r-agent2' }}
           TEST_IMAGE_TAG: ${{ needs.prewarm-images.outputs.test_image_tag || 'test' }}
           STACK_PULL_IMAGES: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
           STACK_NO_BUILD: ${{ needs.prewarm-images.result == 'success' && '1' || '0' }}
         run: |
           npm run system:release-window
+          npm run qa:mesh
 
       - name: Upload release artifacts
         if: always()
@@ -120,5 +123,7 @@ jobs:
             qa/release-summary.md
             qa/release-manifest.json
             qa/smoke-evidence.json
+            tests/rpa/reports/business-qa-*.json
+            tests/rpa/reports/business-qa-*.md
           retention-days: 7
           if-no-files-found: ignore

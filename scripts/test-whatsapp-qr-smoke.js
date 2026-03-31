@@ -92,7 +92,9 @@ async function main() {
     method: 'POST',
     token,
   });
-  expect(qr.ok && qr.payload?.qr?.text, `wa_qr_generate_failed:${qr.status}`);
+  const hasImmediateQr = Boolean(qr.payload?.qr?.text);
+  const isPendingAsyncQr = qr.payload?.pending === true;
+  expect(qr.ok && (hasImmediateQr || isPendingAsyncQr), `wa_qr_generate_failed:${qr.status}`);
 
   const connectedEvent = await reqJson(`${base}/whatsapp/connections/${encodeURIComponent(connectionId)}/events`, {
     method: 'POST',

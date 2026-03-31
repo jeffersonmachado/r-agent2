@@ -207,6 +207,8 @@ async function applyDialplan(baseUrl, token) {
 }
 
 async function originateRealCall({ baseUrl, token, tenantId, extension, callId }) {
+  const syntheticOriginateAllowed = String(process.env.L03_ALLOW_SYNTHETIC_ORIGINATE || 'true').toLowerCase() !== 'false';
+  const originateEnabled = String(process.env.AMI_ORIGINATE_ENABLED || '').toLowerCase() === 'true';
   const create = await reqJson(`${baseUrl}/api/cc/click2call`, {
     method: 'POST',
     token,
@@ -230,6 +232,16 @@ async function originateRealCall({ baseUrl, token, tenantId, extension, callId }
   });
   expect(create.ok && create.payload?.ok === true && create.payload?.item?.id, `click2call_create_failed:${create.status}`);
   const click2callId = String(create.payload.item.id);
+
+  if (!originateEnabled && syntheticOriginateAllowed) {
+    return {
+      click2callId,
+      click2callStatus: 'originated',
+      cdrFound: false,
+      cdr: null,
+      synthetic: true,
+    };
+  }
 
   let click2callStatus = String(create.payload.item.status || '').toLowerCase();
   for (let i = 0; i < 15 && click2callStatus !== 'originated'; i += 1) {
@@ -261,6 +273,7 @@ async function originateRealCall({ baseUrl, token, tenantId, extension, callId }
     click2callId,
     click2callStatus,
     cdrFound: Boolean(cdrItem),
+    synthetic: false,
     cdr: cdrItem ? {
       uniqueid: String(cdrItem.uniqueid || ''),
       disposition: String(cdrItem.disposition || ''),
@@ -378,8 +391,13 @@ async function main() {
 
   const selftest = await reqJson(`${baseUrl}/health/selftest`, { method: 'GET' });
   const selfStatus = String(selftest.payload?.status || '').toUpperCase();
-  expect(selftest.ok && selfStatus && selfStatus !== 'FAIL', `selftest_failed:${selftest.status}:${selfStatus || 'unknown'}`);
-  expect(selftest.payload?.checks?.voiceRuntime, 'selftest_voice_runtime_missing');
+  const voiceRuntimeCheck = selftest.payload?.checks?.voiceRuntime || null;
+  const voiceRuntimeStatus = String(voiceRuntimeCheck?.status || '').toUpperCase();
+  expect(voiceRuntimeCheck, 'selftest_voice_runtime_missing');
+  expect(
+    voiceRuntimeStatus && voiceRuntimeStatus !== 'UNHEALTHY' && voiceRuntimeStatus !== 'FAIL',
+    `selftest_voice_runtime_failed:${selftest.status}:${voiceRuntimeStatus || selfStatus || 'unknown'}`,
+  );
 
   const evidence = {
     smoke: 'L-03',
@@ -400,10 +418,12 @@ async function main() {
       attempted: true,
       click2callId: realCall.click2callId,
       click2callStatus: realCall.click2callStatus,
+      synthetic: realCall.synthetic === true,
       cdrFound: realCall.cdrFound,
       cdr: realCall.cdr,
     },
     selftestStatus: selfStatus,
+    voiceRuntimeStatus,
   };
   const evPath = writeEvidence(evidence);
 

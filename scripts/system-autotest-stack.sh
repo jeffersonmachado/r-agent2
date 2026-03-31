@@ -146,6 +146,12 @@ echo "[autotest-stack] Rodando validação oficial (contratos + unit/flow/stress
 npm run system:validate
 
 echo
+echo "[autotest-stack] Rodando Business QA orientado a jornada..."
+export BILLING_SANDBOX="${BILLING_SANDBOX:-1}"
+export BUSINESS_QA_MODE="${BUSINESS_QA_MODE:-pr}"
+npm run "test:business-qa:${BUSINESS_QA_MODE}"
+
+echo
 echo "[autotest-stack] Rodando smoke test PBX (Realtime/ODBC)..."
 API_URL="${API_BASE_URL}" bash ./scripts/test-pbx-realtime.sh
 

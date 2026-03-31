@@ -97,6 +97,7 @@ run_ssh_script() {
 # Variáveis padrão (valores padrão definidos aqui)
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
 SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
+USE_SSH_DIRECT="${DEPLOY_USE_SSH_DIRECT:-false}"
 
 # Detecta diretório do projeto automaticamente
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -107,25 +108,33 @@ REMOTE_USER="${DEPLOY_USER:-root}"
 # Usa DEPLOY_DIR se definido, senão usa o diretório do projeto atual
 REMOTE_DIR="${DEPLOY_DIR:-$PROJECT_ROOT}"
 
-# Exporta SSHPASS com valor padrão se não estiver definido
-if [ -z "$SSHPASS" ]; then
-    export SSHPASS="$SSH_PASSWORD"
-fi
-
-# Verifica se sshpass está disponível
-if ! command -v sshpass &> /dev/null; then
-    error "sshpass não está instalado. Instale com: apt-get install sshpass ou yum install sshpass"
-    exit 1
-fi
-
-# Configura SSH com senha
-export SSHPASS="$SSH_PASSWORD"
 # Timeouts aumentados para permitir builds longos (npm ci pode demorar vários minutos)
 # ServerAliveInterval=30: envia keepalive a cada 30 segundos
 # ServerAliveCountMax=20: permite até 20 intervalos sem resposta (20*30 = 10 minutos)
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes"
-SSH_CMD="sshpass -e ssh $SSH_OPTS"
-RSYNC_CMD="rsync -avz --progress --delete -e 'sshpass -e ssh $SSH_OPTS'"
+
+if [ "$USE_SSH_DIRECT" = "true" ]; then
+    info "Modo SSH direto habilitado (sem sshpass)."
+    SSH_CMD="ssh $SSH_OPTS"
+    RSYNC_SSH_TRANSPORT="ssh $SSH_OPTS"
+else
+    # Exporta SSHPASS com valor padrão se não estiver definido
+    if [ -z "$SSHPASS" ]; then
+        export SSHPASS="$SSH_PASSWORD"
+    fi
+
+    # Verifica se sshpass está disponível
+    if ! command -v sshpass &> /dev/null; then
+        error "sshpass não está instalado. Instale com: apt-get install sshpass ou yum install sshpass"
+        error "Ou use DEPLOY_USE_SSH_DIRECT=true para autenticação SSH padrão."
+        exit 1
+    fi
+
+    # Configura SSH com senha
+    export SSHPASS="$SSH_PASSWORD"
+    SSH_CMD="sshpass -e ssh $SSH_OPTS"
+    RSYNC_SSH_TRANSPORT="sshpass -e ssh $SSH_OPTS"
+fi
 
 # Variáveis padrão
 MODE="prod"
@@ -185,7 +194,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --password)
             SSH_PASSWORD="$2"
-            export SSHPASS="$SSH_PASSWORD"
+            if [ "$USE_SSH_DIRECT" != "true" ]; then
+                export SSHPASS="$SSH_PASSWORD"
+            fi
             shift 2
             ;;
         *)
@@ -233,7 +244,7 @@ echo ""
 
 # Testa conexão SSH com timeout explícito no SSH
 info "  Testando SSH..."
-SSH_TEST_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes ${REMOTE_USER}@${REMOTE_HOST} \"echo 'Conexão OK'\""
+SSH_TEST_CMD="$SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"echo 'Conexão OK'\""
 echo -e "${YELLOW}[COMANDO SSH]${NC} Testando conexão SSH"
 echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_TEST_CMD"
 echo ""
@@ -390,13 +401,13 @@ if [ ${#RSYNC_SOURCES[@]} -eq 0 ]; then
 fi
 
 # Usa explicitamente paths absolutos no rsync (ex.: /opt/results/ria/r-agent2/api/)
-RSYNC_CMD_FULL="rsync -avz --progress --delete ${EXCLUDE_LIST[@]} -e \"sshpass -e ssh $SSH_OPTS\" \"${RSYNC_SOURCES[@]}\" \"${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/\""
+RSYNC_CMD_FULL="rsync -avz --progress --delete ${EXCLUDE_LIST[@]} -e \"$RSYNC_SSH_TRANSPORT\" \"${RSYNC_SOURCES[@]}\" \"${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/\""
 echo -e "${YELLOW}[COMANDO RSYNC]${NC} Sincronizando arquivos"
 echo -e "${YELLOW}[COMANDO RSYNC]${NC} $RSYNC_CMD_FULL"
 echo ""
 rsync -avz --progress --delete \
     "${EXCLUDE_LIST[@]}" \
-    -e "sshpass -e ssh $SSH_OPTS" \
+    -e "$RSYNC_SSH_TRANSPORT" \
     "${RSYNC_SOURCES[@]}" \
     "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/" \
     2>&1 | grep -vE "(Warning|Permanently|building file list|sent|total size|speedup)" || true
