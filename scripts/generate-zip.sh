@@ -138,12 +138,25 @@ if [[ -f "$ZIP_FILE" ]]; then
 fi
 
 ZIP_EXCLUDES=(
+  # Controle de versão e IDE
   "${PROJECT_NAME}/.git/*"
   "${PROJECT_NAME}/.vscode/*"
   "${PROJECT_NAME}/.idea/*"
   "${PROJECT_NAME}/.pm2/*"
+
+  # Credenciais / arquivos sensíveis — proibidos em qualquer release
+  "${PROJECT_NAME}/.env"
+  "${PROJECT_NAME}/.token.env"
+  "${PROJECT_NAME}/**/.env"
+  "${PROJECT_NAME}/**/.env.local"
+  "${PROJECT_NAME}/**/.env.*.local"
+  "${PROJECT_NAME}/**/.token.env"
+
+  # Cache de sessão WhatsApp (dados de produção, não devem sair)
   "${PROJECT_NAME}/.wwebjs_auth/*"
   "${PROJECT_NAME}/.wwebjs_cache/*"
+
+  # Artefatos de runtime e logs
   "${PROJECT_NAME}/logs/*"
   "${PROJECT_NAME}/recordings/*"
   "${PROJECT_NAME}/replays/*"
@@ -153,6 +166,21 @@ ZIP_EXCLUDES=(
   "${PROJECT_NAME}/tests/rpa/screenshots/*"
   "${PROJECT_NAME}/tests/rpa/reports/*"
   "${PROJECT_NAME}/tests/rpa/replay/*"
+
+  # Dumps e importações externas (dados operacionais, não pertencem ao produto)
+  "${PROJECT_NAME}/remote-dumps/*"
+  "${PROJECT_NAME}/remote-dumps2/*"
+
+  # Backups ad-hoc (estrutura paralela, não parte do produto)
+  "${PROJECT_NAME}/frontend_backup/*"
+
+  # Scripts temporários na raiz (devem estar em scripts/smoke/ quando promovidos)
+  "${PROJECT_NAME}/tmp_*"
+
+  # Dados locais de execução
+  "${PROJECT_NAME}/data/executions/*"
+
+  # Python/build artifacts
   "${PROJECT_NAME}/**/__pycache__/*"
   "${PROJECT_NAME}/**/.pytest_cache/*"
   "${PROJECT_NAME}/**/*.pyc"
@@ -164,15 +192,16 @@ ZIP_EXCLUDES=(
   "${PROJECT_NAME}/**/.DS_Store"
   "${PROJECT_NAME}/**/Thumbs.db"
   "${PROJECT_NAME}/**/*.tsbuildinfo"
-  "${PROJECT_NAME}/**/.env"
-  "${PROJECT_NAME}/**/.env.local"
-  "${PROJECT_NAME}/**/.env.*.local"
   "${PROJECT_NAME}/**/venv/*"
   "${PROJECT_NAME}/**/env/*"
   "${PROJECT_NAME}/**/.venv/*"
+
+  # RAG runtime
   "${PROJECT_NAME}/rag-service/*.index"
   "${PROJECT_NAME}/rag-service/models/*"
   "${PROJECT_NAME}/rag-service/.cache/*"
+
+  # Artefatos gerados anteriores (o ZIP atual já é excluído separadamente)
   "${PROJECT_NAME}/dist/*.zip"
 )
 

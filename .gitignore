@@ -106,9 +106,8 @@ build/
 .DS_Store
 Thumbs.db
 
-# Temporários locais
-tmp_crud_block.js
-tmp_bpmn_smoke_playwright.js
+# Temporários locais na raiz (scripts promovidos devem ir para scripts/smoke/)
+tmp_*
 
 # Sessões locais do WhatsApp Web (não versionar)
 .wwebjs_auth/

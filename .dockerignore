@@ -56,6 +56,16 @@ test-results/
 docs/
 dev Documentos/
 
+# Dumps e importações externas (não pertencem à imagem de produção)
+remote-dumps/
+remote-dumps2/
+
+# Backups ad-hoc
+frontend_backup/
+
+# Scripts temporários promovíveis (qualquer tmp_* na raiz)
+tmp_*
+
 # Arquivos temporários
 *.tmp
 *.temp
