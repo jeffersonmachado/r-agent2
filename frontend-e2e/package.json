@@ -1,0 +1,14 @@
+{
+  "name": "chatbot-flow-editor-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pacote E2E isolado do frontend",
+  "scripts": {
+    "setup": "npm ci --no-audit --no-fund",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open"
+  },
+  "devDependencies": {
+    "cypress": "^15.10.0"
+  }
+}
