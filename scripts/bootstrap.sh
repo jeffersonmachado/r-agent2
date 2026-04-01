@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 # =============================================================================
-# bootstrap.sh — Setup reproduzível do ambiente de desenvolvimento/release
+# bootstrap.sh — Setup base reproduzivel (sem dependencia de E2E pesado)
 #
 # Objetivo: partindo de um clone limpo, preparar o ambiente completo sem
 # depender de estado implícito, arquivos locais escondidos ou resíduos.
 #
 # Uso:
-#   ./scripts/bootstrap.sh            # setup completo (backend + frontend)
-#   ./scripts/bootstrap.sh --api-only # só backend
-#   ./scripts/bootstrap.sh --ci       # modo CI (não abre terminais interativos)
-#   ./scripts/bootstrap.sh --check    # apenas valida pré-requisitos
+#   ./scripts/bootstrap.sh              # setup base (backend + frontend base)
+#   ./scripts/bootstrap.sh --api-only   # so backend
+#   ./scripts/bootstrap.sh --check      # apenas valida pre-requisitos
+#   ./scripts/bootstrap.sh --with-e2e   # roda bootstrap E2E explicito
 #
 # Pré-requisitos verificados automaticamente:
 #   - Node.js >= 20.19.0 ou >= 22.12.0
 #   - npm >= 10.0.0
-#   - PostgreSQL acessível (quando .env estiver configurado)
-#   - Redis acessível (quando .env estiver configurado)
+#   - Scripts essenciais de release/smoke presentes
 # =============================================================================
 
 set -euo pipefail
@@ -31,8 +30,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 API_ONLY=false
-CI_MODE=false
 CHECK_ONLY=false
+WITH_E2E=false
 
 step()  { echo -e "${BLUE}[bootstrap] $*${NC}"; }
 ok()    { echo -e "${GREEN}  ✓ $*${NC}"; }
@@ -43,8 +42,8 @@ fail()  { echo -e "${RED}  ✗ $*${NC}" >&2; exit 1; }
 for arg in "$@"; do
   case "$arg" in
     --api-only) API_ONLY=true ;;
-    --ci)       CI_MODE=true  ;;
     --check)    CHECK_ONLY=true ;;
+    --with-e2e) WITH_E2E=true ;;
     -h|--help)
       sed -n '/^# Uso:/,/^$/p' "$0" | sed 's/^#//'
       exit 0 ;;
@@ -92,6 +91,19 @@ else
   ok ".env presente"
 fi
 
+ESSENTIAL_SCRIPTS=(
+  "$PROJECT_ROOT/scripts/generate-zip.sh"
+  "$PROJECT_ROOT/scripts/release-package.sh"
+  "$PROJECT_ROOT/scripts/smoke/frontend-smoke.sh"
+)
+
+for script_file in "${ESSENTIAL_SCRIPTS[@]}"; do
+  if [[ ! -f "$script_file" ]]; then
+    fail "Script essencial ausente: $script_file"
+  fi
+done
+ok "Scripts essenciais de release/smoke presentes"
+
 if [[ "$CHECK_ONLY" == true ]]; then
   ok "Todos os pré-requisitos verificados."
   exit 0
@@ -104,11 +116,9 @@ npm ci --prefer-offline 2>&1 | grep -vE "^npm warn|^(added|up to date)" || npm i
 ok "Dependências do backend instaladas"
 
 if [[ "$API_ONLY" == false ]]; then
-  step "Instalando dependências do frontend..."
-  cd "$PROJECT_ROOT/frontend"
-  npm ci --prefer-offline 2>&1 | grep -vE "^npm warn|^(added|up to date)" || npm install
-  ok "Dependências do frontend instaladas"
-  cd "$PROJECT_ROOT"
+  step "Instalando frontend base (sem E2E pesado)..."
+  npm run frontend:install
+  ok "Frontend base instalado"
 fi
 
 # ── migração do banco ─────────────────────────────────────────────────────────
@@ -119,13 +129,10 @@ else
   warn "Migração reportou erros — verifique .env (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)"
 fi
 
-# ── build do frontend ─────────────────────────────────────────────────────────
-if [[ "$API_ONLY" == false && "$CI_MODE" == true ]]; then
-  step "Build do frontend (modo CI)..."
-  cd "$PROJECT_ROOT/frontend"
-  npm run build
-  ok "Build do frontend concluído: frontend/dist/"
-  cd "$PROJECT_ROOT"
+if [[ "$WITH_E2E" == true ]]; then
+  step "Executando bootstrap E2E explicito..."
+  bash "$PROJECT_ROOT/scripts/bootstrap-e2e.sh"
+  ok "Bootstrap E2E concluido"
 fi
 
 # ── validação final ───────────────────────────────────────────────────────────
@@ -146,5 +153,6 @@ echo -e "${GREEN}║  • Só API:           npm run start:api                  
 echo -e "${GREEN}║  • Só frontend:      npm run dev:frontend                ║${NC}"
 echo -e "${GREEN}║  • Rodar testes:     npm run test:unit                   ║${NC}"
 echo -e "${GREEN}║  • Build release:    npm run frontend:build              ║${NC}"
+echo -e "${GREEN}║  • Bootstrap E2E:    npm run bootstrap:e2e               ║${NC}"
 echo -e "${GREEN}║  • Gerar ZIP:        npm run zip                         ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"

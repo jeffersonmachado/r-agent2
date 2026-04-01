@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# Script para gerar ZIP do projeto com filtros de include/exclude.
-
 set -euo pipefail
 
 GREEN='\033[0;32m'
@@ -25,23 +23,17 @@ CUSTOM_EXCLUDES=()
 
 usage() {
   cat <<'EOF'
-Uso: ./scripts/generate-zip.sh [opções]
+Uso: ./scripts/generate-zip.sh [opcoes]
 
-Opções:
-  -o, --output-dir DIR      Diretório de saída do ZIP (padrão: ./dist)
-  -n, --name NOME.zip       Nome do arquivo ZIP (padrão: r-agent2-YYYYMMDD-HHMMSS.zip)
-  -i, --include PADRAO      Include customizado (pode repetir)
-  -e, --exclude PADRAO      Exclude customizado (pode repetir)
+Opcoes:
+  -o, --output-dir DIR       Diretorio de saida do ZIP (padrao: ./dist)
+  -n, --name NOME.zip        Nome do arquivo ZIP
+  -i, --include PADRAO       Include customizado no zip final (pode repetir)
+  -e, --exclude PADRAO       Exclude customizado no staging (pode repetir)
       --include-node-modules Inclui node_modules
       --include-coverage     Inclui coverage
-      --include-dist         Inclui dist
-  -h, --help                Exibe esta ajuda
-
-Exemplos:
-  ./scripts/generate-zip.sh
-  ./scripts/generate-zip.sh -o /tmp/backups -n deploy.zip
-  ./scripts/generate-zip.sh -i "api/**" -i "package.json" -n api-only.zip
-  ./scripts/generate-zip.sh -e "tests/**" -e "**/*.test.js" -n production.zip
+      --include-dist         Inclui dist/build
+  -h, --help                 Exibe esta ajuda
 EOF
 }
 
@@ -93,7 +85,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -e|--exclude)
       require_arg "$1" "${2:-}"
-      CUSTOM_EXCLUDES+=("$(to_project_pattern "$2")")
+      CUSTOM_EXCLUDES+=("$2")
       shift 2
       ;;
     --include-node-modules)
@@ -113,144 +105,133 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      echo -e "${RED}Erro: opção inválida '$1'${NC}" >&2
+      echo -e "${RED}Erro: opcao invalida '$1'${NC}" >&2
       usage
       exit 1
       ;;
   esac
 done
 
-if ! command -v zip >/dev/null 2>&1; then
-  echo -e "${RED}Erro: comando 'zip' não encontrado.${NC}" >&2
-  exit 1
-fi
+for cmd in zip unzip rsync; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo -e "${RED}Erro: comando '$cmd' nao encontrado.${NC}" >&2
+    exit 1
+  fi
+done
 
 mkdir -p "$OUTPUT_DIR"
 ZIP_FILE="${OUTPUT_DIR}/${ZIP_NAME}"
-ZIP_FILE_REAL="$(realpath "$ZIP_FILE")"
-PROJECT_PARENT_REAL="$(realpath "$(dirname "$PROJECT_DIR")")"
-
-echo -e "${YELLOW}Gerando ZIP do projeto ${PROJECT_NAME}...${NC}"
-echo "Saída: $ZIP_FILE"
 
 if [[ -f "$ZIP_FILE" ]]; then
   rm -f "$ZIP_FILE"
 fi
 
-ZIP_EXCLUDES=(
-  # Controle de versão e IDE
-  "${PROJECT_NAME}/.git/*"
-  "${PROJECT_NAME}/.vscode/*"
-  "${PROJECT_NAME}/.idea/*"
-  "${PROJECT_NAME}/.pm2/*"
+STAGE_ROOT="$(mktemp -d -t r-agent2-zip-stage-XXXXXX)"
+STAGE_DIR="$STAGE_ROOT/$PROJECT_NAME"
+cleanup() {
+  rm -rf "$STAGE_ROOT"
+}
+trap cleanup EXIT
 
-  # Credenciais / arquivos sensíveis — proibidos em qualquer release
-  "${PROJECT_NAME}/.env"
-  "${PROJECT_NAME}/.token.env"
-  "${PROJECT_NAME}/**/.env"
-  "${PROJECT_NAME}/**/.env.local"
-  "${PROJECT_NAME}/**/.env.*.local"
-  "${PROJECT_NAME}/**/.token.env"
+echo -e "${YELLOW}Gerando ZIP deterministico de ${PROJECT_NAME}...${NC}"
+echo "Saida: $ZIP_FILE"
 
-  # Cache de sessão WhatsApp (dados de produção, não devem sair)
-  "${PROJECT_NAME}/.wwebjs_auth/*"
-  "${PROJECT_NAME}/.wwebjs_cache/*"
-
-  # Artefatos de runtime e logs
-  "${PROJECT_NAME}/logs/*"
-  "${PROJECT_NAME}/recordings/*"
-  "${PROJECT_NAME}/replays/*"
-  "${PROJECT_NAME}/tests/recordings/*"
-  "${PROJECT_NAME}/tests/screenshots/*"
-  "${PROJECT_NAME}/tests/videos/*"
-  "${PROJECT_NAME}/tests/rpa/screenshots/*"
-  "${PROJECT_NAME}/tests/rpa/reports/*"
-  "${PROJECT_NAME}/tests/rpa/replay/*"
-
-  # Dumps e importações externas (dados operacionais, não pertencem ao produto)
-  "${PROJECT_NAME}/remote-dumps/*"
-  "${PROJECT_NAME}/remote-dumps2/*"
-
-  # Backups ad-hoc (estrutura paralela, não parte do produto)
-  "${PROJECT_NAME}/frontend_backup/*"
-
-  # Scripts temporários na raiz (devem estar em scripts/smoke/ quando promovidos)
-  "${PROJECT_NAME}/tmp_*"
-
-  # Dados locais de execução
-  "${PROJECT_NAME}/data/executions/*"
-
-  # Python/build artifacts
-  "${PROJECT_NAME}/**/__pycache__/*"
-  "${PROJECT_NAME}/**/.pytest_cache/*"
-  "${PROJECT_NAME}/**/*.pyc"
-  "${PROJECT_NAME}/**/*.pyo"
-  "${PROJECT_NAME}/**/*.log"
-  "${PROJECT_NAME}/**/*.swp"
-  "${PROJECT_NAME}/**/*.swo"
-  "${PROJECT_NAME}/**/*~"
-  "${PROJECT_NAME}/**/.DS_Store"
-  "${PROJECT_NAME}/**/Thumbs.db"
-  "${PROJECT_NAME}/**/*.tsbuildinfo"
-  "${PROJECT_NAME}/**/venv/*"
-  "${PROJECT_NAME}/**/env/*"
-  "${PROJECT_NAME}/**/.venv/*"
-
-  # RAG runtime
-  "${PROJECT_NAME}/rag-service/*.index"
-  "${PROJECT_NAME}/rag-service/models/*"
-  "${PROJECT_NAME}/rag-service/.cache/*"
-
-  # Artefatos gerados anteriores (o ZIP atual já é excluído separadamente)
-  "${PROJECT_NAME}/dist/*.zip"
+RSYNC_EXCLUDES=(
+  '.git/'
+  '.vscode/'
+  '.idea/'
+  '.pm2/'
+  '.env'
+  '.env.*'
+  '**/.env'
+  '**/.env.*'
+  'frontend/.env.production'
+  '**/.env.production'
+  '.token.env'
+  '**/.token.env'
+  '.wwebjs_auth/'
+  '.wwebjs_cache/'
+  'logs/'
+  'recordings/'
+  'replays/'
+  'tests/recordings/'
+  'tests/screenshots/'
+  'tests/videos/'
+  'tests/rpa/screenshots/'
+  'tests/rpa/reports/'
+  'tests/rpa/replay/'
+  'remote-dumps/'
+  'remote-dumps2/'
+  'frontend_backup/'
+  'tmp_*'
+  '**/tmp_*'
+  'caches/'
+  '**/caches/'
+  'backups/'
+  '**/backups/'
+  'dumps/'
+  '**/dumps/'
+  'data/executions/'
+  '**/__pycache__/'
+  '**/.pytest_cache/'
+  '**/*.pyc'
+  '**/*.pyo'
+  '**/*.log'
+  '**/*.swp'
+  '**/*.swo'
+  '**/*~'
+  '**/.DS_Store'
+  '**/Thumbs.db'
+  '**/*.tsbuildinfo'
+  '**/venv/'
+  '**/env/'
+  '**/.venv/'
+  'rag-service/*.index'
+  'rag-service/models/'
+  'rag-service/.cache/'
+  'dist/*.zip'
 )
 
 if [[ "$INCLUDE_NODE_MODULES" == false ]]; then
-  ZIP_EXCLUDES+=("${PROJECT_NAME}/**/node_modules/*")
+  RSYNC_EXCLUDES+=('node_modules/' '**/node_modules/')
 fi
 
 if [[ "$INCLUDE_COVERAGE" == false ]]; then
-  ZIP_EXCLUDES+=("${PROJECT_NAME}/**/coverage/*")
+  RSYNC_EXCLUDES+=('coverage/' '**/coverage/')
 fi
 
 if [[ "$INCLUDE_DIST" == false ]]; then
-  # Keep exclusions scoped to project build artifacts. Dependency packages often
-  # ship required runtime code under build/, and excluding those directories
-  # corrupts bundled node_modules (for example jest-cli/build/index.js).
-  ZIP_EXCLUDES+=(
-    "${PROJECT_NAME}/dist/*"
-    "${PROJECT_NAME}/build/*"
-    "${PROJECT_NAME}/frontend/dist/*"
-    "${PROJECT_NAME}/frontend/build/*"
-    "${PROJECT_NAME}/apps/mobile/dist/*"
-    "${PROJECT_NAME}/apps/mobile/build/*"
-    "${PROJECT_NAME}/apps/mobile/android/build/*"
-    "${PROJECT_NAME}/apps/mobile/ios/build/*"
+  RSYNC_EXCLUDES+=(
+    'dist/'
+    'build/'
+    'frontend/dist/'
+    'frontend/build/'
+    'apps/mobile/dist/'
+    'apps/mobile/build/'
+    'apps/mobile/android/build/'
+    'apps/mobile/ios/build/'
   )
 fi
 
-# Sempre evita auto-inclusão do ZIP de saída quando o destino está dentro do projeto.
-if [[ "$ZIP_FILE_REAL" == "$PROJECT_PARENT_REAL/$PROJECT_NAME/"* ]]; then
-  ZIP_EXCLUDES+=("${ZIP_FILE_REAL#"$PROJECT_PARENT_REAL/"}")
-fi
-
 if [[ ${#CUSTOM_EXCLUDES[@]} -gt 0 ]]; then
-  ZIP_EXCLUDES+=("${CUSTOM_EXCLUDES[@]}")
+  for pattern in "${CUSTOM_EXCLUDES[@]}"; do
+    RSYNC_EXCLUDES+=("$pattern")
+  done
 fi
 
-# -y stores symlinks as symlinks instead of following targets (e.g. /tmp sockets).
-ZIP_CMD=(zip -qry "$ZIP_FILE" "$PROJECT_NAME")
+RSYNC_ARGS=(-a)
+for pattern in "${RSYNC_EXCLUDES[@]}"; do
+  RSYNC_ARGS+=(--exclude "$pattern")
+done
 
-if [[ ${#CUSTOM_INCLUDES[@]} -gt 0 ]]; then
-  ZIP_CMD+=(-i "${CUSTOM_INCLUDES[@]}")
-fi
-
-if [[ ${#ZIP_EXCLUDES[@]} -gt 0 ]]; then
-  ZIP_CMD+=(-x "${ZIP_EXCLUDES[@]}")
-fi
+rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
 
 (
-  cd "$(dirname "$PROJECT_DIR")"
+  cd "$STAGE_ROOT"
+  ZIP_CMD=(zip -qry "$ZIP_FILE" "$PROJECT_NAME")
+  if [[ ${#CUSTOM_INCLUDES[@]} -gt 0 ]]; then
+    ZIP_CMD+=(-i "${CUSTOM_INCLUDES[@]}")
+  fi
   "${ZIP_CMD[@]}"
 )
 
@@ -259,31 +240,39 @@ if [[ ! -f "$ZIP_FILE" ]]; then
   exit 1
 fi
 
-FILE_SIZE="$(du -h "$ZIP_FILE" | cut -f1)"
-FILE_COUNT="n/d"
-TYPE_STATS=""
-if command -v unzip >/dev/null 2>&1; then
-  ZIP_LIST="$(unzip -Z1 "$ZIP_FILE")"
-  FILE_COUNT="$(printf '%s\n' "$ZIP_LIST" | wc -l | tr -d ' ')"
-  TYPE_STATS="$(printf '%s\n' "$ZIP_LIST" | awk -F/ '
-    {
-      name=$NF;
-      if (name == "") next;
-      n=split(name, parts, ".");
-      ext=(n > 1 ? tolower(parts[n]) : "(sem-ext)");
-      c[ext]++;
-    }
-    END {
-      for (k in c) printf "%d\t%s\n", c[k], k;
-    }
-  ' | sort -rn | head -10)"
+ZIP_CONTENTS="$(unzip -Z1 "$ZIP_FILE")"
+FORBIDDEN_REGEX=(
+  '(^|/)node_modules/'
+  '(^|/)\.env$'
+  '(^|/)\.env\..+$'
+  '\.env\.production$'
+  '(^|/)coverage/'
+  '(^|/)remote-dumps/'
+  '(^|/)remote-dumps2/'
+  '(^|/)frontend_backup/'
+  '(^|/)tmp_'
+)
+
+FOUND_FORBIDDEN=false
+for pattern in "${FORBIDDEN_REGEX[@]}"; do
+  matches="$(printf '%s\n' "$ZIP_CONTENTS" | grep -E "$pattern" || true)"
+  if [[ -n "$matches" ]]; then
+    FOUND_FORBIDDEN=true
+    echo -e "${RED}Erro: padrao proibido detectado no ZIP ($pattern):${NC}" >&2
+    printf '%s\n' "$matches" | head -10 >&2
+  fi
+done
+
+if [[ "$FOUND_FORBIDDEN" == true ]]; then
+  rm -f "$ZIP_FILE"
+  echo -e "${RED}Erro: ZIP removido por contaminacao de conteudo proibido.${NC}" >&2
+  exit 1
 fi
+
+FILE_SIZE="$(du -h "$ZIP_FILE" | cut -f1)"
+FILE_COUNT="$(printf '%s\n' "$ZIP_CONTENTS" | wc -l | tr -d ' ')"
 
 echo -e "${GREEN}✓ ZIP gerado com sucesso!${NC}"
 echo "Arquivo: $ZIP_FILE"
 echo "Tamanho: $FILE_SIZE"
 echo "Arquivos: $FILE_COUNT"
-if [[ -n "$TYPE_STATS" ]]; then
-  echo "Top tipos:"
-  printf '%s\n' "$TYPE_STATS" | awk -F'\t' '{ printf "  - %s: %s\n", $2, $1 }'
-fi

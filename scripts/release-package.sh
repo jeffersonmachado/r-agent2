@@ -35,6 +35,7 @@ DIST_DIR="$PROJECT_ROOT/dist"
 SKIP_AUDIT=false
 KEEP_DIST=3
 CUSTOM_NAME=""
+AUDIT_ONLY_ZIP=""
 
 step()  { echo -e "${BLUE}[release] $*${NC}"; }
 ok()    { echo -e "${GREEN}  ✓ $*${NC}"; }
@@ -47,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --skip-audit)  SKIP_AUDIT=true; shift ;;
     --keep-dist)   KEEP_DIST="${2:?--keep-dist requer valor}"; shift 2 ;;
     --name)        CUSTOM_NAME="${2:?--name requer valor}"; shift 2 ;;
+    --audit-only)  AUDIT_ONLY_ZIP="${2:?--audit-only requer caminho do zip}"; shift 2 ;;
     -h|--help)
       sed -n '/^# Uso:/,/^# Critérios/p' "$0" | sed 's/^#//'
       exit 0 ;;
@@ -57,14 +59,18 @@ done
 # ── padrões proibidos no artefato de release ──────────────────────────────────
 # Qualquer match abaixo representa BLOQUEIO de release.
 FORBIDDEN_PATTERNS=(
-  "\.env$"
-  "\.token\.env"
-  "remote-dumps/"
-  "remote-dumps2/"
-  "frontend_backup/"
-  "/tmp_"
-  "\.wwebjs_auth/"
-  "\.wwebjs_cache/"
+  '(^|/)node_modules/'
+  '(^|/)\.env$'
+  '(^|/)\.env\..+$'
+  '\.env\.production$'
+  '(^|/)coverage/'
+  '(^|/)remote-dumps/'
+  '(^|/)remote-dumps2/'
+  '(^|/)frontend_backup/'
+  '(^|/)tmp_'
+  '(^|/)\.token\.env$'
+  '(^|/)\.wwebjs_auth/'
+  '(^|/)\.wwebjs_cache/'
 )
 
 # ── 1. Pré-condições ──────────────────────────────────────────────────────────
@@ -82,27 +88,41 @@ fi
 ok "Pré-condições verificadas"
 
 # ── 2. Gerar ZIP ──────────────────────────────────────────────────────────────
-step "Gerando artefato de release..."
+if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
+  LATEST_ZIP="$AUDIT_ONLY_ZIP"
+  [[ -f "$LATEST_ZIP" ]] || fail "ZIP informado em --audit-only nao existe: $LATEST_ZIP"
+  ok "Auditando ZIP existente: $LATEST_ZIP"
+else
+  step "Gerando artefato de release..."
 
-ZIP_ARGS=()
-if [[ -n "$CUSTOM_NAME" ]]; then
-  ZIP_ARGS+=("--name" "$CUSTOM_NAME")
+  if [[ ! -d "$PROJECT_ROOT/frontend/dist" ]]; then
+    fail "frontend/dist ausente. Execute: npm run frontend:build"
+  fi
+
+  step "Executando smoke do artefato frontend..."
+  bash "$PROJECT_ROOT/scripts/smoke/frontend-smoke.sh"
+  ok "Smoke do frontend aprovado"
+
+  ZIP_ARGS=()
+  if [[ -n "$CUSTOM_NAME" ]]; then
+    ZIP_ARGS+=("--name" "$CUSTOM_NAME")
+  fi
+
+  GENERATE_ZIP="$SCRIPT_DIR/generate-zip.sh"
+  if [[ ! -x "$GENERATE_ZIP" ]]; then
+    chmod +x "$GENERATE_ZIP"
+  fi
+
+  # Captura o caminho do ZIP gerado
+  ZIP_OUTPUT="$("$GENERATE_ZIP" "${ZIP_ARGS[@]}" 2>&1 | tee /dev/stderr | grep "^Arquivo:" | sed 's/^Arquivo: //')"
+  # Alternativa: pegar o ZIP mais recente em dist/
+  LATEST_ZIP="$(ls -t "$DIST_DIR"/*.zip 2>/dev/null | head -1)"
+  if [[ -z "$LATEST_ZIP" ]]; then
+    fail "Nenhum ZIP encontrado em $DIST_DIR após geração."
+  fi
+
+  ok "Artefato gerado: $LATEST_ZIP"
 fi
-
-GENERATE_ZIP="$SCRIPT_DIR/generate-zip.sh"
-if [[ ! -x "$GENERATE_ZIP" ]]; then
-  chmod +x "$GENERATE_ZIP"
-fi
-
-# Captura o caminho do ZIP gerado
-ZIP_OUTPUT="$("$GENERATE_ZIP" "${ZIP_ARGS[@]}" 2>&1 | tee /dev/stderr | grep "^Arquivo:" | sed 's/^Arquivo: //')"
-# Alternativa: pegar o ZIP mais recente em dist/
-LATEST_ZIP="$(ls -t "$DIST_DIR"/*.zip 2>/dev/null | head -1)"
-if [[ -z "$LATEST_ZIP" ]]; then
-  fail "Nenhum ZIP encontrado em $DIST_DIR após geração."
-fi
-
-ok "Artefato gerado: $LATEST_ZIP"
 
 # ── 3. Auditoria do artefato ──────────────────────────────────────────────────
 if [[ "$SKIP_AUDIT" == false ]]; then
@@ -115,14 +135,16 @@ if [[ "$SKIP_AUDIT" == false ]]; then
     MATCHES="$(echo "$ZIP_CONTENTS" | grep -E "$pattern" || true)"
     if [[ -n "$MATCHES" ]]; then
       echo -e "${RED}  ✗ Padrão proibido encontrado: $pattern${NC}"
-      echo "$MATCHES" | head -5 | sed 's/^/      /'
+      echo "$MATCHES" | head -20 | sed 's/^/      /'
       AUDIT_FAILED=true
     fi
   done
 
   if [[ "$AUDIT_FAILED" == true ]]; then
-    rm -f "$LATEST_ZIP"
-    fail "Artefato contém arquivos proibidos. ZIP removido. Corrija os excludes em generate-zip.sh."
+    if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
+      rm -f "$LATEST_ZIP"
+    fi
+    fail "Artefato contaminado detectado. Corrija o empacotamento: scripts/generate-zip.sh."
   fi
 
   FILE_COUNT="$(echo "$ZIP_CONTENTS" | wc -l | tr -d ' ')"
@@ -130,6 +152,11 @@ if [[ "$SKIP_AUDIT" == false ]]; then
 fi
 
 # ── 4. Manifesto SHA-256 ──────────────────────────────────────────────────────
+if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
+  ok "Auditoria de artefato existente concluida"
+  exit 0
+fi
+
 step "Gerando manifesto de release..."
 
 ZIP_BASENAME="$(basename "$LATEST_ZIP")"

@@ -2,6 +2,8 @@
 'use strict';
 
 const { execFileSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 const ALLOWED_PREFIXES = [
   'qa/',
@@ -36,6 +38,13 @@ function readGitStatusPorcelain() {
 }
 
 function main() {
+  const gitDir = path.resolve(process.cwd(), '.git');
+  if (!fs.existsSync(gitDir)) {
+    // eslint-disable-next-line no-console
+    console.log('[release-clean-check] SKIP: workspace sem .git (check aplicavel apenas em repositorio Git).');
+    process.exit(0);
+  }
+
   const output = readGitStatusPorcelain();
   const lines = output.split('\n').map(parsePorcelainLine).filter(Boolean);
 

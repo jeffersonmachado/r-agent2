@@ -52,7 +52,11 @@ let cheerio = null;
 try {
   cheerio = require('cheerio');
 } catch (error) {
-  logger.warn('[WebScraping] cheerio não instalado. Execute: npm install cheerio');
+  logger.error('[WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.');
+}
+
+function isDegradedScrapingAllowed() {
+  return safeTrimLower(process.env.SCRAPING_ALLOW_DEGRADED) === 'true';
 }
 
 // Playwright é opcional em runtime (habilitado via env USE_PLAYWRIGHT=true)
@@ -110,7 +114,10 @@ async function fetchUrl(url, options = {}) {
  */
 function extractTextFromHtml(html, options = {}) {
   if (!cheerio) {
-    // Fallback simples se cheerio não estiver disponível
+    if (!isDegradedScrapingAllowed()) {
+      throw new Error('CHEERIO_UNAVAILABLE: scraping estrutural indisponível sem cheerio');
+    }
+    // Modo degradado explícito: limpeza simplificada sem parser HTML completo.
     return html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -454,6 +461,10 @@ async function scrapeUrl(url, options = {}) {
   const executionId = options.executionId || `exec-${Date.now()}`;
   logger.info('[WebScraping] Iniciando scraping', { url, executionId, tenantId, autoIndex, timeout });
 
+  if (!cheerio && !isDegradedScrapingAllowed()) {
+    throw new Error('CHEERIO_UNAVAILABLE: instale cheerio ou habilite SCRAPING_ALLOW_DEGRADED=true');
+  }
+
   try {
     // Aplica rate limiting ANTES de fazer requisição
     const userId = options.userId || tenantId;
@@ -466,6 +477,14 @@ async function scrapeUrl(url, options = {}) {
 
     /** @type {{code: string, message: string, details?: any}[]} */
     const warnings = [];
+
+    if (!cheerio && isDegradedScrapingAllowed()) {
+      warnings.push({
+        code: 'CHEERIO_DEGRADED_MODE',
+        message: 'cheerio ausente: scraping em modo degradado explícito.',
+        details: { url },
+      });
+    }
 
     let scrapeResult = null;
     let html = '';
