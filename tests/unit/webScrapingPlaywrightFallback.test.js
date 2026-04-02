@@ -42,14 +42,24 @@ jest.mock('../../lib/recordingSystem', () => ({
 }));
 
 describe('webScrapingService (Playwright fallback)', () => {
+  const oldDegraded = process.env.SCRAPING_ALLOW_DEGRADED;
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.USE_PLAYWRIGHT = 'true';
+    // Testes de fallback Playwright não testam a ausência de cheerio;
+    // modo degradado permite que o guard seja passado.
+    process.env.SCRAPING_ALLOW_DEGRADED = 'true';
   });
 
   afterEach(() => {
     delete process.env.USE_PLAYWRIGHT;
+    if (oldDegraded === undefined) {
+      delete process.env.SCRAPING_ALLOW_DEGRADED;
+    } else {
+      process.env.SCRAPING_ALLOW_DEGRADED = oldDegraded;
+    }
     // @ts-ignore
     delete global.fetch;
   });

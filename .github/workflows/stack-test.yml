@@ -1,4 +1,5 @@
-name: Stack Test (Docker Compose)
+# WORKFLOW OFICIAL: Stack Docker Compose — valida test-stack-up/smoke/rpa-seed.
+name: Stack Test (Docker Compose) [OFICIAL]
 
 on:
   push:

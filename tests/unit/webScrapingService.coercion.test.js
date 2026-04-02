@@ -6,6 +6,7 @@ const path = require('path');
 describe('webScrapingService coercion hardening', () => {
   const oldReplay = process.env.ENABLE_SCRAPING_REPLAY;
   const oldRecording = process.env.ENABLE_SCRAPING_RECORDING;
+  const oldDegraded = process.env.SCRAPING_ALLOW_DEGRADED;
 
   beforeEach(() => {
     jest.resetModules();
@@ -13,6 +14,9 @@ describe('webScrapingService coercion hardening', () => {
 
     process.env.ENABLE_SCRAPING_REPLAY = 'false';
     process.env.ENABLE_SCRAPING_RECORDING = 'false';
+    // Testes de coerção não testam a ausência de cheerio; permitem modo
+    // degradado para que o serviço passe do guard e chegue na lógica testada.
+    process.env.SCRAPING_ALLOW_DEGRADED = 'true';
 
     global.fetch = jest.fn(async () => ({
       ok: true,
@@ -61,6 +65,11 @@ describe('webScrapingService coercion hardening', () => {
   afterAll(() => {
     process.env.ENABLE_SCRAPING_REPLAY = oldReplay;
     process.env.ENABLE_SCRAPING_RECORDING = oldRecording;
+    if (oldDegraded === undefined) {
+      delete process.env.SCRAPING_ALLOW_DEGRADED;
+    } else {
+      process.env.SCRAPING_ALLOW_DEGRADED = oldDegraded;
+    }
   });
 
   test('nao quebra quando createDocument falha com indexError.message hostil', async () => {

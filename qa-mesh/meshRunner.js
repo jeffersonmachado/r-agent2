@@ -479,6 +479,18 @@ function classifyScenarioResult(result, history = []) {
     };
   }
 
+  // passed_via_fallback: passou mas via adapter secundário — degradação explícita
+  if (result.status === 'passed_via_fallback') {
+    return {
+      ...result,
+      failureType: null,
+      errorMessage: null,
+      rootCauseHint: 'Cenário passou via fallback para adapter API (primary adapter falhou).',
+      runtimeMode: result.runtimeMode || 'REAL_FAILED_FALLBACK_USED',
+      durationMs: durationMs(result.startedAt, result.finishedAt),
+    };
+  }
+
   if (result.status === 'skipped') {
     const diagnostics = collectScenarioDiagnostics(result);
     return {
@@ -520,7 +532,9 @@ function classifyScenarioResult(result, history = []) {
 }
 
 function aggregateFailures(results = []) {
-  const failures = results.filter((item) => item.status !== 'passed');
+  // passed_via_fallback é tratado como não-falha estrutural, mas degradação visível
+  const failures = results.filter((item) => item.status !== 'passed' && item.status !== 'passed_via_fallback');
+  const fallbackUsed = results.filter((item) => item.status === 'passed_via_fallback');
   const failuresByDomain = {};
   const failuresByType = {};
   const errorCount = new Map();
@@ -835,12 +849,17 @@ async function executeScenarioWithFallback(scenario, context) {
       context.appendLog?.(`Fallback para adapter API em ${scenario.id}`, 'warning');
       try {
         const fallbackResult = await apiAdapter.executeScenario(scenario, { repoRoot: ROOT_DIR });
+        const fallbackStatus = classifyScenarioStatus(fallbackResult);
+        // Marcar explicitamente que o resultado passou via fallback — nunca ocultar degradação.
+        const degradedStatus = fallbackStatus === 'passed' ? 'passed_via_fallback' : fallbackStatus;
         return {
           ...fallbackResult,
-          status: classifyScenarioStatus(fallbackResult),
+          status: degradedStatus,
+          runtimeMode: 'REAL_FAILED_FALLBACK_USED',
           metrics: {
             ...(fallbackResult.metrics || {}),
             fallbackAdapter: 'api',
+            primaryAdapterFailed: true,
           },
         };
       } catch (fallbackError) {
@@ -954,11 +973,15 @@ async function runMesh(options = {}) {
     executed: governance.executed,
     total: governance.attempted,
     passed: governance.passed,
+    fallbackPassed: governance.fallbackPassed || 0,
     failed: governance.failed,
     skipped: governance.skipped,
     infraErrors: governance.infraErrors,
     environmentMissing: governance.environmentMissing,
     flaky: governance.flaky,
+    // Degradação explícita: cenários que passaram via fallback de adapter (primary falhou)
+    fallbackUsed: results.filter((r) => r.status === 'passed_via_fallback').length,
+    fallbackBlockingUsed: results.filter((r) => r.status === 'passed_via_fallback' && r.criticality === 'blocking').length,
     executionCoverage: governance.executionCoverage,
     executionQuality: governance.executionQuality,
     domains: governance.domains,
@@ -970,6 +993,17 @@ async function runMesh(options = {}) {
     blockingDomains: failureAnalysis.blockingDomains,
     changedFiles,
   };
+
+  // Se existem cenários blocking passando via fallback: degradar explicitamente o gate
+  if (summary.fallbackBlockingUsed > 0) {
+    if (summary.goNoGo === 'GO') {
+      summary.goNoGo = 'GO_DEGRADED';
+    }
+    summary.reasons = [
+      ...(summary.reasons || []),
+      `${summary.fallbackBlockingUsed} cenário(s) blocking passaram via fallback de adapter (primary falhou) — execução degradada.`,
+    ];
+  }
 
   const baselineBeforeUpdate = loadBaseline();
   const baselineComparison = compareWithBaseline(baselineBeforeUpdate, summary, results);

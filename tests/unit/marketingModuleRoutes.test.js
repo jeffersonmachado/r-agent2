@@ -27,9 +27,12 @@ describe('marketing module', () => {
       '/api/marketing/links',
       '/api/marketing/links',
       '/api/marketing/leads',
+      '/api/marketing/leads',
+      '/api/marketing/leads/:leadId',
       '/api/marketing/leads/stats',
       '/api/marketing/scoring-rules',
       '/api/marketing/scoring-rules',
+      '/api/marketing/email-campaigns',
       '/api/marketing/email-campaigns',
       '/api/marketing/email-campaigns/:campaignId/send',
     ]);

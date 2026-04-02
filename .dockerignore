@@ -56,12 +56,19 @@ test-results/
 docs/
 dev Documentos/
 
+# Dependências isoladas E2E / Cypress (não pertencem à imagem de produção)
+frontend-e2e/node_modules/
+
 # Dumps e importações externas (não pertencem à imagem de produção)
 remote-dumps/
 remote-dumps2/
 
 # Backups ad-hoc
 frontend_backup/
+
+# Tokens e credenciais locais
+.token.env
+*.token.env
 
 # Scripts temporários promovíveis (qualquer tmp_* na raiz)
 tmp_*

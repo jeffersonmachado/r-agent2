@@ -6,11 +6,14 @@ function buildDomainSummary(results = []) {
   return results.reduce((acc, item) => {
     const domain = item.domain || 'core';
     if (!acc[domain]) {
-      acc[domain] = { passed: 0, failed: 0, skipped: 0, infra_error: 0, environment_missing: 0, flaky: 0, total: 0 };
+      acc[domain] = { passed: 0, fallbackPassed: 0, failed: 0, skipped: 0, infra_error: 0, environment_missing: 0, flaky: 0, total: 0 };
     }
     acc[domain].total += 1;
     if (item.status === 'passed') acc[domain].passed += 1;
-    else if (item.status === 'failed') acc[domain].failed += 1;
+    else if (item.status === 'passed_via_fallback') {
+      acc[domain].passed += 1; // conta como passed para cobertura
+      acc[domain].fallbackPassed += 1; // rastreia degradação
+    } else if (item.status === 'failed') acc[domain].failed += 1;
     else if (item.status === 'infra_error') acc[domain].infra_error += 1;
     else if (item.status === 'environment_missing') acc[domain].environment_missing += 1;
     else if (item.status === 'flaky') acc[domain].flaky += 1;
@@ -21,7 +24,9 @@ function buildDomainSummary(results = []) {
 
 function summarizeResults(results = [], registryTotal = results.length) {
   const attempted = results.length;
-  const passed = results.filter((item) => item.status === 'passed').length;
+  // passed_via_fallback conta como "passed" para cobertura, mas é rastreado separadamente
+  const passed = results.filter((item) => item.status === 'passed' || item.status === 'passed_via_fallback').length;
+  const fallbackPassed = results.filter((item) => item.status === 'passed_via_fallback').length;
   const failed = results.filter((item) => item.status === 'failed').length;
   const skipped = results.filter((item) => item.status === 'skipped').length;
   const infraErrors = results.filter((item) => item.status === 'infra_error').length;
@@ -35,6 +40,7 @@ function summarizeResults(results = [], registryTotal = results.length) {
     attempted,
     executed,
     passed,
+    fallbackPassed,
     failed,
     skipped,
     infraErrors,
@@ -86,6 +92,7 @@ function evaluateGoNoGo(results = [], options = {}) {
     attempted: summary.attempted,
     executed: summary.executed,
     passed: summary.passed,
+    fallbackPassed: summary.fallbackPassed,
     failed: summary.failed,
     skipped: summary.skipped,
     infraErrors: summary.infraErrors,

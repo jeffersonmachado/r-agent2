@@ -63,4 +63,38 @@ describe('qa-mesh/governance', () => {
     expect(summary.domains.pbx.infra_error).toBe(1);
     expect(summary.domains.pbx.flaky).toBe(1);
   });
+
+  test('passed_via_fallback conta como passed para cobertura e rastreia fallbackPassed', () => {
+    const summary = summarizeResults(
+      [
+        { status: 'passed', domain: 'core' },
+        { status: 'passed_via_fallback', domain: 'core' },
+        { status: 'failed', domain: 'beauty' },
+      ],
+      3
+    );
+
+    expect(summary.passed).toBe(2); // passed + passed_via_fallback
+    expect(summary.fallbackPassed).toBe(1);
+    expect(summary.failed).toBe(1);
+    expect(summary.executed).toBe(3);
+    expect(summary.executionCoverage).toBeCloseTo(1);
+    expect(summary.domains.core.passed).toBe(2);
+    expect(summary.domains.core.fallbackPassed).toBe(1);
+  });
+
+  test('evaluateGoNoGo retorna GO mas reporte fallbackPassed quando cenário passou via fallback', () => {
+    const result = evaluateGoNoGo(
+      [
+        { id: 'ok', domain: 'core', criticality: 'medium', status: 'passed' },
+        { id: 'fall', domain: 'core', criticality: 'medium', status: 'passed_via_fallback' },
+      ],
+      { registryTotal: 2 }
+    );
+
+    // GO porque nenhum blocking falhou — degradação é visível mas não bloqueia se não-blocking
+    expect(result.goNoGo).toBe('GO');
+    expect(result.fallbackPassed).toBe(1);
+    expect(result.passed).toBe(2);
+  });
 });

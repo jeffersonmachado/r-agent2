@@ -1,4 +1,5 @@
-name: Seed Plataforma via RPA
+# WORKFLOW AUXILIAR: Seed manual da plataforma via RPA — disparado manualmente.
+name: Seed Plataforma via RPA [AUXILIAR]
 
 on:
   workflow_dispatch:

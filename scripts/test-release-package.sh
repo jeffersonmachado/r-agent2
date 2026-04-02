@@ -42,6 +42,9 @@ FORBIDDEN_PATTERNS=(
   '(^|/)remote-dumps2/'
   '(^|/)frontend_backup/'
   '(^|/)tmp_'
+  '(^|/)\.token\.env$'
+  '(^|/)\.wwebjs_auth/'
+  '(^|/)\.wwebjs_cache/'
 )
 
 REQUIRED_PATTERNS=(

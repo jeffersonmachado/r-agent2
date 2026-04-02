@@ -1,4 +1,6 @@
-name: Pipeline Completo CI/CD
+# WORKFLOW AUXILIAR: Pipeline integrado CI/CD (build + deploy) — ativado em push a main.
+# Para gate de CI, o pipeline oficial e o stack-test ja cobrem.
+name: Pipeline Completo CI/CD [AUXILIAR]
 
 on:
   push:

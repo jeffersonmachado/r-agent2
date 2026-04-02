@@ -1,4 +1,6 @@
-name: CI Pipeline
+# WORKFLOW OFICIAL: Gate de CI para todo push/PR em main e develop.
+# Cobertura: unit tests, QA mesh, system:validate, smoke scheduling.
+name: CI Pipeline [OFICIAL]
 
 on:
   push:

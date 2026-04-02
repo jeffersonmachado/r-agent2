@@ -1,4 +1,5 @@
-name: Deploy
+# WORKFLOW OFICIAL: Deploy de producao — ativado em push a main ou tag v*.
+name: Deploy [OFICIAL]
 
 on:
   push:

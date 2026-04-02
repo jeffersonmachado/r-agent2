@@ -1,4 +1,6 @@
-name: RPA - Testes E2E (CI)
+# WORKFLOW AUXILIAR: Testes E2E via RPA (Cypress/Playwright) — ativado em main/develop.
+# Requer stack ativa e dispositivos E2E. Nao bloqueia CI base.
+name: RPA - Testes E2E (CI) [AUXILIAR]
 
 on:
   push:

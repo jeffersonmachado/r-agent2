@@ -1,4 +1,5 @@
-name: Test Stack Smoke
+# WORKFLOW AUXILIAR: Smoke rapido da stack — subconjunto do stack-test oficial.
+name: Test Stack Smoke [AUXILIAR]
 
 on:
   workflow_dispatch:

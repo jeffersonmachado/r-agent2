@@ -91,6 +91,19 @@ else
   ok ".env presente"
 fi
 
+# api/data/config.json
+if [[ ! -f "$PROJECT_ROOT/api/data/config.json" ]]; then
+  if [[ -f "$PROJECT_ROOT/api/data/config.example.json" ]]; then
+    warn "api/data/config.json não encontrado. Criando a partir de config.example.json..."
+    cp "$PROJECT_ROOT/api/data/config.example.json" "$PROJECT_ROOT/api/data/config.json"
+    warn "ATENÇÃO: edite api/data/config.json com as configurações reais antes de subir."
+  else
+    warn "api/data/config.json e config.example.json ausentes — sistema usará variáveis de ambiente."
+  fi
+else
+  ok "api/data/config.json presente"
+fi
+
 ESSENTIAL_SCRIPTS=(
   "$PROJECT_ROOT/scripts/generate-zip.sh"
   "$PROJECT_ROOT/scripts/release-package.sh"

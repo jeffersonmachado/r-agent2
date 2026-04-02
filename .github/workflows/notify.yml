@@ -1,4 +1,5 @@
-name: Notificações CI/CD
+# WORKFLOW AUXILIAR: Notificacoes de CI/CD.
+name: Notificações CI/CD [AUXILIAR]
 
 on:
   workflow_run:

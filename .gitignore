@@ -5,6 +5,7 @@ api/data/config.json
 # Node modules
 node_modules/
 frontend/node_modules/
+frontend-e2e/node_modules/
 
 # Logs
 *.log
@@ -108,6 +109,9 @@ Thumbs.db
 
 # Temporários locais na raiz (scripts promovidos devem ir para scripts/smoke/)
 tmp_*
+
+# Artefatos de runtime de scripts (gerados em execução, não versionar)
+scripts/test-report.json
 
 # Sessões locais do WhatsApp Web (não versionar)
 .wwebjs_auth/

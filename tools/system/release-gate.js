@@ -85,6 +85,56 @@ async function verifySelftest() {
   return { url: selftestUrl, status, requiredChecks };
 }
 
+function checkReleaseArtifact() {
+  // ONDA 6: deploy deve partir de artefato aprovado, não de workspace vivo.
+  // Habilitar RELEASE_GATE_SKIP_ARTIFACT_CHECK=1 apenas em ambientes CI sem geração de ZIP.
+  if (String(process.env.RELEASE_GATE_SKIP_ARTIFACT_CHECK || '0') === '1') {
+    log(COLORS.yellow, '[release-gate] RELEASE_GATE_SKIP_ARTIFACT_CHECK=1 → verificação de artefato ignorada.');
+    return { status: 'skipped', reason: 'RELEASE_GATE_SKIP_ARTIFACT_CHECK=1' };
+  }
+
+  const distDir = path.join(ROOT, 'dist');
+  if (!fs.existsSync(distDir)) {
+    throw new Error('artifact_check_failed: dist/ não existe. Execute: npm run zip:release');
+  }
+
+  let zipFiles = [];
+  try {
+    zipFiles = fs.readdirSync(distDir)
+      .filter((f) => f.endsWith('.zip') && !f.includes('test') && !f.includes('contaminated'))
+      .sort()
+      .reverse();
+  } catch (_) {
+    throw new Error('artifact_check_failed: erro ao ler dist/');
+  }
+
+  if (zipFiles.length === 0) {
+    throw new Error('artifact_check_failed: nenhum ZIP aprovado em dist/. Execute: npm run zip:release');
+  }
+
+  const latestZip = zipFiles[0];
+  const manifestName = latestZip.replace(/\.zip$/, '.manifest.json');
+  const manifestPath = path.join(distDir, manifestName);
+
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`artifact_check_failed: manifesto ausente para ${latestZip}. Gere via: npm run zip:release`);
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch (_) {
+    throw new Error(`artifact_check_failed: manifesto ${manifestName} é inválido (JSON malformado)`);
+  }
+
+  if (manifest.audit !== 'passed') {
+    throw new Error(`artifact_check_failed: manifesto ${manifestName} não tem audit=passed (${manifest.audit})`);
+  }
+
+  log(COLORS.green, `[release-gate] OK: artefato aprovado — ${latestZip} (sha256: ${String(manifest.sha256 || 'n/a').slice(0, 16)}...)`);
+  return { status: 'ok', artifact: latestZip, sha256: manifest.sha256, generatedAt: manifest.generated_at };
+}
+
 function writeReport(report) {
   const relPath = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
   const absPath = path.join(ROOT, relPath);
@@ -202,6 +252,7 @@ async function main() {
     startedAt: new Date().toISOString(),
     status: 'running',
     steps: [],
+    artifactCheck: null,
     selftest: null,
     smokeEvidence: null,
     error: null,
@@ -211,6 +262,9 @@ async function main() {
   const gateStartedAt = Date.now();
 
   try {
+    // ONDA 6: verificar artefato aprovado antes de qualquer validação de runtime
+    report.artifactCheck = checkReleaseArtifact();
+
     if (gateMode === 'stack') {
       if (skipStack) {
         throw new Error('invalid_gate_config: RELEASE_GATE_MODE=stack requer RELEASE_GATE_SKIP_STACK!=1');
