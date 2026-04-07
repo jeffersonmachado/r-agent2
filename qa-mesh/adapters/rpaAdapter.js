@@ -7,6 +7,26 @@ async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function compactErrorText(entry) {
+  return String(entry?.error || entry?.message || entry || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isTransientRpaFailure(result) {
+  const errors = Array.isArray(result?.errors) ? result.errors : [];
+  const text = errors.map(compactErrorText).join(' | ');
+  const status = String(result?.metrics?.status || '').toLowerCase();
+  return (
+    status === 'timeout' ||
+    text.includes('tempo limite excedido aguardando execução rpa') ||
+    text.includes('target page, context or browser has been closed') ||
+    (text.includes('locator(\'body\')') && text.includes('timeout')) ||
+    (text.includes('locator(\'html\')') && text.includes('timeout'))
+  );
+}
+
 async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -64,17 +84,54 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000) {
 }
 
 async function executeScenario(scenario) {
-  const start = await executeRecording(
-    scenario.rpaRecordingId,
-    {
-      headless: scenario.headless !== false,
-      slowMo: scenario.slowMo || 0,
-      timeout: scenario.timeout || 30000,
-      screenshotOnFailure: true,
-    },
-    scenario.data || {}
-  );
-  return waitForExecution(start.executionId, scenario.timeoutMs);
+  const maxAttempt = Number(process.env.QA_MESH_RPA_MAX_ATTEMPTS || 2);
+  const effectiveAttempts = Number.isFinite(maxAttempt) && maxAttempt > 0 ? maxAttempt : 2;
+  const requestedWaitTimeout = Number(scenario.timeoutMs);
+  const maxWaitTimeout = Number(process.env.QA_MESH_RPA_MAX_WAIT_MS || (10 * 60 * 1000));
+  const effectiveWaitTimeout = Number.isFinite(requestedWaitTimeout) && requestedWaitTimeout > 0
+    ? Math.min(requestedWaitTimeout, maxWaitTimeout)
+    : maxWaitTimeout;
+
+  let lastResult = null;
+
+  for (let attempt = 1; attempt <= effectiveAttempts; attempt += 1) {
+    const start = await executeRecording(
+      scenario.rpaRecordingId,
+      {
+        headless: scenario.headless !== false,
+        slowMo: scenario.slowMo || 0,
+        timeout: scenario.timeout || 30000,
+        screenshotOnFailure: true,
+      },
+      scenario.data || {}
+    );
+
+    const result = await waitForExecution(start.executionId, effectiveWaitTimeout);
+    if (result?.success) {
+      if (attempt > 1) {
+        result.logs = [
+          ...(result.logs || []),
+          { message: `[qa-mesh:rpa-adapter] sucesso após retry (tentativa ${attempt}/${effectiveAttempts})` },
+        ];
+      }
+      return result;
+    }
+
+    lastResult = result;
+    if (attempt < effectiveAttempts && isTransientRpaFailure(result)) {
+      await sleep(1000);
+      continue;
+    }
+    break;
+  }
+
+  return lastResult || {
+    success: false,
+    logs: [],
+    metrics: { status: 'failed' },
+    errors: [{ error: 'Falha desconhecida na execução RPA' }],
+    artifacts: [],
+  };
 }
 
 module.exports = {
