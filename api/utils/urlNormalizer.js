@@ -48,6 +48,21 @@ function normalizeRpaTestUrls(test) {
 
     // Se já é uma URL absoluta válida (http:// ou https://), verifica se é inválida
     if (url.match(/^https?:\/\//)) {
+      // Reescreve URLs antigas do frontend (localhost:5173) para a base ativa do ambiente.
+      try {
+        const urlObj = new URL(url);
+        const port = urlObj.port || (urlObj.protocol === 'https:' ? '443' : '80');
+        if ((urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') && port === '5173') {
+          const baseObj = new URL(baseUrl);
+          urlObj.protocol = baseObj.protocol;
+          urlObj.hostname = baseObj.hostname;
+          urlObj.port = baseObj.port;
+          return urlObj.toString();
+        }
+      } catch (_) {
+        // Se não parsear, segue o fluxo legado abaixo.
+      }
+
       // Verifica se é um domínio inválido conhecido
       const invalidDomains = ['rpa.local', 'localhost.local', '.local'];
       const isInvalid = invalidDomains.some(domain => url.includes(domain));
@@ -104,6 +119,10 @@ function normalizeRpaTestUrls(test) {
         if (step.value) {
           step.value = normalizeUrl(step.value);
         }
+      }
+
+      if (step.type === 'assert' && step.assert && step.assert.type === 'url' && step.assert.expected) {
+        step.assert.expected = normalizeUrl(step.assert.expected);
       }
     });
   }

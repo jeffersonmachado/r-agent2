@@ -214,7 +214,7 @@ export function SupportConversationPane({
           </h3>
         </div>
 
-        {!isWaitingTicket && !isInProgressTicket ? (
+        {!isWaitingTicket ? (
           <div
             style={{
               display: 'flex',
@@ -246,22 +246,22 @@ export function SupportConversationPane({
           {isWaitingTicket ? (
             <Button onClick={handleAssign} className="support-ticket-action-btn">Atribuir Chamado</Button>
           ) : null}
-          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'bot' ? (
+          {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'bot' ? (
             <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-ticket-action-btn">Assumir atendimento</Button>
           ) : null}
-          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'human' ? (
+            {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'human' ? (
             <>
               <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
               <Button onClick={handlePause} disabled={handoverLoading} className="support-ticket-action-btn">Pausar</Button>
             </>
           ) : null}
-          {!isWaitingTicket && !isInProgressTicket && (selectedTicket.mode || 'bot') === 'paused' ? (
+            {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'paused' ? (
             <>
               <Button onClick={handleResume} disabled={handoverLoading} className="support-ticket-action-btn">Retomar (humano)</Button>
               <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
             </>
           ) : null}
-          {!isWaitingTicket && !isInProgressTicket ? (
+            {!isWaitingTicket ? (
             <>
               <Button
                 onClick={openDeliveryFailures}
@@ -279,7 +279,7 @@ export function SupportConversationPane({
           ) : null}
         </div>
 
-        {!isWaitingTicket && !isInProgressTicket && Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
+        {!isWaitingTicket && Array.isArray(selectedTicket?.context?.handoverHistory) && selectedTicket.context.handoverHistory.length > 0 ? (
           <div style={{ marginBottom: '10px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Histórico de handover</div>
             {selectedTicket.context.handoverHistory.slice(-5).map((item, index) => (

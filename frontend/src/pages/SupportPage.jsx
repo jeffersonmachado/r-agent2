@@ -29,8 +29,13 @@ import { Button } from '../styles/Button';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePhoneMasking } from '../hooks/usePhoneMasking';
+import { useSupportEvidence } from '../hooks/useSupportEvidence';
 import { MaskedPhone } from '../components/MaskedPhone';
 import { CrudPageBase } from '../modules/crud-base';
+import { SupportResolvedEntityCard } from '../components/support/SupportResolvedEntityCard';
+import { SupportEvidenceCard } from '../components/support/SupportEvidenceCard';
+import { SupportHistoryCard } from '../components/support/SupportHistoryCard';
+import { SupportSuggestedReplyCard } from '../components/support/SupportSuggestedReplyCard';
 import {
   SupportWorkspaceHeader,
   SupportFiltersBar,
@@ -77,6 +82,8 @@ export function SupportPage() {
   const [quickReplySuggestions, setQuickReplySuggestions] = useState([]);
   const [quickReplySlashResults, setQuickReplySlashResults] = useState([]);
   const [quickReplySlashOpen, setQuickReplySlashOpen] = useState(false);
+  const [slashMenuMode, setSlashMenuMode] = useState('commands');
+  const [slashMenuCursorIndex, setSlashMenuCursorIndex] = useState(-1);
   const [quickReplyCategories, setQuickReplyCategories] = useState([]);
   const [quickReplySelectedCategory, setQuickReplySelectedCategory] = useState('');
   const [quickReplyCategoryItems, setQuickReplyCategoryItems] = useState([]);
@@ -100,6 +107,51 @@ export function SupportPage() {
   const [deliveryFailuresLoading, setDeliveryFailuresLoading] = useState(false);
   const [deliveryFailures, setDeliveryFailures] = useState({ outboundQueue: [], channelMessages: [] });
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
+
+  const slashCommandResults = React.useMemo(() => {
+    if (!selectedTicket || selectedTicket.status !== 'in_progress') {
+      return [];
+    }
+
+    const mode = String(selectedTicket.mode || 'bot').toLowerCase();
+    const baseCommands = {
+      bot: [
+        { id: 'take-over', label: '/assumir', description: 'Assume o atendimento em modo humano.' },
+        { id: 'quick-replies', label: '/resposta-rapida', description: 'Abre a lista de respostas rápidas.' },
+        { id: 'schedule', label: '/agendar', description: 'Abre o fluxo de agendamento do ticket.' },
+        { id: 'delivery-failures', label: '/falhas-entrega', description: 'Mostra as falhas de entrega do ticket.' },
+        { id: 'close-ticket', label: '/fechar-ticket', description: 'Inicia o fechamento do ticket.' },
+      ],
+      human: [
+        { id: 'return-to-bot', label: '/devolver-bot', description: 'Devolve o atendimento ao bot.' },
+        { id: 'pause', label: '/pausar', description: 'Pausa o atendimento humano.' },
+        { id: 'quick-replies', label: '/resposta-rapida', description: 'Abre a lista de respostas rápidas.' },
+        { id: 'schedule', label: '/agendar', description: 'Abre o fluxo de agendamento do ticket.' },
+        { id: 'delivery-failures', label: '/falhas-entrega', description: 'Mostra as falhas de entrega do ticket.' },
+        { id: 'close-ticket', label: '/fechar-ticket', description: 'Inicia o fechamento do ticket.' },
+      ],
+      paused: [
+        { id: 'resume', label: '/retomar', description: 'Retoma o atendimento humano.' },
+        { id: 'quick-replies', label: '/resposta-rapida', description: 'Abre a lista de respostas rápidas.' },
+        { id: 'schedule', label: '/agendar', description: 'Abre o fluxo de agendamento do ticket.' },
+        { id: 'delivery-failures', label: '/falhas-entrega', description: 'Mostra as falhas de entrega do ticket.' },
+        { id: 'close-ticket', label: '/fechar-ticket', description: 'Inicia o fechamento do ticket.' },
+      ],
+    };
+
+    const commands = baseCommands[mode] || baseCommands.bot;
+    const text = String(messageText || '').trim().toLowerCase();
+    if (!text.startsWith('/')) {
+      return [];
+    }
+
+    const query = text.slice(1);
+    if (!query) {
+      return commands;
+    }
+
+    return commands.filter((command) => command.label.includes(`/${query}`));
+  }, [messageText, selectedTicket]);
 
   const applyTemplateVariables = useCallback((text, variables) => {
     if (!text) return '';
@@ -167,6 +219,8 @@ export function SupportPage() {
   const { debouncedFn: debouncedSearchSlashQuickReplies } = useDebounce(() => {
     const txt = (messageText || '').trim();
     if (!txt.startsWith('/') || txt.length < 2) {
+      setSlashMenuMode('commands');
+      setSlashMenuCursorIndex(-1);
       setQuickReplySlashOpen(false);
       setQuickReplySlashResults([]);
       return;
@@ -175,10 +229,13 @@ export function SupportPage() {
     listQuickReplies({ search: q, activeOnly: true, category: quickReplySelectedCategory || undefined })
       .then((resp) => {
         const list = resp?.quickReplies || [];
+        setSlashMenuMode('quick_replies');
         setQuickReplySlashResults(list.slice(0, 8));
         setQuickReplySlashOpen(true);
       })
       .catch(() => {
+        setSlashMenuMode('commands');
+        setSlashMenuCursorIndex(-1);
         setQuickReplySlashOpen(false);
         setQuickReplySlashResults([]);
       });
@@ -375,8 +432,37 @@ export function SupportPage() {
   // Atualiza dropdown do "/atalho" conforme digita
   useEffect(() => {
     if (!selectedTicket || selectedTicket.status !== 'in_progress') return;
+    const text = String(messageText || '').trim();
+    if (!text.startsWith('/')) {
+      setSlashMenuMode('commands');
+      setSlashMenuCursorIndex(-1);
+      setQuickReplySlashOpen(false);
+      setQuickReplySlashResults([]);
+      return;
+    }
+
+    if (slashCommandResults.length > 0 || text === '/') {
+      setSlashMenuMode('commands');
+      setQuickReplySlashOpen(true);
+      setQuickReplySlashResults([]);
+      return;
+    }
+
     debouncedSearchSlashQuickReplies();
-  }, [messageText, selectedTicket?.id, selectedTicket?.status, debouncedSearchSlashQuickReplies]);
+  }, [messageText, selectedTicket?.id, selectedTicket?.status, slashCommandResults, debouncedSearchSlashQuickReplies]);
+
+  useEffect(() => {
+    if (!quickReplySlashOpen) {
+      setSlashMenuCursorIndex(-1);
+      return;
+    }
+
+    const itemCount = slashMenuMode === 'commands'
+      ? slashCommandResults.length
+      : quickReplySlashResults.length;
+
+    setSlashMenuCursorIndex(itemCount > 0 ? 0 : -1);
+  }, [quickReplySlashOpen, slashMenuMode, slashCommandResults, quickReplySlashResults]);
 
   const insertQuickReply = useCallback(async (reply) => {
     if (!reply) return;
@@ -1141,14 +1227,15 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await takeOverTicket(selectedTicket.id, 'agent_takeover');
+      const nextTicket = updated?.id ? updated : { ...selectedTicket, mode: 'human' };
       showToastRef.current('Atendimento assumido (modo humano)', 'success', 2500);
-      setSelectedTicket(updated);
-      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setSelectedTicket(nextTicket);
+      setTickets(prev => prev.map(t => (t.id === nextTicket.id ? nextTicket : t)));
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
       if (loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(updated.id);
+        loadTicketMessagesRef.current(nextTicket.id);
       }
     } catch (error) {
       logger.error('Erro ao assumir atendimento', error);
@@ -1163,14 +1250,15 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await returnToBotTicket(selectedTicket.id, 'user_request');
+      const nextTicket = updated?.id ? updated : { ...selectedTicket, mode: 'bot', pauseReason: null };
       showToastRef.current('Atendimento devolvido ao bot (modo bot)', 'success', 2500);
-      setSelectedTicket(updated);
-      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setSelectedTicket(nextTicket);
+      setTickets(prev => prev.map(t => (t.id === nextTicket.id ? nextTicket : t)));
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
       if (loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(updated.id);
+        loadTicketMessagesRef.current(nextTicket.id);
       }
     } catch (error) {
       logger.error('Erro ao devolver ao bot', error);
@@ -1185,14 +1273,17 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await pauseTicket(selectedTicket.id, 'outside_window');
+      const nextTicket = updated?.id
+        ? updated
+        : { ...selectedTicket, mode: 'paused', pauseReason: 'outside_window' };
       showToastRef.current('Atendimento pausado', 'success', 2500);
-      setSelectedTicket(updated);
-      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setSelectedTicket(nextTicket);
+      setTickets(prev => prev.map(t => (t.id === nextTicket.id ? nextTicket : t)));
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
       if (loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(updated.id);
+        loadTicketMessagesRef.current(nextTicket.id);
       }
     } catch (error) {
       logger.error('Erro ao pausar atendimento', error);
@@ -1207,14 +1298,17 @@ export function SupportPage() {
     setHandoverLoading(true);
     try {
       const updated = await resumeTicket(selectedTicket.id, 'resume');
+      const nextTicket = updated?.id
+        ? updated
+        : { ...selectedTicket, mode: 'human', pauseReason: null };
       showToastRef.current('Atendimento retomado (modo humano)', 'success', 2500);
-      setSelectedTicket(updated);
-      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      setSelectedTicket(nextTicket);
+      setTickets(prev => prev.map(t => (t.id === nextTicket.id ? nextTicket : t)));
       if (loadTicketsRef.current) {
         loadTicketsRef.current();
       }
       if (loadTicketMessagesRef.current) {
-        loadTicketMessagesRef.current(updated.id);
+        loadTicketMessagesRef.current(nextTicket.id);
       }
     } catch (error) {
       logger.error('Erro ao retomar atendimento', error);
@@ -1243,6 +1337,93 @@ export function SupportPage() {
     }
   };
 
+  const executeSlashCommand = useCallback(async (commandId) => {
+    switch (commandId) {
+      case 'take-over':
+        await handleTakeOver();
+        return;
+      case 'return-to-bot':
+        await handleReturnToBot();
+        return;
+      case 'pause':
+        await handlePause();
+        return;
+      case 'resume':
+        await handleResume();
+        return;
+      case 'quick-replies': {
+        const resp = await listQuickReplies({ activeOnly: true, category: quickReplySelectedCategory || undefined });
+        setQuickReplySlashResults((resp?.quickReplies || []).slice(0, 8));
+        setSlashMenuMode('quick_replies');
+        setQuickReplySlashOpen(true);
+        return;
+      }
+      case 'schedule':
+        showToast('Fluxo de agendamento disponível para este ticket', 'info');
+        return;
+      case 'delivery-failures':
+        await openDeliveryFailures();
+        return;
+      case 'close-ticket':
+        handleClose(selectedTicket?.id);
+        return;
+      default:
+        return;
+    }
+  }, [handleClose, handlePause, handleResume, handleReturnToBot, handleTakeOver, openDeliveryFailures, quickReplySelectedCategory, selectedTicket?.id, showToast]);
+
+  const onHoverSlashItem = useCallback((index) => {
+    setSlashMenuCursorIndex(index);
+  }, []);
+
+  const onSelectSlashItem = useCallback(async (item) => {
+    if (!item) return;
+
+    if (item.kind === 'quick_reply' && item.reply) {
+      await insertQuickReply(item.reply);
+      return;
+    }
+
+    await executeSlashCommand(item.id);
+  }, [executeSlashCommand, insertQuickReply]);
+
+  const onComposerKeyDown = useCallback(async (event) => {
+    if (event.key === 'Escape' && quickReplySlashOpen) {
+      event.preventDefault();
+      setQuickReplySlashOpen(false);
+      setSlashMenuCursorIndex(-1);
+      return;
+    }
+
+    const menuItems = slashMenuMode === 'commands' ? slashCommandResults : quickReplySlashResults;
+    if (quickReplySlashOpen && menuItems.length > 0 && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault();
+      setSlashMenuCursorIndex((current) => {
+        const start = current >= 0 ? current : 0;
+        if (event.key === 'ArrowDown') {
+          return (start + 1) % menuItems.length;
+        }
+        return (start - 1 + menuItems.length) % menuItems.length;
+      });
+      return;
+    }
+
+    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+
+      if (quickReplySlashOpen && menuItems.length > 0) {
+        const index = slashMenuCursorIndex >= 0 ? slashMenuCursorIndex : 0;
+        const selectedItem = slashMenuMode === 'commands'
+          ? menuItems[index]
+          : { kind: 'quick_reply', reply: menuItems[index] };
+        await onSelectSlashItem(selectedItem);
+        return;
+      }
+
+      await handleSendMessage();
+    }
+  }, [handleSendMessage, onSelectSlashItem, quickReplySlashOpen, quickReplySlashResults, slashCommandResults, slashMenuCursorIndex, slashMenuMode]);
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -1260,6 +1441,23 @@ export function SupportPage() {
     }
     return phone;
   };
+
+  const {
+    evidenceHistory,
+    evidenceLoading,
+    suggestedReply,
+    handleCopyEvidence,
+    handleUseEvidenceAsReply,
+    handleOpenEvidenceSource,
+    handleOpenTimelineItem,
+  } = useSupportEvidence({
+    selectedTicket,
+    tickets,
+    setSelectedTicket,
+    setMessageText,
+    showToast,
+    formatDate,
+  });
 
   const getStatusClass = (status) => {
     if (status === 'waiting') return 'waiting';
@@ -1545,6 +1743,12 @@ export function SupportPage() {
                   setMessageText={setMessageText}
                   quickReplySlashOpen={quickReplySlashOpen}
                   quickReplySlashResults={quickReplySlashResults}
+                  slashMenuMode={slashMenuMode}
+                  slashCommandResults={slashCommandResults}
+                  slashMenuCursorIndex={slashMenuCursorIndex}
+                  onSelectSlashItem={onSelectSlashItem}
+                  onHoverSlashItem={onHoverSlashItem}
+                  onComposerKeyDown={onComposerKeyDown}
                   handleSendMessage={handleSendMessage}
                   handleClose={handleClose}
                 />
@@ -1612,6 +1816,29 @@ export function SupportPage() {
                       </div>
                     )}
                   </div>
+
+                  <SupportResolvedEntityCard
+                    identity={evidenceHistory.identity}
+                    loading={evidenceLoading}
+                  />
+
+                  <SupportEvidenceCard
+                    evidenceResult={evidenceHistory.evidence}
+                    loading={evidenceLoading}
+                    formatDate={formatDate}
+                    onOpenSource={handleOpenEvidenceSource}
+                    onCopyEvidence={handleCopyEvidence}
+                    onUseAsReply={handleUseEvidenceAsReply}
+                  />
+
+                  <SupportHistoryCard
+                    timeline={evidenceHistory.timeline}
+                    loading={evidenceLoading}
+                    formatDate={formatDate}
+                    onOpenItem={handleOpenTimelineItem}
+                  />
+
+                  <SupportSuggestedReplyCard suggestedReply={suggestedReply} />
 
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ fontWeight: 700, marginBottom: '8px' }}>Entidades</div>

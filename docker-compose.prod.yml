@@ -140,6 +140,9 @@ services:
           memory: 128M
 
   rag-service:
+    build:
+      context: ./rag-service
+      dockerfile: ./Dockerfile
     image: r-agent2-rag-service:latest
     container_name: r-agent2-rag-service-prod
     environment:
@@ -197,7 +200,7 @@ services:
       # Configurações de segurança
       POSTGRES_HOST_AUTH_METHOD: md5
     ports:
-      - "${PGPORT:-5433}:5432"
+      - "${POSTGRES_PUBLIC_PORT:-5433}:5432"
     volumes:
       - r-agent2-postgres-data:/var/lib/postgresql/data
       # Scripts de inicialização (opcional)

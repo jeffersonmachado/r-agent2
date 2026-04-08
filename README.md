@@ -19,46 +19,37 @@ See `/docs` for architecture, capabilities, verticals, and roadmap.
 
 ---
 
-## Quick Start (clone limpo → ambiente rodando)
+## Caminho Oficial (clone limpo -> operação)
 
-### Pré-requisitos
-- Node.js `>=22.12.0` (use `nvm use` — versão em `.nvmrc`)
-- npm `>=10.0.0`
+### Pré-requisitos oficiais
+- Node.js: 20.19.x ou 22.12.x+
+- npm: 10+
 - PostgreSQL e Redis acessíveis
 
-### Setup completo
+### Comandos oficiais únicos
+- npm run system:bootstrap
+- npm run system:validate
+- npm run system:release
+- npm run system:deploy
+
+Esses quatro comandos formam o fluxo principal do projeto.
+
+### Fluxo operacional recomendado
 ```bash
-# 1. Clonar e entrar no diretório
 git clone <repo> r-agent2
 cd r-agent2
-
-# 2. Bootstrap — valida pré-requisitos, instala backend+frontend, copia .env e config.json, migra banco
-npm run bootstrap
-
-# 3. Subir em desenvolvimento
-npm run dev              # backend + frontend + RAG juntos
-npm run start:api        # só backend (porta 3000)
-npm run dev:frontend     # só frontend Vite (porta 5173)
+npm ci
+npm run system:bootstrap
+npm run system:validate
+npm run system:release
+# dry-run por padrão
+npm run system:deploy
 ```
 
-### Comandos oficiais
-
-| Categoria      | Comando                        | O que faz                                          |
-|----------------|--------------------------------|----------------------------------------------------|
-| Backend        | `npm run start:api`            | Inicia API (Node.js/Express)                       |
-| Dev            | `npm run dev`                  | Inicia backend + frontend (nodemon)                |
-| Frontend       | `npm run frontend:build`       | Build de produção do frontend                      |
-| Frontend       | `npm run frontend:smoke`       | Valida artefato do frontend (bloqueante)           |
-| Frontend       | `npm run frontend:test`        | Testes unitários do frontend                       |
-| Testes         | `npm run test:unit`            | Testes unitários do backend (Jest)                 |
-| DB             | `npm run db:migrate`           | Aplica migrações pendentes                         |
-| Bootstrap      | `npm run bootstrap:check`      | Verifica pré-requisitos sem instalar               |
-| Gate CI        | `npm run pipeline:gate`        | **Go/no-go unificado**: unit + frontend + QA mesh  |
-| Release        | `npm run zip:release`          | Empacota, audita e gera manifesto SHA-256          |
-| Release        | `npm run release:official`     | Pipeline completo: tests → build → pkg → zip       |
-| QA             | `npm run qa:mesh`              | Executa QA Mesh (todos os adaptors)                |
-| Validação      | `npm run system:release-gate`  | Gate de release (requer artefato aprovado em dist/)|
-| Evidência      | `npm run system:release-evidence-pack` | Empacota evidências de release          |
+### Contratos operacionais
+- Trilha oficial detalhada: docs/official-path.md
+- Governança de runtime real vs sintético: docs/runtime-governance.md
+- Contrato de release/deploy por artefato aprovado: docs/release-contract.md
 
 ### Configuração (clone limpo)
 ```bash
@@ -75,14 +66,15 @@ cp api/data/config.example.json api/data/config.json
 # Gerar ZIP auditado + manifesto SHA-256
 npm run zip:release
 
-# Pipeline oficial completo (testes + build + packaging):
-npm run release:official
+# Pipeline oficial completo (validação + gate + packaging + manifestos)
+npm run system:release
 
 # O artefato fica em dist/<nome>.zip + dist/<nome>.manifest.json
 ```
 - O script **bloqueia** se detectar `.env`, `.token.env`, dumps ou backups.
 - Mantém automaticamente apenas os 3 ZIPs mais recentes em `dist/`.
-- `system:release-gate` verifica manifesto com `audit: passed` antes de autorizar deploy.
+- `system:release-gate` consome apenas as evidências geradas em `system:validate`.
+- `system:deploy` exige `audit: passed` e `goNoGo: GO` no manifesto do artefato antes de extrair e aplicar deploy.
 
 ---
 

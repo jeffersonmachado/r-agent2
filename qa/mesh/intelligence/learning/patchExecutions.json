@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-04-07T23:25:02.875Z",
+  "mode": "suggestion-only",
+  "totalExecutions": 6,
+  "executions": [
+    {
+      "failureSignature": "core.functional_failure.boom",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "core/core",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    },
+    {
+      "failureSignature": "core.failed.mesh.api.fail",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "core/core",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    },
+    {
+      "failureSignature": "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.selftest.failed.503.fail",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "scripts/test-pbx-voice-tts-asr-smoke.js",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    },
+    {
+      "failureSignature": "fitness.environment_missing.adapter.inv.lido.missing.adapter",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "core/fitness",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    },
+    {
+      "failureSignature": "fitness.skipped.mesh.invalid.adapter",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "core/fitness",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    },
+    {
+      "failureSignature": "beauty.failed.mesh.api.pass",
+      "mode": "suggestion-only",
+      "status": "suggested",
+      "applied": false,
+      "dryRun": false,
+      "targets": [
+        "core/beauty",
+        "qa-mesh/meshRunner.js"
+      ],
+      "actions": [
+        "alinhar contrato esperado do cenario com implementacao",
+        "adicionar assertiva de causa raiz no passo de falha",
+        "garantir evidencias minimas para diagnostico"
+      ],
+      "createdAt": "2026-04-07T23:25:02.875Z",
+      "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+    }
+  ]
+}

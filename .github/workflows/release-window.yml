@@ -1,5 +1,5 @@
-# WORKFLOW AUXILIAR: Pre-aquecimento de imagens de teste para janela de release.
-name: Release Window (Prewarm) [AUXILIAR]
+# WORKFLOW: Pre-aquecimento de imagens de teste para janela de release.
+name: Release Window (Prewarm)
 
 on:
   workflow_dispatch:

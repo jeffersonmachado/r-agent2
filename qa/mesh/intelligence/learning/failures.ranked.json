@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-04-07T23:25:02.870Z",
+  "totalRanked": 6,
+  "ranked": [
+    {
+      "clusterId": "cluster-1",
+      "module": "core",
+      "probableCause": "functional-contract",
+      "criticality": "high",
+      "totalFrequency": 9,
+      "recurrence": 90,
+      "priorityScore": 94.4,
+      "signatures": [
+        "core.functional_failure.boom"
+      ]
+    },
+    {
+      "clusterId": "cluster-3",
+      "module": "core",
+      "probableCause": "functional-contract",
+      "criticality": "high",
+      "totalFrequency": 2,
+      "recurrence": 20,
+      "priorityScore": 83.2,
+      "signatures": [
+        "core.failed.mesh.api.fail"
+      ]
+    },
+    {
+      "clusterId": "cluster-5",
+      "module": "pbx",
+      "probableCause": "functional-contract",
+      "criticality": "high",
+      "totalFrequency": 1,
+      "recurrence": 10,
+      "priorityScore": 81.6,
+      "signatures": [
+        "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.selftest.failed.503.fail"
+      ]
+    },
+    {
+      "clusterId": "cluster-2",
+      "module": "fitness",
+      "probableCause": "functional-contract",
+      "criticality": "medium",
+      "totalFrequency": 9,
+      "recurrence": 90,
+      "priorityScore": 55.9,
+      "signatures": [
+        "fitness.environment_missing.adapter.inv.lido.missing.adapter"
+      ]
+    },
+    {
+      "clusterId": "cluster-4",
+      "module": "fitness",
+      "probableCause": "functional-contract",
+      "criticality": "medium",
+      "totalFrequency": 2,
+      "recurrence": 20,
+      "priorityScore": 44.7,
+      "signatures": [
+        "fitness.skipped.mesh.invalid.adapter"
+      ]
+    },
+    {
+      "clusterId": "cluster-6",
+      "module": "beauty",
+      "probableCause": "functional-contract",
+      "criticality": "medium",
+      "totalFrequency": 1,
+      "recurrence": 10,
+      "priorityScore": 43.1,
+      "signatures": [
+        "beauty.failed.mesh.api.pass"
+      ]
+    }
+  ]
+}

@@ -79,6 +79,9 @@ qa/release-decision.md
 qa/release-summary.md
 qa/release-manifest.json
 qa/selftest-baseline.json
+qa/runtime-governance-report.json
+qa/system-validate-report.json
+qa/deploy-report.json
 
 # Artefatos locais de execução do QA Mesh
 qa-mesh/meshEvidence/*

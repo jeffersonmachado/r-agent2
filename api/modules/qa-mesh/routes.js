@@ -73,6 +73,111 @@ function createQaMeshRoutes({ buildDeps }) {
     deps.sendJson(res, 200, deps.getMeshSchedulerStatus());
   });
 
+  router.get('/qa/stability', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getStabilitySnapshot());
+  });
+
+  router.get('/qa/stability/history', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getStabilityHistory());
+  });
+
+  router.get('/qa/stability/failures', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getStabilityFailures());
+  });
+
+  router.get('/qa/checkpoints', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getCheckpointsOverview());
+  });
+
+  router.get('/qa/checkpoints/:wave', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    const data = deps.getCheckpointByWaveId(req.params.wave);
+    if (!data) {
+      deps.sendJson(res, 404, { error: 'not_found', message: 'Checkpoint nao encontrado' });
+      return;
+    }
+    deps.sendJson(res, 200, data);
+  });
+
+  router.get('/qa/learn/summary', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getLearnSummary());
+  });
+
+  router.get('/qa/learn/failures', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getLearnFailures());
+  });
+
+  router.get('/qa/learn/suggestions', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getLearnSuggestions());
+  });
+
+  router.get('/qa/learn/plans', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getLearnPlans());
+  });
+
+  router.get('/qa/learn/memory', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    deps.sendJson(res, 200, deps.getLearnMemory());
+  });
+
   router.get('/qa-mesh/executions/:id', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);

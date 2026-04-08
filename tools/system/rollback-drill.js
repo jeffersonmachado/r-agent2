@@ -41,16 +41,19 @@ async function reqJson(baseUrl, endpoint, { method = 'GET', token = null, body =
 
   const text = await response.text().catch(() => '');
   let payload = {};
+  let payloadParseError = null;
   try {
     payload = text ? JSON.parse(text) : {};
-  } catch (_) {
+  } catch (error) {
     payload = { raw: text };
+    payloadParseError = error.message || String(error);
   }
 
   return {
     ok: response.ok,
     status: response.status,
     payload,
+    payloadParseError,
     durationMs: Date.now() - startedAt,
     url,
   };

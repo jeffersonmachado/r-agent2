@@ -1,11 +1,7 @@
-# WORKFLOW OFICIAL: Lint e qualidade de código.
-name: Code Quality [OFICIAL]
+# WORKFLOW: Lint e qualidade de código.
+name: Code Quality
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
   workflow_dispatch:
 
 jobs:

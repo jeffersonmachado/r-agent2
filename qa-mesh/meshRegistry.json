@@ -337,6 +337,32 @@
     "scenarioCode": "BEAUTY-SCR-06"
   },
   {
+    "id": "business-clinic-scr-01",
+    "domain": "clinica",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Clinic maintenance screen smoke",
+    "steps": [
+      "Operação autenticada com acesso à manutenção"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "clinica",
+      "ci",
+      "telemetry"
+    ],
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/business/run.js",
+      "--mode=screens",
+      "--code=CLINIC-SCR-01"
+    ],
+    "scenarioCode": "CLINIC-SCR-01"
+  },
+  {
     "id": "business-f1",
     "domain": "fitness",
     "type": "business",
@@ -570,6 +596,84 @@
     "scenarioCode": "FIT-SCR-03"
   },
   {
+    "id": "business-food-scr-01",
+    "domain": "food",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Food Orders screen smoke",
+    "steps": [
+      "Módulo de pedidos disponível"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/business/run.js",
+      "--mode=screens",
+      "--code=FOOD-SCR-01"
+    ],
+    "scenarioCode": "FOOD-SCR-01"
+  },
+  {
+    "id": "business-market-scr-01",
+    "domain": "mercado",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Market node marketplace screen smoke",
+    "steps": [
+      "Marketplace carregável no tenant"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "mercado",
+      "ci",
+      "telemetry"
+    ],
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/business/run.js",
+      "--mode=screens",
+      "--code=MARKET-SCR-01"
+    ],
+    "scenarioCode": "MARKET-SCR-01"
+  },
+  {
+    "id": "business-serv-scr-01",
+    "domain": "servicos",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Services solutions screen smoke",
+    "steps": [
+      "Catálogo de soluções publicado"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "servicos",
+      "ci",
+      "telemetry"
+    ],
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/business/run.js",
+      "--mode=screens",
+      "--code=SERV-SCR-01"
+    ],
+    "scenarioCode": "SERV-SCR-01"
+  },
+  {
     "id": "qa-bpmn-editor-smoke",
     "domain": "bpmn",
     "type": "technical",
@@ -592,7 +696,7 @@
       "test:bpmn:smoke"
     ],
     "env": {
-      "FRONTEND_URL": "http://localhost:5173"
+      "FRONTEND_URL": "http://localhost:15173"
     },
     "expectedArtifacts": [
       "/opt/results/ria/r-agent2/qa/l06-bpmn-editor-evidence.json",
@@ -719,7 +823,8 @@
       "test:pbx:call-events-runtime:smoke"
     ],
     "env": {
-      "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE": "direct"
+      "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE": "direct",
+      "TEST_DATABASE_URL": "postgresql://results_app:StrongPass@localhost:5433/results_saas_test"
     },
     "expectedArtifacts": [
       "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"

@@ -54,8 +54,7 @@ Padronizar rollback operacional para as suites criticas com evidencias minimas d
 ## Gate de encerramento
 1. Executar gate de release:
    - `npm run system:release-gate`
-   - padrao: `RELEASE_GATE_MODE=stack` (executa stack completa sem repetir suites fora da stack)
-   - opcional diagnostico: `RELEASE_GATE_MODE=legacy npm run system:release-gate`
+   - o gate consome as evidências do fluxo oficial já executado
 2. Executar simulado de rollback e gerar evidência:
    - `npm run system:rollback-drill`
    - opcional (aplica rollback PBX no drill): `ROLLBACK_DRILL_APPLY_PBX=1 npm run system:rollback-drill`

@@ -9,6 +9,19 @@
 
 const { getOrCreateRpaToken } = require('./rpaTokenManager');
 
+async function resolveServerRpaToken(page, baseUrl) {
+  try {
+    const response = await page.request.get(`${baseUrl}/auth/rpa/token`);
+    if (!response.ok()) {
+      return null;
+    }
+    const payload = await response.json().catch(() => null);
+    return payload && typeof payload.token === 'string' && payload.token.trim() ? payload.token : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Aguarda a UI sair do estado de login (campos de login sumirem).
  * Útil para validar que autenticação via token/UI realmente "pegou" no frontend.
@@ -296,20 +309,45 @@ async function waitForLoginPage(page, options = {}) {
 }
 
 /**
+ * Verifica se a página já possui artefatos mínimos de sessão autenticada.
+ * Evita tratar páginas em carregamento lento como autenticadas quando ainda não
+ * existe token/agent em storage.
+ *
+ * @param {Object} page
+ * @returns {Promise<{hasToken: boolean, hasAgent: boolean, effectiveTenantId: string | null}>}
+ */
+async function getStoredAuthState(page) {
+  return page.evaluate(() => {
+    const authToken = window.localStorage.getItem('auth_token');
+    const authAgent = window.localStorage.getItem('auth_agent');
+    const effectiveTenantId = window.localStorage.getItem('auth_effective_tenant_id');
+
+    return {
+      hasToken: !!(authToken && String(authToken).trim()),
+      hasAgent: !!(authAgent && String(authAgent).trim()),
+      effectiveTenantId: effectiveTenantId && String(effectiveTenantId).trim()
+        ? String(effectiveTenantId).trim()
+        : null,
+    };
+  });
+}
+
+/**
  * Faz login usando token RPA via API.
  * 
  * @param {Object} page - Página do Playwright
  * @param {Object} options - Opções
- * @param {string} options.apiBaseUrl - URL base da API (padrão: http://localhost:3000)
+ * @param {string} options.apiBaseUrl - URL base da API (padrão: porta configurada da API)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function performRpaLogin(page, options = {}) {
-  // Prioridade: options.apiBaseUrl > TEST_API_URL > API_BASE_URL > rpa.config.json > config.json > fallback
+  // Prioridade: options.apiBaseUrl > TEST_API_URL > API_URL/API_BASE_URL > rpa.config.json > config.json > fallback
   const rpaConfig = require('../rpaConfig');
   const mainConfig = require('../../../api/utils/config');
   const apiPort = Number(mainConfig.get('api.port', 3001));
   const primaryApiBaseUrl = options.apiBaseUrl || 
                             process.env.TEST_API_URL || 
+                            process.env.API_URL || 
                             process.env.API_BASE_URL || 
                             rpaConfig.urls.api ||
                             mainConfig.get('tests.rpa.apiUrl') ||
@@ -322,32 +360,28 @@ async function performRpaLogin(page, options = {}) {
                    'system';
 
   try {
-    // Obtém token RPA
-    const rpaToken = getOrCreateRpaToken();
-    
-    if (!rpaToken) {
-      return {
-        success: false,
-        error: 'Token RPA não disponível'
-      };
-    }
-
     const normalizeBaseUrl = (url) => {
       if (!url || typeof url !== 'string') return null;
       return url.endsWith('/') ? url.slice(0, -1) : url;
     };
 
-    // Fallback inteligente de URL da API:
-    // Em alguns ambientes a API roda em 3000, em outros em 3001.
-    // Tentamos a URL configurada primeiro e depois portas comuns.
+    const isLegacyLocal3001 = (url) => {
+      if (!url) return false;
+      return /^https?:\/\/localhost:3001$/i.test(String(url).trim());
+    };
+
+    // Tenta primeiro a URL explicitamente configurada e preserva apenas
+    // fallbacks coerentes com a porta ativa do ambiente.
+    const hasExplicitTestApiUrl = Boolean(process.env.TEST_API_URL);
     const candidateBaseUrls = [
       primaryApiBaseUrl,
       `http://localhost:${apiPort}`,
-      'http://localhost:3001',
-      'http://localhost:3000',
+      // Quando TEST_API_URL está definido, evita fallback fixo para 3001 (ruído em stack de teste dedicada).
+      ...(hasExplicitTestApiUrl ? [] : ['http://localhost:3001']),
     ]
       .map(normalizeBaseUrl)
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((url) => !(hasExplicitTestApiUrl && isLegacyLocal3001(url)));
 
     // Remove duplicados preservando ordem
     const seen = new Set();
@@ -365,6 +399,12 @@ async function performRpaLogin(page, options = {}) {
     for (const baseUrl of uniqueCandidates) {
       lastBaseUrl = baseUrl;
       try {
+        const rpaToken = await resolveServerRpaToken(page, baseUrl) || getOrCreateRpaToken();
+        if (!rpaToken) {
+          lastError = `Token RPA não disponível para ${baseUrl}`;
+          continue;
+        }
+
         // Faz login via API
         const loginUrl = `${baseUrl}/auth/rpa/login`;
         const response = await page.request.post(loginUrl, {
@@ -409,7 +449,7 @@ async function performRpaLogin(page, options = {}) {
     }
     
     // Armazena token no localStorage da página (chave usada pelo frontend)
-    await page.evaluate(({ token, agent }) => {
+    await page.evaluate(({ token, agent, tenantId }) => {
       localStorage.setItem('auth_token', token);
       // Ajuda o frontend a ter contexto imediato (sem depender apenas de /auth/me)
       if (agent) {
@@ -419,9 +459,12 @@ async function performRpaLogin(page, options = {}) {
           // ignora
         }
       }
+      if (tenantId && typeof tenantId === 'string' && tenantId.trim()) {
+        localStorage.setItem('auth_effective_tenant_id', tenantId.trim());
+      }
       // Dispara evento de autenticação se necessário
       window.dispatchEvent(new CustomEvent('rpa-authenticated', { detail: { token, agent } }));
-    }, { token: result.token, agent: result.agent || null });
+    }, { token: result.token, agent: result.agent || null, tenantId });
 
     // Recarrega a página para aplicar autenticação
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -472,6 +515,12 @@ async function performRpaLogin(page, options = {}) {
  */
 async function ensureAuthenticated(page, options = {}) {
   try {
+    const storedAuthState = await getStoredAuthState(page).catch(() => ({
+      hasToken: false,
+      hasAgent: false,
+      effectiveTenantId: null,
+    }));
+
     // Verifica se já está autenticado (não está na página de login).
     // Atenção: em rotas protegidas (ex.: /maintenance), o app pode renderizar Login
     // mantendo a URL original; e às vezes os inputs demoram a aparecer.
@@ -484,8 +533,10 @@ async function ensureAuthenticated(page, options = {}) {
         isLogin = true;
       }
     }
-    
-    if (!isLogin) {
+
+    const hasUsableSession = storedAuthState.hasToken && storedAuthState.hasAgent;
+
+    if (!isLogin && hasUsableSession) {
       return { success: true, loggedIn: true };
     }
 

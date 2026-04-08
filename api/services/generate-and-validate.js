@@ -106,8 +106,8 @@ async function executeRpaTest(rpaTestPath) {
     // Como o pipeline executa código em `tests/rpa`, garantimos que a execução
     // sempre use a versão atual do runner/executor (evita cache antigo do require()).
     try {
-      const runnerModulePath = require.resolve('../../tests/rpa/rpaTestRunner');
-      const actionExecutorPath = require.resolve('../../tests/rpa/actionExecutor');
+      const runnerModulePath = require.resolve('../../core/rpa/rpaTestRunner');
+      const actionExecutorPath = require.resolve('../../core/rpa/actionExecutor');
       // Limpa cache em ordem: executor primeiro ou ambos (seguro)
       delete require.cache[actionExecutorPath];
       delete require.cache[runnerModulePath];
@@ -116,7 +116,7 @@ async function executeRpaTest(rpaTestPath) {
     }
 
     // Executa o teste RPA usando o runner existente
-    const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
+    const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
     runner = new RpaTestRunner({
       headless: true,
     });

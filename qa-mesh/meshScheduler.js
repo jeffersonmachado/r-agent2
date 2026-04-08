@@ -15,7 +15,9 @@ let activeTasks = [];
 function safeReadState() {
   try {
     return JSON.parse(fs.readFileSync(SCHEDULER_STATE_PATH, 'utf8'));
-  } catch (_) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`);
     return {
       lastExecutionAt: null,
       lastExecutionKind: null,
@@ -99,10 +101,16 @@ function startScheduler() {
   }
   activeTasks = [
     cron.schedule(CRITICAL_CRON, () => {
-      runScheduledMesh('critical').catch(() => null);
+      runScheduledMesh('critical').catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[qa-mesh/meshScheduler] critical falhou: ${error.message || error}`);
+      });
     }),
     cron.schedule(REGRESSION_CRON, () => {
-      runScheduledMesh('regression').catch(() => null);
+      runScheduledMesh('regression').catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[qa-mesh/meshScheduler] regression falhou: ${error.message || error}`);
+      });
     }),
   ];
   return buildScheduleStatus();

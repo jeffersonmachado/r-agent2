@@ -1,5 +1,6 @@
-const { RpaTestRunner } = require('../../rpa/rpaTestRunner');
-const { ActionRecorder } = require('../../rpa/actionRecorder');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
+const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');
 // Usa versão de produção do normalizador, que vive em `api/utils`
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 const logger = require('../utils/logger');
@@ -17,7 +18,7 @@ let INJECTABLE_SCRIPT = null;
 function getInjectableScript() {
   if (INJECTABLE_SCRIPT === null) {
     try {
-      const overlayInjector = require('../../rpa/overlayInjector');
+      const overlayInjector = require('../../core/rpa/overlayInjector');
       INJECTABLE_SCRIPT = overlayInjector.INJECTABLE_SCRIPT;
     } catch (error) {
       logger.warn('Não foi possível carregar overlayInjector', { error: safeErrorMessage(error) });
@@ -120,6 +121,19 @@ function listRecordings() {
     });
     // Retorna array vazio em caso de erro para não quebrar a API
     return [];
+  }
+}
+
+function hasExecutableRecordingShape(recording) {
+  return Boolean(recording && typeof recording === 'object' && Array.isArray(recording.steps));
+}
+
+function assertExecutableRecording(recording, recordingId) {
+  if (!recording) {
+    throw new Error(`Gravação não encontrada: ${recordingId}`);
+  }
+  if (!hasExecutableRecordingShape(recording)) {
+    throw new Error(`Gravação inválida ou sem steps executáveis: ${recordingId}`);
   }
 }
 
@@ -255,6 +269,9 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       try {
         // Tenta carregar pelo ID primeiro
         recording = ActionRecorder.load(recordingId);
+        if (!hasExecutableRecordingShape(recording)) {
+          throw new Error(`Gravação inválida ou sem steps executáveis: ${recordingId}`);
+        }
       } catch (error) {
         // Se não encontrar pelo ID, tenta encontrar pelo nome do arquivo
         // Lista todas as gravações e procura pelo ID
@@ -271,9 +288,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             recording = foundRecording.recording;
           }
 
-          if (!recording) {
-            throw new Error(`Gravação não encontrada: ${recordingId}`);
-          } else {
+          assertExecutableRecording(recording, recordingId);
+          {
             addLog('info', `📦 Gravação resolvida via catálogo: ${foundRecording.filePath || foundRecording.fileNameId}`, {
               step: 'init',
             });
@@ -282,6 +298,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           throw error;
         }
       }
+
+      assertExecutableRecording(recording, recordingId);
       
       // Normaliza URLs no recording (corrige URLs inválidas de testes antigos)
       normalizeRpaTestUrls(recording);
@@ -294,6 +312,25 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         ...recording.data,
         ...data,
       };
+
+      if (runner.executor?.page) {
+        const config = require('../utils/config');
+        const authResult = await autoLoginBeforeSteps(runner.executor.page, {
+          firstStep: recording.steps?.[0],
+          autoLogin: recording?.metadata?.autoLogin !== false && mergedData.autoLogin !== false,
+          templateData: mergedData,
+          frontendBaseUrl: process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || config.get('frontend.url') || 'http://localhost:5173',
+          apiBaseUrl: process.env.TEST_API_URL || process.env.API_URL || process.env.API_BASE_URL || config.get('api.baseUrl') || `http://localhost:${Number(config.get('api.port', 3001))}`,
+        });
+
+        if (!authResult.success) {
+          addLog('warning', `⚠️ Auto-login não aplicado: ${authResult.error}`, { step: 'init' });
+        } else if (authResult.loggedIn) {
+          addLog('success', '✅ Login automático realizado com sucesso', { step: 'init' });
+        } else if (authResult.skipped) {
+          addLog('info', `ℹ️ Auto-login não aplicado (${authResult.skipReason})`, { step: 'init' });
+        }
+      }
 
       // Executa playback com logging customizado
       addLog('info', '▶️ Iniciando execução das ações...', { step: 'playback' });
@@ -373,10 +410,12 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                 // Obtém URL base da API
                 // Prioridade: API_BASE_URL > config.json > fallback
                 const config = require('../utils/config');
-                const apiBaseUrl = process.env.API_BASE_URL || 
+                const apiBaseUrl = process.env.TEST_API_URL ||
+                                   process.env.API_URL ||
+                                   process.env.API_BASE_URL || 
                                    config.get('api.baseUrl') ||
                                    config.get('scripts.apiUrl') ||
-                                   'http://localhost:3000';
+                                   `http://localhost:${Number(config.get('api.port', 3001))}`;
                 
                 logger.info(`[RPA Overlay] Injetando overlay para execução ${executionId}`);
                 
@@ -1372,7 +1411,10 @@ function cleanupOldExecutions() {
 }
 
 // Limpa execuções antigas a cada 30 minutos
-setInterval(cleanupOldExecutions, 30 * 60 * 1000);
+const cleanupInterval = setInterval(cleanupOldExecutions, 30 * 60 * 1000);
+if (typeof cleanupInterval.unref === 'function') {
+  cleanupInterval.unref();
+}
 
 /**
  * Inicia gravação manual de seed RPA.
@@ -1398,8 +1440,8 @@ async function startManualRecording(seedName, initialUrl) {
       };
     }
 
-    const { RpaRecorder } = require('../../tests/rpa/recorder/rpaRecorder');
-    const rpaConfig = require('../../tests/rpa/rpaConfig');
+    const { RpaRecorder } = require('../../core/rpa/recorder/rpaRecorder');
+    const rpaConfig = require('../../core/rpa/rpaConfig');
     
     const url = initialUrl || rpaConfig.urls.frontend;
     

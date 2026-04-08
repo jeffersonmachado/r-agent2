@@ -4,60 +4,158 @@
     "blockingFailures": 0,
     "infraErrors": 0
   },
-  "accepted": false,
+  "accepted": true,
   "bestKnown": {
-    "executionId": "mesh-2026-03-31T18-37-46-626Z",
-    "passRate": 0.6086956521739131,
-    "blockingFailures": 2,
-    "infraErrors": 12,
-    "total": 46,
-    "passed": 28,
-    "failed": 6,
+    "executionId": "mesh-2026-04-07T23-08-10-246Z",
+    "passRate": 1,
+    "blockingFailures": 0,
+    "infraErrors": 0,
+    "total": 50,
+    "passed": 50,
+    "failed": 0,
     "flaky": 0,
-    "updatedAt": "2026-03-31T19:09:53.423Z"
+    "updatedAt": "2026-04-07T23:25:02.540Z"
   },
   "history": [
     {
-      "executionId": "mesh-maintenance-targeted-1774985590765",
-      "passRate": 0,
+      "executionId": "mesh-2026-04-07T23-08-10-246Z",
+      "passRate": 1,
       "blockingFailures": 0,
       "infraErrors": 0,
-      "at": "2026-03-31T19:34:09.833Z"
+      "at": "2026-04-07T23:25:02.540Z"
     },
     {
-      "executionId": "mesh-2026-03-31T18-37-46-626Z",
-      "passRate": 0.6086956521739131,
-      "blockingFailures": 2,
-      "infraErrors": 12,
-      "at": "2026-03-31T19:09:53.423Z"
+      "executionId": "mesh-2026-04-07T22-03-44-261Z",
+      "passRate": 0.96,
+      "blockingFailures": 0,
+      "infraErrors": 1,
+      "at": "2026-04-07T23:00:24.869Z"
     },
     {
-      "executionId": "mesh-2026-03-31T18-39-56-883Z",
-      "passRate": 0.6086956521739131,
-      "blockingFailures": 2,
-      "infraErrors": 11,
-      "at": "2026-03-31T19:09:48.425Z"
-    },
-    {
-      "executionId": "mesh-2026-03-31T18-33-51-384Z",
-      "passRate": 0.45652173913043476,
-      "blockingFailures": 3,
-      "infraErrors": 13,
-      "at": "2026-03-31T19:07:03.783Z"
-    },
-    {
-      "executionId": "mesh-2026-03-31T18-08-19-563Z",
-      "passRate": 0.5434782608695652,
-      "blockingFailures": 2,
+      "executionId": "mesh-2026-04-07T20-48-16-176Z",
+      "passRate": 0.94,
+      "blockingFailures": 0,
       "infraErrors": 0,
-      "at": "2026-03-31T18:13:51.803Z"
+      "at": "2026-04-07T21:44:13.816Z"
     },
     {
-      "executionId": "mesh-2026-03-31T18-05-20-370Z",
-      "passRate": 0,
+      "executionId": "mesh-2026-04-07T20-29-17-338Z",
+      "passRate": 0.96,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-07T20:45:45.357Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T20-11-57-946Z",
+      "passRate": 0.96,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-07T20:28:21.314Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T19-50-05-274Z",
+      "passRate": 0.66,
+      "blockingFailures": 0,
+      "infraErrors": 1,
+      "at": "2026-04-07T20:06:21.170Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T18-24-14-251Z",
+      "passRate": 0.66,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-07T18:38:50.597Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T18-20-59-266Z",
+      "passRate": 0.02,
       "blockingFailures": 7,
-      "infraErrors": 21,
-      "at": "2026-03-31T18:05:56.044Z"
+      "infraErrors": 28,
+      "at": "2026-04-07T18:22:34.659Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T17-41-59-880Z",
+      "passRate": 0.66,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-07T17:57:25.379Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T17-41-09-470Z",
+      "passRate": 0.66,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-07T17:56:24.268Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T16-53-21-505Z",
+      "passRate": 0.62,
+      "blockingFailures": 1,
+      "infraErrors": 1,
+      "at": "2026-04-07T17:05:23.373Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T16-38-08-323Z",
+      "passRate": 0.08,
+      "blockingFailures": 6,
+      "infraErrors": 0,
+      "at": "2026-04-07T16:41:55.245Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T16-22-08-236Z",
+      "passRate": 0.1,
+      "blockingFailures": 6,
+      "infraErrors": 32,
+      "at": "2026-04-07T16:33:08.320Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T16-00-35-527Z",
+      "passRate": 0.02,
+      "blockingFailures": 7,
+      "infraErrors": 28,
+      "at": "2026-04-07T16:01:43.042Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T15-48-51-825Z",
+      "passRate": 0.02,
+      "blockingFailures": 7,
+      "infraErrors": 28,
+      "at": "2026-04-07T15:50:01.044Z"
+    },
+    {
+      "executionId": "mesh-2026-04-07T15-37-37-214Z",
+      "passRate": 0.02,
+      "blockingFailures": 7,
+      "infraErrors": 28,
+      "at": "2026-04-07T15:38:45.510Z"
+    },
+    {
+      "executionId": "mesh-2026-04-06T20-31-13-124Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-06T20:45:28.477Z"
+    },
+    {
+      "executionId": "mesh-2026-04-06T20-05-00-000Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-06T20:27:28.168Z"
+    },
+    {
+      "executionId": "mesh-2026-04-06T19-18-56-658Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-06T19:32:39.826Z"
+    },
+    {
+      "executionId": "mesh-2026-04-06T19-00-47-591Z",
+      "passRate": 0.98,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-04-06T19:14:35.115Z"
     }
   ]
 }

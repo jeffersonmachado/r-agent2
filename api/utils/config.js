@@ -10,8 +10,8 @@
  *   const token = config.get('whatsapp.accessToken');
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Caminho do arquivo de configuração
 const configFile = path.join(__dirname, '..', 'data', 'config.json');
@@ -376,6 +376,12 @@ function validateRedisConfig() {
  * @returns {string} URL de conexão do banco
  */
 function getDatabaseUrl() {
+  // 0) Prioridade máxima: TEST_DATABASE_URL (testes que rodam no host mas precisam
+  //    apontar para o banco do container de teste, ex.: PBX smoke em modo direct)
+  if (process.env.TEST_DATABASE_URL) {
+    return process.env.TEST_DATABASE_URL;
+  }
+
   // 1) Tenta config.json primeiro
   const configUrl = get('database.url');
   if (configUrl) {

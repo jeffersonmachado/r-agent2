@@ -52,7 +52,12 @@ let cheerio = null;
 try {
   cheerio = require('cheerio');
 } catch (error) {
-  logger.error('[WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.');
+  const message = '[WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.';
+  if (safeTrimLower(process.env.SCRAPING_ALLOW_DEGRADED) === 'true') {
+    logger.warn(message);
+  } else {
+    logger.error(message);
+  }
 }
 
 function isDegradedScrapingAllowed() {

@@ -6,6 +6,14 @@ const { loadRegistry, refreshRegistry, runMesh, loadHistory } = require('../../q
 const { buildScheduleStatus, runScheduledMesh, startScheduler } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
 
+const ROOT_DIR = path.join(__dirname, '..', '..');
+const STABILITY_SNAPSHOT_PATH = path.join(ROOT_DIR, 'qa/mesh/intelligence/stabilitySnapshot.json');
+const STABILITY_HISTORY_INDEX_PATH = path.join(ROOT_DIR, 'qa/mesh/intelligence/history/index.json');
+const CHECKPOINT_WAVES_DIR = path.join(ROOT_DIR, 'qa/checkpoints/waves');
+const CHECKPOINT_PROGRESS_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/progress.json');
+const CHECKPOINT_FAILURES_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/failures.json');
+const LEARN_BASE_DIR = path.join(ROOT_DIR, 'qa/mesh/intelligence/learning');
+
 startScheduler();
 
 function getRegistry() {
@@ -36,6 +44,115 @@ function getExecutionById(executionId) {
   const filePath = path.join(__dirname, '../../qa-mesh/meshHistory', `${executionId}.json`);
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function safeReadJson(filePath, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function getStabilitySnapshot() {
+  return safeReadJson(STABILITY_SNAPSHOT_PATH, {
+    generatedAt: null,
+    global: {
+      stabilityScore: 0,
+      releaseReadiness: 0,
+      flakyRate: 0,
+      replayConsistency: 0,
+      criticalFlowSuccess: 0,
+    },
+    domains: [],
+    channels: [],
+    verticals: [],
+    failures: [],
+    releaseGate: {
+      backendBuild: 'unknown',
+      frontendBuild: 'unknown',
+      technicalQA: 'unknown',
+      businessQA: 'unknown',
+      criticalReplay: 'unknown',
+      artifactIntegrity: 'unknown',
+    },
+  });
+}
+
+function getStabilityHistory() {
+  return safeReadJson(STABILITY_HISTORY_INDEX_PATH, { snapshots: [] });
+}
+
+function getStabilityFailures() {
+  const snapshot = getStabilitySnapshot();
+  return {
+    generatedAt: snapshot.generatedAt,
+    failures: Array.isArray(snapshot.failures) ? snapshot.failures : [],
+  };
+}
+
+function getCheckpointsOverview() {
+  const progress = safeReadJson(CHECKPOINT_PROGRESS_PATH, {
+    currentWave: null,
+    completedWaves: [],
+    failedWaves: [],
+    globalStatus: 'running',
+    lastSuccessfulCheckpoint: null,
+  });
+  const failures = safeReadJson(CHECKPOINT_FAILURES_PATH, { failures: [] });
+
+  const waves = fs.existsSync(CHECKPOINT_WAVES_DIR)
+    ? fs.readdirSync(CHECKPOINT_WAVES_DIR)
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => safeReadJson(path.join(CHECKPOINT_WAVES_DIR, file), null))
+      .filter(Boolean)
+    : [];
+
+  return {
+    progress,
+    waves,
+    failures: failures.failures || [],
+  };
+}
+
+function getCheckpointByWaveId(wave) {
+  const filePath = path.join(CHECKPOINT_WAVES_DIR, `${String(wave || '').toUpperCase()}.json`);
+  if (!fs.existsSync(filePath)) return null;
+  return safeReadJson(filePath, null);
+}
+
+function getLearnFile(fileName, fallback) {
+  return safeReadJson(path.join(LEARN_BASE_DIR, fileName), fallback);
+}
+
+function getLearnSummary() {
+  const ranked = getLearnFile('failures.ranked.json', { ranked: [] });
+  const suggestions = getLearnFile('fixSuggestions.json', { suggestions: [] });
+  const plans = getLearnFile('fixPlans.json', { plans: [] });
+  const memory = getLearnFile('learningMemory.json', { stats: {} });
+  return {
+    generatedAt: new Date().toISOString(),
+    ranked: ranked.ranked.length,
+    suggestions: suggestions.suggestions.length,
+    plans: plans.plans.length,
+    memory: memory.stats || {},
+  };
+}
+
+function getLearnFailures() {
+  return getLearnFile('failures.ranked.json', { ranked: [] });
+}
+
+function getLearnSuggestions() {
+  return getLearnFile('fixSuggestions.json', { suggestions: [] });
+}
+
+function getLearnPlans() {
+  return getLearnFile('fixPlans.json', { plans: [] });
+}
+
+function getLearnMemory() {
+  return getLearnFile('learningMemory.json', { entries: [], stats: {} });
 }
 
 function queueMeshRun(options = {}) {
@@ -121,4 +238,14 @@ module.exports = {
   getMeshSchedulerStatus,
   getAllExecutions,
   runScheduled,
+  getStabilitySnapshot,
+  getStabilityHistory,
+  getStabilityFailures,
+  getCheckpointsOverview,
+  getCheckpointByWaveId,
+  getLearnSummary,
+  getLearnFailures,
+  getLearnSuggestions,
+  getLearnPlans,
+  getLearnMemory,
 };

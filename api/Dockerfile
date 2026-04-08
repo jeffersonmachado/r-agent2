@@ -25,12 +25,14 @@ RUN npm ci --omit=dev && \
 
 # Copia apenas o código necessário (sem tests)
 COPY engine/ ./engine/
+COPY core/ ./core/
 COPY api/ ./api/
 COPY rpa/ ./rpa/
 COPY infra/ ./infra/
 COPY contracts/ ./contracts/
 COPY config/ ./config/
 COPY qa/ ./qa/
+COPY qa-mesh/ ./qa-mesh/
 COPY lib/ ./lib/
 COPY scripts/ ./scripts/
 
@@ -47,22 +49,19 @@ COPY --from=builder /app/package.json /app/package-lock.json* ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.cache ./.cache
 COPY --from=builder /app/engine ./engine
+COPY --from=builder /app/core ./core
 COPY --from=builder /app/api ./api
 COPY --from=builder /app/rpa ./rpa
 COPY --from=builder /app/infra ./infra
 COPY --from=builder /app/contracts ./contracts
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/qa ./qa
+COPY --from=builder /app/qa-mesh ./qa-mesh
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/scripts ./scripts
 
-# Compatibilidade: a API referencia o runner RPA legado em `tests/rpa/*`.
-# Copiamos apenas o código necessário (não a suíte inteira de testes).
-COPY tests/rpa/*.js ./tests/rpa/
-COPY tests/rpa/rpa.config.json ./tests/rpa/rpa.config.json
-COPY tests/rpa/bugResolution ./tests/rpa/bugResolution
-COPY tests/rpa/utils ./tests/rpa/utils
-COPY tests/rpa/seeds ./tests/rpa/seeds
+# Compatibilidade: a API referencia múltiplos módulos de runtime em tests/rpa/**.
+COPY tests/rpa ./tests/rpa
 COPY tests/helpers/errorClassifier.js ./tests/helpers/errorClassifier.js
 
 # Remove dependências de desenvolvimento no runtime

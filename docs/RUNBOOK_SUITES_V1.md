@@ -73,8 +73,7 @@
   - congelar mudancas
   - executar rollback da suite afetada
   - rerodar gate tecnico minimo (`npm run system:release-gate`)
-  - observacao: o gate usa modo `stack` por padrao (sem duplicar suites)
-  - diagnostico (modo legado com etapas redundantes): `RELEASE_GATE_MODE=legacy npm run system:release-gate`
+  - observacao: o gate apenas reavalia as evidências já produzidas pelo fluxo oficial
 
 ## Imagens Pre-aquecidas (test stack)
 - Objetivo:

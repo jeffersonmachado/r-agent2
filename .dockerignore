@@ -63,6 +63,27 @@ frontend-e2e/node_modules/
 remote-dumps/
 remote-dumps2/
 
+# Evidências/artefatos de runtime (não pertencem à imagem de produção)
+qa/release-evidence/
+qa/smoke/
+qa/*-report.json
+qa/*-evidence.json
+qa/runtime-governance-report.json
+qa/system-validate-report.json
+qa/deploy-report.json
+qa-mesh/meshEvidence/
+qa-mesh/meshHistory/
+qa-mesh/metrics.json
+qa-mesh/meshReport.json
+qa-mesh/repairPlan.json
+qa-mesh/scheduler-state.json
+qa-mesh/system-validate/
+reports/
+recordings/
+replays/
+.wwebjs_auth/
+.wwebjs_cache/
+
 # Backups ad-hoc
 frontend_backup/
 

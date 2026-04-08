@@ -30,6 +30,7 @@ RUN mkdir -p /app/data /app/data/vector_store && \
 ENV HOST=0.0.0.0
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # Expõe porta
 EXPOSE 8000

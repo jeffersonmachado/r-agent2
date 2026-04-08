@@ -1,5 +1,5 @@
-# WORKFLOW AUXILIAR: Seed manual da plataforma via RPA — disparado manualmente.
-name: Seed Plataforma via RPA [AUXILIAR]
+# WORKFLOW: Seed manual da plataforma via RPA.
+name: Seed Plataforma via RPA
 
 on:
   workflow_dispatch:
@@ -13,15 +13,22 @@ on:
           - development
           - staging
           - test
-  schedule:
-    # Executa diariamente às 2h da manhã
-    - cron: '0 2 * * *'
-  push:
-    branches:
-      - main
-    paths:
-      - 'tests/rpa/recordings/**'
-      - 'tests/rpa/seedPlatformRPA.js'
+      test_base_url:
+        description: 'URL base da API para o seed'
+        required: false
+        default: 'http://localhost:3000'
+      test_frontend_url:
+        description: 'URL do frontend para o seed'
+        required: false
+        default: 'http://localhost:5173'
+      test_admin_email:
+        description: 'Email administrativo usado no seed'
+        required: false
+        default: 'admin@example.com'
+      test_admin_password:
+        description: 'Senha administrativa usada no seed'
+        required: false
+        default: ''
 
 jobs:
   seed-platform:
@@ -52,10 +59,10 @@ jobs:
       
       - name: Executar Seed via RPA
         env:
-          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'http://localhost:3000' }}
-          TEST_FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:5173' }}
-          TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL || 'admin@example.com' }}
-          TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
+          TEST_BASE_URL: ${{ github.event.inputs.test_base_url }}
+          TEST_FRONTEND_URL: ${{ github.event.inputs.test_frontend_url }}
+          TEST_ADMIN_EMAIL: ${{ github.event.inputs.test_admin_email }}
+          TEST_ADMIN_PASSWORD: ${{ github.event.inputs.test_admin_password }}
         run: |
           node tests/rpa/seedPlatformRPA.js
         continue-on-error: false

@@ -8,7 +8,45 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+
+function logFallback(message, details = {}) {
+  console.warn(`[rpa/run-all] ${message}`, details);
+}
+
+function resolveUrlFromConfig(configKey) {
+  try {
+    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(configRaw);
+    const url = config && config.urls && config.urls[configKey] ? String(config.urls[configKey]).trim() : '';
+    return url || null;
+  } catch (error) {
+    logFallback('Falha ao ler config RPA', { error: error.message || error, configPath: RPA_CONFIG_PATH, configKey });
+    return null;
+  }
+}
+
+function resolveRequiredUrl({ envKeys, configKey, fallbackUrl, label }) {
+  for (const key of envKeys) {
+    if (process.env[key]) {
+      return String(process.env[key]).trim();
+    }
+  }
+
+  const configuredUrl = resolveUrlFromConfig(configKey);
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  if (process.env.RPA_ALLOW_DEFAULT_URL_FALLBACK === '1') {
+    logFallback(`Usando fallback explícito de ${label}`, { fallback: fallbackUrl });
+    return fallbackUrl;
+  }
+
+  throw new Error(
+    `[rpa/run-all] ${label} não configurada. Defina ${envKeys.join(' ou ')}${configKey ? ` ou tests/rpa/rpa.config.json.urls.${configKey}` : ''}. `
+    + `Se quiser manter localhost como fallback temporário, use RPA_ALLOW_DEFAULT_URL_FALLBACK=1.`
+  );
+}
 
 // Diretórios de testes RPA (seeds e flows)
 const RPA_SEEDS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
@@ -53,26 +91,21 @@ function findRpaTestFiles() {
 }
 
 function resolveFrontendUrl() {
-  if (process.env.RPA_FRONTEND_URL) return String(process.env.RPA_FRONTEND_URL);
-  try {
-    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
-    const config = JSON.parse(configRaw);
-    const url = config && config.urls && config.urls.frontend ? String(config.urls.frontend) : '';
-    if (url) return url;
-  } catch (_) {}
-  return 'http://localhost:5173';
+  return resolveRequiredUrl({
+    envKeys: ['RPA_FRONTEND_URL', 'TEST_FRONTEND_URL', 'FRONTEND_URL'],
+    configKey: 'frontend',
+    fallbackUrl: 'http://localhost:5173',
+    label: 'frontend URL',
+  });
 }
 
 function resolveApiUrl() {
-  if (process.env.RPA_API_URL) return String(process.env.RPA_API_URL);
-  if (process.env.TEST_API_URL) return String(process.env.TEST_API_URL);
-  try {
-    const configRaw = fs.readFileSync(RPA_CONFIG_PATH, 'utf8');
-    const config = JSON.parse(configRaw);
-    const url = config && config.urls && config.urls.api ? String(config.urls.api) : '';
-    if (url) return url;
-  } catch (_) {}
-  return 'http://localhost:3000';
+  return resolveRequiredUrl({
+    envKeys: ['RPA_API_URL', 'TEST_API_URL', 'TEST_BASE_URL'],
+    configKey: 'api',
+    fallbackUrl: 'http://localhost:3000',
+    label: 'API URL',
+  });
 }
 
 async function isFrontendReachable(url) {
@@ -353,4 +386,12 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { findRpaTestFiles, runRpaTest, generateReport, saveReport };
+module.exports = {
+  findRpaTestFiles,
+  runRpaTest,
+  generateReport,
+  saveReport,
+  resolveFrontendUrl,
+  resolveApiUrl,
+  resolveRequiredUrl,
+};

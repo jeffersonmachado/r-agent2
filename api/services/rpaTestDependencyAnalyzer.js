@@ -366,7 +366,7 @@ async function resolveDependencies(dependencies, tenantId = 'demo-tenant') {
         try {
           // Implementação real via Runner (runtime)
           // eslint-disable-next-line global-require
-          const { RpaTestRunner } = require('../../rpa/rpaTestRunner');
+          const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
           const runner = new RpaTestRunner({
             headless: true,
             devtools: false,
