@@ -4,19 +4,20 @@ Este diretório contém os workflows de CI/CD do projeto.
 
 ## 📋 Workflows Disponíveis
 
-### 1. `ci.yml` - Pipeline Principal de CI
+### 1. `ci.yml` - CI Pipeline oficial legada
 **Quando executa:**
-- Push em `main` ou `develop`
-- Pull Requests para `main` ou `develop`
-- Manualmente via `workflow_dispatch`
+- Push em `main` e `develop`
+- Pull Requests para `main` e `develop`
 
 **O que faz:**
-- ✅ Testes unitários
-- ✅ Validação estrutural de fluxos
-- ✅ Pipeline de dados (seed → gate → scripts)
-- ✅ Testes RPA em modo CI
-- ✅ Verificação de build
-- ✅ Resumo e notificações
+- Executa o gate amplo de CI
+- Cobre validações oficiais, QA Mesh e smoke complementar
+
+**Workflows relacionados mais recentes:**
+- `ci-core.yml`
+- `code-quality.yml`
+- `rpa-ci.yml`
+- `stack-test.yml`
 
 ### 2. `rpa-seed.yml` - Seed RPA da Plataforma
 **Quando executa:**
@@ -71,14 +72,16 @@ Este diretório contém os workflows de CI/CD do projeto.
 - 💬 Integração com Slack (se configurado)
 - 📧 Notificações por email (placeholder)
 
-### 7. `full-pipeline.yml` - Pipeline Completo
+### 7. `full-pipeline.yml` - Pipeline auxiliar integrado
 **Quando executa:**
 - Push em `main`
-- Pull Requests
-- Manualmente
+- Pull Requests para `main`
+- Manualmente via `workflow_dispatch`
 
 **O que faz:**
-- Executa pipeline completo: validação → RPA → build → resumo
+- Executa validação integrada
+- Faz build do frontend
+- Mantém um pipeline CI/CD agregado para compatibilidade operacional
 
 ## 🔧 Configuração
 
