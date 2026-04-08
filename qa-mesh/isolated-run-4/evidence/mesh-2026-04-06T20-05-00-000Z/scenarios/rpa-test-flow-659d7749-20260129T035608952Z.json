@@ -1,0 +1,145 @@
+{
+  "id": "rpa-test-flow-659d7749-20260129T035608952Z",
+  "domain": "pbx",
+  "type": "regression",
+  "source": "rpa",
+  "flow": "IA - Teste RPA - studiooly",
+  "criticality": "high",
+  "adapter": "rpa",
+  "status": "passed",
+  "startedAt": "2026-04-06T20:22:35.016Z",
+  "finishedAt": "2026-04-06T20:22:44.021Z",
+  "logs": [
+    {
+      "timestamp": "2026-04-06T20:22:35.016Z",
+      "level": "info",
+      "message": "🚀 Iniciando execução RPA...",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:35.016Z",
+      "level": "info",
+      "message": "📋 Gravação: test-flow-659d7749-20260129T035608952Z",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:35.336Z",
+      "level": "success",
+      "message": "✅ Browser inicializado",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:35.337Z",
+      "level": "info",
+      "message": "📝 Total de ações: 4",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:40.895Z",
+      "level": "success",
+      "message": "✅ Login automático realizado com sucesso",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:40.895Z",
+      "level": "info",
+      "message": "▶️ Iniciando execução das ações...",
+      "step": "playback"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:40.895Z",
+      "level": "info",
+      "message": "🌐 Navegar - URL: http://localhost:5173/chat?flowId=flow-659d7749",
+      "step": 1,
+      "action": "navigate",
+      "details": "URL: http://localhost:5173/chat?flowId=flow-659d7749"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.133Z",
+      "level": "success",
+      "message": "✅ Ação 1 concluída com sucesso",
+      "step": 1,
+      "action": "navigate"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.133Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 2,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.185Z",
+      "level": "success",
+      "message": "✅ Ação 2 concluída com sucesso",
+      "step": 2,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.185Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 3,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.201Z",
+      "level": "success",
+      "message": "✅ Ação 3 concluída com sucesso",
+      "step": 3,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.201Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 4,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.214Z",
+      "level": "success",
+      "message": "✅ Ação 4 concluída com sucesso",
+      "step": 4,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.215Z",
+      "level": "success",
+      "message": "🎉 Execução concluída com sucesso!",
+      "totalSteps": 4,
+      "duration": 2319
+    },
+    {
+      "timestamp": "2026-04-06T20:22:43.308Z",
+      "level": "info",
+      "message": "🔒 Browser fechado",
+      "step": "cleanup"
+    }
+  ],
+  "metrics": {
+    "status": "completed",
+    "progress": 100,
+    "totalSteps": 4
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-05-00-000Z/replays/rpa-test-flow-659d7749-20260129T035608952Z.json",
+      "replayType": "rpa_replay"
+    }
+  ],
+  "assertions": [
+    "execução RPA concluída sem erro crítico"
+  ],
+  "rpaRecordingId": "test-flow-659d7749-20260129T035608952Z",
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-05-00-000Z/replays/rpa-test-flow-659d7749-20260129T035608952Z.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 9005
+}

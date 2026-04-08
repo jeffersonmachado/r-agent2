@@ -1,0 +1,45 @@
+{
+  "executionId": "mesh-2026-04-06T20-00-00-000Z",
+  "timestamp": "2026-04-06T19:58:53.011Z",
+  "registryTotal": 1,
+  "attempted": 1,
+  "executed": 1,
+  "total": 1,
+  "passed": 1,
+  "fallbackPassed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "infraErrors": 0,
+  "environmentMissing": 0,
+  "flaky": 0,
+  "fallbackUsed": 0,
+  "fallbackBlockingUsed": 0,
+  "executionCoverage": 1,
+  "executionQuality": "valid",
+  "domains": {
+    "omnichannel": {
+      "passed": 1,
+      "fallbackPassed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "infra_error": 0,
+      "environment_missing": 0,
+      "flaky": 0,
+      "total": 1
+    }
+  },
+  "goNoGo": "GO",
+  "reasons": [],
+  "failuresByDomain": {
+    "omnichannel": {
+      "total": 0,
+      "blocking": 0,
+      "byType": {},
+      "successRate": 1
+    }
+  },
+  "failuresByType": {},
+  "topErrors": [],
+  "blockingDomains": [],
+  "changedFiles": []
+}

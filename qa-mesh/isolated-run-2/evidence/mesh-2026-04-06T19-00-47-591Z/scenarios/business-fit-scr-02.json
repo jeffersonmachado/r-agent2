@@ -1,0 +1,177 @@
+{
+  "id": "business-fit-scr-02",
+  "domain": "fitness",
+  "type": "smoke",
+  "source": "hybrid",
+  "flow": "Fitness Memberships screen smoke",
+  "criticality": "high",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:04:52.697Z",
+  "finishedAt": "2026-04-06T19:05:04.761Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-06T19:04:53.193Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:04:53.687Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+      "timestamp": "2026-04-06T19:04:53.687Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:04:54.182Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)",
+      "timestamp": "2026-04-06T19:04:54.182Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:04:54.183Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byStatus\": {",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byQueue\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"queueDetails\": {}",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:04:54.183Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByStatus\": {",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByQueue\": {}",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:04:54.183Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Business QA concluído: PASS",
+      "timestamp": "2026-04-06T19:05:00.032Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- PASS: 1",
+      "timestamp": "2026-04-06T19:05:00.033Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- FAIL: 0",
+      "timestamp": "2026-04-06T19:05:00.033Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- JSON: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T19-04-53-198Z.json",
+      "timestamp": "2026-04-06T19:05:00.033Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- Markdown: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T19-04-53-198Z.md",
+      "timestamp": "2026-04-06T19:05:00.033Z"
+    }
+  ],
+  "metrics": {
+    "command": "node tests/rpa/business/run.js --mode=screens --code=FIT-SCR-02"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/business-fit-scr-02.json",
+      "replayType": "hybrid_replay"
+    }
+  ],
+  "assertions": [],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/business-fit-scr-02.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 12064
+}

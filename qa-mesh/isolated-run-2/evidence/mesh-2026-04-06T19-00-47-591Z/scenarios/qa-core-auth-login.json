@@ -1,0 +1,579 @@
+{
+  "id": "qa-core-auth-login",
+  "domain": "core",
+  "type": "smoke",
+  "source": "hybrid",
+  "flow": "core_auth_login",
+  "criticality": "blocking",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:06:07.024Z",
+  "finishedAt": "2026-04-06T19:07:03.024Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-06T19:06:08.396Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:06:08.456Z"
+    },
+    {
+      "level": "stdout",
+      "message": "🚀 Executando testes RPA de login...",
+      "timestamp": "2026-04-06T19:06:08.456Z"
+    },
+    {
+      "level": "stdout",
+      "message": "============================================================",
+      "timestamp": "2026-04-06T19:06:08.457Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:06:08.459Z"
+    },
+    {
+      "level": "stdout",
+      "message": "🤖 Teste RPA: Fluxo de Login",
+      "timestamp": "2026-04-06T19:06:08.459Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:06:08.459Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Frontend: http://localhost:5173",
+      "timestamp": "2026-04-06T19:06:08.459Z"
+    },
+    {
+      "level": "stdout",
+      "message": "API: http://localhost:3001",
+      "timestamp": "2026-04-06T19:06:08.459Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Usuário: systemadmin",
+      "timestamp": "2026-04-06T19:06:08.460Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Tenant: tenant-demo",
+      "timestamp": "2026-04-06T19:06:08.460Z"
+    },
+    {
+      "level": "stdout",
+      "message": "1. Navegando para a página de login...",
+      "timestamp": "2026-04-06T19:06:11.672Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Página de login carregada",
+      "timestamp": "2026-04-06T19:06:16.334Z"
+    },
+    {
+      "level": "stdout",
+      "message": "2. Preenchendo formulário de login...",
+      "timestamp": "2026-04-06T19:06:16.334Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Username preenchido: systemadmin (usando: input[type=\"text\"])",
+      "timestamp": "2026-04-06T19:06:18.299Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Password preenchido",
+      "timestamp": "2026-04-06T19:06:19.795Z"
+    },
+    {
+      "level": "stdout",
+      "message": "3. Submetendo formulário de login...",
+      "timestamp": "2026-04-06T19:06:19.795Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Formulário submetido (botão)",
+      "timestamp": "2026-04-06T19:06:21.631Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:06:21.631Z"
+    },
+    {
+      "level": "stdout",
+      "message": "4. Aguardando resposta do login...",
+      "timestamp": "2026-04-06T19:06:21.631Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Modal de seleção de tenant detectado (super-admin)",
+      "timestamp": "2026-04-06T19:06:24.687Z"
+    },
+    {
+      "level": "stdout",
+      "message": "5. Selecionando tenant: tenant-demo...",
+      "timestamp": "2026-04-06T19:06:24.688Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Botão do tenant clicado: button:has-text(\"tenant-demo\")",
+      "timestamp": "2026-04-06T19:06:28.192Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Botão \"Acessar\" clicado (usando: button:has-text(\"Acessar\"))",
+      "timestamp": "2026-04-06T19:06:30.717Z"
+    },
+    {
+      "level": "stdout",
+      "message": "6. Aguardando verificação de provider de IA e redirecionamento...",
+      "timestamp": "2026-04-06T19:06:30.717Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL inicial após seleção: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:06:30.717Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ⚠️  Nenhum log do Login encontrado no console",
+      "timestamp": "2026-04-06T19:06:32.721Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL final: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:06:32.736Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Redirecionado para /config (provider inválido)",
+      "timestamp": "2026-04-06T19:06:33.626Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Campo de configuração deve estar visível",
+      "timestamp": "2026-04-06T19:06:33.626Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Campo de configuração detectado na página",
+      "timestamp": "2026-04-06T19:06:34.642Z"
+    },
+    {
+      "level": "stdout",
+      "message": "7. Verificando se login foi bem-sucedido...",
+      "timestamp": "2026-04-06T19:06:34.642Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Login bem-sucedido",
+      "timestamp": "2026-04-06T19:06:35.662Z"
+    },
+    {
+      "level": "stdout",
+      "message": "8. Capturando screenshot final...",
+      "timestamp": "2026-04-06T19:06:35.662Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Screenshot salvo: /opt/results/ria/r-agent2/tests/rpa/screenshots/login-test-1775502395662.png",
+      "timestamp": "2026-04-06T19:06:35.882Z"
+    },
+    {
+      "level": "stdout",
+      "message": "✅ Teste RPA de login concluído com sucesso!",
+      "timestamp": "2026-04-06T19:06:35.882Z"
+    },
+    {
+      "level": "stdout",
+      "message": "📹 Replay salvo: /opt/results/ria/r-agent2/tests/rpa/replay/login-flow-1775502368874.json",
+      "timestamp": "2026-04-06T19:06:35.999Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   📊 Ações registradas: 6",
+      "timestamp": "2026-04-06T19:06:35.999Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   📸 Telas registradas: 18",
+      "timestamp": "2026-04-06T19:06:35.999Z"
+    },
+    {
+      "level": "stdout",
+      "message": "============================================================",
+      "timestamp": "2026-04-06T19:06:36.104Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:06:36.107Z"
+    },
+    {
+      "level": "stdout",
+      "message": "🤖 Teste RPA: Login com Verificação de Provider de IA",
+      "timestamp": "2026-04-06T19:06:36.107Z"
+    },
+    {
+      "level": "stdout",
+      "message": "1. Fazendo login...",
+      "timestamp": "2026-04-06T19:06:40.660Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Resultado do login: {token: ce3261bc8bf51d6d4f365edaaa961ebf273344b44ff68af8c00a64a99c6aea0b, agent: Object, __httpStatus: 200}",
+      "timestamp": "2026-04-06T19:06:47.640Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Agente recebido: {id: cc1fbca6-d8cb-4ac8-a858-2d221244a8b3, tenantId: system, username: systemadmin, email: systemadmin@exemplo.com, role: super_admin}",
+      "timestamp": "2026-04-06T19:06:47.640Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] É super-admin? true {role: super_admin, tenantId: system, agent: Object}",
+      "timestamp": "2026-04-06T19:06:47.640Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Super-admin: abrindo modal de seleção de tenant",
+      "timestamp": "2026-04-06T19:06:47.640Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Login realizado",
+      "timestamp": "2026-04-06T19:06:50.648Z"
+    },
+    {
+      "level": "stdout",
+      "message": "2. Modal de seleção de tenant detectado",
+      "timestamp": "2026-04-06T19:06:52.687Z"
+    },
+    {
+      "level": "stdout",
+      "message": "3. Selecionando tenant tenant-demo...",
+      "timestamp": "2026-04-06T19:06:52.700Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Botão do tenant clicado: button:has-text(\"tenant-demo\")",
+      "timestamp": "2026-04-06T19:06:55.259Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Tenant selecionado: {id: tenant-demo, tenant_key: tenant-demo, name: Tenant Demo, site: https://demo.example.com, ramo_atividade: Tecnologia e Software - Plataforma de demonstração}",
+      "timestamp": "2026-04-06T19:06:55.841Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] loginResult disponível: true",
+      "timestamp": "2026-04-06T19:06:55.841Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] loginResult.agent disponível: true",
+      "timestamp": "2026-04-06T19:06:55.844Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Atualizando agente com novo tenantId: {id: cc1fbca6-d8cb-4ac8-a858-2d221244a8b3, tenantId: tenant-demo, username: systemadmin, email: systemadmin@exemplo.com, role: super_admin}",
+      "timestamp": "2026-04-06T19:06:55.845Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Verificando provider de IA para o tenant selecionado: tenant-demo",
+      "timestamp": "2026-04-06T19:06:55.845Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] Resposta completa da verificação (ai-credentials/test): {",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"success\": true,",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"valid\": true,",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"provider\": \"openai\",",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"tenantId\": \"tenant-demo\",",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"error\": null",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:06:57.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   [Console] [Login] ✅ Tenant tem provider de IA válido, continuando para /support",
+      "timestamp": "2026-04-06T19:06:57.162Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Botão \"Acessar\" clicado usando: button:has-text(\"Acessar\")",
+      "timestamp": "2026-04-06T19:06:57.741Z"
+    },
+    {
+      "level": "stdout",
+      "message": "4. Aguardando verificação de provider de IA e redirecionamento...",
+      "timestamp": "2026-04-06T19:06:57.741Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL inicial após seleção: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:06:57.741Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   📋 Logs do Login encontrados: 11",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Agente recebido: {id: cc1fbca6-d8cb-4ac8-a858-2d221244a8b3, tenantId: system, username: systemadmin, email: systemadmin@exemplo.com, role: super_admin}",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] É super-admin? true {role: super_admin, tenantId: system, agent: Object}",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Super-admin: abrindo modal de seleção de tenant",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Tenant selecionado: {id: tenant-demo, tenant_key: tenant-demo, name: Tenant Demo, site: https://demo.example.com, ramo_atividade: Tecnologia e Software - Plataforma de demonstração}",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] loginResult disponível: true",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] loginResult.agent disponível: true",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Atualizando agente com novo tenantId: {id: cc1fbca6-d8cb-4ac8-a858-2d221244a8b3, tenantId: tenant-demo, username: systemadmin, email: systemadmin@exemplo.com, role: super_admin}",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Verificando provider de IA para o tenant selecionado: tenant-demo",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] Resposta completa da verificação (ai-credentials/test): {",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"success\": true,",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"valid\": true,",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"provider\": \"openai\",",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"tenantId\": \"tenant-demo\",",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"error\": null",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "      [LOG] [Login] ✅ Tenant tem provider de IA válido, continuando para /support",
+      "timestamp": "2026-04-06T19:06:59.745Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL final: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:06:59.758Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Redirecionado para /config (provider inválido)",
+      "timestamp": "2026-04-06T19:07:00.674Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Campo de configuração deve estar visível",
+      "timestamp": "2026-04-06T19:07:00.674Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Campo de configuração detectado na página",
+      "timestamp": "2026-04-06T19:07:02.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "6. Aguardando redirecionamento final para /support...",
+      "timestamp": "2026-04-06T19:07:02.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL final: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:07:02.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ⚠️  Redirecionado para /config (provider inválido)",
+      "timestamp": "2026-04-06T19:07:02.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "7. Verificando se login foi bem-sucedido...",
+      "timestamp": "2026-04-06T19:07:02.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   ✅ Login bem-sucedido",
+      "timestamp": "2026-04-06T19:07:02.733Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   Screenshot salvo: /opt/results/ria/r-agent2/tests/rpa/screenshots/login-provider-check-1775502422733.png",
+      "timestamp": "2026-04-06T19:07:02.929Z"
+    },
+    {
+      "level": "stdout",
+      "message": "📹 Replay salvo: /opt/results/ria/r-agent2/tests/rpa/replay/login-provider-check-1775502396456.json",
+      "timestamp": "2026-04-06T19:07:02.977Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   📊 Ações registradas: 6",
+      "timestamp": "2026-04-06T19:07:02.978Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   📸 Telas registradas: 19",
+      "timestamp": "2026-04-06T19:07:02.978Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "============================================================",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "📊 RESUMO DOS TESTES RPA DE LOGIN",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "============================================================",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "✅ Testes passaram: 2",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "❌ Testes falharam: 0",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "📈 Total: 2 testes",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "✅ Login Flow: PASSOU",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL final: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "✅ Login with Provider Check: PASSOU",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    },
+    {
+      "level": "stdout",
+      "message": "   URL final: http://localhost:5173/config?tab=billing",
+      "timestamp": "2026-04-06T19:07:03.011Z"
+    }
+  ],
+  "metrics": {
+    "command": "node tests/rpa/login.test.js"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/qa-core-auth-login.json",
+      "replayType": "hybrid_replay"
+    }
+  ],
+  "assertions": [
+    "login funcional"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/qa-core-auth-login.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 56000
+}

@@ -1,0 +1,37 @@
+{
+  "wave": "WAVE-4",
+  "title": "Normalizacao e clusterizacao de falhas",
+  "status": "partial",
+  "startedAt": "2026-04-07T15:53:18.038Z",
+  "finishedAt": "2026-04-07T15:53:18.040Z",
+  "changes": [
+    "failureNormalizer/failureClusterer/impactRanker implementados"
+  ],
+  "filesCreated": [
+    "qa/mesh/intelligence/learning/failureNormalizer.js",
+    "qa/mesh/intelligence/learning/failureClusterer.js",
+    "qa/mesh/intelligence/learning/impactRanker.js"
+  ],
+  "filesModified": [],
+  "filesRemoved": [],
+  "validation": {
+    "buildBackend": false,
+    "buildFrontend": true,
+    "qaTechnical": true,
+    "qaBusiness": false,
+    "replay": true
+  },
+  "metrics": {
+    "testsPassed": 5,
+    "testsFailed": 1,
+    "warnings": 1,
+    "criticalFlowsValidated": 1,
+    "durationMs": 1800
+  },
+  "blockers": [
+    "backend_build"
+  ],
+  "nextActions": [
+    "Manter pipeline learn em suggestion-only ate estabilizar backend"
+  ]
+}

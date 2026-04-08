@@ -1,0 +1,214 @@
+{
+  "id": "business-b1",
+  "domain": "beauty",
+  "type": "business",
+  "source": "qa",
+  "flow": "Beauty campanha de unhas até pagamento",
+  "criticality": "blocking",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-06T20:31:13.127Z",
+  "finishedAt": "2026-04-06T20:31:25.480Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-06T20:31:13.757Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:31:14.406Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+      "timestamp": "2026-04-06T20:31:14.407Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:31:14.892Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)",
+      "timestamp": "2026-04-06T20:31:14.892Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:31:14.893Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byStatus\": {",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byQueue\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"queueDetails\": {}",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:31:14.893Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByStatus\": {",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByQueue\": {}",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T20:31:14.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:31:14.898Z] [INFO] [Marketing] campanha enfileirada",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"tenantId\": \"system\",",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"campaignId\": \"mec-1775507474861-e0b918ec2537\",",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"queued\": 2",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T20:31:14.898Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Business QA concluído: PASS",
+      "timestamp": "2026-04-06T20:31:15.201Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- PASS: 1",
+      "timestamp": "2026-04-06T20:31:15.201Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- FAIL: 0",
+      "timestamp": "2026-04-06T20:31:15.201Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- JSON: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T20-31-13-760Z.json",
+      "timestamp": "2026-04-06T20:31:15.202Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- Markdown: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T20-31-13-760Z.md",
+      "timestamp": "2026-04-06T20:31:15.202Z"
+    }
+  ],
+  "metrics": {
+    "command": "node tests/rpa/business/run.js --mode=journeys --code=B1"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/business-b1.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "Campanha criada",
+    "Lead captado",
+    "Cliente convertido",
+    "Agendamento válido",
+    "Preço promocional aplicado",
+    "Pagamento confirmado"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/business-b1.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 12353
+}

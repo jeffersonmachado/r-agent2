@@ -1,0 +1,449 @@
+{
+  "id": "rpa-test-flow-a85c4a4d-20260129T052758707Z",
+  "domain": "pbx",
+  "type": "regression",
+  "source": "rpa",
+  "flow": "IA - Teste RPA - studiooly",
+  "criticality": "high",
+  "adapter": "rpa",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:30:36.711Z",
+  "finishedAt": "2026-04-06T19:31:18.773Z",
+  "logs": [
+    {
+      "timestamp": "2026-04-06T19:30:36.712Z",
+      "level": "info",
+      "message": "🚀 Iniciando execução RPA...",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:36.712Z",
+      "level": "info",
+      "message": "📋 Gravação: test-flow-a85c4a4d-20260129T052758707Z",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:37.140Z",
+      "level": "success",
+      "message": "✅ Browser inicializado",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:37.140Z",
+      "level": "info",
+      "message": "📝 Total de ações: 24",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:42.437Z",
+      "level": "warning",
+      "message": "⚠️ Auto-login não aplicado: maintenance_auth_gate_failed:permission_block",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:42.438Z",
+      "level": "info",
+      "message": "▶️ Iniciando execução das ações...",
+      "step": "playback"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:42.438Z",
+      "level": "info",
+      "message": "🌐 Navegar - URL: http://localhost:5173/maintenance",
+      "step": 1,
+      "action": "navigate",
+      "details": "URL: http://localhost:5173/maintenance"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:44.648Z",
+      "level": "success",
+      "message": "✅ Ação 1 concluída com sucesso",
+      "step": 1,
+      "action": "navigate"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:44.648Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body",
+      "step": 2,
+      "action": "wait",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:44.757Z",
+      "level": "success",
+      "message": "✅ Ação 2 concluída com sucesso",
+      "step": 2,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:44.757Z",
+      "level": "info",
+      "message": "🖱️ Clicar - Seletor: [data-testid=\"queue-manager-toggle\"], button:has-text(\"Gerenciar Filas\"), button:has-text(\"⚙️ Gerenciar Filas\")",
+      "step": 3,
+      "action": "click",
+      "details": "Seletor: [data-testid=\"queue-manager-toggle\"], button:has-text(\"Gerenciar Filas\"), button:has-text(\"⚙️ Gerenciar Filas\")"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:47.662Z",
+      "level": "success",
+      "message": "✅ Ação 3 concluída com sucesso",
+      "step": 3,
+      "action": "click"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:47.662Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: input.queue-manager-input, input[placeholder*=\"Nome da fila\" i]",
+      "step": 4,
+      "action": "wait",
+      "details": "Seletor: input.queue-manager-input, input[placeholder*=\"Nome da fila\" i]"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:47.695Z",
+      "level": "success",
+      "message": "✅ Ação 4 concluída com sucesso",
+      "step": 4,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:47.695Z",
+      "level": "info",
+      "message": "✏️ Preencher - Seletor: input.queue-manager-input, input[placeholder*=\"Nome da fila\" i] | Valor: default",
+      "step": 5,
+      "action": "fill",
+      "details": "Seletor: input.queue-manager-input, input[placeholder*=\"Nome da fila\" i] | Valor: default"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:49.649Z",
+      "level": "success",
+      "message": "✅ Ação 5 concluída com sucesso",
+      "step": 5,
+      "action": "fill"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:49.649Z",
+      "level": "info",
+      "message": "🖱️ Clicar - Seletor: button:has-text(\"➕ Criar\"), button:has-text(\"Criar\")",
+      "step": 6,
+      "action": "click",
+      "details": "Seletor: button:has-text(\"➕ Criar\"), button:has-text(\"Criar\")"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:51.058Z",
+      "level": "success",
+      "message": "✅ Ação 6 concluída com sucesso",
+      "step": 6,
+      "action": "click"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:51.058Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body",
+      "step": 7,
+      "action": "wait",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:51.089Z",
+      "level": "success",
+      "message": "✅ Ação 7 concluída com sucesso",
+      "step": 7,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:51.089Z",
+      "level": "info",
+      "message": "🌐 Navegar - URL: http://localhost:5173/chat?flowId=flow-a85c4a4d",
+      "step": 8,
+      "action": "navigate",
+      "details": "URL: http://localhost:5173/chat?flowId=flow-a85c4a4d"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.107Z",
+      "level": "success",
+      "message": "✅ Ação 8 concluída com sucesso",
+      "step": 8,
+      "action": "navigate"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.107Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 9,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.158Z",
+      "level": "success",
+      "message": "✅ Ação 9 concluída com sucesso",
+      "step": 9,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.158Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body | Valor: 500",
+      "step": 10,
+      "action": "wait",
+      "details": "Seletor: body | Valor: 500"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.214Z",
+      "level": "success",
+      "message": "✅ Ação 10 concluída com sucesso",
+      "step": 10,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.214Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 11,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.229Z",
+      "level": "success",
+      "message": "✅ Ação 11 concluída com sucesso",
+      "step": 11,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:30:53.229Z",
+      "level": "info",
+      "message": "✏️ Preencher - Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_1",
+      "step": 12,
+      "action": "fill",
+      "details": "Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_1"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:00.147Z",
+      "level": "success",
+      "message": "✅ Ação 12 concluída com sucesso",
+      "step": 12,
+      "action": "fill"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:00.147Z",
+      "level": "info",
+      "message": "🖱️ Clicar - Seletor: button[type='submit'], button",
+      "step": 13,
+      "action": "click",
+      "details": "Seletor: button[type='submit'], button"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.557Z",
+      "level": "success",
+      "message": "✅ Ação 13 concluída com sucesso",
+      "step": 13,
+      "action": "click"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.557Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body | Valor: 500",
+      "step": 14,
+      "action": "wait",
+      "details": "Seletor: body | Valor: 500"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.569Z",
+      "level": "success",
+      "message": "✅ Ação 14 concluída com sucesso",
+      "step": 14,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.569Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 15,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.578Z",
+      "level": "success",
+      "message": "✅ Ação 15 concluída com sucesso",
+      "step": 15,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:01.578Z",
+      "level": "info",
+      "message": "✏️ Preencher - Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_2",
+      "step": 16,
+      "action": "fill",
+      "details": "Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_2"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:08.582Z",
+      "level": "success",
+      "message": "✅ Ação 16 concluída com sucesso",
+      "step": 16,
+      "action": "fill"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:08.582Z",
+      "level": "info",
+      "message": "🖱️ Clicar - Seletor: button[type='submit'], button",
+      "step": 17,
+      "action": "click",
+      "details": "Seletor: button[type='submit'], button"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.921Z",
+      "level": "success",
+      "message": "✅ Ação 17 concluída com sucesso",
+      "step": 17,
+      "action": "click"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.921Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body | Valor: 500",
+      "step": 18,
+      "action": "wait",
+      "details": "Seletor: body | Valor: 500"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.929Z",
+      "level": "success",
+      "message": "✅ Ação 18 concluída com sucesso",
+      "step": 18,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.929Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 19,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.935Z",
+      "level": "success",
+      "message": "✅ Ação 19 concluída com sucesso",
+      "step": 19,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:09.935Z",
+      "level": "info",
+      "message": "✏️ Preencher - Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_3",
+      "step": 20,
+      "action": "fill",
+      "details": "Seletor: textarea, input[type='text'], [contenteditable='true'] | Valor: xqz_invalid_3"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:16.802Z",
+      "level": "success",
+      "message": "✅ Ação 20 concluída com sucesso",
+      "step": 20,
+      "action": "fill"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:16.802Z",
+      "level": "info",
+      "message": "🖱️ Clicar - Seletor: button[type='submit'], button",
+      "step": 21,
+      "action": "click",
+      "details": "Seletor: button[type='submit'], button"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.154Z",
+      "level": "success",
+      "message": "✅ Ação 21 concluída com sucesso",
+      "step": 21,
+      "action": "click"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.154Z",
+      "level": "info",
+      "message": "⏳ Aguardar - Seletor: body | Valor: 800",
+      "step": 22,
+      "action": "wait",
+      "details": "Seletor: body | Valor: 800"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.168Z",
+      "level": "success",
+      "message": "✅ Ação 22 concluída com sucesso",
+      "step": 22,
+      "action": "wait"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.168Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 23,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.180Z",
+      "level": "success",
+      "message": "✅ Ação 23 concluída com sucesso",
+      "step": 23,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.180Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 24,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.195Z",
+      "level": "success",
+      "message": "✅ Ação 24 concluída com sucesso",
+      "step": 24,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.196Z",
+      "level": "success",
+      "message": "🎉 Execução concluída com sucesso!",
+      "totalSteps": 24,
+      "duration": 35757
+    },
+    {
+      "timestamp": "2026-04-06T19:31:18.278Z",
+      "level": "info",
+      "message": "🔒 Browser fechado",
+      "step": "cleanup"
+    }
+  ],
+  "metrics": {
+    "status": "completed",
+    "progress": 100,
+    "totalSteps": 24
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "path": "/opt/results/ria/r-agent2/tests/rpa/screenshots/maintenance-preclick-1775503844761.png"
+    },
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/rpa-test-flow-a85c4a4d-20260129T052758707Z.json",
+      "replayType": "rpa_replay"
+    }
+  ],
+  "assertions": [
+    "execução RPA concluída sem erro crítico"
+  ],
+  "rpaRecordingId": "test-flow-a85c4a4d-20260129T052758707Z",
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/rpa-test-flow-a85c4a4d-20260129T052758707Z.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 42062
+}

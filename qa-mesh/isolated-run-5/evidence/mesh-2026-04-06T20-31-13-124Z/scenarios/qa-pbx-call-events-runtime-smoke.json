@@ -1,0 +1,2130 @@
+{
+  "id": "qa-pbx-call-events-runtime-smoke",
+  "domain": "pbx",
+  "type": "technical",
+  "source": "qa",
+  "flow": "pbx_call_events_runtime",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "passed",
+  "startedAt": "2026-04-06T20:37:23.254Z",
+  "finishedAt": "2026-04-06T20:37:30.465Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T20:37:23.597Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:pbx:call-events-runtime:smoke",
+      "timestamp": "2026-04-06T20:37:23.597Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-pbx-call-events-runtime-smoke.js",
+      "timestamp": "2026-04-06T20:37:23.597Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-06T20:37:24.161Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:37:24.531Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+      "timestamp": "2026-04-06T20:37:24.532Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:37:24.554Z] [INFO] [Sequelize] Conexão fechada",
+      "timestamp": "2026-04-06T20:37:24.554Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:37:24.993Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+      "timestamp": "2026-04-06T20:37:24.993Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:37:26.586Z] [INFO] [PBX CallEvents] scan concluído",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"consumer\": \"pbx_cdr_l04_1775507844993\",",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"scanned\": 123,",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"emitted\": 369,",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"cursor\": {",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"calldate\": \"2026-04-06T20:37:24.537Z\",",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"cdrId\": \"cdr-l04-1775507843861\"",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  }",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T20:37:26.587Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.746Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.746Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.746Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.801Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.801Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.801Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.844Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.844Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.845Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.883Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.883Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.884Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.916Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.916Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.916Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.953Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.954Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.954Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.989Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:26.990Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:26.990Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.022Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.022Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.023Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.050Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.050Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.050Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.080Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.080Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.080Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.107Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.107Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.107Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.128Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.128Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.128Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.149Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.149Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.149Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.172Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.172Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.172Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.199Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.200Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.200Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.229Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.229Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.229Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.262Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.262Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.262Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.290Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.290Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.290Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.318Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.318Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.318Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.347Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.348Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.348Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.376Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.376Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.376Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.403Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.403Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.403Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.432Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.432Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.432Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.456Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.456Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.456Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.481Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.481Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.481Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.511Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.511Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.511Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.541Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.541Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.541Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.568Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.568Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.569Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.595Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.595Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.595Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.619Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.619Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.619Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.646Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.646Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.646Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.683Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.684Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.684Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.719Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.719Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.719Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.750Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.750Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.750Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.781Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.781Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.781Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.815Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.815Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.815Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.849Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.849Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.849Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.884Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.884Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.884Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.918Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.919Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.919Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.954Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.954Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.954Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.981Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:27.981Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:27.981Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.001Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.001Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.001Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.023Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.023Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.023Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.043Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.043Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.043Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.072Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.072Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.072Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.109Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.109Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.109Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.139Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.139Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.139Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.168Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.168Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.168Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.192Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.192Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.192Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.216Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.216Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.216Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.240Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.240Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.240Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.264Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.264Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.264Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.288Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.288Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.288Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.315Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.316Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.316Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.343Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.343Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.343Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.370Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.370Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.370Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.396Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.396Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.396Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.421Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.421Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.421Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.447Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.447Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.447Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.473Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.473Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.473Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.500Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.500Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.500Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.526Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.526Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.526Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.549Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.549Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.549Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.576Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.577Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.577Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.602Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.602Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.602Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.625Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.625Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.625Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.649Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.650Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.650Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.674Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.674Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.674Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.699Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.699Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.725Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.725Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.725Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.749Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.749Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.749Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.775Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.775Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.775Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.812Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.812Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.812Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.844Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.844Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.844Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.876Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.876Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.876Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.906Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.906Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.906Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.936Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.936Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.936Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.966Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.966Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.966Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.993Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:28.993Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:28.993Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.022Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.022Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.022Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.051Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.051Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.051Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.083Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.083Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.083Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.111Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.111Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.111Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.139Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.139Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.139Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.167Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.167Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.168Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.196Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.196Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.196Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.224Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.224Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.224Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.251Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.251Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.251Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.279Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.279Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.279Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.306Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.306Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.307Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.330Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.331Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.331Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.355Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.355Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.355Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.377Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.377Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.377Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.397Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.398Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.398Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.418Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.418Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.418Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.439Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.439Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.439Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.464Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.464Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.464Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.488Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.488Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.488Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.509Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.510Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.510Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.531Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.532Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.532Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.554Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.554Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.554Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.580Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.580Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.580Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.602Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.602Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.603Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.626Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.626Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.626Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.648Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.649Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.649Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.670Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.670Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.671Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.693Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.694Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.694Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.716Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.716Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.716Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.738Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.738Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.738Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.776Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.776Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.776Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.815Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.815Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.815Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.847Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.847Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.847Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.871Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.871Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.872Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.893Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.893Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.916Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.916Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.917Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.940Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.940Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.940Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.963Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.963Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.964Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.987Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:29.987Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:29.987Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.009Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.009Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.009Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.029Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.029Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.029Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.050Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.051Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.051Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.074Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.074Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.074Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.097Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.097Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.097Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.124Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.124Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.124Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.149Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.149Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.149Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.173Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.173Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.173Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.195Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.195Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.195Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.216Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.216Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.216Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.237Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.237Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.237Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.258Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.258Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.258Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.279Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.279Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.279Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.299Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.299Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.299Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.320Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+      "timestamp": "2026-04-06T20:37:30.321Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+      "timestamp": "2026-04-06T20:37:30.321Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T20:37:30.347Z] [INFO] [Sequelize] Conexão fechada",
+      "timestamp": "2026-04-06T20:37:30.347Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[pbx-call-events-runtime-smoke] OK auth=rpa flowId=flow-pbx-call-events-runtime-smoke-1775507843861 executionId=fx-1775507850316-bbf880ea535a latencyMs=29 evidence=qa/l04-pbx-call-events-runtime-evidence.json",
+      "timestamp": "2026-04-06T20:37:30.434Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:pbx:call-events-runtime:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/qa-pbx-call-events-runtime-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "eventos de chamada entregues"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/qa-pbx-call-events-runtime-smoke.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 7211
+}

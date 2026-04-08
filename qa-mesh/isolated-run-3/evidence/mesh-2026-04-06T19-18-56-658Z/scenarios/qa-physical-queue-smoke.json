@@ -1,0 +1,58 @@
+{
+  "id": "qa-physical-queue-smoke",
+  "domain": "core",
+  "type": "smoke",
+  "source": "qa",
+  "flow": "physical_queue_smoke",
+  "criticality": "high",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:25:37.146Z",
+  "finishedAt": "2026-04-06T19:25:38.414Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:25:37.643Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:physical:smoke",
+      "timestamp": "2026-04-06T19:25:37.643Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-physical-queue-smoke.js",
+      "timestamp": "2026-04-06T19:25:37.643Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[physical-smoke] OK queueId=pq-1775503538007-19efa0602adb ticketId=pt-1775503538131-78be315fb3de locationId=smoke-loc-1775503537981 evidence=qa/l01-physical-queue-evidence.json",
+      "timestamp": "2026-04-06T19:25:38.376Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:physical:smoke"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/qa-physical-queue-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "fila física responde"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/qa-physical-queue-smoke.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 1268
+}

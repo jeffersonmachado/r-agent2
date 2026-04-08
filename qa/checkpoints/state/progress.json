@@ -1,0 +1,19 @@
+{
+  "currentWave": "WAVE-MESH",
+  "completedWaves": [
+    "WAVE-1",
+    "WAVE-TEST-1775577117855",
+    "WAVE-3",
+    "WAVE-4",
+    "WAVE-5",
+    "WAVE-6",
+    "WAVE-MESH"
+  ],
+  "failedWaves": [
+    "WAVE-2",
+    "WAVE-7",
+    "WAVE-8"
+  ],
+  "globalStatus": "blocked",
+  "lastSuccessfulCheckpoint": "WAVE-MESH"
+}

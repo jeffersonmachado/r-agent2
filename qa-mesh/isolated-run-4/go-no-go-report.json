@@ -1,0 +1,196 @@
+{
+  "source": "qa-mesh",
+  "executionId": "mesh-2026-04-06T20-05-00-000Z",
+  "status": "GO",
+  "reasons": [],
+  "totals": {
+    "executionId": "mesh-2026-04-06T20-05-00-000Z",
+    "timestamp": "2026-04-06T19:59:40.198Z",
+    "registryTotal": 50,
+    "attempted": 50,
+    "executed": 50,
+    "total": 50,
+    "passed": 50,
+    "fallbackPassed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "infraErrors": 0,
+    "environmentMissing": 0,
+    "flaky": 0,
+    "fallbackUsed": 0,
+    "fallbackBlockingUsed": 0,
+    "executionCoverage": 1,
+    "executionQuality": "valid",
+    "domains": {
+      "beauty": {
+        "passed": 12,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 12
+      },
+      "clinica": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "fitness": {
+        "passed": 8,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 8
+      },
+      "food": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "mercado": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "servicos": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "bpmn": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "omnichannel": {
+        "passed": 13,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 13
+      },
+      "core": {
+        "passed": 5,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 5
+      },
+      "pbx": {
+        "passed": 7,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 7
+      }
+    },
+    "goNoGo": "GO",
+    "reasons": [],
+    "failuresByDomain": {
+      "beauty": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "clinica": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "fitness": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "food": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "mercado": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "servicos": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "bpmn": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "pbx": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      }
+    },
+    "failuresByType": {},
+    "topErrors": [],
+    "blockingDomains": [],
+    "changedFiles": []
+  },
+  "generatedAt": "2026-04-06T20:27:28.165Z"
+}

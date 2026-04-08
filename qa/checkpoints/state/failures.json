@@ -1,0 +1,354 @@
+{
+  "failures": [
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T23:00:25.018Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 48,
+        "testsFailed": 1,
+        "warnings": 3,
+        "criticalFlowsValidated": 7,
+        "durationMs": 3400607
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T21:44:14.002Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 47,
+        "testsFailed": 2,
+        "warnings": 2,
+        "criticalFlowsValidated": 7,
+        "durationMs": 3357634
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T20:45:45.479Z",
+      "blockers": [
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 48,
+        "testsFailed": 2,
+        "warnings": 1,
+        "criticalFlowsValidated": 7,
+        "durationMs": 988018
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T20:28:21.426Z",
+      "blockers": [
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 48,
+        "testsFailed": 2,
+        "warnings": 1,
+        "criticalFlowsValidated": 7,
+        "durationMs": 983367
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T20:06:21.295Z",
+      "blockers": [
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 33,
+        "testsFailed": 16,
+        "warnings": 5,
+        "criticalFlowsValidated": 7,
+        "durationMs": 975894
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T18:38:50.696Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 33,
+        "testsFailed": 5,
+        "warnings": 3,
+        "criticalFlowsValidated": 7,
+        "durationMs": 876345
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T18:22:34.901Z",
+      "blockers": [
+        "BLOCKING_SCENARIO_FAILED",
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 1,
+        "testsFailed": 20,
+        "warnings": 8,
+        "criticalFlowsValidated": 0,
+        "durationMs": 95389
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T17:57:25.611Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 33,
+        "testsFailed": 5,
+        "warnings": 3,
+        "criticalFlowsValidated": 7,
+        "durationMs": 925496
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T17:56:24.524Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 33,
+        "testsFailed": 5,
+        "warnings": 3,
+        "criticalFlowsValidated": 7,
+        "durationMs": 914793
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T17:05:23.464Z",
+      "blockers": [
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 31,
+        "testsFailed": 5,
+        "warnings": 5,
+        "criticalFlowsValidated": 6,
+        "durationMs": 721867
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T16:41:55.429Z",
+      "blockers": [
+        "BLOCKING_SCENARIO_FAILED",
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 4,
+        "testsFailed": 45,
+        "warnings": 7,
+        "criticalFlowsValidated": 1,
+        "durationMs": 226919
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T16:33:08.423Z",
+      "blockers": [
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 5,
+        "testsFailed": 0,
+        "warnings": 7,
+        "criticalFlowsValidated": 1,
+        "durationMs": 660081
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T16:01:43.129Z",
+      "blockers": [
+        "BLOCKING_SCENARIO_FAILED",
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 1,
+        "testsFailed": 20,
+        "warnings": 8,
+        "criticalFlowsValidated": 0,
+        "durationMs": 67513
+      }
+    },
+    {
+      "wave": "WAVE-8",
+      "title": "Testes, hardening e entrega operacional",
+      "finishedAt": "2026-04-07T15:53:18.052Z",
+      "blockers": [
+        "backend_build",
+        "critical_replay"
+      ],
+      "metrics": {
+        "testsPassed": 5,
+        "testsFailed": 1,
+        "warnings": 2,
+        "criticalFlowsValidated": 0,
+        "durationMs": 2600
+      }
+    },
+    {
+      "wave": "WAVE-7",
+      "title": "Integracao backend API e QA Mesh",
+      "finishedAt": "2026-04-07T15:53:18.049Z",
+      "blockers": [
+        "backend_build",
+        "critical_replay",
+        "qa_mesh_no_go"
+      ],
+      "metrics": {
+        "testsPassed": 5,
+        "testsFailed": 1,
+        "warnings": 2,
+        "criticalFlowsValidated": 0,
+        "durationMs": 3200
+      }
+    },
+    {
+      "wave": "WAVE-MESH",
+      "title": "Execucao QA Mesh integrada",
+      "finishedAt": "2026-04-07T15:50:01.108Z",
+      "blockers": [
+        "BLOCKING_SCENARIO_FAILED",
+        "FAILURE_RATE_ABOVE_THRESHOLD",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:pbx",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION",
+        "backend_build",
+        "frontend_build",
+        "qa_technical"
+      ],
+      "metrics": {
+        "testsPassed": 1,
+        "testsFailed": 20,
+        "warnings": 8,
+        "criticalFlowsValidated": 0,
+        "durationMs": 69218
+      }
+    },
+    {
+      "wave": "WAVE-2",
+      "title": "Gate simulation failure",
+      "finishedAt": "2026-04-07T15:48:29.996Z",
+      "blockers": [
+        "backend_build"
+      ],
+      "metrics": {
+        "testsPassed": 4,
+        "testsFailed": 1,
+        "warnings": 1,
+        "criticalFlowsValidated": 1,
+        "durationMs": 900
+      }
+    }
+  ]
+}

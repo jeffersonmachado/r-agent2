@@ -1,0 +1,491 @@
+{
+  "executionId": "mesh-2026-04-06T20-00-00-000Z",
+  "startedAt": "2026-04-06T19:58:53.011Z",
+  "finishedAt": "2026-04-06T19:59:03.032Z",
+  "changedFiles": [],
+  "summary": {
+    "executionId": "mesh-2026-04-06T20-00-00-000Z",
+    "timestamp": "2026-04-06T19:58:53.011Z",
+    "registryTotal": 1,
+    "attempted": 1,
+    "executed": 1,
+    "total": 1,
+    "passed": 1,
+    "fallbackPassed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "infraErrors": 0,
+    "environmentMissing": 0,
+    "flaky": 0,
+    "fallbackUsed": 0,
+    "fallbackBlockingUsed": 0,
+    "executionCoverage": 1,
+    "executionQuality": "valid",
+    "domains": {
+      "omnichannel": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      }
+    },
+    "goNoGo": "GO",
+    "reasons": [],
+    "failuresByDomain": {
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      }
+    },
+    "failuresByType": {},
+    "topErrors": [],
+    "blockingDomains": [],
+    "changedFiles": [],
+    "intelligence": {
+      "totalClusters": 0,
+      "recurringFailures": 0,
+      "weakestDomains": [
+        {
+          "domain": "omnichannel",
+          "stabilityScore": 1,
+          "passed": 1,
+          "total": 1
+        }
+      ],
+      "outputPath": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/intelligence/latest.json"
+    }
+  },
+  "governance": {
+    "goNoGo": "GO",
+    "reasons": [],
+    "registryTotal": 1,
+    "attempted": 1,
+    "executed": 1,
+    "passed": 1,
+    "fallbackPassed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "infraErrors": 0,
+    "environmentMissing": 0,
+    "flaky": 0,
+    "executionCoverage": 1,
+    "executionQuality": "valid",
+    "domains": {
+      "omnichannel": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      }
+    },
+    "thresholds": {
+      "maxFailureRate": 0.2,
+      "minExecutionRatio": 0.7,
+      "criticalDomains": [
+        "core",
+        "pbx",
+        "omnichannel"
+      ]
+    }
+  },
+  "repairPlan": {
+    "generatedAt": "2026-04-06T19:59:03.030Z",
+    "orderedFixList": []
+  },
+  "results": [
+    {
+      "id": "rpa-whatsapp-connections-rpa",
+      "domain": "omnichannel",
+      "type": "regression",
+      "source": "rpa",
+      "flow": "WhatsAppConnectionsPage RPA",
+      "criticality": "medium",
+      "adapter": "rpa",
+      "status": "passed",
+      "startedAt": "2026-04-06T19:58:53.012Z",
+      "finishedAt": "2026-04-06T19:59:03.025Z",
+      "logs": [
+        {
+          "timestamp": "2026-04-06T19:58:53.014Z",
+          "level": "info",
+          "message": "🚀 Iniciando execução RPA...",
+          "step": "init"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:53.014Z",
+          "level": "info",
+          "message": "📋 Gravação: whatsapp-connections-rpa",
+          "step": "init"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:53.280Z",
+          "level": "success",
+          "message": "✅ Browser inicializado",
+          "step": "init"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:53.282Z",
+          "level": "info",
+          "message": "📝 Total de ações: 4",
+          "step": "init"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:58.847Z",
+          "level": "success",
+          "message": "✅ Login automático realizado com sucesso",
+          "step": "init"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:58.847Z",
+          "level": "info",
+          "message": "▶️ Iniciando execução das ações...",
+          "step": "playback"
+        },
+        {
+          "timestamp": "2026-04-06T19:58:58.847Z",
+          "level": "info",
+          "message": "🌐 Navegar - URL: http://localhost:5173/whatsapp-connections",
+          "step": 1,
+          "action": "navigate",
+          "details": "URL: http://localhost:5173/whatsapp-connections"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.001Z",
+          "level": "success",
+          "message": "✅ Ação 1 concluída com sucesso",
+          "step": 1,
+          "action": "navigate"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.001Z",
+          "level": "info",
+          "message": "⏳ Aguardar - Condição: h1",
+          "step": 2,
+          "action": "wait",
+          "details": "Condição: h1"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.109Z",
+          "level": "success",
+          "message": "✅ Ação 2 concluída com sucesso",
+          "step": 2,
+          "action": "wait"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.109Z",
+          "level": "info",
+          "message": "✅ Validar - Seletor: .support-header-title-text",
+          "step": 3,
+          "action": "assert",
+          "details": "Seletor: .support-header-title-text"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.126Z",
+          "level": "success",
+          "message": "✅ Ação 3 concluída com sucesso",
+          "step": 3,
+          "action": "assert"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:01.126Z",
+          "level": "info",
+          "message": "⏳ Aguardar - Condição: 1000",
+          "step": 4,
+          "action": "wait",
+          "details": "Condição: 1000"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:02.134Z",
+          "level": "success",
+          "message": "✅ Ação 4 concluída com sucesso",
+          "step": 4,
+          "action": "wait"
+        },
+        {
+          "timestamp": "2026-04-06T19:59:02.136Z",
+          "level": "success",
+          "message": "🎉 Execução concluída com sucesso!",
+          "totalSteps": 4,
+          "duration": 3287
+        },
+        {
+          "timestamp": "2026-04-06T19:59:02.230Z",
+          "level": "info",
+          "message": "🔒 Browser fechado",
+          "step": "cleanup"
+        }
+      ],
+      "metrics": {
+        "status": "completed",
+        "progress": 100,
+        "totalSteps": 4
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "replay",
+          "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-00-00-000Z/replays/rpa-whatsapp-connections-rpa.json",
+          "replayType": "rpa_replay"
+        }
+      ],
+      "assertions": [
+        "execução RPA concluída sem erro crítico"
+      ],
+      "rpaRecordingId": "whatsapp-connections-rpa",
+      "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-00-00-000Z/replays/rpa-whatsapp-connections-rpa.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 10013,
+      "evidencePath": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-00-00-000Z/scenarios/rpa-whatsapp-connections-rpa.json"
+    }
+  ],
+  "logs": [
+    {
+      "timestamp": "2026-04-06T19:58:53.012Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "rpa-whatsapp-connections-rpa",
+      "index": 1,
+      "total": 1
+    }
+  ],
+  "evidenceDir": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-00-00-000Z",
+  "diff": {
+    "previousExecutionId": null,
+    "scenarioChanges": []
+  },
+  "baselineComparison": {
+    "available": true,
+    "regressed": false,
+    "reasons": [],
+    "current": {
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0
+    },
+    "baseline": {
+      "executionId": "mesh-2026-04-06T19-18-56-658Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "total": 50,
+      "passed": 50,
+      "failed": 0,
+      "flaky": 0,
+      "updatedAt": "2026-04-06T19:32:39.826Z"
+    }
+  },
+  "baseline": {
+    "target": {
+      "passRate": 0.9,
+      "blockingFailures": 0,
+      "infraErrors": 0
+    },
+    "accepted": true,
+    "bestKnown": {
+      "executionId": "mesh-2026-04-06T19-18-56-658Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "total": 50,
+      "passed": 50,
+      "failed": 0,
+      "flaky": 0,
+      "updatedAt": "2026-04-06T19:32:39.826Z"
+    },
+    "history": [
+      {
+        "executionId": "mesh-2026-04-06T19-18-56-658Z",
+        "passRate": 1,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T19:32:39.826Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T19-00-47-591Z",
+        "passRate": 0.98,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T19:14:35.115Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T18-48-16-793Z",
+        "passRate": 0.68,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T18:56:37.870Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T18-34-31-869Z",
+        "passRate": 0.66,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T18:41:15.082Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T15-41-23-897Z",
+        "passRate": 0.66,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T15:48:10.381Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T13-04-10-827Z",
+        "passRate": 0.62,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T13:10:55.867Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T13-01-12-838Z",
+        "passRate": 0.62,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-06T13:07:55.288Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T12-36-56-656Z",
+        "passRate": 0.32,
+        "blockingFailures": 0,
+        "infraErrors": 14,
+        "at": "2026-04-06T12:43:19.287Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T12-18-18-756Z",
+        "passRate": 0.38,
+        "blockingFailures": 0,
+        "infraErrors": 13,
+        "at": "2026-04-06T12:25:54.536Z"
+      },
+      {
+        "executionId": "mesh-2026-04-06T12-10-24-883Z",
+        "passRate": 0.02,
+        "blockingFailures": 7,
+        "infraErrors": 28,
+        "at": "2026-04-06T12:11:21.038Z"
+      },
+      {
+        "executionId": "mesh-2026-04-03T18-33-42-936Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-03T18:40:54.814Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T20-16-06-062Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T20:23:22.056Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T19-48-04-948Z",
+        "passRate": 0.5869565217391305,
+        "blockingFailures": 1,
+        "infraErrors": 0,
+        "at": "2026-04-02T19:55:15.621Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T18-36-41-043Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T18:44:12.112Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T18-01-00-714Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T18:08:29.946Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T17-39-01-145Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T17:46:53.807Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T17-22-37-322Z",
+        "passRate": 0.34782608695652173,
+        "blockingFailures": 1,
+        "infraErrors": 0,
+        "at": "2026-04-02T17:27:14.994Z"
+      },
+      {
+        "executionId": "mesh-maintenance-targeted-1774985590765",
+        "passRate": 0,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-03-31T19:34:09.833Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-37-46-626Z",
+        "passRate": 0.6086956521739131,
+        "blockingFailures": 2,
+        "infraErrors": 12,
+        "at": "2026-03-31T19:09:53.423Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-39-56-883Z",
+        "passRate": 0.6086956521739131,
+        "blockingFailures": 2,
+        "infraErrors": 11,
+        "at": "2026-03-31T19:09:48.425Z"
+      }
+    ]
+  },
+  "metrics": {
+    "generatedAt": "2026-04-06T19:59:03.036Z",
+    "latestExecutionId": "mesh-2026-04-06T20-00-00-000Z",
+    "history": [
+      {
+        "executionId": "mesh-2026-04-06T20-00-00-000Z",
+        "startedAt": "2026-04-06T19:58:53.011Z",
+        "passRate": 1,
+        "coverage": 1,
+        "goNoGo": "GO",
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "infraErrors": 0
+      }
+    ],
+    "avgDurationMsByScenario": {
+      "rpa-whatsapp-connections-rpa": 10013
+    },
+    "successRateByDomain": {
+      "omnichannel": 1
+    }
+  },
+  "intelligence": {
+    "generatedAt": "2026-04-06T19:59:03.038Z",
+    "executionId": "mesh-2026-04-06T20-00-00-000Z",
+    "totalClusters": 0,
+    "clusters": [],
+    "rankedProblems": [],
+    "recurringFailures": [],
+    "moduleStability": [
+      {
+        "domain": "omnichannel",
+        "stabilityScore": 1,
+        "passed": 1,
+        "total": 1
+      }
+    ],
+    "outputPath": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/intelligence/latest.json"
+  },
+  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/history/mesh-2026-04-06T20-00-00-000Z.json"
+}

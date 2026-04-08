@@ -1,0 +1,173 @@
+{
+  "generatedAt": "2026-04-03T23:55:46.800Z",
+  "latestExecutionId": "system-validate-2026-04-03T23-48-11-981Z",
+  "history": [
+    {
+      "executionId": "system-validate-2026-04-03T23-48-11-981Z",
+      "startedAt": "2026-04-03T23:54:47.148Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T23-08-38-009Z",
+      "startedAt": "2026-04-03T23:17:34.471Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T21-17-20-516Z",
+      "startedAt": "2026-04-03T21:23:59.892Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T21-03-33-058Z",
+      "startedAt": "2026-04-03T21:10:56.813Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T20-40-54-790Z",
+      "startedAt": "2026-04-03T20:47:34.578Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T20-30-50-392Z",
+      "startedAt": "2026-04-03T20:37:03.277Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T20-02-17-217Z",
+      "startedAt": "2026-04-03T20:09:00.777Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T19-48-12-051Z",
+      "startedAt": "2026-04-03T19:54:15.214Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T19-39-24-967Z",
+      "startedAt": "2026-04-03T19:45:25.189Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T19-31-26-217Z",
+      "startedAt": "2026-04-03T19:37:48.255Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T19-23-28-349Z",
+      "startedAt": "2026-04-03T19:29:30.647Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T19-15-24-167Z",
+      "startedAt": "2026-04-03T19:21:30.842Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T18-49-27-108Z",
+      "startedAt": "2026-04-03T18:55:57.816Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-03T18-41-27-177Z",
+      "startedAt": "2026-04-03T18:47:59.098Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    }
+  ],
+  "avgDurationMsByScenario": {
+    "qa-chatpro-omnichannel-smoke": 529,
+    "qa-core-auth-login": 34512,
+    "qa-pbx-call-events-runtime-smoke": 5842,
+    "qa-pbx-voice-tts-asr-smoke": 3851,
+    "qa-physical-queue-smoke": 751,
+    "qa-ura-publish-rollback-smoke": 14140
+  },
+  "successRateByDomain": {
+    "omnichannel": 1,
+    "core": 1,
+    "pbx": 1
+  }
+}

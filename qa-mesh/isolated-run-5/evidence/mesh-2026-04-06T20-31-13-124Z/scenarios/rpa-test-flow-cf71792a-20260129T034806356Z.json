@@ -1,0 +1,160 @@
+{
+  "id": "rpa-test-flow-cf71792a-20260129T034806356Z",
+  "domain": "omnichannel",
+  "type": "regression",
+  "source": "rpa",
+  "flow": "IA - Teste RPA - studiooly",
+  "criticality": "medium",
+  "adapter": "rpa",
+  "status": "passed",
+  "startedAt": "2026-04-06T20:44:50.426Z",
+  "finishedAt": "2026-04-06T20:45:02.441Z",
+  "logs": [
+    {
+      "timestamp": "2026-04-06T20:44:50.426Z",
+      "level": "info",
+      "message": "🚀 Iniciando execução RPA...",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:50.426Z",
+      "level": "info",
+      "message": "📋 Gravação: test-flow-cf71792a-20260129T034806356Z",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:50.820Z",
+      "level": "success",
+      "message": "✅ Browser inicializado",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:50.821Z",
+      "level": "info",
+      "message": "📝 Total de ações: 5",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:58.447Z",
+      "level": "success",
+      "message": "✅ Login automático realizado com sucesso",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:58.447Z",
+      "level": "info",
+      "message": "▶️ Iniciando execução das ações...",
+      "step": "playback"
+    },
+    {
+      "timestamp": "2026-04-06T20:44:58.447Z",
+      "level": "info",
+      "message": "🌐 Navegar - URL: http://localhost:5173/chat?flowId=flow-cf71792a",
+      "step": 1,
+      "action": "navigate",
+      "details": "URL: http://localhost:5173/chat?flowId=flow-cf71792a"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.624Z",
+      "level": "success",
+      "message": "✅ Ação 1 concluída com sucesso",
+      "step": 1,
+      "action": "navigate"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.624Z",
+      "level": "info",
+      "message": "✅ Validar - ",
+      "step": 2,
+      "action": "assert",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.636Z",
+      "level": "success",
+      "message": "✅ Ação 2 concluída com sucesso",
+      "step": 2,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.636Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 3,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.754Z",
+      "level": "success",
+      "message": "✅ Ação 3 concluída com sucesso",
+      "step": 3,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.754Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 4,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.785Z",
+      "level": "success",
+      "message": "✅ Ação 4 concluída com sucesso",
+      "step": 4,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.785Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 5,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.818Z",
+      "level": "success",
+      "message": "✅ Ação 5 concluída com sucesso",
+      "step": 5,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.819Z",
+      "level": "success",
+      "message": "🎉 Execução concluída com sucesso!",
+      "totalSteps": 5,
+      "duration": 3371
+    },
+    {
+      "timestamp": "2026-04-06T20:45:01.973Z",
+      "level": "info",
+      "message": "🔒 Browser fechado",
+      "step": "cleanup"
+    }
+  ],
+  "metrics": {
+    "status": "completed",
+    "progress": 100,
+    "totalSteps": 5
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/rpa-test-flow-cf71792a-20260129T034806356Z.json",
+      "replayType": "rpa_replay"
+    }
+  ],
+  "assertions": [
+    "execução RPA concluída sem erro crítico"
+  ],
+  "rpaRecordingId": "test-flow-cf71792a-20260129T034806356Z",
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-5/evidence/mesh-2026-04-06T20-31-13-124Z/replays/rpa-test-flow-cf71792a-20260129T034806356Z.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 12015
+}

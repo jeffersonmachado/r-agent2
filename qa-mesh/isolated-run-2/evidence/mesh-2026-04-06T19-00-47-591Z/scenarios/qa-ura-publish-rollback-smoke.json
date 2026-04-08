@@ -1,0 +1,60 @@
+{
+  "id": "qa-ura-publish-rollback-smoke",
+  "domain": "pbx",
+  "type": "smoke",
+  "source": "qa",
+  "flow": "ura_publish_rollback",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:07:35.187Z",
+  "finishedAt": "2026-04-06T19:07:53.857Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-06T19:07:35.478Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:ura:publish-rollback:smoke",
+      "timestamp": "2026-04-06T19:07:35.478Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-ura-publish-rollback-smoke.js",
+      "timestamp": "2026-04-06T19:07:35.478Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[ura-publish-rollback-smoke] OK auth=rpa v1=498 sigV1=f1c1f887ffc9d2e94923c670 sigV2=efc9f947e3f4a3704abc3eb5 evidence=qa/l02-ura-publish-rollback-evidence.json",
+      "timestamp": "2026-04-06T19:07:53.814Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:ura:publish-rollback:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/qa-ura-publish-rollback-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "publicação e rollback da URA"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-2/evidence/mesh-2026-04-06T19-00-47-591Z/replays/qa-ura-publish-rollback-smoke.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 18670
+}

@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-04-07T23:25:02.546Z",
+  "executionId": "mesh-2026-04-07T23-08-10-246Z",
+  "totalClusters": 0,
+  "clusters": [],
+  "rankedProblems": [],
+  "recurringFailures": [],
+  "moduleStability": [
+    {
+      "domain": "core",
+      "stabilityScore": 0.3889,
+      "passed": 7,
+      "total": 18
+    },
+    {
+      "domain": "fitness",
+      "stabilityScore": 0.4762,
+      "passed": 10,
+      "total": 21
+    },
+    {
+      "domain": "pbx",
+      "stabilityScore": 0.9,
+      "passed": 9,
+      "total": 10
+    },
+    {
+      "domain": "beauty",
+      "stabilityScore": 0.9643,
+      "passed": 27,
+      "total": 28
+    },
+    {
+      "domain": "bpmn",
+      "stabilityScore": 1,
+      "passed": 2,
+      "total": 2
+    },
+    {
+      "domain": "clinica",
+      "stabilityScore": 1,
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "domain": "food",
+      "stabilityScore": 1,
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "domain": "mercado",
+      "stabilityScore": 1,
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "domain": "servicos",
+      "stabilityScore": 1,
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "domain": "omnichannel",
+      "stabilityScore": 1,
+      "passed": 13,
+      "total": 13
+    }
+  ]
+}

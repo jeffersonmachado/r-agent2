@@ -1,0 +1,177 @@
+{
+  "id": "business-clinic-scr-01",
+  "domain": "clinica",
+  "type": "smoke",
+  "source": "hybrid",
+  "flow": "Clinic maintenance screen smoke",
+  "criticality": "high",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-06T19:21:31.487Z",
+  "finishedAt": "2026-04-06T19:21:44.177Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-06T19:21:32.298Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:21:33.137Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+      "timestamp": "2026-04-06T19:21:33.138Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:21:33.795Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)",
+      "timestamp": "2026-04-06T19:21:33.796Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:21:33.797Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byStatus\": {",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"byQueue\": 0,",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"queueDetails\": {}",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:21:33.797Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-06T19:21:33.797Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "{",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"totalTickets\": 0,",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByStatus\": {",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"waiting\": 0,",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"in_progress\": 0,",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "    \"closed\": 0",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  },",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "  \"ticketsByQueue\": {}",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "}",
+      "timestamp": "2026-04-06T19:21:33.798Z"
+    },
+    {
+      "level": "stdout",
+      "message": "Business QA concluído: PASS",
+      "timestamp": "2026-04-06T19:21:39.960Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- PASS: 1",
+      "timestamp": "2026-04-06T19:21:39.961Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- FAIL: 0",
+      "timestamp": "2026-04-06T19:21:39.961Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- JSON: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T19-21-32-303Z.json",
+      "timestamp": "2026-04-06T19:21:39.961Z"
+    },
+    {
+      "level": "stdout",
+      "message": "- Markdown: /opt/results/ria/r-agent2/tests/rpa/reports/business-qa-2026-04-06T19-21-32-303Z.md",
+      "timestamp": "2026-04-06T19:21:39.961Z"
+    }
+  ],
+  "metrics": {
+    "command": "node tests/rpa/business/run.js --mode=screens --code=CLINIC-SCR-01"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/business-clinic-scr-01.json",
+      "replayType": "hybrid_replay"
+    }
+  ],
+  "assertions": [],
+  "rpaRecordingId": null,
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-3/evidence/mesh-2026-04-06T19-18-56-658Z/replays/business-clinic-scr-01.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 12690
+}

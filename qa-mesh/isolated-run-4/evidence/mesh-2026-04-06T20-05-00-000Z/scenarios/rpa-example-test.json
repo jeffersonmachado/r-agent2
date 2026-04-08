@@ -1,0 +1,109 @@
+{
+  "id": "rpa-example-test",
+  "domain": "core",
+  "type": "regression",
+  "source": "rpa",
+  "flow": "Exemplo de Teste RPA",
+  "criticality": "medium",
+  "adapter": "rpa",
+  "status": "passed",
+  "startedAt": "2026-04-06T20:20:37.918Z",
+  "finishedAt": "2026-04-06T20:20:47.960Z",
+  "logs": [
+    {
+      "timestamp": "2026-04-06T20:20:37.929Z",
+      "level": "info",
+      "message": "🚀 Iniciando execução RPA...",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:37.929Z",
+      "level": "info",
+      "message": "📋 Gravação: example-test",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:38.324Z",
+      "level": "success",
+      "message": "✅ Browser inicializado",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:38.327Z",
+      "level": "info",
+      "message": "📝 Total de ações: 2",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:45.671Z",
+      "level": "success",
+      "message": "✅ Login automático realizado com sucesso",
+      "step": "init"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:45.671Z",
+      "level": "info",
+      "message": "▶️ Iniciando execução das ações...",
+      "step": "playback"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:45.671Z",
+      "level": "info",
+      "message": "🌐 Navegar - URL: http://localhost:5173",
+      "step": 1,
+      "action": "navigate",
+      "details": "URL: http://localhost:5173"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:47.837Z",
+      "level": "success",
+      "message": "✅ Ação 1 concluída com sucesso",
+      "step": 1,
+      "action": "navigate"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:47.837Z",
+      "level": "info",
+      "message": "✅ Validar - Seletor: body",
+      "step": 2,
+      "action": "assert",
+      "details": "Seletor: body"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:47.857Z",
+      "level": "success",
+      "message": "✅ Ação 2 concluída com sucesso",
+      "step": 2,
+      "action": "assert"
+    },
+    {
+      "timestamp": "2026-04-06T20:20:47.859Z",
+      "level": "success",
+      "message": "🎉 Execução concluída com sucesso!",
+      "totalSteps": 2,
+      "duration": 2186
+    }
+  ],
+  "metrics": {
+    "status": "completed",
+    "progress": 100,
+    "totalSteps": 2
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-05-00-000Z/replays/rpa-example-test.json",
+      "replayType": "rpa_replay"
+    }
+  ],
+  "assertions": [
+    "execução RPA concluída sem erro crítico"
+  ],
+  "rpaRecordingId": "example-test",
+  "replayArtifact": "/opt/results/ria/r-agent2/qa-mesh/isolated-run-4/evidence/mesh-2026-04-06T20-05-00-000Z/replays/rpa-example-test.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 10042
+}

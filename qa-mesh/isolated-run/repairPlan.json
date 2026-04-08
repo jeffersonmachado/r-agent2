@@ -1,0 +1,165 @@
+{
+  "generatedAt": "2026-04-06T18:56:37.867Z",
+  "orderedFixList": [
+    {
+      "scenarioId": "rpa-test-flow-6f484f7a-20260129T050243761Z",
+      "domain": "pbx",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 740,
+      "criticality": "high",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-a41fb4e3-20260129T051056368Z",
+      "domain": "pbx",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 740,
+      "criticality": "high",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-a85c4a4d-20260129T052758707Z",
+      "domain": "pbx",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 740,
+      "criticality": "high",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-659d7749-20260129T035608952Z",
+      "domain": "pbx",
+      "status": "failed",
+      "failureType": "functional_failure",
+      "priority": 670,
+      "criticality": "high",
+      "rootCauseHint": "Falha funcional ou regra de negócio não atendida.",
+      "errorMessage": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" ☀️ClaroLogin de AgenteAcesse o sistema de atendimentoUsernameSenha→Entrarℹ️Primeiro acesso?Username: adminSenha: Admin123! \""
+    },
+    {
+      "scenarioId": "rpa-test-flow-28d2aea0-20260129T000000000Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-3571aa07-20260129T034520103Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-3b6cada8-20260129T042632607Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-6309e70a-20260129T033246247Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-6e8af7c1-20260129T033828021Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-7fa30156-20260129T030733925Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-937dd7c3-20260129T000000000Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-c0ea1c71-20260129T045514294Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-cca122f2-20260129T000000000Z",
+      "domain": "omnichannel",
+      "status": "auth_redirect",
+      "failureType": "auth_redirect",
+      "priority": 620,
+      "criticality": "medium",
+      "rootCauseHint": "Fluxo redirecionado para login ou sem sessão autenticada válida em /maintenance.",
+      "errorMessage": "maintenance_precheck_failed:auth_redirect. URL=http://localhost:5173/maintenance"
+    },
+    {
+      "scenarioId": "rpa-test-flow-cf71792a-20260129T034806356Z",
+      "domain": "omnichannel",
+      "status": "failed",
+      "failureType": "functional_failure",
+      "priority": 550,
+      "criticality": "medium",
+      "rootCauseHint": "Falha funcional ou regra de negócio não atendida.",
+      "errorMessage": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" ☀️ClaroLogin de AgenteAcesse o sistema de atendimentoUsernameSenha→Entrarℹ️Primeiro acesso?Username: adminSenha: Admin123! \""
+    },
+    {
+      "scenarioId": "rpa-test-flow-da6f66c1-20260131T041500000Z",
+      "domain": "omnichannel",
+      "status": "failed",
+      "failureType": "functional_failure",
+      "priority": 550,
+      "criticality": "medium",
+      "rootCauseHint": "Falha funcional ou regra de negócio não atendida.",
+      "errorMessage": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" ☀️ClaroLogin de AgenteAcesse o sistema de atendimentoUsernameSenha→Entrarℹ️Primeiro acesso?Username: adminSenha: Admin123! \""
+    },
+    {
+      "scenarioId": "rpa-whatsapp-connections-rpa",
+      "domain": "omnichannel",
+      "status": "failed",
+      "failureType": "functional_failure",
+      "priority": 550,
+      "criticality": "medium",
+      "rootCauseHint": "Falha funcional ou regra de negócio não atendida.",
+      "errorMessage": "page.goto: net::ERR_TOO_MANY_REDIRECTS at http://localhost:5173/whatsapp-connections Call log: - navigating to \"http://localhost:5173/whatsapp-connections\", waiting until \"domcontentloaded\""
+    }
+  ]
+}

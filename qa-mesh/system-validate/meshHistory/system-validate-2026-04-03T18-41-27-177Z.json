@@ -1,0 +1,1826 @@
+{
+  "executionId": "system-validate-2026-04-03T18-41-27-177Z",
+  "startedAt": "2026-04-03T18:47:59.098Z",
+  "finishedAt": "2026-04-03T18:48:52.006Z",
+  "changedFiles": [],
+  "summary": {
+    "executionId": "system-validate-2026-04-03T18-41-27-177Z",
+    "timestamp": "2026-04-03T18:47:59.098Z",
+    "registryTotal": 6,
+    "attempted": 6,
+    "executed": 6,
+    "total": 6,
+    "passed": 6,
+    "fallbackPassed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "infraErrors": 0,
+    "environmentMissing": 0,
+    "flaky": 0,
+    "fallbackUsed": 0,
+    "fallbackBlockingUsed": 0,
+    "executionCoverage": 1,
+    "executionQuality": "valid",
+    "domains": {
+      "omnichannel": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "core": {
+        "passed": 2,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 2
+      },
+      "pbx": {
+        "passed": 3,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 3
+      }
+    },
+    "goNoGo": "GO",
+    "reasons": [],
+    "failuresByDomain": {
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "pbx": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      }
+    },
+    "failuresByType": {},
+    "topErrors": [],
+    "blockingDomains": [],
+    "changedFiles": []
+  },
+  "governance": {
+    "goNoGo": "GO",
+    "reasons": [],
+    "registryTotal": 6,
+    "attempted": 6,
+    "executed": 6,
+    "passed": 6,
+    "fallbackPassed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "infraErrors": 0,
+    "environmentMissing": 0,
+    "flaky": 0,
+    "executionCoverage": 1,
+    "executionQuality": "valid",
+    "domains": {
+      "omnichannel": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "core": {
+        "passed": 2,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 2
+      },
+      "pbx": {
+        "passed": 3,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 3
+      }
+    },
+    "thresholds": {
+      "maxFailureRate": 0.2,
+      "minExecutionRatio": 0.7,
+      "criticalDomains": [
+        "core",
+        "pbx",
+        "omnichannel"
+      ]
+    }
+  },
+  "repairPlan": {
+    "generatedAt": "2026-04-03T18:48:52.005Z",
+    "orderedFixList": []
+  },
+  "results": [
+    {
+      "id": "qa-chatpro-omnichannel-smoke",
+      "domain": "omnichannel",
+      "type": "smoke",
+      "source": "qa",
+      "flow": "chatpro_omnichannel",
+      "criticality": "blocking",
+      "adapter": "api",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:47:59.099Z",
+      "finishedAt": "2026-04-03T18:47:59.958Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:47:59.412Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> chatbot-engine@0.1.0 test:inbox:smoke",
+          "timestamp": "2026-04-03T18:47:59.412Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> node scripts/test-inbox-runtime-smoke.js",
+          "timestamp": "2026-04-03T18:47:59.412Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[inbox-smoke] OK ticket=default-1775242079644-8725gkb queue=ux1_smoke_1775242079612 quickReply=qr-1775242079768-zac16e5jk phoneMasking=false->true evidence=qa/l05-chatpro-omnichannel-evidence.json",
+          "timestamp": "2026-04-03T18:47:59.865Z"
+        }
+      ],
+      "metrics": {
+        "command": "npm run test:inbox:smoke"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "json",
+          "path": "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json"
+        },
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-chatpro-omnichannel-smoke.json",
+          "replayType": "api_replay"
+        }
+      ],
+      "assertions": [
+        "tickets e fila omnichannel respondem"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-chatpro-omnichannel-smoke.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 859,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-chatpro-omnichannel-smoke.json"
+    },
+    {
+      "id": "qa-core-auth-login",
+      "domain": "core",
+      "type": "smoke",
+      "source": "hybrid",
+      "flow": "core_auth_login",
+      "criticality": "blocking",
+      "adapter": "api",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:47:59.959Z",
+      "finishedAt": "2026-04-03T18:48:35.465Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:00.339Z"
+        },
+        {
+          "level": "stdout",
+          "message": "🚀 Executando testes RPA de login...",
+          "timestamp": "2026-04-03T18:48:00.339Z"
+        },
+        {
+          "level": "stdout",
+          "message": "============================================================",
+          "timestamp": "2026-04-03T18:48:00.340Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "🤖 Teste RPA: Fluxo de Login",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "Frontend: http://localhost:5173",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "API: http://localhost:3000",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "Usuário: admin",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "Tenant: tenant-demo",
+          "timestamp": "2026-04-03T18:48:00.341Z"
+        },
+        {
+          "level": "stdout",
+          "message": "1. Navegando para a página de login...",
+          "timestamp": "2026-04-03T18:48:03.549Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Página de login carregada",
+          "timestamp": "2026-04-03T18:48:07.094Z"
+        },
+        {
+          "level": "stdout",
+          "message": "2. Preenchendo formulário de login...",
+          "timestamp": "2026-04-03T18:48:07.094Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Username preenchido: admin (usando: input[type=\"text\"])",
+          "timestamp": "2026-04-03T18:48:08.517Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Password preenchido",
+          "timestamp": "2026-04-03T18:48:09.809Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:09.809Z"
+        },
+        {
+          "level": "stdout",
+          "message": "3. Submetendo formulário de login...",
+          "timestamp": "2026-04-03T18:48:09.809Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Formulário submetido (botão)",
+          "timestamp": "2026-04-03T18:48:11.439Z"
+        },
+        {
+          "level": "stdout",
+          "message": "4. Aguardando resposta do login...",
+          "timestamp": "2026-04-03T18:48:11.439Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Login realizado (não é super-admin)",
+          "timestamp": "2026-04-03T18:48:14.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL após login: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:16.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Redirecionado para /support (provider válido)",
+          "timestamp": "2026-04-03T18:48:16.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:16.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "7. Verificando se login foi bem-sucedido...",
+          "timestamp": "2026-04-03T18:48:16.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Login bem-sucedido",
+          "timestamp": "2026-04-03T18:48:17.491Z"
+        },
+        {
+          "level": "stdout",
+          "message": "8. Capturando screenshot final...",
+          "timestamp": "2026-04-03T18:48:17.491Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Screenshot salvo: /opt/results/ria/r-agent2/tests/rpa/screenshots/login-test-1775242097491.png",
+          "timestamp": "2026-04-03T18:48:17.668Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:17.668Z"
+        },
+        {
+          "level": "stdout",
+          "message": "✅ Teste RPA de login concluído com sucesso!",
+          "timestamp": "2026-04-03T18:48:17.668Z"
+        },
+        {
+          "level": "stdout",
+          "message": "📹 Replay salvo: /opt/results/ria/r-agent2/tests/rpa/replay/login-flow-1775242080605.json",
+          "timestamp": "2026-04-03T18:48:17.763Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   📊 Ações registradas: 4",
+          "timestamp": "2026-04-03T18:48:17.763Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   📸 Telas registradas: 15",
+          "timestamp": "2026-04-03T18:48:17.763Z"
+        },
+        {
+          "level": "stdout",
+          "message": "============================================================",
+          "timestamp": "2026-04-03T18:48:17.856Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:17.859Z"
+        },
+        {
+          "level": "stdout",
+          "message": "🤖 Teste RPA: Login com Verificação de Provider de IA",
+          "timestamp": "2026-04-03T18:48:17.859Z"
+        },
+        {
+          "level": "stdout",
+          "message": "1. Fazendo login...",
+          "timestamp": "2026-04-03T18:48:21.144Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   [Console] [Login] Resultado do login: {token: 322b7b1fc77f3662366621d51b376f997162fb68289c10018cf7483b69a00eac, agent: Object, __httpStatus: 200}",
+          "timestamp": "2026-04-03T18:48:27.792Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   [Console] [Login] Agente recebido: {id: 31749db1-d2f6-4e16-8f06-052d0b5e3abb, tenantId: system, username: admin, email: admin@example.com, role: admin}",
+          "timestamp": "2026-04-03T18:48:27.792Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   [Console] [Login] É super-admin? false {role: admin, tenantId: system, agent: Object}",
+          "timestamp": "2026-04-03T18:48:27.792Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   [Console] [Login] Admin normal com tenantId: redirecionando para /support",
+          "timestamp": "2026-04-03T18:48:27.792Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Login realizado",
+          "timestamp": "2026-04-03T18:48:31.007Z"
+        },
+        {
+          "level": "stdout",
+          "message": "2. Modal não detectado - aguardando redirecionamento direto...",
+          "timestamp": "2026-04-03T18:48:33.048Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL inicial: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:33.049Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL após login: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Redirecionado para /support (provider válido)",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "6. Aguardando redirecionamento final para /support...",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL final: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Redirecionado para /support (provider válido)",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "7. Verificando se login foi bem-sucedido...",
+          "timestamp": "2026-04-03T18:48:35.052Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   ✅ Login bem-sucedido",
+          "timestamp": "2026-04-03T18:48:35.089Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   Screenshot salvo: /opt/results/ria/r-agent2/tests/rpa/screenshots/login-provider-check-1775242115088.png",
+          "timestamp": "2026-04-03T18:48:35.263Z"
+        },
+        {
+          "level": "stdout",
+          "message": "📹 Replay salvo: /opt/results/ria/r-agent2/tests/rpa/replay/login-provider-check-1775242098172.json",
+          "timestamp": "2026-04-03T18:48:35.343Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.343Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   📊 Ações registradas: 4",
+          "timestamp": "2026-04-03T18:48:35.343Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   📸 Telas registradas: 14",
+          "timestamp": "2026-04-03T18:48:35.343Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.430Z"
+        },
+        {
+          "level": "stdout",
+          "message": "============================================================",
+          "timestamp": "2026-04-03T18:48:35.430Z"
+        },
+        {
+          "level": "stdout",
+          "message": "📊 RESUMO DOS TESTES RPA DE LOGIN",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "============================================================",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "✅ Testes passaram: 2",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "❌ Testes falharam: 0",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "📈 Total: 2 testes",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "✅ Login Flow: PASSOU",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL final: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "✅ Login with Provider Check: PASSOU",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        },
+        {
+          "level": "stdout",
+          "message": "   URL final: http://localhost:5173/support",
+          "timestamp": "2026-04-03T18:48:35.431Z"
+        }
+      ],
+      "metrics": {
+        "command": "node tests/rpa/login.test.js"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-core-auth-login.json",
+          "replayType": "hybrid_replay"
+        }
+      ],
+      "assertions": [
+        "login funcional"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-core-auth-login.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 35506,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-core-auth-login.json"
+    },
+    {
+      "id": "qa-pbx-call-events-runtime-smoke",
+      "domain": "pbx",
+      "type": "technical",
+      "source": "qa",
+      "flow": "pbx_call_events_runtime",
+      "criticality": "blocking",
+      "adapter": "pbx",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:48:35.467Z",
+      "finishedAt": "2026-04-03T18:48:38.118Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:35.758Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> chatbot-engine@0.1.0 test:pbx:call-events-runtime:smoke",
+          "timestamp": "2026-04-03T18:48:35.758Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> node scripts/test-pbx-call-events-runtime-smoke.js",
+          "timestamp": "2026-04-03T18:48:35.758Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+          "timestamp": "2026-04-03T18:48:36.010Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[2026-04-03T18:48:36.108Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+          "timestamp": "2026-04-03T18:48:36.109Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[2026-04-03T18:48:36.119Z] [INFO] [Sequelize] Conexão fechada",
+          "timestamp": "2026-04-03T18:48:36.119Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[2026-04-03T18:48:36.438Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso",
+          "timestamp": "2026-04-03T18:48:36.438Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[2026-04-03T18:48:36.825Z] [INFO] [PBX CallEvents] scan concluído",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "{",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "  \"consumer\": \"pbx_cdr_l04_1775242116438\",",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "  \"scanned\": 37,",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "  \"emitted\": 111,",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "  \"cursor\": {",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "    \"calldate\": \"2026-04-03T18:48:36.110Z\",",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "    \"cdrId\": \"cdr-l04-1775242115850\"",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "  }",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "}",
+          "timestamp": "2026-04-03T18:48:36.825Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.904Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.904Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:36.904Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.935Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.935Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:36.935Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.957Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.957Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:36.957Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.978Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:36.978Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.978Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:36.999Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.000Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.000Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.021Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.021Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.021Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.043Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.043Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.043Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.064Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.064Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.065Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.085Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.085Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.085Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.106Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.106Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.106Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.126Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.126Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.126Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.147Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.147Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.147Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.166Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.166Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.167Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.186Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.186Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.186Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.206Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.206Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.206Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.226Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.226Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.226Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.247Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.247Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.247Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.267Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.267Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.267Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.290Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.290Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.290Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.311Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.311Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.311Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.331Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.331Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.331Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.350Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.350Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.350Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.370Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.370Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.370Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.389Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.389Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.389Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.410Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.410Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.410Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.429Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.429Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.429Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.449Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.449Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.449Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.469Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.469Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.488Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.488Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.488Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.512Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.512Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.512Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.535Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.535Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.535Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.563Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.563Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.564Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.598Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.598Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.598Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.631Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.631Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.631Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.666Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.667Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.667Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.689Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.689Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.689Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.711Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.711Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.711Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.735Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.735Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.735Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.762Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.763Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.763Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.795Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.795Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.795Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.820Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.820Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.820Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.844Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.845Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.845Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.866Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.866Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.866Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.886Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.886Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.886Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.904Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.904Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.904Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.924Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.924Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.924Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 🔍 getAiProviderForTenant: Buscando provider { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.943Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[DEBUG] 📋 Tenants configurados { tenants: [] }",
+          "timestamp": "2026-04-03T18:48:37.943Z"
+        },
+        {
+          "level": "stderr",
+          "message": "[WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant { tenantId: 'system' }",
+          "timestamp": "2026-04-03T18:48:37.943Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[2026-04-03T18:48:37.970Z] [INFO] [Sequelize] Conexão fechada",
+          "timestamp": "2026-04-03T18:48:37.970Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[pbx-call-events-runtime-smoke] OK auth=admin flowId=flow-pbx-call-events-runtime-smoke-1775242115850 executionId=fx-1775242117940-48093a97f487 latencyMs=34 evidence=qa/l04-pbx-call-events-runtime-evidence.json",
+          "timestamp": "2026-04-03T18:48:38.061Z"
+        }
+      ],
+      "metrics": {
+        "command": "npm run test:pbx:call-events-runtime:smoke",
+        "adapter": "pbx",
+        "domain": "pbx"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "json",
+          "path": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+        },
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-pbx-call-events-runtime-smoke.json",
+          "replayType": "api_replay"
+        }
+      ],
+      "assertions": [
+        "eventos de chamada entregues"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-pbx-call-events-runtime-smoke.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 2651,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-pbx-call-events-runtime-smoke.json"
+    },
+    {
+      "id": "qa-pbx-voice-tts-asr-smoke",
+      "domain": "pbx",
+      "type": "technical",
+      "source": "qa",
+      "flow": "pbx_voice_tts_asr",
+      "criticality": "blocking",
+      "adapter": "pbx",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:48:38.120Z",
+      "finishedAt": "2026-04-03T18:48:40.266Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:38.415Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> chatbot-engine@0.1.0 test:pbx:voice:tts-asr:smoke",
+          "timestamp": "2026-04-03T18:48:38.415Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> node scripts/test-pbx-voice-tts-asr-smoke.js",
+          "timestamp": "2026-04-03T18:48:38.415Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[pbx-voice-tts-asr-smoke] OK auth=admin flowId=flow-voice-tts-asr-smoke-1775242118574 callId=call-voice-tts-asr-1775242118574 selftest=FAIL realCallStatus=originated cdrFound=false evidence=qa/l03-pbx-voice-tts-asr-evidence.json",
+          "timestamp": "2026-04-03T18:48:40.240Z"
+        }
+      ],
+      "metrics": {
+        "command": "npm run test:pbx:voice:tts-asr:smoke",
+        "adapter": "pbx",
+        "domain": "pbx"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "json",
+          "path": "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json"
+        },
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+          "replayType": "api_replay"
+        }
+      ],
+      "assertions": [
+        "pipeline TTS/ASR operacional"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 2146,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-pbx-voice-tts-asr-smoke.json"
+    },
+    {
+      "id": "qa-physical-queue-smoke",
+      "domain": "core",
+      "type": "smoke",
+      "source": "qa",
+      "flow": "physical_queue_smoke",
+      "criticality": "high",
+      "adapter": "api",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:48:40.266Z",
+      "finishedAt": "2026-04-03T18:48:40.882Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:40.488Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> chatbot-engine@0.1.0 test:physical:smoke",
+          "timestamp": "2026-04-03T18:48:40.488Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> node scripts/test-physical-queue-smoke.js",
+          "timestamp": "2026-04-03T18:48:40.488Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[physical-smoke] OK queueId=pq-1775242120622-dea7bd49b746 ticketId=pt-1775242120666-69efcb86649f locationId=smoke-loc-1775242120616 evidence=qa/l01-physical-queue-evidence.json",
+          "timestamp": "2026-04-03T18:48:40.842Z"
+        }
+      ],
+      "metrics": {
+        "command": "npm run test:physical:smoke"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "json",
+          "path": "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json"
+        },
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-physical-queue-smoke.json",
+          "replayType": "api_replay"
+        }
+      ],
+      "assertions": [
+        "fila física responde"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-physical-queue-smoke.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 616,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-physical-queue-smoke.json"
+    },
+    {
+      "id": "qa-ura-publish-rollback-smoke",
+      "domain": "pbx",
+      "type": "smoke",
+      "source": "qa",
+      "flow": "ura_publish_rollback",
+      "criticality": "blocking",
+      "adapter": "pbx",
+      "status": "passed",
+      "startedAt": "2026-04-03T18:48:40.883Z",
+      "finishedAt": "2026-04-03T18:48:52.003Z",
+      "logs": [
+        {
+          "level": "stdout",
+          "message": "",
+          "timestamp": "2026-04-03T18:48:41.213Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> chatbot-engine@0.1.0 test:ura:publish-rollback:smoke",
+          "timestamp": "2026-04-03T18:48:41.213Z"
+        },
+        {
+          "level": "stdout",
+          "message": "> node scripts/test-ura-publish-rollback-smoke.js",
+          "timestamp": "2026-04-03T18:48:41.213Z"
+        },
+        {
+          "level": "stdout",
+          "message": "[ura-publish-rollback-smoke] OK auth=admin v1=184 sigV1=7b0fe8526666a07bb8256971 sigV2=0986c76dd08732c6b34792a3 evidence=qa/l02-ura-publish-rollback-evidence.json",
+          "timestamp": "2026-04-03T18:48:51.985Z"
+        }
+      ],
+      "metrics": {
+        "command": "npm run test:ura:publish-rollback:smoke",
+        "adapter": "pbx",
+        "domain": "pbx"
+      },
+      "errors": [],
+      "artifacts": [
+        {
+          "type": "json",
+          "path": "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json"
+        },
+        {
+          "type": "replay",
+          "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-ura-publish-rollback-smoke.json",
+          "replayType": "api_replay"
+        }
+      ],
+      "assertions": [
+        "publicação e rollback da URA"
+      ],
+      "rpaRecordingId": null,
+      "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/replays/qa-ura-publish-rollback-smoke.json",
+      "failureType": null,
+      "errorMessage": null,
+      "rootCauseHint": null,
+      "durationMs": 11120,
+      "evidencePath": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z/scenarios/qa-ura-publish-rollback-smoke.json"
+    }
+  ],
+  "logs": [
+    {
+      "timestamp": "2026-04-03T18:47:59.100Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-chatpro-omnichannel-smoke",
+      "index": 1,
+      "total": 6
+    },
+    {
+      "timestamp": "2026-04-03T18:47:59.959Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-core-auth-login",
+      "index": 2,
+      "total": 6
+    },
+    {
+      "timestamp": "2026-04-03T18:48:35.467Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-pbx-call-events-runtime-smoke",
+      "index": 3,
+      "total": 6
+    },
+    {
+      "timestamp": "2026-04-03T18:48:38.120Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-pbx-voice-tts-asr-smoke",
+      "index": 4,
+      "total": 6
+    },
+    {
+      "timestamp": "2026-04-03T18:48:40.266Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-physical-queue-smoke",
+      "index": 5,
+      "total": 6
+    },
+    {
+      "timestamp": "2026-04-03T18:48:40.883Z",
+      "level": "info",
+      "message": "EXECUTING_SCENARIO",
+      "scenarioId": "qa-ura-publish-rollback-smoke",
+      "index": 6,
+      "total": 6
+    }
+  ],
+  "evidenceDir": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T18-41-27-177Z",
+  "diff": {
+    "previousExecutionId": null,
+    "scenarioChanges": []
+  },
+  "baselineComparison": {
+    "available": true,
+    "regressed": false,
+    "reasons": [],
+    "current": {
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0
+    },
+    "baseline": {
+      "executionId": "mesh-2026-04-03T18-33-42-936Z",
+      "passRate": 0.6304347826086957,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "total": 46,
+      "passed": 29,
+      "failed": 5,
+      "flaky": 0,
+      "updatedAt": "2026-04-03T18:40:54.814Z"
+    }
+  },
+  "baseline": {
+    "target": {
+      "passRate": 0.9,
+      "blockingFailures": 0,
+      "infraErrors": 0
+    },
+    "accepted": false,
+    "bestKnown": {
+      "executionId": "mesh-2026-04-03T18-33-42-936Z",
+      "passRate": 0.6304347826086957,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "total": 46,
+      "passed": 29,
+      "failed": 5,
+      "flaky": 0,
+      "updatedAt": "2026-04-03T18:40:54.814Z"
+    },
+    "history": [
+      {
+        "executionId": "mesh-2026-04-03T18-33-42-936Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-03T18:40:54.814Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T20-16-06-062Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T20:23:22.056Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T19-48-04-948Z",
+        "passRate": 0.5869565217391305,
+        "blockingFailures": 1,
+        "infraErrors": 0,
+        "at": "2026-04-02T19:55:15.621Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T18-36-41-043Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T18:44:12.112Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T18-01-00-714Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T18:08:29.946Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T17-39-01-145Z",
+        "passRate": 0.6304347826086957,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-04-02T17:46:53.807Z"
+      },
+      {
+        "executionId": "mesh-2026-04-02T17-22-37-322Z",
+        "passRate": 0.34782608695652173,
+        "blockingFailures": 1,
+        "infraErrors": 0,
+        "at": "2026-04-02T17:27:14.994Z"
+      },
+      {
+        "executionId": "mesh-maintenance-targeted-1774985590765",
+        "passRate": 0,
+        "blockingFailures": 0,
+        "infraErrors": 0,
+        "at": "2026-03-31T19:34:09.833Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-37-46-626Z",
+        "passRate": 0.6086956521739131,
+        "blockingFailures": 2,
+        "infraErrors": 12,
+        "at": "2026-03-31T19:09:53.423Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-39-56-883Z",
+        "passRate": 0.6086956521739131,
+        "blockingFailures": 2,
+        "infraErrors": 11,
+        "at": "2026-03-31T19:09:48.425Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-33-51-384Z",
+        "passRate": 0.45652173913043476,
+        "blockingFailures": 3,
+        "infraErrors": 13,
+        "at": "2026-03-31T19:07:03.783Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-08-19-563Z",
+        "passRate": 0.5434782608695652,
+        "blockingFailures": 2,
+        "infraErrors": 0,
+        "at": "2026-03-31T18:13:51.803Z"
+      },
+      {
+        "executionId": "mesh-2026-03-31T18-05-20-370Z",
+        "passRate": 0,
+        "blockingFailures": 7,
+        "infraErrors": 21,
+        "at": "2026-03-31T18:05:56.044Z"
+      }
+    ]
+  },
+  "metrics": {
+    "generatedAt": "2026-04-03T18:48:52.006Z",
+    "latestExecutionId": "system-validate-2026-04-03T18-41-27-177Z",
+    "history": [
+      {
+        "executionId": "system-validate-2026-04-03T18-41-27-177Z",
+        "startedAt": "2026-04-03T18:47:59.098Z",
+        "passRate": 1,
+        "coverage": 1,
+        "goNoGo": "GO",
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "infraErrors": 0
+      }
+    ],
+    "avgDurationMsByScenario": {
+      "qa-chatpro-omnichannel-smoke": 859,
+      "qa-core-auth-login": 35506,
+      "qa-pbx-call-events-runtime-smoke": 2651,
+      "qa-pbx-voice-tts-asr-smoke": 2146,
+      "qa-physical-queue-smoke": 616,
+      "qa-ura-publish-rollback-smoke": 11120
+    },
+    "successRateByDomain": {
+      "omnichannel": 1,
+      "core": 1,
+      "pbx": 1
+    }
+  },
+  "historyPath": "qa-mesh/system-validate/meshHistory/system-validate-2026-04-03T18-41-27-177Z.json"
+}
