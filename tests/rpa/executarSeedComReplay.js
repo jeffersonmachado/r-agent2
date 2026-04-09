@@ -8,6 +8,7 @@
 const { seedPlatform } = require('./seedPlatformRPA');
 const { gerarReplayDetalhado } = require('./gerarReplayDetalhado');
 const { verReplaySeed } = require('./verReplaySeed');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 
 async function executarSeedComReplay() {
   console.log('🌱 Executando Seed Completo com Replay\n');
@@ -78,6 +79,7 @@ async function executarSeedComReplay() {
 
 // Executa se chamado diretamente
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/executarSeedComReplay.js');
   executarSeedComReplay();
 }
 

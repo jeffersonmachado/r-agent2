@@ -6,7 +6,7 @@
  */
 
 const { ActionRecorder } = require('../actionRecorder');
-const { RpaTestRunner } = require('../rpaTestRunner');
+const { RpaTestRunner } = require('../../../core/rpa/rpaTestRunner');
 
 async function demonstrarValidacaoPagina() {
   console.log('🔍 Demonstração: Validação de Página em Camadas\n');
@@ -61,7 +61,7 @@ async function demonstrarValidacaoPagina() {
         {
           type: 'navigate',
           url: (() => {
-            const rpaConfig = require('../rpaConfig');
+            const rpaConfig = require('../../../core/rpa/rpaConfig');
             return `${rpaConfig.urls.frontend}/support`;
           })(),
           waitFor: '.support-page',

@@ -43,7 +43,7 @@ function resolveRequiredUrl({ envKeys, configKey, fallbackUrl, label }) {
   }
 
   throw new Error(
-    `[rpa/run-all] ${label} não configurada. Defina ${envKeys.join(' ou ')}${configKey ? ` ou tests/rpa/rpa.config.json.urls.${configKey}` : ''}. `
+    `[rpa/run-all] ${label} não configurada. Defina ${envKeys.join(' ou ')}${configKey ? ` ou core/rpa/rpa.config.json.urls.${configKey}` : ''}. `
     + `Se quiser manter localhost como fallback temporário, use RPA_ALLOW_DEFAULT_URL_FALLBACK=1.`
   );
 }
@@ -52,7 +52,7 @@ function resolveRequiredUrl({ envKeys, configKey, fallbackUrl, label }) {
 const RPA_SEEDS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
 const RPA_FLOWS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'flows');
 const REPORTS_DIR = path.join(__dirname, '..', '..', 'tests', 'rpa', 'reports');
-const RPA_CONFIG_PATH = path.join(__dirname, '..', '..', 'tests', 'rpa', 'rpa.config.json');
+const RPA_CONFIG_PATH = path.join(__dirname, '..', '..', 'core', 'rpa', 'rpa.config.json');
 
 // Garante que os diretórios existem
 if (!fs.existsSync(REPORTS_DIR)) {
@@ -154,7 +154,7 @@ async function runRpaTest(testFile) {
     const testData = JSON.parse(fs.readFileSync(testFile, 'utf8'));
     
     // Importa o RpaTestRunner
-    const { RpaTestRunner } = require(path.join(__dirname, '..', '..', 'tests', 'rpa', 'rpaTestRunner'));
+    const { RpaTestRunner } = require(path.join(__dirname, '..', '..', 'core', 'rpa', 'rpaTestRunner'));
     
     // Cria runner em modo CI (headless, rápido)
     const runner = new RpaTestRunner({
@@ -387,6 +387,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  main,
   findRpaTestFiles,
   runRpaTest,
   generateReport,

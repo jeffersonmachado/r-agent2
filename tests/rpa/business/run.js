@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const { assertLegacyEntrypointAllowed } = require('../../../core/rpa/legacyEntrypointGuard');
 const { SCREEN_SCENARIOS, FLOW_SCENARIOS, JOURNEY_SCENARIOS, listCatalog } = require('./catalog');
 const { createRunContext, startScenario, executeStep, finalizeScenario, writeRunReport } = require('./reporting');
 const {
@@ -142,7 +143,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[business-qa] erro fatal:', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/business/run.js');
+  main().catch((error) => {
+    console.error('[business-qa] erro fatal:', error);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  main,
+};

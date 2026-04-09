@@ -5,8 +5,9 @@
  * Execute: node tests/rpa/seedPlatformDebug.js
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const config = require('./rpaConfig');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const config = require('../../core/rpa/rpaConfig');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 const fs = require('fs');
 const path = require('path');
 
@@ -258,6 +259,7 @@ async function seedPlatformDebug() {
 
 // Executa se chamado diretamente
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/seedPlatformDebug.js');
   seedPlatformDebug().catch(error => {
     console.error('❌ Erro fatal:', error);
     process.exit(1);

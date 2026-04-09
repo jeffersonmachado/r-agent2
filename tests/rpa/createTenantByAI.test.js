@@ -10,8 +10,8 @@
  * 6. Verificação do tenant criado
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ReplaySystem } = require('./replaySystem');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ReplaySystem } = require('../../core/rpa/replaySystem');
 const path = require('path');
 const fs = require('fs');
 const config = require('../../api/utils/config');

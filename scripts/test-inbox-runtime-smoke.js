@@ -14,7 +14,7 @@
  * - setting phone-masking (get/update/restore)
  */
 
-const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
 const fs = require('fs');
 const path = require('path');
 

@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
@@ -64,6 +64,10 @@ function expect(condition, message) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function insertMode() {
+  return String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || 'compose_exec').toLowerCase();
 }
 
 function extractJsonObjects(text) {
@@ -180,7 +184,12 @@ function buildEventTriggerFlow(flowId, tenantId, uniqueid) {
       environment: 'dev',
       createdBy: 'system-smoke',
       eventTriggers: [
-        { type: 'CallEnded', source: 'pbx.cdr' },
+        {
+          type: 'CallEnded',
+          source: 'pbx.cdr',
+          subjectType: 'pbx_call',
+          subjectId: uniqueid,
+        },
       ],
     },
   };
@@ -204,8 +213,63 @@ async function upsertFlow(baseUrl, token, flow) {
   return update.payload?.id || flow.id;
 }
 
+async function ensureFlowPersistedForDirectRuntime(flow) {
+  if (insertMode() !== 'direct') return;
+
+  // Em modo direct, o runtime lê flows direto do PostgreSQL local.
+  // A API pode responder antes de o persistFlowBestEffort tornar o flow visível
+  // no banco, então garantimos explicitamente a persistência usada pelo runtime.
+  // eslint-disable-next-line global-require
+  const { connect, getSequelize, close } = require('../api/db/sequelize');
+
+  try {
+    await connect();
+    const sq = getSequelize();
+    // eslint-disable-next-line global-require
+    const { Flow } = require('../api/db/models');
+    const FlowModel = Flow();
+    const now = new Date();
+
+    const existing = await FlowModel.findByPk(flow.id);
+    const payload = {
+      id: flow.id,
+      tenant_key: flow.tenantId,
+      name: flow.name || null,
+      data: flow,
+      updated_at: now,
+    };
+
+    if (existing) {
+      await existing.update(payload);
+    } else {
+      await FlowModel.create({ ...payload, created_at: now });
+    }
+
+    const deadline = Date.now() + Math.max(3000, Number(process.env.L04_FLOW_PERSIST_TIMEOUT_MS || 15000));
+
+    while (Date.now() < deadline) {
+      // eslint-disable-next-line no-await-in-loop
+      const [rows] = await sq.query(
+        'SELECT id, tenant_key, data FROM flows WHERE id = :id LIMIT 1',
+        { replacements: { id: flow.id } },
+      );
+      const row = Array.isArray(rows) ? rows[0] : null;
+      const triggers = row?.data?.metadata?.eventTriggers;
+      if (row && Array.isArray(triggers) && triggers.length > 0) {
+        return;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(200);
+    }
+
+    throw new Error(`flow_persistence_timeout:${flow.id}`);
+  } finally {
+    await close().catch(() => {});
+  }
+}
+
 async function insertSyntheticCdr({ tenantId, uniqueid, cdrId }) {
-  const mode = String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || 'compose_exec').toLowerCase();
+  const mode = insertMode();
   if (mode === 'direct') {
     // Execução dentro do container API: acesso direto ao Sequelize local.
     // eslint-disable-next-line global-require
@@ -276,7 +340,7 @@ const { connect, getSequelize, close } = require('./api/db/sequelize');
 }
 
 async function runPbxEventPipeline({ tenantId, uniqueid }) {
-  const mode = String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || 'compose_exec').toLowerCase();
+  const mode = insertMode();
   if (mode === 'direct') {
     // eslint-disable-next-line global-require
     const { connect, getSequelize, close } = require('../api/db/sequelize');
@@ -397,6 +461,80 @@ function findExecutionCandidate(items, flowId, minStartedAtMs) {
 }
 
 async function waitExecution({ baseUrl, token, correlationId, flowId, minStartedAtMs = 0 }) {
+  if (insertMode() === 'direct') {
+    // Em modo direct, o runtime escreve no banco de teste local; validar via HTTP
+    // pode olhar para outro runtime/banco. A leitura precisa usar o ledger real.
+    // eslint-disable-next-line global-require
+    const { connect, getSequelize, close } = require('../api/db/sequelize');
+
+    try {
+      await connect();
+      const sq = getSequelize();
+      const startedAt = Date.now();
+      let lastSeen = null;
+
+      for (let i = 0; i < 120; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const [rows] = await sq.query(
+          `SELECT id, flow_id, status, started_at, finished_at
+             FROM flow_executions
+            WHERE tenant_key = :tenant
+              AND correlation_id = :correlationId
+              AND flow_id = :flowId
+            ORDER BY started_at DESC
+            LIMIT 5`,
+          {
+            replacements: {
+              tenant: 'system',
+              correlationId,
+              flowId,
+            },
+          },
+        );
+        const item = findExecutionCandidate(Array.isArray(rows) ? rows : [], flowId, minStartedAtMs);
+        if (item) {
+          const execId = String(item.id || '');
+          // eslint-disable-next-line no-await-in-loop
+          const [nodes] = await sq.query(
+            `SELECT id, node_id, status, step_index, created_at
+               FROM node_executions
+              WHERE tenant_key = :tenant
+                AND execution_id = :executionId
+              ORDER BY step_index ASC, created_at ASC`,
+            {
+              replacements: {
+                tenant: 'system',
+                executionId: execId,
+              },
+            },
+          );
+          const nodeItems = Array.isArray(nodes) ? nodes : [];
+          const status = String(item?.status || '').toLowerCase();
+          lastSeen = {
+            executionId: execId,
+            status,
+            nodesCount: nodeItems.length,
+          };
+          if ((status === 'done' || status === 'failed') && nodeItems.length > 0) {
+            return {
+              found: true,
+              latencyMs: Date.now() - startedAt,
+              execution: item,
+              nodes: nodeItems,
+              lastSeen,
+            };
+          }
+        }
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(1000);
+      }
+
+      return { found: false, latencyMs: Date.now() - startedAt, execution: null, nodes: [], lastSeen };
+    } finally {
+      await close().catch(() => {});
+    }
+  }
+
   const startedAt = Date.now();
   let lastSeen = null;
   for (let i = 0; i < 120; i += 1) {
@@ -460,6 +598,7 @@ async function main() {
 
   const flow = buildEventTriggerFlow(flowId, auth.tenantId, uniqueid);
   await upsertFlow(baseUrl, auth.token, flow);
+  await ensureFlowPersistedForDirectRuntime(flow);
   await insertSyntheticCdr({ tenantId: auth.tenantId, uniqueid, cdrId });
 
   const pipeline = await runPbxEventPipeline({

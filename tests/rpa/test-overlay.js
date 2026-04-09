@@ -13,7 +13,7 @@ function resolveApiUrl() {
   return process.env.TEST_API_URL ||
     process.env.API_URL ||
     process.env.API_BASE_URL ||
-    require('./rpaConfig').urls.api ||
+    require('../../core/rpa/rpaConfig').urls.api ||
     `http://localhost:${Number(config.get('api.port', 3001))}`;
 }
 

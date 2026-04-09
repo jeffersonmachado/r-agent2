@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 const { chromium } = require('playwright');
 const { SCREEN_CATALOG } = require('./screenCatalog');
-const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
-const { launchChromiumWithFallback } = require('./utils/browserLaunchOptions');
+const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');
+const { launchChromiumWithFallback } = require('../../core/rpa/utils/browserLaunchOptions');
 
 const FRONTEND_URL = String(process.env.TEST_FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 const API_URL = String(process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/$/, '');
@@ -261,6 +262,7 @@ async function runScreenCatalog() {
 }
 
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/runScreenCatalogRPA.js');
   runScreenCatalog()
     .then(({ report }) => {
       process.exit(report.summary.failed > 0 ? 1 : 0);

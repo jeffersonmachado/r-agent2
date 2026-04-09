@@ -365,23 +365,27 @@ async function performRpaLogin(page, options = {}) {
       return url.endsWith('/') ? url.slice(0, -1) : url;
     };
 
-    const isLegacyLocal3001 = (url) => {
-      if (!url) return false;
-      return /^https?:\/\/localhost:3001$/i.test(String(url).trim());
-    };
-
-    // Tenta primeiro a URL explicitamente configurada e preserva apenas
-    // fallbacks coerentes com a porta ativa do ambiente.
+    // Tenta primeiro a URL explicitamente configurada e só adiciona fallbacks
+    // coerentes com a porta ativa do ambiente quando eles forem realmente distintos.
     const hasExplicitTestApiUrl = Boolean(process.env.TEST_API_URL);
-    const candidateBaseUrls = [
-      primaryApiBaseUrl,
-      `http://localhost:${apiPort}`,
-      // Quando TEST_API_URL está definido, evita fallback fixo para 3001 (ruído em stack de teste dedicada).
-      ...(hasExplicitTestApiUrl ? [] : ['http://localhost:3001']),
-    ]
-      .map(normalizeBaseUrl)
-      .filter(Boolean)
-      .filter((url) => !(hasExplicitTestApiUrl && isLegacyLocal3001(url)));
+    const candidateBaseUrls = [];
+    const normalizedPrimaryApiBaseUrl = normalizeBaseUrl(primaryApiBaseUrl);
+    const normalizedActivePortBaseUrl = normalizeBaseUrl(`http://localhost:${apiPort}`);
+
+    if (normalizedPrimaryApiBaseUrl) {
+      candidateBaseUrls.push(normalizedPrimaryApiBaseUrl);
+    }
+
+    if (normalizedActivePortBaseUrl) {
+      candidateBaseUrls.push(normalizedActivePortBaseUrl);
+    }
+
+    if (!hasExplicitTestApiUrl) {
+      const normalizedLegacyBaseUrl = normalizeBaseUrl('http://localhost:3001');
+      if (normalizedLegacyBaseUrl) {
+        candidateBaseUrls.push(normalizedLegacyBaseUrl);
+      }
+    }
 
     // Remove duplicados preservando ordem
     const seen = new Set();

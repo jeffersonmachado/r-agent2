@@ -5,8 +5,8 @@
  * Execute: node tests/rpa/seedPlatformGravar.js
  */
 
-const { ActionRecorder } = require('./actionRecorder');
-const config = require('./rpaConfig');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
+const config = require('../../core/rpa/rpaConfig');
 
 console.log('📹 Gravador de Seed da Plataforma\n');
 console.log('='.repeat(70));

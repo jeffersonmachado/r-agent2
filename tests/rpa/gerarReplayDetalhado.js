@@ -8,6 +8,7 @@
 const { ActionRecorder } = require('./actionRecorder');
 const fs = require('fs');
 const path = require('path');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 
 function gerarReplayDetalhado() {
   console.log('📹 Gerando Replay Detalhado do Seed\n');
@@ -180,6 +181,7 @@ function gerarReplayDetalhado() {
 
 // Executa se chamado diretamente
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/gerarReplayDetalhado.js');
   gerarReplayDetalhado();
 }
 

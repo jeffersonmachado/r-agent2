@@ -4,8 +4,9 @@
  * Execute: node tests/rpa/demo.js
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ActionRecorder } = require('./actionRecorder');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 
 async function demonstrarRPA() {
   console.log('🤖 Sistema RPA - Demonstração\n');
@@ -166,6 +167,7 @@ async function demonstrarRPA() {
 
 // Executa demonstração
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/demo.js');
   demonstrarRPA().catch(error => {
     console.error('Erro fatal:', error);
     process.exit(1);

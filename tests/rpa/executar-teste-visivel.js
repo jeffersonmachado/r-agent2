@@ -4,8 +4,8 @@
  * Execute: node tests/rpa/executar-teste-visivel.js
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ActionRecorder } = require('./actionRecorder');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
 
 async function executarTesteVisivel() {
   console.log('🤖 Executando Teste RPA Visível\n');
@@ -39,7 +39,7 @@ async function executarTesteVisivel() {
         {
           type: 'navigate',
           url: (() => {
-            const rpaConfig = require('./rpaConfig');
+            const rpaConfig = require('../../core/rpa/rpaConfig');
             return `${rpaConfig.urls.frontend}/login`;
           })(),
           waitFor: 'input[type="text"], input[type="email"]',
@@ -70,7 +70,7 @@ async function executarTesteVisivel() {
       data: {
         urls: {
           frontend: (() => {
-            const rpaConfig = require('./rpaConfig');
+            const rpaConfig = require('../../core/rpa/rpaConfig');
             return rpaConfig.urls.frontend;
           })(),
         },
@@ -122,7 +122,7 @@ async function executarTesteVisivel() {
         {
           type: 'navigate',
           url: (() => {
-            const rpaConfig = require('./rpaConfig');
+            const rpaConfig = require('../../core/rpa/rpaConfig');
             return rpaConfig.urls.frontend;
           })(),
           waitFor: 'body',
@@ -137,7 +137,7 @@ async function executarTesteVisivel() {
           page: {
             url: {
               contains: (() => {
-            const rpaConfig = require('./rpaConfig');
+            const rpaConfig = require('../../core/rpa/rpaConfig');
             return new URL(rpaConfig.urls.frontend).hostname;
           })(),
             },
@@ -186,7 +186,7 @@ async function executarTesteVisivel() {
       console.error('   2. Execute novamente: node tests/rpa/executar-teste-visivel.js\n');
     } else if (error.message.includes('net::ERR_CONNECTION_REFUSED') || error.message.includes('Navigation failed')) {
       console.error('\n💡 Solução:');
-      const rpaConfig = require('./rpaConfig');
+      const rpaConfig = require('../../core/rpa/rpaConfig');
       console.error(`   1. Certifique-se de que a aplicação está rodando em ${rpaConfig.urls.frontend}`);
       console.error('   2. Inicie o servidor: npm run dev (ou comando equivalente)');
       console.error('   3. Execute novamente: node tests/rpa/executar-teste-visivel.js\n');

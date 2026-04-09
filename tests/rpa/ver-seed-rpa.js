@@ -11,8 +11,8 @@
  *   node tests/rpa/ver-seed-rpa.js example-login
  */
 
-const { RpaPlayer } = require('./player/rpaPlayer');
-const { ActionRecorder } = require('./actionRecorder');
+const { RpaPlayer } = require('../../core/rpa/player/rpaPlayer');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
 const fs = require('fs');
 const path = require('path');
 

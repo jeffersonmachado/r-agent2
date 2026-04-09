@@ -4,7 +4,7 @@
  * Este arquivo mostra como usar o RPA em conjunto com o sistema de testes existente.
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 const { validateTestData } = require('../helpers/dataValidationHelper');
 
 describe('Integração RPA com Sistema de Testes', () => {

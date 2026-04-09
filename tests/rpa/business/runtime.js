@@ -3,10 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { autoLoginBeforeSteps } = require('../utils/autoLoginFlow');
-const { launchChromiumWithFallback } = require('../utils/browserLaunchOptions');
+const { autoLoginBeforeSteps } = require('../../../core/rpa/utils/autoLoginFlow');
+const { launchChromiumWithFallback } = require('../../../core/rpa/utils/browserLaunchOptions');
 const { createSemanticPageDriver } = require('../../../core/rpa/screen-models');
-const rpaTokenManager = require('../utils/rpaTokenManager');
+const rpaTokenManager = require('../../../core/rpa/utils/rpaTokenManager');
 const { SCREENSHOTS_DIR, ensureDir, slugify } = require('./reporting');
 
 const FRONTEND_URL = String(process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');

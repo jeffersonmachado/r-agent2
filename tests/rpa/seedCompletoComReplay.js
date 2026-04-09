@@ -6,6 +6,7 @@
  */
 
 const { seedPlatform } = require('./seedPlatformRPA');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 const fs = require('fs');
 const path = require('path');
 
@@ -222,6 +223,7 @@ async function seedCompletoComReplay() {
 
 // Executa se chamado diretamente
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/seedCompletoComReplay.js');
   seedCompletoComReplay();
 }
 

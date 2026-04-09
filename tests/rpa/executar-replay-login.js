@@ -8,8 +8,8 @@
  *   node tests/rpa/executar-replay-login.js <nome-do-replay>    # Executa replay específico
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ReplaySystem } = require('./replaySystem');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ReplaySystem } = require('../../core/rpa/replaySystem');
 const fs = require('fs');
 const path = require('path');
 

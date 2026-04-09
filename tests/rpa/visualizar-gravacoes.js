@@ -5,7 +5,7 @@
  * Execute: node tests/rpa/visualizar-gravacoes.js
  */
 
-const { ActionRecorder } = require('./actionRecorder');
+const { ActionRecorder } = require('../../core/rpa/actionRecorder');
 const fs = require('fs');
 const path = require('path');
 
@@ -98,7 +98,7 @@ gravações.forEach((nome, index) => {
 console.log(`\n${'─'.repeat(70)}`);
 console.log('\n✨ Visualização concluída!\n');
 console.log('💡 Para executar uma gravação:');
-console.log('   const { RpaTestRunner } = require("./rpaTestRunner");');
+console.log('   const { RpaTestRunner } = require("../../core/rpa/rpaTestRunner");');
 console.log('   const runner = new RpaTestRunner();');
 console.log('   await runner.init();');
 console.log('   await runner.playback("nome-da-gravacao");');
