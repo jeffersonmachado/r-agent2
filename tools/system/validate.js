@@ -345,7 +345,7 @@ async function main() {
       { label: 'frontend unit', command: 'npm run frontend:test:unit' },
       { label: 'frontend build', command: 'npm run frontend:build' },
       { label: 'frontend smoke', command: 'npm run frontend:smoke' },
-      { label: 'qa mesh', command: 'npm run qa:mesh' },
+      { label: 'qa mesh', command: 'PIPELINE_BYPASS=1 npm run qa:mesh' },
     ];
 
     for (const step of mandatorySteps) {
@@ -358,7 +358,7 @@ async function main() {
         { label: 'backend flow', command: 'npm run test:flow' },
         { label: 'backend stress', command: 'npm run test:stress' },
         { label: 'seed rpa flows', command: 'node scripts/seed-rpa-flows.js' },
-        { label: 'rpa suite', command: 'npm run test:rpa' },
+        { label: 'rpa suite', command: 'PIPELINE_BYPASS=1 npm run test:rpa' },
       ];
       for (const step of extendedSteps) {
         report.steps.push(run(step.command, `${step.label} (extended)`, qaEnv));

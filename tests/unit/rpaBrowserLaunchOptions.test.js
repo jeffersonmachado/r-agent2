@@ -11,7 +11,7 @@ const { spawnSync } = require('child_process');
 const {
   resolveSystemBrowserPath,
   isMissingBrowserError,
-} = require('../rpa/utils/browserLaunchOptions');
+} = require('../../core/rpa/utils/browserLaunchOptions');
 
 describe('RPA browser launch fallback', () => {
   beforeEach(() => {

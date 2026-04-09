@@ -141,7 +141,7 @@ async function main() {
   // 5. Testes RPA
   logSection('5️⃣  TESTES RPA');
   results.rpa = runCommand(
-    'npm run test:rpa',
+    'PIPELINE_BYPASS=1 npm run test:rpa',
     'Executando testes RPA',
     rootDir
   );

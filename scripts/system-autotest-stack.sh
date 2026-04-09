@@ -93,7 +93,7 @@ write_smoke_evidence_summary() {
 echo "[autotest-stack] Preparando token RPA..."
 # Força o token usado no stack a vir do arquivo de config de teste para
 # evitar divergência com um RPA_TOKEN externo do runner.
-export RPA_TOKEN="$(RPA_TOKEN='' node -e "const m = require('./tests/rpa/utils/rpaTokenManager'); let t = m.loadRpaToken(); if (!t) t = m.generateAndSaveRpaToken(); process.stdout.write(t);")"
+export RPA_TOKEN="$(RPA_TOKEN='' node -e "const m = require('./core/rpa/utils/rpaTokenManager'); let t = m.loadRpaToken(); if (!t) t = m.generateAndSaveRpaToken(); process.stdout.write(t);")"
 
 cleanup() {
   write_smoke_evidence_summary || true
@@ -149,7 +149,7 @@ echo
 echo "[autotest-stack] Rodando Business QA orientado a jornada..."
 export BILLING_SANDBOX="${BILLING_SANDBOX:-1}"
 export BUSINESS_QA_MODE="${BUSINESS_QA_MODE:-pr}"
-npm run "test:business-qa:${BUSINESS_QA_MODE}"
+PIPELINE_BYPASS=1 npm run "test:business-qa:${BUSINESS_QA_MODE}"
 
 echo
 echo "[autotest-stack] Rodando smoke test PBX (Realtime/ODBC)..."

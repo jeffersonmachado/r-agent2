@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "description": "Políticas e thresholds do sistema de QA",
+  "stability": {
+    "minScore": 70,
+    "minCriticalScore": 80,
+    "maxBlockers": 0,
+    "maxCriticalBlockers": 0,
+    "regressionThreshold": 5
+  },
+  "releaseGate": {
+    "requireStabilityScore": true,
+    "requireZeroBlockers": true,
+    "requireReplayConsistency": true,
+    "requireCheckpointCompletion": true,
+    "requireEvidencePackage": true,
+    "minStabilityScore": 70,
+    "replayConsistencyThreshold": 0.85
+  },
+  "evidence": {
+    "required": [
+      "execution.json",
+      "stability.json",
+      "learn.json",
+      "checkpoints.json"
+    ],
+    "failOnMissing": true
+  },
+  "learn": {
+    "defaultMode": "suggestion-only",
+    "autoPromotionEnabled": false,
+    "autoPromotionFlag": "RAP_AUTO_PROMOTE",
+    "sandboxRequired": true,
+    "minImprovementPercent": 5
+  }
+}

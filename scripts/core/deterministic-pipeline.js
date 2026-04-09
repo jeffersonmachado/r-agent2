@@ -1,5 +1,26 @@
 'use strict';
 
+/**
+ * @deprecated Use `npm run pipeline` (pipeline/runFullValidation.js) instead.
+ *
+ * Este script é mantido para compatibilidade retroativa com scripts de CI antigos.
+ * O pipeline oficial é pipeline/runFullValidation.js.
+ *
+ * Redireciona automaticamente para o pipeline canônico se PIPELINE_REDIRECT=1.
+ */
+
+if (process.env.PIPELINE_REDIRECT === '1') {
+  const { spawnSync: _s } = require('child_process');
+  console.warn('[pipeline] REDIRECT: Executando pipeline/runFullValidation.js (canônico)');
+  const result = _s('node', ['pipeline/runFullValidation.js'], {
+    cwd: require('path').join(__dirname, '..', '..'),
+    stdio: 'inherit',
+    env: process.env,
+  });
+  process.exitCode = result.status || 0;
+  process.exit(process.exitCode);
+}
+
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');

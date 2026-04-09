@@ -94,7 +94,7 @@ describe('AuthService', () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
     jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => ({})), Session: jest.fn(() => ({})) }));
 
-    jest.doMock('../../tests/rpa/utils/rpaTokenManager', () => ({
+    jest.doMock('../../core/rpa/utils/rpaTokenManager', () => ({
       loadRpaToken: jest.fn(() => {
         const err = {};
         Object.defineProperty(err, 'message', {

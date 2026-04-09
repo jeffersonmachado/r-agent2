@@ -24,11 +24,11 @@ describe('RPA runtime reliability smoke', () => {
 
   beforeAll(async () => {
     jest.resetModules();
-    jest.doMock('../rpa/utils/autoLoginFlow', () => ({
+    jest.doMock('../../core/rpa/utils/autoLoginFlow', () => ({
       autoLoginBeforeSteps: jest.fn(async () => ({ success: true, loggedIn: false })),
     }));
 
-    ({ RpaTestRunner } = require('../rpa/rpaTestRunner'));
+    ({ RpaTestRunner } = require('../../core/rpa/rpaTestRunner'));
     playwrightAvailable = await isPlaywrightAvailable();
   });
 

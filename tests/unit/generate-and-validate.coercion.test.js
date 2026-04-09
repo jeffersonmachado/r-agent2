@@ -52,12 +52,12 @@ jest.mock('../../api/services/superAdminService', () => ({
   isSuperAdmin: jest.fn(() => false),
 }));
 
-jest.mock('../../tests/rpa/rpaTestRunner', () => ({
+jest.mock('../../core/rpa/rpaTestRunner', () => ({
   RpaTestRunner: jest.fn(),
 }));
 
 const { enforceRateLimit } = require('../../infra/rate-limit');
-const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 const pipelineContext = require('../../api/services/pipelineExecutionContext');
 const { generateAndValidate, executeRpaTest } = require('../../api/services/generate-and-validate');
 const fs = require('fs');

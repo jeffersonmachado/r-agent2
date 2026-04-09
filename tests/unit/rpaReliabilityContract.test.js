@@ -1,10 +1,10 @@
 'use strict';
 
-jest.mock('../../tests/rpa/utils/autoLoginFlow', () => ({
+jest.mock('../../core/rpa/utils/autoLoginFlow', () => ({
   autoLoginBeforeSteps: jest.fn(async () => ({ success: true, loggedIn: false })),
 }));
 
-const { RpaTestRunner } = require('../../tests/rpa/rpaTestRunner');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 
 describe('RPA reliability contract', () => {
   function buildRunnerWithMockedExecutor(executeActionMock) {

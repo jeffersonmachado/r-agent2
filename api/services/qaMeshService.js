@@ -14,7 +14,9 @@ const CHECKPOINT_PROGRESS_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/progr
 const CHECKPOINT_FAILURES_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/failures.json');
 const LEARN_BASE_DIR = path.join(ROOT_DIR, 'qa/mesh/intelligence/learning');
 
-startScheduler();
+if (process.env.RUNNING_IN_PIPELINE !== '1' && process.env.QA_MESH_DISABLE_SCHEDULER !== '1') {
+  startScheduler();
+}
 
 function getRegistry() {
   return loadRegistry();

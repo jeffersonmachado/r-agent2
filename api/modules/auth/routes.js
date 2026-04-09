@@ -121,7 +121,7 @@ function createAuthRoutes({
 
   router.get('/auth/rpa/token', (req, res) => {
     try {
-      const rpaTokenManager = require('../../../tests/rpa/utils/rpaTokenManager');
+      const rpaTokenManager = require('../../../core/rpa/utils/rpaTokenManager');
       const token = rpaTokenManager.getOrCreateRpaToken();
       sendJson(res, 200, {
         token,
