@@ -90,6 +90,19 @@ qa-mesh/meshReport.json
 qa-mesh/metrics.json
 qa-mesh/repairPlan.json
 qa-mesh/scheduler-state.json
+qa-mesh/intelligence/latest.json
+qa-mesh/meshRegistry.json
+
+# Artefatos locais de checkpoints e inteligência de QA
+qa/checkpoints/state/*.json
+qa/checkpoints/reports/WAVE-MESH.md
+qa/checkpoints/reports/final-summary.json
+qa/checkpoints/reports/final-summary.md
+qa/checkpoints/waves/WAVE-MESH.json
+qa/mesh/intelligence/history/index.json
+qa/mesh/intelligence/history/stability-*.json
+qa/mesh/intelligence/learning/*.json
+qa/mesh/intelligence/stabilitySnapshot.json
 
 # Metadados locais de ferramenta
 .codex
