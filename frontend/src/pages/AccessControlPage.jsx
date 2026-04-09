@@ -24,6 +24,25 @@ const TABS = [
   { id: 'events', label: 'Eventos' },
 ];
 
+const pillStyle = {
+  padding: '0.5rem 0.75rem',
+  border: '1px solid var(--color-border-default)',
+  borderRadius: 999,
+  background: 'var(--color-bg-primary)',
+  color: 'var(--color-text-primary)',
+};
+
+const cardStyle = {
+  border: '1px solid var(--color-border-default)',
+  borderRadius: 10,
+  padding: '0.75rem',
+  background: 'var(--color-bg-primary)',
+};
+
+const mutedStyle = {
+  color: 'var(--color-text-secondary)',
+};
+
 function Panel({ title, children, action = null }) {
   return (
     <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
@@ -271,7 +290,7 @@ export function AccessControlPage() {
       </Panel>
 
       {error ? (
-        <div style={{ padding: '0.75rem', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, marginBottom: '1rem' }}>
+        <div className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-text-primary">
           <strong>Erro:</strong> {error}
         </div>
       ) : null}
@@ -279,25 +298,29 @@ export function AccessControlPage() {
       {healthSnapshot ? (
         <Panel title="Saúde Operacional">
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-            <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+            <div style={pillStyle}>
               Threshold pending crítico {Math.round((healthSnapshot.threshold_ms || 0) / 60000)} min
             </div>
-            <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+            <div style={pillStyle}>
               Escopo {healthSnapshot.threshold_scope || 'environment_default'}
             </div>
-            <div style={{ padding: '0.5rem 0.75rem', border: healthSnapshot.has_incidents ? '1px solid #fca5a5' : '1px solid #bbf7d0', background: healthSnapshot.has_incidents ? '#fff1f2' : '#f0fdf4', borderRadius: 999 }}>
+            <div style={{
+              ...pillStyle,
+              border: healthSnapshot.has_incidents ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+              background: healthSnapshot.has_incidents ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+            }}>
               {healthSnapshot.has_incidents ? 'Ação necessária' : 'Saudável'}
             </div>
-            <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+            <div style={pillStyle}>
               Pendências críticas {healthSnapshot.summary?.pending_critical || 0}
             </div>
           </div>
           {healthSnapshot.pending_critical_items?.length ? (
             <div style={{ display: 'grid', gap: '0.5rem' }}>
               {healthSnapshot.pending_critical_items.slice(0, 5).map((item) => (
-                <div key={item.id} style={{ border: '1px solid #fecaca', borderRadius: 10, padding: '0.75rem', background: '#fff7ed' }}>
+                <div key={item.id} style={{ ...cardStyle, border: '1px solid rgba(239, 68, 68, 0.35)', background: 'rgba(239, 68, 68, 0.08)' }}>
                   <strong>{item.id}</strong> · {item.reason_code || '-'} · device {item.device_id || '-'} · subject {item.subject_id || '-'}
-                  <div style={{ color: '#7c2d12', marginTop: '0.35rem' }}>
+                  <div style={{ ...mutedStyle, marginTop: '0.35rem' }}>
                     Critério {Math.round((item.pending_critical_threshold_ms || healthSnapshot.threshold_ms || 0) / 60000)} min · {item.pending_critical_threshold_source || healthSnapshot.threshold_scope || 'environment_default'}
                   </div>
                 </div>
@@ -309,7 +332,7 @@ export function AccessControlPage() {
           {healthSnapshot.failed_items?.length ? (
             <div style={{ display: 'grid', gap: '0.5rem', marginTop: '1rem' }}>
               {healthSnapshot.failed_items.slice(0, 5).map((item) => (
-                <div key={`failed-${item.id}`} style={{ border: '1px solid #fed7aa', borderRadius: 10, padding: '0.75rem', background: '#fff7ed' }}>
+                <div key={`failed-${item.id}`} style={{ ...cardStyle, border: '1px solid rgba(245, 158, 11, 0.35)', background: 'rgba(245, 158, 11, 0.10)' }}>
                   <strong>Falha {item.id}</strong> · {item.reason_code || '-'} · device {item.device_id || '-'} · subject {item.subject_id || '-'}
                 </div>
               ))}
@@ -342,9 +365,9 @@ export function AccessControlPage() {
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {devices.map((item) => (
-                <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' }}>
+                <div key={item.id} style={cardStyle}>
                   <div><strong>{item.name}</strong> · {item.type}</div>
-                  <div style={{ color: '#6b7280' }}>{item.vendor || 'vendor genérico'} · unidade {item.unit_id || '-'}</div>
+                  <div style={mutedStyle}>{item.vendor || 'vendor genérico'} · unidade {item.unit_id || '-'}</div>
                 </div>
               ))}
               {devices.length === 0 ? <p>Nenhum dispositivo.</p> : null}
@@ -358,9 +381,9 @@ export function AccessControlPage() {
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {credentials.map((item) => (
-                <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' }}>
+                <div key={item.id} style={cardStyle}>
                   <div><strong>{item.type}</strong> · subject {item.subject_id}</div>
-                  <div style={{ color: '#6b7280' }}>status {item.status} · ref {item.credential_ref || '-'}</div>
+                  <div style={mutedStyle}>status {item.status} · ref {item.credential_ref || '-'}</div>
                 </div>
               ))}
               {credentials.length === 0 ? <p>Nenhuma credencial.</p> : null}
@@ -374,9 +397,9 @@ export function AccessControlPage() {
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {policies.map((item) => (
-                <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' }}>
+                <div key={item.id} style={cardStyle}>
                   <div><strong>{item.name}</strong> · {item.vertical}</div>
-                  <div style={{ color: '#6b7280' }}>
+                  <div style={mutedStyle}>
                     {item.time_start || '--:--'} - {item.time_end || '--:--'} · anti-passback {item.anti_passback_mode} · pending crítico {Math.round(((item.metadata?.pending_critical_age_ms || item.metadata?.pendingCriticalAgeMs || healthSnapshot?.threshold_ms || 0) / 60000))} min
                   </div>
                 </div>
@@ -392,9 +415,9 @@ export function AccessControlPage() {
           {loading ? <p>Carregando...</p> : (
             <div style={{ display: 'grid', gap: '0.75rem' }}>
               {events.map((item) => (
-                <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' }}>
+                <div key={item.id} style={cardStyle}>
                   <div><strong>{item.event_type}</strong> · {item.reason_code || '-'}</div>
-                  <div style={{ color: '#6b7280' }}>{item.subject_id || '-'} · {item.device_id || '-'} · {item.occurred_at}</div>
+                  <div style={mutedStyle}>{item.subject_id || '-'} · {item.device_id || '-'} · {item.occurred_at}</div>
                 </div>
               ))}
               {events.length === 0 ? <p>Nenhum evento.</p> : null}
@@ -446,22 +469,22 @@ export function AccessControlPage() {
         >
           {decisionSummary ? (
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+              <div style={pillStyle}>
                 Total {decisionSummary.total || 0}
               </div>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+              <div style={pillStyle}>
                 Pending {decisionSummary.pending || 0}
               </div>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #fecaca', background: '#fff1f2', borderRadius: 999 }}>
+              <div style={{ ...pillStyle, border: '1px solid rgba(239, 68, 68, 0.35)', background: 'rgba(239, 68, 68, 0.12)' }}>
                 Pending crítico {decisionSummary.pending_critical || 0}
               </div>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+              <div style={pillStyle}>
                 Executed {decisionSummary.executed || 0}
               </div>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+              <div style={pillStyle}>
                 Failed {decisionSummary.failed || 0}
               </div>
-              <div style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 999 }}>
+              <div style={pillStyle}>
                 Expired {decisionSummary.expired || 0}
               </div>
             </div>
@@ -472,8 +495,9 @@ export function AccessControlPage() {
                 <div
                   key={item.id}
                   style={{
-                    border: item.pending_critical ? '1px solid #fca5a5' : '1px solid #e5e7eb',
-                    background: item.pending_critical ? '#fff7ed' : '#fff',
+                    ...cardStyle,
+                    border: item.pending_critical ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--color-border-default)',
+                    background: item.pending_critical ? 'rgba(239, 68, 68, 0.08)' : 'var(--color-bg-primary)',
                     borderRadius: 10,
                     padding: '0.75rem',
                   }}
@@ -482,10 +506,10 @@ export function AccessControlPage() {
                     <strong>{item.decision}</strong> · {item.reason_code || '-'} · status {item.execution_status || 'pending'}
                     {item.pending_critical ? ' · pendente crítico' : ''}
                   </div>
-                  <div style={{ color: '#6b7280' }}>
+                  <div style={mutedStyle}>
                     device {item.device_id || '-'} · subject {item.subject_id || '-'} · {item.issued_at || item.created_at || '-'}
                   </div>
-                  <div style={{ color: '#6b7280' }}>
+                  <div style={mutedStyle}>
                     threshold {Math.round(((item.pending_critical_threshold_ms || healthSnapshot?.threshold_ms || 0) / 60000))} min · {item.pending_critical_threshold_source || healthSnapshot?.threshold_scope || 'environment_default'}
                   </div>
                 </div>

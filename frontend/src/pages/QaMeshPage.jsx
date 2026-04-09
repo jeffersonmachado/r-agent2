@@ -160,10 +160,11 @@ export function QaMeshPage() {
 
   return (
     <CrudPageBase>
-      <section className="mb-6 rounded-2xl border border-border-default bg-gradient-to-r from-[#fff4db] via-[#fffaf1] to-[#eef9f2] p-6 shadow-sm">
+      <section className="mb-6 rounded-2xl border border-border-default bg-[linear-gradient(135deg,rgba(31,31,31,0.98),rgba(31,31,31,0.94)_58%,rgba(94,106,210,0.14))] p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Unified Execution Mesh</h1>
+          <div className="max-w-3xl">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b7c2ff]">QA Mesh</div>
+            <h1 className="mt-2 text-3xl font-bold text-text-primary">Unified Execution Mesh</h1>
             <p className="mt-2 text-sm text-text-secondary">
               Operação unificada de QA + RPA com execução assíncrona, replay universal e gate real.
             </p>

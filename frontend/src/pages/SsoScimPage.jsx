@@ -92,18 +92,18 @@ export function SsoScimPage() {
     <CrudPageBase
       title="SSO / SCIM"
       actions={(
-        <Button onClick={loadSettings} disabled={loading}>
+        <Button onClick={loadSettings} disabled={loading} variant="primary">
           🔄 Atualizar
         </Button>
       )}
     >
       <ToastContainer />
-      <div style={{ padding: '24px' }}>
-        <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+      <div className="p-6">
+        <p className="mb-5 text-text-secondary">
           Configurações básicas para identidade e provisionamento.
         </p>
 
-        <div style={{ display: 'grid', gap: '16px' }}>
+        <div className="grid gap-4">
           <section className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-text-primary mb-3">SSO</h2>
             <textarea
@@ -112,8 +112,8 @@ export function SsoScimPage() {
               onChange={(e) => setSsoJson(e.target.value)}
               className="w-full p-3 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm"
             />
-            <div style={{ marginTop: '8px' }}>
-              <Button onClick={() => handleSave('sso')} disabled={loading}>Salvar SSO</Button>
+            <div className="mt-2">
+              <Button onClick={() => handleSave('sso')} disabled={loading} variant="primary">Salvar SSO</Button>
             </div>
           </section>
 
@@ -125,8 +125,8 @@ export function SsoScimPage() {
               onChange={(e) => setScimJson(e.target.value)}
               className="w-full p-3 bg-bg-secondary border border-border-default rounded-lg text-text-primary font-mono text-sm"
             />
-            <div style={{ marginTop: '8px' }}>
-              <Button onClick={() => handleSave('scim')} disabled={loading}>Salvar SCIM</Button>
+            <div className="mt-2">
+              <Button onClick={() => handleSave('scim')} disabled={loading} variant="primary">Salvar SCIM</Button>
             </div>
           </section>
         </div>

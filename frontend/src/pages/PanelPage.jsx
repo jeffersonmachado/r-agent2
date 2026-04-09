@@ -40,31 +40,30 @@ export function PanelPage() {
   const waiting = state?.waiting || [];
 
   return (
-    <div style={{ minHeight: '100vh', padding: '2rem' }}>
-      <h1 style={{ fontSize: 42, marginBottom: 8 }}>Painel de Chamada</h1>
-      {error ? <p style={{ color: '#ef4444' }}>{error}</p> : null}
+    <div className="min-h-screen bg-bg-primary p-8 text-text-primary">
+      <h1 className="mb-2 text-[42px] font-bold">Painel de Chamada</h1>
+      {error ? <p className="text-status-error">{error}</p> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '1rem' }}>
-          <div style={{ color: '#6b7280' }}>Chamando agora</div>
-          <div style={{ fontSize: 96, fontWeight: 800 }}>
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="rounded-xl border border-border-default bg-bg-elevated p-4">
+          <div className="text-text-secondary">Chamando agora</div>
+          <div className="text-[96px] font-extrabold">
             {lastCalled ? lastCalled.ticket_number : '—'}
           </div>
         </div>
 
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: '1rem' }}>
-          <div style={{ color: '#6b7280', marginBottom: 8 }}>Aguardando</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="rounded-xl border border-border-default bg-bg-elevated p-4">
+          <div className="mb-2 text-text-secondary">Aguardando</div>
+          <div className="flex flex-wrap gap-2">
             {waiting.slice(0, 16).map((t) => (
-              <div key={t.id} style={{ padding: '0.5rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 18 }}>
+              <div key={t.id} className="rounded-[10px] border border-border-default bg-bg-primary px-3 py-2 text-lg">
                 {t.ticket_number}
               </div>
             ))}
-            {waiting.length === 0 ? <div style={{ color: '#6b7280' }}>Sem fila no momento.</div> : null}
+            {waiting.length === 0 ? <div className="text-text-secondary">Sem fila no momento.</div> : null}
           </div>
         </div>
       </div>
     </div>
   );
 }
-

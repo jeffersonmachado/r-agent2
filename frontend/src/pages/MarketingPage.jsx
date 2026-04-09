@@ -20,6 +20,32 @@ import { Button } from '../styles/Button';
 import { CrudPageBase } from '../modules/crud-base';
 
 const STAGE_ORDER = ['visitor', 'lead', 'mql', 'sql', 'customer'];
+const SURFACE_STYLE = {
+  background: 'var(--color-bg-elevated)',
+  border: '1px solid var(--color-border-default)',
+  borderRadius: '12px',
+  padding: '16px',
+  boxShadow: '0 10px 24px rgba(0, 0, 0, 0.12)',
+};
+const CARD_STYLE = {
+  padding: '8px 12px',
+  border: '1px solid var(--color-border-default)',
+  borderRadius: '8px',
+  background: 'var(--color-bg-primary)',
+};
+const MUTED_TEXT_STYLE = {
+  color: 'var(--color-text-secondary)',
+};
+const TABLE_STYLE = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: '13px',
+};
+const TABLE_CELL_STYLE = {
+  padding: '6px',
+  borderBottom: '1px solid var(--color-border-default)',
+  color: 'var(--color-text-primary)',
+};
 
 function toSafeString(value) {
   return value == null ? '' : String(value).trim();
@@ -388,7 +414,7 @@ export function MarketingPage() {
           <h1>🧲 Marketing v1</h1>
         </div>
         <div className="support-controls">
-          <Button onClick={loadAll} style={{ backgroundColor: '#6366f1', color: 'white' }}>
+          <Button onClick={loadAll} variant="primary">
             🔄 Atualizar
           </Button>
         </div>
@@ -438,14 +464,14 @@ export function MarketingPage() {
       </div>
 
       <div style={{ padding: '24px', paddingTop: 0 }}>
-        <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+        <p style={{ ...MUTED_TEXT_STYLE, marginBottom: '20px' }}>
           Gestão de forms, leads, scoring, campanhas e jornada/funil operacional.
         </p>
 
         <div style={{ display: 'grid', gap: '16px' }}>
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Links rastreáveis</h2>
-            <p style={{ color: '#6b7280', marginBottom: '12px' }}>
+            <p style={{ ...MUTED_TEXT_STYLE, marginBottom: '12px' }}>
               Gere links com UTM e acompanhe cliques.
             </p>
             <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
@@ -490,19 +516,19 @@ export function MarketingPage() {
                 placeholder="Código (opcional)"
               />
             </div>
-            <button onClick={handleCreateLink} disabled={loading} style={{ marginTop: '12px' }}>
+            <button onClick={handleCreateLink} disabled={loading} className="btn-primary px-4 py-2 text-sm" style={{ marginTop: '12px' }}>
               Criar link
             </button>
 
             <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={TABLE_STYLE}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: '6px' }}>Nome</th>
-                    <th style={{ textAlign: 'left', padding: '6px' }}>Código</th>
-                    <th style={{ textAlign: 'left', padding: '6px' }}>Destino</th>
-                    <th style={{ textAlign: 'left', padding: '6px' }}>Cliques</th>
-                    <th style={{ textAlign: 'left', padding: '6px' }}>Short URL</th>
+                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Nome</th>
+                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Código</th>
+                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Destino</th>
+                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Cliques</th>
+                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Short URL</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -510,11 +536,11 @@ export function MarketingPage() {
                     const shortUrl = buildApiUrl(`/mkt/l/${encodeURIComponent(link.code)}`);
                     return (
                       <tr key={link.id}>
-                        <td style={{ padding: '6px' }}>{link.name}</td>
-                        <td style={{ padding: '6px' }}>{link.code}</td>
-                        <td style={{ padding: '6px' }}>{link.target_url || link.targetUrl}</td>
-                        <td style={{ padding: '6px' }}>{link.click_count ?? 0}</td>
-                        <td style={{ padding: '6px' }}>
+                        <td style={TABLE_CELL_STYLE}>{link.name}</td>
+                        <td style={TABLE_CELL_STYLE}>{link.code}</td>
+                        <td style={TABLE_CELL_STYLE}>{link.target_url || link.targetUrl}</td>
+                        <td style={TABLE_CELL_STYLE}>{link.click_count ?? 0}</td>
+                        <td style={TABLE_CELL_STYLE}>
                           <a href={shortUrl} target="_blank" rel="noreferrer">{shortUrl}</a>
                         </td>
                       </tr>
@@ -522,21 +548,21 @@ export function MarketingPage() {
                   })}
                   {(!links || links.length === 0) && (
                     <tr>
-                      <td colSpan={5} style={{ padding: '6px', color: '#6b7280' }}>Nenhum link cadastrado</td>
+                      <td colSpan={5} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhum link cadastrado</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </section>
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Funil de Leads</h2>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               {Object.keys(leadStatsMap).length === 0 ? (
-                <span style={{ color: '#6b7280' }}>Sem dados</span>
+                <span style={MUTED_TEXT_STYLE}>Sem dados</span>
               ) : (
                 Object.values(leadStatsMap).map((row) => (
-                  <div key={row.stage || Math.random()} style={{ padding: '8px 12px', border: '1px solid #eee', borderRadius: '6px' }}>
+                  <div key={row.stage || Math.random()} style={CARD_STYLE}>
                     <strong>{row.stage || 'unknown'}</strong>
                     <div>Leads: {row.count}</div>
                     <div>Score médio: {Number(row.avg_score || 0).toFixed(1)}</div>
@@ -546,25 +572,25 @@ export function MarketingPage() {
             </div>
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Funil visual avançado</h2>
             {funnelRows.length === 0 ? (
-              <span style={{ color: '#6b7280' }}>Sem dados para o funil.</span>
+              <span style={MUTED_TEXT_STYLE}>Sem dados para o funil.</span>
             ) : (
               <div style={{ display: 'grid', gap: '10px' }}>
                 {funnelRows.map((row) => (
                   <div key={row.stage} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 220px', gap: '10px', alignItems: 'center' }}>
                     <div style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '12px' }}>{row.stage}</div>
-                    <div style={{ background: '#f3f4f6', borderRadius: '999px', overflow: 'hidden', height: '18px' }}>
+                    <div style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-default)', borderRadius: '999px', overflow: 'hidden', height: '18px' }}>
                       <div
                         style={{
                           width: `${row.widthPct}%`,
-                          background: 'linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%)',
+                          background: 'linear-gradient(90deg, var(--color-accent-primary) 0%, rgba(94, 106, 210, 0.45) 100%)',
                           height: '100%',
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: '12px', color: '#374151' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                       {row.count} lead(s)
                       {row.conversionRate != null && ` | ${row.conversionRate.toFixed(1)}% do estágio anterior`}
                     </div>
@@ -574,30 +600,30 @@ export function MarketingPage() {
             )}
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Jornada por origem/campanha</h2>
             {journeyRows.length === 0 ? (
-              <span style={{ color: '#6b7280' }}>Sem leads com metadados de jornada.</span>
+              <span style={MUTED_TEXT_STYLE}>Sem leads com metadados de jornada.</span>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <table style={TABLE_STYLE}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: '6px' }}>Origem</th>
-                      <th style={{ textAlign: 'left', padding: '6px' }}>Campanha</th>
-                      <th style={{ textAlign: 'left', padding: '6px' }}>Leads</th>
-                      <th style={{ textAlign: 'left', padding: '6px' }}>Score médio</th>
-                      <th style={{ textAlign: 'left', padding: '6px' }}>Conversão cliente</th>
+                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Origem</th>
+                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Campanha</th>
+                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Leads</th>
+                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Score médio</th>
+                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Conversão cliente</th>
                     </tr>
                   </thead>
                   <tbody>
                     {journeyRows.slice(0, 20).map((row) => (
                       <tr key={`${row.source}-${row.campaign}`}>
-                        <td style={{ padding: '6px' }}>{row.source}</td>
-                        <td style={{ padding: '6px' }}>{row.campaign}</td>
-                        <td style={{ padding: '6px' }}>{row.leads}</td>
-                        <td style={{ padding: '6px' }}>{row.avgScore.toFixed(1)}</td>
-                        <td style={{ padding: '6px' }}>{row.conversionToCustomer.toFixed(1)}%</td>
+                        <td style={TABLE_CELL_STYLE}>{row.source}</td>
+                        <td style={TABLE_CELL_STYLE}>{row.campaign}</td>
+                        <td style={TABLE_CELL_STYLE}>{row.leads}</td>
+                        <td style={TABLE_CELL_STYLE}>{row.avgScore.toFixed(1)}</td>
+                        <td style={TABLE_CELL_STYLE}>{row.conversionToCustomer.toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -606,32 +632,32 @@ export function MarketingPage() {
             )}
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Alertas de jornada/campanha</h2>
             {journeyAlerts.length === 0 ? (
-              <span style={{ color: '#6b7280' }}>Sem alertas críticos no momento.</span>
+              <span style={MUTED_TEXT_STYLE}>Sem alertas críticos no momento.</span>
             ) : (
               <div style={{ display: 'grid', gap: '8px' }}>
                 {journeyAlerts.map((alert, idx) => (
                   <div
                     key={`${alert.title}-${idx}`}
                     style={{
-                      border: '1px solid #e5e7eb',
-                      borderLeft: `4px solid ${alert.level === 'high' ? '#ef4444' : '#f59e0b'}`,
+                      border: `1px solid ${alert.level === 'high' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                      borderLeft: `4px solid ${alert.level === 'high' ? 'var(--color-status-error)' : 'var(--color-status-warning)'}`,
                       padding: '10px',
                       borderRadius: '6px',
-                      background: '#fafafa',
+                      background: 'var(--color-bg-primary)',
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{alert.title}</div>
-                    <div style={{ fontSize: '12px', color: '#4b5563' }}>{alert.detail}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{alert.detail}</div>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Forms</h2>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
               <input placeholder="slug" value={formData.slug} onChange={(e) => setFormData((s) => ({ ...s, slug: e.target.value }))} />
@@ -640,95 +666,95 @@ export function MarketingPage() {
                 <option value="active">active</option>
                 <option value="inactive">inactive</option>
               </select>
-              <button onClick={handleCreateForm} disabled={loading}>Salvar</button>
+              <button onClick={handleCreateForm} disabled={loading} className="btn-primary px-4 py-2 text-sm">Salvar</button>
             </div>
-            <table style={{ width: '100%', fontSize: '13px' }}>
+            <table style={TABLE_STYLE}>
               <thead>
                 <tr>
-                  <th align="left">Slug</th>
-                  <th align="left">Nome</th>
-                  <th align="left">Status</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Slug</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {forms.map((f) => (
                   <tr key={f.id || f.slug}>
-                    <td>{f.slug}</td>
-                    <td>{f.name}</td>
-                    <td>{f.status}</td>
+                    <td style={TABLE_CELL_STYLE}>{f.slug}</td>
+                    <td style={TABLE_CELL_STYLE}>{f.name}</td>
+                    <td style={TABLE_CELL_STYLE}>{f.status}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Leads</h2>
-            <table style={{ width: '100%', fontSize: '13px' }}>
+            <table style={TABLE_STYLE}>
               <thead>
                 <tr>
-                  <th align="left">Nome</th>
-                  <th align="left">Email</th>
-                  <th align="left">Score</th>
-                  <th align="left">Stage</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Email</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Score</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Stage</th>
                 </tr>
               </thead>
               <tbody>
                 {leads.map((l) => (
                   <tr key={l.id}>
-                    <td>{l.name || '-'}</td>
-                    <td>{l.email || '-'}</td>
-                    <td>{l.score}</td>
-                    <td>{l.stage}</td>
+                    <td style={TABLE_CELL_STYLE}>{l.name || '-'}</td>
+                    <td style={TABLE_CELL_STYLE}>{l.email || '-'}</td>
+                    <td style={TABLE_CELL_STYLE}>{l.score}</td>
+                    <td style={TABLE_CELL_STYLE}>{l.stage}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Scoring Rules</h2>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
               <input placeholder="nome" value={ruleData.name} onChange={(e) => setRuleData((s) => ({ ...s, name: e.target.value }))} />
               <input placeholder="eventType" value={ruleData.eventType} onChange={(e) => setRuleData((s) => ({ ...s, eventType: e.target.value }))} />
               <input placeholder="delta" type="number" value={ruleData.delta} onChange={(e) => setRuleData((s) => ({ ...s, delta: e.target.value }))} />
-              <button onClick={handleCreateRule} disabled={loading}>Salvar</button>
+              <button onClick={handleCreateRule} disabled={loading} className="btn-primary px-4 py-2 text-sm">Salvar</button>
             </div>
-            <table style={{ width: '100%', fontSize: '13px' }}>
+            <table style={TABLE_STYLE}>
               <thead>
                 <tr>
-                  <th align="left">Nome</th>
-                  <th align="left">EventType</th>
-                  <th align="left">Delta</th>
-                  <th align="left">Enabled</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>EventType</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Delta</th>
+                  <th align="left" style={TABLE_CELL_STYLE}>Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {scoringRules.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.name}</td>
-                    <td>{r.event_type || r.eventType}</td>
-                    <td>{r.delta}</td>
-                    <td>{r.enabled ? 'sim' : 'nao'}</td>
+                    <td style={TABLE_CELL_STYLE}>{r.name}</td>
+                    <td style={TABLE_CELL_STYLE}>{r.event_type || r.eventType}</td>
+                    <td style={TABLE_CELL_STYLE}>{r.delta}</td>
+                    <td style={TABLE_CELL_STYLE}>{r.enabled ? 'sim' : 'nao'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+          <section style={SURFACE_STYLE}>
             <h2 style={{ marginBottom: '8px' }}>Campanhas de Email</h2>
             <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
               <input placeholder="nome" value={campaignData.name} onChange={(e) => setCampaignData((s) => ({ ...s, name: e.target.value }))} />
               <input placeholder="assunto" value={campaignData.subject} onChange={(e) => setCampaignData((s) => ({ ...s, subject: e.target.value }))} />
               <textarea placeholder="corpo texto" rows={4} value={campaignData.bodyText} onChange={(e) => setCampaignData((s) => ({ ...s, bodyText: e.target.value }))} />
               <input placeholder="minScore (opcional)" type="number" value={campaignData.minScore} onChange={(e) => setCampaignData((s) => ({ ...s, minScore: e.target.value }))} />
-              <button onClick={handleCreateCampaign} disabled={loading}>Criar campanha (draft)</button>
+              <button onClick={handleCreateCampaign} disabled={loading} className="btn-primary px-4 py-2 text-sm">Criar campanha (draft)</button>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <input placeholder="ID da campanha" value={sendCampaignId} onChange={(e) => setSendCampaignId(e.target.value)} />
-              <button onClick={handleSendCampaign} disabled={loading}>Enviar</button>
+              <button onClick={handleSendCampaign} disabled={loading} className="btn-default px-4 py-2 text-sm">Enviar</button>
             </div>
           </section>
         </div>
