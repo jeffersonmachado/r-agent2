@@ -36,4 +36,44 @@ describe('checkpointManager', () => {
     expect(data.validation.buildBackend).toBe(true);
     expect(fs.existsSync(checkpointManager.paths.PROGRESS_PATH)).toBe(true);
   });
+
+  test('normaliza falhas historicas supersedidas pelo ultimo checkpoint bem-sucedido', () => {
+    const waves = [
+      {
+        wave: 'WAVE-2',
+        status: 'failed',
+        startedAt: '2026-04-07T15:48:29.995Z',
+        finishedAt: '2026-04-07T15:48:29.996Z',
+      },
+      {
+        wave: 'WAVE-MESH',
+        status: 'passed',
+        startedAt: '2026-04-08T17:33:27.499Z',
+        finishedAt: '2026-04-08T18:25:13.096Z',
+      },
+    ];
+    const progress = {
+      currentWave: 'WAVE-MESH',
+      completedWaves: ['WAVE-MESH'],
+      failedWaves: ['WAVE-2'],
+      globalStatus: 'blocked',
+      lastSuccessfulCheckpoint: 'WAVE-MESH',
+    };
+    const failures = [
+      {
+        wave: 'WAVE-MESH',
+        finishedAt: '2026-04-08T17:21:58.910Z',
+        blockers: ['qa_mesh_no_go'],
+      },
+      {
+        wave: 'WAVE-2',
+        finishedAt: '2026-04-07T15:48:29.996Z',
+        blockers: ['backend_build'],
+      },
+    ];
+
+    const normalized = checkpointManager.normalizeFailures({ progress, failures, waves });
+
+    expect(normalized).toEqual([]);
+  });
 });

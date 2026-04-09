@@ -46,6 +46,14 @@ function safeReadJson(filePath, fallback) {
   }
 }
 
+function safeReadDir(dirPath) {
+  try {
+    return fs.readdirSync(dirPath);
+  } catch (_) {
+    return [];
+  }
+}
+
 function writeJson(filePath, payload) {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
@@ -152,8 +160,127 @@ function appendFailureRecord(item) {
   writeJson(FAILURES_PATH, current);
 }
 
+function toTimestamp(value) {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 function uniqueList(items = []) {
   return Array.from(new Set((items || []).filter(Boolean)));
+}
+
+function loadAllWaves() {
+  ensureStateFiles();
+  return safeReadDir(WAVES_DIR)
+    .filter((fileName) => fileName.endsWith('.json'))
+    .map((fileName) => safeReadJson(path.join(WAVES_DIR, fileName), null))
+    .filter(Boolean)
+    .sort((left, right) => {
+      const leftTs = toTimestamp(left.finishedAt || left.startedAt) || 0;
+      const rightTs = toTimestamp(right.finishedAt || right.startedAt) || 0;
+      return leftTs - rightTs;
+    });
+}
+
+function normalizeFailures({ progress = {}, failures = [], waves = [] } = {}) {
+  const waveIndex = new Map(
+    (waves || []).map((wave) => [normalizeWaveId(wave.wave), wave])
+  );
+  const lastSuccessfulWaveId = progress?.lastSuccessfulCheckpoint
+    ? normalizeWaveId(progress.lastSuccessfulCheckpoint)
+    : null;
+  const lastSuccessfulWave = lastSuccessfulWaveId ? waveIndex.get(lastSuccessfulWaveId) : null;
+  const lastSuccessfulAt = toTimestamp(lastSuccessfulWave?.finishedAt || lastSuccessfulWave?.startedAt);
+  const latestFailureByWave = new Map();
+
+  for (const failure of Array.isArray(failures) ? failures : []) {
+    if (!failure || !failure.wave) continue;
+    const waveId = normalizeWaveId(failure.wave);
+    const failureTs = toTimestamp(failure.finishedAt);
+    const waveState = waveIndex.get(waveId) || null;
+    const waveStateTs = toTimestamp(waveState?.finishedAt || waveState?.startedAt);
+    const waveStatus = String(waveState?.status || '').toLowerCase();
+
+    if (lastSuccessfulAt !== null && failureTs !== null && failureTs <= lastSuccessfulAt) {
+      continue;
+    }
+
+    if ((waveStatus === 'passed' || waveStatus === 'partial') && waveStateTs !== null) {
+      if (failureTs === null || waveStateTs >= failureTs) {
+        continue;
+      }
+    }
+
+    if (waveStatus === 'running') {
+      continue;
+    }
+
+    const previous = latestFailureByWave.get(waveId);
+    const previousTs = toTimestamp(previous?.finishedAt);
+    if (!previous || (failureTs !== null && (previousTs === null || failureTs > previousTs))) {
+      latestFailureByWave.set(waveId, {
+        ...failure,
+        wave: waveId,
+      });
+    }
+  }
+
+  return Array.from(latestFailureByWave.values()).sort((left, right) => {
+    const leftTs = toTimestamp(left.finishedAt) || 0;
+    const rightTs = toTimestamp(right.finishedAt) || 0;
+    return rightTs - leftTs;
+  });
+}
+
+function deriveProgressState(progress = {}, waves = [], failures = []) {
+  const completedWaves = waves
+    .filter((wave) => ['passed', 'partial'].includes(String(wave.status || '').toLowerCase()))
+    .map((wave) => normalizeWaveId(wave.wave));
+  const failedWaves = failures
+    .map((failure) => normalizeWaveId(failure.wave))
+    .filter(Boolean);
+  const runningWave = [...waves]
+    .reverse()
+    .find((wave) => String(wave.status || '').toLowerCase() === 'running');
+
+  return {
+    currentWave: runningWave?.wave || progress.currentWave || null,
+    completedWaves,
+    failedWaves,
+    globalStatus: failures.length > 0 ? 'blocked' : (runningWave ? 'running' : 'completed'),
+    lastSuccessfulCheckpoint: progress.lastSuccessfulCheckpoint || completedWaves[completedWaves.length - 1] || null,
+  };
+}
+
+function buildCheckpointSnapshot() {
+  ensureStateFiles();
+  const progress = safeReadJson(PROGRESS_PATH, {
+    currentWave: null,
+    completedWaves: [],
+    failedWaves: [],
+    globalStatus: 'running',
+    lastSuccessfulCheckpoint: null,
+  });
+  const rawFailures = safeReadJson(FAILURES_PATH, { failures: [] });
+  const failures = Array.isArray(rawFailures)
+    ? rawFailures
+    : Array.isArray(rawFailures?.failures)
+    ? rawFailures.failures
+    : [];
+  const waves = loadAllWaves();
+  const activeFailures = normalizeFailures({ progress, failures, waves });
+
+  return {
+    progress: deriveProgressState(progress, waves, activeFailures),
+    failures: activeFailures,
+    totals: {
+      waves: waves.length,
+      activeFailures: activeFailures.length,
+      historicalFailures: failures.length,
+    },
+    finalizedAt: nowIso(),
+  };
 }
 
 function gateResult(validation) {
@@ -333,6 +460,9 @@ module.exports = {
   failWave,
   markGlobalCompleted,
   loadWave,
+  loadAllWaves,
+  normalizeFailures,
+  buildCheckpointSnapshot,
   gateResult,
   paths: {
     CHECKPOINT_ROOT,

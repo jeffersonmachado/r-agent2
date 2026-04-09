@@ -6,6 +6,7 @@ const cron = require('./nodeCronCompat');
 const { loadRegistry, runMesh } = require('./meshRunner');
 
 const SCHEDULER_STATE_PATH = path.join(__dirname, 'scheduler-state.json');
+const PIPELINE_ACTIVE_LOCK_PATH = path.join(__dirname, '..', 'pipeline', '.active-validation.lock');
 const CRITICAL_CRON = '*/15 * * * *';
 const REGRESSION_CRON = '0 2 * * *';
 
@@ -39,6 +40,14 @@ function selectScenariosForSchedule(kind, registry = loadRegistry()) {
 }
 
 async function runScheduledMesh(kind = 'critical') {
+  if (fs.existsSync(PIPELINE_ACTIVE_LOCK_PATH)) {
+    return {
+      skipped: true,
+      reason: 'pipeline_active',
+      state: safeReadState(),
+    };
+  }
+
   if (activeLock) {
     return {
       skipped: true,
@@ -59,6 +68,7 @@ async function runScheduledMesh(kind = 'critical') {
       scenarioIds: selected.map((item) => item.id),
       autoReplayOnFailure: true,
       executionKind: kind,
+      writeCanonicalOutputs: false,
     });
     writeState({
       activeLock: false,
@@ -126,6 +136,7 @@ function stopScheduler() {
 
 module.exports = {
   SCHEDULER_STATE_PATH,
+  PIPELINE_ACTIVE_LOCK_PATH,
   CRITICAL_CRON,
   REGRESSION_CRON,
   selectScenariosForSchedule,

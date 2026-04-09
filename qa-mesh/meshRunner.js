@@ -212,7 +212,7 @@ function normalizeBusinessScenario(item) {
     criticality: item.criticality === 'blocker' ? 'blocking' : item.criticality,
     adapter: 'api',
     command: 'node',
-    commandArgs: ['tests/rpa/business/run.js', `--mode=${modeByType[item.type]}`, `--code=${item.code}`],
+    commandArgs: ['core/rpa/cli.js', 'business', `--mode=${modeByType[item.type]}`, `--code=${item.code}`],
     assertions: item.assertions || [],
     steps: item.preconditions || [],
     impactScopes: [item.vertical, 'ci', 'telemetry'],
@@ -916,6 +916,7 @@ async function executeScenarioWithFallback(scenario, context) {
 async function runMesh(options = {}) {
   ensureDir(HISTORY_DIR);
   ensureDir(EVIDENCE_DIR);
+  const writeCanonicalOutputs = options.writeCanonicalOutputs !== false;
   checkpointManager.ensureStateFiles();
   const waveId = options.wave || process.env.QA_WAVE_ID || 'WAVE-MESH';
   const waveTitle = options.waveTitle || 'Execucao QA Mesh integrada';
@@ -1052,25 +1053,27 @@ async function runMesh(options = {}) {
   }
 
   writeSummary(evidenceDir, summary);
-  writeJson(REPORT_PATH, summary);
-  writeJson(REPAIR_PLAN_PATH, repairPlan);
-  writeJson(QA_MESH_GO_NO_GO_PATH, {
-    source: 'qa-mesh',
-    executionId,
-    status: summary.goNoGo,
-    reasons: summary.reasons,
-    totals: summary,
-    generatedAt: nowIso(),
-  });
-  writeJson(QA_MESH_RELEASE_GATE_PATH, {
-    source: 'qa-mesh',
-    executionId,
-    gate: summary.goNoGo,
-    thresholds: governance.thresholds,
-    totals: summary,
-    reasons: summary.reasons,
-    generatedAt: nowIso(),
-  });
+  if (writeCanonicalOutputs) {
+    writeJson(REPORT_PATH, summary);
+    writeJson(REPAIR_PLAN_PATH, repairPlan);
+    writeJson(QA_MESH_GO_NO_GO_PATH, {
+      source: 'qa-mesh',
+      executionId,
+      status: summary.goNoGo,
+      reasons: summary.reasons,
+      totals: summary,
+      generatedAt: nowIso(),
+    });
+    writeJson(QA_MESH_RELEASE_GATE_PATH, {
+      source: 'qa-mesh',
+      executionId,
+      gate: summary.goNoGo,
+      thresholds: governance.thresholds,
+      totals: summary,
+      reasons: summary.reasons,
+      generatedAt: nowIso(),
+    });
+  }
 
   const execution = {
     executionId,
@@ -1100,7 +1103,9 @@ async function runMesh(options = {}) {
     weakestDomains: execution.intelligence.moduleStability.slice(0, 3),
     outputPath: execution.intelligence.outputPath || null,
   };
-  writeJson(METRICS_PATH, execution.metrics);
+  if (writeCanonicalOutputs) {
+    writeJson(METRICS_PATH, execution.metrics);
+  }
   execution.historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
   writeJson(execution.historyPath, execution);
 
@@ -1124,7 +1129,7 @@ async function runMesh(options = {}) {
       REPAIR_PLAN_PATH,
       QA_MESH_GO_NO_GO_PATH,
       QA_MESH_RELEASE_GATE_PATH,
-    ],
+    ].filter(() => writeCanonicalOutputs),
   });
 
   checkpointManager.registerValidation({
