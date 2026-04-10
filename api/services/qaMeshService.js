@@ -2,7 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { loadRegistry, refreshRegistry, runMesh, loadHistory } = require('../../qa-mesh/meshRunner');
+const { isInPipeline } = require('../../pipeline/guard');
+const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
 const { buildScheduleStatus, runScheduledMesh, startScheduler } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
 
@@ -13,6 +14,8 @@ const CHECKPOINT_WAVES_DIR = path.join(ROOT_DIR, 'qa/checkpoints/waves');
 const CHECKPOINT_PROGRESS_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/progress.json');
 const CHECKPOINT_FAILURES_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/failures.json');
 const LEARN_BASE_DIR = path.join(ROOT_DIR, 'qa/mesh/intelligence/learning');
+const QA_MESH_GO_NO_GO_PATH = path.join(ROOT_DIR, 'qa-mesh', 'go-no-go-report.json');
+const QA_MESH_RELEASE_GATE_PATH = path.join(ROOT_DIR, 'qa-mesh', 'release-gate-report.json');
 
 if (process.env.RUNNING_IN_PIPELINE !== '1' && process.env.QA_MESH_DISABLE_SCHEDULER !== '1') {
   startScheduler();
@@ -33,6 +36,9 @@ function getLatestExecution() {
 function getMeshHistory(options = {}) {
   const limit = Number.isFinite(options.limit) ? options.limit : 20;
   let history = loadHistory(limit);
+  if (options.officialOnly) {
+    history = history.filter((item) => item?.executionOrigin === 'pipeline' && item?.isCanonicalExecution === true);
+  }
   if (options.domain) {
     history = history.filter((item) => (item.results || []).some((result) => result.domain === options.domain));
   }
@@ -45,7 +51,32 @@ function getExecutionById(executionId) {
   if (live) return live;
   const filePath = path.join(__dirname, '../../qa-mesh/meshHistory', `${executionId}.json`);
   if (!fs.existsSync(filePath)) return null;
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return normalizeExecutionRecord(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+}
+
+function getOfficialReference() {
+  const goNoGo = safeReadJson(QA_MESH_GO_NO_GO_PATH, null);
+  const releaseGate = safeReadJson(QA_MESH_RELEASE_GATE_PATH, null);
+  const executionId = releaseGate?.executionId || goNoGo?.executionId || null;
+
+  if (!executionId) {
+    return null;
+  }
+
+  const execution = getExecutionById(executionId);
+
+  return {
+    executionId,
+    gate: releaseGate?.gate || goNoGo?.status || execution?.summary?.goNoGo || 'N/A',
+    status: goNoGo?.status || releaseGate?.gate || execution?.summary?.goNoGo || 'N/A',
+    reasons: goNoGo?.reasons || releaseGate?.reasons || execution?.summary?.reasons || [],
+    historyPath: execution?.historyPath || path.join(ROOT_DIR, 'qa-mesh', 'meshHistory', `${executionId}.json`),
+    reportPaths: {
+      goNoGo: QA_MESH_GO_NO_GO_PATH,
+      releaseGate: QA_MESH_RELEASE_GATE_PATH,
+    },
+    execution: execution || null,
+  };
 }
 
 function safeReadJson(filePath, fallback) {
@@ -161,6 +192,7 @@ function queueMeshRun(options = {}) {
   return enqueueExecution('run', options, async (executionId) => {
     return runMesh({
       executionId,
+      executionOrigin: 'manual_run',
       scenarioIds: options.scenarioIds,
       domain: options.domain,
       type: options.type,
@@ -169,6 +201,7 @@ function queueMeshRun(options = {}) {
       impactOnly: options.impactOnly,
       detectChangedFiles: options.detectChangedFiles,
       autoReplayOnFailure: false,
+      writeCanonicalOutputs: false,
       onLog(log) {
         appendLog(executionId, log.message, log.level, log);
       },
@@ -192,11 +225,20 @@ function queueScenarioReplay(scenarioId) {
   const registry = loadRegistry();
   const scenario = registry.find((item) => item.id === scenarioId);
   if (!scenario) throw new Error('Cenário não encontrado');
+  if (scenario.requiresOfficialPipeline && process.env.PIPELINE_BYPASS !== '1' && !isInPipeline()) {
+    const error = new Error(
+      'Este cenário exige o pipeline oficial e não pode ser reproduzido pela UI local. Execute: npm run pipeline. Para uso local explícito, use PIPELINE_BYPASS=1.'
+    );
+    error.code = 'PIPELINE_REQUIRED';
+    throw error;
+  }
   return enqueueExecution('replay', { scenarioId }, async (executionId) => {
     return runMesh({
       executionId,
+      executionOrigin: 'manual_replay',
       scenarioIds: [scenarioId],
       autoReplayOnFailure: false,
+      writeCanonicalOutputs: false,
       onLog(log) {
         appendLog(executionId, log.message, log.level, log);
       },
@@ -233,6 +275,7 @@ module.exports = {
   refreshMeshRegistry,
   getLatestExecution,
   getMeshHistory,
+  getOfficialReference,
   getExecutionById,
   queueMeshRun,
   queueScenarioReplay,

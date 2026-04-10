@@ -43,6 +43,51 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function determineExecutionOrigin(options = {}) {
+  if (options.executionOrigin) return options.executionOrigin;
+  if (process.env.RUNNING_IN_PIPELINE === '1') return 'pipeline';
+  if (options.executionKind) return 'scheduler';
+  if (Array.isArray(options.scenarioIds) && options.scenarioIds.length === 1) return 'manual_replay';
+  return 'manual_run';
+}
+
+function normalizeExecutionRecord(execution) {
+  if (!execution || typeof execution !== 'object') return execution;
+
+  const summary = execution.summary && typeof execution.summary === 'object' ? execution.summary : {};
+  const executionKind = execution.executionKind || summary.executionKind || null;
+
+  let executionOrigin = execution.executionOrigin || summary.executionOrigin || null;
+  if (!executionOrigin) {
+    if (executionKind && ['smoke', 'critical', 'regression'].includes(executionKind)) {
+      executionOrigin = 'scheduler';
+    } else if (String(execution.executionId || '').startsWith('mesh-pipeline-')) {
+      executionOrigin = 'pipeline';
+    } else if (String(execution.executionId || '').startsWith('meshq-')) {
+      executionOrigin = 'manual_run';
+    } else {
+      executionOrigin = 'unknown';
+    }
+  }
+
+  const isCanonicalExecution = execution.isCanonicalExecution === true
+    || summary.isCanonicalExecution === true
+    || (executionOrigin === 'pipeline' && execution.isCanonicalExecution !== false && summary.isCanonicalExecution !== false);
+
+  return {
+    ...execution,
+    executionKind,
+    executionOrigin,
+    isCanonicalExecution,
+    summary: {
+      ...summary,
+      executionKind,
+      executionOrigin,
+      isCanonicalExecution,
+    },
+  };
+}
+
 function toScenarioBase(partial) {
   return {
     id: partial.id,
@@ -56,8 +101,16 @@ function toScenarioBase(partial) {
     criticality: partial.criticality || 'medium',
     adapter: partial.adapter || 'api',
     impactScopes: partial.impactScopes || [],
+    requiresOfficialPipeline: partial.requiresOfficialPipeline === true,
     ...partial,
   };
+}
+
+function scenarioRequiresOfficialPipeline(scenario = {}) {
+  if (scenario.requiresOfficialPipeline === true) return true;
+  if (scenario.command !== 'node') return false;
+  const args = Array.isArray(scenario.commandArgs) ? scenario.commandArgs : [];
+  return args[0] === 'core/rpa/cli.js' && args[1] === 'business';
 }
 
 function loadQaSmokeScenarios() {
@@ -217,6 +270,7 @@ function normalizeBusinessScenario(item) {
     steps: item.preconditions || [],
     impactScopes: [item.vertical, 'ci', 'telemetry'],
     scenarioCode: item.code,
+    requiresOfficialPipeline: true,
   });
 }
 
@@ -275,7 +329,12 @@ function refreshRegistry() {
 
 function loadRegistry() {
   const current = safeReadJson(REGISTRY_PATH, null);
-  if (Array.isArray(current) && current.length > 0) return current;
+  if (Array.isArray(current) && current.length > 0) {
+    return current.map((item) => toScenarioBase({
+      ...item,
+      requiresOfficialPipeline: scenarioRequiresOfficialPipeline(item),
+    }));
+  }
   return refreshRegistry();
 }
 
@@ -402,6 +461,17 @@ function detectFailureType(diagnostics = []) {
       failureType: 'functional_failure',
       status: 'failed',
       rootCauseHint: 'Command failed sem evidência suficiente; revisar relatório específico do cenário.',
+    };
+  }
+  if (
+    text.includes('exige o pipeline oficial') ||
+    text.includes('execute: npm run pipeline') ||
+    text.includes('pipeline_bypass=1')
+  ) {
+    return {
+      failureType: 'pipeline_required',
+      status: 'environment_missing',
+      rootCauseHint: 'Cenário exige execução pelo pipeline oficial ou bypass explícito em ambiente local.',
     };
   }
   if (text.includes('auth_redirect') || text.includes('rpa_maintenance_auth_redirect')) {
@@ -533,6 +603,17 @@ function classifyScenarioResult(result, history = []) {
   }
 
   const diagnostics = collectScenarioDiagnostics(result);
+  const classification = detectFailureType(diagnostics);
+  if (classification.failureType === 'pipeline_required') {
+    return {
+      ...result,
+      status: classification.status,
+      failureType: classification.failureType,
+      errorMessage: diagnostics[0] || null,
+      rootCauseHint: classification.rootCauseHint,
+      durationMs: durationMs(result.startedAt, result.finishedAt),
+    };
+  }
   const recentStatuses = history
     .flatMap((execution) => execution.results || [])
     .filter((item) => item.id === result.id)
@@ -550,7 +631,6 @@ function classifyScenarioResult(result, history = []) {
     };
   }
 
-  const classification = detectFailureType(diagnostics);
   return {
     ...result,
     status: classification.status,
@@ -832,7 +912,7 @@ function loadHistory(limit = 20) {
     .sort()
     .reverse()
     .slice(0, limit)
-    .map((file) => safeReadJson(path.join(HISTORY_DIR, file), null))
+    .map((file) => normalizeExecutionRecord(safeReadJson(path.join(HISTORY_DIR, file), null)))
     .filter(Boolean);
 }
 
@@ -916,7 +996,11 @@ async function executeScenarioWithFallback(scenario, context) {
 async function runMesh(options = {}) {
   ensureDir(HISTORY_DIR);
   ensureDir(EVIDENCE_DIR);
-  const writeCanonicalOutputs = options.writeCanonicalOutputs !== false;
+  const requestedCanonicalOutputs = options.writeCanonicalOutputs !== false;
+  const executionOrigin = determineExecutionOrigin(options);
+  const executionKind = options.executionKind || null;
+  const writeCanonicalOutputs = requestedCanonicalOutputs && process.env.RUNNING_IN_PIPELINE === '1';
+  const isCanonicalExecution = writeCanonicalOutputs && executionOrigin === 'pipeline';
   checkpointManager.ensureStateFiles();
   const waveId = options.wave || process.env.QA_WAVE_ID || 'WAVE-MESH';
   const waveTitle = options.waveTitle || 'Execucao QA Mesh integrada';
@@ -1008,6 +1092,9 @@ async function runMesh(options = {}) {
   const summary = {
     executionId,
     timestamp: startedAt,
+    executionOrigin,
+    executionKind,
+    isCanonicalExecution,
     registryTotal,
     attempted: governance.attempted,
     executed: governance.executed,
@@ -1027,6 +1114,7 @@ async function runMesh(options = {}) {
     domains: governance.domains,
     goNoGo: governance.goNoGo,
     reasons: governance.reasons,
+    pipelineBlocked: failureAnalysis.failuresByType.pipeline_required || 0,
     failuresByDomain: failureAnalysis.failuresByDomain,
     failuresByType: failureAnalysis.failuresByType,
     topErrors: failureAnalysis.topErrors,
@@ -1059,6 +1147,9 @@ async function runMesh(options = {}) {
     writeJson(QA_MESH_GO_NO_GO_PATH, {
       source: 'qa-mesh',
       executionId,
+      executionOrigin,
+      executionKind,
+      isCanonicalExecution,
       status: summary.goNoGo,
       reasons: summary.reasons,
       totals: summary,
@@ -1067,6 +1158,9 @@ async function runMesh(options = {}) {
     writeJson(QA_MESH_RELEASE_GATE_PATH, {
       source: 'qa-mesh',
       executionId,
+      executionOrigin,
+      executionKind,
+      isCanonicalExecution,
       gate: summary.goNoGo,
       thresholds: governance.thresholds,
       totals: summary,
@@ -1079,6 +1173,9 @@ async function runMesh(options = {}) {
     executionId,
     startedAt,
     finishedAt: nowIso(),
+    executionOrigin,
+    executionKind,
+    isCanonicalExecution,
     changedFiles,
     summary,
     governance,
@@ -1107,7 +1204,7 @@ async function runMesh(options = {}) {
     writeJson(METRICS_PATH, execution.metrics);
   }
   execution.historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
-  writeJson(execution.historyPath, execution);
+  writeJson(execution.historyPath, normalizeExecutionRecord(execution));
 
   checkpointManager.registerProgress({
     wave: waveId,
@@ -1217,6 +1314,7 @@ module.exports = {
   HISTORY_DIR,
   EVIDENCE_DIR,
   buildRegistry,
+  scenarioRequiresOfficialPipeline,
   refreshRegistry,
   loadRegistry,
   selectScenarios,
@@ -1224,4 +1322,5 @@ module.exports = {
   loadHistory,
   diffAgainstPrevious,
   executeScenarioWithFallback,
+  normalizeExecutionRecord,
 };

@@ -76,6 +76,7 @@ describe('qa-mesh/meshScheduler', () => {
     await runScheduledMesh('critical');
 
     expect(meshRunner.runMesh).toHaveBeenCalledWith(expect.objectContaining({
+      executionOrigin: 'scheduler',
       executionKind: 'critical',
       autoReplayOnFailure: true,
       writeCanonicalOutputs: false,

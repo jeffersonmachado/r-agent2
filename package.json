@@ -60,6 +60,8 @@
     "qa:mesh": "node pipeline/entrypoints/runQaMesh.js",
     "qa:mesh:refresh": "PIPELINE_BYPASS=1 node pipeline/entrypoints/runQaMesh.js --refresh-registry",
     "qa:mesh:impact": "PIPELINE_BYPASS=1 node pipeline/entrypoints/runQaMesh.js --impact-only",
+    "qa:mesh:history:reclassify-pipeline": "node scripts/reclassify-qa-mesh-pipeline-history.js",
+    "qa:mesh:history:backfill-origin": "node scripts/backfill-qa-mesh-execution-origin.js",
     "qa:mesh:scheduler": "node -e \"const { runScheduledMesh } = require('./qa-mesh/meshScheduler'); runScheduledMesh(process.env.MESH_KIND || 'critical').then((result)=>{ console.log(JSON.stringify(result.summary,null,2)); if(result.summary.goNoGo==='NO_GO') process.exitCode=1; }).catch((error)=>{ console.error(error); process.exit(1); });\"",
     "qa:final-report": "node qa/final-report.js",
     "system:bootstrap": "node tools/system/bootstrap.js",

@@ -67,6 +67,7 @@ async function runScheduledMesh(kind = 'critical') {
     const result = await runMesh({
       scenarioIds: selected.map((item) => item.id),
       autoReplayOnFailure: true,
+      executionOrigin: 'scheduler',
       executionKind: kind,
       writeCanonicalOutputs: false,
     });
