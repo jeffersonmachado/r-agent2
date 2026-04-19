@@ -4,18 +4,22 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Dialog } from '../components/Dialog';
-import { listRpaReplays, getRpaReplay, deleteRpaReplay } from '../api/flows';
+import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays } from '../api/flows';
 import logger from '../utils/logger';
 
 /**
  * Página para listar e visualizar todos os arquivos de replay RPA.
  */
 export function RpaReplaysPage() {
+  const DEFAULT_PAGE_SIZE = 50;
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
 
   const [replays, setReplays] = useState([]);
+  const [pagination, setPagination] = useState({ total: 0, limit: DEFAULT_PAGE_SIZE, offset: 0, hasMore: false });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [selectedReplay, setSelectedReplay] = useState(null);
   const [replayData, setReplayData] = useState(null);
@@ -26,7 +30,9 @@ export function RpaReplaysPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1000); // ms entre passos (1000ms = 1 segundo)
   const [deletingReplay, setDeletingReplay] = useState(null);
+  const [deletingAllReplays, setDeletingAllReplays] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [actionsLogCollapsed, setActionsLogCollapsed] = useState(false);
   const [actionsLogWidth, setActionsLogWidth] = useState(() => {
     const saved = localStorage.getItem('replayActionsLogWidth');
@@ -70,16 +76,45 @@ export function RpaReplaysPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchText, filterResult, filterDateRange, sortBy, sortOrder, pageSize]);
+
   // Carrega lista de replays
   useEffect(() => {
     loadReplays();
-  }, []);
+  }, [currentPage, pageSize, searchText, filterResult, filterDateRange, sortBy, sortOrder]);
 
-  const loadReplays = async () => {
+  const loadReplays = async (options = {}) => {
+    const requestedPage = options.page || currentPage;
+    const requestedPageSize = options.pageSize || pageSize;
+    const offset = (requestedPage - 1) * requestedPageSize;
+
     setLoading(true);
     try {
-      const result = await listRpaReplays();
+      const result = await listRpaReplays({
+        limit: requestedPageSize,
+        offset,
+        search: searchText.trim(),
+        result: filterResult,
+        dateRange: filterDateRange,
+        sortBy,
+        sortOrder,
+      });
       setReplays(result.files || []);
+
+      const nextPagination = result.pagination || {
+        total: result.files?.length || 0,
+        limit: requestedPageSize,
+        offset,
+        hasMore: false,
+      };
+      setPagination(nextPagination);
+
+      const totalPages = Math.max(1, Math.ceil((nextPagination.total || 0) / (nextPagination.limit || requestedPageSize || 1)));
+      if (requestedPage > totalPages) {
+        setCurrentPage(totalPages);
+      }
     } catch (err) {
       logger.error('Erro ao carregar replays', err);
       showToast('Erro ao carregar lista de replays', 'error', 3000);
@@ -284,8 +319,12 @@ export function RpaReplaysPage() {
       await deleteRpaReplay(filename);
       showToast(`Replay "${filename}" removido com sucesso`, 'success', 3000);
       setShowDeleteConfirm(null);
-      // Recarrega a lista
-      await loadReplays();
+      const remainingItemsOnPage = Math.max(replays.length - 1, 0);
+      if (remainingItemsOnPage === 0 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        await loadReplays();
+      }
     } catch (err) {
       logger.error('Erro ao remover replay', err);
       showToast('Erro ao remover replay', 'error', 3000);
@@ -294,94 +333,12 @@ export function RpaReplaysPage() {
     }
   };
 
-  // Função de filtragem
-  const getFilteredReplays = () => {
-    let filtered = [...replays];
-
-    // Filtro de busca por texto (nome, ID, recordingId)
-    if (searchText.trim()) {
-      const searchLower = searchText.toLowerCase();
-      filtered = filtered.filter(replay => {
-        const filename = (replay.filename || '').toLowerCase();
-        const id = (replay.id || '').toLowerCase();
-        const recordingId = (replay.recordingId || '').toLowerCase();
-        return filename.includes(searchLower) || 
-               id.includes(searchLower) || 
-               recordingId.includes(searchLower);
-      });
-    }
-
-    // Filtro por resultado
-    if (filterResult !== 'all') {
-      filtered = filtered.filter(replay => {
-        if (filterResult === 'success') {
-          return replay.result === 'success';
-        } else if (filterResult === 'failed') {
-          return replay.result !== 'success' && replay.result !== undefined;
-        }
-        return true;
-      });
-    }
-
-    // Filtro por data
-    if (filterDateRange !== 'all') {
-      const now = new Date();
-      const cutoffDate = new Date();
-      
-      if (filterDateRange === 'today') {
-        cutoffDate.setHours(0, 0, 0, 0);
-      } else if (filterDateRange === 'week') {
-        cutoffDate.setDate(now.getDate() - 7);
-      } else if (filterDateRange === 'month') {
-        cutoffDate.setDate(now.getDate() - 30);
-      }
-
-      filtered = filtered.filter(replay => {
-        const replayDate = new Date(replay.modified || replay.startTime || 0);
-        return replayDate >= cutoffDate;
-      });
-    }
-
-    // Ordenação
-    filtered.sort((a, b) => {
-      let compareA, compareB;
-
-      switch (sortBy) {
-        case 'name':
-          compareA = (a.filename || '').toLowerCase();
-          compareB = (b.filename || '').toLowerCase();
-          break;
-        case 'size':
-          compareA = a.size || 0;
-          compareB = b.size || 0;
-          break;
-        case 'duration':
-          compareA = a.duration || 0;
-          compareB = b.duration || 0;
-          break;
-        case 'date':
-        default:
-          compareA = new Date(a.modified || a.startTime || 0).getTime();
-          compareB = new Date(b.modified || b.startTime || 0).getTime();
-          break;
-      }
-
-      if (sortBy === 'name') {
-        return sortOrder === 'asc' 
-          ? compareA.localeCompare(compareB)
-          : compareB.localeCompare(compareA);
-      } else {
-        return sortOrder === 'asc' 
-          ? compareA - compareB
-          : compareB - compareA;
-      }
-    });
-
-    return filtered;
-  };
-
-  const filteredReplays = getFilteredReplays();
+  const filteredReplays = replays;
   const hasActiveFilters = searchText.trim() || filterResult !== 'all' || filterDateRange !== 'all';
+  const totalReplays = pagination.total || replays.length;
+  const totalPages = Math.max(1, Math.ceil(totalReplays / (pagination.limit || pageSize || 1)));
+  const pageStart = totalReplays === 0 ? 0 : (pagination.offset || 0) + 1;
+  const pageEnd = totalReplays === 0 ? 0 : Math.min((pagination.offset || 0) + replays.length, totalReplays);
 
   const clearFilters = () => {
     setSearchText('');
@@ -389,6 +346,22 @@ export function RpaReplaysPage() {
     setFilterDateRange('all');
     setSortBy('date');
     setSortOrder('desc');
+  };
+
+  const confirmDeleteAllReplays = async () => {
+    setDeletingAllReplays(true);
+    try {
+      const result = await deleteAllRpaReplays();
+      showToast(`Todos os replays foram removidos (${result.deletedCount})`, 'success', 3000);
+      setShowDeleteAllConfirm(false);
+      setCurrentPage(1);
+      await loadReplays({ page: 1 });
+    } catch (err) {
+      logger.error('Erro ao remover todos os replays', err);
+      showToast('Erro ao remover todos os replays', 'error', 3000);
+    } finally {
+      setDeletingAllReplays(false);
+    }
   };
 
   return (
@@ -402,21 +375,50 @@ export function RpaReplaysPage() {
             </h1>
             <p className="text-text-secondary">
               Visualize todos os arquivos de replay de testes RPA executados
-              {filteredReplays.length !== replays.length && (
+              {hasActiveFilters && (
                 <span className="ml-2 text-accent-primary">
-                  ({filteredReplays.length} de {replays.length})
+                  (filtros aplicados no servidor)
                 </span>
               )}
             </p>
+            <p className="text-text-tertiary text-sm mt-1">
+              Exibindo {pageStart}-{pageEnd} de {totalReplays} replay{totalReplays !== 1 ? 's' : ''}
+            </p>
           </div>
-          <Button
-            onClick={loadReplays}
-            variant="default"
-            size="sm"
-            disabled={loading}
-          >
-            🔄 Atualizar Lista
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-text-secondary">
+              <span>Por página</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setCurrentPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+                className="px-2 py-1 text-sm bg-bg-primary border border-border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </label>
+            <Button
+              onClick={() => loadReplays()}
+              variant="default"
+              size="sm"
+              disabled={loading}
+            >
+              🔄 Atualizar Lista
+            </Button>
+            <Button
+              onClick={() => setShowDeleteAllConfirm(true)}
+              variant="danger"
+              size="sm"
+              disabled={loading || deletingAllReplays || totalReplays === 0}
+            >
+              🗑️ Remover Todos
+            </Button>
+          </div>
         </div>
 
         {/* Painel de Filtros */}
@@ -557,111 +559,154 @@ export function RpaReplaysPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredReplays.map((replay) => (
-              <div
-                key={replay.filename}
-                className="bg-bg-secondary rounded-lg border border-border-default p-4 hover:border-accent-primary transition-colors"
-              >
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 
-                    className="text-sm font-semibold text-text-primary truncate flex-1 cursor-pointer"
-                    onClick={() => handleViewReplay(replay.filename)}
-                    title={replay.filename}
-                  >
-                    {replay.filename}
-                  </h3>
-                  <button
-                    onClick={(e) => handleDeleteReplay(replay.filename, e)}
-                    disabled={deletingReplay === replay.filename}
-                    className="text-status-error hover:text-status-error/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-                    title="Remover replay"
-                  >
-                    {deletingReplay === replay.filename ? (
-                      <span className="animate-spin">⏳</span>
-                    ) : (
-                      <span>🗑️</span>
-                    )}
-                  </button>
-                </div>
-                
-                <div 
-                  className="cursor-pointer"
-                  onClick={() => handleViewReplay(replay.filename)}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredReplays.map((replay) => (
+                <div
+                  key={replay.filename}
+                  className="bg-bg-secondary rounded-lg border border-border-default p-4 hover:border-accent-primary transition-colors"
                 >
-                  {/* Informações básicas */}
-                  <div className="flex items-center justify-between text-xs text-text-tertiary mt-2">
-                    <span>{formatFileSize(replay.size)}</span>
-                    <span>{formatDate(replay.modified)}</span>
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <h3 
+                      className="text-sm font-semibold text-text-primary truncate flex-1 cursor-pointer"
+                      onClick={() => handleViewReplay(replay.filename)}
+                      title={replay.filename}
+                    >
+                      {replay.filename}
+                    </h3>
+                    <button
+                      onClick={(e) => handleDeleteReplay(replay.filename, e)}
+                      disabled={deletingReplay === replay.filename}
+                      className="text-status-error hover:text-status-error/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                      title="Remover replay"
+                    >
+                      {deletingReplay === replay.filename ? (
+                        <span className="animate-spin">⏳</span>
+                      ) : (
+                        <span>🗑️</span>
+                      )}
+                    </button>
                   </div>
+                  
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => handleViewReplay(replay.filename)}
+                  >
+                    <div className="flex items-center justify-between text-xs text-text-tertiary mt-2">
+                      <span>{formatFileSize(replay.size)}</span>
+                      <span>{formatDate(replay.modified)}</span>
+                    </div>
 
-                  {/* Detalhes adicionais */}
-                  <div className="mt-3 space-y-1 text-xs">
-                    {replay.id && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">ID:</span>{' '}
-                        <span className="font-mono">{replay.id}</span>
-                      </div>
-                    )}
-                    {replay.recordingId && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Gravação:</span>{' '}
-                        <span className="font-mono">{replay.recordingId}</span>
-                      </div>
-                    )}
-                    {replay.result && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Resultado:</span>{' '}
-                        <span className={`${
-                          replay.result === 'success' 
-                            ? 'text-status-success' 
-                            : 'text-status-error'
-                        }`}>
-                          {replay.result === 'success' ? '✓ Sucesso' : '✗ Falhou'}
-                        </span>
-                      </div>
-                    )}
-                    {replay.mode && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Modo:</span>{' '}
-                        <span>{replay.mode}</span>
-                      </div>
-                    )}
-                    {(replay.actionCount !== undefined || replay.screenCount !== undefined) && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Ações:</span>{' '}
-                        <span>{replay.actionCount || 0}</span>
-                        {replay.screenCount !== undefined && (
-                          <>
-                            {' • '}
-                            <span className="text-text-tertiary">Telas:</span>{' '}
-                            <span>{replay.screenCount}</span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {replay.errorCount > 0 && (
-                      <div className="text-status-error">
-                        <span className="text-text-tertiary">Erros:</span>{' '}
-                        <span>{replay.errorCount}</span>
-                      </div>
-                    )}
-                    {replay.duration && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Duração:</span>{' '}
-                        <span>{formatDuration(replay.duration)}</span>
-                      </div>
-                    )}
-                    {replay.startTime && (
-                      <div className="text-text-secondary">
-                        <span className="text-text-tertiary">Início:</span>{' '}
-                        <span>{formatDate(replay.startTime)}</span>
-                      </div>
-                    )}
+                    <div className="mt-3 space-y-1 text-xs">
+                      {replay.id && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">ID:</span>{' '}
+                          <span className="font-mono">{replay.id}</span>
+                        </div>
+                      )}
+                      {replay.recordingId && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Gravação:</span>{' '}
+                          <span className="font-mono">{replay.recordingId}</span>
+                        </div>
+                      )}
+                      {replay.result && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Resultado:</span>{' '}
+                          <span className={`${
+                            replay.result === 'success' 
+                              ? 'text-status-success' 
+                              : 'text-status-error'
+                          }`}>
+                            {replay.result === 'success' ? '✓ Sucesso' : '✗ Falhou'}
+                          </span>
+                        </div>
+                      )}
+                      {replay.mode && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Modo:</span>{' '}
+                          <span>{replay.mode}</span>
+                        </div>
+                      )}
+                      {(replay.actionCount !== undefined || replay.screenCount !== undefined) && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Ações:</span>{' '}
+                          <span>{replay.actionCount || 0}</span>
+                          {replay.screenCount !== undefined && (
+                            <>
+                              {' • '}
+                              <span className="text-text-tertiary">Telas:</span>{' '}
+                              <span>{replay.screenCount}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {replay.errorCount > 0 && (
+                        <div className="text-status-error">
+                          <span className="text-text-tertiary">Erros:</span>{' '}
+                          <span>{replay.errorCount}</span>
+                        </div>
+                      )}
+                      {replay.duration && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Duração:</span>{' '}
+                          <span>{formatDuration(replay.duration)}</span>
+                        </div>
+                      )}
+                      {replay.startTime && (
+                        <div className="text-text-secondary">
+                          <span className="text-text-tertiary">Início:</span>{' '}
+                          <span>{formatDate(replay.startTime)}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-bg-secondary rounded-lg border border-border-default p-4">
+              <div className="text-sm text-text-secondary">
+                Página {currentPage} de {totalPages}
+                {hasActiveFilters && (
+                  <span className="text-text-tertiary"> • filtros aplicados no servidor</span>
+                )}
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setCurrentPage(1)}
+                  variant="default"
+                  size="sm"
+                  disabled={loading || currentPage === 1}
+                >
+                  ⏮️ Primeira
+                </Button>
+                <Button
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  variant="default"
+                  size="sm"
+                  disabled={loading || currentPage === 1}
+                >
+                  ◀️ Anterior
+                </Button>
+                <Button
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  variant="default"
+                  size="sm"
+                  disabled={loading || currentPage >= totalPages}
+                >
+                  Próxima ▶️
+                </Button>
+                <Button
+                  onClick={() => setCurrentPage(totalPages)}
+                  variant="default"
+                  size="sm"
+                  disabled={loading || currentPage >= totalPages}
+                >
+                  Última ⏭️
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1259,6 +1304,39 @@ export function RpaReplaysPage() {
               disabled={deletingReplay !== null}
             >
               {deletingReplay ? 'Removendo...' : 'Remover'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={showDeleteAllConfirm}
+        onClose={() => setShowDeleteAllConfirm(false)}
+        title="🗑️ Confirmar Remoção Total"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-text-primary">
+            Tem certeza que deseja remover <strong>todos os replays</strong>?
+          </p>
+          <p className="text-text-secondary text-sm">
+            Esta ação remove os arquivos de replay da raiz e do diretório system. Não pode ser desfeita.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button
+              onClick={() => setShowDeleteAllConfirm(false)}
+              variant="default"
+              size="sm"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmDeleteAllReplays}
+              variant="danger"
+              size="sm"
+              disabled={deletingAllReplays}
+            >
+              {deletingAllReplays ? 'Removendo...' : 'Remover Todos'}
             </Button>
           </div>
         </div>

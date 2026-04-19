@@ -188,6 +188,7 @@ export function SupportPage() {
   // Usa useRef para manter referências estáveis
   const showToastRef = React.useRef(showToast);
   const loadTicketsRef = React.useRef();
+  const aiSummaryAutoRequestedRef = React.useRef(new Set());
 
   React.useEffect(() => {
     showToastRef.current = showToast;
@@ -544,26 +545,47 @@ export function SupportPage() {
   useEffect(() => {
     if (!selectedTicket?.id) {
       setAiSummary(null);
+      setAiSummaryLoading(false);
       return;
     }
-    getTicketAiSummary(selectedTicket.id)
-      .then((resp) => setAiSummary(resp?.summary || null))
-      .catch(() => setAiSummary(null));
-  }, [selectedTicket?.id]);
-
-  const handleGenerateAiSummary = async () => {
-    if (!selectedTicket?.id) return;
     setAiSummaryLoading(true);
-    try {
-      const resp = await generateTicketAiSummary(selectedTicket.id);
-      setAiSummary(resp?.summary || null);
-    } catch (err) {
-      logger.error('Erro ao gerar resumo IA', err);
-      showToast('Erro ao gerar resumo IA', 'error');
-    } finally {
-      setAiSummaryLoading(false);
-    }
-  };
+    let active = true;
+
+    (async () => {
+      try {
+        const resp = await getTicketAiSummary(selectedTicket.id);
+        const existingSummary = resp?.summary || null;
+        if (!active) return;
+
+        if (existingSummary) {
+          setAiSummary(existingSummary);
+          return;
+        }
+
+        if (aiSummaryAutoRequestedRef.current.has(selectedTicket.id)) {
+          setAiSummary(null);
+          return;
+        }
+
+        aiSummaryAutoRequestedRef.current.add(selectedTicket.id);
+        const generated = await generateTicketAiSummary(selectedTicket.id);
+        if (!active) return;
+        setAiSummary(generated?.summary || null);
+      } catch (err) {
+        if (!active) return;
+        logger.error('Erro ao carregar/gerar resumo IA', err);
+        setAiSummary(null);
+      } finally {
+        if (active) {
+          setAiSummaryLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedTicket?.id]);
 
   useEffect(() => {
     if (!showCloseModal) return;
@@ -1791,14 +1813,11 @@ export function SupportPage() {
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <div style={{ fontWeight: 700 }}>Resumo IA</div>
-                      <Button
-                        onClick={handleGenerateAiSummary}
-                        disabled={aiSummaryLoading}
-                        style={{ width: 'auto' }}
-                        title="Gerar ou atualizar resumo do ticket"
-                      >
-                        {aiSummaryLoading ? 'Gerando...' : (aiSummary ? 'Atualizar' : 'Gerar')}
-                      </Button>
+                      {aiSummaryLoading ? (
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                          Gerando automaticamente...
+                        </div>
+                      ) : null}
                     </div>
                     {aiSummary ? (
                       typeof aiSummary === 'string' ? (
@@ -1812,7 +1831,7 @@ export function SupportPage() {
                       )
                     ) : (
                       <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        Sem resumo gerado para este ticket.
+                        {aiSummaryLoading ? 'Preparando resumo automatico para este ticket...' : 'Sem resumo disponivel para este ticket.'}
                       </div>
                     )}
                   </div>

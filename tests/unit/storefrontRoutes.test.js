@@ -116,6 +116,14 @@ describe('storefrontRoutes handler', () => {
         idempotencyKey: ' idem-1 ',
         deliveryType: 'delivery',
         deliveryAddress: { line1: 'Rua A' },
+        attribution: {
+          utm_source: 'google',
+          utm_campaign: 'search brand',
+          utm_term: 'crm brand',
+          gclid: 'gclid-123',
+          campaignId: 'cmp-1',
+          keywordText: 'crm brand',
+        },
       })),
     });
 
@@ -132,7 +140,18 @@ describe('storefrontRoutes handler', () => {
       notes: 'sem cebola',
       deliveryType: 'delivery',
       deliveryAddress: { line1: 'Rua A' },
-      context: { publicTokenId: 'pt-2', idempotencyKey: 'idem-1' },
+      context: {
+        publicTokenId: 'pt-2',
+        idempotencyKey: 'idem-1',
+        marketingAttribution: {
+          utm_source: 'google',
+          utm_campaign: 'search brand',
+          utm_term: 'crm brand',
+          gclid: 'gclid-123',
+          campaignId: 'cmp-1',
+          keywordText: 'crm brand',
+        },
+      },
     });
     expect(createDeliveryForOrder).toHaveBeenCalledWith({
       tenantId: 'tenant-1',

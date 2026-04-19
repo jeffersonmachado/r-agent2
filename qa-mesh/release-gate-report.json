@@ -1,6 +1,9 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-04-07T23-08-10-246Z",
+  "executionId": "mesh-20260410183504-hlzgin",
+  "executionOrigin": "pipeline",
+  "executionKind": null,
+  "isCanonicalExecution": true,
   "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
@@ -12,8 +15,11 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-04-07T23-08-10-246Z",
-    "timestamp": "2026-04-07T23:08:10.246Z",
+    "executionId": "mesh-20260410183504-hlzgin",
+    "timestamp": "2026-04-10T18:36:52.965Z",
+    "executionOrigin": "pipeline",
+    "executionKind": null,
+    "isCanonicalExecution": true,
     "registryTotal": 50,
     "attempted": 50,
     "executed": 50,
@@ -133,6 +139,7 @@
     },
     "goNoGo": "GO",
     "reasons": [],
+    "pipelineBlocked": 0,
     "failuresByDomain": {
       "beauty": {
         "total": 0,
@@ -201,5 +208,5 @@
     "changedFiles": []
   },
   "reasons": [],
-  "generatedAt": "2026-04-07T23:25:02.535Z"
+  "generatedAt": "2026-04-10T18:52:17.810Z"
 }

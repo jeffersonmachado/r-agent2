@@ -76,6 +76,7 @@ async function handleStorefrontRoutes(ctx) {
       const idempotencyKey = body && body.idempotencyKey ? String(body.idempotencyKey).trim() : null;
       const deliveryType = body && body.deliveryType ? String(body.deliveryType).trim() : 'delivery';
       const deliveryAddress = body && typeof body.deliveryAddress === 'object' && body.deliveryAddress ? body.deliveryAddress : {};
+      const rawAttribution = body && typeof body.attribution === 'object' && body.attribution ? body.attribution : null;
 
       const { createOrder } = require('../../services/orderService');
       const order = await createOrder({
@@ -88,7 +89,7 @@ async function handleStorefrontRoutes(ctx) {
         notes,
         deliveryType,
         deliveryAddress,
-        context: { publicTokenId: resolved.tokenId, idempotencyKey: idempotencyKey || null },
+        context: { publicTokenId: resolved.tokenId, idempotencyKey: idempotencyKey || null, ...(rawAttribution ? { marketingAttribution: rawAttribution } : {}) },
       });
 
       let delivery = null;

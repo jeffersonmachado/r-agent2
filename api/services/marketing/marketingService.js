@@ -13,6 +13,7 @@ const {
 } = require('../../db/models');
 const { appendEventV1 } = require('../eventLedgerService');
 const outboundQueueService = require('../outboundQueueService');
+const googleAdsConversionService = require('./googleAdsConversionService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -55,6 +56,89 @@ function normalizePhone(v) {
   const out = s.startsWith('+') ? s : `+${s}`;
   if (!/^\+[1-9]\d{7,20}$/.test(out)) return null;
   return out;
+}
+
+const ATTRIBUTION_KEYS = [
+  'utm_source',
+  'utm_campaign',
+  'utm_medium',
+  'utm_content',
+  'utm_term',
+  'gclid',
+  'gbraid',
+  'wbraid',
+  'landingUrl',
+  'pageUrl',
+  'referrer',
+];
+
+function safeObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+function parseUrlAttribution(rawUrl) {
+  const url = safeStr(rawUrl);
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, 'http://localhost');
+    const out = {};
+    ['utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'gbraid', 'wbraid'].forEach((key) => {
+      const value = safeStr(parsed.searchParams.get(key));
+      if (value) out[key] = value;
+    });
+    if (!Object.keys(out).length) return null;
+    out.landingUrl = parsed.toString();
+    return out;
+  } catch (_) {
+    return null;
+  }
+}
+
+function mergeAttributionCandidate(target, candidate) {
+  const source = safeObject(candidate);
+  if (!source) return target;
+
+  ATTRIBUTION_KEYS.forEach((key) => {
+    const value = safeStr(source[key]);
+    if (value) target[key] = value;
+  });
+
+  const fromUrl = parseUrlAttribution(source.url || source.pageUrl || source.landingUrl);
+  if (fromUrl) Object.assign(target, fromUrl);
+  return target;
+}
+
+function extractAttribution(attributesPatch) {
+  const out = {};
+  const source = safeObject(attributesPatch);
+  if (!source) return null;
+
+  mergeAttributionCandidate(out, source);
+  mergeAttributionCandidate(out, source.__tracking);
+  mergeAttributionCandidate(out, source.attribution);
+  mergeAttributionCandidate(out, source.lastAttribution);
+  mergeAttributionCandidate(out, source.props);
+
+  if (!Object.keys(out).length) return null;
+  out.capturedAt = new Date().toISOString();
+  return out;
+}
+
+function applyAttribution(attrs, attribution) {
+  if (!attribution || typeof attribution !== 'object') return attrs;
+  const next = attrs && typeof attrs === 'object' ? { ...attrs } : {};
+  const previous = safeObject(next.lastAttribution);
+  next.lastAttribution = {
+    ...(previous || {}),
+    ...attribution,
+  };
+
+  ['utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'gbraid', 'wbraid', 'landingUrl', 'pageUrl', 'referrer'].forEach((key) => {
+    const value = safeStr(attribution[key]);
+    if (value) next[key] = value;
+  });
+
+  return next;
 }
 
 async function listForms({ tenantId }) {
@@ -126,6 +210,7 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
 
   const now = new Date();
   const attrs0 = (attributesPatch && typeof attributesPatch === 'object') ? attributesPatch : null;
+  const attribution = extractAttribution(attrs0);
   const patch = {
     ...(e ? { email: e } : {}),
     ...(p ? { phone: p } : {}),
@@ -139,10 +224,11 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
     const json = row.toJSON ? row.toJSON() : row;
     const attrs = (json.attributes && typeof json.attributes === 'object') ? { ...json.attributes } : {};
     if (attrs0) Object.assign(attrs, attrs0);
-    await row.update({ ...patch, attributes: attrs });
+    await row.update({ ...patch, attributes: applyAttribution(attrs, attribution) });
     return { ok: true, lead: row.toJSON ? row.toJSON() : row, created: false };
   }
 
+  const finalAttributes = applyAttribution(attrs0 || {}, attribution);
   const row2 = await Model.create({
     id: newId('mlead'),
     tenant_key: t,
@@ -152,7 +238,7 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
     name: nm,
     stage: stage ? safeToString(stage) : (e || p ? 'lead' : 'visitor'),
     score: 0,
-    attributes: attrs0 || {},
+    attributes: finalAttributes,
     last_seen_at: now,
     created_at: now,
     updated_at: now,
@@ -350,6 +436,7 @@ async function updateLead({ tenantId, leadId, stage = null, name = null, attribu
   if (!row) return { ok: false, error: 'lead_not_found' };
 
   const current = row.toJSON ? row.toJSON() : row;
+  const previousStage = safeStr(current.stage).toLowerCase();
   const attributes = current.attributes && typeof current.attributes === 'object'
     ? { ...current.attributes }
     : {};
@@ -366,7 +453,31 @@ async function updateLead({ tenantId, leadId, stage = null, name = null, attribu
   if (score != null && Number.isFinite(Number(score))) payload.score = Number(score);
 
   await row.update(payload);
-  return { ok: true, lead: row.toJSON ? row.toJSON() : row };
+  const nextLead = row.toJSON ? row.toJSON() : row;
+
+  if (safeStr(payload.stage).toLowerCase() === 'customer' && previousStage !== 'customer') {
+    const metadata = {
+      source: 'lead_stage_transition',
+      previousStage,
+      nextStage: 'customer',
+      leadId: safeStr(leadId),
+    };
+    const attributesSafe = nextLead.attributes && typeof nextLead.attributes === 'object' ? nextLead.attributes : {};
+    const settingsOut = await googleAdsConversionService.getGoogleAdsSettingsForUpload({ tenantId }).catch(() => null);
+    const settings = settingsOut && settingsOut.ok ? settingsOut.value : null;
+    await googleAdsConversionService.registerOfflineConversion({
+      tenantId,
+      leadId: safeStr(leadId),
+      conversionName: safeStr(settings && settings.defaultConversionName) || 'customer',
+      conversionActionId: safeStr(settings && settings.defaultConversionActionId) || null,
+      conversionValue: attributesSafe.conversionValue || attributesSafe.customerValue || null,
+      currencyCode: attributesSafe.currencyCode || (settings && settings.defaultCurrencyCode) || 'BRL',
+      idempotencyKey: `google_ads:auto_customer:${safeStr(tenantId)}:${safeStr(leadId)}`,
+      metadata,
+    }).catch(() => null);
+  }
+
+  return { ok: true, lead: nextLead };
 }
 
 async function getLeadStats({ tenantId }) {

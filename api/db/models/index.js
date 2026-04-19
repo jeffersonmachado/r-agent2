@@ -98,6 +98,9 @@ const getMarketingEmailCampaign = require('./MarketingEmailCampaign');
 const getMarketingEmailSend = require('./MarketingEmailSend');
 const getMarketingLink = require('./MarketingLink');
 const getMarketingLinkClick = require('./MarketingLinkClick');
+const getMarketingAdConversion = require('./MarketingAdConversion');
+const getMarketingAdsKeywordMetric = require('./MarketingAdsKeywordMetric');
+const getMarketingAdsSearchTermMetric = require('./MarketingAdsSearchTermMetric');
 const getTenantGoal = require('./TenantGoal');
 const getTenantMetricSnapshot = require('./TenantMetricSnapshot');
 const getTenantInsight = require('./TenantInsight');
@@ -212,6 +215,9 @@ const MarketingEmailCampaign = () => getMarketingEmailCampaign();
 const MarketingEmailSend = () => getMarketingEmailSend();
 const MarketingLink = () => getMarketingLink();
 const MarketingLinkClick = () => getMarketingLinkClick();
+const MarketingAdConversion = () => getMarketingAdConversion();
+const MarketingAdsKeywordMetric = () => getMarketingAdsKeywordMetric();
+const MarketingAdsSearchTermMetric = () => getMarketingAdsSearchTermMetric();
 const TenantGoal = () => getTenantGoal();
 const TenantMetricSnapshot = () => getTenantMetricSnapshot();
 const TenantInsight = () => getTenantInsight();
@@ -489,6 +495,11 @@ module.exports = {
   MarketingScoringRule,
   MarketingEmailCampaign,
   MarketingEmailSend,
+  MarketingLink,
+  MarketingLinkClick,
+  MarketingAdConversion,
+  MarketingAdsKeywordMetric,
+  MarketingAdsSearchTermMetric,
   TenantGoal,
   TenantMetricSnapshot,
   TenantInsight,
@@ -603,6 +614,9 @@ module.exports = {
   getMarketingEmailSend,
   getMarketingLink,
   getMarketingLinkClick,
+  getMarketingAdConversion,
+  getMarketingAdsKeywordMetric,
+  getMarketingAdsSearchTermMetric,
   getTenantGoal,
   getTenantMetricSnapshot,
   getTenantInsight,

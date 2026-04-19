@@ -358,6 +358,27 @@ EXCLUDE_LIST=(
     "--exclude=venv"
     "--exclude=.venv"
     "--exclude=*/venv"
+    "--exclude=logs"
+    "--exclude=recordings"
+    "--exclude=replays"
+    "--exclude=reports"
+    "--exclude=remote-dumps"
+    "--exclude=remote-dumps2"
+    "--exclude=tests/rpa/screenshots"
+    "--exclude=tests/rpa/reports"
+    "--exclude=tests/rpa/replay"
+    "--exclude=tests/screenshots"
+    "--exclude=tests/videos"
+    "--exclude=tests/recordings"
+    "--include=tests/"
+    "--include=tests/rpa/***"
+    "--include=tests/helpers/"
+    "--include=tests/helpers/errorClassifier.js"
+    "--exclude=tests/***"
+    "--exclude=qa/release-evidence"
+    "--exclude=qa/smoke"
+    "--exclude=qa-mesh/meshEvidence"
+    "--exclude=qa-mesh/meshHistory"
 )
 
 # Conjuntos de paths a sincronizar (mínimo para rebuild com docker-compose.prod.yml)
@@ -368,6 +389,7 @@ SYNC_PATHS=(
     "package-lock.json"
     "env.example"
     "api"
+    "core"
     "rpa"
     "frontend"
     "engine"
@@ -375,7 +397,10 @@ SYNC_PATHS=(
     "infra"
     "contracts"
     "config"
+    "pipeline"
     "qa"
+    "qa-mesh"
+    "scripts"
     "tests"
     "redis"
     "lib"
@@ -960,6 +985,29 @@ if [ -n "$BUILD_SERVICE" ]; then
     info "Aguardando alguns segundos para o serviço '$BUILD_SERVICE' estabilizar..."
     sleep 10
 
+    if [ "$BUILD_SERVICE" = "api" ]; then
+        info "Verificando API com retry em /health..."
+        HEALTH_CMD="for i in 1 2 3 4 5 6 7 8 9 10 11 12; do if curl -fsS http://localhost:3001/health > /dev/null; then exit 0; fi; sleep 5; done; exit 1"
+        echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde da API"
+        echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_CMD\""
+        echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_CMD"
+        echo ""
+        if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_CMD" > /dev/null 2>&1; then
+            HEALTH_EXIT=0
+            echo -e "${GREEN}[RESULTADO]${NC} API está respondendo em /health (exit code: $HEALTH_EXIT)"
+            info "✓ API está respondendo"
+        else
+            HEALTH_EXIT=$?
+            echo -e "${RED}[RESULTADO]${NC} API não respondeu em /health (exit code: $HEALTH_EXIT)"
+            error "❌ API não respondeu após o recreate"
+            echo ""
+            info "Logs recentes da API para diagnóstico:"
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs --tail=120 api" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            exit 1
+        fi
+        echo ""
+    fi
+
     if [ "$BUILD_SERVICE" = "frontend" ]; then
         info "Verificando Frontend..."
         HEALTH_CMD="curl -f http://localhost:8086 &> /dev/null"
@@ -967,12 +1015,12 @@ if [ -n "$BUILD_SERVICE" ]; then
         echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$HEALTH_CMD\""
         echo -e "${YELLOW}[COMANDO REMOTO]${NC} $HEALTH_CMD"
         echo ""
-        if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_CMD" 2>&1 | grep -vE "(Warning|Permanently)" > /dev/null; then
-            HEALTH_EXIT=${PIPESTATUS[0]}
+        if $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$HEALTH_CMD" > /dev/null 2>&1; then
+            HEALTH_EXIT=0
             echo -e "${GREEN}[RESULTADO]${NC} Frontend está respondendo (exit code: $HEALTH_EXIT)"
             info "✓ Frontend está respondendo"
         else
-            HEALTH_EXIT=${PIPESTATUS[0]}
+            HEALTH_EXIT=$?
             echo -e "${YELLOW}[RESULTADO]${NC} Frontend não está respondendo ainda (exit code: $HEALTH_EXIT)"
             warn "⚠ Frontend não está respondendo ainda (pode estar iniciando)"
         fi

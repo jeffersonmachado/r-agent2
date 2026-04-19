@@ -43,6 +43,53 @@ function normalizeItems(items) {
     .filter((it) => it.name);
 }
 
+function normalizeMarketingAttribution(value) {
+  if (!value || typeof value !== 'object') return null;
+
+  const normalized = {
+    utm_source: value.utm_source != null ? safeTrim(value.utm_source) || null : null,
+    utm_campaign: value.utm_campaign != null ? safeTrim(value.utm_campaign) || null : null,
+    utm_medium: value.utm_medium != null ? safeTrim(value.utm_medium) || null : null,
+    utm_content: value.utm_content != null ? safeTrim(value.utm_content) || null : null,
+    utm_term: value.utm_term != null ? safeTrim(value.utm_term) || null : null,
+    gclid: value.gclid != null ? safeTrim(value.gclid) || null : null,
+    gbraid: value.gbraid != null ? safeTrim(value.gbraid) || null : null,
+    wbraid: value.wbraid != null ? safeTrim(value.wbraid) || null : null,
+    campaignId: value.campaignId != null ? safeTrim(value.campaignId) || null : null,
+    campaignName: value.campaignName != null ? safeTrim(value.campaignName) || null : null,
+    adGroupId: value.adGroupId != null ? safeTrim(value.adGroupId) || null : null,
+    adGroupName: value.adGroupName != null ? safeTrim(value.adGroupName) || null : null,
+    keywordText: value.keywordText != null ? safeTrim(value.keywordText) || null : null,
+    searchTerm: value.searchTerm != null ? safeTrim(value.searchTerm) || null : null,
+  };
+
+  return Object.values(normalized).some((item) => item) ? normalized : null;
+}
+
+function normalizeOrderContext(context) {
+  const source = context && typeof context === 'object' ? context : {};
+  const normalized = { ...source };
+
+  normalized.correlationId = source.correlationId ? safeTrim(source.correlationId) || null : null;
+  normalized.idempotencyKey = source.idempotencyKey ? safeTrim(source.idempotencyKey) || null : null;
+  normalized.publicTokenId = source.publicTokenId ? safeTrim(source.publicTokenId) || null : null;
+
+  if (Object.prototype.hasOwnProperty.call(source, 'marketingAttribution')) {
+    normalized.marketingAttribution = normalizeMarketingAttribution(source.marketingAttribution);
+  }
+
+  if (!normalized.correlationId) delete normalized.correlationId;
+  if (!normalized.idempotencyKey) delete normalized.idempotencyKey;
+  if (!normalized.publicTokenId) delete normalized.publicTokenId;
+  if (!normalized.marketingAttribution) delete normalized.marketingAttribution;
+
+  return normalized;
+}
+
+function hasMarketingAttribution(value) {
+  return !!(value && typeof value === 'object' && Object.values(value).some((item) => !!item));
+}
+
 async function createOrder({
   tenantId,
   source = 'storefront',
@@ -60,7 +107,8 @@ async function createOrder({
   const sequelize = Model.sequelize;
   const id = makeId();
   const orderNumber = makeOrderNumber({ tenantId });
-  const correlationId = context && context.correlationId ? safeToString(context.correlationId) : makeCorrelationId('ordcor');
+  const normalizedContext = normalizeOrderContext(context);
+  const correlationId = normalizedContext.correlationId || makeCorrelationId('ordcor');
 
   const cleanItems = normalizeItems(items);
   if (cleanItems.length === 0) {
@@ -73,7 +121,7 @@ async function createOrder({
   // Idempotência (v1): se o caller fornecer context.idempotencyKey, evita duplicar pedidos
   // em retries HTTP (ex.: storefront) no mesmo dia.
   try {
-    const idk = context && context.idempotencyKey ? safeToString(context.idempotencyKey) : null;
+    const idk = normalizedContext.idempotencyKey || null;
     if (idk && sequelize) {
       const [rows] = await sequelize.query(
         `SELECT id
@@ -106,10 +154,11 @@ async function createOrder({
     notes,
     delivery_type: deliveryType,
     delivery_address: deliveryAddress || {},
-    context: { ...(context || {}), correlationId },
+    context: { ...normalizedContext, correlationId },
   });
 
   const json = row.toJSON ? row.toJSON() : row;
+  const marketingAttributionPresent = hasMarketingAttribution(json?.context?.marketingAttribution);
 
   // best-effort: emit canonical event
   try {
@@ -120,16 +169,38 @@ async function createOrder({
       occurredAt: new Date(),
       correlationId,
       subject: { type: 'order', id },
-      actor: context && context.publicTokenId ? { type: 'public_token', id: safeToString(context.publicTokenId) } : { type: 'system', id: 'api' },
-      idempotencyKey: context && context.idempotencyKey ? `order_created:${tenantId}:${safeToString(context.idempotencyKey)}` : null,
+      actor: normalizedContext.publicTokenId ? { type: 'public_token', id: normalizedContext.publicTokenId } : { type: 'system', id: 'api' },
+      idempotencyKey: normalizedContext.idempotencyKey ? `order_created:${tenantId}:${normalizedContext.idempotencyKey}` : null,
       payload: {
         orderId: id,
         orderNumber,
         status: 'created',
         deliveryType,
         locationId: locationId || null,
+        hasMarketingAttribution: marketingAttributionPresent,
       },
     });
+
+    if (!marketingAttributionPresent) {
+      await appendEventV1({
+        tenantId,
+        type: 'OrderMarketingAttributionMissing',
+        source: source ? `orders.${source}` : 'orders',
+        occurredAt: new Date(),
+        correlationId,
+        subject: { type: 'order', id },
+        actor: normalizedContext.publicTokenId ? { type: 'public_token', id: normalizedContext.publicTokenId } : { type: 'system', id: 'api' },
+        idempotencyKey: `order_missing_marketing_attribution:${tenantId}:${id}`,
+        payload: {
+          orderId: id,
+          orderNumber,
+          status: 'created',
+          deliveryType,
+          locationId: locationId || null,
+          source: source || 'orders',
+        },
+      });
+    }
   } catch (_) {}
 
   return json;

@@ -25,10 +25,30 @@ async function handlePublicMarketingRoutes(ctx) {
       const js = `
 (function(){
   var endpoint = "/mkt/e?token=${String(token).replace(/"/g, '\\"')}";
+  function collectAttribution(){
+    try {
+      var params = new URLSearchParams(location.search || "");
+      var keys = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","gclid","gbraid","wbraid"];
+      var out = {};
+      keys.forEach(function(key){
+        var value = params.get(key);
+        if (value) out[key] = value;
+      });
+      out.pageUrl = location.href;
+      if (document.referrer) out.referrer = document.referrer;
+      return out;
+    } catch(e) {
+      return {};
+    }
+  }
   function send(evt){
     try{
       evt = evt || {};
       evt.ts = evt.ts || Date.now();
+      evt.attribution = Object.assign({}, collectAttribution(), evt.attribution || {});
+      if (evt.props && typeof evt.props === "object") {
+        evt.props = Object.assign({}, collectAttribution(), evt.props || {});
+      }
       var payload = JSON.stringify(evt);
       if (navigator.sendBeacon) {
         var blob = new Blob([payload], {type: "application/json"});
@@ -72,9 +92,16 @@ async function handlePublicMarketingRoutes(ctx) {
       const email = body && body.email ? String(body.email).trim() : null;
       const phone = body && body.phone ? String(body.phone).trim() : null;
       const name = body && body.name ? String(body.name).trim() : null;
+      const leadAttributes = {
+        ...(body && body.props && typeof body.props === 'object' ? body.props : {}),
+        ...(body && body.attribution && typeof body.attribution === 'object' ? { attribution: body.attribution } : {}),
+        ...(body && body.url ? { url: body.url } : {}),
+        ...(body && body.referrer ? { referrer: body.referrer } : {}),
+        ...(body && body.title ? { title: body.title } : {}),
+      };
       const marketing = require('../../services/marketing/marketingService');
       const leadRes = (email || phone || externalId)
-        ? await marketing.upsertLead({ tenantId, email, phone, externalId, name, attributesPatch: body && body.props ? body.props : null })
+        ? await marketing.upsertLead({ tenantId, email, phone, externalId, name, attributesPatch: leadAttributes })
         : null;
       const lead = leadRes && leadRes.ok ? leadRes.lead : null;
 
@@ -203,12 +230,33 @@ async function handlePublicMarketingRoutes(ctx) {
   <script src="/mkt/track.js?token=${encodeURIComponent(String(token))}"></script>
   <script>
     (function(){
+      function collectAttribution(){
+        try {
+          var params = new URLSearchParams(location.search || "");
+          var keys = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","gclid","gbraid","wbraid"];
+          var out = {};
+          keys.forEach(function(key){
+            var value = params.get(key);
+            if (value) out[key] = value;
+          });
+          out.landingUrl = location.href;
+          if (document.referrer) out.referrer = document.referrer;
+          return out;
+        } catch (e) {
+          return {};
+        }
+      }
       var form = document.getElementById("mktForm");
       var msg = document.getElementById("mktMsg");
       form.addEventListener("submit", function(e){
         e.preventDefault();
         var data = {};
         new FormData(form).forEach(function(v,k){ data[k]=v; });
+        var tracking = collectAttribution();
+        Object.keys(tracking).forEach(function(key){
+          if (!data[key]) data[key] = tracking[key];
+        });
+        data.__tracking = tracking;
         fetch("/lp/${encodeURIComponent(slug)}/submit?token=${encodeURIComponent(String(token))}", {
           method:"POST",
           headers: {"Content-Type":"application/json"},

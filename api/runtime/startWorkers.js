@@ -95,6 +95,19 @@ function startWorkers({
       logger.warn('[ChannelHealth] Falha ao iniciar monitor (ignorado)', { error: err.message });
     }
   }
+
+  // Marketing Google Ads scheduler (best-effort).
+  if (processRef.env.ENABLE_MARKETING_GOOGLE_ADS_SCHEDULER !== 'false') {
+    try {
+      const { startMarketingGoogleAdsScheduler } = require('../services/marketing/googleAdsRecommendationSchedulerService');
+      const intervalMs = parseInt(processRef.env.MARKETING_GOOGLE_ADS_SCHEDULER_INTERVAL_MS || '300000', 10);
+      const tenantLimit = parseInt(processRef.env.MARKETING_GOOGLE_ADS_SCHEDULER_TENANT_LIMIT || '50', 10);
+      const autoUploadOnScheduler = processRef.env.MARKETING_GOOGLE_ADS_AUTO_UPLOAD_ON_SCHEDULER !== 'false';
+      startMarketingGoogleAdsScheduler({ intervalMs, tenantLimit, autoUploadOnScheduler });
+    } catch (err) {
+      logger.warn('[MarketingGoogleAdsScheduler] Falha ao iniciar (ignorado)', { error: err.message });
+    }
+  }
 }
 
 module.exports = {

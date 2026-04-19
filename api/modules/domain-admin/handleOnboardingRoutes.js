@@ -60,7 +60,7 @@ async function handleOnboardingRoutes(ctx) {
       return true;
     }
 
-    const result = startOnboarding(req.tenantId);
+    const result = await startOnboarding(req.tenantId);
     if (!result.success) {
       sendJson(res, 400, { error: result.error });
       return true;
@@ -90,7 +90,7 @@ async function handleOnboardingRoutes(ctx) {
         return true;
       }
 
-      const result = completeOnboardingStep(req.tenantId, body.stepId);
+      const result = await completeOnboardingStep(req.tenantId, body.stepId);
       if (!result.success) {
         sendJson(res, 400, { error: result.error });
         return true;

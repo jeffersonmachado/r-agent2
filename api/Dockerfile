@@ -31,6 +31,7 @@ COPY rpa/ ./rpa/
 COPY infra/ ./infra/
 COPY contracts/ ./contracts/
 COPY config/ ./config/
+COPY pipeline/ ./pipeline/
 COPY qa/ ./qa/
 COPY qa-mesh/ ./qa-mesh/
 COPY lib/ ./lib/
@@ -55,6 +56,7 @@ COPY --from=builder /app/rpa ./rpa
 COPY --from=builder /app/infra ./infra
 COPY --from=builder /app/contracts ./contracts
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/pipeline ./pipeline
 COPY --from=builder /app/qa ./qa
 COPY --from=builder /app/qa-mesh ./qa-mesh
 COPY --from=builder /app/lib ./lib

@@ -12,11 +12,12 @@ const { handleRagRoutes } = require('../rag-documents/handleRagRoutes');
 function runHandled(handler, selectDeps) {
   return async (req, res, next) => {
     const ctx = req.routeContext || req.appRouteContext || {};
+    const pathname = new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
 
     try {
       const handled = await handler({
         method: req.method,
-        pathname: req.originalUrl || req.url,
+        pathname,
         params: req.params || {},
         query: req.query || {},
         body: req.body,
@@ -38,11 +39,12 @@ function runHandled(handler, selectDeps) {
 function createPlatformContentRoutes({ buildDeps }) {
   const router = express.Router();
 
-  // Initialize routing context on request (required for route handlers to access dependencies)
+  // Sempre sobrescreve o contexto deste domínio. Outros routers globais também
+  // usam req.routeContext, e reutilizar o contexto anterior faz o handler de
+  // conteúdo perder dependências específicas como as do RAG.
   router.use((req, res, next) => {
-    if (!req.routeContext && !req.appRouteContext) {
-      req.appRouteContext = buildDeps(req, res);
-    }
+    req.routeContext = buildDeps(req, res);
+    req.appRouteContext = req.routeContext;
     next();
   });
 

@@ -73,6 +73,7 @@ function frontendRoutesPlugin() {
                           url.startsWith('/replay') || 
                           url.startsWith('/templates') || 
                           url.startsWith('/server') || 
+                          url.startsWith('/billing') ||
                           url.startsWith('/api') ||
                           url.startsWith('/metrics') ||
                           url.startsWith('/auth') ||
@@ -392,6 +393,11 @@ const viteConfig = defineConfig(({ mode }) => {
         secure: false,
       },
       '^/api': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/billing': {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,

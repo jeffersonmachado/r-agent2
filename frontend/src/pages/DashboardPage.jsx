@@ -3,6 +3,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { NavigationLink } from '../components/NavigationLink';
 import { getGeneralMetrics, getQueueMetrics } from '../api/analytics';
+import { getMarketingGoogleAdsAttributionExceptions } from '../api/marketing';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
@@ -21,6 +22,22 @@ export function DashboardPage() {
   const [kpiLoading, setKpiLoading] = useState(true);
   const [versionInfo, setVersionInfo] = useState(null);
   const [versionError, setVersionError] = useState(null);
+  const [marketingAttributionMonitor, setMarketingAttributionMonitor] = useState(null);
+  const [marketingAttributionLoading, setMarketingAttributionLoading] = useState(true);
+
+  function attributionBadge(severity) {
+    const value = String(severity || 'ok').toLowerCase();
+    if (value === 'critical') return 'bg-rose-500/10 text-rose-200 border border-rose-500/30';
+    if (value === 'warning') return 'bg-amber-500/10 text-amber-200 border border-amber-500/30';
+    return 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/30';
+  }
+
+  function attributionLabel(severity) {
+    const value = String(severity || 'ok').toLowerCase();
+    if (value === 'critical') return 'Crítico';
+    if (value === 'warning') return 'Alerta';
+    return 'Estável';
+  }
 
   function formatSecondsCompact(sec) {
     if (sec === null || sec === undefined) return '-';
@@ -63,6 +80,27 @@ export function DashboardPage() {
         setQueuesKpis(null);
       } finally {
         if (mounted) setKpiLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setMarketingAttributionLoading(true);
+        const data = await getMarketingGoogleAdsAttributionExceptions({ windowDays: 1, limit: 5 });
+        if (!mounted) return;
+        setMarketingAttributionMonitor(data?.ok ? data : null);
+      } catch (err) {
+        logger.error('[Dashboard] Erro ao carregar monitor de atribuição Google Ads', err);
+        if (!mounted) return;
+        setMarketingAttributionMonitor(null);
+      } finally {
+        if (mounted) setMarketingAttributionLoading(false);
       }
     })();
     return () => {
@@ -582,8 +620,33 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {marketingAttributionMonitor?.alert?.triggered ? (
+        <div
+          className={`rounded-xl p-4 mb-6 ${attributionBadge(marketingAttributionMonitor?.alert?.severity)}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/marketing')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') navigate('/marketing');
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-xs uppercase tracking-wide opacity-80">Google Ads</div>
+              <div className="text-sm font-semibold">
+                {attributionLabel(marketingAttributionMonitor?.alert?.severity)} de atribuição ausente
+              </div>
+              <div className="text-xs opacity-80 mt-1">
+                {marketingAttributionMonitor?.alert?.currentCount ?? 0} ocorrência(s) em 1 dia, crescimento de {Number(marketingAttributionMonitor?.alert?.growthFactor || 0).toFixed(2)}x.
+              </div>
+            </div>
+            <div className="text-xs opacity-80">Abrir Marketing</div>
+          </div>
+        </div>
+      ) : null}
+
       {/* KPIs operacionais (Blip-like) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
           <div className="text-xs text-text-tertiary">Tickets abertos</div>
           <div className="text-2xl font-semibold text-text-primary">
@@ -618,6 +681,17 @@ export function DashboardPage() {
             {kpiLoading ? '…' : formatPct(kpis?.botContainmentRate)}
           </div>
           <div className="text-xs text-text-secondary">conversas sem ticket</div>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
+          <div className="text-xs text-text-tertiary">Ads atribuição</div>
+          <div className="text-2xl font-semibold text-text-primary">
+            {marketingAttributionLoading ? '…' : attributionLabel(marketingAttributionMonitor?.alert?.severity)}
+          </div>
+          <div className="text-xs text-text-secondary">
+            {marketingAttributionLoading
+              ? 'carregando monitor'
+              : `${marketingAttributionMonitor?.alert?.currentCount ?? 0} evento(s) / 1 dia`}
+          </div>
         </div>
       </div>
 

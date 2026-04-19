@@ -19,6 +19,7 @@
     "test:rpa:seed:smoke": "node core/rpa/cli.js seed --smoke-only",
     "test:rpa:seed:full": "node core/rpa/cli.js seed",
     "test:rpa:screens": "node core/rpa/cli.js screens",
+    "test:rpa:replays:scale:smoke": "node scripts/test-rpa-replays-scale-smoke.js",
     "test:business-qa:catalog": "node core/rpa/cli.js business --mode=catalog",
     "test:business-qa:seed": "node core/rpa/cli.js business --mode=seed",
     "test:business-qa:seed:reset": "node core/rpa/cli.js business --mode=seed-reset",

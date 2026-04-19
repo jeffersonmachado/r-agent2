@@ -10,6 +10,7 @@
 import logger from '../utils/logger';
 import { getAuthHeaders, removeToken } from './auth';
 import { redirectToLogin } from '../utils/index';
+import { getBasePath } from '../utils/index';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -32,26 +33,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
 function buildUrl(path) {
   const base = import.meta.env.VITE_API_BASE_URL;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  let basePath = '';
-
-  // Quando rodando atrás de um prefixo (ex: /r-agent2), garante que as
-  // chamadas vão para /r-agent2/config, /r-agent2/health, etc.
-  if (typeof window !== 'undefined') {
-    try {
-      // Usa href completo para escapar de qualquer getter customizado de pathname
-      const url = new URL(window.location.href);
-      const rawPath = url.pathname || window.location.pathname || '/';
-      const match = rawPath.match(/^\/([^/]+)(\/|$)/);
-      if (match && match[1]) {
-        basePath = `/${match[1]}`;
-      }
-    } catch {
-      const fallbackMatch = window.location.pathname && window.location.pathname.match(/^\/([^/]+)(\/|$)/);
-      if (fallbackMatch && fallbackMatch[1]) {
-        basePath = `/${fallbackMatch[1]}`;
-      }
-    }
-  }
+  const basePath = getBasePath();
   
   // Se VITE_API_BASE_URL estiver definido, usa URL absoluta
   if (base && base.trim()) {

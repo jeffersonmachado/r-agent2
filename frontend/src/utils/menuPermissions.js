@@ -3,376 +3,22 @@
  * Baseado no sistema RBAC do backend.
  */
 
+import { navigationMenu, flattenNavigationLeaves, normalizeNavigationPath } from '../navigation/menu';
+
 /**
  * Definição de itens do menu com suas permissões.
  */
-export const menuItems = [
-  {
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: '🏠',
-    // Dashboard é visível para todos autenticados
-    permission: null,
-  },
-  {
-    label: 'CRM',
-    path: '/crm',
-    icon: '💼',
-    permission: { resource: 'crm', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Atendimento',
-    path: '/support',
-    icon: '💬',
-    permission: { resource: 'tickets', action: 'read' },
-  },
-  {
-    label: 'Inbox',
-    path: '/inbox',
-    icon: '📥',
-    permission: { resource: 'tickets', action: 'read' },
-  },
-  {
-    label: 'Editor',
-    path: '/editor',
-    icon: '📝',
-    permission: { resource: 'flows', action: 'read' },
-    // Editor é visível apenas para supervisor e admin (mesmo que agent tenha flows:read)
-    roles: ['supervisor', 'admin'],
-  },
-  {
-    label: 'Editor BPMN',
-    path: '/bpmn-editor',
-    icon: '📐',
-    permission: { resource: 'flows', action: 'read' },
-    roles: ['supervisor', 'admin'],
-  },
-  {
-    label: 'Respostas Rápidas',
-    path: '/quick-replies',
-    icon: '⚡',
-    permission: { resource: 'quick_replies', action: 'read' },
-  },
-  {
-    label: 'FAQ',
-    path: '/faq',
-    icon: '❓',
-    permission: { resource: 'rag', action: 'update' },
-  },
-  {
-    label: 'Departamentos',
-    path: '/departments',
-    icon: '🏢',
-    permission: { resource: 'departments', action: 'read' },
-  },
-  {
-    label: 'Disparos em Massa',
-    path: '/bulk-messaging',
-    icon: '📢',
-    permission: { resource: 'bulk_messaging', action: 'read' },
-    roles: ['supervisor', 'admin'],
-  },
-  {
-    label: 'Marketing',
-    path: '/marketing',
-    icon: '🧲',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Access Control',
-    path: '/access-control',
-    icon: '🚪',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Painel Operacional',
-    path: '/operations-dashboard',
-    icon: '🧭',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Fitness Students',
-    path: '/fitness/students',
-    icon: '🏋️',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Fitness Memberships',
-    path: '/fitness/memberships',
-    icon: '🏋️',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Fitness Attendance',
-    path: '/fitness/attendance',
-    icon: '🏋️',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Beauty Schedule',
-    path: '/beauty/schedule',
-    icon: '💄',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Beauty Customers',
-    path: '/beauty/customers',
-    icon: '💄',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Beauty Bundles',
-    path: '/beauty/bundles',
-    icon: '💄',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Vertical Dashboard',
-    path: '/vertical/dashboard',
-    icon: '📊',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Solutions Packs',
-    path: '/solutions',
-    icon: '📦',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Analytics',
-    path: '/analytics',
-    icon: '📊',
-    permission: { resource: 'reports', action: 'read' },
-  },
-  {
-    label: 'Tenant Intelligence',
-    path: '/tenant-intelligence',
-    icon: '🧠',
-    permission: { resource: 'reports', action: 'read' },
-  },
-  {
-    label: 'Supervisor',
-    path: '/supervisor',
-    icon: '🧭',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'RBAC',
-    path: '/rbac',
-    icon: '🔐',
-    permission: { resource: 'agents', action: 'update' },
-    roles: ['admin', 'owner'],
-  },
-  {
-    label: 'MFA',
-    path: '/mfa',
-    icon: '🛡️',
-    permission: { resource: 'config', action: 'update' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'URA WhatsApp',
-    path: '/whatsapp-ivr',
-    icon: '💬',
-    permission: { resource: 'config', action: 'update' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'WhatsApp QR',
-    path: '/whatsapp-connections',
-    icon: '📱',
-    permission: { resource: 'config', action: 'update' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'API Keys',
-    path: '/developer-keys',
-    icon: '🔑',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'Automações',
-    path: '/automations',
-    icon: '🧩',
-    permission: { resource: 'config', action: 'update' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'Tarefas',
-    path: '/tasks',
-    icon: '✅',
-    permission: { resource: 'config', action: 'update' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'SLA',
-    path: '/sla-policies',
-    icon: '⏱️',
-    permission: { resource: 'reports', action: 'read' },
-    roles: ['admin', 'owner', 'manager', 'supervisor'],
-  },
-  {
-    label: 'Exportação',
-    path: '/export',
-    icon: '📥',
-    permission: { resource: 'reports', action: 'export' },
-    roles: ['supervisor', 'admin'],
-  },
-  {
-    label: 'Ferramentas de IA',
-    path: '/ai-tools',
-    icon: '🤖',
-    permission: { resource: 'tickets', action: 'read' },
-  },
-  {
-    label: 'Segmentação',
-    path: '/segmentation',
-    icon: '🏷️',
-    permission: { resource: 'tickets', action: 'read' },
-  },
-  {
-    label: 'Templates WhatsApp',
-    path: '/whatsapp-templates',
-    icon: '📋',
-    permission: { resource: 'flows', action: 'read' },
-  },
-  {
-    label: 'Node Marketplace',
-    path: '/node-marketplace',
-    icon: '🧩',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'SSO / SCIM',
-    path: '/sso-scim',
-    icon: '🔐',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['admin', 'owner'],
-  },
-  {
-    label: 'Backup / DR',
-    path: '/backup',
-    icon: '🗄️',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['admin', 'owner'],
-  },
-  {
-    label: 'Canais',
-    path: '/channel-accounts',
-    icon: '🔌',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Plano e Uso',
-    path: '/plan-usage',
-    icon: '📦',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['admin', 'owner'],
-  },
-  {
-    label: 'Saúde de Canais',
-    path: '/channel-health',
-    icon: '📡',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'PBX (Legado)',
-    path: '/pbx',
-    icon: '📞',
-    permission: { resource: 'config', action: 'read' },
-    roles: ['supervisor', 'manager', 'admin', 'owner'],
-  },
-  {
-    label: 'Configuração',
-    path: '/config',
-    icon: '⚙️',
-    permission: { resource: 'config', action: 'read' },
-  },
-  {
-    label: 'Manutenção',
-    path: '/maintenance',
-    icon: '🛠️',
-    permission: { resource: 'tickets', action: 'list_all' },
-  },
-  {
-    label: 'Agentes',
-    path: '/agents',
-    icon: '👥',
-    permission: { resource: 'agents', action: 'list_all' },
-  },
-  {
-    label: 'Tenants',
-    path: '/tenants',
-    icon: '🏢',
-    permission: { resource: 'tenant', action: 'read' },
-    roles: ['owner', 'admin'],
-  },
-  {
-    label: 'Super Admin',
-    path: '/super-admin',
-    icon: '🔐',
-    roles: ['super_admin'],
-  },
-  {
-    label: 'Dev Dashboard',
-    path: '/dev',
-    icon: '🛠️',
-    roles: ['super_admin'],
-  },
-  {
-    label: 'Onboarding',
-    path: '/onboarding',
-    icon: '🚀',
-    permission: { resource: 'tenant', action: 'read' },
-  },
-  {
-    label: 'Auditoria',
-    path: '/audit',
-    icon: '📋',
-    permission: { resource: 'audit', action: 'read' },
-  },
-  {
-    label: 'Base de Conhecimento',
-    path: '/knowledge-base',
-    icon: '📚',
-    permission: { resource: 'rag', action: 'read' },
-  },
-  {
-    label: 'Documentação de Produtos',
-    path: '/product-docs',
-    icon: '📦',
-    permission: { resource: 'rag', action: 'read' },
-  },
-  {
-    label: 'Documentos RAG',
-    path: '/rag-documents',
-    icon: '🔍',
-    permission: { resource: 'rag', action: 'read' },
-  },
-  {
-    label: 'Raspagem de Sites',
-    path: '/web-scraping',
-    icon: '🕷️',
-    permission: { resource: 'rag', action: 'create' },
-  },
-];
+export const menuItems = flattenNavigationLeaves(navigationMenu)
+  .filter((item) => item.path)
+  .map((item) => ({
+    label: item.label,
+    path: item.path,
+    icon: item.icon || '•',
+    permission: item.permission || null,
+    roles: item.roles,
+    hiddenInSidebar: item.hiddenInSidebar,
+    hiddenInSubNav: item.hiddenInSubNav,
+  }));
 
 /**
  * Mapeamento de permissões por papel (baseado no rbacService do backend).
@@ -578,25 +224,7 @@ export function getVisibleMenuItems(agent) {
   return menuItems.filter((item) => canAccessMenuItem(agent, item));
 }
 
-function normalizePath(path) {
-  if (!path || typeof path !== 'string') {
-    return '/';
-  }
-  const withoutQuery = path.split('?')[0].split('#')[0];
-  
-  // Remove prefixo /r-agent2 se presente (producción fallback)
-  let normalized = withoutQuery;
-  if (normalized.startsWith('/r-agent2/')) {
-    normalized = normalized.substring('/r-agent2'.length) || '/';
-  }
-  
-  if (normalized.length > 1 && normalized.endsWith('/')) {
-    return normalized.slice(0, -1);
-  }
-  return normalized;
-}
-
-function canAccessMenuItem(agent, item) {
+export function canAccessMenuItem(agent, item) {
   if (!agent || !item) {
     return false;
   }
@@ -608,11 +236,10 @@ function canAccessMenuItem(agent, item) {
   if (item.roles && Array.isArray(item.roles)) {
     const agentRole = agent.role?.toLowerCase();
 
-    if (item.roles.includes('super_admin')) {
-      return isSuperAdmin(agent);
-    }
+    const hasSuperAdminAccess = item.roles.includes('super_admin') && isSuperAdmin(agent);
+    const hasDirectRoleAccess = Boolean(agentRole) && item.roles.includes(agentRole);
 
-    if (!item.roles.includes(agentRole)) {
+    if (!hasSuperAdminAccess && !hasDirectRoleAccess) {
       return false;
     }
   }
@@ -622,6 +249,29 @@ function canAccessMenuItem(agent, item) {
   }
 
   return hasPermission(agent, item.permission.resource, item.permission.action);
+}
+
+export function filterNavigationTree(agent, nodes = []) {
+  if (!agent) return [];
+
+  return nodes.reduce((acc, node) => {
+    const visibleChildren = Array.isArray(node.children)
+      ? filterNavigationTree(agent, node.children)
+      : [];
+
+    const currentNode = {
+      ...node,
+      children: visibleChildren,
+    };
+
+    const isAccessible = canAccessMenuItem(agent, currentNode);
+    const hasVisibleChildren = visibleChildren.length > 0;
+
+    if (isAccessible || hasVisibleChildren) {
+      acc.push(currentNode);
+    }
+    return acc;
+  }, []);
 }
 
 /**
@@ -635,14 +285,14 @@ function canAccessMenuItem(agent, item) {
  */
 export function canAccessPath(agent, path, options = {}) {
   const { allowUnknown = true } = options;
-  const targetPath = normalizePath(path);
+  const targetPath = normalizeNavigationPath(path);
 
   if (!agent) {
     return false;
   }
 
   const item = menuItems.find((menuItem) => {
-    const basePath = normalizePath(menuItem.path);
+    const basePath = normalizeNavigationPath(menuItem.path);
     return targetPath === basePath || targetPath.startsWith(`${basePath}/`);
   });
 

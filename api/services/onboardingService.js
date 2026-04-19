@@ -133,7 +133,7 @@ function getOnboardingStatus(tenantId) {
  * @param {string} stepId - ID do step
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
-function completeOnboardingStep(tenantId, stepId) {
+async function completeOnboardingStep(tenantId, stepId) {
   const tenant = getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
@@ -169,7 +169,7 @@ function completeOnboardingStep(tenantId, stepId) {
     },
   };
 
-  const result = updateTenant(tenantId, { settings });
+  const result = await updateTenant(tenantId, { settings });
   if (!result.success) {
     return result;
   }
@@ -215,7 +215,7 @@ function getNextStep(completedSteps) {
  * @param {string} tenantId - ID do tenant
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
-function startOnboarding(tenantId) {
+async function startOnboarding(tenantId) {
   const tenant = getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
@@ -242,7 +242,7 @@ function startOnboarding(tenantId) {
     },
   };
 
-  const result = updateTenant(tenantId, { settings });
+  const result = await updateTenant(tenantId, { settings });
   if (!result.success) {
     return result;
   }

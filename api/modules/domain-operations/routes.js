@@ -27,6 +27,153 @@ function ensurePermission(ctx, req, res, moduleName, actionName) {
   return true;
 }
 
+function parseIntegerQuery(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function getSupportMessagesSortColumn(sortBy) {
+  const normalized = String(sortBy || '').trim().toLowerCase();
+  if (normalized === 'created_at') return 'created_at';
+  if (normalized === 'attempts') return 'attempts';
+  if (normalized === 'status') return 'status';
+  return 'updated_at';
+}
+
+async function resolveSupportMessagesSequelize() {
+  const { OutboundQueueItem, ChannelMessage } = require('../../db/models');
+  const outModel = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
+  const msgModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+  return outModel?.sequelize || msgModel?.sequelize || null;
+}
+
+async function listFailedSupportMessages({ sequelize, tenantId, query }) {
+  const limit = Math.min(parseIntegerQuery(query.limit, 50) || 50, 200);
+  const offset = parseIntegerQuery(query.offset, 0);
+  const status = String(query.status || 'failed').trim().toLowerCase();
+  const channel = String(query.channel || '').trim().toLowerCase();
+  const searchId = String(query.searchId || '').trim();
+  const sortColumn = getSupportMessagesSortColumn(query.sortBy);
+
+  const where = ['tenant_key = :tenantId'];
+  const replacements = { tenantId, limit, offset };
+
+  if (status && status !== 'all') {
+    where.push('status = :status');
+    replacements.status = status;
+  }
+
+  if (channel) {
+    where.push('LOWER(channel_type) = :channel');
+    replacements.channel = channel;
+  }
+
+  if (searchId) {
+    where.push('(id ILIKE :search OR external_message_id ILIKE :search)');
+    replacements.search = `%${searchId}%`;
+  }
+
+  const whereSql = where.join(' AND ');
+
+  const [countRows] = await sequelize.query(
+    `SELECT COUNT(*)::int AS total
+     FROM outbound_queue
+     WHERE ${whereSql}`,
+    { replacements }
+  );
+
+  const [rows] = await sequelize.query(
+    `SELECT
+       id,
+       channel_type,
+       channel_account_id,
+       conversation_id,
+       status,
+       attempts,
+       next_attempt_at,
+       last_error,
+       reason_code,
+       external_message_id,
+       message,
+       created_at,
+       updated_at
+     FROM outbound_queue
+     WHERE ${whereSql}
+     ORDER BY ${sortColumn} DESC, id DESC
+     LIMIT :limit OFFSET :offset`,
+    { replacements }
+  );
+
+  return {
+    messages: Array.isArray(rows) ? rows : [],
+    total: countRows?.[0]?.total ?? 0,
+    limit,
+    offset,
+  };
+}
+
+async function listDeliveredSupportMessages({ sequelize, tenantId, query }) {
+  const limit = Math.min(parseIntegerQuery(query.limit, 50) || 50, 200);
+  const offset = parseIntegerQuery(query.offset, 0);
+  const channel = String(query.channel || '').trim().toLowerCase();
+  const searchId = String(query.searchId || '').trim();
+  const sortColumn = getSupportMessagesSortColumn(query.sortBy);
+
+  const where = [
+    'tenant_key = :tenantId',
+    `direction = 'out'`,
+    `status IN ('sent', 'delivered', 'read')`,
+  ];
+  const replacements = { tenantId, limit, offset };
+
+  if (channel) {
+    where.push('LOWER(channel_type) = :channel');
+    replacements.channel = channel;
+  }
+
+  if (searchId) {
+    where.push('(id ILIKE :search OR external_message_id ILIKE :search)');
+    replacements.search = `%${searchId}%`;
+  }
+
+  const whereSql = where.join(' AND ');
+
+  const [countRows] = await sequelize.query(
+    `SELECT COUNT(*)::int AS total
+     FROM channel_messages
+     WHERE ${whereSql}`,
+    { replacements }
+  );
+
+  const [rows] = await sequelize.query(
+    `SELECT
+       id,
+       channel_type,
+       conversation_id,
+       status,
+       1 AS attempts,
+       NULL::timestamp AS next_attempt_at,
+       NULL::text AS last_error,
+       NULL::text AS reason_code,
+       external_message_id,
+       body AS message,
+       created_at,
+       updated_at
+     FROM channel_messages
+     WHERE ${whereSql}
+     ORDER BY ${sortColumn} DESC, id DESC
+     LIMIT :limit OFFSET :offset`,
+    { replacements }
+  );
+
+  return {
+    messages: Array.isArray(rows) ? rows : [],
+    total: countRows?.[0]?.total ?? 0,
+    limit,
+    offset,
+  };
+}
+
 function createDomainOperationsRoutes({ buildDeps }) {
   const router = express.Router();
 
@@ -155,6 +302,56 @@ function createDomainOperationsRoutes({ buildDeps }) {
     } catch (err) {
       ctx.logger.error('[DomainOperations] Erro ao obter support dashboard', err);
       ctx.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter dashboard de suporte' });
+    }
+  });
+
+  router.get('/api/support/failed-messages', async (req, res) => {
+    const ctx = buildDeps(req, res);
+    const tenantId = await resolveAuthenticatedTenant(ctx, req, res);
+    if (!tenantId) return;
+    if (!ensurePermission(ctx, req, res, 'tickets', 'read')) return;
+
+    try {
+      const sequelize = await resolveSupportMessagesSequelize();
+      if (!sequelize) {
+        ctx.sendJson(res, 200, { messages: [], total: 0, limit: 50, offset: 0, meta: { warning: 'db_unavailable' } });
+        return;
+      }
+
+      const data = await listFailedSupportMessages({
+        sequelize,
+        tenantId,
+        query: req.query || {},
+      });
+      ctx.sendJson(res, 200, data);
+    } catch (err) {
+      ctx.logger.error('[DomainOperations] Erro ao listar mensagens falhadas', err);
+      ctx.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens falhadas' });
+    }
+  });
+
+  router.get('/api/support/delivered-messages', async (req, res) => {
+    const ctx = buildDeps(req, res);
+    const tenantId = await resolveAuthenticatedTenant(ctx, req, res);
+    if (!tenantId) return;
+    if (!ensurePermission(ctx, req, res, 'tickets', 'read')) return;
+
+    try {
+      const sequelize = await resolveSupportMessagesSequelize();
+      if (!sequelize) {
+        ctx.sendJson(res, 200, { messages: [], total: 0, limit: 50, offset: 0, meta: { warning: 'db_unavailable' } });
+        return;
+      }
+
+      const data = await listDeliveredSupportMessages({
+        sequelize,
+        tenantId,
+        query: req.query || {},
+      });
+      ctx.sendJson(res, 200, data);
+    } catch (err) {
+      ctx.logger.error('[DomainOperations] Erro ao listar mensagens entregues', err);
+      ctx.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens entregues' });
     }
   });
 
