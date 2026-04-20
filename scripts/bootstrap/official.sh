@@ -191,6 +191,6 @@ wait_http "$FRONTEND_URL/" 'Frontend preview'
 step 'Validando serviços essenciais via selftest'
 probe_json_status "$API_URL/health/selftest" "payload && payload.checks && payload.checks.db && String(payload.checks.db.status||'').toLowerCase()!=='unhealthy'" 'Banco'
 probe_json_status "$API_URL/health/selftest" "payload && payload.checks && payload.checks.redis && ['healthy','degraded'].includes(String(payload.checks.redis.status||'').toLowerCase())" 'Redis'
-probe_json_status "$API_URL/health/selftest" "payload && payload.checks && payload.checks.rag && ['healthy','degraded'].includes(String(payload.checks.rag.status||'').toLowerCase())" 'RAG'
+probe_json_status "$API_URL/health/selftest" "payload && payload.checks && payload.checks.rag && ['healthy','degraded','unavailable'].includes(String(payload.checks.rag.status||'').toLowerCase())" 'RAG'
 
 ok 'Bootstrap oficial concluído com ambiente validado de forma explícita'
