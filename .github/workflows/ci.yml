@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/r_agent2
+      RUNTIME_ROOT: /tmp/ragent2-runtime-ci
 
     services:
       postgres:
