@@ -73,7 +73,7 @@ npm run dev
 - Arquivo: `scripts/test-bpmn-editor-smoke.js`
 - Evidência: `qa/l06-bpmn-editor-evidence.json`
 - Report: `qa/smoke/l06-bpmn-editor-smoke.md`
-
+### Deployment Guides (Environment-Specific)
 **L-07 RPA Replays Scale**
 - Arquivo: `scripts/test-rpa-replays-scale-smoke.js`
 - Evidência: `qa/l07-rpa-replays-scale-evidence.json`
@@ -105,7 +105,6 @@ npm run system:release-summary  # Document approval
 ```
 
 **Decision criteria:**
-- Pass rate ≥ 80%
 - Core/PBX/Omnichannel domains must pass critical checks
 - No workspace residues
 - Gates approved
@@ -229,7 +228,22 @@ Após "Doutrina operacional e config única":
 4. Pipeline frontend e release
 5. Validação final e relatório
 
----
+
+## ✅ Fases Completas
+
+- ✅ **Wave 1** — Core runtime utilities (scripts/check-green.js, etc.)
+- ✅ **Wave 2** — Smoke tests + internal validator (8 testers + L-00)
+- ✅ **Separar produto e runtime** — Path separation, RUNTIME_ROOT, cleanup
+- ✅ **Doutrina operacional e config única** — Unified operational doctrine
+- ✅ **Environment-specific deployment guides** — Dev, Docker, CI/CD, Hardening
+
+## ⏳ Próximas Fases
+
+- [ ] **Endurecimento configuração IA** — IA framework hardening
+- [ ] **Modularização hotspots backend** — Break down monolithic APIs
+- [ ] **Consolidação modular frontend** — Component architecture
+- [ ] **Pipeline frontend e release** — Build + deploy automation
+- [ ] **Validação final e relatório** — End-to-end verification
 
 ## 📝 Changelog Documentação
 
