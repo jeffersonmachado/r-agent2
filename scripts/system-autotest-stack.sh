@@ -17,26 +17,39 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-mkdir -p qa/smoke
+runtime_aware_path() {
+  local rel_path="$1"
+  if [[ -n "${RUNTIME_ROOT:-}" ]]; then
+    if [[ "$RUNTIME_ROOT" = /* ]]; then
+      printf '%s\n' "$RUNTIME_ROOT/$rel_path"
+    else
+      printf '%s\n' "$ROOT_DIR/$RUNTIME_ROOT/$rel_path"
+    fi
+    return
+  fi
+  printf '%s\n' "$rel_path"
+}
+
+mkdir -p "$(runtime_aware_path qa/smoke)"
 L01_STATUS="not_run"
 L02_STATUS="not_run"
 L03_STATUS="not_run"
 L04_STATUS="not_run"
 L05_STATUS="not_run"
 L06_STATUS="not_run"
-L01_LOG_PATH="qa/smoke/l01-physical-queue.log"
-L02_LOG_PATH="qa/smoke/l02-ura-publish-rollback.log"
-L03_LOG_PATH="qa/smoke/l03-pbx-voice-tts-asr.log"
-L04_LOG_PATH="qa/smoke/l04-pbx-call-events-runtime.log"
-L05_LOG_PATH="qa/smoke/l05-chatpro-omnichannel.log"
-L06_LOG_PATH="qa/smoke/l06-bpmn-editor-smoke.log"
-L01_EVIDENCE_PATH="qa/l01-physical-queue-evidence.json"
-L02_EVIDENCE_PATH="qa/l02-ura-publish-rollback-evidence.json"
-L03_EVIDENCE_PATH="qa/l03-pbx-voice-tts-asr-evidence.json"
-L04_EVIDENCE_PATH="qa/l04-pbx-call-events-runtime-evidence.json"
-L05_EVIDENCE_PATH="qa/l05-chatpro-omnichannel-evidence.json"
-L06_EVIDENCE_PATH="qa/l06-bpmn-editor-evidence.json"
-SMOKE_EVIDENCE_SUMMARY_PATH="${SMOKE_EVIDENCE_SUMMARY_PATH:-qa/smoke-evidence.json}"
+L01_LOG_PATH="$(runtime_aware_path qa/smoke/l01-physical-queue.log)"
+L02_LOG_PATH="$(runtime_aware_path qa/smoke/l02-ura-publish-rollback.log)"
+L03_LOG_PATH="$(runtime_aware_path qa/smoke/l03-pbx-voice-tts-asr.log)"
+L04_LOG_PATH="$(runtime_aware_path qa/smoke/l04-pbx-call-events-runtime.log)"
+L05_LOG_PATH="$(runtime_aware_path qa/smoke/l05-chatpro-omnichannel.log)"
+L06_LOG_PATH="$(runtime_aware_path qa/smoke/l06-bpmn-editor-smoke.log)"
+L01_EVIDENCE_PATH="$(runtime_aware_path qa/l01-physical-queue-evidence.json)"
+L02_EVIDENCE_PATH="$(runtime_aware_path qa/l02-ura-publish-rollback-evidence.json)"
+L03_EVIDENCE_PATH="$(runtime_aware_path qa/l03-pbx-voice-tts-asr-evidence.json)"
+L04_EVIDENCE_PATH="$(runtime_aware_path qa/l04-pbx-call-events-runtime-evidence.json)"
+L05_EVIDENCE_PATH="$(runtime_aware_path qa/l05-chatpro-omnichannel-evidence.json)"
+L06_EVIDENCE_PATH="$(runtime_aware_path qa/l06-bpmn-editor-evidence.json)"
+SMOKE_EVIDENCE_SUMMARY_PATH="${SMOKE_EVIDENCE_SUMMARY_PATH:-$(runtime_aware_path qa/smoke-evidence.json)}"
 
 run_with_log() {
   local status_var="$1"
@@ -121,7 +134,7 @@ node -e "const token=process.env.RPA_TOKEN||''; const base='${API_BASE_URL}'; fe
 
 echo
 echo "[autotest-stack] Rodando selftest read-only..."
-SELFTEST_BASELINE_PATH="${SELFTEST_BASELINE_PATH:-qa/selftest-baseline.json}" \
+SELFTEST_BASELINE_PATH="${SELFTEST_BASELINE_PATH:-$(runtime_aware_path qa/selftest-baseline.json)}" \
 RELEASE_GATE_REQUIRED_CHECKS="${RELEASE_GATE_REQUIRED_CHECKS:-eventDispatchRuntime,pbxEventRuntime,voiceRuntime}" \
 node -e "const fs=require('fs'); const path=require('path'); const base='${API_BASE_URL}'; const out=process.env.SELFTEST_BASELINE_PATH||'qa/selftest-baseline.json'; const req=(process.env.RELEASE_GATE_REQUIRED_CHECKS||'eventDispatchRuntime,pbxEventRuntime,voiceRuntime').split(',').map(s=>String(s||'').trim()).filter(Boolean); fetch(base + '/health/selftest').then(async r=>{ if(!r.ok){ console.error('[selftest] http', r.status); process.exit(2);} const j=await r.json(); console.log('[selftest]', j.status); if(!j||!j.status) process.exit(2); const checks=(j&&j.checks&&typeof j.checks==='object')?j.checks:{}; const critical={}; for(const key of req){ const item=checks[key]||null; critical[key]={ status:item&&item.status||'missing', message:item&&item.message||null, details:item&&item.details||null }; if(!item) { console.error('[selftest] missing_check', key); process.exit(1);} if(String(item.status||'').toLowerCase()==='unhealthy'){ console.error('[selftest] unhealthy_check', key); process.exit(1);} } const baseline={ generatedAt:new Date().toISOString(), url:base + '/health/selftest', status:j.status, criticalChecks:critical }; fs.mkdirSync(path.dirname(out),{recursive:true}); fs.writeFileSync(out, JSON.stringify(baseline,null,2)+'\n','utf8'); console.log('[selftest] baseline:', out); if(String(j.status).toUpperCase()==='FAIL') process.exit(1); }).catch(e=>{ console.error(e); process.exit(2); })"
 

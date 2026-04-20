@@ -7,9 +7,10 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 const { findLatestReleaseArtifact, extractArtifact, resolveExtractedRoot } = require('./lib/release-artifact');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const DEPLOY_REPORT_PATH = process.env.SYSTEM_DEPLOY_REPORT_PATH || 'qa/deploy-report.json';
+const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
 const PORT_SPECS = [
   {
     service: 'api',
@@ -72,7 +73,7 @@ function run(command, label, cwd = ROOT, env = process.env) {
 }
 
 function writeReport(report) {
-  const absPath = path.join(ROOT, DEPLOY_REPORT_PATH);
+  const absPath = resolveWorkspacePath(ROOT, DEPLOY_REPORT_PATH);
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }

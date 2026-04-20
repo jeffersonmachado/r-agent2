@@ -36,6 +36,11 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # OpenAI API Key (server default, opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      WWEBJS_AUTH_PATH: ${WWEBJS_AUTH_PATH:-/var/lib/ragent2/whatsapp/auth}
+      QA_MESH_HISTORY_DIR: ${QA_MESH_HISTORY_DIR:-/var/lib/ragent2/qa-mesh/history}
+      QA_MESH_EVIDENCE_DIR: ${QA_MESH_EVIDENCE_DIR:-/var/lib/ragent2/qa-mesh/evidence}
+      QA_MESH_SYSTEM_VALIDATE_DIR: ${QA_MESH_SYSTEM_VALIDATE_DIR:-/var/lib/ragent2/qa-mesh/system-validate}
+      RELEASE_EVIDENCE_BASE_DIR: ${RELEASE_EVIDENCE_BASE_DIR:-/var/lib/ragent2/release-evidence}
       # -------------------------------------------------------------------
       # PBX v1 (Asterisk Realtime/ODBC + AMI)
       # -------------------------------------------------------------------
@@ -61,6 +66,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
+      - r-agent2-runtime:/var/lib/ragent2
       - pbx-media:/app/api/data/pbx-media
       - pbx-recordings:/app/api/data/pbx-recordings
 
@@ -125,7 +131,9 @@ services:
       CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
       CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
       VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-postgres}
-      VECTOR_STORE_PATH: /app/data/vector_store
+      RAG_DATA_ROOT: ${RAG_DATA_ROOT:-/var/lib/ragent2/rag}
+      VECTOR_STORE_PATH: ${VECTOR_STORE_PATH:-/var/lib/ragent2/rag/vector_store}
+      ADAPTIVE_LEARNING_DATA_PATH: ${ADAPTIVE_LEARNING_DATA_PATH:-/var/lib/ragent2/rag/adaptive_learning}
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -134,7 +142,7 @@ services:
     ports:
       - "${RAG_PORT:-8001}:8001"
     volumes:
-      - rag-vector-store:/app/data/vector_store
+      - r-agent2-rag-data:/var/lib/ragent2/rag
     restart: unless-stopped
 
   postgres:
@@ -176,7 +184,8 @@ services:
       retries: 5
 
 volumes:
-  rag-vector-store:
+  r-agent2-runtime:
+  r-agent2-rag-data:
   redis-data:
   postgres-data:
   pbx-media:

@@ -1,7 +1,73 @@
 {
-  "generatedAt": "2026-04-03T23:55:46.800Z",
-  "latestExecutionId": "system-validate-2026-04-03T23-48-11-981Z",
+  "generatedAt": "2026-04-20T16:23:48.140Z",
+  "latestExecutionId": "system-validate-2026-04-20T16-16-04-740Z",
   "history": [
+    {
+      "executionId": "system-validate-2026-04-20T16-16-04-740Z",
+      "startedAt": "2026-04-20T16:22:12.573Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-20T15-04-13-930Z",
+      "startedAt": "2026-04-20T15:10:09.780Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-20T14-44-25-385Z",
+      "startedAt": "2026-04-20T14:50:04.543Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-20T14-04-28-397Z",
+      "startedAt": "2026-04-20T14:10:18.876Z",
+      "passRate": 1,
+      "coverage": 1,
+      "goNoGo": "GO",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-20T13-44-30-270Z",
+      "startedAt": "2026-04-20T13:50:21.902Z",
+      "passRate": 0.8333333333333334,
+      "coverage": 1,
+      "goNoGo": "NO_GO",
+      "total": 6,
+      "passed": 5,
+      "failed": 0,
+      "infraErrors": 0
+    },
+    {
+      "executionId": "system-validate-2026-04-19T17-31-28-114Z",
+      "startedAt": "2026-04-19T18:57:59.233Z",
+      "passRate": 0.16666666666666666,
+      "coverage": 1,
+      "goNoGo": "NO_GO",
+      "total": 6,
+      "passed": 1,
+      "failed": 0,
+      "infraErrors": 5
+    },
     {
       "executionId": "system-validate-2026-04-03T23-48-11-981Z",
       "startedAt": "2026-04-03T23:54:47.148Z",
@@ -100,70 +166,15 @@
       "passed": 6,
       "failed": 0,
       "infraErrors": 0
-    },
-    {
-      "executionId": "system-validate-2026-04-03T19-31-26-217Z",
-      "startedAt": "2026-04-03T19:37:48.255Z",
-      "passRate": 1,
-      "coverage": 1,
-      "goNoGo": "GO",
-      "total": 6,
-      "passed": 6,
-      "failed": 0,
-      "infraErrors": 0
-    },
-    {
-      "executionId": "system-validate-2026-04-03T19-23-28-349Z",
-      "startedAt": "2026-04-03T19:29:30.647Z",
-      "passRate": 1,
-      "coverage": 1,
-      "goNoGo": "GO",
-      "total": 6,
-      "passed": 6,
-      "failed": 0,
-      "infraErrors": 0
-    },
-    {
-      "executionId": "system-validate-2026-04-03T19-15-24-167Z",
-      "startedAt": "2026-04-03T19:21:30.842Z",
-      "passRate": 1,
-      "coverage": 1,
-      "goNoGo": "GO",
-      "total": 6,
-      "passed": 6,
-      "failed": 0,
-      "infraErrors": 0
-    },
-    {
-      "executionId": "system-validate-2026-04-03T18-49-27-108Z",
-      "startedAt": "2026-04-03T18:55:57.816Z",
-      "passRate": 1,
-      "coverage": 1,
-      "goNoGo": "GO",
-      "total": 6,
-      "passed": 6,
-      "failed": 0,
-      "infraErrors": 0
-    },
-    {
-      "executionId": "system-validate-2026-04-03T18-41-27-177Z",
-      "startedAt": "2026-04-03T18:47:59.098Z",
-      "passRate": 1,
-      "coverage": 1,
-      "goNoGo": "GO",
-      "total": 6,
-      "passed": 6,
-      "failed": 0,
-      "infraErrors": 0
     }
   ],
   "avgDurationMsByScenario": {
-    "qa-chatpro-omnichannel-smoke": 529,
-    "qa-core-auth-login": 34512,
-    "qa-pbx-call-events-runtime-smoke": 5842,
-    "qa-pbx-voice-tts-asr-smoke": 3851,
-    "qa-physical-queue-smoke": 751,
-    "qa-ura-publish-rollback-smoke": 14140
+    "qa-chatpro-omnichannel-smoke": 905,
+    "qa-core-auth-login": 44932,
+    "qa-pbx-call-events-runtime-smoke": 8745,
+    "qa-pbx-voice-tts-asr-smoke": 8993,
+    "qa-physical-queue-smoke": 746,
+    "qa-ura-publish-rollback-smoke": 31188
   },
   "successRateByDomain": {
     "omnichannel": 1,

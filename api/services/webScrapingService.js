@@ -13,7 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 const { enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-const path = require('path');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -377,7 +377,7 @@ async function scrapeUrl(url, options = {}) {
   
   if (shouldRecordReplay) {
     replay = new ReplaySystem({
-      storagePath: path.join(process.cwd(), 'replays', 'scraping'),
+      storagePath: resolveRuntimePath('replays', 'scraping'),
       tenantId,
       context: 'scraping',
       enableScreenshots: false,
@@ -397,7 +397,7 @@ async function scrapeUrl(url, options = {}) {
     const shouldRecord = process.env.ENABLE_SCRAPING_RECORDING !== 'false';
     if (shouldRecord) {
       recording = new RecordingSystem({
-        storagePath: path.join(process.cwd(), 'recordings', 'scraping'),
+        storagePath: resolveRuntimePath('recordings', 'scraping'),
         tenantId,
         context: 'scraping',
         enableTimestamps: true,

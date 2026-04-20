@@ -211,7 +211,7 @@ function loadQaSmokeScenarios() {
       commandArgs: ['run', 'test:pbx:call-events-runtime:smoke'],
       env: {
         PBX_CALL_EVENTS_RUNTIME_INSERT_MODE: 'direct',
-        TEST_DATABASE_URL: 'postgresql://results_app:StrongPass@localhost:5433/results_saas_test',
+        PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK: '1',
       },
       assertions: ['eventos de chamada entregues'],
       impactScopes: ['telemetry', 'executors'],

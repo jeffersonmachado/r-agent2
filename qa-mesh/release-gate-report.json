@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-20260410183504-hlzgin",
+  "executionId": "system-validate-2026-04-20T16-16-04-740Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -15,16 +15,16 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-20260410183504-hlzgin",
-    "timestamp": "2026-04-10T18:36:52.965Z",
+    "executionId": "system-validate-2026-04-20T16-16-04-740Z",
+    "timestamp": "2026-04-20T16:22:12.573Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 50,
-    "attempted": 50,
-    "executed": 50,
-    "total": 50,
-    "passed": 50,
+    "registryTotal": 6,
+    "attempted": 6,
+    "executed": 6,
+    "total": 6,
+    "passed": 6,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -36,153 +36,41 @@
     "executionCoverage": 1,
     "executionQuality": "valid",
     "domains": {
-      "beauty": {
-        "passed": 12,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 12
-      },
-      "clinica": {
-        "passed": 1,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 1
-      },
-      "fitness": {
-        "passed": 8,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 8
-      },
-      "food": {
-        "passed": 1,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 1
-      },
-      "mercado": {
-        "passed": 1,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 1
-      },
-      "servicos": {
-        "passed": 1,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 1
-      },
-      "bpmn": {
-        "passed": 1,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 1
-      },
       "omnichannel": {
-        "passed": 13,
+        "passed": 1,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 13
+        "total": 1
       },
       "core": {
-        "passed": 5,
+        "passed": 2,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 5
+        "total": 2
       },
       "pbx": {
-        "passed": 7,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 7
+        "total": 3
       }
     },
     "goNoGo": "GO",
     "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "beauty": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "clinica": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "fitness": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "food": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "mercado": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "servicos": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "bpmn": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "omnichannel": {
         "total": 0,
         "blocking": 0,
@@ -208,5 +96,5 @@
     "changedFiles": []
   },
   "reasons": [],
-  "generatedAt": "2026-04-10T18:52:17.810Z"
+  "generatedAt": "2026-04-20T16:23:48.094Z"
 }

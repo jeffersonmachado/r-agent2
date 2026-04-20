@@ -29,13 +29,20 @@ Este repositório adota uma trilha operacional única com quatro comandos oficia
 - consolida `qa/smoke-evidence.json`
 - gera qa/system-validate-report.json
 - classifica runtime em qa/runtime-governance-report.json
+- quando `RUNTIME_ROOT` está definido (sem overrides específicos), report/evidências do validate são escritos em `<RUNTIME_ROOT>/qa/...` e `<RUNTIME_ROOT>/qa-mesh/...`
+- no smoke L-04 (PBX call events -> runtime) em modo `direct`, o fluxo exige intenção explícita de banco:
+	- definir `TEST_DATABASE_URL`, ou
+	- definir `PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1`
+	- o cenário oficial do `qa:mesh` já injeta `PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1`
 
 ### system:release
 - executa system:validate
+- exige workspace sem resíduos de runtime conhecidos (`npm run runtime:clean:check`)
 - gera artefato limpo auditado com hash/manifest
 - executa release gate sem reexecutar validate
 - emite go/no-go sem reexecutar gate
 - emite manifesto e resumo de release
+- quando `RUNTIME_ROOT` está definido (sem overrides específicos), manifest/gate/go-no-go/summary/rollback drill/evidências são escritos sob `<RUNTIME_ROOT>/qa/...` e `<RUNTIME_ROOT>/qa/release-evidence/...`
 
 ### system:deploy
 - exige artefato aprovado (dist/*.zip com manifest audit=passed e goNoGo=GO)
@@ -43,8 +50,10 @@ Este repositório adota uma trilha operacional única com quatro comandos oficia
 - deploy real apenas com SYSTEM_DEPLOY_EXECUTE=1
 - extrai o ZIP para diretório temporário e executa deploy a partir do artefato extraído
 - registra `qa/deploy-report.json`
+- quando `RUNTIME_ROOT` está definido (sem override específico), o deploy report é escrito em `<RUNTIME_ROOT>/qa/deploy-report.json`
 - quando `API_PUBLIC_PORT`, `FRONTEND_PORT`, `RAG_PORT`, `POSTGRES_PUBLIC_PORT`, `REDIS_PORT` ou `AMI_PUBLIC_PORT` não são informados, reutiliza a porta atual da stack ou escolhe uma alternativa explícita se a padrão estiver ocupada
 
 ## Uso recomendado
 
 - Novas automações devem chamar somente os quatro comandos oficiais.
+- Antes de empacotar release em um workspace de desenvolvimento, execute `npm run runtime:clean`.

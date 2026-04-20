@@ -8,9 +8,25 @@ const { buildRuntimeGovernanceReport, writeRuntimeGovernanceReport, toBool } = r
 const { evaluatePillars } = require('./lib/pillar-readiness');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const REPORT_PATH = process.env.SYSTEM_VALIDATE_REPORT_PATH || 'qa/system-validate-report.json';
-const QA_MESH_REPORT_PATH = process.env.QA_MESH_REPORT_PATH || 'qa-mesh/meshReport.json';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
+const RUNTIME_ROOT = process.env.RUNTIME_ROOT
+  ? (path.isAbsolute(process.env.RUNTIME_ROOT)
+    ? process.env.RUNTIME_ROOT
+    : path.join(ROOT_DIR, process.env.RUNTIME_ROOT))
+  : null;
+
+function runtimeAwarePath(defaultRelPath, explicitEnvVar) {
+  if (explicitEnvVar && process.env[explicitEnvVar]) {
+    return process.env[explicitEnvVar];
+  }
+  if (!RUNTIME_ROOT) {
+    return defaultRelPath;
+  }
+  return path.join(RUNTIME_ROOT, defaultRelPath);
+}
+
+const REPORT_PATH = runtimeAwarePath('qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const QA_MESH_REPORT_PATH = runtimeAwarePath('qa-mesh/meshReport.json', 'QA_MESH_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath('qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
 const OFFICIAL_QA_MESH_SCENARIOS = [
   'qa-core-auth-login',
   'qa-physical-queue-smoke',
@@ -25,6 +41,11 @@ const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
 const BLUE = '\x1b[34m';
+
+function resolveWorkspacePath(targetPath) {
+  if (!targetPath) return ROOT_DIR;
+  return path.isAbsolute(targetPath) ? targetPath : path.join(ROOT_DIR, targetPath);
+}
 
 function log(message, color = RESET) {
   // eslint-disable-next-line no-console
@@ -162,6 +183,45 @@ async function ensureFrontendPreview(frontendUrl, env) {
   }
 }
 
+function getApiRuntimeConfig(apiUrl) {
+  const parsedUrl = new URL(apiUrl);
+  return {
+    apiPort: parsedUrl.port ? String(parsedUrl.port) : (parsedUrl.protocol === 'https:' ? '443' : '80'),
+    readyUrl: new URL('/health/ready', parsedUrl).toString(),
+  };
+}
+
+async function ensureApiServer(apiUrl, env) {
+  const { apiPort, readyUrl } = getApiRuntimeConfig(apiUrl);
+
+  if (await canReach(readyUrl)) {
+    log(`[system:validate] api already reachable at ${readyUrl}`, BLUE);
+    return null;
+  }
+
+  const child = startManagedProcess(
+    'npm',
+    ['run', 'start:api'],
+    'api server',
+    {
+      ...env,
+      API_PORT: env.API_PORT || apiPort,
+    },
+    ROOT_DIR,
+    { detached: true },
+  );
+
+  try {
+    await waitForUrl(readyUrl, 90000, 'api_server');
+    return child;
+  } catch (error) {
+    try {
+      child.kill('SIGTERM');
+    } catch {}
+    throw error;
+  }
+}
+
 function validateContracts() {
   const contracts = [
     path.join(ROOT_DIR, 'contracts', 'generation.interface.json'),
@@ -183,7 +243,7 @@ function validateContracts() {
 }
 
 function writeReport(report) {
-  const absPath = path.join(ROOT_DIR, REPORT_PATH);
+  const absPath = resolveWorkspacePath(REPORT_PATH);
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
@@ -202,7 +262,10 @@ function resolveOfficialServiceUrls() {
 
 function buildQaMeshRuntimePaths() {
   const executionId = `system-validate-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-  const baseDir = path.join('qa-mesh', 'system-validate');
+  const baseDir = process.env.QA_MESH_SYSTEM_VALIDATE_DIR
+    || (RUNTIME_ROOT
+      ? path.join(RUNTIME_ROOT, 'qa-mesh', 'system-validate')
+      : path.join('qa-mesh', 'system-validate'));
   return {
     executionId,
     reportPath: path.join(baseDir, 'meshReport.json'),
@@ -214,7 +277,7 @@ function buildQaMeshRuntimePaths() {
 }
 
 function readJsonStrict(relPath, label) {
-  const absPath = path.join(ROOT_DIR, relPath);
+  const absPath = resolveWorkspacePath(relPath);
   if (!fs.existsSync(absPath)) {
     throw new Error(`${label}_missing:${relPath}`);
   }
@@ -226,7 +289,7 @@ function readJsonStrict(relPath, label) {
 }
 
 function loadEvidenceMaybe(relPath) {
-  const absPath = path.join(ROOT_DIR, relPath);
+  const absPath = resolveWorkspacePath(relPath);
   if (!fs.existsSync(absPath)) {
     return null;
   }
@@ -280,7 +343,7 @@ function buildSmokeEvidenceSummary() {
     source: 'system:validate',
     smokes,
   };
-  const absPath = path.join(ROOT_DIR, SMOKE_EVIDENCE_SUMMARY_PATH);
+  const absPath = resolveWorkspacePath(SMOKE_EVIDENCE_SUMMARY_PATH);
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
   return summary;
@@ -334,6 +397,11 @@ async function main() {
       QA_MESH_EXECUTION_ID: qaMeshPaths.executionId,
       QA_MESH_SCENARIO_IDS: OFFICIAL_QA_MESH_SCENARIOS.join(','),
     };
+
+    const apiServer = await ensureApiServer(officialUrls.apiUrl, qaEnv);
+    if (apiServer) {
+      managedChildren.push(apiServer);
+    }
 
     const frontendPreview = await ensureFrontendPreview(officialUrls.frontendUrl, qaEnv);
     if (frontendPreview) {

@@ -1,109 +1,58 @@
 # Configuração de Providers de IA
 
-Este guia explica como configurar providers de IA no sistema.
+## Estado atual
 
-## Visão Geral
+O projeto usa providers reais, com configuração por tenant e credenciais criptografadas no banco.
 
-O sistema suporta múltiplos providers de IA e permite configurar diferentes providers por tenant. Os providers são gerenciados pelo módulo `aiProviderManager` e a configuração/credenciais são **por tenant (no banco, criptografadas)**.
+- providers suportados: `openai`, `anthropic`
+- configuração por tenant: `primary` obrigatório, `secondary` opcional
+- credenciais: salvas no banco e protegidas por `ENCRYPTION_KEY`
 
-## Providers Suportados
+## Hierarquia operacional
 
-### 1. OpenAI
-- **ID**: `openai`
-- **Requer**: Chave de API OpenAI
-- **Modelos**: gpt-5.2 (recomendado), gpt-5.1, gpt-4o, gpt-4, gpt-3.5-turbo, etc.
+1. credenciais do tenant no banco
+2. configuração do tenant no banco (`primary` / `secondary`)
+3. fallback temporário via `config.json` apenas para migração controlada
 
-### 2. Anthropic (Claude)
-- **ID**: `anthropic`
-- **Requer**: Chave de API Anthropic
-- **Modelos**: claude-3-sonnet-20240229, claude-3-opus, etc.
+Não há provider `fallback` estático como caminho oficial.
 
-### 3. Fallback
-- **ID**: `fallback`
-- **Descrição**: Provider de fallback que retorna mensagens estáticas quando outros providers falham
+## Fallback do provider secundário
 
-## Configuração
+O provider secundário não entra automaticamente só por existir.
 
-### 1. Configurar via UI (recomendado)
+Ele só pode ser usado se:
 
-Use `http://localhost:5173/config?tab=ai&tenant=<TENANT_KEY>` para:
+- o tenant tiver `secondary` configurado
+- `fallbacks.aiProviderSecondary=true` estiver definido explicitamente em `api/data/config.json`
 
-- escolher o provider primário (e opcionalmente secundário)
-- salvar a configuração do tenant
-- salvar credenciais (API key) do provider (criptografadas no DB)
+Sem essa flag, o runtime usa apenas o provider primário e falha de forma observável.
 
-### 2. Campos de Configuração (por tenant)
+## Configuração recomendada
 
-- **`primary`**: Provider principal para o tenant (obrigatório)
-- **`secondary`**: Provider secundário (opcional)
-- **Credenciais**: API key do provider selecionado (salvas no DB e nunca exibidas)
+Use a UI de configuração do tenant para:
 
-### 3. Instalar Dependências (Opcional)
+- definir `primary`
+- opcionalmente definir `secondary`
+- salvar a API key do provider selecionado
 
-Para usar providers reais, você precisa instalar os SDKs correspondentes:
+## Dependências
 
-```bash
-# Para OpenAI
-npm install openai
+Os SDKs já fazem parte da base operacional atual:
 
-# Para Anthropic
-npm install @anthropic-ai/sdk
-```
+- `openai`
+- `@anthropic-ai/sdk`
 
-**Nota**: Atualmente, os providers retornam respostas simuladas. Para usar chamadas reais à API, você precisa:
+Se o SDK não estiver disponível em um ambiente específico, o serviço tenta chamada HTTP direta, mantendo erro explícito quando a configuração ou a credencial estiverem ausentes.
 
-1. Instalar os pacotes acima
-2. Descomentar e implementar o código real em `api/services/aiProviderService.js`
+## Erros esperados
 
-## Como Funciona
-
-1. **Inicialização**: Quando o servidor inicia, `initializeAiProviders()` é chamado
-2. **Registro**: Os providers configurados são registrados no `aiProviderManager`
-3. **Configuração por Tenant**: Cada tenant pode ter seu próprio provider principal e fallback
-4. **Fallback Automático**: Se o provider principal falhar, o sistema tenta o fallback automaticamente
-
-## Exemplo de Uso
-
-### Via API
-
-```bash
-curl -X POST http://localhost:3000/api/ai/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Olá, como você está?",
-    "tenantId": "tenant-acme",
-    "sessionId": "session-123",
-    "flowId": "flow-456",
-    "nodeId": "node-789"
-  }'
-```
-
-### Resposta
-
-```json
-{
-  "text": "Olá! Estou bem, obrigado por perguntar. Como posso ajudá-lo hoje?",
-  "usage": {
-    "promptTokens": 10,
-    "completionTokens": 15,
-    "totalTokens": 25
-  }
-}
-```
-
-## Troubleshooting
-
-### Erro: "Nenhum provider de IA configurado"
-- Verifique se o tenant tem `primary` configurado e salvo
-- Verifique se existem credenciais salvas para o provider (no DB)
-
-### Provider sempre retorna resposta simulada
-- Verifique se os pacotes SDK estão instalados
-- Descomente e implemente o código real em `aiProviderService.js`
+- tenant sem `primary`: provider indisponível para execução
+- credencial ausente: erro explícito por tenant/provider
+- `ENCRYPTION_KEY` inválida ou ausente: credenciais não podem ser usadas com segurança
 
 ## Segurança
 
-⚠️ **IMPORTANTE**: Nunca commite chaves de API reais no controle de versão.
-
-- As credenciais são salvas criptografadas no DB e nunca são exibidas pela API.
+- nunca commite chaves reais
+- injete `ENCRYPTION_KEY` por ambiente
+- trate `secondary` como exceção governada, não como mascaramento silencioso
 

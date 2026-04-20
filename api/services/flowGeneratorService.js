@@ -16,7 +16,7 @@ const { generateChatbotViaCore } = require('./aiWrappersAdapter');
 const ragService = require('./ragService');
 const webScrapingService = require('./webScrapingService');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-const path = require('path');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 const { validateFlow } = require('../../engine/validator');
 const {
   safeToString,
@@ -767,7 +767,7 @@ async function generateFlowFromDescription(description, options = {}) {
   
   // Inicializa gravação
   const recording = new RecordingSystem({
-    storagePath: path.join(process.cwd(), 'recordings', 'flow-generation'),
+    storagePath: resolveRuntimePath('recordings', 'flow-generation'),
     tenantId,
     context: 'flow-generation',
     enableTimestamps: false,

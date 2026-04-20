@@ -16,6 +16,12 @@ import { RagDocumentDetailsModal } from './rag-documents/RagDocumentDetailsModal
 import { RagQueryModal } from './rag-documents/RagQueryModal';
 import { RagAnalysisModal } from './rag-documents/RagAnalysisModal';
 import { RagLearningModal } from './rag-documents/RagLearningModal';
+import {
+  formatDateOnly,
+  formatDateTime,
+  getDetailsText,
+  getExtractedText,
+} from './rag-documents/ragDocumentsPageUtils';
 
 export function RAGDocumentsPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
@@ -103,42 +109,6 @@ export function RAGDocumentsPage() {
     failedQuestions: 0,
     documentsAnalyzed: 0,
   });
-
-  const getExtractedText = (doc) => {
-    if (!doc) return '';
-    const meta = doc.metadata || {};
-    const candidate =
-      meta.extractedContent ??
-      meta.extractedText ??
-      meta.extracted_text ??
-      meta.textoExtraido ??
-      meta.texto_extraido;
-    if (typeof candidate !== 'string') return '';
-    const trimmed = candidate.trim();
-    return trimmed ? trimmed : '';
-  };
-
-  const getDetailsText = (doc) => {
-    const extracted = getExtractedText(doc);
-    if (extracted) return extracted;
-    if (!doc || typeof doc.content !== 'string') return '';
-    const trimmed = doc.content.trim();
-    return trimmed ? trimmed : '';
-  };
-
-  const formatDateTime = (value, fallback = '—') => {
-    if (value === null || value === undefined || value === '') return fallback;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return fallback;
-    return date.toLocaleString('pt-BR');
-  };
-
-  const formatDateOnly = (value, fallback = '—') => {
-    if (value === null || value === undefined || value === '') return fallback;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return fallback;
-    return date.toLocaleDateString('pt-BR');
-  };
 
   const downloadTextAsFile = (filename, text) => {
     try {

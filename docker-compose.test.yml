@@ -53,7 +53,9 @@ services:
       PORT: 8000
       DEBUG: "false"
       VECTOR_STORE_TYPE: postgres
-      VECTOR_STORE_PATH: /app/data/vector_store
+      RAG_DATA_ROOT: /var/lib/ragent2/rag
+      VECTOR_STORE_PATH: /var/lib/ragent2/rag/vector_store
+      ADAPTIVE_LEARNING_DATA_PATH: /var/lib/ragent2/rag/adaptive_learning
       DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
@@ -64,7 +66,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - r-agent2-rag-vector-test-store:/app/data/vector_store
+      - r-agent2-rag-runtime-test:/var/lib/ragent2/rag
       - ./rag-service/test-results:/test-results
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -103,6 +105,11 @@ services:
       SYSTEMADMIN_USERNAME: systemadmin
       SYSTEMADMIN_NAME: System Admin
       RPA_TOKEN: ${RPA_TOKEN:-}
+      WWEBJS_AUTH_PATH: /var/lib/ragent2/whatsapp/auth
+      QA_MESH_HISTORY_DIR: /var/lib/ragent2/qa-mesh/history
+      QA_MESH_EVIDENCE_DIR: /var/lib/ragent2/qa-mesh/evidence
+      QA_MESH_SYSTEM_VALIDATE_DIR: /var/lib/ragent2/qa-mesh/system-validate
+      RELEASE_EVIDENCE_BASE_DIR: /var/lib/ragent2/release-evidence
       AMI_HOST: asterisk
       AMI_PORT: 5038
       AMI_USERNAME: ragent2
@@ -128,6 +135,7 @@ services:
       retries: 30
       start_period: 30s
     volumes:
+      - r-agent2-api-runtime-test:/var/lib/ragent2
       - r-agent2-pbx-media-test-data:/app/api/data/pbx-media
       - r-agent2-pbx-recordings-test-data:/app/api/data/pbx-recordings
       - ./tests/rpa/config:/app/tests/rpa/config:ro
@@ -184,6 +192,7 @@ services:
 volumes:
   r-agent2-postgres-test-data:
   r-agent2-redis-test-data:
-  r-agent2-rag-vector-test-store:
+  r-agent2-api-runtime-test:
+  r-agent2-rag-runtime-test:
   r-agent2-pbx-media-test-data:
   r-agent2-pbx-recordings-test-data:

@@ -15,11 +15,12 @@ const path = require('path');
 const fs = require('fs');
 const { evaluatePillars } = require('./lib/pillar-readiness');
 const { findLatestReleaseArtifact } = require('./lib/release-artifact');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SYSTEM_VALIDATE_REPORT_PATH = process.env.SYSTEM_VALIDATE_REPORT_PATH || 'qa/system-validate-report.json';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || 'qa/runtime-governance-report.json';
+const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
 
 const COLORS = {
   reset: '\x1b[0m',
@@ -34,7 +35,7 @@ function log(color, msg) {
 }
 
 function readJsonStrict(relPath, label) {
-  const absPath = path.join(ROOT, relPath);
+  const absPath = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(absPath)) {
     throw new Error(`${label}_missing:${relPath}`);
   }
@@ -58,8 +59,8 @@ function checkReleaseArtifact() {
 }
 
 function writeReport(report) {
-  const relPath = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-  const absPath = path.join(ROOT, relPath);
+  const relPath = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+  const absPath = resolveWorkspacePath(ROOT, relPath);
   const dir = path.dirname(absPath);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');

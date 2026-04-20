@@ -3,12 +3,13 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
 const DEFAULT_API_URL = process.env.ROLLBACK_DRILL_API_URL || process.env.API_URL || process.env.TEST_BASE_URL || 'http://localhost:3001';
-const REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
+const REPORT_PATH = runtimeAwarePath(ROOT, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
 const APPLY_PBX_ROLLBACK = process.env.ROLLBACK_DRILL_APPLY_PBX === '1';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
 const REQUIRE_PBX_SMOKE_EVIDENCE = String(process.env.ROLLBACK_DRILL_REQUIRE_PBX_SMOKE_EVIDENCE || '1') !== '0';
 
 function nowIso() {
@@ -149,7 +150,7 @@ function sanitizePayload(payload) {
 }
 
 function loadSmokeEvidenceSummary() {
-  const abs = path.join(ROOT, SMOKE_EVIDENCE_SUMMARY_PATH);
+  const abs = resolveWorkspacePath(ROOT, SMOKE_EVIDENCE_SUMMARY_PATH);
   if (!fs.existsSync(abs)) {
     return { ok: false, error: 'smoke_evidence_missing', path: SMOKE_EVIDENCE_SUMMARY_PATH, data: null };
   }
@@ -246,7 +247,7 @@ async function run() {
   };
 
   const writeReport = () => {
-    const abs = path.join(ROOT, REPORT_PATH);
+    const abs = resolveWorkspacePath(ROOT, REPORT_PATH);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   };

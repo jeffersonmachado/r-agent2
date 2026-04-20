@@ -53,6 +53,11 @@ services:
       SYSTEMADMIN_PASSWORD: ${SYSTEMADMIN_PASSWORD:-Admin123!}
       # OpenAI API Key (opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      WWEBJS_AUTH_PATH: ${WWEBJS_AUTH_PATH:-/var/lib/ragent2/whatsapp/auth}
+      QA_MESH_HISTORY_DIR: ${QA_MESH_HISTORY_DIR:-/var/lib/ragent2/qa-mesh/history}
+      QA_MESH_EVIDENCE_DIR: ${QA_MESH_EVIDENCE_DIR:-/var/lib/ragent2/qa-mesh/evidence}
+      QA_MESH_SYSTEM_VALIDATE_DIR: ${QA_MESH_SYSTEM_VALIDATE_DIR:-/var/lib/ragent2/qa-mesh/system-validate}
+      RELEASE_EVIDENCE_BASE_DIR: ${RELEASE_EVIDENCE_BASE_DIR:-/var/lib/ragent2/release-evidence}
       # Configurações adicionais de produção
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # -------------------------------------------------------------------
@@ -73,6 +78,7 @@ services:
     volumes:
       # Persistência de dados
       - r-agent2-api-data:/app/api/data
+      - r-agent2-runtime:/var/lib/ragent2
       - r-agent2-pbx-media-data:/app/api/data/pbx-media
       - r-agent2-pbx-recordings-data:/app/api/data/pbx-recordings
     depends_on:
@@ -155,7 +161,9 @@ services:
       CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-50}
       CHUNK_STRATEGY: ${RAG_CHUNK_STRATEGY:-sentence}
       VECTOR_STORE_TYPE: ${RAG_VECTOR_STORE_TYPE:-postgres}
-      VECTOR_STORE_PATH: /app/data/vector_store
+      RAG_DATA_ROOT: ${RAG_DATA_ROOT:-/var/lib/ragent2/rag}
+      VECTOR_STORE_PATH: ${VECTOR_STORE_PATH:-/var/lib/ragent2/rag/vector_store}
+      ADAPTIVE_LEARNING_DATA_PATH: ${ADAPTIVE_LEARNING_DATA_PATH:-/var/lib/ragent2/rag/adaptive_learning}
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -163,7 +171,7 @@ services:
     ports:
       - "${RAG_PORT:-8002}:8000"
     volumes:
-      - r-agent2-rag-vector-store:/app/data/vector_store
+      - r-agent2-rag-data:/var/lib/ragent2/rag
     depends_on:
       postgres:
         condition: service_healthy
@@ -304,9 +312,10 @@ volumes:
   r-agent2-postgres-data:
   r-agent2-redis-data:
   r-agent2-api-data:
+  r-agent2-runtime:
   r-agent2-pbx-media-data:
   r-agent2-pbx-recordings-data:
-  r-agent2-rag-vector-store:
+  r-agent2-rag-data:
 
 networks:
   r-agent2-network:

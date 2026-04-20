@@ -3,6 +3,10 @@ const {
   getPathSuffix,
   isSafeJsonFilename,
 } = require('./rpaRouteUtils');
+const {
+  getRpaReportReadDirs,
+  getRpaReplayReadDirs,
+} = require('../../../lib/rpaPathResolver');
 
 const DEFAULT_REPLAY_LIST_LIMIT = 50;
 const MAX_REPLAY_LIST_LIMIT = 500;
@@ -168,6 +172,16 @@ function removeReplayFiles(fs, path, targetDir) {
   return deleted;
 }
 
+function findFirstExistingFile(fs, path, directories, filename) {
+  for (const dirPath of directories) {
+    const candidate = path.join(dirPath, filename);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 async function handleRpaReplayRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const {
@@ -188,7 +202,7 @@ async function handleRpaReplayRoutes(ctx) {
         return true;
       }
 
-      const reportPath = path.join(process.cwd(), 'tests', 'rpa', 'reports', filename);
+      const reportPath = findFirstExistingFile(fs, path, getRpaReportReadDirs(), filename);
       if (!fs.existsSync(reportPath)) {
         sendJson(res, 404, { error: 'not_found', message: 'Relatório não encontrado' });
         return true;
@@ -217,8 +231,8 @@ async function handleRpaReplayRoutes(ctx) {
     if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
 
     try {
-      const replayDir = path.join(process.cwd(), 'tests', 'rpa', 'replay');
-      if (!fs.existsSync(replayDir)) {
+      const replayDirs = getRpaReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+      if (replayDirs.length === 0) {
         sendJson(res, 200, { files: [] });
         return true;
       }
@@ -237,13 +251,19 @@ async function handleRpaReplayRoutes(ctx) {
       const sortBy = searchParams.get('sortBy') || 'date';
       const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
 
-      const filteredEntries = fs.readdirSync(replayDir, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-        .map((entry) => {
+      const uniqueEntries = new Map();
+      for (const replayDir of replayDirs) {
+        const entries = fs.readdirSync(replayDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+          if (uniqueEntries.has(entry.name)) continue;
           const filePath = path.join(replayDir, entry.name);
           const stats = fs.statSync(filePath);
-          return buildReplayDetails(fs, path, replayDir, entry.name, stats, logger);
-        })
+          uniqueEntries.set(entry.name, buildReplayDetails(fs, path, replayDir, entry.name, stats, logger));
+        }
+      }
+
+      const filteredEntries = Array.from(uniqueEntries.values())
         .filter((replay) => matchesReplayFilters(replay, filters));
 
       const sortedEntries = sortReplayList(filteredEntries, sortBy, sortOrder);
@@ -281,8 +301,8 @@ async function handleRpaReplayRoutes(ctx) {
         return true;
       }
 
-      const replayPath = path.join(process.cwd(), 'tests', 'rpa', 'replay', filename);
-      if (!fs.existsSync(replayPath)) {
+      const replayPath = findFirstExistingFile(fs, path, getRpaReplayReadDirs(), filename);
+      if (!replayPath || !fs.existsSync(replayPath)) {
         sendJson(res, 404, { error: 'not_found', message: 'Log/Replay não encontrado' });
         return true;
       }
@@ -316,8 +336,8 @@ async function handleRpaReplayRoutes(ctx) {
         return true;
       }
 
-      const replayPath = path.join(process.cwd(), 'tests', 'rpa', 'replay', filename);
-      if (!fs.existsSync(replayPath)) {
+      const replayPath = findFirstExistingFile(fs, path, getRpaReplayReadDirs(), filename);
+      if (!replayPath || !fs.existsSync(replayPath)) {
         sendJson(res, 404, { error: 'not_found', message: 'Replay não encontrado' });
         return true;
       }
@@ -341,10 +361,13 @@ async function handleRpaReplayRoutes(ctx) {
     if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
 
     try {
-      const replayDir = path.join(process.cwd(), 'tests', 'rpa', 'replay');
-      const replaySystemDir = path.join(replayDir, 'system');
-      const deletedRoot = removeReplayFiles(fs, path, replayDir);
-      const deletedSystem = removeReplayFiles(fs, path, replaySystemDir);
+      const replayDirs = getRpaReplayReadDirs();
+      let deletedRoot = [];
+      let deletedSystem = [];
+      for (const replayDir of replayDirs) {
+        deletedRoot = deletedRoot.concat(removeReplayFiles(fs, path, replayDir));
+        deletedSystem = deletedSystem.concat(removeReplayFiles(fs, path, path.join(replayDir, 'system')));
+      }
 
       sendJson(res, 200, {
         success: true,

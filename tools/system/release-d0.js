@@ -4,9 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const REPORT_PATH = process.env.RELEASE_D0_REPORT_PATH || 'qa/release-d0-report.json';
+const REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-d0-report.json', 'RELEASE_D0_REPORT_PATH');
 const DRY_RUN = String(process.env.RELEASE_D0_DRY_RUN || '1') === '1';
 const DEPLOY_COMMAND = process.env.RELEASE_D0_DEPLOY_COMMAND || '';
 const RUN_BACKUP = String(process.env.RELEASE_D0_RUN_BACKUP || '1') === '1';
@@ -49,7 +50,7 @@ function runStep(report, label, command, options = {}) {
 }
 
 function writeReport(report) {
-  const abs = path.join(ROOT, REPORT_PATH);
+  const abs = resolveWorkspacePath(ROOT, REPORT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
@@ -69,12 +70,12 @@ function main() {
     },
     artifacts: {
       d0Report: REPORT_PATH,
-      releaseWindowReport: 'qa/release-window-report.json',
-      releaseGateReport: 'qa/release-gate-report.json',
-      launchPlanStatus: 'qa/launch-plan-status.json',
-      releaseManifest: 'qa/release-manifest.json',
-      releaseSummary: 'qa/release-summary.md',
-      releaseDecision: 'qa/release-decision.json',
+      releaseWindowReport: runtimeAwarePath(ROOT, 'qa/release-window-report.json', 'RELEASE_WINDOW_REPORT_PATH'),
+      releaseGateReport: runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH'),
+      launchPlanStatus: runtimeAwarePath(ROOT, 'qa/launch-plan-status.json', 'LAUNCH_PLAN_STATUS_PATH'),
+      releaseManifest: runtimeAwarePath(ROOT, 'qa/release-manifest.json', 'RELEASE_MANIFEST_PATH'),
+      releaseSummary: runtimeAwarePath(ROOT, 'qa/release-summary.md', 'RELEASE_SUMMARY_PATH'),
+      releaseDecision: runtimeAwarePath(ROOT, 'qa/release-decision.json', 'RELEASE_DECISION_PATH'),
     },
     error: null,
   };

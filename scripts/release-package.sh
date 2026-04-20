@@ -79,10 +79,16 @@ FORBIDDEN_PATTERNS=(
   '(^|/)qa-mesh/system-validate/'
   '(^|/)qa/deploy-report\.json$'
   '(^|/)reports/'
+  '(^|/)rag-service/\.coverage$'
+  '(^|/)rag-service/data/vector_store/'
+  '(^|/)rag-service/data/adaptive_learning/'
+  '(^|/)frontend/\.vite/'
   '(^|/)tmp_'
   '(^|/)\.token\.env$'
   '(^|/)\.wwebjs_auth/'
   '(^|/)\.wwebjs_cache/'
+  '(^|/)api/data/wa_sessions/'
+  '(^|/)qa-mesh/isolated-run[^/]*?/'
 )
 
 # ── 1. Pré-condições ──────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
  * 3. Executa IA limitada ao escopo
  * 4. Gera FlowDefinition
  * 5. Gera arquivo de teste RPA compatível (se solicitado)
- * 6. Salva RPA em tests/rpa/flows/
+ * 6. Salva RPA em runtime/rpa/flows/ com fallback de leitura para artefatos legados
  * 7. Registra metadata de auditoria
  * 
  * ⚠️ IMPORTANTE: Não executa RPA, apenas gera artefatos.
@@ -27,6 +27,7 @@ const { validateFlow } = require('../../engine/validator');
 const { executeRecording, getExecutionStatus } = require('./rpaService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 const {
   safeToString,
   safeTrim,
@@ -640,7 +641,7 @@ async function orchestrateGeneration(payload, options = {}) {
 
   // Inicializa Sistema de Replay
   const replay = new ReplaySystem({
-    storagePath: path.join(process.cwd(), 'replays', 'generation'),
+    storagePath: resolveRuntimePath('replays', 'generation'),
     tenantId,
     context: 'generation',
     enableScreenshots: false,
@@ -666,7 +667,7 @@ async function orchestrateGeneration(payload, options = {}) {
     const shouldRecord = process.env.ENABLE_GENERATION_RECORDING !== 'false';
     if (shouldRecord) {
       recording = new RecordingSystem({
-        storagePath: path.join(process.cwd(), 'recordings', 'generation'),
+        storagePath: resolveRuntimePath('recordings', 'generation'),
         tenantId,
         context: 'generation',
         enableTimestamps: true,

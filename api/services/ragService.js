@@ -14,228 +14,26 @@ const nlpService = require('./nlpService');
 const ragDeduplicationService = require('./ragDeduplicationService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-const path = require('path');
-const { getSequelize } = require('../db/sequelize');
-const { TenantContext: TenantContextGetter } = require('../db/models');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
+const {
+  DEFAULT_RAG_TIMEOUT,
+  fetchWithTimeout,
+  getRagDomainConfig,
+  getRagDomainSources,
+  getRagDomains,
+  getRagServiceUrl,
+  getRagTimeout,
+  getTenantContextForRag,
+  handleRagHttpError,
+  isRagDomainEnabled,
+  normalizeTenantId,
+} = require('./rag/ragRuntime');
 const {
   safeToString,
   safeTrim,
   safeTrimLower,
   safeErrorMessage,
 } = require('../utils/defensiveCoercion');
-
-// URL padrão do serviço Python RAG
-const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
-const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
-
-function normalizeTenantId(tenantId) {
-  if (tenantId === null || tenantId === undefined) return null;
-  const tid = safeTrim(tenantId);
-  return tid || null;
-}
-
-async function getTenantContextForRag(tenantId) {
-  const finalTenantId = normalizeTenantId(tenantId);
-  if (!finalTenantId) return null;
-  if (!getSequelize()) return null;
-
-  try {
-    const TenantContextModel = typeof TenantContextGetter === 'function' ? TenantContextGetter() : TenantContextGetter;
-    if (!TenantContextModel) return null;
-    const row = await TenantContextModel.findByPk(finalTenantId);
-    if (!row) return null;
-    const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
-    return {
-      tenantId: base.tenant_key,
-      ramo_atividade: base.ramo_atividade || '',
-      objetivo: base.objetivo || '',
-      site_oficial: base.site_oficial || '',
-      prioridade: base.prioridade || 'HIGH',
-      escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
-    };
-  } catch (err) {
-    logger.warn('[RAGService] Erro ao consultar tenant_context no PostgreSQL', {
-      tenantId: finalTenantId,
-      error: safeErrorMessage(err),
-    });
-    return null;
-  }
-}
-
-/**
- * Obtém a URL do serviço RAG para um tenant específico.
- * 
- * IMPORTANTE: Variáveis de ambiente têm prioridade sobre config.json
- * 
- * @param {string} tenantId - ID do tenant
- * @returns {string} URL do serviço RAG
- */
-function getRagServiceUrl(tenantId) {
-  tenantId = normalizeTenantId(tenantId);
-  // 1) Prioridade: variável de ambiente (override de tudo)
-  if (process.env.RAG_SERVICE_URL) {
-    return process.env.RAG_SERVICE_URL;
-  }
-  
-  if (!tenantId) {
-    return DEFAULT_RAG_SERVICE_URL;
-  }
-  
-  // 2) Verifica se há configuração específica para o tenant no config.json
-  const ragConfig = config.get('rag', {});
-  const tenantsConfig = ragConfig.tenants || {};
-  const tenantConfig = tenantsConfig[tenantId];
-  
-  if (tenantConfig && tenantConfig.serviceUrl) {
-    return tenantConfig.serviceUrl;
-  }
-  
-  // 3) Fallback para URL padrão
-  return DEFAULT_RAG_SERVICE_URL;
-}
-
-/**
- * Obtém o timeout do serviço RAG para um tenant específico.
- * 
- * @param {string} tenantId - ID do tenant
- * @returns {number} Timeout em milissegundos
- */
-function getRagTimeout(tenantId) {
-  tenantId = normalizeTenantId(tenantId);
-  if (!tenantId) {
-    return DEFAULT_RAG_TIMEOUT;
-  }
-  
-  // Verifica se há configuração específica para o tenant
-  const ragConfig = config.get('rag', {});
-  const tenantsConfig = ragConfig.tenants || {};
-  const tenantConfig = tenantsConfig[tenantId];
-  
-  if (tenantConfig && tenantConfig.timeout) {
-    return parseInt(tenantConfig.timeout, 10);
-  }
-  
-  return DEFAULT_RAG_TIMEOUT;
-}
-
-/**
- * Obtém a configuração de domínios RAG para um tenant específico.
- * 
- * @param {string} tenantId - ID do tenant
- * @returns {Object} Configuração de domínios
- */
-function getRagDomains(tenantId) {
-  const ragConfig = config.get('rag', {});
-  const tenantsConfig = ragConfig.tenants || {};
-  const tenantConfig = tenantsConfig[tenantId];
-  
-  if (tenantConfig && tenantConfig.domains) {
-    return tenantConfig.domains;
-  }
-  
-  // Retorna configuração padrão se não houver específica
-  return {
-    chatbot: {
-      sources: ['knowledge_base', 'product_docs', 'chat_upload'],
-      defaultCategory: 'general',
-      enabled: true,
-    },
-    rpa: {
-      sources: ['knowledge_base', 'product_docs'],
-      defaultCategory: 'rpa',
-      enabled: true,
-    },
-  };
-}
-
-/**
- * Obtém a configuração de um domínio específico para um tenant.
- * 
- * @param {string} tenantId - ID do tenant
- * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
- * @returns {Object|null} Configuração do domínio ou null se não encontrado
- */
-function getRagDomainConfig(tenantId, domain) {
-  const domains = getRagDomains(tenantId);
-  return domains[domain] || null;
-}
-
-/**
- * Verifica se um domínio está habilitado para um tenant.
- * 
- * @param {string} tenantId - ID do tenant
- * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
- * @returns {boolean} true se habilitado
- */
-function isRagDomainEnabled(tenantId, domain) {
-  const domainConfig = getRagDomainConfig(tenantId, domain);
-  return domainConfig ? domainConfig.enabled !== false : true;
-}
-
-/**
- * Obtém as fontes permitidas para um domínio de um tenant.
- * 
- * @param {string} tenantId - ID do tenant
- * @param {string} domain - Nome do domínio ('chatbot' ou 'rpa')
- * @returns {string[]} Array de fontes permitidas
- */
-function getRagDomainSources(tenantId, domain) {
-  const domainConfig = getRagDomainConfig(tenantId, domain);
-  return domainConfig ? (domainConfig.sources || []) : [];
-}
-
-/**
- * Trata erros HTTP do serviço RAG de forma padronizada.
- *
- * @param {Response} response - Resposta HTTP
- * @param {string} serviceUrl - URL do serviço
- * @param {string} endpoint - Endpoint que foi chamado
- * @param {string} errorText - Texto do erro
- * @returns {Error} Erro formatado
- */
-function handleRagHttpError(response, serviceUrl, endpoint, errorText = 'Erro desconhecido') {
-  if (response.status === 404) {
-    return new Error(`Endpoint não encontrado no serviço RAG (${serviceUrl}${endpoint}). Verifique se o serviço está configurado corretamente e se as rotas foram carregadas. O serviço pode precisar ser reiniciado.`);
-  } else if (response.status === 500) {
-    return new Error(`Erro interno no serviço RAG (${serviceUrl}${endpoint}). Detalhes: ${errorText}`);
-  } else if (response.status === 503) {
-    return new Error(`Serviço RAG temporariamente indisponível (${serviceUrl}${endpoint}). Tente novamente mais tarde.`);
-  } else {
-    return new Error(`Erro HTTP ${response.status} do serviço RAG: ${errorText}`);
-  }
-}
-
-/**
- * Faz requisição HTTP com timeout.
- *
- * @param {string} url - URL da requisição
- * @param {Object} options - Opções da requisição
- * @param {number} timeout - Timeout em ms
- * @returns {Promise<Response>}
- */
-async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error(`RAG service timeout após ${timeout}ms ao acessar ${url}`);
-    }
-    // Melhora mensagens de erro de conexão
-    if (safeErrorMessage(error).includes('fetch failed')) {
-      throw new Error(`Falha ao conectar com serviço RAG em ${url}. Verifique se o serviço está rodando e acessível.`);
-    }
-    throw error;
-  }
-}
 
 /**
  * Gera embeddings em batch reutilizando o modelo do serviço RAG (Python).
@@ -321,7 +119,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   
   if (shouldRecordReplay) {
     replay = new ReplaySystem({
-      storagePath: path.join(process.cwd(), 'replays', 'rag'),
+      storagePath: resolveRuntimePath('replays', 'rag'),
       tenantId,
       context: 'rag',
       enableScreenshots: false,
@@ -338,7 +136,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
 
   if (shouldRecord) {
     recording = new RecordingSystem({
-      storagePath: path.join(process.cwd(), 'recordings', 'rag'),
+      storagePath: resolveRuntimePath('recordings', 'rag'),
       tenantId,
       context: 'rag',
       enableTimestamps: true,

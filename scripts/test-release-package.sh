@@ -41,10 +41,16 @@ FORBIDDEN_PATTERNS=(
   '(^|/)remote-dumps/'
   '(^|/)remote-dumps2/'
   '(^|/)frontend_backup/'
+  '(^|/)frontend/\.vite/'
   '(^|/)tmp_'
   '(^|/)\.token\.env$'
   '(^|/)\.wwebjs_auth/'
   '(^|/)\.wwebjs_cache/'
+  '(^|/)api/data/wa_sessions/'
+  '(^|/)rag-service/\.coverage$'
+  '(^|/)rag-service/data/vector_store/'
+  '(^|/)rag-service/data/adaptive_learning/'
+  '(^|/)qa-mesh/isolated-run[^/]*?/'
 )
 
 REQUIRED_PATTERNS=(

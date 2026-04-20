@@ -4,13 +4,14 @@ const path = require('path');
 const models = require('../../db/models');
 const { getSequelize } = require('../../db/sequelize');
 const { getRecordingPolicy } = require('./pbxRecordingPolicyService');
+const { resolveRuntimePath } = require('../../utils/runtimePaths');
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
 
 function getRecordingsRoot() {
-  return process.env.PBX_RECORDINGS_DIR || path.resolve(__dirname, '../../data/pbx-recordings');
+  return process.env.PBX_RECORDINGS_DIR || resolveRuntimePath('pbx', 'recordings');
 }
 
 function parseRecordingFilename(fileName) {

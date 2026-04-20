@@ -9,8 +9,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
-const FINAL_VERDICT_PATH = path.join(__dirname, '../qa/final-verdict.json');
+const ROOT = path.join(__dirname, '..');
+const FINAL_VERDICT_PATH = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/final-verdict.json', 'QA_FINAL_VERDICT_PATH'));
 
 /**
  * Verifica se sistema está "verde" (pronto).

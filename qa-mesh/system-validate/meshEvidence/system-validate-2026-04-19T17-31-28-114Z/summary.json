@@ -1,0 +1,121 @@
+{
+  "executionId": "system-validate-2026-04-19T17-31-28-114Z",
+  "timestamp": "2026-04-19T18:57:59.233Z",
+  "executionOrigin": "pipeline",
+  "executionKind": null,
+  "isCanonicalExecution": true,
+  "registryTotal": 6,
+  "attempted": 6,
+  "executed": 6,
+  "total": 6,
+  "passed": 1,
+  "fallbackPassed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "infraErrors": 5,
+  "environmentMissing": 0,
+  "flaky": 0,
+  "fallbackUsed": 0,
+  "fallbackBlockingUsed": 0,
+  "executionCoverage": 1,
+  "executionQuality": "valid",
+  "domains": {
+    "omnichannel": {
+      "passed": 0,
+      "fallbackPassed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "infra_error": 1,
+      "environment_missing": 0,
+      "flaky": 0,
+      "total": 1
+    },
+    "core": {
+      "passed": 1,
+      "fallbackPassed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "infra_error": 1,
+      "environment_missing": 0,
+      "flaky": 0,
+      "total": 2
+    },
+    "pbx": {
+      "passed": 0,
+      "fallbackPassed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "infra_error": 3,
+      "environment_missing": 0,
+      "flaky": 0,
+      "total": 3
+    }
+  },
+  "goNoGo": "NO_GO",
+  "reasons": [
+    "FAILURE_RATE_ABOVE_THRESHOLD",
+    "CRITICAL_DOMAIN_FAILED:omnichannel",
+    "CRITICAL_DOMAIN_FAILED:core",
+    "CRITICAL_DOMAIN_FAILED:pbx",
+    "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_BLOCKING_REGRESSION",
+    "BASELINE_INFRA_REGRESSION"
+  ],
+  "pipelineBlocked": 0,
+  "failuresByDomain": {
+    "omnichannel": {
+      "total": 1,
+      "blocking": 1,
+      "byType": {
+        "infra_error": 1
+      },
+      "successRate": 0
+    },
+    "pbx": {
+      "total": 3,
+      "blocking": 3,
+      "byType": {
+        "infra_error": 3
+      },
+      "successRate": 0
+    },
+    "core": {
+      "total": 1,
+      "blocking": 0,
+      "byType": {
+        "infra_error": 1
+      },
+      "successRate": 0.5
+    }
+  },
+  "failuresByType": {
+    "infra_error": 5
+  },
+  "topErrors": [
+    {
+      "message": "[inbox-smoke] evidence=qa/l05-chatpro-omnichannel-evidence.json",
+      "count": 1
+    },
+    {
+      "message": "[pbx-call-events-runtime-smoke] FAIL fetch failed",
+      "count": 1
+    },
+    {
+      "message": "[pbx-voice-tts-asr-smoke] FAIL fetch failed",
+      "count": 1
+    },
+    {
+      "message": "[physical-smoke] evidence=qa/l01-physical-queue-evidence.json",
+      "count": 1
+    },
+    {
+      "message": "[ura-publish-rollback-smoke] FAIL fetch failed",
+      "count": 1
+    }
+  ],
+  "blockingDomains": [
+    "omnichannel",
+    "pbx"
+  ],
+  "changedFiles": []
+}

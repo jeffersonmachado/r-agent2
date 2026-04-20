@@ -4,9 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const BASE_DIR = process.env.RELEASE_EVIDENCE_BASE_DIR || 'qa/release-evidence';
+const BASE_DIR = runtimeAwarePath(ROOT, 'qa/release-evidence', 'RELEASE_EVIDENCE_BASE_DIR');
 const TS = new Date().toISOString().replace(/[:.]/g, '-');
 const PACK_DIR = process.env.RELEASE_EVIDENCE_OUT_DIR || path.join(BASE_DIR, TS);
 const DRY_RUN = String(process.env.RELEASE_EVIDENCE_DRY_RUN || '0') === '1';
@@ -40,11 +41,15 @@ const OPTIONAL_FILES = [
 ];
 
 function abs(rel) {
-  return path.join(ROOT, rel);
+  return resolveWorkspacePath(ROOT, rel);
+}
+
+function sourceRelPath(rel) {
+  return runtimeAwarePath(ROOT, rel, null);
 }
 
 function exists(rel) {
-  return fs.existsSync(abs(rel));
+  return fs.existsSync(abs(sourceRelPath(rel)));
 }
 
 function mkdirp(dirRel) {
@@ -52,7 +57,7 @@ function mkdirp(dirRel) {
 }
 
 function copyFile(relSrc, relDst) {
-  const src = abs(relSrc);
+  const src = abs(sourceRelPath(relSrc));
   const dst = abs(relDst);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   fs.copyFileSync(src, dst);
@@ -116,6 +121,7 @@ function main() {
   const missingOptional = OPTIONAL_FILES.filter((f) => !exists(f));
 
   const manifest = buildManifest(foundRequired, missingRequired, foundOptional, missingOptional);
+  const packDirAbs = abs(PACK_DIR);
 
   if (!DRY_RUN) {
     mkdirp(PACK_DIR);
@@ -138,7 +144,7 @@ function main() {
   // eslint-disable-next-line no-console
   console.log(`[release-evidence-pack] status=${manifest.summary.status} dryRun=${DRY_RUN ? '1' : '0'} requiredMissing=${manifest.summary.requiredMissing}`);
   // eslint-disable-next-line no-console
-  console.log(`[release-evidence-pack] outDir=${PACK_DIR}`);
+  console.log(`[release-evidence-pack] outDir=${packDirAbs}`);
 
   if (manifest.summary.requiredMissing > 0) {
     process.exit(1);

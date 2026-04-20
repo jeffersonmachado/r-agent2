@@ -124,6 +124,7 @@ def load_full_config_json() -> Optional[dict]:
 
 # Carrega configuração do config.json uma vez no início
 _CONFIG_JSON = load_config_json()
+_DEFAULT_RAG_DATA_ROOT = os.getenv("RAG_DATA_ROOT") or "./data"
 
 
 class Settings(BaseSettings):
@@ -164,8 +165,9 @@ class Settings(BaseSettings):
         if _CONFIG_JSON else "postgres"
     )
     vector_store_path: str = (
-        _CONFIG_JSON.get('vectorStore', {}).get('path', './data/vector_store')
-        if _CONFIG_JSON else "./data/vector_store"
+        os.getenv("VECTOR_STORE_PATH")
+        or (_CONFIG_JSON.get('vectorStore', {}).get('path', str(Path(_DEFAULT_RAG_DATA_ROOT) / 'vector_store'))
+        if _CONFIG_JSON else str(Path(_DEFAULT_RAG_DATA_ROOT) / 'vector_store'))
     )
 
     # Database (para pgvector)
@@ -251,4 +253,8 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings()
+        try:
+            Path(_settings.vector_store_path).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
     return _settings

@@ -73,6 +73,7 @@ qa/system-validate-report.json
 qa/deploy-report.json
 qa-mesh/meshEvidence/
 qa-mesh/meshHistory/
+qa-mesh/isolated-run*/
 qa-mesh/metrics.json
 qa-mesh/meshReport.json
 qa-mesh/repairPlan.json
@@ -83,6 +84,11 @@ recordings/
 replays/
 .wwebjs_auth/
 .wwebjs_cache/
+api/data/wa_sessions/
+rag-service/.coverage
+rag-service/data/vector_store/
+rag-service/data/adaptive_learning/
+frontend/.vite/
 
 # Backups ad-hoc
 frontend_backup/
@@ -99,6 +105,7 @@ tmp_*
 *.temp
 .cache/
 .temp/
+runtime/
 
 # Build artifacts
 dist/

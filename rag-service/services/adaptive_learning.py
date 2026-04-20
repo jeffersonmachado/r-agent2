@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 LEARNING_DATA_PATH = Path(
     os.getenv("ADAPTIVE_LEARNING_DATA_PATH")
     or os.getenv("RAG_ADAPTIVE_LEARNING_PATH")
-    or "./data/adaptive_learning"
+    or str(Path(os.getenv("RAG_DATA_ROOT") or "./data") / "adaptive_learning")
 )
 LEARNING_DATA_PATH.mkdir(parents=True, exist_ok=True)
 

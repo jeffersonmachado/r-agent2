@@ -4,12 +4,14 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
+const REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-window-report.json', 'RELEASE_WINDOW_REPORT_PATH');
 const FAST_MODE = String(process.env.RELEASE_WINDOW_FAST || '0') === '1';
 const PRUNE_OLD = String(process.env.RELEASE_WINDOW_PRUNE_OLD || '0') === '1';
 const RUN_BACKUP = !FAST_MODE && String(process.env.RELEASE_WINDOW_RUN_BACKUP || '0') === '1';
+const RELEASE_EVIDENCE_BASE_DIR = runtimeAwarePath(ROOT, 'qa/release-evidence', 'RELEASE_EVIDENCE_BASE_DIR');
 
 function runStep(report, label, command, envPatch = {}) {
   const startedAt = Date.now();
@@ -42,7 +44,7 @@ function runStep(report, label, command, envPatch = {}) {
 }
 
 function writeReport(report) {
-  const abs = path.join(ROOT, REPORT_PATH);
+  const abs = resolveWorkspacePath(REPORT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
@@ -57,12 +59,12 @@ function main() {
     status: 'running',
     steps: [],
     artifacts: {
-      goNoGo: 'qa/go-no-go-report.json',
-      launchPlanStatus: 'qa/launch-plan-status.json',
-      launchPlanStatusMd: 'qa/launch-plan-status.md',
-      releaseManifest: 'qa/release-manifest.json',
-      releaseSummary: 'qa/release-summary.md',
-      evidencePackRoot: 'qa/release-evidence',
+      goNoGo: runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH'),
+      launchPlanStatus: runtimeAwarePath(ROOT, 'qa/launch-plan-status.json', 'LAUNCH_PLAN_STATUS_PATH'),
+      launchPlanStatusMd: runtimeAwarePath(ROOT, 'qa/launch-plan-status.md', 'LAUNCH_PLAN_STATUS_MD_PATH'),
+      releaseManifest: runtimeAwarePath(ROOT, 'qa/release-manifest.json', 'RELEASE_MANIFEST_PATH'),
+      releaseSummary: runtimeAwarePath(ROOT, 'qa/release-summary.md', 'RELEASE_SUMMARY_PATH'),
+      evidencePackRoot: RELEASE_EVIDENCE_BASE_DIR,
       releaseWindowReport: REPORT_PATH,
     },
     config: {

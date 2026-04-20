@@ -19,6 +19,7 @@ const config = require('../utils/config');
 const { generateAiResponse } = require('./aiProviderService');
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 const {
   safeToString,
   safeTrim,
@@ -386,7 +387,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
     const shouldRecord = process.env.ENABLE_RPA_TEST_RECORDING !== 'false';
     if (shouldRecord) {
       recording = new RecordingSystem({
-        storagePath: path.join(process.cwd(), 'recordings', 'rpa-test'),
+        storagePath: resolveRuntimePath('recordings', 'rpa-test'),
         tenantId,
         context: 'rpa-test',
         enableTimestamps: true,

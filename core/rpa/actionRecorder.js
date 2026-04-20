@@ -13,21 +13,19 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-
-const SEEDS_DIR = path.join(process.cwd(), 'tests', 'rpa', 'seeds');
-const FLOWS_DIR = path.join(process.cwd(), 'tests', 'rpa', 'flows');
-
-function getRecordingSearchPaths(filename) {
-  const normalized = String(filename || '').replace(/\.json$/i, '');
-  return [
-    path.join(SEEDS_DIR, `${normalized}.json`),
-    path.join(FLOWS_DIR, `${normalized}.json`),
-  ];
-}
+const {
+  getRecordingSearchPaths,
+  getRpaFlowReadDirs,
+  getRpaSeedReadDirs,
+  getRpaSeedWriteDir,
+} = require('../../lib/rpaPathResolver');
 
 function getRecordingDirectories() {
-  return [SEEDS_DIR, FLOWS_DIR].filter((dirPath, index, all) => all.indexOf(dirPath) === index);
+  return [...getRpaSeedReadDirs(), ...getRpaFlowReadDirs()]
+    .filter((dirPath, index, all) => all.indexOf(dirPath) === index);
 }
+
+const SEEDS_DIR = getRpaSeedWriteDir();
 
 /**
  * ActionRecorder - Wrapper de compatibilidade

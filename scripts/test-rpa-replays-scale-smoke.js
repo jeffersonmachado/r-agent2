@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
 const ROOT = path.resolve(__dirname, '..');
 const REPLAY_DIR = path.join(ROOT, 'tests', 'rpa', 'replay');
@@ -101,9 +102,9 @@ function resolveLatestGeneratedReportPaths({ fsImpl = fs, reportsDir = REPORTS_D
 }
 
 function writeEvidence(evidence) {
-  const evidencePath = path.resolve(
+  const evidencePath = resolveWorkspacePath(
     ROOT,
-    process.env.RPA_REPLAY_SCALE_EVIDENCE_PATH || 'qa/l07-rpa-replays-scale-evidence.json'
+    runtimeAwarePath(ROOT, 'qa/l07-rpa-replays-scale-evidence.json', 'RPA_REPLAY_SCALE_EVIDENCE_PATH'),
   );
   ensureDir(path.dirname(evidencePath));
   fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');

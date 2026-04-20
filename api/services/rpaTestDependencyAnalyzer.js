@@ -11,6 +11,7 @@
 const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
+const { getRpaSeedReadDirs } = require('../../lib/rpaPathResolver');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -251,17 +252,16 @@ async function loadExistingData(dependencies, tenantId) {
  * Identifica seeds RPA disponíveis para resolução de dependências.
  */
 async function identifyAvailableSeeds(dependencies) {
-  const seedsDir = path.join(__dirname, '../../tests/rpa/seeds');
-  
   try {
-    if (!fs.existsSync(seedsDir)) {
-      logger.warn('Diretório de seeds RPA não encontrado', { seedsDir });
+    const seedDirs = getRpaSeedReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+    if (seedDirs.length === 0) {
+      logger.warn('Diretório de seeds RPA não encontrado', { seedsDir: getRpaSeedReadDirs() });
       return;
     }
 
-    const seedFiles = fs.readdirSync(seedsDir)
+    const seedFiles = Array.from(new Set(seedDirs.flatMap((seedsDir) => fs.readdirSync(seedsDir)
       .filter(f => f.endsWith('.json'))
-      .map(f => f.replace('.json', ''));
+      .map(f => f.replace('.json', '')))));
 
     dependencies.seeds.available = seedFiles;
 

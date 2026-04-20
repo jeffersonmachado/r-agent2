@@ -1,6 +1,9 @@
 {
-  "executionId": "system-validate-2026-04-03T23-48-11-981Z",
-  "timestamp": "2026-04-03T23:54:47.148Z",
+  "executionId": "system-validate-2026-04-20T16-16-04-740Z",
+  "timestamp": "2026-04-20T16:22:12.573Z",
+  "executionOrigin": "pipeline",
+  "executionKind": null,
+  "isCanonicalExecution": true,
   "registryTotal": 6,
   "attempted": 6,
   "executed": 6,
@@ -50,6 +53,7 @@
   },
   "goNoGo": "GO",
   "reasons": [],
+  "pipelineBlocked": 0,
   "failuresByDomain": {
     "omnichannel": {
       "total": 0,

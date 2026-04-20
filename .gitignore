@@ -56,6 +56,12 @@ remote-dumps2/
 # Coverage (gerado)
 coverage/
 
+# Python virtualenvs locais
+venv/
+.venv/
+rag-service/venv/
+rag-service/.venv/
+
 # Artefatos de teste do frontend (JUnit)
 frontend/test-results/
 frontend/.vite/
@@ -63,6 +69,8 @@ frontend/.vite/
 # Dados locais do vector store do rag-service (não versionar)
 rag-service/data/vector_store/
 rag-service/test-results/
+rag-service/.coverage
+rag-service/data/adaptive_learning/
 rag-service/data/adaptive_learning/*_learning.json
 
 # Evidências locais de QA / release
@@ -86,6 +94,7 @@ qa/deploy-report.json
 # Artefatos locais de execução do QA Mesh
 qa-mesh/meshEvidence/*
 qa-mesh/meshHistory/*
+qa-mesh/isolated-run*/
 qa-mesh/meshReport.json
 qa-mesh/metrics.json
 qa-mesh/repairPlan.json
@@ -132,3 +141,10 @@ scripts/test-report.json
 # Sessões locais do WhatsApp Web (não versionar)
 .wwebjs_auth/
 .wwebjs_cache/
+api/data/wa_sessions/
+
+# Runtime root opcional para ambientes locais/containerizados
+runtime/
+
+# Saída de teste do empacotamento
+dist/test-release/

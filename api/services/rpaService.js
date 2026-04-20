@@ -12,6 +12,13 @@ const {
 } = require('../utils/defensiveCoercion');
 const path = require('path');
 const fs = require('fs');
+const {
+  getRpaFlowReadDirs,
+  getRpaSeedReadDirs,
+  getRpaSeedWriteDir,
+  normalizeJsonName,
+  uniquePaths,
+} = require('../../lib/rpaPathResolver');
 
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
 let INJECTABLE_SCRIPT = null;
@@ -40,15 +47,10 @@ const activeRecordings = new Map();
  */
 function listRecordings() {
   try {
-    const candidateDirs = [
-      path.join(__dirname, '../../rpa/seeds'),
-      path.join(__dirname, '../../tests/rpa/seeds'),
-      path.join(process.cwd(), 'tests/rpa/seeds'),
-      path.resolve(__dirname, '../../tests/rpa/seeds'),
-      path.join(__dirname, '../../tests/rpa/flows'),
-      path.join(process.cwd(), 'tests/rpa/flows'),
-      path.resolve(__dirname, '../../tests/rpa/flows'),
-    ];
+    const candidateDirs = uniquePaths([
+      ...getRpaSeedReadDirs(),
+      ...getRpaFlowReadDirs(),
+    ]);
     const recordings = [];
 
     function pushRecording(filePath, source) {
@@ -98,7 +100,8 @@ function listRecordings() {
         for (const file of files) {
           if (file.endsWith('.json')) {
             try {
-              const source = dirPath.endsWith('/flows') ? 'flow' : 'seed';
+              const normalizedDir = dirPath.replace(/\\/g, '/');
+              const source = normalizedDir.endsWith('/flows') ? 'flow' : 'seed';
               pushRecording(path.join(dirPath, file), source);
             } catch (error) {
               logger.warn(`Erro ao ler gravação ${file}`, { error: safeErrorMessage(error), path: dirPath });
@@ -1277,43 +1280,16 @@ function deleteRecording(recordingId) {
     };
   }
 
-  // Tenta múltiplos caminhos possíveis (mesmo padrão de listRecordings)
-  const possibleBasePaths = [
-    path.join(__dirname, '../../tests/rpa'), // De api/services
-    path.join(process.cwd(), 'tests/rpa'), // Do diretório raiz do projeto
-    path.resolve(__dirname, '../../tests/rpa'), // Resolvido
-  ];
-  
-  let basePath = null;
-  for (const dirPath of possibleBasePaths) {
-    if (fs.existsSync(dirPath)) {
-      basePath = dirPath;
-      break;
-    }
-  }
-  
-  if (!basePath) {
-    return {
-      success: false,
-      message: 'Diretório de gravações não encontrado',
-    };
-  }
-
-  // Remove .json se presente
-  let sanitizedId = safeTrim(recordingId);
-  if (sanitizedId.endsWith('.json')) {
-    sanitizedId = sanitizedId.slice(0, -'.json'.length);
-  }
-
-  // UNIFICADO: Tudo está em /seeds/
-  const seedsDir = path.join(basePath, 'seeds');
+  const sanitizedId = normalizeJsonName(safeTrim(recordingId));
+  const writableSeedsDir = getRpaSeedWriteDir();
+  const legacySearchDirs = getRpaSeedReadDirs().filter((dirPath) => dirPath !== writableSeedsDir);
   
   // Tenta primeiro pelo nome do arquivo (caso mais comum)
   let recordingFile = null;
   let foundFileName = null;
   
-  if (fs.existsSync(seedsDir)) {
-    const seedsFile = path.join(seedsDir, `${sanitizedId}.json`);
+  if (fs.existsSync(writableSeedsDir)) {
+    const seedsFile = path.join(writableSeedsDir, `${sanitizedId}.json`);
     if (fs.existsSync(seedsFile)) {
       recordingFile = seedsFile;
       foundFileName = sanitizedId;
@@ -1322,11 +1298,10 @@ function deleteRecording(recordingId) {
 
   // Se não encontrou pelo nome do arquivo, procura pelo UUID interno
   if (!recordingFile) {
-    const searchDirs = [];
-    if (fs.existsSync(seedsDir)) searchDirs.push(seedsDir);
+    const searchDirs = legacySearchDirs.filter((dirPath) => fs.existsSync(dirPath));
 
     // eslint-disable-next-line no-console
-    console.log(`[deleteRecording] Procurando por UUID: ${sanitizedId} (original: ${recordingId})`);
+    console.log(`[deleteRecording] Procurando legado por UUID: ${sanitizedId} (original: ${recordingId})`);
     
     for (const dir of searchDirs) {
       const files = fs.readdirSync(dir);

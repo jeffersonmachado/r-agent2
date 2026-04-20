@@ -4,9 +4,10 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const REPORT_PATH = process.env.RELEASE_CONTINGENCY_REPORT_PATH || 'qa/release-contingency-report.json';
+const REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-contingency-report.json', 'RELEASE_CONTINGENCY_REPORT_PATH');
 const DRY_RUN = String(process.env.RELEASE_CONTINGENCY_DRY_RUN || '0') === '1';
 const RUN_BACKUP = String(process.env.RELEASE_CONTINGENCY_RUN_BACKUP || '1') !== '0';
 const RUN_GO_NO_GO = String(process.env.RELEASE_CONTINGENCY_RUN_GO_NO_GO || '1') !== '0';
@@ -51,7 +52,7 @@ function skipStep(report, label, command, reason) {
 }
 
 function writeReport(report) {
-  const abs = path.join(ROOT, REPORT_PATH);
+  const abs = resolveWorkspacePath(ROOT, REPORT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
@@ -69,10 +70,10 @@ function main() {
     },
     steps: [],
     artifacts: {
-      releaseGate: 'qa/release-gate-report.json',
-      goNoGo: 'qa/go-no-go-report.json',
-      launchPlanStatus: 'qa/launch-plan-status.json',
-      launchPlanStatusMd: 'qa/launch-plan-status.md',
+      releaseGate: runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH'),
+      goNoGo: runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH'),
+      launchPlanStatus: runtimeAwarePath(ROOT, 'qa/launch-plan-status.json', 'LAUNCH_PLAN_STATUS_PATH'),
+      launchPlanStatusMd: runtimeAwarePath(ROOT, 'qa/launch-plan-status.md', 'LAUNCH_PLAN_STATUS_MD_PATH'),
       report: REPORT_PATH,
     },
     error: null,

@@ -5,18 +5,19 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { findLatestReleaseArtifact, updateArtifactManifest } = require('./lib/release-artifact');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const OUTPUT_PATH = process.env.RELEASE_MANIFEST_PATH || 'qa/release-manifest.json';
-const SYSTEM_VALIDATE_REPORT_PATH = process.env.SYSTEM_VALIDATE_REPORT_PATH || 'qa/system-validate-report.json';
-const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
-const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
-const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || 'qa/runtime-governance-report.json';
-const DEPLOY_REPORT_PATH = process.env.SYSTEM_DEPLOY_REPORT_PATH || 'qa/deploy-report.json';
+const OUTPUT_PATH = runtimeAwarePath(ROOT, 'qa/release-manifest.json', 'RELEASE_MANIFEST_PATH');
+const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const RELEASE_GATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+const ROLLBACK_DRILL_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
+const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
+const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
 
 function readJson(relPath) {
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(abs)) {
     return { ok: false, error: 'missing', data: null };
   }
@@ -134,7 +135,7 @@ function buildManifest() {
 
 function main() {
   const manifest = buildManifest();
-  const abs = path.join(ROOT, OUTPUT_PATH);
+  const abs = resolveWorkspacePath(ROOT, OUTPUT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 

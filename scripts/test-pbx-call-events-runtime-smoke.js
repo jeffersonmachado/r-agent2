@@ -15,6 +15,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
+
+const ROOT = path.join(__dirname, '..');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
@@ -70,6 +73,21 @@ function insertMode() {
   return String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || 'compose_exec').toLowerCase();
 }
 
+function isTruthy(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
+}
+
+function assertDirectModeDbIntent() {
+  if (insertMode() !== 'direct') return;
+  const hasExplicitTestDb = Boolean(String(process.env.TEST_DATABASE_URL || '').trim());
+  const allowFallback = isTruthy(process.env.PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK);
+  if (hasExplicitTestDb || allowFallback) return;
+
+  throw new Error(
+    'direct_mode_requires_explicit_db_intent:set_TEST_DATABASE_URL_or_PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1',
+  );
+}
+
 function extractJsonObjects(text) {
   const src = String(text || '');
   const out = [];
@@ -114,14 +132,16 @@ function extractJsonObjects(text) {
 }
 
 function evidencePath() {
-  return String(process.env.PBX_CALL_EVENTS_RUNTIME_EVIDENCE_PATH || 'qa/l04-pbx-call-events-runtime-evidence.json');
+  return resolveWorkspacePath(
+    ROOT,
+    runtimeAwarePath(ROOT, 'qa/l04-pbx-call-events-runtime-evidence.json', 'PBX_CALL_EVENTS_RUNTIME_EVIDENCE_PATH'),
+  );
 }
 
 function writeEvidence(payload) {
   const out = evidencePath();
-  const abs = path.resolve(process.cwd(), out);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return out;
 }
 
@@ -589,6 +609,7 @@ async function waitExecution({ baseUrl, token, correlationId, flowId, minStarted
 }
 
 async function main() {
+  assertDirectModeDbIntent();
   const baseUrl = apiBaseUrl();
   const auth = await login(baseUrl);
   const ts = Date.now();

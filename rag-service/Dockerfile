@@ -21,8 +21,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Cria diretório para dados e vector store
-RUN mkdir -p /app/data /app/data/vector_store && \
-    chmod -R 755 /app/data && \
+RUN mkdir -p /app/data /app/data/vector_store /var/lib/ragent2/rag/vector_store /var/lib/ragent2/rag/adaptive_learning && \
+    chmod -R 755 /app/data /var/lib/ragent2 && \
     apt-get purge -y --auto-remove build-essential || true && \
     rm -rf /var/lib/apt/lists/*
 
@@ -31,6 +31,9 @@ ENV HOST=0.0.0.0
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV RAG_DATA_ROOT=/var/lib/ragent2/rag
+ENV VECTOR_STORE_PATH=/var/lib/ragent2/rag/vector_store
+ENV ADAPTIVE_LEARNING_DATA_PATH=/var/lib/ragent2/rag/adaptive_learning
 
 # Expõe porta
 EXPOSE 8000

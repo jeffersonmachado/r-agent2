@@ -5,21 +5,22 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { evaluatePillars } = require('./lib/pillar-readiness');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const SYSTEM_VALIDATE_REPORT_PATH = process.env.SYSTEM_VALIDATE_REPORT_PATH || 'qa/system-validate-report.json';
-const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
-const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || 'qa/runtime-governance-report.json';
-const DEPLOY_REPORT_PATH = process.env.SYSTEM_DEPLOY_REPORT_PATH || 'qa/deploy-report.json';
+const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const RELEASE_GATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+const ROLLBACK_DRILL_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
+const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
 const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '0') !== '0';
 const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '0') !== '0';
 const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
 
 function readJson(relPath) {
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(abs)) return null;
   try {
     return JSON.parse(fs.readFileSync(abs, 'utf8'));
@@ -58,7 +59,7 @@ function runRollbackDrillStep() {
 }
 
 function writeReport(report) {
-  const abs = path.join(ROOT, GO_NO_GO_REPORT_PATH);
+  const abs = resolveWorkspacePath(ROOT, GO_NO_GO_REPORT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }

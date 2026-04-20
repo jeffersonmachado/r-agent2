@@ -4,10 +4,16 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { runtimeAwarePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const BASE_DIR = process.env.RELEASE_EVIDENCE_BASE_DIR || 'qa/release-evidence';
+const BASE_DIR = runtimeAwarePath(ROOT, 'qa/release-evidence', 'RELEASE_EVIDENCE_BASE_DIR');
 const TARGET_DIR = process.env.RELEASE_EVIDENCE_DIR || '';
+
+function resolvePath(targetPath) {
+  if (!targetPath) return '';
+  return path.isAbsolute(targetPath) ? targetPath : path.join(ROOT, targetPath);
+}
 
 function sha256File(absPath) {
   const hash = crypto.createHash('sha256');
@@ -42,9 +48,9 @@ function parseChecksums(content) {
 }
 
 function main() {
-  const baseAbs = path.join(ROOT, BASE_DIR);
+  const baseAbs = resolvePath(BASE_DIR);
   const targetAbs = TARGET_DIR
-    ? path.join(ROOT, TARGET_DIR)
+    ? resolvePath(TARGET_DIR)
     : pickLatestDir(baseAbs);
 
   if (!targetAbs || !fs.existsSync(targetAbs)) {
@@ -82,12 +88,12 @@ function main() {
 
   if (failures.length > 0) {
     // eslint-disable-next-line no-console
-    console.error(`[release-evidence-verify] FAIL dir=${path.relative(ROOT, targetAbs)} issues=${failures.join(',')}`);
+    console.error(`[release-evidence-verify] FAIL dir=${path.relative(ROOT, targetAbs) || targetAbs} issues=${failures.join(',')}`);
     process.exit(1);
   }
 
   // eslint-disable-next-line no-console
-  console.log(`[release-evidence-verify] PASS dir=${path.relative(ROOT, targetAbs)} files=${entries.length}`);
+  console.log(`[release-evidence-verify] PASS dir=${path.relative(ROOT, targetAbs) || targetAbs} files=${entries.length}`);
   process.exit(0);
 }
 

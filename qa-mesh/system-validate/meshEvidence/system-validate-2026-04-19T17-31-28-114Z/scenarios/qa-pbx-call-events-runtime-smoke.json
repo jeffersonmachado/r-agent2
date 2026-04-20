@@ -1,0 +1,62 @@
+{
+  "id": "qa-pbx-call-events-runtime-smoke",
+  "domain": "pbx",
+  "type": "technical",
+  "source": "qa",
+  "flow": "pbx_call_events_runtime",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "infra_error",
+  "startedAt": "2026-04-19T18:58:36.904Z",
+  "finishedAt": "2026-04-19T18:58:37.827Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-19T18:58:36.998Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:pbx:call-events-runtime:smoke",
+      "timestamp": "2026-04-19T18:58:36.998Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-pbx-call-events-runtime-smoke.js",
+      "timestamp": "2026-04-19T18:58:36.998Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[pbx-call-events-runtime-smoke] FAIL fetch failed",
+      "timestamp": "2026-04-19T18:58:37.814Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:pbx:call-events-runtime:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [
+    "[pbx-call-events-runtime-smoke] FAIL fetch failed"
+  ],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-19T17-31-28-114Z/replays/qa-pbx-call-events-runtime-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "eventos de chamada entregues"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-19T17-31-28-114Z/replays/qa-pbx-call-events-runtime-smoke.json",
+  "failureType": "infra_error",
+  "errorMessage": "[pbx-call-events-runtime-smoke] FAIL fetch failed",
+  "rootCauseHint": "Infraestrutura local, rede ou runtime do browser impediu a execução do cenário.",
+  "durationMs": 923
+}

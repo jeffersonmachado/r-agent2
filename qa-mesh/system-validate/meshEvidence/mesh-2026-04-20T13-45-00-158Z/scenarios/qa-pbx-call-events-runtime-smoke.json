@@ -1,0 +1,798 @@
+{
+  "id": "qa-pbx-call-events-runtime-smoke",
+  "domain": "pbx",
+  "type": "technical",
+  "source": "qa",
+  "flow": "pbx_call_events_runtime",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "flaky",
+  "startedAt": "2026-04-20T13:45:44.714Z",
+  "finishedAt": "2026-04-20T13:49:56.462Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-20T13:45:44.833Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:pbx:call-events-runtime:smoke",
+      "timestamp": "2026-04-20T13:45:44.833Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-pbx-call-events-runtime-smoke.js",
+      "timestamp": "2026-04-20T13:45:44.833Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
+      "timestamp": "2026-04-20T13:45:45.330Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:45.371Z] [WARN] [Sequelize] Tentativa 1/30 falhou, tentando novamente em 1000ms...",
+      "timestamp": "2026-04-20T13:45:45.372Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:45.372Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:45.372Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:45.372Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:46.374Z] [WARN] [Sequelize] Tentativa 2/30 falhou, tentando novamente em 1500ms...",
+      "timestamp": "2026-04-20T13:45:46.374Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:46.374Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:46.374Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:46.374Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:47.878Z] [WARN] [Sequelize] Tentativa 3/30 falhou, tentando novamente em 2250ms...",
+      "timestamp": "2026-04-20T13:45:47.879Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:47.879Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:47.879Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:47.879Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:50.134Z] [WARN] [Sequelize] Tentativa 4/30 falhou, tentando novamente em 3375ms...",
+      "timestamp": "2026-04-20T13:45:50.134Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:50.134Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:50.134Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:50.134Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:53.513Z] [WARN] [Sequelize] Tentativa 5/30 falhou, tentando novamente em 5062.5ms...",
+      "timestamp": "2026-04-20T13:45:53.513Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:53.513Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:53.513Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:53.513Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:45:58.583Z] [WARN] [Sequelize] Tentativa 6/30 falhou, tentando novamente em 7593.75ms...",
+      "timestamp": "2026-04-20T13:45:58.584Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:45:58.584Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:45:58.584Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:45:58.584Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:06.188Z] [WARN] [Sequelize] Tentativa 7/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:06.189Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:06.189Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:06.189Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:06.189Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:16.200Z] [WARN] [Sequelize] Tentativa 8/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:16.200Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:16.200Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:16.200Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:16.200Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:26.214Z] [WARN] [Sequelize] Tentativa 9/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:26.215Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:26.215Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:26.215Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:26.215Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:36.228Z] [WARN] [Sequelize] Tentativa 10/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:36.229Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:36.229Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:36.229Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:36.229Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:46.241Z] [WARN] [Sequelize] Tentativa 11/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:46.241Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:46.241Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:46.242Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:46.242Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:46:56.253Z] [WARN] [Sequelize] Tentativa 12/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:46:56.253Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:46:56.253Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:46:56.253Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:46:56.253Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:06.258Z] [WARN] [Sequelize] Tentativa 13/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:06.258Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:06.258Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:06.258Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:06.258Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:16.268Z] [WARN] [Sequelize] Tentativa 14/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:16.268Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:16.268Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:16.268Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:16.268Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:26.279Z] [WARN] [Sequelize] Tentativa 15/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:26.280Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:26.280Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:26.280Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:26.280Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:36.292Z] [WARN] [Sequelize] Tentativa 16/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:36.293Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:36.293Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:36.293Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:36.293Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:46.304Z] [WARN] [Sequelize] Tentativa 17/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:46.304Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:46.304Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:46.304Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:46.304Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:47:56.316Z] [WARN] [Sequelize] Tentativa 18/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:47:56.316Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:47:56.316Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:47:56.316Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:47:56.316Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:06.329Z] [WARN] [Sequelize] Tentativa 19/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:06.329Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:06.329Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:06.329Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:06.329Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:16.339Z] [WARN] [Sequelize] Tentativa 20/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:16.339Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:16.339Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:16.339Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:16.339Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:26.349Z] [WARN] [Sequelize] Tentativa 21/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:26.350Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:26.350Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:26.350Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:26.350Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:36.352Z] [WARN] [Sequelize] Tentativa 22/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:36.352Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:36.352Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:36.352Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:36.352Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:46.360Z] [WARN] [Sequelize] Tentativa 23/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:46.360Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:46.360Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:46.360Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:46.360Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:48:56.370Z] [WARN] [Sequelize] Tentativa 24/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:48:56.371Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:48:56.371Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:48:56.371Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:48:56.371Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:06.381Z] [WARN] [Sequelize] Tentativa 25/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:49:06.382Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:06.382Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:06.382Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:06.382Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:16.394Z] [WARN] [Sequelize] Tentativa 26/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:49:16.394Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:16.394Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:16.394Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:16.394Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:26.405Z] [WARN] [Sequelize] Tentativa 27/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:49:26.405Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:26.405Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:26.405Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:26.405Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:36.416Z] [WARN] [Sequelize] Tentativa 28/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:49:36.417Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:36.417Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:36.417Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:36.417Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:46.427Z] [WARN] [Sequelize] Tentativa 29/30 falhou, tentando novamente em 10000ms...",
+      "timestamp": "2026-04-20T13:49:46.427Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:46.427Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:46.427Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:46.427Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[2026-04-20T13:49:56.438Z] [ERROR] [Sequelize] Falha ao conectar ao PostgreSQL após todas as tentativas",
+      "timestamp": "2026-04-20T13:49:56.438Z"
+    },
+    {
+      "level": "stderr",
+      "message": "{",
+      "timestamp": "2026-04-20T13:49:56.438Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"attempts\": 30,",
+      "timestamp": "2026-04-20T13:49:56.438Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+      "timestamp": "2026-04-20T13:49:56.438Z"
+    },
+    {
+      "level": "stderr",
+      "message": "}",
+      "timestamp": "2026-04-20T13:49:56.438Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[2026-04-20T13:49:56.439Z] [INFO] [Sequelize] Conexão fechada",
+      "timestamp": "2026-04-20T13:49:56.439Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[pbx-call-events-runtime-smoke] FAIL Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:5433",
+      "timestamp": "2026-04-20T13:49:56.439Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:pbx:call-events-runtime:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [
+    "[2026-04-20T13:45:45.371Z] [WARN] [Sequelize] Tentativa 1/30 falhou, tentando novamente em 1000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:45:46.374Z] [WARN] [Sequelize] Tentativa 2/30 falhou, tentando novamente em 1500ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:45:47.878Z] [WARN] [Sequelize] Tentativa 3/30 falhou, tentando novamente em 2250ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:45:50.134Z] [WARN] [Sequelize] Tentativa 4/30 falhou, tentando novamente em 3375ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:45:53.513Z] [WARN] [Sequelize] Tentativa 5/30 falhou, tentando novamente em 5062.5ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:45:58.583Z] [WARN] [Sequelize] Tentativa 6/30 falhou, tentando novamente em 7593.75ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:06.188Z] [WARN] [Sequelize] Tentativa 7/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:16.200Z] [WARN] [Sequelize] Tentativa 8/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:26.214Z] [WARN] [Sequelize] Tentativa 9/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:36.228Z] [WARN] [Sequelize] Tentativa 10/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:46.241Z] [WARN] [Sequelize] Tentativa 11/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:46:56.253Z] [WARN] [Sequelize] Tentativa 12/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:06.258Z] [WARN] [Sequelize] Tentativa 13/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:16.268Z] [WARN] [Sequelize] Tentativa 14/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:26.279Z] [WARN] [Sequelize] Tentativa 15/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:36.292Z] [WARN] [Sequelize] Tentativa 16/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:46.304Z] [WARN] [Sequelize] Tentativa 17/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:47:56.316Z] [WARN] [Sequelize] Tentativa 18/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:06.329Z] [WARN] [Sequelize] Tentativa 19/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:16.339Z] [WARN] [Sequelize] Tentativa 20/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:26.349Z] [WARN] [Sequelize] Tentativa 21/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:36.352Z] [WARN] [Sequelize] Tentativa 22/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:46.360Z] [WARN] [Sequelize] Tentativa 23/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:48:56.370Z] [WARN] [Sequelize] Tentativa 24/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:06.381Z] [WARN] [Sequelize] Tentativa 25/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:16.394Z] [WARN] [Sequelize] Tentativa 26/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:26.405Z] [WARN] [Sequelize] Tentativa 27/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:36.416Z] [WARN] [Sequelize] Tentativa 28/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:46.427Z] [WARN] [Sequelize] Tentativa 29/30 falhou, tentando novamente em 10000ms...",
+    "{",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[2026-04-20T13:49:56.438Z] [ERROR] [Sequelize] Falha ao conectar ao PostgreSQL após todas as tentativas",
+    "{",
+    "  \"attempts\": 30,",
+    "  \"error\": \"connect ECONNREFUSED 127.0.0.1:5433\"",
+    "}",
+    "[pbx-call-events-runtime-smoke] FAIL Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:5433"
+  ],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/mesh-2026-04-20T13-45-00-158Z/replays/qa-pbx-call-events-runtime-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "eventos de chamada entregues"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/mesh-2026-04-20T13-45-00-158Z/replays/qa-pbx-call-events-runtime-smoke.json",
+  "failureType": "flaky",
+  "errorMessage": "[2026-04-20T13:45:45.371Z] [WARN] [Sequelize] Tentativa 1/30 falhou, tentando novamente em 1000ms...",
+  "rootCauseHint": "O cenário alternou entre PASS e FAIL em execuções recentes.",
+  "durationMs": 251748
+}

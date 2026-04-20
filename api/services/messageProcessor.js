@@ -71,6 +71,7 @@ const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 
 // Sessões em memória (para produção, ideal mover para Redis/DB)
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
@@ -234,7 +235,7 @@ async function processWhatsAppMessage(message, value, deps) {
   if (shouldRecordReplay) {
     const tenantId = inboundTenantId || null;
     replay = new ReplaySystem({
-      storagePath: path.join(process.cwd(), 'replays', 'message'),
+      storagePath: resolveRuntimePath('replays', 'message'),
       tenantId,
       context: 'message',
       enableScreenshots: false,
@@ -253,7 +254,7 @@ async function processWhatsAppMessage(message, value, deps) {
   if (shouldRecord) {
     const tenantId = inboundTenantId || null;
     recording = new RecordingSystem({
-      storagePath: path.join(process.cwd(), 'recordings', 'message'),
+      storagePath: resolveRuntimePath('recordings', 'message'),
       tenantId,
       context: 'message',
       enableTimestamps: true,

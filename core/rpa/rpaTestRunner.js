@@ -15,8 +15,9 @@ const { normalizeRpaTestUrls } = require('./utils/urlNormalizer');
 const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
 const { createDeterministicExecution } = require('./deterministic');
 const { resolveSemanticStep } = require('./screen-models');
+const { getRpaReportDir } = require('../../lib/rpaPathResolver');
 
-const RPA_REPORTS_DIR = path.join(process.cwd(), 'tests', 'rpa', 'reports');
+const RPA_REPORTS_DIR = getRpaReportDir();
 
 class RpaTestRunner {
   constructor(options = {}) {

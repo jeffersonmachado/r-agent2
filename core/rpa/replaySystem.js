@@ -13,8 +13,9 @@
 
 const path = require('path');
 const { ReplaySystem: CoreReplaySystem, generateScreenSignature: coreGenerateScreenSignature } = require('../../lib/replaySystem');
+const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 
-const REPLAY_DIR = path.join(process.cwd(), 'tests', 'rpa', 'replay');
+const REPLAY_DIR = getRpaReplayDir();
 
 function assignDeterministicTimestamp(collection, clock, label) {
   if (!clock || !Array.isArray(collection) || collection.length < 1) return;

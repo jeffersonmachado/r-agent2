@@ -42,6 +42,9 @@ FROM ${API_BASE_IMAGE} AS runtime
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
+ENV WWEBJS_AUTH_PATH=/var/lib/ragent2/whatsapp/auth
+ENV QA_MESH_SYSTEM_VALIDATE_DIR=/var/lib/ragent2/qa-mesh/system-validate
+ENV RELEASE_EVIDENCE_BASE_DIR=/var/lib/ragent2/release-evidence
 
 WORKDIR /app
 
@@ -62,14 +65,14 @@ COPY --from=builder /app/qa-mesh ./qa-mesh
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/scripts ./scripts
 
-# Compatibilidade: a API referencia múltiplos módulos de runtime em tests/rpa/**.
+# Compatibilidade: a API ainda lê seeds/flows versionados em tests/rpa/**.
 COPY tests/rpa ./tests/rpa
 COPY tests/helpers/errorClassifier.js ./tests/helpers/errorClassifier.js
 
 # Remove dependências de desenvolvimento no runtime
 RUN npm prune --omit=dev && \
     npm cache clean --force && \
-    mkdir -p /app/api/data /app/tests/rpa/reports /app/tests/rpa/replay /app/.cache/puppeteer
+    mkdir -p /app/api/data /app/.cache/puppeteer /var/lib/ragent2/whatsapp/auth /var/lib/ragent2/qa-mesh/system-validate /var/lib/ragent2/release-evidence /var/lib/ragent2/runtime/rpa/reports /var/lib/ragent2/runtime/rpa/replay /var/lib/ragent2/runtime/rpa/seeds /var/lib/ragent2/runtime/rpa/flows /var/lib/ragent2/runtime/pbx/recordings
 
 # Mantém entrypoint
 RUN chmod +x ./api/entrypoint.sh

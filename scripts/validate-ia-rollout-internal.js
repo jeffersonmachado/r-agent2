@@ -13,6 +13,9 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('../api/utils/logger');
 const { readQaResults, getQaStats } = require('../engine/qa/qaTelemetry');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
+
+const ROOT = path.join(__dirname, '..');
 
 // Carrega políticas
 const ROLLOUT_POLICY_PATH = path.join(__dirname, '../governance/ia-rollout-policy.json');
@@ -98,7 +101,7 @@ function validateQaCriteria() {
   const criteria = INTERNAL_CRITERIA.qa;
   
   // Lê último resultado de QA
-  const qaResultPath = path.join(__dirname, '../qa/qa-result.json');
+  const qaResultPath = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/qa-result.json', 'QA_RESULT_PATH'));
   let latestQaResult = null;
   
   try {

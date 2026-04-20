@@ -16,6 +16,7 @@ const qaMeshService = require('./qaMeshService');
 const logger = require('../utils/logger');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -170,14 +171,14 @@ function runQaManual(options = {}) {
 
   // Inicializa replay
   const replay = new ReplaySystem({
-    storagePath: path.join(process.cwd(), 'replays', 'qa'),
+    storagePath: resolveRuntimePath('replays', 'qa'),
     context: 'qa',
     enableScreenshots: false,
   });
 
   // Inicializa gravação
   const recording = new RecordingSystem({
-    storagePath: path.join(process.cwd(), 'recordings', 'qa'),
+    storagePath: resolveRuntimePath('recordings', 'qa'),
     context: 'qa',
     enableTimestamps: true,
   });

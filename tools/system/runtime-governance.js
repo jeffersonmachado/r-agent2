@@ -3,9 +3,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const DEFAULT_REPORT_PATH = 'qa/runtime-governance-report.json';
+const DEFAULT_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
 
 function toBool(value, fallback = false) {
   if (value == null || value === '') return fallback;
@@ -24,7 +25,7 @@ function loadJsonState(relPath) {
       parseError: null,
     };
   }
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(abs)) {
     return {
       path: relPath,
@@ -75,8 +76,10 @@ function classifyRuntime(options = {}) {
 }
 
 function buildRuntimeGovernanceReport(options = {}) {
-  const smokeEvidencePath = options.smokeEvidencePath || process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-  const runtimeReportPath = options.runtimeReportPath || process.env.RUNTIME_REPORT_PATH || 'qa/runtime-report.json';
+  const smokeEvidencePath = options.smokeEvidencePath
+    || runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+  const runtimeReportPath = options.runtimeReportPath
+    || runtimeAwarePath(ROOT, 'qa/runtime-report.json', 'RUNTIME_REPORT_PATH');
   const smokeEvidenceState = loadJsonState(smokeEvidencePath);
   const runtimeReportState = loadJsonState(runtimeReportPath);
   const smokeEvidence = smokeEvidenceState.data;
@@ -148,7 +151,7 @@ function buildRuntimeGovernanceReport(options = {}) {
 }
 
 function writeRuntimeGovernanceReport(report, relPath = DEFAULT_REPORT_PATH) {
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   return relPath;
@@ -156,7 +159,7 @@ function writeRuntimeGovernanceReport(report, relPath = DEFAULT_REPORT_PATH) {
 
 if (require.main === module) {
   const report = buildRuntimeGovernanceReport();
-  const outputPath = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || DEFAULT_REPORT_PATH;
+  const outputPath = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
   writeRuntimeGovernanceReport(report, outputPath);
 
   // eslint-disable-next-line no-console
