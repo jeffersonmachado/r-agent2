@@ -105,6 +105,7 @@ services:
       SYSTEMADMIN_USERNAME: systemadmin
       SYSTEMADMIN_NAME: System Admin
       RPA_TOKEN: ${RPA_TOKEN:-}
+      RUNTIME_ROOT: /var/lib/ragent2
       WWEBJS_AUTH_PATH: /var/lib/ragent2/whatsapp/auth
       QA_MESH_HISTORY_DIR: /var/lib/ragent2/qa-mesh/history
       QA_MESH_EVIDENCE_DIR: /var/lib/ragent2/qa-mesh/evidence

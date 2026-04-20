@@ -31,19 +31,17 @@ function hasPath(absPath) {
 
 function resolveRuntimeRoot() {
   const explicit = safeTrim(process.env.RUNTIME_ROOT);
-  if (explicit) return ensureDir(path.resolve(explicit));
-
-  const systemBase = '/var/lib/ragent2';
-  if (hasPath(systemBase)) {
-    return ensureDir(path.join(systemBase, 'runtime'));
+  if (!explicit) {
+    throw new Error('RUNTIME_ROOT é obrigatório. Configure um diretório externo ao workspace.');
   }
 
-  const home = safeTrim(process.env.HOME);
-  if (home) {
-    return ensureDir(path.join(home, '.ragent2', 'runtime'));
+  const resolved = path.resolve(explicit);
+  const workspaceRoot = path.resolve(process.cwd());
+  if (resolved === workspaceRoot || resolved.startsWith(`${workspaceRoot}${path.sep}`)) {
+    throw new Error('RUNTIME_ROOT inválido: o runtime deve ficar fora do workspace.');
   }
 
-  return ensureDir(path.resolve(process.cwd(), 'runtime'));
+  return ensureDir(resolved);
 }
 
 function resolveRuntimePath(...segments) {

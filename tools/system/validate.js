@@ -164,9 +164,13 @@ async function ensureFrontendPreview(frontendUrl, env) {
     return null;
   }
 
+  const parsed = new URL(frontendUrl);
+  const previewHost = parsed.hostname || '127.0.0.1';
+  const previewPort = parsed.port || '5173';
+
   const child = startManagedProcess(
     'npm',
-    ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '5173'],
+    ['run', 'preview', '--', '--host', previewHost, '--port', previewPort],
     'frontend preview',
     env,
     path.join(ROOT_DIR, 'frontend'),
@@ -249,8 +253,8 @@ function writeReport(report) {
 }
 
 function resolveOfficialServiceUrls() {
-  const frontendUrl = process.env.SYSTEM_VALIDATE_FRONTEND_URL || 'http://localhost:5173';
-  const apiUrl = process.env.SYSTEM_VALIDATE_API_URL || 'http://localhost:3001';
+  const frontendUrl = process.env.SYSTEM_VALIDATE_FRONTEND_URL || 'http://127.0.0.1:5173';
+  const apiUrl = process.env.SYSTEM_VALIDATE_API_URL || 'http://127.0.0.1:3001';
   const baseUrl = process.env.SYSTEM_VALIDATE_BASE_URL || apiUrl;
 
   return {

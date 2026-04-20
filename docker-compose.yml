@@ -24,7 +24,7 @@ services:
       RATE_LIMIT_SCRAPING_DURATION: ${RATE_LIMIT_SCRAPING_DURATION:-300}
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
-      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8001}
+      RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       # PostgreSQL
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
       PGHOST: ${PGHOST:-postgres}
@@ -36,6 +36,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       # OpenAI API Key (server default, opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RUNTIME_ROOT: ${RUNTIME_ROOT:-/var/lib/ragent2}
       WWEBJS_AUTH_PATH: ${WWEBJS_AUTH_PATH:-/var/lib/ragent2/whatsapp/auth}
       QA_MESH_HISTORY_DIR: ${QA_MESH_HISTORY_DIR:-/var/lib/ragent2/qa-mesh/history}
       QA_MESH_EVIDENCE_DIR: ${QA_MESH_EVIDENCE_DIR:-/var/lib/ragent2/qa-mesh/evidence}
@@ -54,7 +55,7 @@ services:
       PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
       PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
     ports:
-      - "${API_PORT:-3001}:3001"
+      - "${API_HOST_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,8 +100,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile
       args:
         VITE_BASE_PATH: ${VITE_BASE_PATH:-/r-agent2/}
     image: r-agent2-frontend:latest
@@ -110,7 +111,7 @@ services:
       # VITE_API_BASE_URL vazio para usar URLs relativas (proxy nginx)
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${FRONTEND_HOST_PORT:-8080}:80"
     depends_on:
       - api
     restart: unless-stopped
@@ -140,7 +141,7 @@ services:
       # Usa o mesmo Postgres da API (fonte única)
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
     ports:
-      - "${RAG_PORT:-8001}:8001"
+      - "${RAG_HOST_PORT:-8001}:8000"
     volumes:
       - r-agent2-rag-data:/var/lib/ragent2/rag
     restart: unless-stopped
@@ -154,7 +155,7 @@ services:
       POSTGRES_DB: ${PGDATABASE:-results_saas}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "${PGPORT:-5432}:5432"
+      - "${PG_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -172,7 +173,7 @@ services:
     image: r-agent2-redis:latest
     container_name: chatbot-redis
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes

@@ -5,9 +5,13 @@ const path = require('path');
 function getRuntimeRoot(rootDir, env = process.env) {
   const runtimeRoot = env.RUNTIME_ROOT;
   if (!runtimeRoot) {
-    return null;
+    throw new Error('RUNTIME_ROOT é obrigatório para execução dos scripts oficiais.');
   }
-  return path.isAbsolute(runtimeRoot) ? runtimeRoot : path.join(rootDir, runtimeRoot);
+  const resolved = path.isAbsolute(runtimeRoot) ? runtimeRoot : path.join(rootDir, runtimeRoot);
+  if (resolved === rootDir || resolved.startsWith(`${rootDir}${path.sep}`)) {
+    throw new Error('RUNTIME_ROOT inválido: deve apontar para diretório externo ao workspace.');
+  }
+  return resolved;
 }
 
 function runtimeAwarePath(rootDir, defaultRelPath, explicitEnvVar, env = process.env) {
@@ -15,9 +19,6 @@ function runtimeAwarePath(rootDir, defaultRelPath, explicitEnvVar, env = process
     return env[explicitEnvVar];
   }
   const runtimeRoot = getRuntimeRoot(rootDir, env);
-  if (!runtimeRoot) {
-    return defaultRelPath;
-  }
   return path.join(runtimeRoot, defaultRelPath);
 }
 

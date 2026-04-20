@@ -113,13 +113,9 @@ if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
 else
   step "Gerando artefato de release..."
 
-  if [[ ! -d "$PROJECT_ROOT/frontend/dist" ]]; then
-    fail "frontend/dist ausente. Execute: npm run frontend:build"
-  fi
-
-  step "Executando smoke do artefato frontend..."
-  bash "$PROJECT_ROOT/scripts/smoke/frontend-smoke.sh"
-  ok "Smoke do frontend aprovado"
+  step "Executando pipeline completo do frontend (build + preview + smoke)..."
+  bash "$PROJECT_ROOT/scripts/frontend-release-pipeline.sh"
+  ok "Pipeline do frontend aprovado"
 
   ZIP_ARGS=()
   if [[ -n "$CUSTOM_NAME" ]]; then
