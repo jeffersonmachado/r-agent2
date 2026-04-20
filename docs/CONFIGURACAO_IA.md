@@ -56,3 +56,30 @@ Se o SDK não estiver disponível em um ambiente específico, o serviço tenta c
 - injete `ENCRYPTION_KEY` por ambiente
 - trate `secondary` como exceção governada, não como mascaramento silencioso
 
+## Hardening aplicado (abril/2026)
+
+### Validação estrita de provider
+
+- providers aceitos para persistência: `openai`, `anthropic`
+- qualquer valor fora dessa lista é rejeitado com erro explícito
+- provider é normalizado (`trim + lowercase`) antes de validar
+
+### Validação de configuração por tenant
+
+- `tenantId` vazio/inválido é rejeitado
+- `primary` é obrigatório para configuração efetiva
+- `secondary` não pode ser igual ao `primary`
+- IDs de tenant/provider são normalizados antes de entrar no runtime
+
+### Comportamento de execução endurecido
+
+- runtime não resolve provider para tenant inválido
+- fallback para provider secundário só ocorre com flag explícita e `secondary` válido
+- ausência de provider/credencial continua em modo fail-fast observável (sem fallback silencioso)
+
+### Credenciais
+
+- gravação de credenciais só aceita provider suportado
+- leitura de credenciais usa provider normalizado
+- `ENCRYPTION_KEY` inválida/ausente continua bloqueando descriptografia de forma explícita
+

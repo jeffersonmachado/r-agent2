@@ -36,6 +36,15 @@ const providerRegistry = new Map();
 /** @type {Map<string, TenantAiConfig>} */
 const tenantConfig = new Map();
 
+function normalizeId(value) {
+  if (typeof value !== 'string') return '';
+  try {
+    return value.trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Registra um provider de IA globalmente.
  *
@@ -47,10 +56,11 @@ const tenantConfig = new Map();
  * @param {AiProvider} provider
  */
 function registerAiProvider(id, provider) {
-  if (!id || typeof provider !== 'object' || typeof provider.generate !== 'function') {
+  const providerId = normalizeId(id);
+  if (!providerId || typeof provider !== 'object' || typeof provider.generate !== 'function') {
     throw new Error('registerAiProvider: provider inválido');
   }
-  providerRegistry.set(id, provider);
+  providerRegistry.set(providerId, provider);
 }
 
 /**
@@ -60,12 +70,23 @@ function registerAiProvider(id, provider) {
  * @param {TenantAiConfig} config
  */
 function setTenantAiConfig(tenantId, config) {
-  if (!config || !config.primary) {
+  const normalizedTenantId = normalizeId(tenantId);
+  const primary = normalizeId(config?.primary);
+  const secondary = normalizeId(config?.secondary);
+
+  if (!normalizedTenantId) {
+    throw new Error('setTenantAiConfig: tenantId é obrigatório');
+  }
+  if (!primary) {
     throw new Error('setTenantAiConfig: config.primary é obrigatório');
   }
-  tenantConfig.set(tenantId, {
-    primary: config.primary,
-    secondary: config.secondary,
+  if (secondary && secondary === primary) {
+    throw new Error('setTenantAiConfig: config.secondary deve ser diferente de config.primary');
+  }
+
+  tenantConfig.set(normalizedTenantId, {
+    primary,
+    secondary: secondary || undefined,
   });
 }
 
@@ -84,6 +105,11 @@ function setTenantAiConfig(tenantId, config) {
  * @returns {AiProvider|null}
  */
 function getAiProviderForTenant(tenantId) {
+  const normalizedTenantId = normalizeId(tenantId);
+  if (!normalizedTenantId) {
+    return null;
+  }
+
   // Fallback "provider secundário" deve ser explícito e configurável.
   // Default: false (não usar secondary automaticamente).
   let allowSecondaryFallback = false;
@@ -121,9 +147,9 @@ function getAiProviderForTenant(tenantId) {
     },
   };
 
-  log.debug('🔍 getAiProviderForTenant: Buscando provider', { tenantId });
+  log.debug('🔍 getAiProviderForTenant: Buscando provider', { tenantId: normalizedTenantId });
   
-  const cfg = tenantConfig.get(tenantId);
+  const cfg = tenantConfig.get(normalizedTenantId);
   if (!cfg) {
     log.warn('⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant', { tenantId });
     log.debug('📋 Tenants configurados', { tenants: Array.from(tenantConfig.keys()) });
@@ -174,7 +200,7 @@ function getAiProviderForTenant(tenantId) {
     async generate(prompt, context) {
       try {
         log.debug('🔄 Provider composto: Tentando provider primário', {
-          tenantId,
+          tenantId: normalizedTenantId,
           primaryId: cfg.primary,
         });
         const result = await primary.generate(prompt, context);
@@ -187,7 +213,7 @@ function getAiProviderForTenant(tenantId) {
       } catch (err) {
         // Log como warning - provider secundário sendo usado
         log.warn('⚠️ Provider composto: Provider primário falhou, usando provider secundário', {
-          tenantId,
+          tenantId: normalizedTenantId,
           primaryId: cfg.primary,
           secondaryId: cfg.secondary,
           error: err.message,
@@ -198,14 +224,14 @@ function getAiProviderForTenant(tenantId) {
         // qualquer erro ainda será tratado no nível do nó de IA.
         if (!secondary) {
           log.error('❌ Provider composto: Provider secundário não disponível', {
-            tenantId,
+            tenantId: normalizedTenantId,
             secondaryId: cfg.secondary,
           });
           throw err;
         }
         const secondaryResult = await secondary.generate(prompt, context);
         log.info('✅ Provider composto: Provider secundário funcionou', {
-          tenantId,
+          tenantId: normalizedTenantId,
           secondaryId: cfg.secondary,
           primaryId: cfg.primary,
           hasText: !!secondaryResult?.text,
@@ -225,7 +251,7 @@ function getAiProviderForTenant(tenantId) {
  * @returns {boolean}
  */
 function isProviderRegistered(providerId) {
-  return providerRegistry.has(providerId);
+  return providerRegistry.has(normalizeId(providerId));
 }
 
 /**

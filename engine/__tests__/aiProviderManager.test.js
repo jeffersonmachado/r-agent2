@@ -58,6 +58,33 @@ describe('aiProviderManager', () => {
     const provider = getAiProviderForTenant('unknown-tenant');
     expect(provider).toBeNull();
   });
+
+  test('normaliza ids de provider e tenant (trim + lowercase)', async () => {
+    const primary = {
+      generate: jest.fn().mockResolvedValue('ok'),
+    };
+
+    registerAiProvider('  OpenAI  ', primary);
+    setTenantAiConfig('  TENANT-ABC  ', { primary: ' OPENAI ' });
+
+    const provider = getAiProviderForTenant('tenant-abc');
+    expect(provider).not.toBeNull();
+
+    const result = await provider.generate('hi', {});
+    expect(result).toBe('ok');
+  });
+
+  test('rejeita secondary igual ao primary', () => {
+    expect(() => {
+      setTenantAiConfig('tenant-1', { primary: 'openai', secondary: 'openai' });
+    }).toThrow('config.secondary deve ser diferente de config.primary');
+  });
+
+  test('rejeita tenantId vazio', () => {
+    expect(() => {
+      setTenantAiConfig('   ', { primary: 'openai' });
+    }).toThrow('tenantId é obrigatório');
+  });
 });
 
 
