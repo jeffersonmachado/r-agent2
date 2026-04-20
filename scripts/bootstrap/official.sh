@@ -14,6 +14,7 @@ BOOTSTRAP_API_PORT="${SYSTEM_BOOTSTRAP_API_PORT:-13001}"
 BOOTSTRAP_FRONTEND_PORT="${SYSTEM_BOOTSTRAP_FRONTEND_PORT:-14173}"
 API_URL="${SYSTEM_BOOTSTRAP_API_URL:-http://127.0.0.1:${BOOTSTRAP_API_PORT}}"
 FRONTEND_URL="${SYSTEM_BOOTSTRAP_FRONTEND_URL:-http://127.0.0.1:${BOOTSTRAP_FRONTEND_PORT}}"
+BOOTSTRAP_RUNTIME_ROOT="${RUNTIME_ROOT:-/tmp/ragent2-runtime-bootstrap}"
 CHECK_ONLY=false
 SKIP_SERVICE_PROBES=false
 
@@ -112,6 +113,12 @@ if [[ ! -f "$ROOT_DIR/api/data/config.json" ]] && [[ -f "$ROOT_DIR/api/data/conf
 	cp "$ROOT_DIR/api/data/config.example.json" "$ROOT_DIR/api/data/config.json"
 	warn 'api/data/config.json criado a partir do exemplo oficial'
 fi
+
+if [[ -z "${RUNTIME_ROOT:-}" ]]; then
+	export RUNTIME_ROOT="$BOOTSTRAP_RUNTIME_ROOT"
+	warn "RUNTIME_ROOT não informado; usando fallback de bootstrap: $RUNTIME_ROOT"
+fi
+mkdir -p "$RUNTIME_ROOT"
 
 if [[ "$CHECK_ONLY" == true ]]; then
 	ok 'Pré-checagens concluídas'
