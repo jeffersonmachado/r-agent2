@@ -459,12 +459,17 @@ async function main() {
 
     const smokeSummary = buildSmokeEvidenceSummary();
     const pillars = evaluatePillars(smokeSummary.smokes);
-    if (!pillars.ok) {
+    const skipSmokePillars = toBool(process.env.SYSTEM_VALIDATE_SKIP_SMOKE_PILLARS, false);
+    if (!pillars.ok && !skipSmokePillars) {
       throw new Error(`smoke_pillars_not_ready:${pillars.reasons.join(',')}`);
+    }
+    if (!pillars.ok && skipSmokePillars) {
+      log(`[system:validate] Smoke pillars em bypass por SYSTEM_VALIDATE_SKIP_SMOKE_PILLARS=1 (${pillars.reasons.join(',')})`, YELLOW);
     }
     report.evidence.smoke = {
       path: SMOKE_EVIDENCE_SUMMARY_PATH,
       pillars,
+      skipped: !pillars.ok && skipSmokePillars,
     };
 
     const runtimeReport = buildRuntimeGovernanceReport({
