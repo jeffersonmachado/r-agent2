@@ -2,10 +2,12 @@
 # Para gate de CI, o pipeline oficial e o stack-test ja cobrem.
 name: Pipeline Completo CI/CD [AUXILIAR]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
