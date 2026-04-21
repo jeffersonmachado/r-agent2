@@ -475,7 +475,10 @@ async function main() {
     const runtimeReport = buildRuntimeGovernanceReport({
       requireRealRuntime: toBool(process.env.RUNTIME_REQUIRE_REAL, false),
     });
-    writeRuntimeGovernanceReport(runtimeReport, process.env.RUNTIME_GOVERNANCE_REPORT_PATH || 'qa/runtime-governance-report.json');
+    writeRuntimeGovernanceReport(
+      runtimeReport,
+      runtimeAwarePath('qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH'),
+    );
     report.runtime = runtimeReport;
 
     const fallbackThreshold = Number(process.env.SYSTEM_VALIDATE_FALLBACK_THRESHOLD || 0);
