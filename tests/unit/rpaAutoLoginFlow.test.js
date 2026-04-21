@@ -1,4 +1,4 @@
-const { shouldAutoLoginForTarget, replaceTemplateVariables } = require('../rpa/utils/autoLoginFlow');
+const { shouldAutoLoginForTarget, replaceTemplateVariables } = require('../../core/rpa/utils/autoLoginFlow');
 
 describe('RPA autoLoginFlow', () => {
   test('mantém auto-login para rotas internas', () => {

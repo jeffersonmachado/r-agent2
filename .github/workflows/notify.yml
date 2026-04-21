@@ -1,74 +1,59 @@
-# WORKFLOW AUXILIAR: Notificacoes de CI/CD.
-name: Notificações CI/CD [AUXILIAR]
+# WORKFLOW: Notificacoes de CI/CD.
+name: Notificações CI/CD
 
 on:
-  workflow_run:
-    workflows: ["CI - Testes e Validação", "RPA - Testes E2E (CI)", "Deploy"]
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      workflow_name:
+        description: 'Nome do workflow referenciado'
+        required: false
+        default: 'manual'
+      workflow_status:
+        description: 'Status a reportar'
+        required: false
+        default: 'unknown'
+      branch:
+        description: 'Branch associada'
+        required: false
+        default: 'unknown'
+      commit_sha:
+        description: 'Commit associado'
+        required: false
+        default: 'unknown'
+      details_url:
+        description: 'URL opcional com detalhes da execução'
+        required: false
+        default: ''
+      email_enabled:
+        description: 'Emitir placeholder de email'
+        required: false
+        default: 'false'
 
 jobs:
   notify:
     name: Enviar Notificações
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion != 'success' }}
     
     steps:
       - name: Resumo da execução
         run: |
           echo "## 📢 Notificação de CI/CD" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Workflow:** ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** ${{ github.event.workflow_run.conclusion }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.event.workflow_run.head_sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔗 [Ver detalhes](${{ github.event.workflow_run.html_url }})" >> $GITHUB_STEP_SUMMARY
-      
-      # Notificação via Slack (se configurado)
-      - name: Notificar Slack
-        if: env.SLACK_WEBHOOK_URL != ''
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "text": "❌ Workflow falhou: ${{ github.event.workflow_run.name }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Workflow:* ${{ github.event.workflow_run.name }}\n*Status:* ${{ github.event.workflow_run.conclusion }}\n*Branch:* ${{ github.event.workflow_run.head_branch }}"
-                  }
-                },
-                {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "Ver Detalhes"
-                      },
-                      "url": "${{ github.event.workflow_run.html_url }}"
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        continue-on-error: true
+          echo "**Workflow:** ${{ github.event.inputs.workflow_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ github.event.inputs.workflow_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.event.inputs.commit_sha }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ github.event.inputs.details_url }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[Ver detalhes](${{ github.event.inputs.details_url }})" >> $GITHUB_STEP_SUMMARY
+          fi
       
       # Notificação via Email (placeholder)
       - name: Notificar Email
-        if: env.EMAIL_ENABLED == 'true'
+        if: ${{ github.event.inputs.email_enabled == 'true' }}
         run: |
           echo "📧 Notificação por email (configurar conforme necessário)"
-          echo "Workflow: ${{ github.event.workflow_run.name }}"
-          echo "Status: ${{ github.event.workflow_run.conclusion }}"
+          echo "Workflow: ${{ github.event.inputs.workflow_name }}"
+          echo "Status: ${{ github.event.inputs.workflow_status }}"
         continue-on-error: true
-        env:
-          EMAIL_ENABLED: ${{ secrets.EMAIL_NOTIFICATIONS_ENABLED }}
 

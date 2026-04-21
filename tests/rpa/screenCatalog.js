@@ -4,8 +4,16 @@ function screen(id, path, options = {}) {
     path,
     auth: options.auth || 'admin',
     expectedPath: options.expectedPath || path,
+    expectedText: options.expectedText || [],
     description: options.description || null,
     category: options.category || 'general',
+    failOnConsoleError: options.failOnConsoleError !== false,
+    failOnHttpError: options.failOnHttpError !== false,
+    ignoredConsoleErrorPatterns: options.ignoredConsoleErrorPatterns || [],
+    ignoredHttpErrorPatterns: options.ignoredHttpErrorPatterns || [],
+    awaitApiPath: options.awaitApiPath || null,
+    awaitApiTimeoutMs: options.awaitApiTimeoutMs || null,
+    postLoadWaitMs: options.postLoadWaitMs || 1200,
   };
 }
 
@@ -52,7 +60,12 @@ const ADMIN_SCREENS = [
   screen('rag-documents', '/rag-documents', { category: 'knowledge' }),
   screen('web-scraping', '/web-scraping', { category: 'ai' }),
   screen('rpa-test', '/rpa-test', { category: 'rpa' }),
-  screen('rpa-replays', '/rpa-replays', { category: 'rpa' }),
+  screen('rpa-replays', '/rpa-replays', {
+    category: 'rpa',
+    awaitApiPath: '/tests/rpa/replay',
+    awaitApiTimeoutMs: 20000,
+    postLoadWaitMs: 300,
+  }),
   screen('rpa-seeds', '/rpa-seeds', { category: 'rpa' }),
   screen('chat', '/chat', { category: 'chat' }),
   screen('qa', '/qa', { category: 'qa' }),

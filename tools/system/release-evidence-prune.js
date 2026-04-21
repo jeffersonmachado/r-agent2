@@ -3,14 +3,19 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const BASE_DIR = process.env.RELEASE_EVIDENCE_BASE_DIR || 'qa/release-evidence';
+const BASE_DIR = runtimeAwarePath(ROOT, 'qa/release-evidence', 'RELEASE_EVIDENCE_BASE_DIR');
 const KEEP = Math.max(1, Number(process.env.RELEASE_EVIDENCE_PRUNE_KEEP || 5));
 const DRY_RUN = String(process.env.RELEASE_EVIDENCE_PRUNE_DRY_RUN || '1') !== '0';
 
+function resolvePath(targetPath) {
+  return path.isAbsolute(targetPath) ? targetPath : path.join(ROOT, targetPath);
+}
+
 function main() {
-  const baseAbs = path.join(ROOT, BASE_DIR);
+  const baseAbs = resolvePath(BASE_DIR);
   if (!fs.existsSync(baseAbs)) {
     // eslint-disable-next-line no-console
     console.log(`[release-evidence-prune] no_dir base=${BASE_DIR}`);

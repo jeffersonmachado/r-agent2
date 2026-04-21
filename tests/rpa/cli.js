@@ -9,11 +9,11 @@
  * - ci: Reproduz seed em modo headless/rápido
  */
 
-const { RpaRecorder } = require('./recorder/rpaRecorder');
-const { RpaPlayer } = require('./player/rpaPlayer');
+const { RpaRecorder } = require('../../core/rpa/recorder/rpaRecorder');
+const { RpaPlayer } = require('../../core/rpa/player/rpaPlayer');
 const path = require('path');
 
-const rpaConfig = require('./rpaConfig');
+const rpaConfig = require('../../core/rpa/rpaConfig');
 
 const mode = process.argv[2];
 const seedName = process.argv[3];

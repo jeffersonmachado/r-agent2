@@ -1,14 +1,37 @@
 const fs = require('fs');
 const path = require('path');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 const { chromium } = require('playwright');
 const { SCREEN_CATALOG } = require('./screenCatalog');
-const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
-const { launchChromiumWithFallback } = require('./utils/browserLaunchOptions');
+const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');
+const { launchChromiumWithFallback } = require('../../core/rpa/utils/browserLaunchOptions');
 
 const FRONTEND_URL = String(process.env.TEST_FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 const API_URL = String(process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 const REPORTS_DIR = path.join(__dirname, 'reports');
 const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots', 'screen-catalog');
+
+function parseSelectedScreenIds(argv = process.argv, env = process.env) {
+  const cliIds = argv.slice(2).map((value) => String(value || '').trim()).filter(Boolean);
+  if (cliIds.length > 0) {
+    return cliIds;
+  }
+
+  const envValue = env.TEST_SCREEN_IDS || env.TEST_SCREEN_ID || '';
+  return String(envValue)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function getSelectedScreens(screenCatalog, selectedIds) {
+  if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
+    return screenCatalog;
+  }
+
+  const selectedSet = new Set(selectedIds);
+  return screenCatalog.filter((screen) => selectedSet.has(screen.id));
+}
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
@@ -21,6 +44,46 @@ function slugify(value) {
     .replace(/[^a-zA-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .toLowerCase();
+}
+
+function matchesPathname(url, expectedPathname) {
+  if (!expectedPathname) return false;
+
+  try {
+    return new URL(url).pathname === expectedPathname;
+  } catch (_) {
+    return String(url || '').includes(expectedPathname);
+  }
+}
+
+async function waitForScreenData(page, screen, requestFailures) {
+  const postLoadWaitMs = Number.isFinite(screen.postLoadWaitMs) ? screen.postLoadWaitMs : 1200;
+
+  if (!screen.awaitApiPath) {
+    if (postLoadWaitMs > 0) {
+      await page.waitForTimeout(postLoadWaitMs);
+    }
+    return null;
+  }
+
+  try {
+    await page.waitForResponse(
+      (response) => matchesPathname(response.url(), screen.awaitApiPath),
+      { timeout: screen.awaitApiTimeoutMs || 20000 }
+    );
+
+    if (postLoadWaitMs > 0) {
+      await page.waitForTimeout(postLoadWaitMs);
+    }
+
+    return null;
+  } catch (error) {
+    const requestFailure = requestFailures.find((entry) => matchesPathname(entry.url, screen.awaitApiPath));
+    if (requestFailure) {
+      return `${requestFailure.method} ${screen.awaitApiPath} falhou: ${requestFailure.errorText || error.message}`;
+    }
+    return `Timeout aguardando resposta de ${screen.awaitApiPath}`;
+  }
 }
 
 function authOptionsForProfile(profile) {
@@ -76,6 +139,8 @@ async function buildStorageState(browser, profile) {
 async function runScreen(browser, storageStates, screen) {
   const pageErrors = [];
   const consoleErrors = [];
+  const httpErrors = [];
+  const requestFailures = [];
   const targetUrl = `${FRONTEND_URL}${screen.path}`;
   const storageState = storageStates[screen.auth] || undefined;
 
@@ -96,17 +161,60 @@ async function runScreen(browser, storageStates, screen) {
       consoleErrors.push(message.text());
     }
   });
+  page.on('requestfailed', (request) => {
+    requestFailures.push({
+      method: request.method(),
+      url: request.url(),
+      errorText: request.failure()?.errorText || null,
+    });
+  });
+  page.on('response', async (response) => {
+    try {
+      const status = response.status();
+      if (status < 400) return;
+
+      const request = response.request();
+      const method = request.method();
+      const url = response.url();
+      const headers = response.headers();
+      const contentType = headers['content-type'] || headers['Content-Type'] || null;
+      let bodyPreview = null;
+
+      if (contentType && /application\/json|text\/|application\/problem\+json/i.test(contentType)) {
+        try {
+          bodyPreview = (await response.text()).slice(0, 500);
+        } catch (_) {
+          bodyPreview = null;
+        }
+      }
+
+      httpErrors.push({
+        status,
+        method,
+        url,
+        contentType,
+        bodyPreview,
+      });
+    } catch (_) {
+      // ignora erro na coleta para nao mascarar o teste principal
+    }
+  });
 
   let screenshotPath = null;
 
   try {
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(1200);
+    const awaitedApiFailure = await waitForScreenData(page, screen, requestFailures);
 
     const finalUrl = page.url();
     const title = await page.title().catch(() => null);
     const bodyText = await page.locator('body').innerText({ timeout: 2000 }).catch(() => '');
     const expectedPath = screen.expectedPath || screen.path;
+    const expectedTexts = Array.isArray(screen.expectedText)
+      ? screen.expectedText.filter(Boolean)
+      : (screen.expectedText ? [screen.expectedText] : []);
+    const ignoredConsoleErrorPatterns = (screen.ignoredConsoleErrorPatterns || []).map((pattern) => new RegExp(pattern, 'i'));
+    const ignoredHttpErrorPatterns = (screen.ignoredHttpErrorPatterns || []).map((pattern) => new RegExp(pattern, 'i'));
 
     const failures = [];
 
@@ -122,8 +230,36 @@ async function runScreen(browser, storageStates, screen) {
       failures.push('Tela retornou Acesso Negado');
     }
 
+    for (const expectedText of expectedTexts) {
+      if (!bodyText.includes(expectedText)) {
+        failures.push(`Texto esperado ausente: ${expectedText}`);
+      }
+    }
+
     if (pageErrors.length > 0) {
       failures.push(`${pageErrors.length} pageerror(s) no browser`);
+    }
+
+    const relevantConsoleErrors = consoleErrors.filter((entry) => {
+      const text = String(entry || '');
+      return !ignoredConsoleErrorPatterns.some((pattern) => pattern.test(text));
+    });
+
+    if (screen.failOnConsoleError !== false && relevantConsoleErrors.length > 0) {
+      failures.push(`${relevantConsoleErrors.length} console.error(s) no browser`);
+    }
+
+    const relevantHttpErrors = httpErrors.filter((entry) => {
+      const text = `${entry.method || 'GET'} ${entry.url || ''} ${entry.status || ''} ${entry.bodyPreview || ''}`;
+      return !ignoredHttpErrorPatterns.some((pattern) => pattern.test(text));
+    });
+
+    if (screen.failOnHttpError !== false && relevantHttpErrors.length > 0) {
+      failures.push(`${relevantHttpErrors.length} HTTP error(s) >= 400`);
+    }
+
+    if (awaitedApiFailure) {
+      failures.push(awaitedApiFailure);
     }
 
     if (failures.length > 0) {
@@ -143,6 +279,7 @@ async function runScreen(browser, storageStates, screen) {
       title,
       pageErrors,
       consoleErrors: consoleErrors.slice(0, 10),
+      httpErrors: httpErrors.slice(0, 10),
       screenshotPath,
     };
   } catch (error) {
@@ -161,6 +298,7 @@ async function runScreen(browser, storageStates, screen) {
       title: await page.title().catch(() => null),
       pageErrors,
       consoleErrors: consoleErrors.slice(0, 10),
+      httpErrors: httpErrors.slice(0, 10),
       screenshotPath,
     };
   } finally {
@@ -192,6 +330,12 @@ function writeReport(report) {
     lines.push(`- ${result.id} \`${result.path}\` [${result.auth}]: ${result.success ? 'PASS' : 'FAIL'}`);
     if (!result.success) {
       lines.push(`  Falhas: ${result.failures.join(' | ')}`);
+      if (result.consoleErrors?.length) {
+        lines.push(`  Console: ${result.consoleErrors.join(' | ')}`);
+      }
+      if (result.httpErrors?.length) {
+        lines.push(`  HTTP: ${result.httpErrors.map((entry) => `${entry.status} ${entry.method} ${entry.url}`).join(' | ')}`);
+      }
     }
   }
 
@@ -200,6 +344,12 @@ function writeReport(report) {
     lines.push('## Falhas');
     for (const failure of report.failures) {
       lines.push(`- ${failure.id} \`${failure.path}\`: ${failure.failures.join(' | ')}`);
+      if (failure.consoleErrors?.length) {
+        lines.push(`  Console: ${failure.consoleErrors.join(' | ')}`);
+      }
+      if (failure.httpErrors?.length) {
+        lines.push(`  HTTP: ${failure.httpErrors.map((entry) => `${entry.status} ${entry.method} ${entry.url}`).join(' | ')}`);
+      }
       if (failure.screenshotPath) {
         lines.push(`  Screenshot: ${failure.screenshotPath}`);
       }
@@ -212,8 +362,15 @@ function writeReport(report) {
   return { jsonPath, mdPath, latestMdPath };
 }
 
-async function runScreenCatalog() {
-  console.log(`📺 RPA Screen Catalog (${SCREEN_CATALOG.length} telas)\n`);
+async function runScreenCatalog(argv = process.argv, env = process.env) {
+  const selectedIds = parseSelectedScreenIds(argv, env);
+  const selectedScreens = getSelectedScreens(SCREEN_CATALOG, selectedIds);
+
+  if (selectedIds.length > 0 && selectedScreens.length === 0) {
+    throw new Error(`Nenhuma tela encontrada para os ids: ${selectedIds.join(', ')}`);
+  }
+
+  console.log(`📺 RPA Screen Catalog (${selectedScreens.length} telas)\n`);
   const launch = await launchChromiumWithFallback(chromium, { headless: process.env.HEADLESS !== 'false' });
   const browser = launch.browser;
 
@@ -225,7 +382,7 @@ async function runScreenCatalog() {
     };
 
     const results = [];
-    for (const screen of SCREEN_CATALOG) {
+    for (const screen of selectedScreens) {
       console.log(`- ${screen.id} -> ${screen.path} [${screen.auth}]`);
       // eslint-disable-next-line no-await-in-loop
       const result = await runScreen(browser, storageStates, screen);
@@ -261,6 +418,7 @@ async function runScreenCatalog() {
 }
 
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/runScreenCatalogRPA.js');
   runScreenCatalog()
     .then(({ report }) => {
       process.exit(report.summary.failed > 0 ? 1 : 0);
@@ -272,5 +430,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  parseSelectedScreenIds,
+  getSelectedScreens,
   runScreenCatalog,
 };

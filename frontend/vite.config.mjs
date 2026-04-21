@@ -55,6 +55,8 @@ function frontendRoutesPlugin() {
         const isApiRoute = url.startsWith('/tickets') || 
                           url.startsWith('/queues') || 
                           url.startsWith('/inbox') ||
+                          (url.startsWith('/supervisor/') && url !== '/supervisor') ||
+                          (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
                           url.startsWith('/public') ||
                           (url === '/segmentation' && isApiRequest) ||
                           (url.startsWith('/segmentation/') && url !== '/segmentation') ||
@@ -71,6 +73,7 @@ function frontendRoutesPlugin() {
                           url.startsWith('/replay') || 
                           url.startsWith('/templates') || 
                           url.startsWith('/server') || 
+                          url.startsWith('/billing') ||
                           url.startsWith('/api') ||
                           url.startsWith('/metrics') ||
                           url.startsWith('/auth') ||
@@ -394,6 +397,11 @@ const viteConfig = defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
+      '^/billing': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
       '^/metrics': {
         target: apiProxyTarget,
         changeOrigin: true,
@@ -440,6 +448,46 @@ const viteConfig = defineConfig(({ mode }) => {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+      },
+      '^/supervisor': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /supervisor é rota de página do frontend quando navegação GET.
+          // Subrotas (/supervisor/*) são API e devem ser proxyadas.
+          if (req.method === 'GET' && req.url === '/supervisor') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+
+            if (isNavigation) {
+              return false;
+            }
+          }
+
+          return undefined;
+        },
+      },
+      '^/qa-mesh': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /qa-mesh é rota de página do frontend quando navegação GET.
+          // Subrotas (/qa-mesh/*) são API e devem ser proxyadas.
+          if (req.method === 'GET' && req.url === '/qa-mesh') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+
+            if (isNavigation) {
+              return false;
+            }
+          }
+
+          return undefined;
+        },
       },
       // IMPORTANTE:
       // - /rag-documents é rota de página do frontend (SPA)

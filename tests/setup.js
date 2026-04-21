@@ -30,7 +30,12 @@ afterEach(() => {
 // Finaliza WebSocket no fim de cada arquivo de teste
 afterAll(async () => {
   try {
-    const { shutdownWebSocket } = require('../api/services/websocketService');
+    const websocketServicePath = require.resolve('../api/services/websocketService');
+    if (!require.cache[websocketServicePath]) {
+      return;
+    }
+
+    const { shutdownWebSocket } = require(websocketServicePath);
     await shutdownWebSocket();
   } catch (err) {
     // best-effort

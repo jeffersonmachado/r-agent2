@@ -67,10 +67,28 @@ FORBIDDEN_PATTERNS=(
   '(^|/)remote-dumps/'
   '(^|/)remote-dumps2/'
   '(^|/)frontend_backup/'
+  '(^|/)qa/release-evidence/'
+  '(^|/)qa/smoke/'
+  '(^|/)qa/.*-report\.json$'
+  '(^|/)qa/.*-evidence\.json$'
+  '(^|/)qa/runtime-governance-report\.json$'
+  '(^|/)qa/system-validate-report\.json$'
+  '(^|/)qa-mesh/meshEvidence/'
+  '(^|/)qa-mesh/meshHistory/'
+  '(^|/)qa-mesh/(meshReport|metrics|repairPlan|scheduler-state)\.json$'
+  '(^|/)qa-mesh/system-validate/'
+  '(^|/)qa/deploy-report\.json$'
+  '(^|/)reports/'
+  '(^|/)rag-service/\.coverage$'
+  '(^|/)rag-service/data/vector_store/'
+  '(^|/)rag-service/data/adaptive_learning/'
+  '(^|/)frontend/\.vite/'
   '(^|/)tmp_'
   '(^|/)\.token\.env$'
   '(^|/)\.wwebjs_auth/'
   '(^|/)\.wwebjs_cache/'
+  '(^|/)api/data/wa_sessions/'
+  '(^|/)qa-mesh/isolated-run[^/]*?/'
 )
 
 # ── 1. Pré-condições ──────────────────────────────────────────────────────────
@@ -95,13 +113,9 @@ if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
 else
   step "Gerando artefato de release..."
 
-  if [[ ! -d "$PROJECT_ROOT/frontend/dist" ]]; then
-    fail "frontend/dist ausente. Execute: npm run frontend:build"
-  fi
-
-  step "Executando smoke do artefato frontend..."
-  bash "$PROJECT_ROOT/scripts/smoke/frontend-smoke.sh"
-  ok "Smoke do frontend aprovado"
+  step "Executando pipeline completo do frontend (build + preview + smoke)..."
+  bash "$PROJECT_ROOT/scripts/frontend-release-pipeline.sh"
+  ok "Pipeline do frontend aprovado"
 
   ZIP_ARGS=()
   if [[ -n "$CUSTOM_NAME" ]]; then

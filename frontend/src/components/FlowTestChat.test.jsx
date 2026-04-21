@@ -114,7 +114,8 @@ describe('FlowTestChat - Upload de Arquivos', () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // Evita resetar implementacao do hook mockado durante updates assincronos.
+    vi.clearAllMocks();
   });
 
   describe('Seleção de Arquivos', () => {

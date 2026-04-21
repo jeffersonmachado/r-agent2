@@ -155,12 +155,26 @@ export function getReplay(sessionId) {
 }
 
 /**
- * Lista todos os arquivos de replay RPA.
+ * Lista arquivos de replay RPA com suporte a paginação.
  *
- * @returns {Promise<{files: Array<{filename: string, size: number, modified: string, created: string}>}>}
+ * @param {{limit?: number, offset?: number}} [options]
+ * @returns {Promise<{files: Array<{filename: string, size: number, modified: string, created: string}>, pagination?: {total: number, limit: number, offset: number, hasMore: boolean}}>} 
  */
-export function listRpaReplays() {
-  return fetchJson('/tests/rpa/replay', {
+export function listRpaReplays(options = {}) {
+  const params = new URLSearchParams();
+
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.offset) params.set('offset', String(options.offset));
+  if (options.search) params.set('search', String(options.search));
+  if (options.result && options.result !== 'all') params.set('result', String(options.result));
+  if (options.dateRange && options.dateRange !== 'all') params.set('dateRange', String(options.dateRange));
+  if (options.sortBy) params.set('sortBy', String(options.sortBy));
+  if (options.sortOrder) params.set('sortOrder', String(options.sortOrder));
+
+  const suffix = params.toString();
+  const url = suffix ? `/tests/rpa/replay?${suffix}` : '/tests/rpa/replay';
+
+  return fetchJson(url, {
     method: 'GET',
   });
 }
@@ -200,6 +214,27 @@ export function deleteRpaReplay(filename) {
     },
     (error) => {
       logger.error('Erro ao remover replay RPA', { filename, error });
+      throw error;
+    }
+  );
+}
+
+/**
+ * Remove todos os arquivos de replay RPA.
+ *
+ * @returns {Promise<{success: boolean, deletedCount: number, deletedRootCount: number, deletedSystemCount: number, message: string}>}
+ */
+export function deleteAllRpaReplays() {
+  logger.info('Removendo todos os replays RPA');
+  return fetchJson('/tests/rpa/replay', {
+    method: 'DELETE',
+  }).then(
+    (result) => {
+      logger.info('Todos os replays RPA foram removidos com sucesso', { result });
+      return result;
+    },
+    (error) => {
+      logger.error('Erro ao remover todos os replays RPA', { error });
       throw error;
     }
   );

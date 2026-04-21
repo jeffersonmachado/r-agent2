@@ -1,11 +1,7 @@
-# WORKFLOW OFICIAL: Stack Docker Compose — valida test-stack-up/smoke/rpa-seed.
-name: Stack Test (Docker Compose) [OFICIAL]
+# WORKFLOW: Stack Docker Compose — valida test-stack-up/smoke/rpa-seed.
+name: Stack Test (Docker Compose)
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       enable_trace:

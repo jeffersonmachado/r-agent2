@@ -11,9 +11,42 @@ function getQueryParam(name) {
   }
 }
 
+function getStorefrontAttribution() {
+  try {
+    const url = new URL(window.location.href);
+    const queryKeys = [
+      'utm_source',
+      'utm_campaign',
+      'utm_medium',
+      'utm_content',
+      'utm_term',
+      'gclid',
+      'gbraid',
+      'wbraid',
+      'campaignId',
+      'campaignName',
+      'adGroupId',
+      'adGroupName',
+      'keywordText',
+      'searchTerm',
+    ];
+    const attribution = {};
+    queryKeys.forEach((key) => {
+      const value = url.searchParams.get(key);
+      if (value != null && String(value).trim()) {
+        attribution[key] = String(value).trim();
+      }
+    });
+    return Object.keys(attribution).length ? attribution : null;
+  } catch {
+    return null;
+  }
+}
+
 export function StorefrontOrderPage() {
   const { navigate } = useRouter();
   const token = useMemo(() => getQueryParam('token') || '', []);
+  const attribution = useMemo(() => getStorefrontAttribution(), []);
 
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -56,6 +89,7 @@ export function StorefrontOrderPage() {
         deliveryAddress: { address: address.trim() || null },
         items,
         notes: notes.trim() || null,
+        attribution,
       });
       const orderId = result?.order?.id;
       if (orderId) {

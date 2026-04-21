@@ -16,8 +16,13 @@ export async function getQaMeshHistory(options = {}) {
   const params = new URLSearchParams();
   if (options.limit) params.set('limit', String(options.limit));
   if (options.domain) params.set('domain', String(options.domain));
+  if (options.officialOnly) params.set('officialOnly', '1');
   const query = params.toString();
   return fetchJson(`/qa-mesh/history${query ? `?${query}` : ''}`);
+}
+
+export async function getQaMeshOfficialReference() {
+  return fetchJson('/qa-mesh/official-reference');
 }
 
 export async function getQaMeshScheduler() {

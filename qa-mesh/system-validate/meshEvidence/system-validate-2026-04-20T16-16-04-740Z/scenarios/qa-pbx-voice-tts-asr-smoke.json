@@ -1,0 +1,60 @@
+{
+  "id": "qa-pbx-voice-tts-asr-smoke",
+  "domain": "pbx",
+  "type": "technical",
+  "source": "qa",
+  "flow": "pbx_voice_tts_asr",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "passed",
+  "startedAt": "2026-04-20T16:23:07.160Z",
+  "finishedAt": "2026-04-20T16:23:16.153Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-20T16:23:07.481Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:pbx:voice:tts-asr:smoke",
+      "timestamp": "2026-04-20T16:23:07.481Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-pbx-voice-tts-asr-smoke.js",
+      "timestamp": "2026-04-20T16:23:07.481Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[pbx-voice-tts-asr-smoke] OK auth=admin flowId=flow-voice-tts-asr-smoke-1776702187600 callId=call-voice-tts-asr-1776702187600 selftest=FAIL realCallStatus=originated cdrFound=false evidence=/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "timestamp": "2026-04-20T16:23:16.141Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:pbx:voice:tts-asr:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-20T16-16-04-740Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "pipeline TTS/ASR operacional"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-20T16-16-04-740Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 8993
+}

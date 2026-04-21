@@ -13,9 +13,12 @@
  * - métricas + selftest voiceRuntime
  */
 
-const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
+
+const ROOT = path.join(__dirname, '..');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
@@ -67,14 +70,16 @@ function sleep(ms) {
 }
 
 function evidencePath() {
-  return String(process.env.PBX_VOICE_TTS_ASR_EVIDENCE_PATH || 'qa/l03-pbx-voice-tts-asr-evidence.json');
+  return resolveWorkspacePath(
+    ROOT,
+    runtimeAwarePath(ROOT, 'qa/l03-pbx-voice-tts-asr-evidence.json', 'PBX_VOICE_TTS_ASR_EVIDENCE_PATH'),
+  );
 }
 
 function writeEvidence(payload) {
   const out = evidencePath();
-  const abs = path.resolve(process.cwd(), out);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return out;
 }
 

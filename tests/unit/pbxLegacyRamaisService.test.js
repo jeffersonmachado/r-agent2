@@ -11,7 +11,9 @@ describe('pbxLegacy ramaisService', () => {
 
   test('listRamais lê ramal.xml da fixture', () => {
     const root = path.join(__dirname, '..', 'fixtures', 'ripabx-min');
+    const xmlDir = path.join(root, 'dados', 'xml');
     process.env.PBX_LEGACY_ROOT = root;
+    process.env.PBX_LEGACY_XML_DIR = xmlDir;
     // eslint-disable-next-line global-require
     const { listRamais } = require('../../api/services/pbxLegacy/ramaisService');
     const items = listRamais();

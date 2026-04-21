@@ -45,6 +45,10 @@ vi.mock('../api/operationsDashboard', () => ({
   getOperationsInsights: vi.fn(),
 }));
 
+vi.mock('../api/marketing', () => ({
+  getMarketingGoogleAdsAttributionExceptions: vi.fn(),
+}));
+
 import {
   getOperationsSummary,
   getOperationsTimeline,
@@ -52,6 +56,7 @@ import {
   getOperationsNotifications,
   getOperationsInsights,
 } from '../api/operationsDashboard';
+import { getMarketingGoogleAdsAttributionExceptions } from '../api/marketing';
 
 vi.mock('../api/verticalPilot', () => ({
   getBeautyAgenda: vi.fn(),
@@ -122,6 +127,15 @@ describe('pages/OperationsDashboardPage', () => {
       summary: { total: 0, byVertical: { beauty: 0, fitness: 0 } },
       items: [],
     });
+    getMarketingGoogleAdsAttributionExceptions.mockResolvedValue({
+      ok: true,
+      alert: {
+        severity: 'warning',
+        currentCount: 4,
+        previousCount: 2,
+        growthFactor: 2,
+      },
+    });
 
     getBeautyAgenda.mockResolvedValue({ summary: { total: 0 }, items: [] });
     searchBeautyCustomers.mockResolvedValue({ items: [] });
@@ -147,6 +161,8 @@ describe('pages/OperationsDashboardPage', () => {
       expect(screen.getByText('Concluidos')).toBeInTheDocument();
       expect(screen.getByText('Check-ins hoje')).toBeInTheDocument();
       expect(screen.getByText('Jobs executados')).toBeInTheDocument();
+      expect(screen.getByText('Atribuição Ads')).toBeInTheDocument();
+      expect(screen.getByText('Alerta')).toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -157,7 +173,9 @@ describe('pages/OperationsDashboardPage', () => {
   });
 
   it('mostra erro via toast quando falha ao carregar resumo', async () => {
-    getOperationsSummary.mockRejectedValueOnce(new Error('boom'));
+    getOperationsSummary.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
 
     render(<OperationsDashboardPage />);
 

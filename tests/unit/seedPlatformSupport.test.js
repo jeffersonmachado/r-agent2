@@ -1,4 +1,4 @@
-jest.mock('../rpa/utils/rpaTokenManager', () => ({
+jest.mock('../../core/rpa/utils/rpaTokenManager', () => ({
   getOrCreateRpaToken: jest.fn(() => 'token-rpa-fixo'),
 }));
 

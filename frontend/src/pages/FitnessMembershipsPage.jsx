@@ -63,14 +63,28 @@ export function FitnessMembershipsPage() {
         <p className="text-sm text-text-secondary">Controle operacional de memberships, status de billing e disparo de cobranca.</p>
       </div>
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <select className="support-input" value={billingStatus} onChange={(e) => setBillingStatus(e.target.value)}>
+        <select
+          className="support-input"
+          data-testid="status-filter"
+          aria-label="Status"
+          value={billingStatus}
+          onChange={(e) => setBillingStatus(e.target.value)}
+        >
           <option value="">Todos os billing status</option>
           <option value="active">active</option>
           <option value="delinquent">delinquent</option>
           <option value="blocked">blocked</option>
           <option value="cancelled">cancelled</option>
         </select>
-        <button className="support-button" onClick={loadData} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
+        <button
+          className="support-button"
+          data-testid="refresh-button"
+          aria-label="Atualizar memberships"
+          onClick={loadData}
+          disabled={loading}
+        >
+          {loading ? 'Atualizando...' : 'Atualizar'}
+        </button>
       </div>
       <div className="support-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
         <div className="support-details-panel"><strong>Total</strong><div>{summary.total}</div></div>

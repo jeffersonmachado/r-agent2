@@ -1,0 +1,58 @@
+{
+  "id": "qa-chatpro-omnichannel-smoke",
+  "domain": "omnichannel",
+  "type": "smoke",
+  "source": "qa",
+  "flow": "chatpro_omnichannel",
+  "criticality": "blocking",
+  "adapter": "api",
+  "status": "passed",
+  "startedAt": "2026-04-03T21:10:56.813Z",
+  "finishedAt": "2026-04-03T21:10:57.651Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-03T21:10:57.115Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:inbox:smoke",
+      "timestamp": "2026-04-03T21:10:57.115Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-inbox-runtime-smoke.js",
+      "timestamp": "2026-04-03T21:10:57.115Z"
+    },
+    {
+      "level": "stdout",
+      "message": "[inbox-smoke] OK ticket=default-1775250657356-ux2wev1 queue=ux1_smoke_1775250657320 quickReply=qr-1775250657478-eyztwv0o3 phoneMasking=false->true evidence=qa/l05-chatpro-omnichannel-evidence.json",
+      "timestamp": "2026-04-03T21:10:57.569Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:inbox:smoke"
+  },
+  "errors": [],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T21-03-33-058Z/replays/qa-chatpro-omnichannel-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "tickets e fila omnichannel respondem"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-03T21-03-33-058Z/replays/qa-chatpro-omnichannel-smoke.json",
+  "failureType": null,
+  "errorMessage": null,
+  "rootCauseHint": null,
+  "durationMs": 838
+}

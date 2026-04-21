@@ -9,8 +9,9 @@
  */
 
 const path = require('path');
-const { RpaTestRunner } = require('./rpaTestRunner');
-const config = require('./rpaConfig');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const config = require('../../core/rpa/rpaConfig');
 const {
   SEED_DATA,
   SEED_RECORDINGS,
@@ -404,6 +405,7 @@ async function seedPlatform() {
 }
 
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/seedPlatformRPA.js');
   seedPlatform()
     .then((report) => {
       const hasSmokeFailure = report.smokeResults.some((item) => !item.skipped && !item.success);

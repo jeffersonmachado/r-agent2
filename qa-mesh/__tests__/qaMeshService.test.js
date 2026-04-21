@@ -53,6 +53,7 @@ function buildDepsFactory(overrides = {}) {
     refreshMeshRegistry: jest.fn(() => []),
     getLatestExecution: jest.fn(() => null),
     getMeshHistory: jest.fn(() => []),
+    getOfficialReference: jest.fn(() => null),
     getMeshSchedulerStatus: jest.fn(() => ({ enabled: true })),
     getExecutionById: jest.fn(() => null),
     getQueuedExecutionStatus: jest.fn(() => ({ executionId: 'meshq-1', status: 'running', progress: 50 })),
@@ -117,6 +118,45 @@ describe('qa-mesh routes', () => {
     expect(res.body.progress).toBe(50);
   });
 
+  test('encaminha officialOnly no histórico do qa-mesh', async () => {
+    const getMeshHistory = jest.fn(() => []);
+    const router = createQaMeshRoutes({
+      buildDeps: buildDepsFactory({
+        agent: { role: 'supervisor' },
+        permission: { allowed: true },
+        extra: { getMeshHistory },
+      }),
+    });
+    const handler = findRouteHandler(router, 'GET', '/qa-mesh/history');
+    const req = { headers: {}, query: { limit: '5', domain: 'beauty', officialOnly: '1' } };
+    const res = createResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(getMeshHistory).toHaveBeenCalledWith({ limit: 5, domain: 'beauty', officialOnly: true });
+  });
+
+  test('retorna referência oficial dedicada do qa-mesh', async () => {
+    const getOfficialReference = jest.fn(() => ({ executionId: 'mesh-pipeline-1', historyPath: '/tmp/mesh-pipeline-1.json' }));
+    const router = createQaMeshRoutes({
+      buildDeps: buildDepsFactory({
+        agent: { role: 'supervisor' },
+        permission: { allowed: true },
+        extra: { getOfficialReference },
+      }),
+    });
+    const handler = findRouteHandler(router, 'GET', '/qa-mesh/official-reference');
+    const req = { headers: {}, query: {} };
+    const res = createResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.executionId).toBe('mesh-pipeline-1');
+    expect(getOfficialReference).toHaveBeenCalled();
+  });
+
   test('aceita replay universal para supervisor', async () => {
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
@@ -133,5 +173,29 @@ describe('qa-mesh routes', () => {
     expect(res.statusCode).toBe(202);
     expect(res.body.executionId).toBe('meshq-replay');
     expect(res.body.status).toBe('queued');
+  });
+
+  test('retorna 409 quando replay exige pipeline oficial', async () => {
+    const error = new Error('Execute: npm run pipeline');
+    error.code = 'PIPELINE_REQUIRED';
+    const router = createQaMeshRoutes({
+      buildDeps: buildDepsFactory({
+        agent: { role: 'supervisor' },
+        permission: { allowed: true },
+        extra: {
+          queueScenarioReplay: jest.fn(() => {
+            throw error;
+          }),
+        },
+      }),
+    });
+    const handler = findRouteHandler(router, 'POST', '/qa-mesh/replay/:scenarioId');
+    const req = { headers: {}, params: { scenarioId: 'scenario-123' } };
+    const res = createResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error).toBe('pipeline_required');
   });
 });

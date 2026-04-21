@@ -137,7 +137,7 @@ async function handleAuthRoutes(ctx) {
   // GET /auth/rpa/token - Obtém ou gera token RPA
   if (method === 'GET' && pathname === '/auth/rpa/token') {
     try {
-      const rpaTokenManager = require('../../../tests/rpa/utils/rpaTokenManager');
+      const rpaTokenManager = require('../../../core/rpa/utils/rpaTokenManager');
       const token = rpaTokenManager.getOrCreateRpaToken();
 
       sendJson(res, 200, {

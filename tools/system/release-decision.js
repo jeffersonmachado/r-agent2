@@ -4,11 +4,12 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
-const OUTPUT_JSON_PATH = process.env.RELEASE_DECISION_PATH || 'qa/release-decision.json';
-const OUTPUT_MD_PATH = process.env.RELEASE_DECISION_MD_PATH || 'qa/release-decision.md';
+const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+const OUTPUT_JSON_PATH = runtimeAwarePath(ROOT, 'qa/release-decision.json', 'RELEASE_DECISION_PATH');
+const OUTPUT_MD_PATH = runtimeAwarePath(ROOT, 'qa/release-decision.md', 'RELEASE_DECISION_MD_PATH');
 const CANDIDATE_TAG_ENV = process.env.RELEASE_CANDIDATE_TAG || '';
 const CANDIDATE_BRANCH_ENV = process.env.RELEASE_CANDIDATE_BRANCH || '';
 const DECISION_ENV = process.env.RELEASE_DECISION || '';
@@ -23,7 +24,7 @@ const DECISION_APPROVERS = (process.env.RELEASE_DECISION_APPROVERS || `${ONCALL_
   .filter(Boolean);
 
 function readJson(relPath) {
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(abs)) return null;
   try {
     return JSON.parse(fs.readFileSync(abs, 'utf8'));
@@ -91,8 +92,8 @@ function toMarkdown(report) {
 }
 
 function writeOutputs(report) {
-  const jsonAbs = path.join(ROOT, OUTPUT_JSON_PATH);
-  const mdAbs = path.join(ROOT, OUTPUT_MD_PATH);
+  const jsonAbs = resolveWorkspacePath(ROOT, OUTPUT_JSON_PATH);
+  const mdAbs = resolveWorkspacePath(ROOT, OUTPUT_MD_PATH);
   fs.mkdirSync(path.dirname(jsonAbs), { recursive: true });
   fs.mkdirSync(path.dirname(mdAbs), { recursive: true });
   fs.writeFileSync(jsonAbs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');

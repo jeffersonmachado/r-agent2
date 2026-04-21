@@ -1,34 +1,8 @@
-# WORKFLOW AUXILIAR: Smoke rapido da stack — subconjunto do stack-test oficial.
-name: Test Stack Smoke [AUXILIAR]
+# WORKFLOW: Smoke rapido da stack — subconjunto do stack-test.
+name: Test Stack Smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'docker-compose.test.yml'
-      - 'package.json'
-      - 'tests/rpa/**'
-      - 'scripts/test-stack-*.sh'
-      - 'api/**'
-      - 'engine/**'
-      - 'frontend/**'
-      - 'infra/**'
-      - 'rag-service/**'
-      - '.github/workflows/test-stack-smoke.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'docker-compose.test.yml'
-      - 'package.json'
-      - 'tests/rpa/**'
-      - 'scripts/test-stack-*.sh'
-      - 'api/**'
-      - 'engine/**'
-      - 'frontend/**'
-      - 'infra/**'
-      - 'rag-service/**'
-      - '.github/workflows/test-stack-smoke.yml'
 
 jobs:
   stack-smoke:

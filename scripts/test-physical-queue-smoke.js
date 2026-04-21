@@ -11,9 +11,12 @@
  * - valida metricas minimas admin
  */
 
-const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
+
+const ROOT = path.join(__dirname, '..');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
@@ -65,14 +68,16 @@ function sleep(ms) {
 }
 
 function evidencePath() {
-  return String(process.env.PHYSICAL_QUEUE_EVIDENCE_PATH || 'qa/l01-physical-queue-evidence.json');
+  return resolveWorkspacePath(
+    ROOT,
+    runtimeAwarePath(ROOT, 'qa/l01-physical-queue-evidence.json', 'PHYSICAL_QUEUE_EVIDENCE_PATH'),
+  );
 }
 
 function writeEvidence(payload) {
   const out = evidencePath();
-  const abs = path.resolve(process.cwd(), out);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return out;
 }
 

@@ -6,6 +6,9 @@ describe('pbxLegacy inventory', () => {
     jest.clearAllMocks();
     delete process.env.PBX_LEGACY_ROOT;
     delete process.env.PBX_LEGACY_XML_DIR;
+    jest.doMock('../../api/utils/config', () => ({
+      get: (_key, fallback = '') => fallback,
+    }));
   });
 
   test('quando PBX_LEGACY_ROOT não está configurado, configured=false', async () => {

@@ -13,7 +13,7 @@
  * - disconnect e status final "disconnected"
  */
 
-const { getOrCreateRpaToken } = require('../tests/rpa/utils/rpaTokenManager');
+const { getOrCreateRpaToken } = require('../core/rpa/utils/rpaTokenManager');
 
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');

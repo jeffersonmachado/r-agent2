@@ -53,6 +53,8 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 
 Este repositório já contém documentação detalhada por área. Alguns pontos de entrada úteis:
 
+- **Marketing / Google Ads (configuração, conversões offline, upload e operação)**: `MARKETING_GOOGLE_ADS_OPERACAO.md`
+- **Marketing / Google Ads (roadmap de gestão completa e supervisão por IA)**: `MARKETING_GOOGLE_ADS_GESTAO_COMPLETA_IA.md`
 - **Atendimento (análise e gaps BLIP-like)**: `BLIP_GAP_ANALYSIS.md`
 - **Padrões do workspace `/support` (layout, cards, compositor, handover, IA)**: `SUPORTE_PADRAO_WORKSPACE.md`
 - **Templates/marketplace de flows**: `ARCHITECTURE_TEMPLATE_MARKETPLACE_PHASE5.md`

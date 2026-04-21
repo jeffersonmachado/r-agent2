@@ -23,6 +23,20 @@ function getModels() {
 const { encrypt, decrypt } = require('../utils/crypto');
 const logger = require('../utils/logger');
 
+const SUPPORTED_AI_PROVIDERS = new Set(['openai', 'anthropic']);
+
+function normalizeProvider(provider) {
+  if (typeof provider !== 'string') return null;
+  const normalized = provider.trim().toLowerCase();
+  return normalized || null;
+}
+
+function assertSupportedProvider(provider, fieldName = 'provider') {
+  if (!provider || !SUPPORTED_AI_PROVIDERS.has(provider)) {
+    throw new Error(`${fieldName} inválido. Suportados: ${Array.from(SUPPORTED_AI_PROVIDERS).join(', ')}`);
+  }
+}
+
 /**
  * Helper padronizado: Busca tenant por tenant_key ou id (UUID).
  * Reutiliza a função do tenantService para garantir consistência.
@@ -129,8 +143,18 @@ async function saveAIConfig(tenantKey, config) {
     });
 
     // Suporta primary/secondary ou provider (para compatibilidade)
-    const primaryProvider = config.primary || config.provider || null;
-    const secondaryProvider = config.secondary || null;
+    const primaryProvider = normalizeProvider(config.primary || config.provider || null);
+    const secondaryProvider = normalizeProvider(config.secondary || null);
+
+    if (primaryProvider) {
+      assertSupportedProvider(primaryProvider, 'primary');
+    }
+    if (secondaryProvider) {
+      assertSupportedProvider(secondaryProvider, 'secondary');
+    }
+    if (primaryProvider && secondaryProvider && primaryProvider === secondaryProvider) {
+      throw new Error('secondary deve ser diferente de primary');
+    }
 
     const settingData = {
       enabled: config.enabled !== false,
@@ -171,6 +195,9 @@ async function saveAIConfig(tenantKey, config) {
  */
 async function saveAICredentials(tenantKey, provider, apiKey) {
   try {
+    const normalizedProvider = normalizeProvider(provider);
+    assertSupportedProvider(normalizedProvider);
+
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
       throw new Error('API key não pode estar vazia');
     }
@@ -202,7 +229,7 @@ async function saveAICredentials(tenantKey, provider, apiKey) {
     const credential = await TenantAICredential.findOne({
       where: {
         tenant_id: tenant.id,
-        provider: provider,
+        provider: normalizedProvider,
       },
     });
 
@@ -213,12 +240,12 @@ async function saveAICredentials(tenantKey, provider, apiKey) {
     } else {
       await TenantAICredential.create({
         tenant_id: tenant.id,
-        provider: provider,
+        provider: normalizedProvider,
         api_key_encrypted: encrypted,
       });
     }
 
-    logger.info(`[TenantAIService] Credencial ${provider} salva para tenant ${tenantKey}`);
+    logger.info(`[TenantAIService] Credencial ${normalizedProvider} salva para tenant ${tenantKey}`);
   } catch (err) {
     logger.error('[TenantAIService] Erro ao salvar credenciais de IA:', err);
     throw err;
@@ -234,6 +261,9 @@ async function saveAICredentials(tenantKey, provider, apiKey) {
  */
 async function getDecryptedAPIKey(tenantKey, provider) {
   try {
+    const normalizedProvider = normalizeProvider(provider);
+    if (!normalizedProvider) return null;
+
     const sequelize = getSequelize();
     if (!sequelize) {
       await connect();
@@ -260,7 +290,7 @@ async function getDecryptedAPIKey(tenantKey, provider) {
     const credential = await TenantAICredential.findOne({
       where: {
         tenant_id: tenant.id,
-        provider: provider,
+        provider: normalizedProvider,
       },
     });
 
@@ -284,6 +314,9 @@ async function getDecryptedAPIKey(tenantKey, provider) {
  */
 async function hasCredentials(tenantKey, provider) {
   try {
+    const normalizedProvider = normalizeProvider(provider);
+    if (!normalizedProvider) return false;
+
     const sequelize = getSequelize();
     if (!sequelize) {
       await connect();
@@ -310,7 +343,7 @@ async function hasCredentials(tenantKey, provider) {
     const credential = await TenantAICredential.findOne({
       where: {
         tenant_id: tenant.id,
-        provider: provider,
+        provider: normalizedProvider,
       },
     });
 
@@ -327,4 +360,5 @@ module.exports = {
   saveAICredentials,
   getDecryptedAPIKey,
   hasCredentials,
+  SUPPORTED_AI_PROVIDERS,
 };

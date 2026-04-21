@@ -1,0 +1,41 @@
+{
+  "wave": "WAVE-7",
+  "title": "Integracao backend API e QA Mesh",
+  "status": "failed",
+  "startedAt": "2026-04-07T15:53:18.047Z",
+  "finishedAt": "2026-04-07T15:53:18.049Z",
+  "changes": [
+    "Rotas /qa/stability,/qa/checkpoints,/qa/learn adicionadas",
+    "meshRunner integrado com checkpoint+stability+learn"
+  ],
+  "filesCreated": [],
+  "filesModified": [
+    "api/services/qaMeshService.js",
+    "api/modules/qa-mesh/routes.js",
+    "api/composition/qa-mesh/index.js",
+    "qa-mesh/meshRunner.js"
+  ],
+  "filesRemoved": [],
+  "validation": {
+    "buildBackend": false,
+    "buildFrontend": true,
+    "qaTechnical": true,
+    "qaBusiness": false,
+    "replay": false
+  },
+  "metrics": {
+    "testsPassed": 5,
+    "testsFailed": 1,
+    "warnings": 2,
+    "criticalFlowsValidated": 0,
+    "durationMs": 3200
+  },
+  "blockers": [
+    "backend_build",
+    "critical_replay",
+    "qa_mesh_no_go"
+  ],
+  "nextActions": [
+    "Corrigir cenarios criticos do mesh e backend unitario antes de liberar release gate"
+  ]
+}

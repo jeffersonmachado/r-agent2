@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { runtimeAwarePath } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 
@@ -242,14 +243,14 @@ function checkLaunchEvidence() {
   logSection('🚀 LANÇAMENTO - Evidências');
 
   const requireEvidence = String(process.env.CHECKLIST_REQUIRE_LAUNCH_EVIDENCE || '0') === '1';
-  const releaseGatePath = path.join(ROOT_DIR, 'qa', 'release-gate-report.json');
-  const rollbackPath = path.join(ROOT_DIR, 'qa', 'rollback-drill-report.json');
-  const goNoGoPath = path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
-  const releaseDecisionPath = path.join(ROOT_DIR, 'qa', 'release-decision.json');
-  const smokePath = path.join(ROOT_DIR, 'qa', 'smoke-evidence.json');
-  const releaseWindowPath = path.join(ROOT_DIR, 'qa', 'release-window-report.json');
-  const releaseManifestPath = path.join(ROOT_DIR, 'qa', 'release-manifest.json');
-  const releaseSummaryPath = path.join(ROOT_DIR, 'qa', 'release-summary.md');
+  const releaseGatePath = runtimeAwarePath(ROOT_DIR, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+  const rollbackPath = runtimeAwarePath(ROOT_DIR, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
+  const goNoGoPath = runtimeAwarePath(ROOT_DIR, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+  const releaseDecisionPath = runtimeAwarePath(ROOT_DIR, 'qa/release-decision.json', 'RELEASE_DECISION_PATH');
+  const smokePath = runtimeAwarePath(ROOT_DIR, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+  const releaseWindowPath = runtimeAwarePath(ROOT_DIR, 'qa/release-window-report.json', 'RELEASE_WINDOW_REPORT_PATH');
+  const releaseManifestPath = runtimeAwarePath(ROOT_DIR, 'qa/release-manifest.json', 'RELEASE_MANIFEST_PATH');
+  const releaseSummaryPath = runtimeAwarePath(ROOT_DIR, 'qa/release-summary.md', 'RELEASE_SUMMARY_PATH');
 
   const evidenceFiles = [
     { name: 'Release gate report', path: releaseGatePath },
@@ -267,10 +268,10 @@ function checkLaunchEvidence() {
   for (const file of evidenceFiles) {
     if (!fs.existsSync(file.path)) {
       if (requireEvidence) {
-        logError(`${file.name} não encontrado: ${file.path}`);
+        logError(`${file.name} não encontrado: ${path.isAbsolute(file.path) ? file.path : path.join(ROOT_DIR, file.path)}`);
         ok = false;
       } else {
-        logWarning(`${file.name} ausente (modo informativo): ${file.path}`);
+        logWarning(`${file.name} ausente (modo informativo): ${path.isAbsolute(file.path) ? file.path : path.join(ROOT_DIR, file.path)}`);
       }
       continue;
     }

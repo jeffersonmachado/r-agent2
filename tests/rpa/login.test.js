@@ -10,13 +10,14 @@
  * 6. Redirecionamento correto
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
-const { ReplaySystem } = require('./replaySystem');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+const { ReplaySystem } = require('../../core/rpa/replaySystem');
 const path = require('path');
 const fs = require('fs');
+const config = require('../../api/utils/config');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+const API_URL = process.env.TEST_API_URL || process.env.API_URL || `http://localhost:${Number(config.get('api.port', 3001))}`;
 const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
 const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
 const TENANT_ID = process.env.TEST_TENANT_ID || 'tenant-demo';

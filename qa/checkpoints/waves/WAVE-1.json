@@ -1,0 +1,33 @@
+{
+  "wave": "WAVE-1",
+  "title": "Smoke checkpoints",
+  "status": "passed",
+  "startedAt": "2026-04-07T15:48:29.988Z",
+  "finishedAt": "2026-04-07T15:48:29.993Z",
+  "changes": [
+    "checkpointManager bootstrap"
+  ],
+  "filesCreated": [
+    "qa/checkpoints/checkpointManager.js"
+  ],
+  "filesModified": [
+    "qa-mesh/meshRunner.js"
+  ],
+  "filesRemoved": [],
+  "validation": {
+    "buildBackend": true,
+    "buildFrontend": true,
+    "qaTechnical": true,
+    "qaBusiness": true,
+    "replay": true
+  },
+  "metrics": {
+    "testsPassed": 5,
+    "testsFailed": 0,
+    "warnings": 0,
+    "criticalFlowsValidated": 2,
+    "durationMs": 1200
+  },
+  "blockers": [],
+  "nextActions": []
+}

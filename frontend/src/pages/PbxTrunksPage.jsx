@@ -254,10 +254,10 @@ export function PbxTrunksPage() {
           <h1>🌐 PBX • Troncos</h1>
         </div>
         <div className="support-controls">
-          <Button onClick={openCreate} style={{ backgroundColor: '#25D366', color: 'white', marginRight: '10px' }}>
+          <Button onClick={openCreate} variant="success" className="mr-2.5">
             ➕ Incluir
           </Button>
-          <Button onClick={loadData} style={{ backgroundColor: '#6366f1', color: 'white' }}>
+          <Button onClick={loadData} variant="primary">
             🔄 Atualizar
           </Button>
         </div>

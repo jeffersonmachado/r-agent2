@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-04-07T15:48:29.745Z",
+  "existingWaves": [
+    "legacy qa-mesh execution waves",
+    "system release gate checks",
+    "qa runner impact scopes"
+  ],
+  "duplicatedStructures": {
+    "directories": [
+      "qa-mesh",
+      "qa",
+      "rpa",
+      "tests/rpa",
+      "core/rpa"
+    ],
+    "runners": [
+      "qa/qaRunner.js",
+      "qa-mesh/meshRunner.js",
+      "rpa/rpaTestRunner.js",
+      "tests/rpa/rpaTestRunner.js",
+      "core/rpa/rpaTestRunner.js"
+    ],
+    "replay": [
+      "lib/replaySystem.js",
+      "tests/rpa/replaySystem.js",
+      "core/rpa/replaySystem.js",
+      "engine/replay.js"
+    ],
+    "scriptsRedundant": [
+      "rpa:seed",
+      "test:rpa:seed",
+      "rpa:seed:smoke",
+      "test:rpa:seed:smoke"
+    ]
+  },
+  "evidenceSources": [
+    "qa-mesh/meshEvidence",
+    "qa-mesh/meshHistory",
+    "qa/checkpoints/logs",
+    "qa/reports",
+    "replays/"
+  ],
+  "currentIntegrations": {
+    "backend": [
+      "api/modules/qa/routes.js",
+      "api/modules/qa-mesh/routes.js"
+    ],
+    "frontend": [
+      "frontend/src/pages/QaPage.jsx",
+      "frontend/src/pages/QaMeshPage.jsx"
+    ],
+    "mesh": [
+      "qa-mesh/meshRunner.js",
+      "qa-mesh/intelligence/failureIntelligence.js"
+    ]
+  },
+  "criticalWarnings": [
+    "      at Object.toHaveBeenCalledWith (tests/unit/fitnessMembershipService.test.js:151:36) |  |  | Test Suites: 1 failed, 33 passed, 34 of 323 total | Tests:       1 failed, 464 passed, 465 total | Snapshots:   0 total | Time:        11.353 s | Ran all test suites matching /tests\\/unit/i.",
+    "        \"stabilityScore\": 0, |         \"passed\": 0, |         \"total\": 1 |       } |     ], |     \"outputPath\": \"/opt/results/ria/r-agent2/qa-mesh/intelligence/latest.json\" |   } | }"
+  ],
+  "silentFallbacksIdentified": [
+    "tools/rpa/run-all.js: fallback URL condicional por env",
+    "qa-mesh/meshRunner.js: fallback de adapter com status passed_via_fallback (degradacao explicita)",
+    "tools/system/runtime-governance.js: classificacao REAL_FAILED_FALLBACK_USED"
+  ],
+  "gaps": [
+    "faltava checkpoint manager unificado por onda",
+    "faltava snapshot unico de estabilidade em qa/mesh/intelligence",
+    "faltava pipeline learn persistente com planos de correcao"
+  ]
+}

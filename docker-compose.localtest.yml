@@ -1,0 +1,26 @@
+# Compose override para validação local quando portas padrão já estão em uso.
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.localtest.yml up -d
+#
+# Mapeia serviços em portas alternativas sem conflitar com o ambiente dev local.
+
+services:
+  api:
+    ports:
+      - "13901:3001"
+
+  frontend:
+    ports:
+      - "18890:80"
+
+  postgres:
+    ports:
+      - "15432:5432"
+
+  redis:
+    ports:
+      - "16379:6379"
+
+  rag-service:
+    ports:
+      - "18001:8001"

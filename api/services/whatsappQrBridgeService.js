@@ -19,6 +19,7 @@ const { listTenants } = require('./tenantService');
 const { resolveOrCreateTicketFromIncomingMessage, appendTicketMessage } = require('./conversationTicketLinkService');
 const { storeTicketMedia, getTicketMediaById } = require('./ticketMediaService');
 const { emitEvent } = require('./websocketService');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 
 const activeClients = new Map();
 let started = false;
@@ -60,15 +61,14 @@ function clientKey(tenantId, connectionId) {
 
 function resolveWwebjsAuthPath() {
   const explicit = safeTrim(process.env.WWEBJS_AUTH_PATH || '');
-  if (explicit) return explicit;
+  if (explicit) return path.resolve(explicit);
 
-  // Em container de producao, /app/api/data fica em volume persistente.
-  const persistentDefault = '/app/api/data/wa_sessions/wwebjs_auth';
+  const runtimeDefault = '/var/lib/ragent2/whatsapp/auth';
   try {
-    if (fs.existsSync('/app/api/data')) return persistentDefault;
+    if (fs.existsSync('/var/lib/ragent2')) return path.resolve(runtimeDefault);
   } catch (_) {}
 
-  return path.join(process.env.HOME || '/app', '.wwebjs_auth');
+  return resolveRuntimePath('whatsapp', 'auth');
 }
 
 function sanitizeClientId(tenantId, connectionId) {

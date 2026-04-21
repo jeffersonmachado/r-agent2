@@ -229,7 +229,8 @@ async function handleRpaTestGenerationRoutes(ctx) {
 
       const fs = require('fs');
       const path = require('path');
-      const seedsDir = path.join(__dirname, '../../../../tests/rpa/seeds');
+      const { getRpaSeedWriteDir } = require('../../../../lib/rpaPathResolver');
+      const seedsDir = getRpaSeedWriteDir();
 
       if (!fs.existsSync(seedsDir)) {
         fs.mkdirSync(seedsDir, { recursive: true });

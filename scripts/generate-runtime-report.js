@@ -9,6 +9,9 @@ const path = require('path');
 const logger = require('../api/utils/logger');
 const { readQaResults, getQaStats } = require('../engine/qa/qaTelemetry');
 const runtimeEscalationPolicy = require('../governance/runtime-escalation-policy.json');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
+
+const ROOT = path.join(__dirname, '..');
 
 /**
  * Analisa resultados de runtime e determina níveis de escalonamento
@@ -168,7 +171,8 @@ function generateRuntimeReport() {
   }
   
   // Salva relatório
-  const reportPath = path.join(__dirname, '../qa/runtime-report.json');
+  const reportPath = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/runtime-report.json', 'RUNTIME_REPORT_PATH'));
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
   
   logger.info('[generate-runtime-report] Relatório gerado', {

@@ -58,6 +58,7 @@ async function loadFeaturesConfig() {
     const defaultConfig = {
       aiTasksEnabled: true,
       useRealAiApi: false, // Por padrão usa implementação mock
+      NEW_NAVIGATION: true,
       version: '1.0.0',
     };
 
@@ -221,4 +222,3 @@ export async function reloadConfig() {
   lastFetchTime = 0; // Reseta cooldown para forçar novo fetch
   return loadFeaturesConfig();
 }
-

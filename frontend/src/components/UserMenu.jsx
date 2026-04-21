@@ -11,7 +11,6 @@ import { useWebSocketContext } from '../context/WebSocketContext';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 import { redirectToLogin } from '../utils';
-import { getTenant } from '../api/tenants';
 
 /**
  * Menu de usuário fixo no canto superior direito
@@ -21,7 +20,7 @@ import { getTenant } from '../api/tenants';
  * - Badge de tickets ativos no avatar
  * - Status do agente (online/ocupado/offline)
  */
-export function UserMenu() {
+export function UserMenu({ showNavigation = true, tenantLabel = '', verticalLabels = [] }) {
   const { agent, logout } = useAuth();
   const { navigate } = useRouter();
   const { showToast } = useToast();
@@ -29,7 +28,6 @@ export function UserMenu() {
   const [activeTicketsCount, setActiveTicketsCount] = useState(0);
   const [agentStatus, setAgentStatus] = useState('online'); // online, busy, offline
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
-  const [tenantInfo, setTenantInfo] = useState(null);
   const [isInEditor, setIsInEditor] = useState(false);
   const [position, setPosition] = useState({ top: 12, right: 12 });
   const [isDragging, setIsDragging] = useState(false);
@@ -529,31 +527,6 @@ export function UserMenu() {
     websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
   }, [wsConnected, wsAuthenticated]);
 
-  // Carrega informações do tenant
-  useEffect(() => {
-    if (!agent || !agent.tenantId) {
-      setTenantInfo(null);
-      return;
-    }
-
-    const loadTenantInfo = async () => {
-      try {
-        const result = await getTenant(agent.tenantId);
-        if (result && result.tenant) {
-          setTenantInfo(result.tenant);
-        } else {
-          logger.warn('[UserMenu] Tenant não encontrado:', agent.tenantId);
-          setTenantInfo(null);
-        }
-      } catch (err) {
-        logger.error('Erro ao carregar informações do tenant', err);
-        setTenantInfo(null);
-      }
-    };
-
-    loadTenantInfo();
-  }, [agent]);
-
   // Carrega tickets iniciais - apenas uma vez quando o agente é carregado
   // Polling removido - apenas WebSocket é usado para atualizações em tempo real
   useEffect(() => {
@@ -615,6 +588,10 @@ export function UserMenu() {
   if (!agent) {
     return null;
   }
+
+  const resolvedTenantLabel = tenantLabel || agent.tenantId || '';
+  const resolvedVerticalLabels = Array.isArray(verticalLabels) ? verticalLabels.filter(Boolean) : [];
+  const verticalSummary = resolvedVerticalLabels.join(', ');
 
   // Obtém itens do menu visíveis baseado em permissões e ordena alfabeticamente
   const visibleMenuItems = getVisibleMenuItems(agent).sort((a, b) => 
@@ -678,11 +655,11 @@ export function UserMenu() {
         <span 
           className="user-name" 
           title={
-            tenantInfo 
-              ? `Tenant: ${tenantInfo.name || agent.tenantId}\nTenant ID: ${agent.tenantId || 'N/A'}` 
-              : agent.tenantId 
-                ? `Tenant ID: ${agent.tenantId}` 
-                : ''
+            [
+              resolvedTenantLabel ? `Tenant: ${resolvedTenantLabel}` : '',
+              agent.tenantId ? `Tenant ID: ${agent.tenantId}` : '',
+              verticalSummary ? `Vertical${resolvedVerticalLabels.length > 1 ? 's' : ''}: ${verticalSummary}` : '',
+            ].filter(Boolean).join('\n')
           }
         >
           {agent.name}
@@ -713,37 +690,41 @@ export function UserMenu() {
                     {getStatusText()}
                   </span>
                 </div>
-                {tenantInfo && (
-                  <div className="user-menu-tenant" title={`Tenant: ${tenantInfo.name}\nTenant ID: ${agent.tenantId || 'N/A'}`}>
-                    🏢 {tenantInfo.name}
+                {resolvedTenantLabel && (
+                  <div className="user-menu-tenant" title={`Tenant: ${resolvedTenantLabel}\nTenant ID: ${agent.tenantId || 'N/A'}`}>
+                    🏢 {resolvedTenantLabel}
                   </div>
                 )}
-                {!tenantInfo && agent.tenantId && (
-                  <div className="user-menu-tenant" title={`Tenant ID: ${agent.tenantId}`}>
-                    🏢 {agent.tenantId}
+                {resolvedVerticalLabels.length > 0 && (
+                  <div className="user-menu-tenant" title={`Vertical${resolvedVerticalLabels.length > 1 ? 's' : ''}: ${verticalSummary}`}>
+                    🧭 {verticalSummary}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="user-menu-divider"></div>
+          {showNavigation && (
+            <>
+              <div className="user-menu-divider"></div>
 
-          <div className="user-menu-nav">
-            {visibleMenuItems.map((item) => (
-              <NavigationLink
-                key={item.path}
-                to={item.path}
-                className="user-menu-item"
-                onClick={() => setIsOpen(false)}
-              >
-                <span className="icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavigationLink>
-            ))}
-          </div>
+              <div className="user-menu-nav">
+                {visibleMenuItems.map((item) => (
+                  <NavigationLink
+                    key={item.path}
+                    to={item.path}
+                    className="user-menu-item"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <span className="icon">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </NavigationLink>
+                ))}
+              </div>
 
-          <div className="user-menu-divider"></div>
+              <div className="user-menu-divider"></div>
+            </>
+          )}
 
           <div className="user-menu-footer">
             <Button
@@ -773,4 +754,3 @@ export function UserMenu() {
 
 // Export default também para compatibilidade
 export default UserMenu;
-

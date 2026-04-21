@@ -8,16 +8,16 @@ const { getSequelize } = require('../sequelize');
 let Flow = null;
 
 function getFlowModel() {
-  if (!Flow) {
-    const sequelize = getSequelize();
-    if (!sequelize) {
-      return new Proxy({}, {
-        get: () => {
-          throw new Error('Sequelize não inicializado. Chame connect() primeiro.');
-        }
-      });
-    }
+  const sequelize = getSequelize();
+  if (!sequelize) {
+    return new Proxy({}, {
+      get: () => {
+        throw new Error('Sequelize não inicializado. Chame connect() primeiro.');
+      }
+    });
+  }
 
+  if (!Flow || Flow.sequelize !== sequelize) {
     Flow = sequelize.define('Flow', {
       id: {
         type: DataTypes.STRING,

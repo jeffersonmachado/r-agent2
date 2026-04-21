@@ -1,0 +1,154 @@
+{
+  "id": "business-f1",
+  "domain": "fitness",
+  "type": "business",
+  "source": "qa",
+  "flow": "Fitness novo aluno até pagamento e ativação",
+  "criticality": "blocking",
+  "adapter": "api",
+  "status": "environment_missing",
+  "startedAt": "2026-04-20T13:45:00.283Z",
+  "finishedAt": "2026-04-20T13:45:00.392Z",
+  "logs": [
+    {
+      "level": "stderr",
+      "message": "/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  throw new Error(",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "  ^",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "Error: [core/rpa/cli] \"business-qa\" exige o pipeline oficial.",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "Execute: npm run pipeline",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "Para uso local explicito: PIPELINE_BYPASS=1 <comando>",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at ensureExecutionMode (/opt/results/ria/r-agent2/core/rpa/cli.js:88:9)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at main (/opt/results/ria/r-agent2/core/rpa/cli.js:105:3)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Object.<anonymous> (/opt/results/ria/r-agent2/core/rpa/cli.js:131:3)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Module._compile (node:internal/modules/cjs/loader:1565:14)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Object..js (node:internal/modules/cjs/loader:1708:10)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Module.load (node:internal/modules/cjs/loader:1318:32)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Function._load (node:internal/modules/cjs/loader:1128:12)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at wrapModuleLoad (node:internal/modules/cjs/loader:219:24)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    },
+    {
+      "level": "stderr",
+      "message": "Node.js v22.12.0",
+      "timestamp": "2026-04-20T13:45:00.384Z"
+    }
+  ],
+  "metrics": {
+    "command": "node core/rpa/cli.js business --mode=journeys --code=F1"
+  },
+  "errors": [
+    "/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+    "  throw new Error(",
+    "  ^",
+    "",
+    "Error: [core/rpa/cli] \"business-qa\" exige o pipeline oficial.",
+    "Execute: npm run pipeline",
+    "Para uso local explicito: PIPELINE_BYPASS=1 <comando>",
+    "    at ensureExecutionMode (/opt/results/ria/r-agent2/core/rpa/cli.js:88:9)",
+    "    at main (/opt/results/ria/r-agent2/core/rpa/cli.js:105:3)",
+    "    at Object.<anonymous> (/opt/results/ria/r-agent2/core/rpa/cli.js:131:3)",
+    "    at Module._compile (node:internal/modules/cjs/loader:1565:14)",
+    "    at Object..js (node:internal/modules/cjs/loader:1708:10)",
+    "    at Module.load (node:internal/modules/cjs/loader:1318:32)",
+    "    at Function._load (node:internal/modules/cjs/loader:1128:12)",
+    "    at TracingChannel.traceSync (node:diagnostics_channel:322:14)",
+    "    at wrapModuleLoad (node:internal/modules/cjs/loader:219:24)",
+    "    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)",
+    "",
+    "Node.js v22.12.0"
+  ],
+  "artifacts": [
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/mesh-2026-04-20T13-45-00-158Z/replays/business-f1.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "Aluno criado",
+    "Plano aplicado",
+    "Cobrança criada",
+    "Pagamento reconhecido",
+    "Status ativo",
+    "Reflexo em check-in/financeiro"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/mesh-2026-04-20T13-45-00-158Z/replays/business-f1.json",
+  "failureType": "pipeline_required",
+  "errorMessage": "/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+  "rootCauseHint": "Cenário exige execução pelo pipeline oficial ou bypass explícito em ambiente local.",
+  "durationMs": 109
+}

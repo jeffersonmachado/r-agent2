@@ -5,7 +5,7 @@
  * Execute: node tests/rpa/demo-visual.js
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 
 async function demonstrarVisual() {
   console.log('🌐 Sistema RPA - Demonstração Visual\n');

@@ -15,9 +15,11 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const logger = require('../api/utils/logger');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
 // Carrega test-report.json
-const TEST_REPORT_PATH = path.join(__dirname, '../qa/test-report.json');
+const ROOT = path.join(__dirname, '..');
+const TEST_REPORT_PATH = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/test-report.json', 'TEST_REPORT_PATH'));
 const QA_POLICY_PATH = path.join(__dirname, '../governance/qa-policy.json');
 
 let testReport = null;
@@ -145,7 +147,8 @@ function validateGoTechnical() {
     logger.error('[validate-go-technical] GO TÉCNICO BLOQUEADO', results);
     
     // Gera relatório de bloqueio
-    const reportPath = path.join(__dirname, '../qa/go-technical-blocked.json');
+    const reportPath = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/go-technical-blocked.json', 'GO_TECHNICAL_BLOCKED_PATH'));
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, JSON.stringify({
       status: 'BLOCKED',
       reason: 'Uma ou mais validações falharam',
@@ -159,7 +162,8 @@ function validateGoTechnical() {
   logger.info('[validate-go-technical] GO TÉCNICO APROVADO', results);
   
   // Gera relatório de aprovação
-  const reportPath = path.join(__dirname, '../qa/go-technical-approved.json');
+  const reportPath = resolveWorkspacePath(ROOT, runtimeAwarePath(ROOT, 'qa/go-technical-approved.json', 'GO_TECHNICAL_APPROVED_PATH'));
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, JSON.stringify({
     status: 'APPROVED',
     results,

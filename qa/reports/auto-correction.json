@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-04-10T18:52:30.491Z",
+  "learnMode": "patch-controlled",
+  "autoPromoteEnabled": false,
+  "dryRun": true,
+  "summary": {
+    "totalFailureClusters": 0,
+    "totalPlans": 0,
+    "patchExecutions": 0,
+    "promotedPlans": 0,
+    "rejectedPlans": 0,
+    "scoreBefore": 100,
+    "scoreAfter": 100
+  },
+  "learning": {
+    "normalized": 0,
+    "clustered": 0,
+    "ranked": 0,
+    "suggestions": 0,
+    "fixPlans": 0
+  },
+  "promotionResults": [],
+  "patchExecutions": [],
+  "learnValidation": {
+    "generatedAt": "2026-04-10T18:52:30.490Z",
+    "sandboxPath": null,
+    "skipped": true,
+    "reason": "no_fix_plans_generated",
+    "before": {
+      "score": 100,
+      "gate": "GO",
+      "replayPassed": true
+    },
+    "after": {
+      "score": 100,
+      "gate": "GO",
+      "replayPassed": true
+    },
+    "comparison": {
+      "scoreDelta": 0,
+      "regression": false,
+      "failureResolved": false,
+      "replayMaintained": true
+    },
+    "pipeline": {
+      "exitCode": 0,
+      "success": true
+    }
+  },
+  "featureFlags": {
+    "RAP_LEARN_MODE": "patch-controlled",
+    "RAP_AUTO_PROMOTE": "0"
+  },
+  "notes": "Modo dry-run. Nenhuma alteração automática foi aplicada. Defina RAP_AUTO_PROMOTE=1 para habilitar promoção."
+}

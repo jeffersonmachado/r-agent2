@@ -1,0 +1,40 @@
+{
+  "wave": "WAVE-8",
+  "title": "Testes, hardening e entrega operacional",
+  "status": "failed",
+  "startedAt": "2026-04-07T15:53:18.050Z",
+  "finishedAt": "2026-04-07T15:53:18.052Z",
+  "changes": [
+    "Testes unitarios adicionados para checkpoint/stability/learn",
+    "Sumarios baseline/inventory/final gerados"
+  ],
+  "filesCreated": [
+    "qa/__tests__/checkpointManager.test.js",
+    "qa/mesh/intelligence/__tests__/stabilityEngine.test.js",
+    "qa/mesh/intelligence/learning/__tests__/pipeline.test.js",
+    "api/services/__tests__/qaMeshService.stability.test.js"
+  ],
+  "filesModified": [],
+  "filesRemoved": [],
+  "validation": {
+    "buildBackend": false,
+    "buildFrontend": true,
+    "qaTechnical": true,
+    "qaBusiness": false,
+    "replay": false
+  },
+  "metrics": {
+    "testsPassed": 5,
+    "testsFailed": 1,
+    "warnings": 2,
+    "criticalFlowsValidated": 0,
+    "durationMs": 2600
+  },
+  "blockers": [
+    "backend_build",
+    "critical_replay"
+  ],
+  "nextActions": [
+    "Executar plano de correcao para liberar ondas finais"
+  ]
+}

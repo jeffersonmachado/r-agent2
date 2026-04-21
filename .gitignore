@@ -56,6 +56,12 @@ remote-dumps2/
 # Coverage (gerado)
 coverage/
 
+# Python virtualenvs locais
+venv/
+.venv/
+rag-service/venv/
+rag-service/.venv/
+
 # Artefatos de teste do frontend (JUnit)
 frontend/test-results/
 frontend/.vite/
@@ -63,6 +69,8 @@ frontend/.vite/
 # Dados locais do vector store do rag-service (não versionar)
 rag-service/data/vector_store/
 rag-service/test-results/
+rag-service/.coverage
+rag-service/data/adaptive_learning/
 rag-service/data/adaptive_learning/*_learning.json
 
 # Evidências locais de QA / release
@@ -79,14 +87,31 @@ qa/release-decision.md
 qa/release-summary.md
 qa/release-manifest.json
 qa/selftest-baseline.json
+qa/runtime-governance-report.json
+qa/system-validate-report.json
+qa/deploy-report.json
 
 # Artefatos locais de execução do QA Mesh
 qa-mesh/meshEvidence/*
 qa-mesh/meshHistory/*
+qa-mesh/isolated-run*/
 qa-mesh/meshReport.json
 qa-mesh/metrics.json
 qa-mesh/repairPlan.json
 qa-mesh/scheduler-state.json
+qa-mesh/intelligence/latest.json
+qa-mesh/meshRegistry.json
+
+# Artefatos locais de checkpoints e inteligência de QA
+qa/checkpoints/state/*.json
+qa/checkpoints/reports/WAVE-MESH.md
+qa/checkpoints/reports/final-summary.json
+qa/checkpoints/reports/final-summary.md
+qa/checkpoints/waves/WAVE-MESH.json
+qa/mesh/intelligence/history/index.json
+qa/mesh/intelligence/history/stability-*.json
+qa/mesh/intelligence/learning/*.json
+qa/mesh/intelligence/stabilitySnapshot.json
 
 # Metadados locais de ferramenta
 .codex
@@ -116,3 +141,10 @@ scripts/test-report.json
 # Sessões locais do WhatsApp Web (não versionar)
 .wwebjs_auth/
 .wwebjs_cache/
+api/data/wa_sessions/
+
+# Runtime root opcional para ambientes locais/containerizados
+runtime/
+
+# Saída de teste do empacotamento
+dist/test-release/

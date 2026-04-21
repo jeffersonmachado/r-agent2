@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-04-10T18:52:30.408Z",
+  "passed": true,
+  "executionSuccess": true,
+  "missing": [],
+  "corrupted": [],
+  "artifacts": [
+    {
+      "name": "execution",
+      "file": "execution.json",
+      "path": "/opt/results/ria/r-agent2/qa/reports/execution.json",
+      "exists": true,
+      "valid": true,
+      "description": "Resultado de execução das etapas do pipeline"
+    },
+    {
+      "name": "stability",
+      "file": "stability.json",
+      "path": "/opt/results/ria/r-agent2/qa/reports/stability.json",
+      "exists": true,
+      "valid": true,
+      "description": "Snapshot de estabilidade do sistema"
+    },
+    {
+      "name": "learn",
+      "file": "learn.json",
+      "path": "/opt/results/ria/r-agent2/qa/reports/learn.json",
+      "exists": true,
+      "valid": true,
+      "description": "Artefatos do pipeline de aprendizado adaptativo"
+    },
+    {
+      "name": "checkpoints",
+      "file": "checkpoints.json",
+      "path": "/opt/results/ria/r-agent2/qa/reports/checkpoints.json",
+      "exists": true,
+      "valid": true,
+      "description": "Estado dos checkpoints por onda"
+    }
+  ],
+  "verdict": "EVIDENCE_COMPLETE"
+}

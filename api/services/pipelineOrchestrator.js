@@ -27,7 +27,7 @@ const { validateFlow } = require('../../engine/validator');
 const { saveFlowToFile, removeFlowFromFile } = require('./generationOrchestrator');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
-const path = require('path');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -125,7 +125,7 @@ async function advancePipeline(execution, onProgress = null) {
       null;
 
     replay = new ReplaySystem({
-      storagePath: path.join(process.cwd(), 'replays', 'pipeline'),
+      storagePath: resolveRuntimePath('replays', 'pipeline'),
       tenantId,
       context: 'pipeline',
       enableScreenshots: false,

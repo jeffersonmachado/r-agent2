@@ -5,18 +5,22 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { evaluatePillars } = require('./lib/pillar-readiness');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
-const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '1') !== '0';
-const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '1') !== '0';
+const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const RELEASE_GATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+const ROLLBACK_DRILL_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
+const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
+const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '0') !== '0';
+const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '0') !== '0';
 const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
 
 function readJson(relPath) {
-  const abs = path.join(ROOT, relPath);
+  const abs = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(abs)) return null;
   try {
     return JSON.parse(fs.readFileSync(abs, 'utf8'));
@@ -55,7 +59,7 @@ function runRollbackDrillStep() {
 }
 
 function writeReport(report) {
-  const abs = path.join(ROOT, GO_NO_GO_REPORT_PATH);
+  const abs = resolveWorkspacePath(ROOT, GO_NO_GO_REPORT_PATH);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
@@ -68,9 +72,12 @@ function main() {
     decision: 'NO_GO',
     steps: [],
     checks: {
+      validate: null,
       releaseGate: null,
       rollbackDrill: null,
       smoke: null,
+      runtimeGovernance: null,
+      deploy: null,
     },
     reasons: [],
   };
@@ -88,9 +95,19 @@ function main() {
       report.steps.push({ label: 'rollback-drill', command: 'node tools/system/rollback-drill.js', status: 'skipped' });
     }
 
+    const validateReport = readJson(SYSTEM_VALIDATE_REPORT_PATH);
     const gate = readJson(RELEASE_GATE_REPORT_PATH);
     const drill = readJson(ROLLBACK_DRILL_REPORT_PATH);
     const smokeSummary = readJson(SMOKE_EVIDENCE_SUMMARY_PATH);
+    const runtimeGovernance = readJson(RUNTIME_GOVERNANCE_REPORT_PATH);
+    const deployReport = readJson(DEPLOY_REPORT_PATH);
+
+    report.checks.validate = {
+      path: SYSTEM_VALIDATE_REPORT_PATH,
+      loaded: !!validateReport,
+      status: validateReport?.status || 'missing',
+      result: validateReport?.result || 'missing',
+    };
 
     report.checks.releaseGate = {
       path: RELEASE_GATE_REPORT_PATH,
@@ -102,9 +119,30 @@ function main() {
       loaded: !!drill,
       status: drill?.status || 'missing',
     };
+    report.checks.runtimeGovernance = {
+      path: RUNTIME_GOVERNANCE_REPORT_PATH,
+      loaded: !!runtimeGovernance,
+      status: runtimeGovernance?.gateStatus || 'missing',
+      classification: runtimeGovernance?.classification || 'missing',
+    };
+    report.checks.deploy = {
+      path: DEPLOY_REPORT_PATH,
+      loaded: !!deployReport,
+      status: deployReport?.status || 'missing',
+      artifact: deployReport?.artifact?.name || 'missing',
+      portResolution: Array.isArray(deployReport?.portResolution) ? deployReport.portResolution : [],
+      optional: true,
+    };
 
+    if (!validateReport || !['pass', 'degraded'].includes(validateReport.status)) report.reasons.push('system_validate_not_releasable');
     if (!gate || gate.status !== 'pass') report.reasons.push('release_gate_not_pass');
     if (!drill || drill.status !== 'pass') report.reasons.push('rollback_drill_not_pass');
+
+    if (!runtimeGovernance) {
+      report.reasons.push('runtime_governance_missing');
+    } else if (runtimeGovernance.gateStatus === 'no_go') {
+      report.reasons.push(`runtime_mode_blocked:${runtimeGovernance.classification || 'unknown'}`);
+    }
 
     if (!smokeSummary || !smokeSummary.smokes) {
       report.checks.smoke = {
@@ -128,9 +166,19 @@ function main() {
       }
     }
 
+    if (!RUN_ROLLBACK_DRILL) {
+      report.checks.rollbackDrill.optional = true;
+      report.reasons = report.reasons.filter((reason) => reason !== 'rollback_drill_not_pass');
+    }
+
     if (report.reasons.length === 0) {
-      report.status = 'pass';
-      report.decision = 'GO';
+      if ((runtimeGovernance && runtimeGovernance.gateStatus === 'go_degraded') || validateReport?.status === 'degraded') {
+        report.status = 'degraded';
+        report.decision = 'GO_DEGRADED';
+      } else {
+        report.status = 'pass';
+        report.decision = 'GO';
+      }
     } else {
       report.status = 'fail';
       report.decision = 'NO_GO';
@@ -144,7 +192,7 @@ function main() {
   report.finishedAt = new Date().toISOString();
   writeReport(report);
 
-  if (report.decision === 'GO') {
+  if (report.decision === 'GO' || report.decision === 'GO_DEGRADED') {
     // eslint-disable-next-line no-console
     console.log(`[go-no-go] GO report=${GO_NO_GO_REPORT_PATH}`);
     process.exit(0);

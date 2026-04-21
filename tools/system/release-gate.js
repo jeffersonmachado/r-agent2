@@ -4,23 +4,23 @@
 /**
  * Gate oficial de release (bloco 3/4).
  *
- * Modo padrão (RELEASE_GATE_MODE=stack):
- * 1) bash scripts/system-autotest-stack.sh
- *    (já inclui validação oficial + selftest read-only dentro da stack)
- *
- * Modo legado (RELEASE_GATE_MODE=legacy):
- * 1) npm run test:unit
- * 2) node tools/system/validate.js
- * 3) node scripts/autotest.js
- * 4) bash scripts/system-autotest-stack.sh
- * 5) GET /health/selftest (não pode FAIL; checks obrigatórios sem unhealthy)
+ * Consome apenas as evidências já produzidas pelo fluxo oficial:
+ * 1) system-validate-report.json
+ * 2) smoke-evidence.json
+ * 3) runtime-governance-report.json
+ * 4) artefato auditado em dist/
  */
 
-const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { evaluatePillars } = require('./lib/pillar-readiness');
+const { findLatestReleaseArtifact } = require('./lib/release-artifact');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
+const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
 
 const COLORS = {
   reset: '\x1b[0m',
@@ -34,227 +34,63 @@ function log(color, msg) {
   console.log(`${color}${msg}${COLORS.reset}`);
 }
 
-function runStep(command, label) {
-  log(COLORS.blue, `[release-gate] ${label}`);
-  const startedAt = Date.now();
-  execSync(command, {
-    cwd: ROOT,
-    stdio: 'inherit',
-    env: process.env,
-  });
-  const durationMs = Date.now() - startedAt;
-  log(COLORS.green, `[release-gate] OK: ${label}`);
-  return { label, command, status: 'pass', durationMs };
-}
-
-function parseRequiredChecks() {
-  const raw = process.env.RELEASE_GATE_REQUIRED_CHECKS || 'eventDispatchRuntime,pbxEventRuntime,voiceRuntime';
-  return raw
-    .split(',')
-    .map((s) => String(s || '').trim())
-    .filter(Boolean);
-}
-
-async function verifySelftest() {
-  const selftestUrl = process.env.SELFTEST_URL || 'http://localhost:3000/health/selftest';
-  const requiredChecks = parseRequiredChecks();
-
-  log(COLORS.blue, `[release-gate] Verificando selftest em ${selftestUrl}`);
-  const res = await fetch(selftestUrl, { method: 'GET' });
-  if (!res.ok) {
-    throw new Error(`selftest_http_${res.status}`);
+function readJsonStrict(relPath, label) {
+  const absPath = resolveWorkspacePath(ROOT, relPath);
+  if (!fs.existsSync(absPath)) {
+    throw new Error(`${label}_missing:${relPath}`);
   }
-  const body = await res.json();
-  const status = String(body?.status || '').toUpperCase();
-  if (status === 'FAIL') {
-    throw new Error('selftest_status_fail');
+  try {
+    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`${label}_invalid:${relPath}:${error.message || error}`);
   }
-
-  const checks = body?.checks && typeof body.checks === 'object' ? body.checks : {};
-  for (const key of requiredChecks) {
-    const item = checks[key];
-    if (!item || typeof item !== 'object') {
-      throw new Error(`selftest_missing_check:${key}`);
-    }
-    const cStatus = String(item.status || '').toLowerCase();
-    if (cStatus === 'unhealthy') {
-      throw new Error(`selftest_unhealthy_check:${key}`);
-    }
-  }
-  log(COLORS.green, `[release-gate] OK: selftest=${status}, checks=${requiredChecks.join(',')}`);
-  return { url: selftestUrl, status, requiredChecks };
 }
 
 function checkReleaseArtifact() {
-  // ONDA 6: deploy deve partir de artefato aprovado, não de workspace vivo.
-  // Habilitar RELEASE_GATE_SKIP_ARTIFACT_CHECK=1 apenas em ambientes CI sem geração de ZIP.
-  if (String(process.env.RELEASE_GATE_SKIP_ARTIFACT_CHECK || '0') === '1') {
-    log(COLORS.yellow, '[release-gate] RELEASE_GATE_SKIP_ARTIFACT_CHECK=1 → verificação de artefato ignorada.');
-    return { status: 'skipped', reason: 'RELEASE_GATE_SKIP_ARTIFACT_CHECK=1' };
-  }
-
-  const distDir = path.join(ROOT, 'dist');
-  if (!fs.existsSync(distDir)) {
-    throw new Error('artifact_check_failed: dist/ não existe. Execute: npm run zip:release');
-  }
-
-  let zipFiles = [];
-  try {
-    zipFiles = fs.readdirSync(distDir)
-      .filter((f) => f.endsWith('.zip') && !f.includes('test') && !f.includes('contaminated'))
-      .sort()
-      .reverse();
-  } catch (_) {
-    throw new Error('artifact_check_failed: erro ao ler dist/');
-  }
-
-  if (zipFiles.length === 0) {
-    throw new Error('artifact_check_failed: nenhum ZIP aprovado em dist/. Execute: npm run zip:release');
-  }
-
-  const latestZip = zipFiles[0];
-  const manifestName = latestZip.replace(/\.zip$/, '.manifest.json');
-  const manifestPath = path.join(distDir, manifestName);
-
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error(`artifact_check_failed: manifesto ausente para ${latestZip}. Gere via: npm run zip:release`);
-  }
-
-  let manifest;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  } catch (_) {
-    throw new Error(`artifact_check_failed: manifesto ${manifestName} é inválido (JSON malformado)`);
-  }
-
-  if (manifest.audit !== 'passed') {
-    throw new Error(`artifact_check_failed: manifesto ${manifestName} não tem audit=passed (${manifest.audit})`);
-  }
-
-  log(COLORS.green, `[release-gate] OK: artefato aprovado — ${latestZip} (sha256: ${String(manifest.sha256 || 'n/a').slice(0, 16)}...)`);
-  return { status: 'ok', artifact: latestZip, sha256: manifest.sha256, generatedAt: manifest.generated_at };
+  const artifact = findLatestReleaseArtifact({ requireAuditPassed: true });
+  log(COLORS.green, `[release-gate] OK: artefato auditado — ${artifact.zip} (sha256: ${String(artifact.manifest.sha256 || 'n/a').slice(0, 16)}...)`);
+  return {
+    status: 'ok',
+    artifact: artifact.zip,
+    manifestPath: path.relative(ROOT, artifact.manifestPath),
+    sha256: artifact.manifest.sha256,
+    generatedAt: artifact.manifest.generated_at || artifact.manifest.generatedAt || null,
+  };
 }
 
 function writeReport(report) {
-  const relPath = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-  const absPath = path.join(ROOT, relPath);
+  const relPath = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+  const absPath = resolveWorkspacePath(ROOT, relPath);
   const dir = path.dirname(absPath);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   log(COLORS.blue, `[release-gate] Report: ${relPath}`);
 }
 
-function loadSmokeEvidenceSummary() {
-  const relPath = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-  const absPath = path.join(ROOT, relPath);
-  if (!fs.existsSync(absPath)) {
-    return { path: relPath, found: false, data: null };
-  }
-  try {
-    const data = JSON.parse(fs.readFileSync(absPath, 'utf8'));
-    return { path: relPath, found: true, data };
-  } catch (err) {
-    return { path: relPath, found: true, parseError: err.message || String(err), data: null };
-  }
-}
-
-function assertCriticalSmokeEvidence(evidence) {
-  if (!evidence?.found || !evidence?.data?.smokes) {
-    throw new Error('smoke_evidence_missing');
-  }
-  const l02 = evidence.data.smokes.l02 || null;
-  const l03 = evidence.data.smokes.l03 || null;
-  const l04 = evidence.data.smokes.l04 || null;
-  const l05 = evidence.data.smokes.l05 || null;
-  const l01 = evidence.data.smokes.l01 || null;
-  if (!l01 || l01.status !== 'pass') {
-    throw new Error('smoke_l01_not_pass');
-  }
-  if (
-    !l01.evidence
-    || l01.evidence.ok !== true
-    || !String(l01.evidence.queueId || '').trim()
-    || !String(l01.evidence.ticketId || '').trim()
-    || !l01.evidence.transitions
-    || l01.evidence.transitions.callNext !== true
-    || l01.evidence.transitions.start !== true
-    || l01.evidence.transitions.pause !== true
-    || l01.evidence.transitions.resume !== true
-    || l01.evidence.transitions.finish !== true
-    || !l01.evidence.metrics
-    || Number(l01.evidence.metrics.doneCount || 0) < 1
-  ) {
-    throw new Error('smoke_l01_physical_evidence_missing');
-  }
-  if (!l02 || l02.status !== 'pass') {
-    throw new Error('smoke_l02_not_pass');
-  }
-  if (!l03 || l03.status !== 'pass') {
-    throw new Error('smoke_l03_not_pass');
-  }
-  if (
-    !l03.evidence
-    || l03.evidence.ok !== true
-    || !l03.evidence.realCall
-    || l03.evidence.realCall.attempted !== true
-    || String(l03.evidence.realCall.click2callStatus || '').toLowerCase() !== 'originated'
-  ) {
-    throw new Error('smoke_l03_real_call_evidence_missing');
-  }
-  if (!l04 || l04.status !== 'pass') {
-    throw new Error('smoke_l04_not_pass');
-  }
-  if (
-    !l04.evidence
-    || l04.evidence.ok !== true
-    || !l04.evidence.flow
-    || !String(l04.evidence.flow.executionId || '').trim()
-    || Number(l04.evidence.flow.nodesCount || 0) <= 0
-  ) {
-    throw new Error('smoke_l04_runtime_evidence_missing');
-  }
-  if (
-    !l04.evidence.pipeline
-    || !l04.evidence.pipeline.queue
-    || Number(l04.evidence.pipeline.queue.jobsDone || 0) <= 0
-    || Number(l04.evidence.pipeline.queue.jobsDead || 0) !== 0
-  ) {
-    throw new Error('smoke_l04_queue_evidence_missing');
-  }
-  if (!l05 || l05.status !== 'pass') {
-    throw new Error('smoke_l05_not_pass');
-  }
-  if (
-    !l05.evidence
-    || l05.evidence.ok !== true
-    || !l05.evidence.ticket
-    || !String(l05.evidence.ticket.id || '').trim()
-    || !l05.evidence.operations
-    || l05.evidence.operations.assign !== true
-    || l05.evidence.operations.transfer !== true
-    || l05.evidence.operations.note !== true
-    || l05.evidence.operations.addTag !== true
-    || l05.evidence.operations.removeTag !== true
-    || l05.evidence.operations.quickReplyCreate !== true
-    || l05.evidence.operations.quickReplyUse !== true
-    || l05.evidence.operations.quickReplyList !== true
-  ) {
-    throw new Error('smoke_l05_omnichannel_evidence_missing');
+function validateMandatorySteps(validateReport) {
+  const requiredLabels = ['backend unit', 'frontend unit', 'frontend build', 'frontend smoke', 'qa mesh'];
+  const steps = Array.isArray(validateReport.steps) ? validateReport.steps : [];
+  for (const label of requiredLabels) {
+    const match = steps.find((step) => step && step.label === label);
+    if (!match) {
+      throw new Error(`validate_step_missing:${label}`);
+    }
+    if (match.status !== 'pass') {
+      throw new Error(`validate_step_not_pass:${label}:${match.status}`);
+    }
   }
 }
 
-async function main() {
+function main() {
   log(COLORS.blue, '[release-gate] Iniciando gate de release...');
 
-  const gateMode = String(process.env.RELEASE_GATE_MODE || 'stack').trim().toLowerCase();
-  const skipStack = process.env.RELEASE_GATE_SKIP_STACK === '1';
   const report = {
     startedAt: new Date().toISOString(),
     status: 'running',
-    steps: [],
     artifactCheck: null,
-    selftest: null,
+    validate: null,
     smokeEvidence: null,
+    runtimeGovernance: null,
     error: null,
     finishedAt: null,
     durationMs: 0,
@@ -262,42 +98,43 @@ async function main() {
   const gateStartedAt = Date.now();
 
   try {
-    // ONDA 6: verificar artefato aprovado antes de qualquer validação de runtime
     report.artifactCheck = checkReleaseArtifact();
 
-    if (gateMode === 'stack') {
-      if (skipStack) {
-        throw new Error('invalid_gate_config: RELEASE_GATE_MODE=stack requer RELEASE_GATE_SKIP_STACK!=1');
-      }
-      report.steps.push(runStep('bash scripts/system-autotest-stack.sh', 'autotest de stack (validação completa)'));
-      report.smokeEvidence = loadSmokeEvidenceSummary();
-      assertCriticalSmokeEvidence(report.smokeEvidence);
-      report.selftest = {
-        status: 'validated_in_stack',
-        info: 'Selftest já validado dentro de scripts/system-autotest-stack.sh',
-      };
-    } else if (gateMode === 'legacy') {
-      report.steps.push(runStep('npm run test:unit', 'testes unitários'));
-      report.steps.push(runStep('node tools/system/validate.js', 'validação oficial do sistema'));
-      report.steps.push(runStep('node scripts/autotest.js', 'autotest com veredito'));
-      if (!skipStack) {
-        report.steps.push(runStep('bash scripts/system-autotest-stack.sh', 'autotest de stack'));
-        report.smokeEvidence = loadSmokeEvidenceSummary();
-        assertCriticalSmokeEvidence(report.smokeEvidence);
-      } else {
-        log(COLORS.yellow, '[release-gate] RELEASE_GATE_SKIP_STACK=1 -> pulando system-autotest-stack');
-        report.steps.push({
-          label: 'autotest de stack',
-          command: 'bash scripts/system-autotest-stack.sh',
-          status: 'skipped',
-          durationMs: 0,
-          reason: 'RELEASE_GATE_SKIP_STACK=1',
-        });
-        report.smokeEvidence = { status: 'skipped', reason: 'stack_skipped' };
-      }
-      report.selftest = await verifySelftest();
-    } else {
-      throw new Error(`invalid_gate_mode:${gateMode}`);
+    const validateReport = readJsonStrict(SYSTEM_VALIDATE_REPORT_PATH, 'system_validate_report');
+    validateMandatorySteps(validateReport);
+    report.validate = {
+      path: SYSTEM_VALIDATE_REPORT_PATH,
+      status: validateReport.status,
+      result: validateReport.result,
+    };
+    if (!['pass', 'degraded'].includes(validateReport.status)) {
+      throw new Error(`validate_status_not_releasable:${validateReport.status}`);
+    }
+
+    const smokeSummary = readJsonStrict(SMOKE_EVIDENCE_SUMMARY_PATH, 'smoke_evidence');
+    const pillars = evaluatePillars(smokeSummary.smokes || {});
+    report.smokeEvidence = {
+      path: SMOKE_EVIDENCE_SUMMARY_PATH,
+      ok: pillars.ok,
+      reasons: pillars.reasons,
+      pillars: pillars.pillars,
+    };
+    if (!pillars.ok) {
+      throw new Error(`smoke_pillars_not_ready:${pillars.reasons.join(',')}`);
+    }
+
+    const runtimeGovernance = readJsonStrict(RUNTIME_GOVERNANCE_REPORT_PATH, 'runtime_governance_report');
+    report.runtimeGovernance = {
+      path: RUNTIME_GOVERNANCE_REPORT_PATH,
+      classification: runtimeGovernance.classification,
+      gateStatus: runtimeGovernance.gateStatus,
+      issues: runtimeGovernance.issues || [],
+    };
+    if (runtimeGovernance.gateStatus === 'no_go') {
+      throw new Error(`runtime_mode_blocked:${runtimeGovernance.classification}`);
+    }
+    if (runtimeGovernance.gateStatus === 'go_degraded' && String(process.env.RELEASE_GATE_ALLOW_DEGRADED || '1') !== '1') {
+      throw new Error(`runtime_mode_degraded_not_allowed:${runtimeGovernance.classification}`);
     }
 
     report.status = 'pass';

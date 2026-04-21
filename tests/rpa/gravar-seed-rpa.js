@@ -10,8 +10,9 @@
  *   node tests/rpa/gravar-seed-rpa.js meu-login http://localhost:5173
  */
 
-const { RpaRecorder } = require('./recorder/rpaRecorder');
-const { getModeConfig } = require('./rpaConfig');
+const { RpaRecorder } = require('../../core/rpa/recorder/rpaRecorder');
+const { getModeConfig } = require('../../core/rpa/rpaConfig');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,7 +28,7 @@ async function gravarSeed(seedName, initialUrl) {
     process.exit(1);
   }
 
-  const rpaConfig = require('./rpaConfig');
+  const rpaConfig = require('../../core/rpa/rpaConfig');
   const url = initialUrl || rpaConfig.urls.frontend;
   const config = getModeConfig('record');
 
@@ -206,5 +207,6 @@ async function gravarSeed(seedName, initialUrl) {
 const seedName = process.argv[2];
 const initialUrl = process.argv[3];
 
+assertLegacyEntrypointAllowed('tests/rpa/gravar-seed-rpa.js');
 gravarSeed(seedName, initialUrl);
 

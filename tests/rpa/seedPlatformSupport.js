@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 
-const config = require('./rpaConfig');
-const { getOrCreateRpaToken } = require('./utils/rpaTokenManager');
-const { resolveSystemBrowserPath } = require('./utils/browserLaunchOptions');
+const config = require('../../core/rpa/rpaConfig');
+const { getOrCreateRpaToken } = require('../../core/rpa/utils/rpaTokenManager');
+const { resolveSystemBrowserPath } = require('../../core/rpa/utils/browserLaunchOptions');
 
 const SEEDS_DIR = path.join(__dirname, 'seeds');
 const REPORTS_DIR = path.join(__dirname, 'reports');

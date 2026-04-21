@@ -621,14 +621,15 @@ export function PbxModulePage() {
           <Button
             onClick={handleOpenCreate}
             disabled={!canCreate || loading}
-            style={{ backgroundColor: canCreate ? '#25D366' : '#4b5563', color: 'white', marginRight: '10px' }}
+            variant={canCreate ? 'success' : 'default'}
+            className="mr-2.5"
           >
             ➕ Incluir
           </Button>
-          <Button onClick={() => navigate('/pbx')} style={{ backgroundColor: '#374151', color: 'white', marginRight: '10px' }}>
+          <Button onClick={() => navigate('/pbx')} variant="default" className="mr-2.5">
             ← Dashboard PBX
           </Button>
-          <Button onClick={loadData} style={{ backgroundColor: '#6366f1', color: 'white' }}>
+          <Button onClick={loadData} variant="primary">
             🔄 Atualizar
           </Button>
         </div>

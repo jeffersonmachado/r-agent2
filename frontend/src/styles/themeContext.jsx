@@ -47,6 +47,22 @@ const themes = {
         end: '#6b7280',
       },
     },
+    rap: {
+      shellBackground: 'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
+      shellGlowStart: 'rgba(94, 106, 210, 0.16)',
+      shellGlowEnd: 'rgba(59, 130, 246, 0.12)',
+      panelBackground: 'rgba(31, 31, 31, 0.82)',
+      panelBackgroundSoft: 'rgba(26, 26, 26, 0.74)',
+      panelBackgroundStrong: 'rgba(37, 37, 37, 0.92)',
+      panelBorder: 'rgba(74, 74, 74, 0.34)',
+      panelBorderStrong: 'rgba(94, 106, 210, 0.34)',
+      textPrimary: 'rgba(255, 255, 255, 0.92)',
+      textSecondary: 'rgba(255, 255, 255, 0.68)',
+      textTertiary: 'rgba(255, 255, 255, 0.52)',
+      activeBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.24), rgba(59, 130, 246, 0.16))',
+      heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.18), rgba(59, 130, 246, 0.1))',
+      overlayBackdrop: 'rgba(10, 10, 10, 0.62)',
+    },
   },
   light: {
     name: 'light',
@@ -92,6 +108,22 @@ const themes = {
         ai: '#16A085',            // Verde-água suave
         end: '#95A5A6',           // Cinza suave
       },
+    },
+    rap: {
+      shellBackground: 'linear-gradient(180deg, #f6f7f9 0%, #eef2f7 100%)',
+      shellGlowStart: 'rgba(94, 106, 210, 0.08)',
+      shellGlowEnd: 'rgba(59, 130, 246, 0.06)',
+      panelBackground: 'rgba(255, 255, 255, 0.92)',
+      panelBackgroundSoft: 'rgba(255, 255, 255, 0.82)',
+      panelBackgroundStrong: 'rgba(255, 255, 255, 0.98)',
+      panelBorder: 'rgba(209, 213, 219, 0.82)',
+      panelBorderStrong: 'rgba(94, 106, 210, 0.26)',
+      textPrimary: 'rgba(31, 41, 55, 0.94)',
+      textSecondary: 'rgba(75, 85, 99, 0.82)',
+      textTertiary: 'rgba(107, 114, 128, 0.76)',
+      activeBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.14), rgba(59, 130, 246, 0.08))',
+      heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.12), rgba(59, 130, 246, 0.07))',
+      overlayBackdrop: 'rgba(15, 23, 42, 0.18)',
     },
   },
 };
@@ -139,7 +171,22 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-status-error', theme.colors.status.error);
     root.style.setProperty('--color-status-warning', theme.colors.status.warning);
     root.style.setProperty('--color-status-info', theme.colors.status.info);
-    
+
+    root.style.setProperty('--rap-shell-background', theme.rap.shellBackground);
+    root.style.setProperty('--rap-shell-glow-start', theme.rap.shellGlowStart);
+    root.style.setProperty('--rap-shell-glow-end', theme.rap.shellGlowEnd);
+    root.style.setProperty('--rap-panel-background', theme.rap.panelBackground);
+    root.style.setProperty('--rap-panel-background-soft', theme.rap.panelBackgroundSoft);
+    root.style.setProperty('--rap-panel-background-strong', theme.rap.panelBackgroundStrong);
+    root.style.setProperty('--rap-panel-border', theme.rap.panelBorder);
+    root.style.setProperty('--rap-panel-border-strong', theme.rap.panelBorderStrong);
+    root.style.setProperty('--rap-text-primary', theme.rap.textPrimary);
+    root.style.setProperty('--rap-text-secondary', theme.rap.textSecondary);
+    root.style.setProperty('--rap-text-tertiary', theme.rap.textTertiary);
+    root.style.setProperty('--rap-active-background', theme.rap.activeBackground);
+    root.style.setProperty('--rap-hero-background', theme.rap.heroBackground);
+    root.style.setProperty('--rap-overlay-backdrop', theme.rap.overlayBackdrop);
+
     // Canvas background colors
     if (themeName === 'dark') {
       root.style.setProperty('--canvas-bg-color', '#0b0b0b');
@@ -170,4 +217,3 @@ export function useTheme() {
   }
   return context;
 }
-

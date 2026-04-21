@@ -32,9 +32,9 @@ if (!SHOULD_RUN) {
     });
   });
 } else {
-  const { RpaTestRunner } = require('./rpaTestRunner');
-  const { ActionRecorder } = require('./actionRecorder');
-  const config = require('./rpaConfig');
+  const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
+  const { ActionRecorder } = require('../../core/rpa/actionRecorder');
+  const config = require('../../core/rpa/rpaConfig');
 
   describe('Sistema RPA', () => {
     const testFilesToCleanup = []; // Rastreia arquivos criados pelos testes

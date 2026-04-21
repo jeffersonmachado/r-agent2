@@ -19,6 +19,16 @@ const {
   getQueuedExecutionStatus,
   getMeshSchedulerStatus,
   runScheduled,
+  getStabilitySnapshot,
+  getStabilityHistory,
+  getStabilityFailures,
+  getCheckpointsOverview,
+  getCheckpointByWaveId,
+  getLearnSummary,
+  getLearnFailures,
+  getLearnSuggestions,
+  getLearnPlans,
+  getLearnMemory,
 } = require('../../services/qaMeshService');
 const { createQaMeshRoutes } = require('../../modules/qa-mesh/routes');
 
@@ -41,6 +51,16 @@ function buildQaMeshRouteDeps() {
     getQueuedExecutionStatus,
     getMeshSchedulerStatus,
     runScheduled,
+    getStabilitySnapshot,
+    getStabilityHistory,
+    getStabilityFailures,
+    getCheckpointsOverview,
+    getCheckpointByWaveId,
+    getLearnSummary,
+    getLearnFailures,
+    getLearnSuggestions,
+    getLearnPlans,
+    getLearnMemory,
   };
 }
 

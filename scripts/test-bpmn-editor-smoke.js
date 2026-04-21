@@ -19,13 +19,19 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
+const ROOT = path.join(__dirname, '..');
 const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:15173';
-const EVIDENCE_PATH = path.resolve(
-  process.env.BPMN_EDITOR_EVIDENCE_PATH || 'qa/l06-bpmn-editor-evidence.json',
+const EVIDENCE_PATH = resolveWorkspacePath(
+  ROOT,
+  runtimeAwarePath(ROOT, 'qa/l06-bpmn-editor-evidence.json', 'BPMN_EDITOR_EVIDENCE_PATH'),
 );
 const outDir = path.join(path.dirname(EVIDENCE_PATH), 'bpmn-smoke-artifacts');
-const reportPath = path.join(path.dirname(EVIDENCE_PATH).replace(/qa$/, 'qa/smoke'), 'l06-bpmn-editor-smoke.md');
+const reportPath = resolveWorkspacePath(
+  ROOT,
+  runtimeAwarePath(ROOT, 'qa/smoke/l06-bpmn-editor-smoke.md', 'BPMN_EDITOR_SMOKE_REPORT_PATH'),
+);
 
 const mockAgent = {
   id: 'agent-smoke',

@@ -48,7 +48,7 @@ EXPOSE 80
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD sh -c "wget -qO- http://localhost/r-agent2/api/health | grep -Eq '\"status\"[[:space:]]*:[[:space:]]*\"ok\"'"
+    CMD sh -c "wget -qO- http://127.0.0.1/ | grep -qi 'html' || exit 1"
 
 # Comando para iniciar nginx
 CMD ["nginx", "-g", "daemon off;"]

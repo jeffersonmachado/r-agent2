@@ -6,7 +6,8 @@
  */
 
 const { seedPlatform, SEED_DATA } = require('./seedPlatformRPA');
-const config = require('./rpaConfig');
+const config = require('../../core/rpa/rpaConfig');
+const { assertLegacyEntrypointAllowed } = require('../../core/rpa/legacyEntrypointGuard');
 
 // Dados expandidos
 const SEED_DATA_COMPLETO = {
@@ -98,6 +99,7 @@ async function seedCompleto() {
 
 // Executa se chamado diretamente
 if (require.main === module) {
+  assertLegacyEntrypointAllowed('tests/rpa/seedPlatformCompleto.js');
   seedCompleto();
 }
 

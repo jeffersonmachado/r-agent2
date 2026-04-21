@@ -29,9 +29,11 @@ describe('orderService', () => {
     const create = jest.fn(async (payload) => ({
       toJSON: () => payload,
     }));
+    const appendEventV1 = jest.fn(async () => ({ ok: true }));
     jest.doMock('../../api/db/models', () => ({
       Order: () => ({ create }),
     }));
+    jest.doMock('../../api/services/eventLedgerService', () => ({ appendEventV1 }));
 
     // eslint-disable-next-line global-require
     const { createOrder } = require('../../api/services/orderService');
@@ -50,6 +52,71 @@ describe('orderService', () => {
     expect(order.items).toHaveLength(1);
     expect(order.items[0]).toMatchObject({ qty: 2, name: 'Pizza' });
     expect(create).toHaveBeenCalledTimes(1);
+    expect(appendEventV1).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'OrderCreated',
+      payload: expect.objectContaining({ hasMarketingAttribution: false }),
+    }));
+    expect(appendEventV1).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'OrderMarketingAttributionMissing',
+    }));
+  });
+
+  test('createOrder normaliza marketingAttribution no contexto', async () => {
+    const create = jest.fn(async (payload) => ({ toJSON: () => payload }));
+    const appendEventV1 = jest.fn(async () => ({ ok: true }));
+    jest.doMock('../../api/db/models', () => ({
+      Order: () => ({ create }),
+    }));
+    jest.doMock('../../api/services/eventLedgerService', () => ({
+      appendEventV1,
+    }));
+
+    // eslint-disable-next-line global-require
+    const { createOrder } = require('../../api/services/orderService');
+
+    const order = await createOrder({
+      tenantId: 'tenant-1',
+      items: [{ qty: 1, name: 'Pizza' }],
+      context: {
+        publicTokenId: ' pt-1 ',
+        idempotencyKey: ' idem-1 ',
+        marketingAttribution: {
+          utm_source: ' google ',
+          utm_campaign: ' brand-search ',
+          gclid: ' gclid-123 ',
+          keywordText: ' crm ',
+          adGroupName: '',
+        },
+      },
+    });
+
+    expect(order.context).toMatchObject({
+      publicTokenId: 'pt-1',
+      idempotencyKey: 'idem-1',
+      marketingAttribution: {
+        utm_source: 'google',
+        utm_campaign: 'brand-search',
+        utm_medium: null,
+        utm_content: null,
+        utm_term: null,
+        gclid: 'gclid-123',
+        gbraid: null,
+        wbraid: null,
+        campaignId: null,
+        campaignName: null,
+        adGroupId: null,
+        adGroupName: null,
+        keywordText: 'crm',
+        searchTerm: null,
+      },
+    });
+    expect(appendEventV1).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'OrderCreated',
+      payload: expect.objectContaining({ hasMarketingAttribution: true }),
+    }));
+    expect(appendEventV1).not.toHaveBeenCalledWith(expect.objectContaining({
+      type: 'OrderMarketingAttributionMissing',
+    }));
   });
 
   test('updateOrderStatus valida transição e atualiza timestamps', async () => {

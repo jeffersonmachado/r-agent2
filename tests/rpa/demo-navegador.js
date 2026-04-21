@@ -5,7 +5,7 @@
  * Execute: node tests/rpa/demo-navegador.js
  */
 
-const { RpaTestRunner } = require('./rpaTestRunner');
+const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 
 async function demonstrarComNavegador() {
   console.log('🌐 Sistema RPA - Demonstração com Navegador Real\n');

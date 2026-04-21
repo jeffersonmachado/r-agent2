@@ -6,8 +6,8 @@
  * - Alertar quando uso de fallback excede thresholds
  * - Fornecer métricas de saúde do sistema
  * 
- * IMPORTANTE: Este módulo não deve afetar a execução.
- * Erros aqui são silenciosamente ignorados.
+ * IMPORTANTE: Este módulo não afeta o fluxo principal,
+ * mas qualquer falha interna precisa ser logada explicitamente.
  */
 
 const logger = require('../api/utils/logger');
@@ -109,8 +109,7 @@ function recordFallback(fallbackType, metadata = {}) {
       ...metadata,
     });
   } catch (error) {
-    // Não deve quebrar o fluxo se monitoramento falhar
-    logger.debug('[FallbackMonitor] Erro ao registrar fallback', { error: error.message });
+    logger.error('[FallbackMonitor] Erro ao registrar fallback', { error: error.message });
   }
 }
 

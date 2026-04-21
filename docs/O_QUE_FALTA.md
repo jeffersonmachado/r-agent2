@@ -362,7 +362,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
   - `npm run system:release-manifest`
   - saída: `qa/release-manifest.json`
 - [ ] executar smoke pós-release imediato:
-  - `npm run system:release-gate` (ou, em contingência, `RELEASE_GATE_MODE=legacy npm run system:release-gate`)
+  - `npm run system:release-gate`
 - [ ] consolidar status final da janela:
   - `npm run system:launch-plan-status`
   - validar `qa/launch-plan-status.md` como checklist final da ata de release

@@ -10,11 +10,11 @@ jest.mock('../../api/utils/logger', () => ({
   error: jest.fn(),
 }));
 
-jest.mock('../../rpa/rpaTestRunner', () => ({
+jest.mock('../../core/rpa/rpaTestRunner', () => ({
   RpaTestRunner: jest.fn(),
 }));
 
-jest.mock('../../rpa/actionRecorder', () => ({
+jest.mock('../../core/rpa/actionRecorder', () => ({
   ActionRecorder: jest.fn(),
 }));
 
@@ -29,7 +29,7 @@ describe('rpaService coercion hardening', () => {
   });
 
   test('startManualRecording: tolera seedName hostil sem lançar exceção', async () => {
-    jest.doMock('../../tests/rpa/recorder/rpaRecorder', () => ({
+    jest.doMock('../../core/rpa/recorder/rpaRecorder', () => ({
       RpaRecorder: class RpaRecorderMock {
         async init() {}
         async startRecording() {}
@@ -38,7 +38,7 @@ describe('rpaService coercion hardening', () => {
       },
     }));
 
-    jest.doMock('../../tests/rpa/rpaConfig', () => ({
+    jest.doMock('../../core/rpa/rpaConfig', () => ({
       urls: { frontend: 'http://localhost:3000' },
     }));
 
@@ -59,7 +59,7 @@ describe('rpaService coercion hardening', () => {
   });
 
   test('stopManualRecording/getRecordingStatus: toleram recordingId hostil', async () => {
-    jest.doMock('../../tests/rpa/recorder/rpaRecorder', () => ({
+    jest.doMock('../../core/rpa/recorder/rpaRecorder', () => ({
       RpaRecorder: class RpaRecorderMock {
         async init() {}
         async startRecording() {}
@@ -68,7 +68,7 @@ describe('rpaService coercion hardening', () => {
       },
     }));
 
-    jest.doMock('../../tests/rpa/rpaConfig', () => ({
+    jest.doMock('../../core/rpa/rpaConfig', () => ({
       urls: { frontend: 'http://localhost:3000' },
     }));
 
@@ -92,7 +92,7 @@ describe('rpaService coercion hardening', () => {
   });
 
   test('stopManualRecording: não quebra com erro hostil em stopRecording', async () => {
-    jest.doMock('../../tests/rpa/recorder/rpaRecorder', () => ({
+    jest.doMock('../../core/rpa/recorder/rpaRecorder', () => ({
       RpaRecorder: class RpaRecorderMock {
         async init() {}
         async startRecording() {}
@@ -113,7 +113,7 @@ describe('rpaService coercion hardening', () => {
       },
     }));
 
-    jest.doMock('../../tests/rpa/rpaConfig', () => ({
+    jest.doMock('../../core/rpa/rpaConfig', () => ({
       urls: { frontend: 'http://localhost:3000' },
     }));
 

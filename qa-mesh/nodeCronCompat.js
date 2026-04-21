@@ -3,7 +3,9 @@
 let cron = null;
 try {
   cron = require('node-cron');
-} catch (_) {
+} catch (error) {
+  // eslint-disable-next-line no-console
+  console.error(`[qa-mesh/nodeCronCompat] node-cron indisponível, usando polyfill explícito: ${error.message || error}`);
   cron = {
     schedule(expression, task) {
       const knownIntervals = {

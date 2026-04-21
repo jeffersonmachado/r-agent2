@@ -13,6 +13,7 @@ import {
   getBillingHealth,
   getBillingAlerts,
 } from '../api/operationsDashboard';
+import { getMarketingGoogleAdsAttributionExceptions } from '../api/marketing';
 import {
   getBeautyAgenda,
   searchBeautyCustomers,
@@ -133,6 +134,20 @@ function billingHealthBadgeClass(status) {
   if (value === 'degraded') return 'bg-amber-500/10 text-amber-200 border border-amber-500/30';
   if (value === 'unhealthy') return 'bg-rose-500/10 text-rose-200 border border-rose-500/30';
   return 'bg-bg-tertiary text-text-secondary border border-border-default';
+}
+
+function marketingAttributionVariant(alert) {
+  const severity = String(alert?.severity || 'ok').toLowerCase();
+  if (severity === 'critical') return 'danger';
+  if (severity === 'warning') return 'warning';
+  return 'success';
+}
+
+function marketingAttributionLabel(alert) {
+  const severity = String(alert?.severity || 'ok').toLowerCase();
+  if (severity === 'critical') return 'Crítico';
+  if (severity === 'warning') return 'Alerta';
+  return 'Estável';
 }
 
 function reconcileAuditLabel(snapshot) {
@@ -278,6 +293,7 @@ export function OperationsDashboardPage() {
   const [financeHighlightedJobId, setFinanceHighlightedJobId] = useState('');
   const [billingHealthData, setBillingHealthData] = useState(null);
   const [billingAlertsData, setBillingAlertsData] = useState(null);
+  const [marketingAttributionData, setMarketingAttributionData] = useState(null);
 
   const [beautyAgendaFilters, setBeautyAgendaFilters] = useState({ date: isoDateToday(), professionalId: '' });
   const [beautyAgendaLoading, setBeautyAgendaLoading] = useState(false);
@@ -334,8 +350,12 @@ export function OperationsDashboardPage() {
     setLoadingSummary(true);
     setSummaryError('');
     try {
-      const result = await getOperationsSummary(baseParams());
+      const [result, attributionOut] = await Promise.all([
+        getOperationsSummary(baseParams()),
+        getMarketingGoogleAdsAttributionExceptions({ windowDays: 1, limit: 5 }).catch(() => null),
+      ]);
       setSummary(result || null);
+      setMarketingAttributionData(attributionOut?.ok ? attributionOut : null);
     } catch (err) {
       logger.error('[OperationsDashboardPage] loadSummary failed', err);
       setSummaryError('Erro ao carregar resumo do painel operacional.');
@@ -786,25 +806,26 @@ export function OperationsDashboardPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      loadSummary();
-      loadBeautyAgenda();
+      loadSummary().catch(() => {});
+      loadBeautyAgenda().catch(() => {});
     }
   }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (activeTab === 'beauty-agenda') loadBeautyAgenda();
-    if (activeTab === 'timeline') loadTimeline();
-    if (activeTab === 'jobs') loadJobs();
-    if (activeTab === 'finance') loadFinance();
-    if (activeTab === 'notifications') loadNotifications();
-    if (activeTab === 'insights') loadInsights();
+    if (activeTab === 'beauty-agenda') loadBeautyAgenda().catch(() => {});
+    if (activeTab === 'timeline') loadTimeline().catch(() => {});
+    if (activeTab === 'jobs') loadJobs().catch(() => {});
+    if (activeTab === 'finance') loadFinance().catch(() => {});
+    if (activeTab === 'notifications') loadNotifications().catch(() => {});
+    if (activeTab === 'insights') loadInsights().catch(() => {});
   }, [activeTab, isAuthenticated]);
 
   const beauty = summary?.summary?.beauty;
   const fitness = summary?.summary?.fitness;
   const system = summary?.summary?.system;
   const billing = system?.billing;
+  const marketingAttributionAlert = marketingAttributionData?.alert || null;
   const billingRiskCount = Number(billing?.overdueCount || 0) + Number(billing?.pendingCount || 0) + Number(billing?.refundedCount || 0) + Number(billing?.chargebackCount || 0);
   const billingHealthStatus = billingHealthData?.status || 'unknown';
   const billingViolationsCount = Array.isArray(billingHealthData?.violations) ? billingHealthData.violations.length : 0;
@@ -866,6 +887,31 @@ export function OperationsDashboardPage() {
             <KpiCard title="Jobs com erro" value={system?.jobsError} />
             <KpiCard title="Notificacoes enviadas" value={system?.notificationsSent} />
             <KpiCard title="Falhas envio" value={system?.notificationFailures} />
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-border-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium">Marketing / Ads</h4>
+              <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => navigate('/marketing')}>
+                Abrir Marketing
+              </button>
+            </div>
+            <div className="grid gap-3 grid-cols-2">
+              <DashboardKpiCard
+                label="Atribuição Ads"
+                value={marketingAttributionLabel(marketingAttributionAlert)}
+                subtitle={`${cardNumber(marketingAttributionAlert?.currentCount || 0)} evento(s) em 1 dia`}
+                variant={marketingAttributionVariant(marketingAttributionAlert)}
+                onClick={() => navigate('/marketing')}
+              />
+              <DashboardKpiCard
+                label="Crescimento"
+                value={`${Number(marketingAttributionAlert?.growthFactor || 0).toFixed(2)}x`}
+                subtitle={`Anterior ${cardNumber(marketingAttributionAlert?.previousCount || 0)} • Atual ${cardNumber(marketingAttributionAlert?.currentCount || 0)}`}
+                variant={marketingAttributionVariant(marketingAttributionAlert)}
+                onClick={() => navigate('/marketing')}
+              />
+            </div>
           </div>
 
           <div className="mt-4 pt-4 border-t border-border-default">

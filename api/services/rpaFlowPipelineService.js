@@ -18,6 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
+const { getRpaSeedWriteDir } = require('../../lib/rpaPathResolver');
 const { logAction } = require('./auditService');
 
 function safeToString(value, fallback = '') {
@@ -89,7 +91,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
   // Inicializa replay
   const replay = new ReplaySystem({
-    storagePath: path.join(process.cwd(), 'replays', 'rpa-pipeline'),
+    storagePath: resolveRuntimePath('replays', 'rpa-pipeline'),
     tenantId,
     context: 'rpa-pipeline',
     enableScreenshots: false,
@@ -97,7 +99,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
 
   // Inicializa gravação
   const recordingSystem = new RecordingSystem({
-    storagePath: path.join(process.cwd(), 'recordings', 'rpa-pipeline'),
+    storagePath: resolveRuntimePath('recordings', 'rpa-pipeline'),
     tenantId,
     context: 'rpa-pipeline',
     enableTimestamps: false,
@@ -514,7 +516,7 @@ async function validateSystemState(flow, tenantId) {
  */
 async function saveRpaRecording(recording) {
   // UNIFICADO: Tudo salva em /seeds/ agora
-  const seedsDir = path.join(__dirname, '../../tests/rpa/seeds');
+  const seedsDir = getRpaSeedWriteDir();
   
   // Garante que o diretório existe
   if (!fs.existsSync(seedsDir)) {

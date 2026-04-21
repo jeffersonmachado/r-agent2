@@ -291,16 +291,10 @@ export function TenantsPage() {
       title="🏢 Gerenciamento de Tenants"
       actions={(
         <>
-          <Button
-            onClick={handleCreate}
-            style={{ backgroundColor: '#25D366', color: 'white' }}
-          >
+          <Button onClick={handleCreate} variant="success">
             ➕ Novo Tenant
           </Button>
-          <Button
-            onClick={() => navigate('/generate-system?mode=tenant')}
-            style={{ backgroundColor: '#8B5CF6', color: 'white' }}
-          >
+          <Button onClick={() => navigate('/generate-system?mode=tenant')} variant="primary">
             🤖 Criar por IA
           </Button>
         </>
@@ -894,4 +888,3 @@ export function TenantsPage() {
     </CrudPageBase>
   );
 }
-

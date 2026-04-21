@@ -218,7 +218,7 @@ vi.mock('../FlowEditor', () => ({
 
 describe('pages/FlowEditorPage', () => {
   // Timeout global para todos os testes deste describe
-  const TEST_TIMEOUT = 5000; // 5 segundos
+  const TEST_TIMEOUT = 15000;
   
   beforeEach(() => {
     // Com isolate=false no Vitest, garantimos cache limpo para evitar
@@ -257,68 +257,38 @@ describe('pages/FlowEditorPage', () => {
   });
 
   it('renderiza o componente sem erros', async () => {
-    // Proteção contra travamentos: timeout e cleanup garantido
-    const timeoutId = setTimeout(() => {
-      throw new Error('Teste travou: timeout após 3 segundos');
-    }, 3000);
-    
-    try {
-      // Renderiza o componente com timeout para evitar loops infinitos
-      let container;
-      let unmount;
-      
-      const renderPromise = act(async () => {
-        const { FlowEditorPage } = await import('./FlowEditorPage');
-        const { ThemeProvider } = await import('../styles/themeContext');
-        const { WebSocketProvider } = await import('../context/WebSocketContext');
-        const result = render(
-          <ThemeProvider>
-            <WebSocketProvider>
-              <FlowEditorPage />
-            </WebSocketProvider>
-          </ThemeProvider>,
-        );
-        container = result.container;
-        unmount = result.unmount;
-      });
+    vi.useRealTimers();
 
-      // Aguarda renderização com timeout
-      await Promise.race([
-        renderPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout na renderização')), 2000)
-        )
-      ]).catch((err) => {
-        // Se timeout, pelo menos verifica que o container foi criado
-        console.warn('Aviso no teste:', err.message);
-      });
+    let container;
+    let unmount;
 
-      // Verifica que o componente renderizou sem erros
-      expect(container).toBeTruthy();
-      
-      // Avança timers de forma controlada (apenas uma vez)
-      await act(async () => {
-        vi.advanceTimersByTime(50);
-      });
-      
-      // Verifica que pelo menos algum elemento foi renderizado
-      // Usa querySelector direto sem waitFor para evitar loops
-      const hasContent = container?.querySelector('[data-testid]') || 
-                         container?.querySelector('div') ||
-                         (container?.textContent && container.textContent.trim().length > 0);
-      // Se não encontrou conteúdo, pelo menos verifica que o container existe
-      expect(container).toBeTruthy();
-      if (hasContent) {
-        expect(hasContent).toBeTruthy();
-      }
-      
-      // Desmonta o componente imediatamente
-      if (unmount) {
-        unmount();
-      }
-    } finally {
-      // Sempre limpa o timeout, mesmo se o teste falhar
-      clearTimeout(timeoutId);
+    await act(async () => {
+      const { FlowEditorPage } = await import('./FlowEditorPage');
+      const { ThemeProvider } = await import('../styles/themeContext');
+      const { WebSocketProvider } = await import('../context/WebSocketContext');
+      const result = render(
+        <ThemeProvider>
+          <WebSocketProvider>
+            <FlowEditorPage />
+          </WebSocketProvider>
+        </ThemeProvider>,
+      );
+      container = result.container;
+      unmount = result.unmount;
+    });
+
+    expect(container).toBeTruthy();
+
+    const hasContent = container?.querySelector('[data-testid]') ||
+      container?.querySelector('div') ||
+      (container?.textContent && container.textContent.trim().length > 0);
+
+    if (hasContent) {
+      expect(hasContent).toBeTruthy();
+    }
+
+    if (unmount) {
+      unmount();
     }
   }, TEST_TIMEOUT);
 

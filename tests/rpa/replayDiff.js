@@ -4,7 +4,7 @@
  * Execute: node tests/rpa/replayDiff.js <baseline> <actual>
  */
 
-const { ReplaySystem } = require('./replaySystem');
+const { ReplaySystem } = require('../../core/rpa/replaySystem');
 const fs = require('fs');
 const path = require('path');
 

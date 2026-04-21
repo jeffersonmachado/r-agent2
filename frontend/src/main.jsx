@@ -48,6 +48,7 @@ import { RpaSeedsPage } from './pages/RpaSeedsPage';
 import { ChatPage } from './pages/ChatPage';
 import { QaPage } from './pages/QaPage';
 import { QaMeshPage } from './pages/QaMeshPage';
+import { StabilityPage } from './pages/qa/StabilityPage';
 import { GenerateSystemPage } from './pages/GenerateSystemPage';
 import { SystemStatusPage } from './pages/SystemStatusPage';
 import { ChannelHealthPage } from './pages/ChannelHealthPage';
@@ -93,9 +94,17 @@ import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
 import { PwaUpdateManager } from './components/PwaUpdateManager';
+import { Sidebar } from './components/Sidebar';
+import { SubNav } from './components/SubNav';
+import { CommandPalette } from './components/CommandPalette';
+import { VerticalLayout } from './components/VerticalLayout';
 import { useRouter } from './hooks/useRouter';
 import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
 import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
+import { getFeature } from './utils/featuresConfig';
+import { DashboardV2 } from './pages/DashboardV2';
+import { getTenant, getTenantContext } from './api/tenants';
+import { getWorkspaceKeysForPath, inferWorkspaceKeyFromTenantProfile, verticalWorkspaces } from './navigation/menu';
 
 function isFilterTitle(text = '') {
   const normalized = String(text || '').trim().toLowerCase();
@@ -295,9 +304,29 @@ function App() {
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
   const { isAuthenticated, loading, agent } = useAuth();
+  const [newNavigationEnabled, setNewNavigationEnabled] = React.useState(true);
+  const [tenantProfile, setTenantProfile] = React.useState(null);
   
   // Monitora falhas de autenticação do WebSocket e redireciona para login
   useWebSocketAuthGuard();
+
+  useEffect(() => {
+    let mounted = true;
+    getFeature('NEW_NAVIGATION', true)
+      .then((value) => {
+        if (mounted) {
+          setNewNavigationEnabled(Boolean(value));
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setNewNavigationEnabled(true);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   
   const isRoute = (basePath) =>
     currentPath === basePath ||
@@ -311,6 +340,7 @@ function AppWithAuth() {
   const isPanel = isRoute('/panel');
   const isStation = isRoute('/station');
   const isDashboard = currentPath === '/' || currentPath === '/dashboard';
+  const isDashboardLegacy = isRoute('/dashboard-legacy');
   const isEditor = isRoute('/editor');
   const isBpmnEditor = isRoute('/bpmn-editor');
   const isSupport = isRoute('/support');
@@ -350,6 +380,7 @@ function AppWithAuth() {
   const isRpaReplays = isRoute('/rpa-replays');
   const isRpaSeeds = isRoute('/rpa-seeds');
   const isChat = isRoute('/chat');
+  const isQaStability = isRoute('/qa/stability');
   const isQa = isRoute('/qa');
   const isQaMesh = isRoute('/qa-mesh');
   const isGenerateSystem = isRoute('/generate-system');
@@ -395,6 +426,37 @@ function AppWithAuth() {
   // Verifica se é Super Admin usando a função completa que considera originalTenantId
   const isSuperAdmin = checkIsSuperAdmin(agent);
 
+  useEffect(() => {
+    if (!newNavigationEnabled || !isAuthenticated || !agent?.tenantId) {
+      setTenantProfile(null);
+      return undefined;
+    }
+
+    let active = true;
+
+    Promise.allSettled([
+      getTenant(agent.tenantId),
+      getTenantContext(agent.tenantId),
+    ])
+      .then(([tenantResult, contextResult]) => {
+        if (!active) return;
+
+        setTenantProfile({
+          tenant: tenantResult.status === 'fulfilled' ? tenantResult.value?.tenant || null : null,
+          context: contextResult.status === 'fulfilled' ? contextResult.value?.context || null : null,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setTenantProfile(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [agent?.tenantId, isAuthenticated, newNavigationEnabled]);
+
   // Rotas públicas (sem login): Storefront v1
   const publicRoutes = ['/storefront', '/kiosk', '/panel', '/station']; // além de /login
 
@@ -406,9 +468,9 @@ function AppWithAuth() {
     const allRoutes = [
       isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
-      isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+      isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
@@ -423,9 +485,9 @@ function AppWithAuth() {
       }
     }
   }, [
-    isDashboard, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+    isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isTasks, isAgenda, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
     isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -439,6 +501,7 @@ function AppWithAuth() {
     const pageTitles = {
       '/': '📊 Dashboard',
       '/dashboard': '📊 Dashboard',
+      '/dashboard-legacy': '📊 Dashboard Legado',
       '/editor': '📝 Editor de Fluxos',
       '/bpmn-editor': '📐 Editor BPMN',
       '/support': '💬 Atendimento',
@@ -476,6 +539,7 @@ function AppWithAuth() {
       '/rpa-replays': '📋 Replays RPA',
       '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
+      '/qa/stability': '📈 QA Stability',
       '/qa': '✅ Painel de Qualidade (QA)',
       '/qa-mesh': '🕸️ Unified Execution Mesh',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
@@ -594,7 +658,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login
-  const protectedRoutes = ['/', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -647,193 +711,247 @@ function AppWithAuth() {
     );
   }
 
+  let pageContent = null;
+  if (isDashboard) {
+    pageContent = <DashboardV2 />;
+  } else if (isDashboardLegacy) {
+    pageContent = <DashboardPage />;
+  } else if (isEditor) {
+    pageContent = (
+      <EditorProvider>
+        <FlowEditorPage />
+      </EditorProvider>
+    );
+  } else if (isBpmnEditor) {
+    pageContent = <BpmnEditorPage />;
+  } else if (isSupport) {
+    pageContent = <SupportPage />;
+  } else if (isInbox) {
+    pageContent = <InboxPage />;
+  } else if (isMaintenance) {
+    pageContent = <TicketMaintenancePage />;
+  } else if (isConfig) {
+    pageContent = <ConfigPage />;
+  } else if (isAgents) {
+    pageContent = <AgentsPage />;
+  } else if (isTenants) {
+    pageContent = <TenantsPage />;
+  } else if (isSuperAdminPage) {
+    pageContent = <SuperAdminPage />;
+  } else if (isOnboarding) {
+    pageContent = <OnboardingPage />;
+  } else if (isAudit) {
+    pageContent = <AuditPage />;
+  } else if (isQuickReplies) {
+    pageContent = <QuickRepliesPage />;
+  } else if (isFaq) {
+    pageContent = <FaqManagementPage />;
+  } else if (isDepartments) {
+    pageContent = <DepartmentsPage />;
+  } else if (isBulkMessaging) {
+    pageContent = <BulkMessagingPage />;
+  } else if (isAnalytics) {
+    pageContent = <AnalyticsPage />;
+  } else if (isTenantIntelligence) {
+    pageContent = <TenantIntelligencePage />;
+  } else if (isSupervisor) {
+    pageContent = <SupervisorPage />;
+  } else if (isRbac) {
+    pageContent = <RbacPage />;
+  } else if (isMfa) {
+    pageContent = <MfaPage />;
+  } else if (isWhatsAppIvr) {
+    pageContent = <WhatsAppIvrPage />;
+  } else if (isWhatsAppConnections) {
+    pageContent = <WhatsAppConnectionsPage />;
+  } else if (isDeveloperKeys) {
+    pageContent = <DeveloperKeysPage />;
+  } else if (isAutomations) {
+    pageContent = <AutomationsPage />;
+  } else if (isTasks) {
+    pageContent = <TasksPage />;
+  } else if (isAgenda) {
+    pageContent = <CalendarPage />;
+  } else if (isSlaPolicies) {
+    pageContent = <SlaPoliciesPage />;
+  } else if (isExport) {
+    pageContent = <ExportPage />;
+  } else if (isAITools) {
+    pageContent = <AIToolsPage />;
+  } else if (isSegmentation) {
+    pageContent = <SegmentationPage />;
+  } else if (isWhatsAppTemplates) {
+    pageContent = <WhatsAppTemplatesPage />;
+  } else if (isKnowledgeBase) {
+    pageContent = <KnowledgeBasePage />;
+  } else if (isProductDocs) {
+    pageContent = <ProductDocsPage />;
+  } else if (isRAGDocuments) {
+    pageContent = <RAGDocumentsPage />;
+  } else if (isWebScraping) {
+    pageContent = <WebScrapingPage />;
+  } else if (isRpaTest) {
+    pageContent = <RpaTestPage />;
+  } else if (isRpaReplays) {
+    pageContent = <RpaReplaysPage />;
+  } else if (isRpaSeeds) {
+    pageContent = <RpaSeedsPage />;
+  } else if (isChat) {
+    pageContent = <ChatPage />;
+  } else if (isQaStability) {
+    pageContent = <StabilityPage />;
+  } else if (isQa) {
+    pageContent = <QaPage />;
+  } else if (isQaMesh) {
+    pageContent = <QaMeshPage />;
+  } else if (isGenerateSystem) {
+    pageContent = <GenerateSystemPage />;
+  } else if (isSystemStatus) {
+    pageContent = <SystemStatusPage />;
+  } else if (isChannelHealth) {
+    pageContent = <ChannelHealthPage />;
+  } else if (isChannelAccounts) {
+    pageContent = <ChannelAccountsPage />;
+  } else if (isPlanUsage) {
+    pageContent = <PlanUsagePage />;
+  } else if (isPbxExtensions) {
+    pageContent = <PbxExtensionsPage />;
+  } else if (isPbxTrunks) {
+    pageContent = <PbxTrunksPage />;
+  } else if (isPbxRoutes) {
+    pageContent = <PbxRoutesPage />;
+  } else if (isPbxModule) {
+    pageContent = <PbxModulePage />;
+  } else if (isPbx) {
+    pageContent = <PbxPage />;
+  } else if (isChatHumanoDashboard) {
+    pageContent = <ChatHumanoDashboardPage />;
+  } else if (isCrmDashboard) {
+    pageContent = <CrmDashboardPage />;
+  } else if (isFailedMessages) {
+    pageContent = <FailedMessagesPage />;
+  } else if (isQueuePhysicalDashboard) {
+    pageContent = <QueuePhysicalDashboardPage />;
+  } else if (isOrders) {
+    pageContent = <OrdersPage />;
+  } else if (isKitchen) {
+    pageContent = <KitchenPage />;
+  } else if (isDispatch) {
+    pageContent = <DispatchPage />;
+  } else if (isMarketing) {
+    pageContent = <MarketingPage />;
+  } else if (isAccessControl) {
+    pageContent = <AccessControlPage />;
+  } else if (isOperationsDashboard) {
+    pageContent = <OperationsDashboardPage />;
+  } else if (isFitnessStudents) {
+    pageContent = <FitnessStudentsPage />;
+  } else if (isFitnessMemberships) {
+    pageContent = <FitnessMembershipsPage />;
+  } else if (isFitnessAttendance) {
+    pageContent = <FitnessAttendancePage />;
+  } else if (isBeautySchedule) {
+    pageContent = <BeautySchedulePage />;
+  } else if (isBeautyCampaigns) {
+    pageContent = <BeautyCampaignsPage />;
+  } else if (isBeautyLeads) {
+    pageContent = <BeautyLeadsPage />;
+  } else if (isBeautyCustomers) {
+    pageContent = <BeautyCustomersPage />;
+  } else if (isBeautyBundles) {
+    pageContent = <BeautyBundlesPage />;
+  } else if (isBeautyServices) {
+    pageContent = <BeautyServicesPage />;
+  } else if (isBeautyPayments) {
+    pageContent = <BeautyPaymentsPage />;
+  } else if (isSolutions) {
+    pageContent = <SolutionsPage />;
+  } else if (isNodeMarketplace) {
+    pageContent = <NodeMarketplacePage />;
+  } else if (isSsoScim) {
+    pageContent = <SsoScimPage />;
+  } else if (isBackup) {
+    pageContent = <BackupPage />;
+  } else if (isDevDashboard) {
+    pageContent = isSuperAdmin ? (
+      <DevDashboardPage />
+    ) : (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Acesso Negado</h2>
+        <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+          Apenas super-admins podem acessar o Dashboard de Desenvolvimento.
+        </p>
+        <button
+          onClick={() => navigate('/support')}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#3b82f6',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+          }}
+        >
+          Voltar para Atendimento
+        </button>
+      </div>
+    );
+  }
+
+  const workspaceKeys = getWorkspaceKeysForPath(currentPath, {
+    tenantContext: tenantProfile?.context || null,
+    tenantProfile,
+    includeAllVerticals: isSuperAdmin,
+  });
+  const inferredTenantWorkspaceKey = inferWorkspaceKeyFromTenantProfile(tenantProfile);
+  const sidebarVerticalKeys = isSuperAdmin
+    ? Object.keys(verticalWorkspaces)
+    : (inferredTenantWorkspaceKey ? [inferredTenantWorkspaceKey] : []);
+  const subNavVerticalLabels = sidebarVerticalKeys
+    .map((key) => verticalWorkspaces[key]?.label)
+    .filter(Boolean);
+  const subNavTenantLabel = tenantProfile?.tenant?.name || agent?.tenantId || '';
+
+  if (isVerticalDashboard) {
+    pageContent = <VerticalOperationalDashboardPage workspaceKeys={workspaceKeys} isSuperAdmin={isSuperAdmin} />;
+  }
+
+  if (newNavigationEnabled && workspaceKeys.length > 0) {
+    pageContent = (
+      <VerticalLayout agent={agent} verticalKeys={workspaceKeys} currentPath={currentPath}>
+        {pageContent}
+      </VerticalLayout>
+    );
+  }
+
   // Se chegou aqui, está autenticado OU é rota pública
+  if (!newNavigationEnabled) {
+    return (
+      <div className="support-content-wrapper">
+        <UserMenu tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />
+        <TenantGate />
+        {pageContent}
+      </div>
+    );
+  }
+
   return (
-    <div className="support-content-wrapper">
-      <UserMenu />
-      <TenantGate />
-      {isDashboard ? (
-        <DashboardPage />
-      ) : isEditor ? (
-        <EditorProvider>
-          <FlowEditorPage />
-        </EditorProvider>
-      ) : isBpmnEditor ? (
-        <BpmnEditorPage />
-      ) : isSupport ? (
-        <SupportPage />
-      ) : isInbox ? (
-        <InboxPage />
-      ) : isMaintenance ? (
-        <TicketMaintenancePage />
-      ) : isConfig ? (
-        <ConfigPage />
-      ) : isAgents ? (
-        <AgentsPage />
-      ) : isTenants ? (
-        <TenantsPage />
-      ) : isSuperAdminPage ? (
-        <SuperAdminPage />
-      ) : isOnboarding ? (
-        <OnboardingPage />
-      ) : isAudit ? (
-        <AuditPage />
-      ) : isQuickReplies ? (
-        <QuickRepliesPage />
-      ) : isFaq ? (
-        <FaqManagementPage />
-      ) : isDepartments ? (
-        <DepartmentsPage />
-      ) : isBulkMessaging ? (
-        <BulkMessagingPage />
-      ) : isAnalytics ? (
-        <AnalyticsPage />
-      ) : isTenantIntelligence ? (
-        <TenantIntelligencePage />
-      ) : isSupervisor ? (
-        <SupervisorPage />
-      ) : isRbac ? (
-        <RbacPage />
-      ) : isMfa ? (
-        <MfaPage />
-      ) : isWhatsAppIvr ? (
-        <WhatsAppIvrPage />
-      ) : isWhatsAppConnections ? (
-        <WhatsAppConnectionsPage />
-      ) : isDeveloperKeys ? (
-        <DeveloperKeysPage />
-      ) : isAutomations ? (
-        <AutomationsPage />
-      ) : isTasks ? (
-        <TasksPage />
-      ) : isAgenda ? (
-        <CalendarPage />
-      ) : isSlaPolicies ? (
-        <SlaPoliciesPage />
-      ) : isExport ? (
-        <ExportPage />
-      ) : isAITools ? (
-        <AIToolsPage />
-      ) : isSegmentation ? (
-        <SegmentationPage />
-      ) : isWhatsAppTemplates ? (
-        <WhatsAppTemplatesPage />
-      ) : isKnowledgeBase ? (
-        <KnowledgeBasePage />
-      ) : isProductDocs ? (
-        <ProductDocsPage />
-      ) : isRAGDocuments ? (
-        <RAGDocumentsPage />
-      ) : isWebScraping ? (
-        <WebScrapingPage />
-      ) : isRpaTest ? (
-        <RpaTestPage />
-      ) : isRpaReplays ? (
-        <RpaReplaysPage />
-      ) : isRpaSeeds ? (
-        <RpaSeedsPage />
-      ) : isChat ? (
-        <ChatPage />
-      ) : isQa ? (
-        <QaPage />
-      ) : isQaMesh ? (
-        <QaMeshPage />
-      ) : isGenerateSystem ? (
-        <GenerateSystemPage />
-      ) : isSystemStatus ? (
-        <SystemStatusPage />
-      ) : isChannelHealth ? (
-        <ChannelHealthPage />
-      ) : isChannelAccounts ? (
-        <ChannelAccountsPage />
-      ) : isPlanUsage ? (
-        <PlanUsagePage />
-      ) : isPbxExtensions ? (
-        <PbxExtensionsPage />
-      ) : isPbxTrunks ? (
-        <PbxTrunksPage />
-      ) : isPbxRoutes ? (
-        <PbxRoutesPage />
-      ) : isPbxModule ? (
-        <PbxModulePage />
-      ) : isPbx ? (
-        <PbxPage />
-      ) : isChatHumanoDashboard ? (
-        <ChatHumanoDashboardPage />
-      ) : isCrmDashboard ? (
-        <CrmDashboardPage />
-      ) : isFailedMessages ? (
-        <FailedMessagesPage />
-      ) : isQueuePhysicalDashboard ? (
-        <QueuePhysicalDashboardPage />
-      ) : isOrders ? (
-        <OrdersPage />
-      ) : isKitchen ? (
-        <KitchenPage />
-      ) : isDispatch ? (
-        <DispatchPage />
-      ) : isMarketing ? (
-        <MarketingPage />
-      ) : isAccessControl ? (
-        <AccessControlPage />
-      ) : isOperationsDashboard ? (
-        <OperationsDashboardPage />
-      ) : isFitnessStudents ? (
-        <FitnessStudentsPage />
-      ) : isFitnessMemberships ? (
-        <FitnessMembershipsPage />
-      ) : isFitnessAttendance ? (
-        <FitnessAttendancePage />
-      ) : isBeautySchedule ? (
-        <BeautySchedulePage />
-      ) : isBeautyCampaigns ? (
-        <BeautyCampaignsPage />
-      ) : isBeautyLeads ? (
-        <BeautyLeadsPage />
-      ) : isBeautyCustomers ? (
-        <BeautyCustomersPage />
-      ) : isBeautyBundles ? (
-        <BeautyBundlesPage />
-      ) : isBeautyServices ? (
-        <BeautyServicesPage />
-      ) : isBeautyPayments ? (
-        <BeautyPaymentsPage />
-      ) : isVerticalDashboard ? (
-        <VerticalOperationalDashboardPage />
-      ) : isSolutions ? (
-        <SolutionsPage />
-      ) : isNodeMarketplace ? (
-        <NodeMarketplacePage />
-      ) : isSsoScim ? (
-        <SsoScimPage />
-      ) : isBackup ? (
-        <BackupPage />
-      ) : isDevDashboard ? (
-        // Rota /dev só é acessível por super-admin
-        isSuperAdmin ? (
-          <DevDashboardPage />
-        ) : (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Acesso Negado</h2>
-            <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
-              Apenas super-admins podem acessar o Dashboard de Desenvolvimento.
-            </p>
-            <button
-              onClick={() => navigate('/support')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-              }}
-            >
-              Voltar para Atendimento
-            </button>
-          </div>
-        )
-      ) : null}
+    <div className="rap-shell">
+      <Sidebar agent={agent} currentPath={currentPath} resolvedVerticalKeys={sidebarVerticalKeys} />
+      <div className="rap-shell-main">
+        <SubNav
+          agent={agent}
+          currentPath={currentPath}
+          tenantLabel={subNavTenantLabel}
+          verticalLabels={subNavVerticalLabels}
+          rightSlot={<UserMenu showNavigation={false} tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />}
+        />
+        <div className="rap-page">
+          <CommandPalette agent={agent} />
+          <TenantGate />
+          {pageContent}
+        </div>
+      </div>
     </div>
   );
 }

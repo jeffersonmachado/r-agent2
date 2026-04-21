@@ -1,4 +1,4 @@
-const { normalizeRpaTestUrls } = require('../rpa/utils/urlNormalizer');
+const { normalizeRpaTestUrls } = require('../../core/rpa/utils/urlNormalizer');
 const config = require('../../api/utils/config');
 
 describe('normalizeRpaTestUrls', () => {

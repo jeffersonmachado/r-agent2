@@ -1,0 +1,59 @@
+# Runtime and local state
+.wwebjs_auth/
+.wwebjs_cache/
+api/data/wa_sessions/
+runtime/
+recordings/
+replays/
+logs/
+
+# QA and evidence artifacts
+qa/release-evidence/
+qa/smoke/
+qa/*-report.json
+qa/*-evidence.json
+qa/runtime-governance-report.json
+qa/system-validate-report.json
+qa/deploy-report.json
+qa-mesh/meshEvidence/
+qa-mesh/meshHistory/
+qa-mesh/isolated-run*/
+qa-mesh/system-validate/
+qa-mesh/meshReport.json
+qa-mesh/metrics.json
+qa-mesh/repairPlan.json
+qa-mesh/scheduler-state.json
+reports/
+
+# RAG runtime data
+rag-service/.coverage
+rag-service/data/vector_store/
+rag-service/data/adaptive_learning/
+rag-service/test-results/
+
+# Frontend transient artifacts
+frontend/.vite/
+frontend/test-results/
+frontend-e2e/test-results/
+
+# Dumps and backups
+remote-dumps/
+remote-dumps2/
+frontend_backup/
+
+# Build outputs and packages
+dist/
+build/
+*.zip
+*.tar.gz
+
+# Development files
+coverage/
+node_modules/
+**/node_modules/
+.codex/
+.vscode/
+.idea/
+.token.env
+.env
+.env.*

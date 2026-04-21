@@ -690,7 +690,7 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
 
   let expectedToken = null;
   try {
-    const rpaTokenManager = require('../../tests/rpa/utils/rpaTokenManager');
+    const rpaTokenManager = require('../../core/rpa/utils/rpaTokenManager');
     expectedToken = rpaTokenManager.loadRpaToken();
     if (!expectedToken) {
       return { success: false, error: 'Token RPA não configurado no servidor' };

@@ -6,6 +6,7 @@ const cron = require('./nodeCronCompat');
 const { loadRegistry, runMesh } = require('./meshRunner');
 
 const SCHEDULER_STATE_PATH = path.join(__dirname, 'scheduler-state.json');
+const PIPELINE_ACTIVE_LOCK_PATH = path.join(__dirname, '..', 'pipeline', '.active-validation.lock');
 const CRITICAL_CRON = '*/15 * * * *';
 const REGRESSION_CRON = '0 2 * * *';
 
@@ -15,7 +16,9 @@ let activeTasks = [];
 function safeReadState() {
   try {
     return JSON.parse(fs.readFileSync(SCHEDULER_STATE_PATH, 'utf8'));
-  } catch (_) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[qa-mesh/meshScheduler] estado inválido ou ausente em ${SCHEDULER_STATE_PATH}: ${error.message || error}`);
     return {
       lastExecutionAt: null,
       lastExecutionKind: null,
@@ -37,6 +40,14 @@ function selectScenariosForSchedule(kind, registry = loadRegistry()) {
 }
 
 async function runScheduledMesh(kind = 'critical') {
+  if (fs.existsSync(PIPELINE_ACTIVE_LOCK_PATH)) {
+    return {
+      skipped: true,
+      reason: 'pipeline_active',
+      state: safeReadState(),
+    };
+  }
+
   if (activeLock) {
     return {
       skipped: true,
@@ -56,7 +67,9 @@ async function runScheduledMesh(kind = 'critical') {
     const result = await runMesh({
       scenarioIds: selected.map((item) => item.id),
       autoReplayOnFailure: true,
+      executionOrigin: 'scheduler',
       executionKind: kind,
+      writeCanonicalOutputs: false,
     });
     writeState({
       activeLock: false,
@@ -99,10 +112,16 @@ function startScheduler() {
   }
   activeTasks = [
     cron.schedule(CRITICAL_CRON, () => {
-      runScheduledMesh('critical').catch(() => null);
+      runScheduledMesh('critical').catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[qa-mesh/meshScheduler] critical falhou: ${error.message || error}`);
+      });
     }),
     cron.schedule(REGRESSION_CRON, () => {
-      runScheduledMesh('regression').catch(() => null);
+      runScheduledMesh('regression').catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[qa-mesh/meshScheduler] regression falhou: ${error.message || error}`);
+      });
     }),
   ];
   return buildScheduleStatus();
@@ -118,6 +137,7 @@ function stopScheduler() {
 
 module.exports = {
   SCHEDULER_STATE_PATH,
+  PIPELINE_ACTIVE_LOCK_PATH,
   CRITICAL_CRON,
   REGRESSION_CRON,
   selectScenariosForSchedule,

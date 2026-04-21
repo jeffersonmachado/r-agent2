@@ -1,23 +1,22 @@
-# WORKFLOW AUXILIAR: Testes E2E via RPA (Cypress/Playwright) — ativado em main/develop.
+# WORKFLOW: Testes E2E via RPA (Cypress/Playwright).
 # Requer stack ativa e dispositivos E2E. Nao bloqueia CI base.
-name: RPA - Testes E2E (CI) [AUXILIAR]
+name: RPA - Testes E2E (CI)
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'tests/rpa/**'
-      - '.github/workflows/rpa-ci.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'tests/rpa/**'
   workflow_dispatch:
     inputs:
       seed_name:
         description: 'Nome do seed para executar'
         required: false
         default: 'example-login'
+      test_base_url:
+        description: 'URL base da API para os testes'
+        required: false
+        default: 'http://localhost:3000'
+      test_frontend_url:
+        description: 'URL do frontend para os testes'
+        required: false
+        default: 'http://localhost:5173'
 
 jobs:
   rpa-e2e:
@@ -50,8 +49,8 @@ jobs:
       
       - name: Executar seed em modo CI
         env:
-          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL || 'http://localhost:3000' }}
-          TEST_FRONTEND_URL: ${{ secrets.TEST_FRONTEND_URL || 'http://localhost:5173' }}
+          TEST_BASE_URL: ${{ github.event.inputs.test_base_url }}
+          TEST_FRONTEND_URL: ${{ github.event.inputs.test_frontend_url }}
         run: |
           echo "🚀 Executando seed: ${{ matrix.seed }}"
           node tests/rpa/cli.js ci ${{ matrix.seed }}

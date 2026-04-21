@@ -1,0 +1,62 @@
+{
+  "id": "qa-pbx-voice-tts-asr-smoke",
+  "domain": "pbx",
+  "type": "technical",
+  "source": "qa",
+  "flow": "pbx_voice_tts_asr",
+  "criticality": "blocking",
+  "adapter": "pbx",
+  "status": "infra_error",
+  "startedAt": "2026-04-19T18:58:37.828Z",
+  "finishedAt": "2026-04-19T18:58:38.249Z",
+  "logs": [
+    {
+      "level": "stdout",
+      "message": "",
+      "timestamp": "2026-04-19T18:58:37.922Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> chatbot-engine@0.1.0 test:pbx:voice:tts-asr:smoke",
+      "timestamp": "2026-04-19T18:58:37.922Z"
+    },
+    {
+      "level": "stdout",
+      "message": "> node scripts/test-pbx-voice-tts-asr-smoke.js",
+      "timestamp": "2026-04-19T18:58:37.922Z"
+    },
+    {
+      "level": "stderr",
+      "message": "[pbx-voice-tts-asr-smoke] FAIL fetch failed",
+      "timestamp": "2026-04-19T18:58:38.233Z"
+    }
+  ],
+  "metrics": {
+    "command": "npm run test:pbx:voice:tts-asr:smoke",
+    "adapter": "pbx",
+    "domain": "pbx"
+  },
+  "errors": [
+    "[pbx-voice-tts-asr-smoke] FAIL fetch failed"
+  ],
+  "artifacts": [
+    {
+      "type": "json",
+      "path": "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json"
+    },
+    {
+      "type": "replay",
+      "path": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-19T17-31-28-114Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+      "replayType": "api_replay"
+    }
+  ],
+  "assertions": [
+    "pipeline TTS/ASR operacional"
+  ],
+  "rpaRecordingId": null,
+  "replayArtifact": "qa-mesh/system-validate/meshEvidence/system-validate-2026-04-19T17-31-28-114Z/replays/qa-pbx-voice-tts-asr-smoke.json",
+  "failureType": "infra_error",
+  "errorMessage": "[pbx-voice-tts-asr-smoke] FAIL fetch failed",
+  "rootCauseHint": "Infraestrutura local, rede ou runtime do browser impediu a execução do cenário.",
+  "durationMs": 421
+}

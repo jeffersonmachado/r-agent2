@@ -575,6 +575,26 @@ export function useFlowRunner(flow) {
           // Remove ROUTE_SELECTED - não é um router
           break;
 
+        case 'set_variable': {
+          const assignments = node.config?.assignments;
+          if (assignments && typeof assignments === 'object' && !Array.isArray(assignments)) {
+            Object.entries(assignments).forEach(([key, value]) => {
+              if (!key) return;
+              if (typeof value === 'string') {
+                newState.variables[key] = renderTemplate(value, newState.variables);
+              } else {
+                newState.variables[key] = value;
+              }
+            });
+          }
+          nextNodeId = normalizeNext(node.next);
+          output = {
+            type: 'set_variable',
+            assignments: assignments || {},
+          };
+          break;
+        }
+
         case 'fallback': {
           // Nó de fallback: espera input, conta tentativas e encerra/escalona ao exceder maxAttempts.
           const maxAttemptsRaw = node.config?.maxAttempts;

@@ -4,20 +4,21 @@
 const fs = require('fs');
 const path = require('path');
 const { evaluatePillars } = require('./lib/pillar-readiness');
+const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RELEASE_GATE_REPORT_PATH = process.env.RELEASE_GATE_REPORT_PATH || 'qa/release-gate-report.json';
-const ROLLBACK_DRILL_REPORT_PATH = process.env.ROLLBACK_DRILL_REPORT_PATH || 'qa/rollback-drill-report.json';
-const SMOKE_EVIDENCE_SUMMARY_PATH = process.env.SMOKE_EVIDENCE_SUMMARY_PATH || 'qa/smoke-evidence.json';
-const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || 'qa/go-no-go-report.json';
-const RELEASE_DECISION_PATH = process.env.RELEASE_DECISION_PATH || 'qa/release-decision.json';
-const RELEASE_WINDOW_REPORT_PATH = process.env.RELEASE_WINDOW_REPORT_PATH || 'qa/release-window-report.json';
-const OUTPUT_JSON_PATH = process.env.LAUNCH_PLAN_STATUS_PATH || 'qa/launch-plan-status.json';
-const OUTPUT_MD_PATH = process.env.LAUNCH_PLAN_STATUS_MD_PATH || 'qa/launch-plan-status.md';
+const RELEASE_GATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-gate-report.json', 'RELEASE_GATE_REPORT_PATH');
+const ROLLBACK_DRILL_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/rollback-drill-report.json', 'ROLLBACK_DRILL_REPORT_PATH');
+const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
+const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
+const RELEASE_DECISION_PATH = runtimeAwarePath(ROOT, 'qa/release-decision.json', 'RELEASE_DECISION_PATH');
+const RELEASE_WINDOW_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/release-window-report.json', 'RELEASE_WINDOW_REPORT_PATH');
+const OUTPUT_JSON_PATH = runtimeAwarePath(ROOT, 'qa/launch-plan-status.json', 'LAUNCH_PLAN_STATUS_PATH');
+const OUTPUT_MD_PATH = runtimeAwarePath(ROOT, 'qa/launch-plan-status.md', 'LAUNCH_PLAN_STATUS_MD_PATH');
 const ALLOW_PENDING_RELEASE_WINDOW = String(process.env.LAUNCH_PLAN_ALLOW_PENDING_RELEASE_WINDOW || '0') === '1';
 
 function readJson(relPath) {
-  const absPath = path.join(ROOT, relPath);
+  const absPath = resolveWorkspacePath(ROOT, relPath);
   if (!fs.existsSync(absPath)) return null;
   try {
     return JSON.parse(fs.readFileSync(absPath, 'utf8'));
@@ -152,8 +153,8 @@ function toMarkdown(status) {
 }
 
 function writeOutputs(status) {
-  const jsonAbs = path.join(ROOT, OUTPUT_JSON_PATH);
-  const mdAbs = path.join(ROOT, OUTPUT_MD_PATH);
+  const jsonAbs = resolveWorkspacePath(ROOT, OUTPUT_JSON_PATH);
+  const mdAbs = resolveWorkspacePath(ROOT, OUTPUT_MD_PATH);
   fs.mkdirSync(path.dirname(jsonAbs), { recursive: true });
   fs.mkdirSync(path.dirname(mdAbs), { recursive: true });
   fs.writeFileSync(jsonAbs, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
