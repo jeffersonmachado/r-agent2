@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 120
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/r_agent2
+      RUNTIME_ROOT: /tmp/ragent2-runtime-release
 
     services:
       postgres:

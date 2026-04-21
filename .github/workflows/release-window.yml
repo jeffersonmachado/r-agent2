@@ -96,6 +96,7 @@ jobs:
 
       - name: Rodar release-window
         env:
+          RUNTIME_ROOT: /tmp/ragent2-runtime-release-window
           RELEASE_WINDOW_FAST: ${{ inputs.release_window_fast }}
           RELEASE_WINDOW_RUN_BACKUP: ${{ inputs.release_window_run_backup }}
           RPA_TRACE: ${{ inputs.enable_trace }}
