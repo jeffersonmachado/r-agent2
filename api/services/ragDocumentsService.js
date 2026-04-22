@@ -16,6 +16,12 @@ const ragService = require('./ragService');
 const { getSequelize } = require('../db/sequelize');
 const { RagDocument: RagDocumentGetter, RagDocumentFile: RagDocumentFileGetter } = require('../db/models');
 const postgresVectorStore = require('./vectorStore/postgresVectorStore');
+const { toDbPayload, fromDbRow, setIndexState } = require('./rag/ragDocumentsState');
+const ragDocumentsIndexing = require('./rag/ragDocumentsIndexing');
+const ragDocumentsDeduplication = require('./rag/ragDocumentsDeduplication');
+const ragDocumentsHealth = require('./rag/ragDocumentsHealth');
+const ragDocumentsStats = require('./rag/ragDocumentsStats');
+const ragDocumentsLifecycle = require('./rag/ragDocumentsLifecycle');
 const {
   safeToString,
   safeTrim,
@@ -31,93 +37,6 @@ let documents = new Map();
 
 function dbAvailable() {
   return !!getSequelize();
-}
-
-function toDbPayload(doc) {
-  return {
-    id: doc.id,
-    tenant_key: doc.tenantId || null,
-    title: doc.title || null,
-    content: doc.content || null,
-    metadata: doc.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
-    permissions: doc.permissions && typeof doc.permissions === 'object' ? doc.permissions : {},
-    status: doc.status || 'active',
-    indexed: !!doc.indexed,
-    indexed_at: doc.indexedAt ? new Date(doc.indexedAt) : null,
-    chunks_count: Number.isFinite(doc.chunksCount) ? doc.chunksCount : 0,
-    index_status: doc.indexStatus || (doc.indexed ? 'indexed' : 'pending'),
-    index_error_code: doc.indexErrorCode || null,
-    index_error_message: doc.indexErrorMessage || null,
-    last_index_attempt_at: doc.lastIndexAttemptAt ? new Date(doc.lastIndexAttemptAt) : null,
-    inconsistent: !!doc.inconsistent,
-    inconsistent_reason: doc.inconsistentReason || null,
-  };
-}
-
-function fromDbRow(row) {
-  const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
-  return {
-    id: base.id,
-    tenantId: base.tenant_key || null,
-    title: base.title || 'Sem título',
-    content: base.content || '',
-    metadata: base.metadata || {},
-    permissions: base.permissions || {},
-    status: base.status || 'active',
-    indexed: !!base.indexed,
-    indexedAt: base.indexed_at ? new Date(base.indexed_at).toISOString() : null,
-    chunksCount: Number.isFinite(base.chunks_count) ? base.chunks_count : 0,
-    indexStatus: base.index_status || (base.indexed ? 'indexed' : 'pending'),
-    indexErrorCode: base.index_error_code || null,
-    indexErrorMessage: base.index_error_message || null,
-    lastIndexAttemptAt: base.last_index_attempt_at ? new Date(base.last_index_attempt_at).toISOString() : null,
-    inconsistent: !!base.inconsistent,
-    inconsistentReason: base.inconsistent_reason || null,
-  };
-}
-
-function setIndexState(doc, state, opts = {}) {
-  const nowIso = new Date().toISOString();
-  doc.indexStatus = state;
-  doc.lastIndexAttemptAt = opts.lastIndexAttemptAt || nowIso;
-
-  if (state === 'pending') {
-    doc.indexed = false;
-    doc.indexedAt = null;
-    doc.chunksCount = 0;
-    doc.indexErrorCode = null;
-    doc.indexErrorMessage = null;
-    doc.inconsistent = false;
-    doc.inconsistentReason = null;
-    return;
-  }
-
-  if (state === 'indexed') {
-    doc.indexed = true;
-    doc.indexedAt = opts.indexedAt || nowIso;
-    doc.chunksCount = Number.isFinite(opts.chunksCount) ? opts.chunksCount : (doc.chunksCount || 0);
-    doc.indexErrorCode = null;
-    doc.indexErrorMessage = null;
-    doc.inconsistent = false;
-    doc.inconsistentReason = null;
-    return;
-  }
-
-  if (state === 'indexing') {
-    // Não altera indexed aqui; só marca indexed após confirmação (chunks > 0)
-    doc.indexErrorCode = null;
-    doc.indexErrorMessage = null;
-    return;
-  }
-
-  if (state === 'failed') {
-    doc.indexed = false;
-    doc.indexedAt = null;
-    doc.chunksCount = 0;
-    doc.indexErrorCode = opts.errorCode || 'RAG_INDEX_FAILED';
-    doc.indexErrorMessage = opts.errorMessage || 'Falha ao indexar no vector store';
-    return;
-  }
 }
 
 async function getDbIndexedCount(tenantId) {
@@ -377,23 +296,7 @@ function getDocument(documentId) {
  * @returns {Object|null} Documento existente ou null
  */
 function findDocumentByUrl(url, tenantId) {
-  if (!url) return null;
-  
-  const normalizedUrl = safeTrimLower(url);
-  if (!normalizedUrl) return null;
-  
-  for (const doc of documents.values()) {
-    // Verifica se é do mesmo tenant
-    if (tenantId && doc.tenantId !== tenantId) continue;
-    
-    // Verifica se tem a mesma URL no metadata
-    const docUrl = doc.metadata?.url;
-    if (docUrl && safeTrimLower(docUrl) === normalizedUrl) {
-      return doc;
-    }
-  }
-  
-  return null;
+  return ragDocumentsDeduplication.findDocumentByUrl(url, tenantId, documents);
 }
 
 /**
@@ -405,31 +308,7 @@ function findDocumentByUrl(url, tenantId) {
  * @returns {Object|null} Documento existente ou null
  */
 function findDocumentByFileName(fileName, tenantId, fileSize = null) {
-  if (!fileName) return null;
-  
-  const normalizedFileName = safeTrimLower(fileName);
-  if (!normalizedFileName) return null;
-  
-  for (const doc of documents.values()) {
-    // Verifica se é do mesmo tenant
-    if (tenantId && doc.tenantId !== tenantId) continue;
-    
-    // Verifica se tem o mesmo nome de arquivo no metadata
-    const docFileName = doc.metadata?.fileName;
-    if (docFileName && safeTrimLower(docFileName) === normalizedFileName) {
-      // Se fileSize foi fornecido, também verifica o tamanho para maior precisão
-      if (fileSize !== null && doc.metadata?.fileSize) {
-        if (doc.metadata.fileSize === fileSize) {
-          return doc;
-        }
-        // Se tamanho é diferente, não é o mesmo arquivo
-        continue;
-      }
-      return doc;
-    }
-  }
-  
-  return null;
+  return ragDocumentsDeduplication.findDocumentByFileName(fileName, tenantId, documents, fileSize);
 }
 
 /**
@@ -446,312 +325,28 @@ async function createDocument(documentData, tenantId, options = {}) {
     
     // Verifica duplicação se não foi desabilitado
     if (!options.skipDuplicateCheck) {
-      // Verifica por URL (web scraping)
-      if (documentData.metadata?.url) {
-        const existingDoc = findDocumentByUrl(documentData.metadata.url, finalTenantId);
-        if (existingDoc) {
-          logger.info('[RAGDocuments] Documento duplicado encontrado (mesma URL)', {
-            url: documentData.metadata.url,
-            existingDocumentId: existingDoc.id,
-            existingTitle: existingDoc.title,
-            tenantId: finalTenantId,
-            indexed: existingDoc.indexed || false
-          });
-          
-          // Se o documento existente não está indexado e autoIndex está ativo, indexa agora
-          if (documentData.autoIndex !== false && !existingDoc.indexed) {
-            logger.info('[RAGDocuments] Documento duplicado não está indexado, indexando agora...', {
-              documentId: existingDoc.id,
-              tenantId: finalTenantId
-            });
-            
-            try {
-              // Garante que o documento tem content_hash nos metadados antes de indexar
-              if (!existingDoc.metadata?.content_hash && existingDoc.content) {
-                const contentHash = await ragDeduplicationService.generateContentHash(existingDoc.content);
-                existingDoc.metadata = {
-                  ...existingDoc.metadata,
-                  content_hash: contentHash,
-                };
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-              }
-              
-              const ragServiceInstance = ragService;
-              setIndexState(existingDoc, 'indexing');
-              documents.set(existingDoc.id, existingDoc);
-              persistDocumentBestEffort(existingDoc);
-              const indexResult = await ragServiceInstance.indexDocument(existingDoc, finalTenantId);
-              
-              const chunksCreated = indexResult.chunksCreated || 0;
-              if (indexResult.success && chunksCreated > 0) {
-                setIndexState(existingDoc, 'indexed', { chunksCount: chunksCreated });
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-                
-                logger.info('[RAGDocuments] Documento duplicado indexado com sucesso', {
-                  documentId: existingDoc.id,
-                  chunksCreated
-                });
-              } else {
-                setIndexState(existingDoc, 'failed', {
-                  errorCode: 'RAG_INDEX_FAILED',
-                  errorMessage: chunksCreated === 0
-                    ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
-                    : (indexResult.error || 'Indexação retornou success=false'),
-                });
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-                logger.warn('[RAGDocuments] Indexação do documento duplicado retornou success=false', {
-                  documentId: existingDoc.id,
-                  error: indexResult.error,
-                  isDuplicate: indexResult.isDuplicate
-                });
-              }
-            } catch (indexError) {
-              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
-              documents.set(existingDoc.id, existingDoc);
-              persistDocumentBestEffort(existingDoc);
-              logger.error('[RAGDocuments] Erro ao indexar documento duplicado', {
-                error: indexError.message,
-                stack: indexError.stack,
-                documentId: existingDoc.id,
-                tenantId: finalTenantId
-              });
-            }
-          }
-          
-          // Retorna documento existente sem criar duplicata
-          return {
-            success: true,
-            document: existingDoc,
-            isDuplicate: true,
-            existingDocument: existingDoc,
-          };
-        }
-      }
-      
-      // Verifica por nome de arquivo (uploads)
-      if (documentData.metadata?.fileName) {
-        const existingDoc = findDocumentByFileName(
-          documentData.metadata.fileName, 
-          finalTenantId,
-          documentData.metadata.fileSize
-        );
-        if (existingDoc) {
-          logger.info('[RAGDocuments] Documento duplicado encontrado (mesmo arquivo)', {
-            fileName: documentData.metadata.fileName,
-            fileSize: documentData.metadata.fileSize,
-            existingDocumentId: existingDoc.id,
-            existingTitle: existingDoc.title,
-            tenantId: finalTenantId,
-            indexed: existingDoc.indexed || false
-          });
-          
-          // Se o documento existente não está indexado e autoIndex está ativo, indexa agora
-          if (documentData.autoIndex !== false && !existingDoc.indexed) {
-            logger.info('[RAGDocuments] Documento duplicado (arquivo) não está indexado, indexando agora...', {
-              documentId: existingDoc.id,
-              tenantId: finalTenantId,
-              fileName: documentData.metadata.fileName
-            });
-            
-            try {
-              // Garante que o documento tem content_hash nos metadados antes de indexar
-              if (!existingDoc.metadata?.content_hash && existingDoc.content) {
-                const contentHash = await ragDeduplicationService.generateContentHash(existingDoc.content);
-                existingDoc.metadata = {
-                  ...existingDoc.metadata,
-                  content_hash: contentHash,
-                };
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-              }
-              
-              const ragServiceInstance = ragService;
-              setIndexState(existingDoc, 'indexing');
-              documents.set(existingDoc.id, existingDoc);
-              persistDocumentBestEffort(existingDoc);
-              const indexResult = await ragServiceInstance.indexDocument(existingDoc, finalTenantId);
-              
-              const chunksCreated = indexResult.chunksCreated || 0;
-              if (indexResult.success && chunksCreated > 0) {
-                setIndexState(existingDoc, 'indexed', { chunksCount: chunksCreated });
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-                
-                logger.info('[RAGDocuments] Documento duplicado (arquivo) indexado com sucesso', {
-                  documentId: existingDoc.id,
-                  chunksCreated
-                });
-              } else {
-                setIndexState(existingDoc, 'failed', {
-                  errorCode: 'RAG_INDEX_FAILED',
-                  errorMessage: chunksCreated === 0
-                    ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
-                    : (indexResult.error || 'Indexação retornou success=false'),
-                });
-                documents.set(existingDoc.id, existingDoc);
-                persistDocumentBestEffort(existingDoc);
-                logger.warn('[RAGDocuments] Indexação do documento duplicado (arquivo) retornou success=false', {
-                  documentId: existingDoc.id,
-                  error: indexResult.error,
-                  isDuplicate: indexResult.isDuplicate
-                });
-              }
-            } catch (indexError) {
-              setIndexState(existingDoc, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
-              documents.set(existingDoc.id, existingDoc);
-              persistDocumentBestEffort(existingDoc);
-              logger.error('[RAGDocuments] Erro ao indexar documento duplicado (arquivo)', {
-                error: safeErrorMessage(indexError),
-                stack: indexError.stack,
-                documentId: existingDoc.id,
-                tenantId: finalTenantId
-              });
-            }
-          }
-          
-          // Retorna documento existente sem criar duplicata
-          return {
-            success: true,
-            document: existingDoc,
-            isDuplicate: true,
-            existingDocument: existingDoc,
-          };
-        }
+      const duplicateResult = await ragDocumentsDeduplication.handleDuplicateDocument({
+        documentData,
+        finalTenantId,
+        documentsCache: documents,
+        persistFn: persistDocumentBestEffort,
+        generateContentHash: ragDeduplicationService.generateContentHash,
+        reindexDocumentFn: reindexDocument,
+      });
+      if (duplicateResult) {
+        return duplicateResult;
       }
     }
     
-    const now = new Date().toISOString();
-    
-    // Gera ID do documento primeiro
-    const documentId = documentData.id || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // ETAPA 3: Gera metadados obrigatórios para deduplicação
-    // Para uploads, usa fileName como source_id para agrupar versões do mesmo arquivo
-    // Para outros, usa o documentId como source_id
-    const sourceId = documentData.metadata?.source_id || 
-                     (documentData.metadata?.fileName ? `file:${documentData.metadata.fileName}` : documentId);
-    const currentVersion = ragDeduplicationService.getCurrentSourceVersion(finalTenantId, sourceId);
-    const sourceVersion = documentData.metadata?.source_version || (currentVersion + 1);
-    
-    // Gera content_hash se ainda não foi gerado
-    let contentHash = documentData.metadata?.content_hash;
-    if (!contentHash && documentData.content) {
-      contentHash = await ragDeduplicationService.generateContentHash(documentData.content);
-    }
-    
-    const document = {
-      id: documentId,
-      tenantId: finalTenantId,
-      title: documentData.title || 'Sem título',
-      content: documentData.content || '',
-      metadata: {
-        ...(documentData.metadata && typeof documentData.metadata === 'object' ? documentData.metadata : {}),
-        source: documentData.metadata?.source || 'manual',
-        category: documentData.metadata?.category || null,
-        productId: documentData.metadata?.productId || null,
-        clientId: documentData.metadata?.clientId || null,
-        tags: documentData.metadata?.tags || [],
-        author: documentData.metadata?.author || null,
-        url: documentData.metadata?.url || null, // Preserva URL para verificação de duplicação
-        fileName: documentData.metadata?.fileName || null, // Preserva fileName para verificação de duplicação
-        fileSize: documentData.metadata?.fileSize || null, // Preserva fileSize para verificação de duplicação
-        // Metadados obrigatórios para deduplicação
-        source_id: sourceId,
-        source_version: sourceVersion,
-        content_hash: contentHash,
-        tenant_id: finalTenantId,
-        createdAt: now,
-        updatedAt: now,
-        version: sourceVersion, // Usa source_version como version
-      },
-      permissions: {
-        roles: documentData.permissions?.roles || null,
-        agents: documentData.permissions?.agents || null,
-      },
-      status: documentData.status || 'active',
-      indexed: false,
-      indexedAt: null,
-      chunksCount: 0,
-      indexStatus: 'pending',
-      indexErrorCode: null,
-      indexErrorMessage: null,
-      lastIndexAttemptAt: null,
-      inconsistent: false,
-      inconsistentReason: null,
-    };
+    const document = await ragDocumentsLifecycle.buildDocumentForCreate(documentData, finalTenantId);
 
     documents.set(document.id, document);
     persistDocumentBestEffort(document);
 
     // Indexa automaticamente se solicitado
     if (documentData.autoIndex !== false) {
-      try {
-        logger.info('[RAGDocuments] Indexando documento automaticamente', {
-          documentId: document.id,
-          tenantId: document.tenantId,
-          title: document.title,
-          contentLength: document.content?.length || 0,
-          url: document.metadata?.url,
-          fileName: document.metadata?.fileName,
-          sourceId: document.metadata?.source_id,
-          sourceVersion: document.metadata?.source_version,
-          contentHash: document.metadata?.content_hash ? document.metadata.content_hash.substring(0, 16) + '...' : null
-        });
-        
-        const ragServiceInstance = ragService;
-        setIndexState(document, 'indexing');
-        documents.set(document.id, document);
-        persistDocumentBestEffort(document);
-        const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId);
-        
-        const chunksCreated = indexResult.chunksCreated || 0;
-        if (indexResult.success && chunksCreated > 0) {
-          setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-          documents.set(document.id, document);
-          persistDocumentBestEffort(document);
-          
-          logger.info('[RAGDocuments] Documento indexado com sucesso', {
-            documentId: document.id,
-            tenantId: document.tenantId,
-            chunksCreated,
-            isDuplicate: indexResult.isDuplicate || false,
-            sourceId: document.metadata?.source_id,
-            sourceVersion: document.metadata?.source_version
-          });
-        } else {
-          setIndexState(document, 'failed', {
-            errorCode: 'RAG_INDEX_FAILED',
-            errorMessage: chunksCreated === 0
-              ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
-              : (indexResult.error || 'Indexação retornou success=false'),
-          });
-          documents.set(document.id, document);
-          persistDocumentBestEffort(document);
-          logger.warn('[RAGDocuments] Indexação retornou success=false', {
-            documentId: document.id,
-            tenantId: document.tenantId,
-            error: indexResult.error,
-            isDuplicate: indexResult.isDuplicate || false,
-            chunksCreated
-          });
-        }
-      } catch (indexError) {
-        setIndexState(document, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: indexError.message });
-        documents.set(document.id, document);
-        persistDocumentBestEffort(document);
-        logger.error('[RAGDocuments] Erro ao indexar documento automaticamente', {
-                error: safeErrorMessage(indexError),
-          stack: indexError.stack,
-          documentId: document.id,
-          tenantId: document.tenantId,
-          title: document.title,
-          contentLength: document.content?.length || 0
-        });
-        // Não falha a criação se a indexação falhar
-      }
+      await ragDocumentsLifecycle.autoIndexDocument(document, persistDocumentBestEffort);
+      documents.set(document.id, document);
     } else {
       logger.debug('[RAGDocuments] Auto-indexação desabilitada para documento', {
         documentId: document.id,
@@ -760,19 +355,7 @@ async function createDocument(documentData, tenantId, options = {}) {
       });
     }
 
-    const indexing = (() => {
-      const attempted = documentData.autoIndex !== false;
-      if (!attempted) {
-        return { attempted: false, success: null, errorCode: null, errorMessage: null };
-      }
-      const success = document.indexStatus === 'indexed' && (document.chunksCount || 0) > 0;
-      return {
-        attempted: true,
-        success,
-        errorCode: success ? null : (document.indexErrorCode || 'RAG_INDEX_FAILED'),
-        errorMessage: success ? null : (document.indexErrorMessage || 'Falha ao indexar'),
-      };
-    })();
+    const indexing = ragDocumentsLifecycle.buildCreateIndexingResponse(document, documentData.autoIndex !== false);
 
     return {
       success: true,
@@ -807,63 +390,13 @@ async function updateDocument(documentId, updates) {
       };
     }
 
-    // Atualiza campos permitidos
-    if (updates.title !== undefined) {
-      document.title = updates.title;
-    }
-    if (updates.content !== undefined) {
-      document.content = updates.content;
-    }
-    if (updates.status !== undefined) {
-      document.status = updates.status;
-    }
-    if (updates.metadata) {
-      document.metadata = {
-        ...document.metadata,
-        ...updates.metadata,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    if (updates.permissions) {
-      document.permissions = {
-        ...document.permissions,
-        ...updates.permissions,
-      };
-    }
-
-    // Incrementa versão se conteúdo mudou
-    if (updates.content !== undefined) {
-      document.metadata.version = (document.metadata.version || 1) + 1;
-    }
-
-    document.metadata.updatedAt = new Date().toISOString();
+    ragDocumentsLifecycle.applyDocumentUpdates(document, updates);
     documents.set(documentId, document);
     persistDocumentBestEffort(document);
 
     // Reindexa se solicitado e conteúdo mudou
     if (updates.reindex && updates.content !== undefined) {
-      try {
-        const ragServiceInstance = ragService;
-        setIndexState(document, 'indexing');
-        persistDocumentBestEffort(document);
-
-        const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId);
-        const chunksCreated = indexResult.chunksCreated || 0;
-        if (indexResult.success && chunksCreated > 0) {
-          setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-          persistDocumentBestEffort(document);
-        } else {
-          setIndexState(document, 'failed', {
-            errorCode: 'RAG_INDEX_FAILED',
-            errorMessage: chunksCreated === 0 ? 'Indexação retornou 0 chunks (não persistido no vector store)' : (indexResult.error || 'Indexação retornou success=false'),
-          });
-          persistDocumentBestEffort(document);
-        }
-      } catch (indexError) {
-        setIndexState(document, 'failed', { errorCode: 'RAG_INDEX_FAILED', errorMessage: safeErrorMessage(indexError) });
-        persistDocumentBestEffort(document);
-        logger.warn('[RAGDocuments] Erro ao reindexar documento:', safeErrorMessage(indexError));
-      }
+      await ragDocumentsLifecycle.reindexUpdatedDocument(document, persistDocumentBestEffort);
     }
 
     return {
@@ -959,498 +492,45 @@ async function deleteDocument(documentId) {
 }
 
 /**
- * Reindexa um documento.
+ * Reindexa um documento (delegado para ragDocumentsIndexing).
  * 
  * @param {string} documentId - ID do documento
  * @returns {Promise<{success: boolean, chunksCreated: number, error?: string}>}
  */
 async function reindexDocument(documentId) {
-  try {
-    const document = documents.get(documentId);
-    if (!document) {
-      return {
-        success: false,
-        chunksCreated: 0,
-        error: 'Documento não encontrado',
-      };
-    }
-
-    if (!document.content) {
-      return {
-        success: false,
-        chunksCreated: 0,
-        error: 'Documento não tem conteúdo',
-      };
-    }
-
-    // Valida que a função existe
-    const ragServiceInstance = ragService;
-    if (typeof ragServiceInstance.indexDocument !== 'function') {
-      logger.error('[RAGDocuments] ragService.indexDocument não é uma função', {
-        documentId,
-        ragServiceType: typeof ragServiceInstance,
-        ragServiceKeys: Object.keys(ragServiceInstance || {}),
-        hasIndexDocument: 'indexDocument' in (ragServiceInstance || {})
-      });
-      return {
-        success: false,
-        chunksCreated: 0,
-        error: 'ragService.indexDocument não está disponível. Verifique se o módulo foi carregado corretamente.',
-      };
-    }
-
-    logger.info('[RAGDocuments] Reindexando documento', {
-      documentId: document.id,
-      tenantId: document.tenantId,
-      title: document.title,
-      contentLength: document.content?.length || 0,
-      currentlyIndexed: document.indexed
-    });
-
-    setIndexState(document, 'indexing');
-    documents.set(document.id, document);
-    persistDocumentBestEffort(document);
-
-    // Reindex consistente: remove vetores anteriores antes de reinserir
-    try {
-      if (document.tenantId) {
-        await postgresVectorStore.deleteDocumentVectors({ tenantId: document.tenantId, documentId: document.id });
-      }
-    } catch (e) {
-      logger.warn('[RAGDocuments] Falha ao remover vetores antes do reindex (best-effort)', {
-        tenantId: document.tenantId || null,
-        documentId: document.id,
-        error: e.message,
-      });
-    }
-
-    const indexResult = await ragServiceInstance.indexDocument(document, document.tenantId);
-    
-    logger.info('[RAGDocuments] Resultado da indexação', {
-      documentId: document.id,
-      success: indexResult.success,
-      chunksCreated: indexResult.chunksCreated,
-      error: indexResult.error,
-      tenantId: document.tenantId
-    });
-    
-    const chunksCreated = indexResult.chunksCreated || 0;
-    if (indexResult.success && chunksCreated > 0) {
-      setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-      persistDocumentBestEffort(document);
-      
-      logger.info('[RAGDocuments] Documento marcado como indexado no BD', {
-        documentId: document.id,
-        chunksCount: document.chunksCount,
-        indexedAt: document.indexedAt
-      });
-    } else {
-      const rawErrMsg = safeToString(indexResult.error || '');
-      const derivedCode = rawErrMsg.includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED';
-      setIndexState(document, 'failed', {
-        errorCode: derivedCode,
-        errorMessage: chunksCreated === 0
-          ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
-          : (indexResult.error || 'Falha ao indexar documento'),
-      });
-      persistDocumentBestEffort(document);
-      logger.error('[RAGDocuments] Falha ao indexar documento', {
-        documentId: document.id,
-        error: indexResult.error,
-        tenantId: document.tenantId
-      });
-    }
-
-    const finalChunks = indexResult.chunksCreated || 0;
-    const finalSuccess = !!indexResult.success && finalChunks > 0;
-    return {
-      success: finalSuccess,
-      chunksCreated: finalChunks,
-      errorCode: finalSuccess ? null : (document.indexErrorCode || (safeToString(indexResult.error || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED')),
-      error: finalSuccess ? null : (indexResult.error || 'Indexação retornou 0 chunks'),
-    };
-  } catch (error) {
-    logger.error('[RAGDocuments] Erro ao reindexar documento:', error);
-    const safeError = safeErrorMessage(error);
-    return {
-      success: false,
-      chunksCreated: 0,
-      errorCode: safeToString(safeError).includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
-      error: safeError,
-    };
-  }
+  return await ragDocumentsIndexing.reindexDocument(documentId, documents, persistDocumentBestEffort);
 }
 
 /**
- * Reindexa todos os documentos não indexados ou inconsistentes.
+ * Reindexa todos os documentos não indexados ou inconsistentes (delegado para ragDocumentsIndexing).
  * 
- * @param {string} [tenantId] - ID do tenant (opcional)
- * @param {boolean} [includeInconsistent=false] - Se true, também reindexa documentos marcados como indexados mas que podem não estar no vector store
+ * @param {string} tenantId - ID do tenant (opcional)
+ * @param {boolean} includeInconsistent - Incluir documentos já marcados como indexed
  * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
  */
 async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false) {
-  try {
-    const ragServiceInstance = ragService;
-    let docs = Array.from(documents.values());
-    
-    // Filtra por tenant se fornecido
-    if (tenantId) {
-      docs = docs.filter(doc => doc.tenantId === tenantId);
-    }
-    
-    // Filtra documentos não indexados
-    let notIndexedDocs = docs.filter(doc => !doc.indexed && doc.status === 'active' && doc.content);
-    
-    // Se includeInconsistent for true, também inclui documentos marcados como indexados
-    // (para sincronizar com o vector store)
-    if (includeInconsistent) {
-      const indexedDocs = docs.filter(doc => doc.indexed && doc.status === 'active' && doc.content);
-      notIndexedDocs = [...notIndexedDocs, ...indexedDocs];
-    }
-    
-    if (notIndexedDocs.length === 0) {
-      return {
-        success: true,
-        total: 0,
-        indexed: 0,
-        failed: 0,
-        errors: [],
-      };
-    }
-    
-    let indexed = 0;
-    let failed = 0;
-    const errors = [];
-    
-    logger.info(`[RAGDocuments] Iniciando reindexação em lote de ${notIndexedDocs.length} documentos`);
-    
-    // Verifica se o serviço RAG está disponível antes de começar
-    // Usa o ragService já importado no topo do arquivo
-    const serviceUrl = ragServiceInstance.getRagServiceUrl(tenantId);
-    const isAvailable = await ragServiceInstance.isRagAvailable(tenantId);
-    if (!isAvailable) {
-      logger.error('[RAGDocuments] Serviço RAG não está disponível', { tenantId, serviceUrl });
-      return {
-        success: false,
-        total: notIndexedDocs.length,
-        indexed: 0,
-        failed: notIndexedDocs.length,
-        errors: [{
-          documentId: 'all',
-          title: 'Serviço RAG indisponível',
-          error: `O serviço RAG não está respondendo. Verifique se está rodando em ${serviceUrl}`,
-        }],
-      };
-    }
-    
-    // Verifica vector store antes de começar
-    try {
-      const healthUrlBefore = tenantId 
-        ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
-        : `${serviceUrl}/rag/health`;
-      let fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
-      const beforeResponse = await fetchFn(healthUrlBefore, { method: 'GET' });
-      if (beforeResponse.ok) {
-        const beforeData = await beforeResponse.json();
-        logger.info('[RAGDocuments] Vector store ANTES da reindexação', {
-          tenantId,
-          indexedDocuments: beforeData.indexedDocuments,
-          indexedChunks: beforeData.indexedChunks,
-          vectorStore: beforeData.vectorStore,
-          embeddingModel: beforeData.embeddingModel
-        });
-      }
-    } catch (beforeErr) {
-      logger.warn('[RAGDocuments] Não foi possível verificar vector store antes da reindexação', {
-        error: beforeErr.message,
-        tenantId
-      });
-    }
-    
-    // Reindexa cada documento
-    for (let i = 0; i < notIndexedDocs.length; i++) {
-      const doc = notIndexedDocs[i];
-      logger.info(`[RAGDocuments] Processando documento ${i + 1}/${notIndexedDocs.length}`, {
-        documentId: doc.id,
-        title: doc.title,
-        tenantId: doc.tenantId
-      });
-      
-      try {
-        const result = await reindexDocument(doc.id);
-        if (result.success) {
-          indexed++;
-          logger.info(`[RAGDocuments] Documento ${doc.id} reindexado com sucesso`, {
-            documentId: doc.id,
-            chunksCreated: result.chunksCreated,
-            indexed: indexed,
-            total: notIndexedDocs.length
-          });
-          
-          // Verifica vector store após cada indexação bem-sucedida
-          try {
-            const healthUrlAfter = tenantId 
-              ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
-              : `${serviceUrl}/rag/health`;
-            let fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
-            const afterResponse = await fetchFn(healthUrlAfter, { method: 'GET' });
-            if (afterResponse.ok) {
-              const afterData = await afterResponse.json();
-              logger.info(`[RAGDocuments] Vector store APÓS indexar documento ${doc.id}`, {
-                documentId: doc.id,
-                tenantId,
-                indexedDocuments: afterData.indexedDocuments,
-                indexedChunks: afterData.indexedChunks,
-                progress: `${indexed}/${notIndexedDocs.length}`
-              });
-            }
-          } catch (afterErr) {
-            logger.warn(`[RAGDocuments] Erro ao verificar vector store após indexar ${doc.id}`, {
-              error: afterErr.message,
-              documentId: doc.id
-            });
-          }
-        } else {
-          failed++;
-          errors.push({
-            documentId: doc.id,
-            title: doc.title,
-            error: result.error || 'Erro desconhecido',
-          });
-          logger.error(`[RAGDocuments] Falha ao reindexar documento ${doc.id}`, {
-            documentId: doc.id,
-            error: result.error,
-            indexed: indexed,
-            failed: failed
-          });
-        }
-      } catch (error) {
-        failed++;
-        errors.push({
-          documentId: doc.id,
-          title: doc.title,
-          error: safeErrorMessage(error, 'Erro desconhecido'),
-        });
-        logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}`, {
-          documentId: doc.id,
-          error: safeErrorMessage(error),
-          stack: error.stack,
-          indexed: indexed,
-          failed: failed
-        });
-      }
-    }
-    
-    // Verifica vector store após TODA a reindexação
-    try {
-      const healthUrlFinal = tenantId 
-        ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
-        : `${serviceUrl}/rag/health`;
-      let fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
-      const finalResponse = await fetchFn(healthUrlFinal, { method: 'GET' });
-      if (finalResponse.ok) {
-        const finalData = await finalResponse.json();
-        logger.info('[RAGDocuments] Vector store APÓS reindexação completa', {
-          tenantId,
-          indexedDocuments: finalData.indexedDocuments,
-          indexedChunks: finalData.indexedChunks,
-          vectorStore: finalData.vectorStore,
-          embeddingModel: finalData.embeddingModel,
-          totalIndexed: indexed,
-          totalFailed: failed,
-          totalProcessed: notIndexedDocs.length
-        });
-      }
-    } catch (finalErr) {
-      logger.warn('[RAGDocuments] Não foi possível verificar vector store após reindexação completa', {
-        error: finalErr.message,
-        tenantId
-      });
-    }
-    
-    logger.info(`[RAGDocuments] Reindexação em lote concluída: ${indexed} indexados, ${failed} falharam`);
-    
-    // Verifica consistência após reindexação
-    // Usa uma função auxiliar para evitar recursão (getDocumentsStats chama loadDocuments que pode causar problemas)
-    let consistencyCheck = null;
-    try {
-      logger.info('[RAGDocuments] Verificando consistência após reindexação', { tenantId });
-      
-      // Busca stats do vector store diretamente sem passar por getDocumentsStats completo
-      // para evitar problemas de recursão
-      const isAvailable = await ragServiceInstance.isRagAvailable(tenantId);
-      if (isAvailable) {
-        const serviceUrl = ragServiceInstance.getRagServiceUrl(tenantId);
-        let fetchFn;
-        try {
-          if (typeof global.fetch === 'function') {
-            fetchFn = global.fetch;
-          } else {
-            fetchFn = require('node-fetch');
-          }
-          
-          const healthUrl = tenantId 
-            ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
-            : `${serviceUrl}/rag/health`;
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000); // Timeout maior para verificação
-          
-          const response = await fetchFn(healthUrl, {
-            method: 'GET',
-            signal: controller.signal,
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            const vectorData = await response.json();
-            
-            logger.info('[RAGDocuments] Dados do vector store recebidos na verificação de consistência', {
-              tenantId,
-              vectorData,
-              healthUrl,
-              indexedDocuments: vectorData.indexedDocuments,
-              indexedChunks: vectorData.indexedChunks,
-              vectorStore: vectorData.vectorStore,
-              embeddingModel: vectorData.embeddingModel,
-              aggregated: vectorData.aggregated,
-              tenantsCount: vectorData.tenantsCount
-            });
-            
-            // Recarrega documentos para obter contagem atualizada do BD
-            // Dados agora estão no banco de dados PostgreSQL
-            let docs = Array.from(documents.values());
-            if (tenantId) {
-              docs = docs.filter(doc => doc.tenantId === tenantId);
-            }
-            const dbIndexed = docs.filter(doc => doc.indexed).length;
-            const vectorIndexed = vectorData.indexedDocuments || 0;
-            const isConsistent = dbIndexed === vectorIndexed;
-            
-            logger.info('[RAGDocuments] Comparação BD vs Vector Store na verificação de consistência', {
-              tenantId,
-              dbIndexed,
-              vectorIndexed,
-              difference: dbIndexed - vectorIndexed,
-              isConsistent,
-              totalDocs: docs.length,
-              docsIndexedInBD: docs.filter(doc => doc.indexed).map(doc => ({
-                id: doc.id,
-                title: doc.title,
-                indexed: doc.indexed,
-                indexedAt: doc.indexedAt
-              }))
-            });
-            
-            consistencyCheck = {
-              isConsistent,
-              dbIndexed,
-              vectorIndexed,
-              difference: dbIndexed - vectorIndexed,
-              message: isConsistent 
-                ? `✅ Consistência verificada: ${dbIndexed} documentos no BD e ${vectorIndexed} no vector store`
-                : `⚠️ Inconsistência detectada: ${dbIndexed} documentos no BD mas apenas ${vectorIndexed} no vector store (diferença: ${dbIndexed - vectorIndexed})`
-            };
-            
-            logger.info('[RAGDocuments] Verificação de consistência concluída', {
-              ...consistencyCheck,
-              tenantId,
-              totalDocs: docs.length,
-              vectorStoreDetails: {
-                indexedDocuments: vectorData.indexedDocuments,
-                indexedChunks: vectorData.indexedChunks,
-                vectorStore: vectorData.vectorStore,
-                embeddingModel: vectorData.embeddingModel
-              }
-            });
-          } else {
-            logger.warn('[RAGDocuments] Não foi possível verificar consistência - resposta não OK', {
-              status: response.status,
-              tenantId
-            });
-            consistencyCheck = {
-              isConsistent: null,
-              error: `Resposta do vector store não OK: ${response.status}`,
-              message: 'Não foi possível verificar consistência - vector store não respondeu corretamente'
-            };
-          }
-        } catch (fetchErr) {
-          logger.warn('[RAGDocuments] Erro ao verificar consistência', {
-            error: fetchErr.message,
-            tenantId
-          });
-          consistencyCheck = {
-            isConsistent: null,
-            error: fetchErr.message,
-            message: 'Não foi possível verificar consistência - erro ao consultar vector store'
-          };
-        }
-      } else {
-        logger.warn('[RAGDocuments] RAG Service não disponível para verificação de consistência', { tenantId });
-        consistencyCheck = {
-          isConsistent: null,
-          error: 'RAG Service não disponível',
-          message: 'Não foi possível verificar consistência - RAG Service não está disponível'
-        };
-      }
-    } catch (consistencyError) {
-      logger.warn('[RAGDocuments] Erro ao verificar consistência após reindexação', {
-        error: consistencyError.message,
-        tenantId
-      });
-      consistencyCheck = {
-        isConsistent: null,
-        error: consistencyError.message,
-        message: 'Não foi possível verificar consistência após reindexação'
-      };
-    }
-    
-    return {
-      success: true,
-      total: notIndexedDocs.length,
-      indexed,
-      failed,
-      errors,
-      consistencyCheck,
-    };
-  } catch (error) {
-    logger.error('[RAGDocuments] Erro ao reindexar documentos em lote:', error);
-    return {
-      success: false,
-      total: 0,
-      indexed: 0,
-      failed: 0,
-      errors: [{ error: safeErrorMessage(error) }],
-    };
-  }
+  return await ragDocumentsIndexing.reindexAllNotIndexed(
+    tenantId,
+    includeInconsistent,
+    documents,
+    persistDocumentBestEffort,
+    reindexDocument
+  );
 }
 
 /**
- * Reindex completo de um tenant (single source of truth = Postgres):
- * 1) marca todos docs como pending (no cache + best-effort no DB)
+ * Reindex completo de um tenant (single source of truth = Postgres).
+ * 1) marca todos docs como pending
  * 2) apaga todos os rag_chunks do tenant
- * 3) reprocessa indexação (reindexAllNotIndexed)
+ * 3) reprocessa indexação
  */
 async function reindexAllTenant(tenantId) {
-  const finalTenantId = tenantId || null;
-  if (!finalTenantId) {
-    return { success: false, total: 0, indexed: 0, failed: 0, errors: [{ error: 'tenantId é obrigatório' }] };
-  }
-
-  // Marca todos como pending (cache + best-effort persist)
-  for (const doc of documents.values()) {
-    if (doc.tenantId !== finalTenantId) continue;
-    setIndexState(doc, 'pending');
-    documents.set(doc.id, doc);
-    persistDocumentBestEffort(doc);
-  }
-
-  // Apaga vetores do tenant (fonte única)
-  await postgresVectorStore.deleteTenantVectors(finalTenantId);
-
-  // Reindexa tudo (agora todos estão !indexed)
-  return await reindexAllNotIndexed(finalTenantId, true);
+  return await ragDocumentsIndexing.reindexAllTenant(
+    tenantId,
+    documents,
+    persistDocumentBestEffort,
+    reindexAllNotIndexed
+  );
 }
 
 /**
@@ -1460,89 +540,7 @@ async function reindexAllTenant(tenantId) {
  * @returns {Object} Estatísticas
  */
 async function getDocumentsStats(tenantId = null) {
-  const ragServiceInstance = ragService;
-  let docs = Array.from(documents.values());
-  
-  if (tenantId) {
-    docs = docs.filter(doc => doc.tenantId === tenantId);
-  }
-
-  const stats = {
-    total: docs.length,
-    indexed: docs.filter(doc => doc.indexed).length,
-    notIndexed: docs.filter(doc => !doc.indexed).length,
-    bySource: {},
-    byCategory: {},
-    byStatus: {},
-    totalChunks: 0,
-    // Adiciona informações do vector store para comparação
-    vectorStoreStats: null,
-    syncStatus: null,
-  };
-
-  docs.forEach(doc => {
-    const source = doc.metadata?.source || 'unknown';
-    const category = doc.metadata?.category || 'uncategorized';
-    const status = doc.status || 'active';
-
-    stats.bySource[source] = (stats.bySource[source] || 0) + 1;
-    stats.byCategory[category] = (stats.byCategory[category] || 0) + 1;
-    stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
-    stats.totalChunks += doc.chunksCount || 0;
-  });
-
-  // Vector store agora é Postgres (pgvector): stats vem direto do banco.
-  try {
-    const vectorCounts = await postgresVectorStore.countVectorDocs({ tenantId: tenantId || null });
-    stats.vectorStoreStats = {
-      vectorStore: 'postgres',
-      indexedDocuments: vectorCounts.documents || 0,
-      indexedChunks: vectorCounts.chunks || 0,
-      tenantId: tenantId || null,
-    };
-
-    // Fonte de verdade de chunks: substitui soma por doc.chunksCount (cache)
-    stats.totalChunks = stats.vectorStoreStats.indexedChunks;
-
-    const dbIndexed = stats.indexed;
-    const vectorIndexed = stats.vectorStoreStats.indexedDocuments;
-
-    if (dbIndexed === vectorIndexed) {
-      stats.syncStatus = 'synced';
-    } else if (dbIndexed > vectorIndexed) {
-      stats.syncStatus = 'db_ahead';
-      stats.syncDifference = dbIndexed - vectorIndexed;
-    } else {
-      stats.syncStatus = 'vector_ahead';
-      stats.syncDifference = vectorIndexed - dbIndexed;
-    }
-  } catch (err) {
-    stats.vectorStoreStats = {
-      vectorStore: 'postgres',
-      indexedDocuments: 0,
-      indexedChunks: 0,
-      tenantId: tenantId || null,
-      error: safeErrorMessage(err),
-    };
-    if (stats.indexed > 0) {
-      stats.syncStatus = 'db_ahead';
-      stats.syncDifference = stats.indexed;
-    }
-  }
-  
-  logger.info('[RAGDocuments] Estatísticas finais retornadas', {
-    tenantId,
-    total: stats.total,
-    indexed: stats.indexed,
-    notIndexed: stats.notIndexed,
-    syncStatus: stats.syncStatus,
-    syncDifference: stats.syncDifference,
-    hasVectorStoreStats: !!stats.vectorStoreStats,
-    vectorStoreIndexed: stats.vectorStoreStats?.indexedDocuments || 0,
-    vectorStoreError: stats.vectorStoreStats?.error || null
-  });
-
-  return stats;
+  return await ragDocumentsStats.getDocumentsStats(tenantId, documents);
 }
 
 /**
@@ -1553,77 +551,14 @@ async function getDocumentsStats(tenantId = null) {
  * @returns {Promise<{ok: boolean, tenantId?: string, docs?: any, chunks?: any, warnings?: any[], error?: any}>}
  */
 async function getRagHealth(tenantId, options = {}) {
-  const finalTenantId = tenantId || null;
-  if (!finalTenantId) {
-    return { ok: false, error: { code: 'TENANT_REQUIRED', message: 'tenantId é obrigatório' } };
-  }
-
-  try {
-    const docs = Array.from(documents.values()).filter((d) => d.tenantId === finalTenantId);
-    const total = docs.length;
-    const indexed = docs.filter((d) => d.indexStatus === 'indexed').length;
-    const failed = docs.filter((d) => d.indexStatus === 'failed').length;
-
-    const vectorCounts = await postgresVectorStore.countVectorDocs({ tenantId: finalTenantId });
-    const chunksByDoc = await postgresVectorStore.countChunksByDocument({ tenantId: finalTenantId });
-
-    const warnings = [];
-
-    // Consistência interna: doc marcado como indexed mas não tem chunks no Postgres
-    const inconsistentDocIds = docs
-      .filter((d) => d.indexStatus === 'indexed' && (Number(chunksByDoc[d.id] || 0) === 0))
-      .map((d) => d.id);
-
-    if (inconsistentDocIds.length > 0) {
-      const reason = `Documento marcado como indexed mas chunks=0 no Postgres (${inconsistentDocIds.length} doc(s))`;
-      warnings.push({
-        code: 'RAG_INCONSISTENT_INDEXED_WITHOUT_CHUNKS',
-        message: reason,
-        details: { tenantId: finalTenantId, documentIds: inconsistentDocIds },
-      });
-
-      // Auto-correção: rebaixa para failed (fonte única = Postgres)
-      for (const id of inconsistentDocIds) {
-        const doc = documents.get(id);
-        if (!doc) continue;
-        setIndexState(doc, 'failed', {
-          errorCode: 'RAG_INCONSISTENT',
-          errorMessage: 'Marcado como indexed, mas não há chunks gravados no Postgres (pgvector)',
-        });
-        documents.set(id, doc);
-        persistDocumentBestEffort(doc);
-      }
-      await markInconsistentDocuments(finalTenantId, reason, inconsistentDocIds).catch(() => {});
-    } else {
-      await markConsistentForTenant(finalTenantId).catch(() => {});
-    }
-
-    // Se houver chunks sem documentos (órfãos), avisa (limpeza é endpoint dedicado)
-    if ((vectorCounts.documents || 0) > total) {
-      warnings.push({
-        code: 'RAG_VECTOR_AHEAD',
-        message: 'Vector store contém documentos/chunks além do que existe em rag_documents',
-        details: { tenantId: finalTenantId, vectorDocuments: vectorCounts.documents, dbDocuments: total },
-      });
-    }
-
-    return {
-      ok: true,
-      tenantId: finalTenantId,
-      docs: { total, indexed, failed },
-      chunks: { total: vectorCounts.chunks || 0 },
-      warnings,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error: {
-        code: 'RAG_HEALTH_FAILED',
-        message: 'Falha ao calcular health do RAG',
-        details: { tenantId: finalTenantId, message: safeErrorMessage(err) },
-      },
-    };
-  }
+  return await ragDocumentsHealth.getRagHealth(
+    tenantId,
+    options,
+    documents,
+    persistDocumentBestEffort,
+    markInconsistentDocuments,
+    markConsistentForTenant
+  );
 }
 
 // Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
@@ -1636,41 +571,7 @@ async function getRagHealth(tenantId, options = {}) {
  * @returns {Promise<{success: boolean, removedDocuments: number, removedChunks: number, orphanedDocuments: string[]}>}
  */
 async function cleanOrphanedDocuments(tenantId = null, orphanedDocumentIds = []) {
-  try {
-    logger.info('[RAGDocuments] Iniciando limpeza de documentos órfãos', { 
-      tenantId,
-      orphanedDocumentIdsCount: orphanedDocumentIds.length 
-    });
-    
-    if (!orphanedDocumentIds || orphanedDocumentIds.length === 0) {
-      logger.warn('[RAGDocuments] Nenhum documento órfão fornecido para remover', { tenantId });
-      return {
-        success: false,
-        removedDocuments: 0,
-        removedChunks: 0,
-        orphanedDocuments: [],
-        error: 'Nenhum documento órfão fornecido'
-      };
-    }
-    
-    // Chama o RAG Service para remover os documentos órfãos
-    const result = await ragService.cleanOrphanedDocuments(tenantId, orphanedDocumentIds);
-    
-    logger.info('[RAGDocuments] Limpeza de documentos órfãos concluída', {
-      tenantId,
-      success: result.success,
-      removedDocuments: result.removedDocuments,
-      removedChunks: result.removedChunks
-    });
-    
-    return result;
-  } catch (error) {
-    logger.error('[RAGDocuments] Erro ao limpar documentos órfãos', {
-      error: safeErrorMessage(error),
-      tenantId
-    });
-    throw error;
-  }
+  return await ragDocumentsHealth.cleanOrphanedDocuments(tenantId, orphanedDocumentIds);
 }
 
 module.exports = {
