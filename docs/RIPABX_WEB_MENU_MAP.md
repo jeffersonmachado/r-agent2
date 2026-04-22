@@ -543,18 +543,6 @@ Total de links no menu: **82** (deduplicado por href+label).
 - **mysql*.php (reads)**: —
 - **URA**: —
 
-### Processos
-
-- **href**: `/pm2`
-- **permissão (legado)**: `C`
-- **arquivo resolvido**: —
-- **JS**: —
-- **xml.php (views)**: —
-- **server.php (writes)**: —
-- **server2.php (writes)**: —
-- **mysql*.php (reads)**: —
-- **URA**: —
-
 ### Fila
 
 - **href**: `app/fila.html`

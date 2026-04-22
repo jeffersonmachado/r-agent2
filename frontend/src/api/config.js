@@ -78,7 +78,7 @@ export async function reloadConfig() {
  * Reinicia o servidor da API.
  * 
  * ⚠️ ATENÇÃO: Isso encerrará o processo do servidor.
- * Se estiver usando PM2, nodemon ou similar, o servidor será reiniciado automaticamente.
+ * Se estiver usando nodemon ou similar, o servidor será reiniciado automaticamente.
  * 
  * @returns {Promise<{success: boolean, message: string, processManager?: string, hasProcessManager?: boolean, note?: string}>}
  */

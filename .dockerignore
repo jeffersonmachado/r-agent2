@@ -113,10 +113,6 @@ build/
 *.zip
 *.tar.gz
 
-# PM2
-ecosystem.config.js
-.pm2/
-
 # Scripts de desenvolvimento
 scripts/*.md
 scripts/*.txt

@@ -68,7 +68,6 @@ export const LEGACY_MENU_TAB_ITEMS = [
   { key: 'legacyCfgAssistencia', label: 'Legado: Assistência', section: 'Configurações', href: '/cgi/ripabx/assistencia.cgi', mappedTab: 'governance', status: 'parcial' },
   { key: 'legacyCfgRecarga', label: 'Legado: Recarga', section: 'Configurações', href: 'app/recarga.php', mappedTab: 'governance', status: 'parcial' },
   { key: 'legacyCfgServicos', label: 'Legado: Serviços', section: 'Configurações', href: 'app/servicos.html', mappedTab: 'governance', status: 'parcial' },
-  { key: 'legacyCfgProcessos', label: 'Legado: Processos', section: 'Configurações', href: '/pm2', mappedTab: 'governance', status: 'parcial' },
   { key: 'legacyCcFila', label: 'Legado: CC Fila', section: 'Contact Center', href: 'app/fila.html', mappedTab: 'queues', status: 'coberto' },
   { key: 'legacyCcMotivoPausa', label: 'Legado: CC Motivo Pausa', section: 'Contact Center', href: 'app/motivo.html', mappedTab: 'ccPauseReasons', status: 'coberto' },
   { key: 'legacyCcMotivoContato', label: 'Legado: CC Motivo Contato', section: 'Contact Center', href: 'app/motivo1.html', mappedTab: 'ccContactReasons', status: 'coberto' },

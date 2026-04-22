@@ -4,7 +4,7 @@ Script para resetar completamente a plataforma r-agent2, limpando:
 - ✅ Containers Docker (desenvolvimento e produção)
 - ✅ Volumes Docker
 - ✅ Serviços systemd (Redis, RAG)
-- ✅ Processos (uvicorn, Node.js, PM2)
+- ✅ Processos (uvicorn, Node.js)
 - ✅ Cache Redis
 - ✅ Dados JSON (reset com seed)
 
@@ -54,7 +54,6 @@ npm run reset:all:yes
 - Serviço Redis (systemd)
 - Processos uvicorn
 - Processos Node.js da API
-- Processos PM2
 
 ### Dados
 - Cache Redis (FLUSHALL)

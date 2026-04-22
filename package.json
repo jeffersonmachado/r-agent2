@@ -66,6 +66,8 @@
     "qa:mesh:scheduler": "node -e \"const { runScheduledMesh } = require('./qa-mesh/meshScheduler'); runScheduledMesh(process.env.MESH_KIND || 'critical').then((result)=>{ console.log(JSON.stringify(result.summary,null,2)); if(result.summary.goNoGo==='NO_GO') process.exitCode=1; }).catch((error)=>{ console.error(error); process.exit(1); });\"",
     "qa:final-report": "node qa/final-report.js",
     "system:bootstrap": "node tools/system/bootstrap.js",
+    "system:reproducibility": "node tools/system/reproducibility.js",
+    "system:ai-hardening": "node tools/system/ai-hardening-check.js",
     "system:validate": "node tools/system/validate.js",
     "system:release": "node tools/system/release.js",
     "system:deploy": "node tools/system/deploy.js",

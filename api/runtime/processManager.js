@@ -1,18 +1,6 @@
 'use strict';
 
 function detectProcessManager(processRef = process) {
-  if (processRef.env.PM2_HOME || processRef.env.PM2_INSTANCE_ID !== undefined) {
-    return {
-      name: 'PM2',
-      hasProcessManager: true,
-      details: {
-        pm2Home: processRef.env.PM2_HOME,
-        instanceId: processRef.env.PM2_INSTANCE_ID,
-        method: 'environment_variables',
-      },
-    };
-  }
-
   const parentProcess = processRef.env.nodemon || '';
   if (parentProcess || processRef.argv.some((arg) => arg.includes('nodemon'))) {
     return {
@@ -33,17 +21,6 @@ function detectProcessManager(processRef = process) {
           encoding: 'utf8',
           timeout: 1000,
         }).trim();
-
-        if (parentCmd.includes('pm2') || parentCmd.includes('PM2')) {
-          return {
-            name: 'PM2',
-            hasProcessManager: true,
-            details: {
-              parentProcess: parentCmd,
-              method: 'parent_process_detection',
-            },
-          };
-        }
 
         if (parentCmd.includes('nodemon')) {
           return {

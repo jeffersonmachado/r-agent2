@@ -32,6 +32,5 @@ npm run deploy:down
 
 ## Política operacional
 
-- PM2 não faz parte do fluxo oficial de produção.
 - Release é bloqueada se validações de build/smoke/empacotamento falharem.
 - Runtime local dentro do repositório não é permitido.

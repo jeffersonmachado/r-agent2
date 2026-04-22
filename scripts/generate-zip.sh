@@ -140,7 +140,6 @@ RSYNC_EXCLUDES=(
   '.git/'
   '.vscode/'
   '.idea/'
-  '.pm2/'
   '.env'
   '.env.*'
   '**/.env'

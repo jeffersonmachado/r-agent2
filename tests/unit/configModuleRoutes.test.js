@@ -58,7 +58,7 @@ describe('config module', () => {
 
   test('controller getProcessManager preserva contrato de resposta', async () => {
     const deps = makeDeps({
-      detectProcessManager: jest.fn(() => ({ name: 'pm2', hasProcessManager: true, details: { exec: 'pm2' } })),
+      detectProcessManager: jest.fn(() => ({ name: 'nodemon', hasProcessManager: true, details: { exec: 'nodemon' } })),
     });
     const service = createConfigService({ deps });
     const controller = createConfigController({ service, deps });
@@ -68,9 +68,9 @@ describe('config module', () => {
 
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, {
       success: true,
-      processManager: 'pm2',
+      processManager: 'nodemon',
       hasProcessManager: true,
-      details: { exec: 'pm2' },
+      details: { exec: 'nodemon' },
     });
   });
 });

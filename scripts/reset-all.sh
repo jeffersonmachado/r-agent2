@@ -120,12 +120,6 @@ else
     echo -e "${GREEN}   ✅ Nenhum processo Node.js encontrado${NC}"
 fi
 
-# Para PM2 (se estiver rodando)
-echo -e "${YELLOW}⏹️  Parando PM2...${NC}"
-pm2 stop all 2>/dev/null || true
-pm2 delete all 2>/dev/null || true
-echo -e "${GREEN}   ✅ PM2 parado${NC}"
-
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}🗄️  ETAPA 3: Limpando Cache Redis${NC}"

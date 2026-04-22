@@ -264,7 +264,7 @@ flowchart LR
   - Documentação operacional, testes E2E e validação/observabilidade do pipeline.
 
 - **Autoprovisionamento v1 (one-click bootstrap)**
-  - Padronizar “primeira instalação” (on-prem/Compose/PM2) com seed/migrations + criação guiada de tenant + templates/filas iniciais.
+  - Padronizar “primeira instalação” (on-prem/Compose) com seed/migrations + criação guiada de tenant + templates/filas iniciais.
   - Reduzir steps manuais para colocar uma unidade/tenant operando (fast service + pedidos + tokens públicos).
 
 ### 3.2) Next (3–6 meses) — “v1 vendável” por suíte + primeiros dashboards operacionais

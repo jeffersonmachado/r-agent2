@@ -12,9 +12,8 @@ frontend-e2e/node_modules/
 npm-debug.log*
 nodemon-debug.log
 
-# PM2
+# Logs
 logs/
-.pm2/
 
 # Arquivos de ambiente
 .env

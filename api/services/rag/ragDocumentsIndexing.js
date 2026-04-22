@@ -1,0 +1,312 @@
+const logger = require('../../utils/logger');
+const { safeErrorMessage, safeToString } = require('../../utils/defensiveCoercion');
+const { setIndexState } = require('./ragDocumentsState');
+
+const ragService = require('../ragService');
+const postgresVectorStore = require('../vectorStore/postgresVectorStore');
+
+/**
+ * Reindexa um documento único.
+ * 
+ * @param {string} documentId - ID do documento
+ * @param {Map} documentsCache - Cache de documentos (referência mutável)
+ * @param {Function} persistFn - Função para persistir documento (best-effort)
+ * @returns {Promise<{success: boolean, chunksCreated: number, error?: string, errorCode?: string}>}
+ */
+async function reindexDocument(documentId, documentsCache, persistFn) {
+  try {
+    const document = documentsCache.get(documentId);
+    if (!document) {
+      return {
+        success: false,
+        chunksCreated: 0,
+        error: 'Documento não encontrado',
+      };
+    }
+
+    if (!document.content) {
+      return {
+        success: false,
+        chunksCreated: 0,
+        error: 'Documento não tem conteúdo',
+      };
+    }
+
+    logger.info('[RAGDocuments] Reindexando documento', {
+      documentId: document.id,
+      tenantId: document.tenantId,
+      title: document.title,
+      contentLength: document.content?.length || 0,
+      currentlyIndexed: document.indexed
+    });
+
+    setIndexState(document, 'indexing');
+    documentsCache.set(document.id, document);
+    if (persistFn) persistFn(document);
+
+    // Remove vetores anteriores antes de reinserir
+    try {
+      if (document.tenantId) {
+        await postgresVectorStore.deleteDocumentVectors({ tenantId: document.tenantId, documentId: document.id });
+      }
+    } catch (e) {
+      logger.warn('[RAGDocuments] Falha ao remover vetores antes do reindex (best-effort)', {
+        tenantId: document.tenantId || null,
+        documentId: document.id,
+        error: e.message,
+      });
+    }
+
+    const indexResult = await ragService.indexDocument(document, document.tenantId);
+    
+    logger.info('[RAGDocuments] Resultado da indexação', {
+      documentId: document.id,
+      success: indexResult.success,
+      chunksCreated: indexResult.chunksCreated,
+      error: indexResult.error,
+      tenantId: document.tenantId
+    });
+    
+    const chunksCreated = indexResult.chunksCreated || 0;
+    if (indexResult.success && chunksCreated > 0) {
+      setIndexState(document, 'indexed', { chunksCount: chunksCreated });
+      if (persistFn) persistFn(document);
+      
+      logger.info('[RAGDocuments] Documento marcado como indexado no BD', {
+        documentId: document.id,
+        chunksCount: document.chunksCount,
+        indexedAt: document.indexedAt
+      });
+    } else {
+      const rawErrMsg = safeToString(indexResult.error || '');
+      const derivedCode = rawErrMsg.includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED';
+      setIndexState(document, 'failed', {
+        errorCode: derivedCode,
+        errorMessage: chunksCreated === 0
+          ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
+          : (indexResult.error || 'Falha ao indexar documento'),
+      });
+      if (persistFn) persistFn(document);
+      logger.error('[RAGDocuments] Falha ao indexar documento', {
+        documentId: document.id,
+        error: indexResult.error,
+        tenantId: document.tenantId
+      });
+    }
+
+    const finalChunks = indexResult.chunksCreated || 0;
+    const finalSuccess = !!indexResult.success && finalChunks > 0;
+    return {
+      success: finalSuccess,
+      chunksCreated: finalChunks,
+      errorCode: finalSuccess ? null : (document.indexErrorCode || (safeToString(indexResult.error || '').includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED')),
+      error: finalSuccess ? null : (indexResult.error || 'Indexação retornou 0 chunks'),
+    };
+  } catch (error) {
+    logger.error('[RAGDocuments] Erro ao reindexar documento:', error);
+    const safeError = safeErrorMessage(error);
+    return {
+      success: false,
+      chunksCreated: 0,
+      errorCode: safeToString(safeError).includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
+      error: safeError,
+    };
+  }
+}
+
+/**
+ * Reindexa todos os documentos não indexados (ou inconsistentes).
+ * 
+ * @param {string|null} tenantId - ID do tenant (opcional)
+ * @param {boolean} includeInconsistent - Incluir documentos indexados para sincronização
+ * @param {Map} documentsCache - Cache de documentos
+ * @param {Function} persistFn - Função para persistir documento (best-effort)
+ * @param {Function} reindexDocFn - Função de reindex individual
+ * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
+ */
+async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false, documentsCache, persistFn, reindexDocFn) {
+  try {
+    let docs = Array.from(documentsCache.values());
+    
+    // Filtra por tenant se fornecido
+    if (tenantId) {
+      docs = docs.filter(doc => doc.tenantId === tenantId);
+    }
+    
+    // Filtra documentos não indexados
+    let notIndexedDocs = docs.filter(doc => !doc.indexed && doc.status === 'active' && doc.content);
+    
+    // Se includeInconsistent for true, também inclui documentos marcados como indexados
+    if (includeInconsistent) {
+      const indexedDocs = docs.filter(doc => doc.indexed && doc.status === 'active' && doc.content);
+      notIndexedDocs = [...notIndexedDocs, ...indexedDocs];
+    }
+    
+    if (notIndexedDocs.length === 0) {
+      return {
+        success: true,
+        total: 0,
+        indexed: 0,
+        failed: 0,
+        errors: [],
+      };
+    }
+    
+    let indexed = 0;
+    let failed = 0;
+    const errors = [];
+    
+    logger.info(`[RAGDocuments] Iniciando reindexação em lote de ${notIndexedDocs.length} documentos`);
+    
+    // Verifica se o serviço RAG está disponível antes de começar
+    const isAvailable = await ragService.isRagAvailable(tenantId);
+    if (!isAvailable) {
+      const serviceUrl = ragService.getRagServiceUrl(tenantId);
+      logger.error('[RAGDocuments] Serviço RAG não está disponível', { tenantId, serviceUrl });
+      return {
+        success: false,
+        total: notIndexedDocs.length,
+        indexed: 0,
+        failed: notIndexedDocs.length,
+        errors: [{
+          documentId: 'all',
+          title: 'Serviço RAG indisponível',
+          error: `O serviço RAG não está respondendo. Verifique se está rodando em ${serviceUrl}`,
+        }],
+      };
+    }
+    
+    // Verifica vector store antes de começar
+    try {
+      const serviceUrl = ragService.getRagServiceUrl(tenantId);
+      const healthUrlBefore = tenantId 
+        ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
+        : `${serviceUrl}/rag/health`;
+      let fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
+      const beforeResponse = await fetchFn(healthUrlBefore, { method: 'GET' });
+      if (beforeResponse.ok) {
+        const beforeData = await beforeResponse.json();
+        logger.info('[RAGDocuments] Vector store ANTES da reindexação', {
+          tenantId,
+          indexedDocuments: beforeData.indexedDocuments,
+          indexedChunks: beforeData.indexedChunks,
+          vectorStore: beforeData.vectorStore,
+          embeddingModel: beforeData.embeddingModel
+        });
+      }
+    } catch (beforeErr) {
+      logger.warn('[RAGDocuments] Não foi possível verificar vector store antes da reindexação', {
+        error: beforeErr.message,
+        tenantId
+      });
+    }
+    
+    // Reindexa cada documento
+    for (let i = 0; i < notIndexedDocs.length; i++) {
+      const doc = notIndexedDocs[i];
+      logger.info(`[RAGDocuments] Processando documento ${i + 1}/${notIndexedDocs.length}`, {
+        documentId: doc.id,
+        title: doc.title,
+        tenantId: doc.tenantId
+      });
+      
+      try {
+        const result = await reindexDocFn(doc.id);
+        if (result.success) {
+          indexed++;
+          logger.info(`[RAGDocuments] Documento ${doc.id} reindexado com sucesso`, {
+            documentId: doc.id,
+            chunksCreated: result.chunksCreated,
+            indexed: indexed,
+            total: notIndexedDocs.length
+          });
+        } else {
+          failed++;
+          errors.push({
+            documentId: doc.id,
+            title: doc.title,
+            error: result.error || 'Erro desconhecido',
+          });
+          logger.error(`[RAGDocuments] Falha ao reindexar documento ${doc.id}`, {
+            documentId: doc.id,
+            error: result.error,
+            indexed: indexed,
+            failed: failed
+          });
+        }
+      } catch (error) {
+        failed++;
+        errors.push({
+          documentId: doc.id,
+          title: doc.title,
+          error: safeErrorMessage(error, 'Erro desconhecido'),
+        });
+        logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}`, {
+          documentId: doc.id,
+          error: safeErrorMessage(error),
+          stack: error.stack,
+          indexed: indexed,
+          failed: failed
+        });
+      }
+    }
+    
+    logger.info(`[RAGDocuments] Reindexação em lote concluída: ${indexed} indexados, ${failed} falharam`);
+    
+    return {
+      success: true,
+      total: notIndexedDocs.length,
+      indexed,
+      failed,
+      errors,
+    };
+  } catch (error) {
+    logger.error('[RAGDocuments] Erro geral em reindexAllNotIndexed', error);
+    return {
+      success: false,
+      total: 0,
+      indexed: 0,
+      failed: 0,
+      errors: [{ error: safeErrorMessage(error) }],
+    };
+  }
+}
+
+/**
+ * Reindex completo de um tenant (single source of truth = Postgres):
+ * 1) marca todos docs como pending
+ * 2) apaga todos os rag_chunks do tenant
+ * 3) reprocessa indexação
+ * 
+ * @param {string} tenantId - ID do tenant (obrigatório)
+ * @param {Map} documentsCache - Cache de documentos
+ * @param {Function} persistFn - Função para persistir documento
+ * @param {Function} reindexAllFn - Função de reindex em lote
+ * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
+ */
+async function reindexAllTenant(tenantId, documentsCache, persistFn, reindexAllFn) {
+  const finalTenantId = tenantId || null;
+  if (!finalTenantId) {
+    return { success: false, total: 0, indexed: 0, failed: 0, errors: [{ error: 'tenantId é obrigatório' }] };
+  }
+
+  // Marca todos como pending (cache + best-effort persist)
+  for (const doc of documentsCache.values()) {
+    if (doc.tenantId !== finalTenantId) continue;
+    setIndexState(doc, 'pending');
+    documentsCache.set(doc.id, doc);
+    if (persistFn) persistFn(doc);
+  }
+
+  // Apaga vetores do tenant (fonte única)
+  await postgresVectorStore.deleteTenantVectors(finalTenantId);
+
+  // Reindexa tudo (agora todos estão !indexed)
+  return await reindexAllFn(finalTenantId, true);
+}
+
+module.exports = {
+  reindexDocument,
+  reindexAllNotIndexed,
+  reindexAllTenant,
+};

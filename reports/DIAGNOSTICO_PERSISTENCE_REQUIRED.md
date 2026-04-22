@@ -139,7 +139,7 @@ Se servidor retornar 503 persistentemente:
 
 ```bash
 # Verificar logs do servidor
-tail -f ~/.pm2/logs/api-error.log
+docker compose logs -f api
 
 # Testar conexão manualmente
 node -e "

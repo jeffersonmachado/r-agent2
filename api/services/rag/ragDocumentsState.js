@@ -1,0 +1,91 @@
+function toDbPayload(doc) {
+  return {
+    id: doc.id,
+    tenant_key: doc.tenantId || null,
+    title: doc.title || null,
+    content: doc.content || null,
+    metadata: doc.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
+    permissions: doc.permissions && typeof doc.permissions === 'object' ? doc.permissions : {},
+    status: doc.status || 'active',
+    indexed: !!doc.indexed,
+    indexed_at: doc.indexedAt ? new Date(doc.indexedAt) : null,
+    chunks_count: Number.isFinite(doc.chunksCount) ? doc.chunksCount : 0,
+    index_status: doc.indexStatus || (doc.indexed ? 'indexed' : 'pending'),
+    index_error_code: doc.indexErrorCode || null,
+    index_error_message: doc.indexErrorMessage || null,
+    last_index_attempt_at: doc.lastIndexAttemptAt ? new Date(doc.lastIndexAttemptAt) : null,
+    inconsistent: !!doc.inconsistent,
+    inconsistent_reason: doc.inconsistentReason || null,
+  };
+}
+
+function fromDbRow(row) {
+  const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+  return {
+    id: base.id,
+    tenantId: base.tenant_key || null,
+    title: base.title || 'Sem título',
+    content: base.content || '',
+    metadata: base.metadata || {},
+    permissions: base.permissions || {},
+    status: base.status || 'active',
+    indexed: !!base.indexed,
+    indexedAt: base.indexed_at ? new Date(base.indexed_at).toISOString() : null,
+    chunksCount: Number.isFinite(base.chunks_count) ? base.chunks_count : 0,
+    indexStatus: base.index_status || (base.indexed ? 'indexed' : 'pending'),
+    indexErrorCode: base.index_error_code || null,
+    indexErrorMessage: base.index_error_message || null,
+    lastIndexAttemptAt: base.last_index_attempt_at ? new Date(base.last_index_attempt_at).toISOString() : null,
+    inconsistent: !!base.inconsistent,
+    inconsistentReason: base.inconsistent_reason || null,
+  };
+}
+
+function setIndexState(doc, state, opts = {}) {
+  const nowIso = new Date().toISOString();
+  doc.indexStatus = state;
+  doc.lastIndexAttemptAt = opts.lastIndexAttemptAt || nowIso;
+
+  if (state === 'pending') {
+    doc.indexed = false;
+    doc.indexedAt = null;
+    doc.chunksCount = 0;
+    doc.indexErrorCode = null;
+    doc.indexErrorMessage = null;
+    doc.inconsistent = false;
+    doc.inconsistentReason = null;
+    return;
+  }
+
+  if (state === 'indexed') {
+    doc.indexed = true;
+    doc.indexedAt = opts.indexedAt || nowIso;
+    doc.chunksCount = Number.isFinite(opts.chunksCount) ? opts.chunksCount : (doc.chunksCount || 0);
+    doc.indexErrorCode = null;
+    doc.indexErrorMessage = null;
+    doc.inconsistent = false;
+    doc.inconsistentReason = null;
+    return;
+  }
+
+  if (state === 'indexing') {
+    // Nao altera indexed aqui; so marca indexed apos confirmacao (chunks > 0)
+    doc.indexErrorCode = null;
+    doc.indexErrorMessage = null;
+    return;
+  }
+
+  if (state === 'failed') {
+    doc.indexed = false;
+    doc.indexedAt = null;
+    doc.chunksCount = 0;
+    doc.indexErrorCode = opts.errorCode || 'RAG_INDEX_FAILED';
+    doc.indexErrorMessage = opts.errorMessage || 'Falha ao indexar no vector store';
+  }
+}
+
+module.exports = {
+  toDbPayload,
+  fromDbRow,
+  setIndexState,
+};

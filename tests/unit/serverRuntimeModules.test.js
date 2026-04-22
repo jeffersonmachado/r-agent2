@@ -42,16 +42,16 @@ describe('server runtime modules', () => {
     jest.unmock(ragDocumentsServicePath);
   });
 
-  test('detectProcessManager detects PM2 via environment', () => {
+  test('detectProcessManager returns none when no manager is detected', () => {
     const result = detectProcessManager({
-      env: { PM2_HOME: '/tmp/pm2' },
+      env: {},
       argv: ['node', 'api/server.js'],
       ppid: 0,
       platform: 'linux',
     });
 
-    expect(result.name).toBe('PM2');
-    expect(result.hasProcessManager).toBe(true);
+    expect(result.name).toBe('none');
+    expect(result.hasProcessManager).toBe(false);
   });
 
   test('detectProcessManager detects nodemon via argv', () => {

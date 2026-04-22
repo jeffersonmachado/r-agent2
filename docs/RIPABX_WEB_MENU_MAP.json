@@ -266,12 +266,6 @@
       "source": "menu.php"
     },
     {
-      "label": "Processos",
-      "href": "/pm2",
-      "perm": "C",
-      "source": "menu.php"
-    },
-    {
       "label": "Fila",
       "href": "app/fila.html",
       "perm": "C",
@@ -1545,23 +1539,6 @@
         "servicos.js",
         "servicos.js"
       ],
-      "endpoints": {
-        "xmlViews": [],
-        "serverProgs": [],
-        "server2Progs": [],
-        "mysqlProgs": [],
-        "ura": {
-          "load": false,
-          "save": false
-        }
-      }
-    },
-    {
-      "label": "Processos",
-      "href": "/pm2",
-      "permission": "C",
-      "resolvedFile": null,
-      "jsFiles": [],
       "endpoints": {
         "xmlViews": [],
         "serverProgs": [],

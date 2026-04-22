@@ -40,11 +40,35 @@ git clone <repo> r-agent2
 cd r-agent2
 npm ci
 npm run system:bootstrap
+npm run system:reproducibility
 npm run system:validate
 npm run system:release
 # dry-run por padrão
 npm run system:deploy
 ```
+
+### Reprodutibilidade de bootstrap/build/smoke
+```bash
+# caminho padrão (usa dependências já instaladas)
+npm run system:reproducibility
+
+# modo clone limpo (inclui install de deps)
+SYSTEM_REPRO_INSTALL_DEPS=1 npm run system:reproducibility
+
+# inclui bootstrap completo (sem probes de serviço)
+SYSTEM_REPRO_RUN_BOOTSTRAP_FULL=1 npm run system:reproducibility
+```
+- Relatório gerado em `qa/reproducibility-report.json` (ou `REPRODUCIBILITY_REPORT_PATH`).
+
+### Hardening de configuração de IA
+```bash
+# valida docs + providers suportados + config.example sem segredos em bloco ai
+npm run system:ai-hardening
+
+# modo estrito (exige ENCRYPTION_KEY válida)
+AI_HARDENING_REQUIRE_ENCRYPTION_KEY=1 npm run system:ai-hardening
+```
+- Relatório gerado em `qa/ai-hardening-report.json` (ou `AI_HARDENING_REPORT_PATH`).
 
 ### Contratos operacionais
 - Trilha oficial detalhada: docs/official-path.md
