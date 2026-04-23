@@ -61,6 +61,7 @@ import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { QaWavesPage } from './pages/QaWavesPage';
+import { WorkManagementPage } from './pages/WorkManagementPage';
 import { PbxPage } from './pages/PbxPage';
 import { PbxRoutesPage } from './pages/PbxRoutesPage';
 import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
@@ -320,6 +321,26 @@ function AppWithAuth() {
   useWebSocketAuthGuard();
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !document?.documentElement) {
+      return undefined;
+    }
+
+    const root = document.documentElement;
+    const updateViewportHeight = () => {
+      root.style.setProperty('--rap-viewport-height', `${window.innerHeight}px`);
+    };
+
+    updateViewportHeight();
+    window.addEventListener('resize', updateViewportHeight, { passive: true });
+    window.addEventListener('orientationchange', updateViewportHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('orientationchange', updateViewportHeight);
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
     getFeature('NEW_NAVIGATION', true)
       .then((value) => {
@@ -415,6 +436,7 @@ function AppWithAuth() {
   const isQueuePhysicalDashboard = isRoute('/fila-fisica');
   const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
   const isQaWaves = isRoute('/dev/qa-waves');
+  const isWorkManagement = currentPath === '/dev/work-management' || currentPath.startsWith('/dev/work-management/');
   const isOrders = isRoute('/orders');
   const isKitchen = isRoute('/kitchen');
   const isDispatch = isRoute('/dispatch');
@@ -494,6 +516,7 @@ function AppWithAuth() {
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
+      isWorkManagement,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
       isLogin
     ];
@@ -509,7 +532,7 @@ function AppWithAuth() {
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-        isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
+          isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -627,6 +650,7 @@ function AppWithAuth() {
       '/backup': '🗄️ Backup / DR',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev/qa-waves': '🌊 QA Waves Integrado',
+      '/dev/work-management': '🧭 Work Management',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/saas': '🌐 Results SaaS',
       '/saas/products': '🧩 Produtos SaaS',
@@ -678,7 +702,7 @@ function AppWithAuth() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '100vh',
+        minHeight: 'var(--rap-viewport-height, 100vh)',
       }}>
         <p>Carregando...</p>
       </div>
@@ -880,6 +904,8 @@ function AppWithAuth() {
     pageContent = <QueuePhysicalDashboardPage />;
   } else if (isQaWaves) {
     pageContent = <QaWavesPage />;
+  } else if (isWorkManagement) {
+    pageContent = <WorkManagementPage />;
   } else if (isOrders) {
     pageContent = <OrdersPage />;
   } else if (isKitchen) {
@@ -975,7 +1001,7 @@ function AppWithAuth() {
   // Se chegou aqui, está autenticado OU é rota pública
   if (!newNavigationEnabled) {
     return (
-      <div className="support-content-wrapper">
+      <div className="support-content-wrapper rap-legacy-shell">
         <UserMenu tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />
         <TenantGate />
         {pageContent}
@@ -992,9 +1018,7 @@ function AppWithAuth() {
         <AreaHeader
           agent={agent}
           currentPath={currentPath}
-          tenantLabel={subNavTenantLabel}
-          verticalLabels={subNavVerticalLabels}
-          rightSlot={<UserMenu showNavigation={false} tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />}
+          actionsSlot={<UserMenu showNavigation={false} tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />}
         />
         <div className="rap-page">
           <CommandPalette agent={agent} />
