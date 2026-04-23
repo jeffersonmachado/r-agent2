@@ -8,8 +8,10 @@ const WorkManagementUnavailable = () => (
   </section>
 );
 
+const workManagementModulePath = '../../../dev/work-management/App.jsx';
+
 const LazyWorkManagementApp = React.lazy(() =>
-  import(/* @vite-ignore */ '../../../dev/work-management/App.jsx')
+  import(/* @vite-ignore */ workManagementModulePath)
     .then((mod) => ({ default: mod.default }))
     .catch(() => ({ default: WorkManagementUnavailable })),
 );
