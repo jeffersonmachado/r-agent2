@@ -43,9 +43,15 @@ export function useSupportTicketListViewModel({
 
   const getContactName = useCallback((ticket) => (
     ticket?.contactName
+      || ticket?.customerName
       || ticket?.contact?.name
       || ticket?.context?.contactName
+      || ticket?.context?.metadata?.contactName
+      || ticket?.context?.metadata?.name
       || ticket?.context?.contact?.name
+      || ticket?.context?.variables?.customerName
+      || ticket?.context?.variables?.name
+      || ticket?.context?.variables?.nome
       || ticket?.phoneNumber
       || 'Sem contato'
   ), []);

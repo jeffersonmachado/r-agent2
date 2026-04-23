@@ -151,6 +151,68 @@ export function useSupportPageController({
     if (loadTicketsRef.current) loadTicketsRef.current();
   }, 500);
 
+  const mergeTicketWithPrevious = useCallback((previousTicket, incomingTicket) => {
+    if (!previousTicket) return incomingTicket;
+    if (!incomingTicket) return previousTicket;
+
+    const merged = {
+      ...previousTicket,
+      ...incomingTicket,
+      context: {
+        ...(previousTicket.context || {}),
+        ...(incomingTicket.context || {}),
+        metadata: {
+          ...(previousTicket.context?.metadata || {}),
+          ...(incomingTicket.context?.metadata || {}),
+        },
+        variables: {
+          ...(previousTicket.context?.variables || {}),
+          ...(incomingTicket.context?.variables || {}),
+        },
+      },
+      contact: {
+        ...(previousTicket.contact || {}),
+        ...(incomingTicket.contact || {}),
+      },
+    };
+
+    const resolvedPhone =
+      incomingTicket.phoneNumber
+      || incomingTicket.phone
+      || incomingTicket.contactPhone
+      || previousTicket.phoneNumber
+      || previousTicket.phone
+      || previousTicket.contactPhone
+      || previousTicket.context?.metadata?.phoneNumber
+      || previousTicket.context?.metadata?.phone
+      || null;
+
+    const resolvedName =
+      incomingTicket.contactName
+      || incomingTicket.customerName
+      || incomingTicket.contact?.name
+      || incomingTicket.context?.metadata?.contactName
+      || incomingTicket.context?.metadata?.name
+      || incomingTicket.context?.variables?.customerName
+      || incomingTicket.context?.variables?.name
+      || incomingTicket.context?.variables?.nome
+      || previousTicket.contactName
+      || previousTicket.customerName
+      || previousTicket.contact?.name
+      || previousTicket.context?.metadata?.contactName
+      || previousTicket.context?.metadata?.name
+      || previousTicket.context?.variables?.customerName
+      || previousTicket.context?.variables?.name
+      || previousTicket.context?.variables?.nome
+      || null;
+
+    return {
+      ...merged,
+      phoneNumber: resolvedPhone,
+      contactName: resolvedName,
+    };
+  }, []);
+
   const updateTicketInList = useCallback((ticket) => {
     if (!ticket) return;
 
@@ -163,7 +225,7 @@ export function useSupportPageController({
 
       if (existingIndex >= 0) {
         if (shouldShow) {
-          newTickets[existingIndex] = ticket;
+          newTickets[existingIndex] = mergeTicketWithPrevious(newTickets[existingIndex], ticket);
         } else {
           newTickets.splice(existingIndex, 1);
         }
@@ -176,10 +238,10 @@ export function useSupportPageController({
     });
 
     setSelectedTicket((prevSelected) => {
-      if (prevSelected?.id === ticket.id) return ticket;
+      if (prevSelected?.id === ticket.id) return mergeTicketWithPrevious(prevSelected, ticket);
       return prevSelected;
     });
-  }, [agent?.id, agent?.username]);
+  }, [agent?.id, agent?.username, mergeTicketWithPrevious]);
 
   const handleWebSocketEvent = useCallback((event, data) => {
     logger.debug('[SupportPage] Evento WebSocket recebido', event, data);

@@ -275,8 +275,17 @@ function PublicWebchat() {
           </div>
         </div>
       ) : null}
-      <button type="button" className="saas-webchat-trigger" onClick={() => setOpen((prev) => !prev)}>
-        Webchat
+      <button
+        type="button"
+        className="saas-webchat-trigger"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Abrir webchat"
+        title="Webchat"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v7A2.5 2.5 0 0117.5 16H10l-4.2 3V16H6.5A2.5 2.5 0 014 13.5v-7z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 9.5h8M8 12.5h5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
       </button>
     </div>
   );

@@ -105,7 +105,16 @@ export function SupportPage() {
             uiSearchDebounced={state.uiSearchDebounced}
             highlightText={actions.highlightText}
             getContactName={actions.getContactName}
-            getPhoneNode={(ticket) => <MaskedPhone phone={ticket?.phoneNumber} mask={state.phoneMaskingEnabled} />}
+            getPhoneNode={(ticket) => {
+              const resolvedPhone = ticket?.phoneNumber
+                || ticket?.phone
+                || ticket?.contactPhone
+                || ticket?.context?.metadata?.phoneNumber
+                || ticket?.context?.metadata?.phone
+                || ticket?.context?.variables?.phoneNumber
+                || ticket?.context?.variables?.phone;
+              return <MaskedPhone phone={resolvedPhone} mask={state.phoneMaskingEnabled} />;
+            }}
             formatTicketMode={actions.formatTicketMode}
             getStatusClass={actions.getStatusClass}
             formatTicketStatus={actions.formatTicketStatus}
