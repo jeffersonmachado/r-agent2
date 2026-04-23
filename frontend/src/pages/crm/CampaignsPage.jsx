@@ -12,9 +12,9 @@ export function CampaignsPage() {
     return map[status] || status;
   };
   const [campaigns] = useState([
-    { id: 1, name: 'Q1 Outreach', status: 'active', leads: 45, converted: 12 },
-    { id: 2, name: 'Product Launch', status: 'scheduled', leads: 0, converted: 0 },
-    { id: 3, name: 'Reactivation', status: 'completed', leads: 89, converted: 23 },
+    { id: 1, name: 'Prospeccao T1', status: 'active', leads: 45, converted: 12 },
+    { id: 2, name: 'Lancamento de Produto', status: 'scheduled', leads: 0, converted: 0 },
+    { id: 3, name: 'Reativacao', status: 'completed', leads: 89, converted: 23 },
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 

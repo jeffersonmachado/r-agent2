@@ -29,14 +29,14 @@ export const navigationMenu = [
         children: [
           {
             id: 'support',
-            label: 'Workspace',
+            label: 'Central de Atendimento',
             path: '/support',
             permission: { resource: 'tickets', action: 'read' },
             keywords: ['tickets', 'conversas', 'workspace'],
           },
           {
             id: 'inbox',
-            label: 'Inbox',
+            label: 'Caixa de Entrada',
             path: '/inbox',
             permission: { resource: 'tickets', action: 'read' },
           },
@@ -74,7 +74,7 @@ export const navigationMenu = [
         children: [
           {
             id: 'crm-dashboard',
-            label: 'Dashboard CRM',
+            label: 'Painel CRM',
             path: '/crm',
             permission: { resource: 'crm', action: 'read' },
           },
@@ -84,10 +84,10 @@ export const navigationMenu = [
           { id: 'crm-pipelines', label: 'Pipelines', path: '/crm/pipelines', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-opportunities', label: 'Oportunidades', path: '/crm/opportunities', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-activities', label: 'Atividades', path: '/crm/activities', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
-          { id: 'crm-analytics', label: 'Analytics CRM', path: '/crm/analytics', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
+          { id: 'crm-analytics', label: 'Analises CRM', path: '/crm/analytics', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-reports', label: 'Relatorios CRM', path: '/crm/reports', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-campaigns', label: 'Campanhas CRM', path: '/crm/campaigns', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
-          { id: 'crm-webhooks', label: 'Webhooks CRM', path: '/crm/webhooks', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
+          { id: 'crm-webhooks', label: 'Webhooks do CRM', path: '/crm/webhooks', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-rbac', label: 'RBAC CRM', path: '/crm/rbac', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-audit', label: 'Auditoria CRM', path: '/crm/audit', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
         ],
@@ -138,9 +138,9 @@ export const navigationMenu = [
           { id: 'channel-health', label: 'Saude de Canais', path: '/channel-health', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           { id: 'system-status', label: 'Status do Sistema', path: '/system-status', permission: { resource: 'config', action: 'read' } },
           { id: 'plan-usage', label: 'Plano e Uso', path: '/plan-usage', permission: { resource: 'config', action: 'read' }, roles: ['admin', 'owner', 'super_admin'] },
-          { id: 'orders', label: 'Orders', path: '/orders', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
-          { id: 'kitchen', label: 'Kitchen', path: '/kitchen', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
-          { id: 'dispatch', label: 'Dispatch', path: '/dispatch', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
+          { id: 'orders', label: 'Pedidos', path: '/orders', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
+          { id: 'kitchen', label: 'Cozinha', path: '/kitchen', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
+          { id: 'dispatch', label: 'Despacho', path: '/dispatch', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
         ],
       },
       {
@@ -176,12 +176,12 @@ export const navigationMenu = [
     children: [
       {
         id: 'design',
-        label: 'Design',
+        label: 'Modelagem',
         children: [
           { id: 'editor', label: 'Editor de Fluxos', path: '/editor', permission: { resource: 'flows', action: 'read' }, roles: ['supervisor', 'admin', 'super_admin'] },
           { id: 'bpmn-editor', label: 'Editor BPMN', path: '/bpmn-editor', permission: { resource: 'flows', action: 'read' }, roles: ['supervisor', 'admin', 'super_admin'] },
-          { id: 'node-marketplace', label: 'Node Marketplace', path: '/node-marketplace', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
-          { id: 'solutions', label: 'Solutions Packs', path: '/solutions', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          { id: 'node-marketplace', label: 'Mercado de Nodes', path: '/node-marketplace', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          { id: 'solutions', label: 'Pacotes de Solucao', path: '/solutions', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
         ],
       },
       {
@@ -191,10 +191,10 @@ export const navigationMenu = [
           { id: 'automations', label: 'Automacoes', path: '/automations', permission: { resource: 'config', action: 'update' }, roles: ['admin', 'owner', 'manager', 'supervisor', 'super_admin'] },
           { id: 'projects', label: 'Projetos', path: '/projects', permission: { resource: 'projects', action: 'read' }, roles: ['operator', 'manager', 'admin', 'owner', 'supervisor', 'super_admin'] },
           { id: 'tasks', label: 'Tarefas', path: '/tasks', permission: { resource: 'config', action: 'update' }, roles: ['admin', 'owner', 'manager', 'supervisor', 'super_admin'] },
-          { id: 'generate-system', label: 'Generate System', path: '/generate-system', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },
-          { id: 'rpa-test', label: 'RPA Test', path: '/rpa-test', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
-          { id: 'rpa-replays', label: 'RPA Replays', path: '/rpa-replays', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
-          { id: 'rpa-seeds', label: 'RPA Seeds', path: '/rpa-seeds', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
+          { id: 'generate-system', label: 'Gerar Sistema', path: '/generate-system', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },
+          { id: 'rpa-test', label: 'Teste RPA', path: '/rpa-test', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
+          { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
+          { id: 'rpa-seeds', label: 'Seeds RPA', path: '/rpa-seeds', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
           { id: 'chat', label: 'Chat de Teste', path: '/chat', permission: { resource: 'tickets', action: 'read' }, hiddenInSidebar: true },
         ],
       },
@@ -219,16 +219,16 @@ export const navigationMenu = [
         id: 'conhecimento',
         label: 'Conhecimento',
         children: [
-          { id: 'faq', label: 'FAQ', path: '/faq', permission: { resource: 'rag', action: 'update' } },
+          { id: 'faq', label: 'Perguntas Frequentes', path: '/faq', permission: { resource: 'rag', action: 'update' } },
           { id: 'knowledge-base', label: 'Base de Conhecimento', path: '/knowledge-base', permission: { resource: 'rag', action: 'read' } },
-          { id: 'product-docs', label: 'Documentacao de Produtos', path: '/product-docs', permission: { resource: 'rag', action: 'read' } },
+          { id: 'product-docs', label: 'Documentacao de Produto', path: '/product-docs', permission: { resource: 'rag', action: 'read' } },
           { id: 'rag-documents', label: 'Documentos RAG', path: '/rag-documents', permission: { resource: 'rag', action: 'read' } },
           { id: 'web-scraping', label: 'Raspagem de Sites', path: '/web-scraping', permission: { resource: 'rag', action: 'create' } },
         ],
       },
       {
         id: 'governed-insights',
-        label: 'Insights Governados',
+        label: 'Analises Governadas',
         roles: ['admin', 'owner', 'super_admin'],
         children: [
           { id: 'export', label: 'Exportacao', path: '/export', permission: { resource: 'reports', action: 'export' }, roles: ['supervisor', 'admin', 'super_admin'] },
@@ -280,7 +280,7 @@ export const navigationMenu = [
         label: 'Governanca',
         roles: ['admin', 'owner', 'super_admin'],
         children: [
-          { id: 'access-control', label: 'Access Control', path: '/access-control', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          { id: 'access-control', label: 'Controle de Acesso', path: '/access-control', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           { id: 'rbac', label: 'RBAC', path: '/rbac', permission: { resource: 'agents', action: 'update' }, roles: ['admin', 'owner', 'super_admin'] },
           { id: 'audit', label: 'Auditoria', path: '/audit', permission: { resource: 'audit', action: 'read' } },
           { id: 'sso-scim', label: 'SSO / SCIM', path: '/sso-scim', permission: { resource: 'config', action: 'read' }, roles: ['admin', 'owner', 'super_admin'] },
@@ -303,7 +303,7 @@ export const navigationMenu = [
         roles: ['super_admin'],
         children: [
           { id: 'super-admin-page', label: 'Super Admin', path: '/super-admin', roles: ['super_admin'] },
-          { id: 'dev', label: 'Dev Center', path: '/dev', roles: ['super_admin'] },
+          { id: 'dev', label: 'Central Dev', path: '/dev', roles: ['super_admin'] },
           { id: 'dev-qa-waves', label: 'QA Waves', path: '/dev/qa-waves', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
         ],
       },
@@ -314,11 +314,11 @@ export const navigationMenu = [
 export const verticalWorkspaces = {
   beauty: {
     id: 'beauty',
-    label: 'Beauty',
+    label: 'Beleza',
     color: '#ec4899',
     description: 'Agenda, relacionamento e receita da vertical Beauty.',
     items: [
-      { id: 'vertical-dashboard-beauty', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-beauty', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
       { id: 'beauty-schedule', label: 'Agenda', path: '/beauty/schedule', permission: { resource: 'reports', action: 'read' } },
       { id: 'beauty-campaigns', label: 'Campanhas', path: '/beauty/campaigns', permission: { resource: 'reports', action: 'read' } },
       { id: 'beauty-leads', label: 'Leads', path: '/beauty/leads', permission: { resource: 'reports', action: 'read' } },
@@ -334,7 +334,7 @@ export const verticalWorkspaces = {
     color: '#10b981',
     description: 'Adesao, frequencia e retencao da vertical Fitness.',
     items: [
-      { id: 'vertical-dashboard-fitness', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-fitness', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
       { id: 'fitness-students', label: 'Alunos', path: '/fitness/students', permission: { resource: 'reports', action: 'read' } },
       { id: 'fitness-memberships', label: 'Memberships', path: '/fitness/memberships', permission: { resource: 'reports', action: 'read' } },
       { id: 'fitness-attendance', label: 'Presenca', path: '/fitness/attendance', permission: { resource: 'reports', action: 'read' } },
@@ -342,11 +342,11 @@ export const verticalWorkspaces = {
   },
   ecommerce: {
     id: 'ecommerce',
-    label: 'E-commerce',
+    label: 'Comercio Eletronico',
     color: '#f97316',
     description: 'Catalogo, pedidos e relacionamento para operacoes de e-commerce.',
     items: [
-      { id: 'vertical-dashboard-ecommerce', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-ecommerce', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   varejo: {
@@ -355,7 +355,7 @@ export const verticalWorkspaces = {
     color: '#ef4444',
     description: 'Operacao comercial e atendimento para varejo omnichannel.',
     items: [
-      { id: 'vertical-dashboard-varejo', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-varejo', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   servicos: {
@@ -364,7 +364,7 @@ export const verticalWorkspaces = {
     color: '#3b82f6',
     description: 'Agenda, execucao e handover para operacoes baseadas em servicos.',
     items: [
-      { id: 'vertical-dashboard-servicos', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-servicos', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   saude: {
@@ -373,7 +373,7 @@ export const verticalWorkspaces = {
     color: '#14b8a6',
     description: 'Triagem, agenda e relacionamento para a vertical de saude.',
     items: [
-      { id: 'vertical-dashboard-saude', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-saude', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   educacao: {
@@ -382,7 +382,7 @@ export const verticalWorkspaces = {
     color: '#8b5cf6',
     description: 'Onboarding, jornada e retencao para operacoes de educacao.',
     items: [
-      { id: 'vertical-dashboard-educacao', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-educacao', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   financeiro: {
@@ -391,7 +391,7 @@ export const verticalWorkspaces = {
     color: '#eab308',
     description: 'Cobranca, recuperacao e relacionamento para servicos financeiros.',
     items: [
-      { id: 'vertical-dashboard-financeiro', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-financeiro', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
   cobranca: {
@@ -400,7 +400,7 @@ export const verticalWorkspaces = {
     color: '#f59e0b',
     description: 'Negociacao e recuperacao para operacoes de cobranca.',
     items: [
-      { id: 'vertical-dashboard-cobranca', label: 'Cockpit Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+      { id: 'vertical-dashboard-cobranca', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
 };

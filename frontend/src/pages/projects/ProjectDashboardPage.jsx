@@ -27,7 +27,7 @@ export function ProjectDashboardPage() {
         setProject(projectResponse?.project || null);
         setDashboard(dashboardResponse?.dashboard || null);
       } catch (error) {
-        showToast('Erro ao carregar dashboard do projeto', 'error');
+          showToast('Erro ao carregar painel do projeto', 'error');
       }
     }
     load();
@@ -40,10 +40,10 @@ export function ProjectDashboardPage() {
     <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
-        <h1>{project?.name || 'Dashboard do Projeto'}</h1>
+        <h1>{project?.name || 'Painel do Projeto'}</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Board</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Timeline</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Quadro</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Linha do Tempo</button>
         </div>
       </div>
 

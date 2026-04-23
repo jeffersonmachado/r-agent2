@@ -17,9 +17,9 @@ export function SubNav({ agent, currentPath, rightSlot = null, tenantLabel = '',
     .filter((item) => item.path && !item.hiddenInSubNav && !item.hiddenInSidebar);
   const breadcrumb = trail.filter((node) => node.label);
   const metaItems = [
-    tenantLabel ? `Tenant: ${tenantLabel}` : '',
+    tenantLabel ? `Conta: ${tenantLabel}` : '',
     Array.isArray(verticalLabels) && verticalLabels.length > 0
-      ? `Vertical${verticalLabels.length > 1 ? 's' : ''}: ${verticalLabels.join(', ')}`
+      ? `Vertical${verticalLabels.length > 1 ? 'is' : ''}: ${verticalLabels.join(', ')}`
       : '',
   ].filter(Boolean);
 

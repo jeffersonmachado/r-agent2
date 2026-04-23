@@ -43,16 +43,16 @@ export function ProjectTimelinePage() {
     <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
-        <h1>{project?.name || 'Timeline do Projeto'}</h1>
+        <h1>{project?.name || 'Linha do Tempo do Projeto'}</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Board</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Dashboard</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Quadro</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Painel</button>
         </div>
       </div>
 
       <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-5 shadow-lg">
-          <div className="text-lg font-semibold text-text-primary mb-4">Milestones</div>
+          <div className="text-lg font-semibold text-text-primary mb-4">Marcos</div>
           <div className="space-y-3">
             {(timeline.milestones || []).map((milestone) => (
               <div key={milestone.id} className="rounded-xl border border-border-default bg-bg-secondary p-4">
@@ -61,7 +61,7 @@ export function ProjectTimelinePage() {
                 <div className="text-sm text-text-secondary">{formatDate(milestone.due_date)}</div>
               </div>
             ))}
-            {(timeline.milestones || []).length === 0 ? <div className="text-sm text-text-secondary">Nenhum milestone registrado.</div> : null}
+            {(timeline.milestones || []).length === 0 ? <div className="text-sm text-text-secondary">Nenhum marco registrado.</div> : null}
           </div>
         </div>
 

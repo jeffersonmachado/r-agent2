@@ -52,7 +52,7 @@ export function CommandPalette({ agent }) {
       <div className="rap-command-dialog" onClick={(event) => event.stopPropagation()}>
         <div className="rap-command-header">
           <div>
-            <strong>Command Palette</strong>
+            <strong>Paleta de Comandos</strong>
             <p>Ctrl/Cmd + K para abrir atalhos de navegacao</p>
           </div>
           <button type="button" className="rap-command-close" onClick={() => setOpen(false)}>

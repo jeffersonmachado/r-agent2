@@ -90,7 +90,7 @@ export function OpportunitiesPage() {
       if (response.opportunity) {
         await loadData();
         setIsModalOpen(false);
-        showToast('Opportunity salva com sucesso!', 'success');
+        showToast('Oportunidade salva com sucesso!', 'success');
       }
     } catch (err) {
       showToast(`Erro ao salvar: ${err.message}`, 'error');
@@ -101,7 +101,7 @@ export function OpportunitiesPage() {
     try {
       await moveOpportunityStage(opportunityId, toStageId);
       await loadData();
-      showToast('Opportunity movida com sucesso!', 'success');
+      showToast('Oportunidade movida com sucesso!', 'success');
     } catch (err) {
       showToast(`Erro ao mover: ${err.message}`, 'error');
     }
@@ -111,7 +111,7 @@ export function OpportunitiesPage() {
     try {
       await deleteOpportunity(id);
       await loadData();
-      showToast('Opportunity deletada com sucesso!', 'success');
+      showToast('Oportunidade excluida com sucesso!', 'success');
     } catch (err) {
       showToast(`Erro ao deletar: ${err.message}`, 'error');
     }
@@ -132,7 +132,7 @@ export function OpportunitiesPage() {
     <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>💼 Opportunities</h1>
+          <h1>💼 Oportunidades</h1>
         </div>
         <div className="support-controls">
           <button
@@ -168,7 +168,7 @@ export function OpportunitiesPage() {
             Tabela
           </button>
           <CrmButton onClick={handleOpenModal} variant="primary">
-            ➕ Nova Opportunity
+            ➕ Nova Oportunidade
           </CrmButton>
         </div>
       </div>
@@ -182,7 +182,7 @@ export function OpportunitiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block mb-2 text-sm font-medium text-text-primary">
-              Buscar Opportunity
+              Buscar Oportunidade
             </label>
             <input
               type="text"
@@ -302,7 +302,7 @@ export function OpportunitiesPage() {
             <thead style={{ backgroundColor: 'var(--color-bg-hover)', borderBottom: '1px solid var(--color-border-default)' }}>
               <tr>
                 <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Título</th>
-                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Stage</th>
+                <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Etapa</th>
                 <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Valor</th>
                 <th className="px-4 py-2 text-left" style={{ color: 'var(--color-text-primary)' }}>Probabilidade</th>
                 <th className="px-4 py-2 text-center" style={{ color: 'var(--color-text-primary)' }}>Ações</th>
@@ -336,12 +336,12 @@ export function OpportunitiesPage() {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('Deseja deletar esta opportunity?')) {
+                          if (confirm('Deseja excluir esta oportunidade?')) {
                             handleDelete(opp.id);
                           }
                         }}
                         className="text-status-error hover:opacity-80 transition-opacity"
-                        title="Deletar"
+                        title="Excluir"
                       >
                         🗑️
                       </button>
@@ -357,7 +357,7 @@ export function OpportunitiesPage() {
       <CrmModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Nova Opportunity"
+        title="Nova Oportunidade"
         size="lg"
       >
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>
@@ -383,7 +383,7 @@ export function OpportunitiesPage() {
             required
           />
           <CrmSelect
-            label="Stage"
+            label="Etapa"
             value={formData.stageId}
             onChange={(v) => setFormData({ ...formData, stageId: v })}
             options={
@@ -434,7 +434,7 @@ export function OpportunitiesPage() {
           contactId={scheduleOpportunity.contact_id || ''}
           defaultPurpose="follow-up comercial"
           defaultChannel="internal"
-          title={`Agendar opportunity: ${scheduleOpportunity.title || scheduleOpportunity.id}`}
+          title={`Agendar oportunidade: ${scheduleOpportunity.title || scheduleOpportunity.id}`}
           onCreated={() => showToast('Agendamento criado', 'success')}
         />
       ) : null}

@@ -104,7 +104,7 @@ export function BeautyLeadsPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Beauty Leads</h1>
+        <h1>Leads de Beleza</h1>
         <p className="text-sm text-text-secondary">Captação, qualificação e conversão operacional de leads da vertical beauty.</p>
       </div>
 

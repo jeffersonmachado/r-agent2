@@ -448,7 +448,7 @@ export function TenantIntelligencePage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <h1>🧠 Tenant Intelligence</h1>
+        <h1>🧠 Inteligencia do Tenant</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
           <Button onClick={handleSnapshotRefresh} disabled={snapshotLoading} style={{ width: 'auto' }}>
             {snapshotLoading ? 'Atualizando snapshots...' : 'Atualizar snapshots'}

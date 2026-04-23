@@ -158,8 +158,8 @@ export function DashboardPage() {
     },
     {
       id: 'inbox',
-      title: 'Inbox',
-      description: 'Inbox unificado com atribuição, transferência e notas',
+      title: 'Caixa de Entrada',
+      description: 'Caixa unificada com atribuição, transferência e notas',
       icon: '📥',
       path: '/inbox',
       color: 'bg-sky-500',
@@ -212,7 +212,7 @@ export function DashboardPage() {
     },
     {
       id: 'solutions',
-      title: 'Solutions Packs',
+      title: 'Pacotes de Solucao',
       description: 'Templates por segmento e checklist operacional',
       icon: '📦',
       path: '/solutions',
@@ -221,8 +221,8 @@ export function DashboardPage() {
     },
     {
       id: 'analytics',
-      title: 'Analytics & Métricas',
-      description: 'Dashboard com KPIs e indicadores',
+      title: 'Analises e Metricas',
+      description: 'Painel com KPIs e indicadores',
       icon: '📊',
       path: '/analytics',
       color: 'bg-red-500',
@@ -285,7 +285,7 @@ export function DashboardPage() {
     },
     {
       id: 'node-marketplace',
-      title: 'Node Marketplace',
+      title: 'Mercado de Nodes',
       description: 'Catálogo interno de nodes',
       icon: '🧩',
       path: '/node-marketplace',

@@ -45,14 +45,14 @@ export function ChatHumanoDashboardPage() {
 
   const features = [
     { id: 'support', title: 'Atendimento', description: 'Operação central de tickets e conversas', icon: '💬', path: '/support', color: 'bg-cyan-500', category: 'Operação' },
-    { id: 'inbox', title: 'Inbox', description: 'Fila unificada com filtros, transferência e notas', icon: '📥', path: '/inbox', color: 'bg-sky-500', category: 'Operação' },
+    { id: 'inbox', title: 'Caixa de Entrada', description: 'Fila unificada com filtros, transferência e notas', icon: '📥', path: '/inbox', color: 'bg-sky-500', category: 'Operação' },
     { id: 'quick-replies', title: 'Respostas Rápidas', description: 'Templates e atalhos operacionais', icon: '⚡', path: '/quick-replies', color: 'bg-emerald-500', category: 'Produtividade' },
     { id: 'faq', title: 'FAQ / RAG', description: 'Base de conhecimento para apoiar atendimento', icon: '📚', path: '/faq', color: 'bg-violet-500', category: 'Conhecimento' },
     { id: 'departments', title: 'Departamentos', description: 'Estrutura de squads e roteamento por equipe', icon: '🏢', path: '/departments', color: 'bg-indigo-500', category: 'Organização' },
     { id: 'whatsapp', title: 'WhatsApp', description: 'Gerencie conexões, IVR e templates do WhatsApp', icon: '🟢', path: '/whatsapp-connections', color: 'bg-green-500', category: 'Omnichannel' },
     { id: 'sla', title: 'SLA', description: 'Políticas de prazo e governança operacional', icon: '⏱️', path: '/sla-policies', color: 'bg-amber-500', category: 'Governança' },
     { id: 'supervisor', title: 'Painel Supervisor', description: 'TME, TMA, abandono e status operacional', icon: '🧭', path: '/supervisor', color: 'bg-teal-500', category: 'Analytics' },
-    { id: 'analytics', title: 'Analytics', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
+    { id: 'analytics', title: 'Analises', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
     { id: 'automations', title: 'Automações', description: 'Regras para ganho de escala e consistência', icon: '🧩', path: '/automations', color: 'bg-fuchsia-500', category: 'Automação' },
     { id: 'audit', title: 'Auditoria', description: 'Rastro de eventos para compliance e suporte', icon: '📋', path: '/audit', color: 'bg-slate-500', category: 'Governança' },
   ];
@@ -65,7 +65,7 @@ export function ChatHumanoDashboardPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <h1>Dashboard Chat Humano</h1>
+        <h1>Painel de Chat Humano</h1>
         <p>Pilar 1: cockpit operacional para atendimento omnichannel.</p>
         <div className="support-controls">
           <button type="button" className="btn-default px-4 py-2 text-sm" onClick={() => window.location.reload()}>
@@ -77,8 +77,8 @@ export function ChatHumanoDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <DashboardKpiCard label="Módulos" value={features.length} subtitle="atalhos do pilar" />
         <DashboardKpiCard label="Categorias" value={categories.length} subtitle="grupos de navegação" />
-        <DashboardKpiCard label="Core" value="Atendimento + Inbox" subtitle="execução diária" />
-        <DashboardKpiCard label="Indicadores" value="Supervisor + Analytics" subtitle="medição e ajuste" />
+        <DashboardKpiCard label="Nucleo" value="Atendimento + Caixa de Entrada" subtitle="execução diária" />
+        <DashboardKpiCard label="Indicadores" value="Supervisor + Analises" subtitle="medição e ajuste" />
         <DashboardKpiCard
           label="Mensagens Falhadas"
           value={failedMessages.failed}

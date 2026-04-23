@@ -38,13 +38,13 @@ export function FitnessAttendancePage() {
 
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
-      <div className="support-header"><h1>Fitness Attendance</h1></div>
+      <div className="support-header"><h1>Presenca Fitness</h1></div>
       <button className="support-button" onClick={loadData} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
       <div className="support-details-panel" style={{ marginTop: '1rem' }}>
         <table className="support-table">
           <thead>
             <tr>
-              <th>Attendance</th>
+              <th>Presenca</th>
               <th>Aluno</th>
               <th>Entrada</th>
               <th>Ação</th>
@@ -56,7 +56,7 @@ export function FitnessAttendancePage() {
                 <td>{item.id}</td>
                 <td>{item.subject_id}</td>
                 <td>{item.checked_in_at ? new Date(item.checked_in_at).toLocaleString() : '-'}</td>
-                <td><button className="support-button" onClick={() => closeAttendance(item)}>Check-out</button></td>
+                <td><button className="support-button" onClick={() => closeAttendance(item)}>Encerrar presenca</button></td>
               </tr>
             ))}
           </tbody>

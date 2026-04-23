@@ -41,8 +41,8 @@ export function ProjectListPage() {
       <div className="support-header">
         <h1>{project?.name || 'Lista do Projeto'}</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Board</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Dashboard</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Quadro</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Painel</button>
         </div>
       </div>
 

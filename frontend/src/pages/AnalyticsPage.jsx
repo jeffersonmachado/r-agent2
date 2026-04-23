@@ -493,7 +493,7 @@ export function AnalyticsPage() {
       <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>📈 Analytics & Métricas</h1>
+            <h1>📈 Analises e Metricas</h1>
           </div>
         
         <div className="support-controls">
@@ -580,7 +580,7 @@ export function AnalyticsPage() {
   };
   const physicalMetricLabels = {
     created_count: 'Criados',
-    done_count: 'Done',
+    done_count: 'Concluidos',
     abandoned_count: 'Abandonados',
   };
   const orderByHourMax = filteredOrderByHour.reduce((max, row) => {
@@ -604,10 +604,10 @@ export function AnalyticsPage() {
     <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>📈 Analytics & Métricas</h1>
+          <h1>📈 Analises e Metricas</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
-          Dashboard com KPIs e indicadores em tempo real
+          Painel com KPIs e indicadores em tempo real
         </p>
       </div>
 

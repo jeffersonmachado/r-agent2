@@ -101,8 +101,10 @@ import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
 import { PwaUpdateManager } from './components/PwaUpdateManager';
-import { Sidebar } from './components/Sidebar';
-import { SubNav } from './components/SubNav';
+import { PrimaryRail } from './components/PrimaryRail';
+import { SecondaryNav } from './components/SecondaryNav';
+import { AreaHeader } from './components/AreaHeader';
+import { ContextPanel } from './components/ContextPanel';
 import { CommandPalette } from './components/CommandPalette';
 import { VerticalLayout } from './components/VerticalLayout';
 import { useRouter } from './hooks/useRouter';
@@ -524,24 +526,24 @@ function AppWithAuth() {
       '/editor': '📝 Editor de Fluxos',
       '/bpmn-editor': '📐 Editor BPMN',
       '/support': '💬 Atendimento',
-      '/inbox': '📥 Inbox',
+      '/inbox': '📥 Caixa de Entrada',
       '/maintenance': '🔧 Manutenção de Tickets',
       '/config': '⚙️ Configuração do Sistema',
       '/agents': '👥 Gerenciamento de Agentes',
       '/tenants': '🏢 Gerenciamento de Tenants',
       '/audit': '🔍 Auditoria',
       '/quick-replies': '⚡ Respostas Rápidas',
-      '/faq': '❓ FAQ',
+      '/faq': '❓ Perguntas Frequentes',
       '/departments': '🏢 Departamentos',
       '/bulk-messaging': '📢 Disparos em Massa',
-      '/analytics': '📈 Analytics & Métricas',
-      '/tenant-intelligence': '🧠 Tenant Intelligence',
+      '/analytics': '📈 Analises e Metricas',
+      '/tenant-intelligence': '🧠 Inteligencia do Tenant',
       '/supervisor': '🧭 Painel Supervisor',
       '/rbac': '🔐 RBAC',
       '/mfa': '🔐 MFA',
       '/whatsapp-ivr': '💬 URA WhatsApp',
       '/whatsapp-connections': '📱 WhatsApp QR',
-      '/developer-keys': '🔑 API Keys',
+      '/developer-keys': '🔑 Chaves de API',
       '/automations': '🧩 Automações',
       '/projects': '📁 Projetos',
       '/tasks': '✅ Tarefas',
@@ -552,16 +554,16 @@ function AppWithAuth() {
       '/segmentation': '🎯 Segmentação',
       '/whatsapp-templates': '💬 Templates WhatsApp Business API',
       '/knowledge-base': '🧠 Base de Conhecimento',
-      '/product-docs': '📖 Documentação de Produtos',
+      '/product-docs': '📖 Documentacao de Produto',
       '/rag-documents': '📚 Gerenciamento de Documentos RAG',
       '/web-scraping': '🕷️ Raspagem de Sites',
       '/rpa-test': '🚀 Execução de Testes RPA',
       '/rpa-replays': '📋 Replays RPA',
       '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
-      '/qa/stability': '📈 QA Stability',
+      '/qa/stability': '📈 Estabilidade QA',
       '/qa': '✅ Painel de Qualidade (QA)',
-      '/qa-mesh': '🕸️ Unified Execution Mesh',
+      '/qa-mesh': '🕸️ Malha Unificada de Execucao',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
       '/system-status': '📊 Status dos Serviços',
       '/channel-health': '📡 Saúde de Canais',
@@ -589,15 +591,15 @@ function AppWithAuth() {
       '/pbx/cc/click2call': '📱 PBX • Click2Call',
       '/pbx/referencia/xml': '🗄️ PBX • Referência XML',
       '/chat-humano': '💬 Dashboard Chat Humano',
-      '/crm': '📊 CRM • Dashboard',
-      '/crm/dashboard': '📊 CRM • Dashboard',
+      '/crm': '📊 CRM • Painel',
+      '/crm/dashboard': '📊 CRM • Painel',
       '/crm/accounts': '🏢 CRM • Contas',
       '/crm/contacts': '👥 CRM • Contatos',
       '/crm/leads': '🎯 CRM • Leads',
       '/crm/pipelines': '🛣️ CRM • Pipelines',
       '/crm/opportunities': '💼 CRM • Oportunidades',
       '/crm/activities': '📝 CRM • Atividades',
-      '/crm/analytics': '📈 CRM • Analytics',
+      '/crm/analytics': '📈 CRM • Analises',
       '/crm/reports': '📋 CRM • Relatórios',
       '/crm/campaigns': '📣 CRM • Campanhas',
       '/crm/webhooks': '🪝 CRM • Webhooks',
@@ -606,21 +608,21 @@ function AppWithAuth() {
       '/failed-messages': '🚨 Mensagens Falhadas',
       '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
-      '/access-control': '🚪 Access Control',
+      '/access-control': '🚪 Controle de Acesso',
       '/operations-dashboard': '🧭 Painel Operacional',
-      '/fitness/students': '🏋️ Fitness • Students',
+      '/fitness/students': '🏋️ Fitness • Alunos',
       '/fitness/memberships': '🏋️ Fitness • Memberships',
-      '/fitness/attendance': '🏋️ Fitness • Attendance',
-      '/beauty/schedule': '💄 Beauty • Schedule',
-      '/beauty/campaigns': '💄 Beauty • Campaigns',
-      '/beauty/leads': '💄 Beauty • Leads',
-      '/beauty/customers': '💄 Beauty • Customers',
-      '/beauty/bundles': '💄 Beauty • Bundles',
-      '/beauty/services': '💄 Beauty • Services',
-      '/beauty/payments': '💄 Beauty • Payments',
-      '/vertical/dashboard': '📊 Vertical Dashboard',
-      '/solutions': '📦 Solutions Packs',
-      '/node-marketplace': '🧩 Node Marketplace',
+      '/fitness/attendance': '🏋️ Fitness • Presenca',
+      '/beauty/schedule': '💄 Beleza • Agenda',
+      '/beauty/campaigns': '💄 Beleza • Campanhas',
+      '/beauty/leads': '💄 Beleza • Leads',
+      '/beauty/customers': '💄 Beleza • Clientes',
+      '/beauty/bundles': '💄 Beleza • Bundles',
+      '/beauty/services': '💄 Beleza • Servicos',
+      '/beauty/payments': '💄 Beleza • Pagamentos',
+      '/vertical/dashboard': '📊 Painel Vertical',
+      '/solutions': '📦 Pacotes de Solucao',
+      '/node-marketplace': '🧩 Mercado de Nodes',
       '/sso-scim': '🔐 SSO / SCIM',
       '/backup': '🗄️ Backup / DR',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
@@ -635,7 +637,7 @@ function AppWithAuth() {
     };
 
     // Encontra o título mais específico correspondente à rota atual
-    let pageTitle = 'Chatbot Flow Editor';
+    let pageTitle = 'Editor de Fluxos do Chatbot';
     let bestMatchLength = -1;
 
     const normalizedPath = currentPath.startsWith('/r-agent2')
@@ -982,10 +984,12 @@ function AppWithAuth() {
   }
 
   return (
-    <div className="rap-shell">
-      <Sidebar agent={agent} currentPath={currentPath} resolvedVerticalKeys={sidebarVerticalKeys} />
-      <div className="rap-shell-main">
-        <SubNav
+    <div className="rap-enterprise-shell">
+      <PrimaryRail agent={agent} currentPath={currentPath} />
+      <SecondaryNav agent={agent} currentPath={currentPath} />
+
+      <div className="rap-enterprise-main">
+        <AreaHeader
           agent={agent}
           currentPath={currentPath}
           tenantLabel={subNavTenantLabel}
@@ -998,6 +1002,8 @@ function AppWithAuth() {
           {pageContent}
         </div>
       </div>
+
+      <ContextPanel agent={agent} currentPath={currentPath} tenantLabel={subNavTenantLabel} />
     </div>
   );
 }

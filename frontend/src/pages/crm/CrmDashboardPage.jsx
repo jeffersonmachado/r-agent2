@@ -224,7 +224,7 @@ function CrmDashboardContent() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <h1>🚀 Dashboard CRM</h1>
+        <h1>🚀 Painel CRM</h1>
         <p>Pilar de Relacionamento com Cliente: gestão comercial end-to-end.</p>
       
         <div className="support-controls">
@@ -292,7 +292,7 @@ function CrmDashboardContent() {
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
           <div className="text-xs text-text-tertiary flex items-center gap-1">
-            <span>📈</span> Win Rate
+            <span>📈</span> Taxa de Ganho
           </div>
           <div className="text-2xl font-semibold text-text-primary">
             {loadingMetrics ? '...' : crmMetrics.winRate}
@@ -327,7 +327,7 @@ function CrmDashboardContent() {
         >
           <div className="text-2xl mb-2">💼</div>
           <div className="font-semibold">Nova Oportunidade</div>
-          <div className="text-xs opacity-90">Criar deal</div>
+          <div className="text-xs opacity-90">Criar negocio</div>
         </button>
 
         <button

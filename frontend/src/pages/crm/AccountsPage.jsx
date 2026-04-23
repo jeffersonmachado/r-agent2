@@ -39,7 +39,7 @@ export function AccountsPage() {
       const response = await listAccounts();
       setAccounts(response.items || []);
     } catch (err) {
-      showToast(`Erro ao carregar accounts: ${err.message}`, 'error');
+      showToast(`Erro ao carregar contas: ${err.message}`, 'error');
     }
   };
 
@@ -98,7 +98,7 @@ export function AccountsPage() {
       if (response.account) {
         await loadAccounts();
         setIsModalOpen(false);
-        showToast('Account salva com sucesso!', 'success');
+        showToast('Conta salva com sucesso!', 'success');
       }
     } catch (err) {
       showToast(`Erro ao salvar: ${err.message}`, 'error');

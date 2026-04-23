@@ -81,7 +81,7 @@ export function BeautyCustomersPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Beauty Customers</h1>
+        <h1>Clientes de Beleza</h1>
         <p className="text-sm text-text-secondary">Consulta de clientes, jornada, bundle, no-show, follow-up e reativacao.</p>
       </div>
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

@@ -39,7 +39,7 @@ export function ProjectBoardPage() {
       setItems(Array.isArray(itemsResponse?.items) ? itemsResponse.items : []);
       setDashboard(dashboardResponse?.dashboard || null);
     } catch (error) {
-      showToast('Erro ao carregar board do projeto', 'error');
+      showToast('Erro ao carregar quadro do projeto', 'error');
     } finally {
       setLoading(false);
     }
@@ -96,12 +96,12 @@ export function ProjectBoardPage() {
     <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
-        <h1>{project?.name || 'Board do Projeto'}</h1>
+        <h1>{project?.name || 'Quadro do Projeto'}</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
           <button type="button" className="support-button" onClick={() => navigate('/projects')}>Projetos</button>
           <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/list`)}>Lista</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Dashboard</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Timeline</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/dashboard`)}>Painel</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Linha do Tempo</button>
         </div>
       </div>
 
@@ -112,15 +112,15 @@ export function ProjectBoardPage() {
           <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" placeholder="Novo item" value={newItem.title} onChange={(event) => setNewItem((prev) => ({ ...prev, title: event.target.value }))} />
           <select className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={newItem.itemType} onChange={(event) => setNewItem((prev) => ({ ...prev, itemType: event.target.value }))}>
             <option value="epic">Epic</option>
-            <option value="story">Story</option>
-            <option value="task">Task</option>
+            <option value="story">Historia</option>
+            <option value="task">Tarefa</option>
             <option value="bug">Bug</option>
-            <option value="incident">Incident</option>
-            <option value="improvement">Improvement</option>
-            <option value="deployment">Deployment</option>
-            <option value="qa_fix">QA Fix</option>
-            <option value="automation">Automation</option>
-            <option value="research">Research</option>
+            <option value="incident">Incidente</option>
+            <option value="improvement">Melhoria</option>
+            <option value="deployment">Implantacao</option>
+            <option value="qa_fix">Correcao QA</option>
+            <option value="automation">Automacao</option>
+            <option value="research">Pesquisa</option>
           </select>
           <select className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={newItem.priority} onChange={(event) => setNewItem((prev) => ({ ...prev, priority: event.target.value }))}>
             <option value="low">Baixa</option>

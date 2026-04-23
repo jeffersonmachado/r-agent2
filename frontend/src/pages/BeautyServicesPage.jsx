@@ -26,7 +26,7 @@ export function BeautyServicesPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Beauty Services</h1>
+        <h1>Servicos de Beleza</h1>
         <p className="text-sm text-text-secondary">Catálogo operacional de serviços usados em campanhas, agenda e cobrança.</p>
       </div>
       <div className="support-controls">

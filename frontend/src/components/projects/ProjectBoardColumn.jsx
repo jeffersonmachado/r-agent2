@@ -1,7 +1,29 @@
 import React from 'react';
 
+const ITEM_TYPE_LABELS = {
+  epic: 'Epic',
+  story: 'Historia',
+  task: 'Tarefa',
+  bug: 'Bug',
+  incident: 'Incidente',
+  improvement: 'Melhoria',
+  deployment: 'Implantacao',
+  qa_fix: 'Correcao QA',
+  automation: 'Automacao',
+  research: 'Pesquisa',
+};
+
+const PRIORITY_LABELS = {
+  low: 'Baixa',
+  medium: 'Media',
+  high: 'Alta',
+  critical: 'Critica',
+};
+
 function formatBadge(item) {
-  return `${item.item_type || 'task'} • ${item.priority || 'medium'}`;
+  const itemType = ITEM_TYPE_LABELS[item.item_type] || item.item_type || 'Tarefa';
+  const priority = PRIORITY_LABELS[item.priority] || item.priority || 'Media';
+  return `${itemType} • ${priority}`;
 }
 
 export function ProjectBoardColumn({ list, items, onDropItem, onOpenItem }) {

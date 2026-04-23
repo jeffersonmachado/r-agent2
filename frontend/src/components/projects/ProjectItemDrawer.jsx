@@ -1,6 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { createProjectComment, getProjectItem, updateProjectItem } from '../../api/projects';
 
+const ITEM_TYPE_LABELS = {
+  epic: 'Epic',
+  story: 'Historia',
+  task: 'Tarefa',
+  bug: 'Bug',
+  incident: 'Incidente',
+  improvement: 'Melhoria',
+  deployment: 'Implantacao',
+  qa_fix: 'Correcao QA',
+  automation: 'Automacao',
+  research: 'Pesquisa',
+};
+
+const STATUS_LABELS = {
+  backlog: 'Backlog',
+  todo: 'A Fazer',
+  in_progress: 'Em Andamento',
+  blocked: 'Bloqueado',
+  review: 'Revisao',
+  done: 'Concluido',
+};
+
+const PRIORITY_LABELS = {
+  low: 'Baixa',
+  medium: 'Media',
+  high: 'Alta',
+  critical: 'Critica',
+};
+
 export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast }) {
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState(item);
@@ -93,7 +122,7 @@ export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast
       <div className="bg-bg-elevated border-l border-border-default shadow-2xl" style={{ width: 'min(520px, 100vw)', height: '100%', overflowY: 'auto', padding: '24px' }}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="text-xs text-text-secondary mb-1">{details?.item_type || 'task'} • {details?.status || 'todo'}</div>
+            <div className="text-xs text-text-secondary mb-1">{ITEM_TYPE_LABELS[details?.item_type] || details?.item_type || 'Tarefa'} • {STATUS_LABELS[details?.status] || details?.status || 'A Fazer'}</div>
             <h2 className="text-xl font-semibold text-text-primary">{details?.title}</h2>
           </div>
           <button type="button" className="support-button" onClick={onClose}>Fechar</button>

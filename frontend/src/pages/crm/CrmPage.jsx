@@ -78,7 +78,7 @@ function DashboardSection() {
         if (data.ok) {
           setDashboardData(data.dashboard);
         } else {
-          showToast(data.error || 'Erro ao carregar dashboard', 'error');
+          showToast(data.error || 'Erro ao carregar painel', 'error');
         }
       } catch (err) {
         showToast(err.message, 'error');
@@ -95,13 +95,13 @@ function DashboardSection() {
       <CrudPageBase>
         <div className="support-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h1>📊 Dashboard CRM</h1>
+             <h1>📊 Painel CRM</h1>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
-            <p className="text-text-secondary">Carregando dashboard...</p>
+            <p className="text-text-secondary">Carregando painel...</p>
           </div>
         </div>
         <ToastContainer />
@@ -126,7 +126,7 @@ function DashboardSection() {
     <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>📊 Dashboard CRM</h1>
+          <h1>📊 Painel CRM</h1>
         </div>
       </div>
 
@@ -165,7 +165,7 @@ function DashboardSection() {
         <div className="bg-bg-elevated rounded-lg shadow border border-border-default p-6">
           <h3 className="font-bold text-text-primary mb-3">ℹ️ Informações do Sistema</h3>
           <ul className="space-y-2 text-sm text-text-secondary">
-            <li>✓ Dashboard carregado com sucesso</li>
+            <li>✓ Painel carregado com sucesso</li>
             <li>✓ Dados em tempo real do banco de dados</li>
             <li>✓ Atualizado pelo endpoint `/api/crm/analytics/dashboard`</li>
             <li>✓ Navegue pelas abas para gerenciar dados</li>
@@ -174,10 +174,10 @@ function DashboardSection() {
         <div className="bg-bg-elevated rounded-lg shadow border border-border-default p-6">
           <h3 className="font-bold text-text-primary mb-3">🎯 Próximas Ações</h3>
           <ul className="space-y-2 text-sm text-text-secondary">
-            <li>→ Adicionar novas contas em Accounts</li>
+            <li>→ Adicionar novas contas em Contas</li>
             <li>→ Gerenciar contatos em Contatos</li>
             <li>→ Qualificar leads em Leads</li>
-            <li>→ Monitorar oportunidades em Opportunities</li>
+            <li>→ Monitorar oportunidades em Oportunidades</li>
           </ul>
         </div>
       </div>

@@ -249,7 +249,7 @@ export function StabilityPage() {
 			<section className="mb-6 rounded-2xl border border-border-default bg-gradient-to-r from-[#ecf8ff] via-[#f8fbff] to-[#f4fff5] p-6 shadow-sm">
 				<div className="flex items-center justify-between gap-3">
 					<div>
-						<h1 className="text-3xl font-bold text-text-primary">QA Stability Dashboard</h1>
+						<h1 className="text-3xl font-bold text-text-primary">Painel de Estabilidade QA</h1>
 						<p className="mt-1 text-sm text-text-secondary">Saude operacional em tempo real com checkpoints, release gate e RAP Learn.</p>
 					</div>
 					<Button onClick={loadAll}>Atualizar</Button>

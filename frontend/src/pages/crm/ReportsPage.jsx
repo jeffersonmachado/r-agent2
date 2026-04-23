@@ -14,7 +14,7 @@ export function ReportsPage() {
         <CrmCard>
           <h3 className="text-lg font-semibold mb-4">📊 Vendas por Período</h3>
           <p className="text-sm text-text-secondary mb-4">
-            Análise de vendas fechadas, receita e número de deals por mês/trimestre.
+            Análise de vendas fechadas, receita e número de negócios por mês/trimestre.
           </p>
           <CrmButton style={{ width: '100%' }}>Gerar Relatório</CrmButton>
         </CrmCard>

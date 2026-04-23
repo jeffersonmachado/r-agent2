@@ -190,10 +190,10 @@ export function SupportPage() {
                         <div>Motivo: <strong>{state.selectedTicket.pauseReason}</strong></div>
                       ) : null}
                       {state.selectedTicket?.context?.closeReasonName ? (
-                        <div>Close reason: <strong>{state.selectedTicket.context.closeReasonName}</strong></div>
+                        <div>Motivo de fechamento: <strong>{state.selectedTicket.context.closeReasonName}</strong></div>
                       ) : null}
                       {state.selectedTicket.channelType ? <div>Canal: <strong>{state.selectedTicket.channelType}</strong></div> : null}
-                      {state.selectedTicket.conversationId ? <div>ConversationId: <code>{state.selectedTicket.conversationId}</code></div> : null}
+                      {state.selectedTicket.conversationId ? <div>ID da conversa: <code>{state.selectedTicket.conversationId}</code></div> : null}
                       <div>Criado: {actions.formatDate(state.selectedTicket.createdAt)}</div>
                     </div>
                   </div>

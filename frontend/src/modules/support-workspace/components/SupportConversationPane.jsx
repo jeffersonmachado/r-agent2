@@ -577,7 +577,7 @@ export function SupportConversationPane({
             {quickReplySlashOpen ? (
               <div className="support-slash-menu" ref={slashMenuRef}>
                 <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', marginBottom: '6px' }}>
-                {slashMenuMode === 'commands' ? 'Comandos do workspace' : <>Resultados para <code>{(messageText || '').trim()}</code></>}
+                {slashMenuMode === 'commands' ? 'Comandos do atendimento' : <>Resultados para <code>{(messageText || '').trim()}</code></>}
               </div>
               {slashMenuMode === 'commands' ? (
                 slashCommandResults.map((command, index) => (

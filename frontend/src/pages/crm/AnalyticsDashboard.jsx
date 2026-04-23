@@ -20,7 +20,7 @@ export function AnalyticsDashboard() {
       const data = await response.json();
       setDashboard(data.dashboard);
     } catch (err) {
-      console.error('Failed to load dashboard:', err);
+      console.error('Falha ao carregar painel:', err);
     } finally {
       setLoading(false);
     }
@@ -30,9 +30,9 @@ export function AnalyticsDashboard() {
     return (
       <CrudPageBase>
         <div className="support-header">
-          <h1>📊 CRM Analytics</h1>
+          <h1>📊 Analises CRM</h1>
         </div>
-        <div className="text-center text-text-secondary">Carregando dashboard...</div>
+        <div className="text-center text-text-secondary">Carregando painel...</div>
       </CrudPageBase>
     );
   }
@@ -40,7 +40,7 @@ export function AnalyticsDashboard() {
     return (
       <CrudPageBase>
         <div className="support-header">
-          <h1>📊 CRM Analytics</h1>
+          <h1>📊 Analises CRM</h1>
         </div>
         <div className="text-center text-status-error">Erro ao carregar dados</div>
       </CrudPageBase>
@@ -109,7 +109,7 @@ export function AnalyticsDashboard() {
             </p>
           </div>
           <div className="bg-bg-hover p-4 rounded-lg border border-border-default">
-            <p className="text-text-secondary text-sm">Ganho (closed won)</p>
+            <p className="text-text-secondary text-sm">Ganho (fechado como ganho)</p>
             <p className="text-3xl font-bold text-text-primary mt-2">
               {formatCurrency(opportunity.closedWonValue)}
             </p>

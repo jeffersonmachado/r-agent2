@@ -119,7 +119,7 @@ export function Sidebar({ agent, currentPath, resolvedVerticalKeys = [] }) {
       <div className="rap-sidebar-brand">
         <div className="rap-sidebar-brand-mark">RAP</div>
         <div>
-          <div className="rap-sidebar-brand-title">Runtime Access Portal</div>
+          <div className="rap-sidebar-brand-title">RAP (Results Autonomous Platform)</div>
           <div className="rap-sidebar-brand-subtitle">Navegacao por capacidades</div>
         </div>
       </div>
