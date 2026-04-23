@@ -204,7 +204,7 @@ async function checkRagServiceStatus() {
       } catch (err) {
         // Se não tiver fetch, retorna status básico
         // Extrai a porta da URL do serviço RAG
-        const port = extractPortFromUrl(ragServiceUrl, 8000);
+        const port = extractPortFromUrl(ragServiceUrl, 8001);
         
         return {
           status: 'healthy',
@@ -231,7 +231,7 @@ async function checkRagServiceStatus() {
           const data = await response.json();
           
           // Extrai a porta da URL do serviço RAG
-          const port = extractPortFromUrl(ragServiceUrl, 8000);
+          const port = extractPortFromUrl(ragServiceUrl, 8001);
 
           // -------------------------------------------------------------------
           // Unificação: também reporta consistência BD vs Vector Store (agregado)
@@ -290,7 +290,7 @@ async function checkRagServiceStatus() {
       }
       
       // Extrai a porta da URL do serviço RAG
-      const port = extractPortFromUrl(ragServiceUrl, 8000);
+      const port = extractPortFromUrl(ragServiceUrl, 8001);
       
       return {
         status: 'healthy',

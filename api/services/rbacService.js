@@ -113,6 +113,18 @@ const ROLE_PERMISSIONS = {
     { resource: 'ai', action: 'train' },
     { resource: 'ai', action: 'execute' },
     { resource: 'ai', action: 'configure' },
+    // Projects
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'create' },
+    { resource: 'projects', action: 'update' },
+    { resource: 'projects', action: 'delete' },
+    { resource: 'projects', action: 'manage_members' },
+    { resource: 'projects', action: 'manage_workflow' },
+    { resource: 'projects', action: 'comment' },
+    { resource: 'projects', action: 'attach' },
+    { resource: 'projects', action: 'manage_templates' },
+    { resource: 'projects', action: 'view_all' },
+    { resource: 'projects', action: 'run_automation' },
   ],
 
   admin: [
@@ -178,6 +190,18 @@ const ROLE_PERMISSIONS = {
     // Desenvolvimento
     { resource: 'dev', action: 'read' },
     { resource: 'dev', action: 'write' },
+    // Projects
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'create' },
+    { resource: 'projects', action: 'update' },
+    { resource: 'projects', action: 'delete' },
+    { resource: 'projects', action: 'manage_members' },
+    { resource: 'projects', action: 'manage_workflow' },
+    { resource: 'projects', action: 'comment' },
+    { resource: 'projects', action: 'attach' },
+    { resource: 'projects', action: 'manage_templates' },
+    { resource: 'projects', action: 'view_all' },
+    { resource: 'projects', action: 'run_automation' },
   ],
 
   supervisor: [
@@ -221,6 +245,17 @@ const ROLE_PERMISSIONS = {
     // Desenvolvimento
     { resource: 'dev', action: 'read' },
     { resource: 'dev', action: 'write' },
+    // Projects
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'create' },
+    { resource: 'projects', action: 'update' },
+    { resource: 'projects', action: 'manage_members' },
+    { resource: 'projects', action: 'manage_workflow' },
+    { resource: 'projects', action: 'comment' },
+    { resource: 'projects', action: 'attach' },
+    { resource: 'projects', action: 'manage_templates' },
+    { resource: 'projects', action: 'view_all' },
+    { resource: 'projects', action: 'run_automation' },
   ],
 
   manager: [
@@ -267,6 +302,17 @@ const ROLE_PERMISSIONS = {
     { resource: 'rpa', action: 'execute' },
     // IA
     { resource: 'ai', action: 'execute' },
+    // Projects
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'create' },
+    { resource: 'projects', action: 'update' },
+    { resource: 'projects', action: 'manage_members' },
+    { resource: 'projects', action: 'manage_workflow' },
+    { resource: 'projects', action: 'comment' },
+    { resource: 'projects', action: 'attach' },
+    { resource: 'projects', action: 'manage_templates' },
+    { resource: 'projects', action: 'view_all' },
+    { resource: 'projects', action: 'run_automation' },
   ],
 
   operator: [
@@ -294,6 +340,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'rpa', action: 'execute' },
     // IA (apenas execução)
     { resource: 'ai', action: 'execute' },
+    // Projects
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'comment' },
   ],
 
   auditor: [
@@ -315,6 +364,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'bulk_messaging', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rpa', action: 'read' },
+    { resource: 'projects', action: 'read' },
+    { resource: 'projects', action: 'view_all' },
   ],
 
   readonly: [
@@ -329,6 +380,7 @@ const ROLE_PERMISSIONS = {
     { resource: 'departments', action: 'read' },
     { resource: 'rag', action: 'read' },
     { resource: 'rag', action: 'query' },
+    { resource: 'projects', action: 'read' },
   ],
 };
 

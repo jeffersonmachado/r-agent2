@@ -5,6 +5,7 @@ const { createInboxRoutes } = require('../inbox/routes');
 const { createSchedulingSupportRoutes } = require('../scheduling-support/routes');
 const { createSupervisorRoutes } = require('../supervisor/routes');
 const { createTaskRoutes } = require('../task/routes');
+const { createProjectManagementRoutes } = require('../project-management/routes');
 
 async function resolveAuthenticatedTenant(ctx, req, res) {
   const authResult = ctx.requireAuth(req);
@@ -178,6 +179,23 @@ function createDomainOperationsRoutes({ buildDeps }) {
   const router = express.Router();
 
   router.use(createTaskRoutes({
+    buildDeps: (req, res) => {
+      const ctx = buildDeps(req, res);
+
+      return {
+        requireAuth: ctx.requireAuth,
+        requirePermission: ctx.requirePermission,
+        requireTenant: ctx.requireTenant,
+        sendJson: ctx.sendJson,
+        badRequest: ctx.badRequest,
+        hasJsonContentType: ctx.hasJsonContentType,
+        parseJsonBody: ctx.parseJsonBody,
+        logger: ctx.logger,
+      };
+    },
+  }));
+
+  router.use(createProjectManagementRoutes({
     buildDeps: (req, res) => {
       const ctx = buildDeps(req, res);
 

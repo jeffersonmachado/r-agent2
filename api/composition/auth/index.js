@@ -14,6 +14,7 @@ const {
 const { validateInput, ValidationError, schemas } = require('../../utils/inputValidator');
 const {
   login: authLogin,
+  createSaasSignupAccount,
   logout: authLogout,
   logoutAllSessions,
   validateToken,
@@ -31,6 +32,7 @@ function buildAuthRouteDeps() {
     schemas,
     ValidationError,
     authLogin,
+    createSaasSignupAccount,
     loginWithRpaToken,
     validateToken,
     authLogout,

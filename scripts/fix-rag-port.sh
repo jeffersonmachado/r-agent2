@@ -8,15 +8,15 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${YELLOW}🔍 Verificando porta 8000...${NC}"
+echo -e "${YELLOW}🔍 Verificando porta 8001...${NC}"
 
-# Encontra processo na porta 8000
-PORT_PID=$(lsof -ti:8000 2>/dev/null | head -1)
+# Encontra processo na porta 8001
+PORT_PID=$(lsof -ti:8001 2>/dev/null | head -1)
 
 if [ -z "$PORT_PID" ]; then
-    echo -e "${GREEN}✅ Porta 8000 está livre${NC}"
+    echo -e "${GREEN}✅ Porta 8001 está livre${NC}"
 else
-    echo -e "${YELLOW}📋 Processo encontrado na porta 8000: PID $PORT_PID${NC}"
+    echo -e "${YELLOW}📋 Processo encontrado na porta 8001: PID $PORT_PID${NC}"
     ps -p $PORT_PID -o pid,user,cmd || true
     
     # Verifica se é o processo do systemd
@@ -63,9 +63,9 @@ if systemctl is-active --quiet r-agent2-rag.service; then
     # Testa o endpoint
     echo -e "${YELLOW}🔍 Testando endpoint /rag/health...${NC}"
     for i in {1..5}; do
-        if curl -s http://localhost:8000/rag/health > /dev/null 2>&1; then
+        if curl -s http://localhost:8001/rag/health > /dev/null 2>&1; then
             echo -e "${GREEN}✅ Endpoint /rag/health está funcionando!${NC}"
-            curl -s http://localhost:8000/rag/health | python3 -m json.tool 2>/dev/null || curl -s http://localhost:8000/rag/health
+            curl -s http://localhost:8001/rag/health | python3 -m json.tool 2>/dev/null || curl -s http://localhost:8001/rag/health
             exit 0
         else
             if [ $i -lt 5 ]; then

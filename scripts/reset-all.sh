@@ -96,16 +96,16 @@ else
     echo -e "${GREEN}   ✅ Nenhum processo uvicorn encontrado${NC}"
 fi
 
-# Libera porta 8000
-echo -e "${YELLOW}🔍 Liberando porta 8000...${NC}"
-PORT_PIDS=$(lsof -ti:8000 2>/dev/null || true)
+# Libera porta 8001
+echo -e "${YELLOW}🔍 Liberando porta 8001...${NC}"
+PORT_PIDS=$(lsof -ti:8001 2>/dev/null || true)
 if [ -n "$PORT_PIDS" ]; then
     for pid in $PORT_PIDS; do
         sudo kill -9 $pid 2>/dev/null || true
     done
-    echo -e "${GREEN}   ✅ Porta 8000 liberada${NC}"
+    echo -e "${GREEN}   ✅ Porta 8001 liberada${NC}"
 else
-    echo -e "${GREEN}   ✅ Porta 8000 já está livre${NC}"
+    echo -e "${GREEN}   ✅ Porta 8001 já está livre${NC}"
 fi
 
 # Para processos Node.js da API (se rodando fora do Docker)

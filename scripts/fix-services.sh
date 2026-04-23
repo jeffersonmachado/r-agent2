@@ -14,8 +14,8 @@ echo -e "${BLUE}🔧 Corrigindo serviços...${NC}"
 # Para todos os processos uvicorn (incluindo os rodando como root)
 echo -e "${YELLOW}⏹️  Parando processos uvicorn existentes...${NC}"
 
-# Lista processos uvicorn na porta 8000
-UVICORN_PIDS=$(ps aux | grep "uvicorn.*8000" | grep -v grep | awk '{print $2}')
+# Lista processos uvicorn na porta 8001
+UVICORN_PIDS=$(ps aux | grep "uvicorn.*8001" | grep -v grep | awk '{print $2}')
 if [ -n "$UVICORN_PIDS" ]; then
     echo -e "${YELLOW}   Encontrados processos: $UVICORN_PIDS${NC}"
     for pid in $UVICORN_PIDS; do
@@ -29,18 +29,18 @@ sudo pkill -f "uvicorn main:app" || true
 sleep 2
 
 # Verifica se ainda há processos
-if pgrep -f "uvicorn.*8000" > /dev/null; then
-    echo -e "${YELLOW}⚠️  Ainda há processos uvicorn na porta 8000, forçando parada...${NC}"
-    for pid in $(pgrep -f "uvicorn.*8000"); do
+if pgrep -f "uvicorn.*8001" > /dev/null; then
+    echo -e "${YELLOW}⚠️  Ainda há processos uvicorn na porta 8001, forçando parada...${NC}"
+    for pid in $(pgrep -f "uvicorn.*8001"); do
         sudo kill -9 $pid 2>/dev/null || true
     done
     sleep 1
 fi
 
-# Verifica se a porta 8000 está livre
-if lsof -i :8000 > /dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Porta 8000 ainda está em uso, tentando liberar...${NC}"
-    PORT_PID=$(lsof -ti:8000 | head -1)
+# Verifica se a porta 8001 está livre
+if lsof -i :8001 > /dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️  Porta 8001 ainda está em uso, tentando liberar...${NC}"
+    PORT_PID=$(lsof -ti:8001 | head -1)
     if [ -n "$PORT_PID" ]; then
         sudo kill -9 $PORT_PID 2>/dev/null || true
         sleep 1
@@ -67,9 +67,9 @@ sleep 5
 # Verifica RAG Service
 echo -e "${YELLOW}🔍 Verificando RAG Service...${NC}"
 for i in {1..5}; do
-    if curl -s http://localhost:8000/rag/health > /dev/null 2>&1; then
+    if curl -s http://localhost:8001/rag/health > /dev/null 2>&1; then
         echo -e "${GREEN}✅ RAG Service está respondendo${NC}"
-        curl -s http://localhost:8000/rag/health | python3 -m json.tool 2>/dev/null || echo "   (Resposta recebida)"
+        curl -s http://localhost:8001/rag/health | python3 -m json.tool 2>/dev/null || echo "   (Resposta recebida)"
         break
     else
         if [ $i -lt 5 ]; then
@@ -89,4 +89,4 @@ redis-cli -p 6379 ping 2>&1 || echo "   Não disponível"
 
 echo ""
 echo -e "${GREEN}RAG Service:${NC}"
-curl -s http://localhost:8000/rag/health 2>&1 | head -3 || echo "   Não disponível"
+curl -s http://localhost:8001/rag/health 2>&1 | head -3 || echo "   Não disponível"

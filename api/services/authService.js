@@ -15,9 +15,10 @@
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
+const { cacheTenantContext } = require('./tenantService');
 
 const { getSequelize } = require('../db/sequelize');
-const { User, Session } = require('../db/models');
+const { User, Session, Tenant, TenantContext } = require('../db/models');
 const { checkLimit } = require('./planLimitsService');
 
 // ---------------------------------------------------------------------------
@@ -352,6 +353,170 @@ async function createAgent({ tenantId, username, email, password, role, name }) 
   agents.set(created.id, agent);
 
   return { success: true, agent: toAgentSafe(agent) };
+}
+
+function toTenantKey(input) {
+  const base = safeToString(input, '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return base || `tenant-${Date.now()}`;
+}
+
+function toUsernameFromEmail(email) {
+  const local = safeToString(email, '').split('@')[0] || '';
+  const normalized = local
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return normalized || `user-${Date.now()}`;
+}
+
+async function createSaasSignupAccount({ name, company, email, password }) {
+  const safeName = safeToString(name, '').trim();
+  const safeCompany = safeToString(company, '').trim();
+  const safeEmail = safeToString(email, '').trim().toLowerCase();
+  const safePassword = safeToString(password, '');
+
+  if (!safeName) return { success: false, error: 'Nome é obrigatório' };
+  if (!safeCompany) return { success: false, error: 'Empresa é obrigatória' };
+  if (!safeEmail || !safeEmail.includes('@')) return { success: false, error: 'Email corporativo inválido' };
+  if (!safePassword || safePassword.length < 8) {
+    return { success: false, error: 'Senha deve ter pelo menos 8 caracteres' };
+  }
+
+  await initialize();
+  if (!dbAvailable()) {
+    return { success: false, error: 'PostgreSQL é obrigatório para cadastro SaaS' };
+  }
+
+  const UserModel = typeof User === 'function' ? User() : User;
+  const TenantModel = typeof Tenant === 'function' ? Tenant() : Tenant;
+  const TenantContextModel = typeof TenantContext === 'function' ? TenantContext() : TenantContext;
+  const sequelize = UserModel.sequelize;
+
+  const existingEmail = await UserModel.findOne({
+    where: sequelize.where(sequelize.fn('lower', sequelize.col('email')), safeEmail),
+  });
+  if (existingEmail) {
+    return { success: false, error: 'Já existe conta com este e-mail' };
+  }
+
+  const baseTenantKey = toTenantKey(safeCompany);
+  let tenantKey = baseTenantKey;
+  let tenantIndex = 1;
+
+  while (true) {
+    const tenantExists = await TenantModel.findOne({ where: { tenant_key: tenantKey } });
+    if (!tenantExists) break;
+    tenantIndex += 1;
+    tenantKey = `${baseTenantKey}-${tenantIndex}`;
+  }
+
+  const baseUsername = toUsernameFromEmail(safeEmail);
+  let username = baseUsername;
+  let usernameIndex = 1;
+  while (true) {
+    const usernameExists = await UserModel.findOne({
+      where: sequelize.where(sequelize.fn('lower', sequelize.col('username')), username.toLowerCase()),
+    });
+    if (!usernameExists) break;
+    usernameIndex += 1;
+    username = `${baseUsername}.${usernameIndex}`;
+  }
+
+  const result = await sequelize.transaction(async (transaction) => {
+    const now = new Date();
+    const trialExpiresAt = new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000));
+
+    const tenant = await TenantModel.create({
+      tenant_key: tenantKey,
+      name: safeCompany,
+      site: '',
+      ramo_atividade: 'SaaS',
+      objetivo: 'Onboarding inicial da conta criada via landing pública',
+      status: 'trial',
+      plan: 'trial',
+      limits: {},
+      settings: {},
+      branding: {},
+      trial_expires_at: trialExpiresAt,
+    }, { transaction });
+
+    await TenantContextModel.create({
+      tenant_key: tenantKey,
+      ramo_atividade: 'SaaS',
+      objetivo: 'Configurar integrações obrigatórias no onboarding',
+      site_oficial: '',
+      prioridade: 'HIGH',
+      escopo: ['rag', 'chatbot', 'classificacao_intencao'],
+    }, { transaction });
+
+    const user = await UserModel.create({
+      tenant_key: tenantKey,
+      username,
+      email: safeEmail,
+      name: safeName,
+      password_hash: hashPassword(safePassword),
+      role: 'admin',
+      is_active: true,
+      status: 'active',
+      is_superadmin: false,
+      mfa_enabled: false,
+    }, { transaction });
+
+    const agent = {
+      ...buildAgentFromUserRow(user),
+      _passwordHash: user.password_hash,
+      invitationToken: null,
+      invitationExpiresAt: null,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+    };
+    agents.set(user.id, agent);
+
+    return {
+      tenant,
+      user,
+      agent: toAgentSafe(agent),
+    };
+  });
+
+  // Mantem cache em memoria do tenant_context sincronizado para leituras imediatas.
+  try {
+    cacheTenantContext(
+      result.tenant.tenant_key,
+      'SaaS',
+      'Configurar integrações obrigatórias no onboarding',
+      '',
+    );
+  } catch (err) {
+    logger.warn('[AuthService] Falha ao sincronizar cache de tenant_context após signup', {
+      tenantKey: result.tenant.tenant_key,
+      error: safeErrorMessage(err),
+    });
+  }
+
+  return {
+    success: true,
+    tenant: {
+      id: result.tenant.id,
+      tenantKey: result.tenant.tenant_key,
+      name: result.tenant.name,
+      plan: result.tenant.plan,
+      status: result.tenant.status,
+    },
+    agent: result.agent,
+    credentials: {
+      username,
+      email: safeEmail,
+    },
+  };
 }
 
 async function listAgents(tenantId = null) {
@@ -953,6 +1118,7 @@ module.exports = {
   initialize,
   // agents
   createAgent,
+  createSaasSignupAccount,
   listAgents,
   getAgent,
   updateAgent,

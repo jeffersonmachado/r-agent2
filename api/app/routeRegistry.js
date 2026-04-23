@@ -16,6 +16,7 @@ function createRouteRegistry(routers) {
     { router: routers.operationsDashboardRouter },
     { router: routers.webScrapingRouter },
     { router: routers.qaRouter },
+    { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
     { router: routers.rpaTestsRouter },
     { router: routers.devManagementRouter },

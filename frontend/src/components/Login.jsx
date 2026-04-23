@@ -100,23 +100,23 @@ export function Login() {
               setTimeout(() => {
                 console.log('[Login] Redirecionando para /config após verificação de provider');
                 try {
-                  navigate(`/config?tab=ai&tenant=${encodeURIComponent(tenant.id)}`);
-                  console.log('[Login] Comando navigate para /config executado');
+                  navigate(`/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`);
+                  console.log('[Login] Comando navigate para /onboarding executado');
                   
                   // Verifica se o redirecionamento funcionou após um tempo
                   setTimeout(() => {
                     const stillInLogin = window.location.pathname.includes('/login');
-                    const inConfig = window.location.pathname.includes('/config');
-                    if (stillInLogin || !inConfig) {
+                    const inOnboarding = window.location.pathname.includes('/onboarding');
+                    if (stillInLogin || !inOnboarding) {
                       console.warn('[Login] ⚠️ Redirecionamento via SPA falhou, usando hard redirect');
                       const basePath = getBasePath() || '';
-                      window.location.href = `${basePath}/config?tab=ai&tenant=${encodeURIComponent(tenant.id)}`;
+                      window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
                     }
                   }, 500);
                 } catch (err) {
                   console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
                   const basePath = getBasePath() || '';
-                  window.location.href = `${basePath}/config?tab=ai&tenant=${encodeURIComponent(tenant.id)}`;
+                  window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
                 }
               }, 300);
             });
@@ -132,12 +132,6 @@ export function Login() {
             if (!readiness?.ready) {
               const missing = (readiness?.missing || []).map((item) => item?.path).filter(Boolean);
               const preview = missing.slice(0, 4).join(', ');
-              const preferredTab = missing.some((path) => String(path).startsWith('billing.'))
-                ? 'billing'
-                : missing.some((path) => String(path).startsWith('whatsapp.') || String(path).startsWith('notifications.'))
-                  ? 'whatsapp'
-                  : 'general';
-
               updateAgent(updatedAgent);
               setIsSuperAdminLogin(false);
               setShowTenantModal(false);
@@ -153,10 +147,10 @@ export function Login() {
               requestAnimationFrame(() => {
                 setTimeout(() => {
                   try {
-                    navigate(`/config?tab=${encodeURIComponent(preferredTab)}`);
+                    navigate('/onboarding?source=login&required=integrations');
                   } catch (_) {
                     const basePath = getBasePath() || '';
-                    window.location.href = `${basePath}/config?tab=${encodeURIComponent(preferredTab)}`;
+                  window.location.href = `${basePath}/onboarding?source=login&required=integrations`;
                   }
                 }, 300);
               });
@@ -167,24 +161,24 @@ export function Login() {
           }
         } catch (err) {
           console.error('[Login] Erro ao verificar provider de IA:', err);
-          logger.warn('Erro ao verificar provider de IA do tenant, bloqueando fluxo e redirecionando para configuração', err);
+          logger.warn('Erro ao verificar provider de IA do tenant, bloqueando fluxo e redirecionando para onboarding', err);
           
           // Neste caso, NÃO podemos ignorar: sem saber o status do provider, não deixamos prosseguir.
-          // Atualiza o agente e redireciona para a configuração de IA do tenant selecionado.
+          // Atualiza o agente e redireciona para onboarding obrigatório do tenant selecionado.
           updateAgent(updatedAgent);
           setIsSuperAdminLogin(false);
           setShowTenantModal(false);
           
-          showToast('Não foi possível verificar o provider de IA do tenant. Redirecionando para configuração.', 'warning', 8000);
+          showToast('Não foi possível verificar o provider de IA do tenant. Redirecionando para onboarding obrigatório.', 'warning', 8000);
           
           requestAnimationFrame(() => {
             setTimeout(() => {
               try {
-                navigate(`/config?tab=ai&tenant=${encodeURIComponent(tenant.id)}`);
+                navigate(`/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`);
               } catch (navErr) {
                 console.error('[Login] Erro ao usar navigate, tentando window.location:', navErr);
                 const basePath = getBasePath() || '';
-                window.location.href = `${basePath}/config?tab=ai&tenant=${encodeURIComponent(tenant.id)}`;
+                window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
               }
             }, 300);
           });
@@ -625,6 +619,34 @@ export function Login() {
                 color: theme.colors.accent.primary,
               }}>Admin123!</code>
             </div>
+          </div>
+
+          <div style={{
+            marginTop: '12px',
+            paddingTop: '10px',
+            borderTop: `1px solid ${theme.colors.border.default}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+          }}>
+            <span style={{ color: theme.colors.text.tertiary }}>Novo por aqui?</span>
+            <button
+              type="button"
+              onClick={() => navigate('/saas/signup')}
+              style={{
+                border: `1px solid ${theme.colors.accent.primary}`,
+                background: theme.colors.bg.primary,
+                color: theme.colors.accent.primary,
+                borderRadius: '6px',
+                padding: '6px 10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Criar conta SaaS
+            </button>
           </div>
         </div>
       </div>

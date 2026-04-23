@@ -1,0 +1,11 @@
+{
+  "waveId": "wave-billing",
+  "itemId": "",
+  "status": "failure",
+  "channel": "whatsapp",
+  "query": "renegociacao",
+  "startDate": "2026-04-20",
+  "startTime": "08:00",
+  "endDate": "2026-04-21",
+  "endTime": "18:30"
+}

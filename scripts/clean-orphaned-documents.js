@@ -12,7 +12,7 @@ const http = require('http');
 
 const { connect } = require('../api/db/sequelize');
 const { RagDocument: RagDocumentGetter } = require('../api/db/models');
-const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
+const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8001';
 const TENANT_ID = process.env.TENANT_ID;
 if (!TENANT_ID) {
   console.error('❌ Erro: TENANT_ID é obrigatório');

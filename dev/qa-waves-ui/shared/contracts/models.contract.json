@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QA Waves UI Contracts",
+  "type": "object",
+  "definitions": {
+    "Wave": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "status",
+        "coverage",
+        "lastRunAt",
+        "itemsCount",
+        "replayCount"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "coverage": { "type": "number" },
+        "lastRunAt": { "type": ["string", "null"], "format": "date-time" },
+        "itemsCount": { "type": "integer" },
+        "replayCount": { "type": "integer" }
+      }
+    },
+    "WaveItem": {
+      "type": "object",
+      "required": ["id", "waveId", "name", "type", "channel", "critical", "lastStatus", "lastRunAt"],
+      "properties": {
+        "id": { "type": "string" },
+        "waveId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "channel": { "type": "string" },
+        "critical": { "type": "boolean" },
+        "lastStatus": { "type": "string" },
+        "lastRunAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "ExecutionRequest": {
+      "type": "object",
+      "required": ["selectedWaveIds", "selectedItemIds"],
+      "properties": {
+        "selectedWaveIds": { "type": "array", "items": { "type": "string" } },
+        "selectedItemIds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ExecutionResult": {
+      "type": "object",
+      "required": ["executionId", "startedAt", "finishedAt", "status", "items"],
+      "properties": {
+        "executionId": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+        "status": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["itemId", "itemName", "waveId", "status"],
+            "properties": {
+              "itemId": { "type": "string" },
+              "itemName": { "type": "string" },
+              "waveId": { "type": "string" },
+              "status": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "Replay": {
+      "type": "object",
+      "required": [
+        "id",
+        "waveId",
+        "waveName",
+        "itemId",
+        "itemName",
+        "name",
+        "seed",
+        "channel",
+        "status",
+        "startedAt",
+        "finishedAt",
+        "durationMs",
+        "critical"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "waveId": { "type": "string" },
+        "waveName": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "name": { "type": "string" },
+        "seed": { "type": "string" },
+        "channel": { "type": "string" },
+        "status": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": "string", "format": "date-time" },
+        "durationMs": { "type": "integer" },
+        "critical": { "type": "boolean" }
+      }
+    },
+    "ReplayFilter": {
+      "type": "object",
+      "properties": {
+        "waveId": { "type": "string" },
+        "itemId": { "type": "string" },
+        "status": { "type": "string" },
+        "channel": { "type": "string" },
+        "query": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endDate": { "type": "string", "format": "date" },
+        "endTime": { "type": "string" }
+      }
+    }
+  }
+}

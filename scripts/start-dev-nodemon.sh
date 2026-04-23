@@ -74,9 +74,91 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
-# Verifica se a porta 3000 está em uso
-if check_port 3000; then
-    echo -e "${YELLOW}Aviso: Porta 3000 já está em uso${NC}"
+# Detecta diretório do projeto
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+read_config() {
+    local expr="$1"
+    node -e "
+const fs = require('fs');
+const config = JSON.parse(fs.readFileSync('api/data/config.json', 'utf8'));
+const read = (obj, path) => path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+const value = read(config, process.argv[1]);
+if (value === undefined || value === null) process.exit(1);
+if (typeof value === 'object') {
+  process.stdout.write(JSON.stringify(value));
+} else {
+  process.stdout.write(String(value));
+}
+" "$expr" 2>/dev/null
+}
+
+# Carrega variáveis do .env se existir
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | grep -v '^$' | xargs 2>/dev/null)
+fi
+
+# Garante runtime externo ao workspace para evitar crash da API
+PROJECT_ROOT_ABS="$(cd "$PROJECT_ROOT" && pwd -P)"
+
+if [ -z "$RUNTIME_ROOT" ]; then
+    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+    echo -e "${YELLOW}RUNTIME_ROOT não definido. Usando padrão: $RUNTIME_ROOT${NC}"
+fi
+
+mkdir -p "$RUNTIME_ROOT" 2>/dev/null || true
+RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" 2>/dev/null && pwd -P)"
+
+if [ -z "$RUNTIME_ROOT_ABS" ]; then
+    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+    mkdir -p "$RUNTIME_ROOT"
+    RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
+fi
+
+case "$RUNTIME_ROOT_ABS" in
+    "$PROJECT_ROOT_ABS"|"$PROJECT_ROOT_ABS"/*)
+        RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+        mkdir -p "$RUNTIME_ROOT"
+        RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
+        echo -e "${YELLOW}RUNTIME_ROOT apontava para dentro do workspace. Ajustado para: $RUNTIME_ROOT_ABS${NC}"
+        ;;
+esac
+
+export RUNTIME_ROOT="$RUNTIME_ROOT_ABS"
+echo -e "${GREEN}✅ RUNTIME_ROOT ativo: $RUNTIME_ROOT${NC}"
+
+# Lê portas/features do config com fallback sensato
+API_PORT="${API_PORT:-${API_PORT_ENV:-$(read_config 'api.port')}}"
+if [ -z "$API_PORT" ]; then
+    API_PORT=3001
+fi
+
+FRONTEND_PORT="${FRONTEND_PORT:-${FRONTEND_PORT_ENV:-$(read_config 'frontend.port')}}"
+if [ -z "$FRONTEND_PORT" ]; then
+    FRONTEND_PORT=5173
+fi
+
+RAG_ENABLED="${ENABLE_RAG:-$(read_config 'features.enableRAG')}"
+if [ -z "$RAG_ENABLED" ]; then
+    RAG_ENABLED=false
+fi
+
+RAG_PORT="$(read_config 'rag.port')"
+if [ -z "$RAG_PORT" ]; then
+    RAG_SERVICE_URL="$(read_config 'rag.serviceUrl')"
+    if [ -n "$RAG_SERVICE_URL" ]; then
+        RAG_PORT="$(echo "$RAG_SERVICE_URL" | sed -n 's/.*:\([0-9]*\).*/\1/p')"
+    fi
+fi
+if [ -z "$RAG_PORT" ]; then
+    RAG_PORT=8001
+fi
+
+# Verifica se a porta da API está em uso
+if check_port "$API_PORT"; then
+    echo -e "${YELLOW}Aviso: Porta ${API_PORT} já está em uso${NC}"
     echo -e "${YELLOW}Verificando se é a API do projeto...${NC}"
     
     # Tenta encontrar o processo
@@ -88,14 +170,14 @@ if check_port 3000; then
         API_PID=$API_PROCESS
         USE_EXISTING_API=true
     else
-        echo -e "${RED}Erro: Porta 3000 está em uso por outro processo${NC}"
-        echo -e "${YELLOW}Execute: lsof -ti:3000 | xargs kill${NC}"
-        echo -e "${YELLOW}Ou use uma porta diferente: API_PORT=3001 npm run dev:api${NC}"
+        echo -e "${RED}Erro: Porta ${API_PORT} está em uso por outro processo${NC}"
+        echo -e "${YELLOW}Execute: lsof -ti:${API_PORT} | xargs kill${NC}"
+        echo -e "${YELLOW}Ou use uma porta diferente: API_PORT=3002 npm run dev:api${NC}"
         exit 1
     fi
 else
     # Inicia a API com nodemon em background
-    echo -e "${GREEN}Iniciando API com nodemon na porta 3000...${NC}"
+    echo -e "${GREEN}Iniciando API com nodemon na porta ${API_PORT}...${NC}"
     # Usa npx para executar nodemon (que está em devDependencies)
     npx --yes nodemon api/server.js &
     API_PID=$!
@@ -111,99 +193,56 @@ else
     fi
 fi
 
-# Lê porta do RAG service do config.json (padrão: 9000)
-RAG_PORT=9000
-if [ -f "api/data/config.json" ]; then
-    # Tenta extrair a porta da URL do RAG service
-    RAG_SERVICE_URL=$(grep -o '"serviceUrl"[[:space:]]*:[[:space:]]*"[^"]*"' api/data/config.json | head -1 | grep -o 'http[^"]*' | head -1)
-    if [ -n "$RAG_SERVICE_URL" ]; then
-        # Extrai a porta da URL (ex: http://localhost:9000 -> 9000)
-        EXTRACTED_PORT=$(echo "$RAG_SERVICE_URL" | sed -n 's/.*:\([0-9]*\).*/\1/p')
-        if [ -n "$EXTRACTED_PORT" ] && [ "$EXTRACTED_PORT" -gt 0 ] 2>/dev/null; then
-            RAG_PORT=$EXTRACTED_PORT
-        fi
+if [ "$RAG_ENABLED" = "true" ]; then
+    # Verifica se a porta do RAG está em uso (uvicorn)
+    UVICORN_PROCESS=$(ps aux | grep -E "(uvicorn|python.*uvicorn|python3.*uvicorn).*main:app" | grep -v grep | awk '{print $2}' | head -1)
+
+    PORT_IN_USE=false
+    if check_port "$RAG_PORT"; then
+        PORT_IN_USE=true
+        PORT_RAG_PID=$(get_port_pid "$RAG_PORT")
     fi
-    # Também tenta ler diretamente de rag.port se existir
-    RAG_CONFIG_PORT=$(grep -A 2 '"rag"' api/data/config.json | grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' | grep -o '[0-9]*' | head -1)
-    if [ -n "$RAG_CONFIG_PORT" ]; then
-        RAG_PORT=$RAG_CONFIG_PORT
-    fi
-fi
 
-# Verifica se a porta do RAG está em uso (uvicorn)
-# Primeiro tenta encontrar processos uvicorn diretamente
-UVICORN_PROCESS=$(ps aux | grep -E "(uvicorn|python.*uvicorn|python3.*uvicorn).*main:app" | grep -v grep | awk '{print $2}' | head -1)
+    if [ -n "$UVICORN_PROCESS" ]; then
+        echo -e "${GREEN}Uvicorn já está rodando (PID: $UVICORN_PROCESS)${NC}"
+        echo -e "${BLUE}Usando uvicorn existente...${NC}"
+        UVICORN_PID=$UVICORN_PROCESS
+        USE_EXISTING_UVICORN=true
+    elif [ "$PORT_IN_USE" = true ]; then
+        echo -e "${YELLOW}Aviso: Porta ${RAG_PORT} já está em uso${NC}"
 
-# Verifica se a porta está em uso
-PORT_IN_USE=false
-if check_port $RAG_PORT; then
-    PORT_IN_USE=true
-    # Tenta obter PID da porta
-    PORT_RAG_PID=$(get_port_pid $RAG_PORT)
-fi
-
-# Se encontrou processo uvicorn, usa ele (assume que está usando a porta)
-if [ -n "$UVICORN_PROCESS" ]; then
-    echo -e "${GREEN}Uvicorn já está rodando (PID: $UVICORN_PROCESS)${NC}"
-    echo -e "${BLUE}Usando uvicorn existente...${NC}"
-    UVICORN_PID=$UVICORN_PROCESS
-    USE_EXISTING_UVICORN=true
-elif [ "$PORT_IN_USE" = true ]; then
-    # Porta está em uso mas não encontrou processo uvicorn
-    echo -e "${YELLOW}Aviso: Porta ${RAG_PORT} já está em uso${NC}"
-    
-    if [ -n "$PORT_RAG_PID" ] && [ "$PORT_RAG_PID" != "-" ]; then
-        echo -e "${YELLOW}Verificando processo na porta (PID: $PORT_RAG_PID)...${NC}"
-        PROCESS_CMD=$(ps -p $PORT_RAG_PID -o cmd= 2>/dev/null)
-        if echo "$PROCESS_CMD" | grep -qE "(uvicorn|main:app|rag-service|python.*${RAG_PORT})"; then
-            echo -e "${GREEN}Uvicorn já está rodando (PID: $PORT_RAG_PID)${NC}"
-            echo -e "${BLUE}Usando uvicorn existente...${NC}"
-            UVICORN_PID=$PORT_RAG_PID
-            USE_EXISTING_UVICORN=true
+        if [ -n "$PORT_RAG_PID" ] && [ "$PORT_RAG_PID" != "-" ]; then
+            echo -e "${YELLOW}Verificando processo na porta (PID: $PORT_RAG_PID)...${NC}"
+            PROCESS_CMD=$(ps -p "$PORT_RAG_PID" -o cmd= 2>/dev/null)
+            if echo "$PROCESS_CMD" | grep -qE "(uvicorn|main:app|rag-service|python.*${RAG_PORT})"; then
+                echo -e "${GREEN}Uvicorn já está rodando (PID: $PORT_RAG_PID)${NC}"
+                echo -e "${BLUE}Usando uvicorn existente...${NC}"
+                UVICORN_PID=$PORT_RAG_PID
+                USE_EXISTING_UVICORN=true
+            else
+                echo -e "${RED}Erro: Porta ${RAG_PORT} está em uso por outro processo${NC}"
+                echo -e "${YELLOW}Comando do processo: $PROCESS_CMD${NC}"
+                echo -e "${YELLOW}Execute: lsof -ti:${RAG_PORT} | xargs kill${NC}"
+                exit 1
+            fi
         else
-            echo -e "${RED}Erro: Porta ${RAG_PORT} está em uso por outro processo${NC}"
-            echo -e "${YELLOW}Comando do processo: $PROCESS_CMD${NC}"
-            echo -e "${YELLOW}Execute: lsof -ti:${RAG_PORT} | xargs kill${NC}"
-            exit 1
+            UVICORN_CHECK=$(check_uvicorn_running "$RAG_PORT")
+            if [ -n "$UVICORN_CHECK" ]; then
+                echo -e "${GREEN}Uvicorn já está rodando (PID: $UVICORN_CHECK)${NC}"
+                echo -e "${BLUE}Usando uvicorn existente...${NC}"
+                UVICORN_PID=$UVICORN_CHECK
+                USE_EXISTING_UVICORN=true
+            else
+                echo -e "${YELLOW}Não foi possível identificar o processo usando a porta ${RAG_PORT}${NC}"
+                echo -e "${YELLOW}Mas a porta está em uso. Tentando iniciar mesmo assim...${NC}"
+                echo -e "${YELLOW}(Se falhar, execute: lsof -ti:${RAG_PORT} | xargs kill)${NC}"
+            fi
         fi
     else
-        # Não conseguiu obter PID, mas porta está em uso
-        # Tenta uma última vez encontrar uvicorn
-        UVICORN_CHECK=$(check_uvicorn_running $RAG_PORT)
-        if [ -n "$UVICORN_CHECK" ]; then
-            echo -e "${GREEN}Uvicorn já está rodando (PID: $UVICORN_CHECK)${NC}"
-            echo -e "${BLUE}Usando uvicorn existente...${NC}"
-            UVICORN_PID=$UVICORN_CHECK
-            USE_EXISTING_UVICORN=true
-        else
-            echo -e "${YELLOW}Não foi possível identificar o processo usando a porta ${RAG_PORT}${NC}"
-            echo -e "${YELLOW}Mas a porta está em uso. Tentando iniciar mesmo assim...${NC}"
-            echo -e "${YELLOW}(Se falhar, execute: lsof -ti:${RAG_PORT} | xargs kill)${NC}"
-            # Continua para tentar iniciar (pode falhar, mas pelo menos tenta)
-        fi
-    fi
-else
-    # Verificação dupla antes de iniciar (pode ter mudado entre as verificações)
-    PORT_RAG_PID=$(get_port_pid $RAG_PORT)
-    if [ -n "$PORT_RAG_PID" ]; then
-        echo -e "${YELLOW}Aviso: Porta ${RAG_PORT} ficou em uso durante a verificação${NC}"
-        PROCESS_CMD=$(ps -p $PORT_RAG_PID -o cmd= 2>/dev/null)
-        if echo "$PROCESS_CMD" | grep -qE "(uvicorn|main:app|rag-service|python.*${RAG_PORT})"; then
-            echo -e "${GREEN}Uvicorn já está rodando (PID: $PORT_RAG_PID) na porta ${RAG_PORT}${NC}"
-            echo -e "${BLUE}Usando uvicorn existente...${NC}"
-            UVICORN_PID=$PORT_RAG_PID
-            USE_EXISTING_UVICORN=true
-        else
-            echo -e "${RED}Erro: Porta ${RAG_PORT} está em uso por outro processo${NC}"
-            echo -e "${YELLOW}Execute: lsof -ti:${RAG_PORT} | xargs kill${NC}"
-            exit 1
-        fi
-    else
-        # Verificação final antes de iniciar (pode ter mudado no último momento)
         sleep 0.5
-        PORT_RAG_PID=$(get_port_pid $RAG_PORT)
+        PORT_RAG_PID=$(get_port_pid "$RAG_PORT")
         if [ -n "$PORT_RAG_PID" ]; then
-            PROCESS_CMD=$(ps -p $PORT_RAG_PID -o cmd= 2>/dev/null)
+            PROCESS_CMD=$(ps -p "$PORT_RAG_PID" -o cmd= 2>/dev/null)
             if echo "$PROCESS_CMD" | grep -qE "(uvicorn|main:app|rag-service|python.*${RAG_PORT})"; then
                 echo -e "${GREEN}Uvicorn já está rodando (PID: $PORT_RAG_PID) na porta ${RAG_PORT}${NC}"
                 echo -e "${BLUE}Usando uvicorn existente...${NC}"
@@ -215,25 +254,23 @@ else
                 exit 1
             fi
         else
-            # Inicia o uvicorn em background
             echo -e "${GREEN}Iniciando uvicorn na porta ${RAG_PORT}...${NC}"
-            # Verifica se há ambiente virtual no rag-service
             UVICORN_STARTED=false
             if [ -f "rag-service/venv/bin/uvicorn" ]; then
                 cd rag-service
-                ./venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port $RAG_PORT > /dev/null 2>&1 &
+                ./venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port "$RAG_PORT" > /dev/null 2>&1 &
                 UVICORN_PID=$!
                 cd ..
                 UVICORN_STARTED=true
             elif command -v uvicorn &> /dev/null; then
                 cd rag-service
-                uvicorn main:app --reload --host 0.0.0.0 --port $RAG_PORT 2>&1 &
+                uvicorn main:app --reload --host 0.0.0.0 --port "$RAG_PORT" 2>&1 &
                 UVICORN_PID=$!
                 cd ..
                 UVICORN_STARTED=true
             elif command -v python3 &> /dev/null; then
                 cd rag-service
-                python3 -m uvicorn main:app --reload --host 0.0.0.0 --port $RAG_PORT 2>&1 &
+                python3 -m uvicorn main:app --reload --host 0.0.0.0 --port "$RAG_PORT" 2>&1 &
                 UVICORN_PID=$!
                 cd ..
                 UVICORN_STARTED=true
@@ -241,87 +278,20 @@ else
                 echo -e "${RED}Erro: uvicorn não encontrado. Instale o ambiente virtual em rag-service/venv${NC}"
                 exit 1
             fi
-        
+
             if [ "$UVICORN_STARTED" = true ]; then
                 USE_EXISTING_UVICORN=false
-                
-                # Verificação imediata (pode ter falhado imediatamente)
                 sleep 1
-                if ! kill -0 $UVICORN_PID 2>/dev/null; then
-                    # Processo terminou imediatamente, verifica se a porta está em uso
-                    PORT_RAG_PID=$(get_port_pid $RAG_PORT)
-                    if [ -n "$PORT_RAG_PID" ]; then
-                        PROCESS_CMD=$(ps -p $PORT_RAG_PID -o cmd= 2>/dev/null)
-                        if echo "$PROCESS_CMD" | grep -qE "(uvicorn|main:app|rag-service|python.*${RAG_PORT})"; then
-                            echo -e "${GREEN}Uvicorn já estava rodando (PID: $PORT_RAG_PID) na porta ${RAG_PORT}${NC}"
-                            echo -e "${BLUE}Usando uvicorn existente...${NC}"
-                            UVICORN_PID=$PORT_RAG_PID
-                            USE_EXISTING_UVICORN=true
-                        else
-                            echo -e "${RED}Erro: Uvicorn não iniciou e porta ${RAG_PORT} está em uso por outro processo${NC}"
-                            echo -e "${YELLOW}Execute: lsof -ti:${RAG_PORT} | xargs kill${NC}"
-                            exit 1
-                        fi
-                    else
-                        echo -e "${RED}Erro: Uvicorn não iniciou corretamente (processo terminou)${NC}"
-                        exit 1
-                    fi
-                else
-                    # Aguarda mais um pouco para o uvicorn iniciar completamente
-                    sleep 2
-                    
-                    # Verifica novamente se o uvicorn está rodando
-                    if ! kill -0 $UVICORN_PID 2>/dev/null; then
-                        echo -e "${RED}Erro: Uvicorn não iniciou corretamente (processo terminou)${NC}"
-                        exit 1
-                    fi
-                fi
-                
-                # Verifica se a porta do RAG está realmente em uso pelo processo
-                # Aguarda um pouco mais para o uvicorn inicializar completamente
-                echo -e "${BLUE}Aguardando uvicorn inicializar na porta ${RAG_PORT}...${NC}"
-                PORT_ACTIVE=false
-                for i in {1..10}; do
-                    if check_port $RAG_PORT; then
-                        PORT_ACTIVE=true
-                        echo -e "${GREEN}Porta ${RAG_PORT} está ativa!${NC}"
-                        break
-                    fi
-                    if [ $i -lt 10 ]; then
-                        sleep 1
-                    fi
-                done
-                
-                if [ "$PORT_ACTIVE" = false ]; then
-                    # Verifica se o processo ainda está rodando
-                    if kill -0 $UVICORN_PID 2>/dev/null; then
-                        echo -e "${YELLOW}Aviso: Uvicorn está rodando mas porta ${RAG_PORT} ainda não está ativa${NC}"
-                        echo -e "${YELLOW}Isso pode ser normal - o uvicorn pode estar ainda inicializando${NC}"
-                        echo -e "${YELLOW}O serviço deve ficar disponível em breve${NC}"
-                        # Não mata o processo, deixa continuar
-                    else
-                        echo -e "${RED}Erro: Uvicorn não conseguiu iniciar corretamente${NC}"
-                        exit 1
-                    fi
+                if ! kill -0 "$UVICORN_PID" 2>/dev/null; then
+                    echo -e "${RED}Erro: Uvicorn não iniciou corretamente (processo terminou)${NC}"
+                    exit 1
                 fi
             fi
         fi
     fi
-fi
-
-# Lê porta do frontend (variável de ambiente tem precedência sobre config.json)
-FRONTEND_PORT=5173
-
-# Primeiro tenta ler da variável de ambiente
-if [ -n "$FRONTEND_PORT_ENV" ]; then
-    FRONTEND_PORT=$FRONTEND_PORT_ENV
-# Se não houver variável de ambiente, lê do config.json
-elif [ -f "api/data/config.json" ]; then
-    # Procura especificamente dentro da seção "frontend"
-    CONFIG_PORT=$(grep -A 5 '"frontend"' api/data/config.json | grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' | grep -o '[0-9]*' | head -1)
-    if [ -n "$CONFIG_PORT" ]; then
-        FRONTEND_PORT=$CONFIG_PORT
-    fi
+else
+    USE_EXISTING_UVICORN=true
+    echo -e "${BLUE}RAG desabilitado em api/data/config.json; pulando uvicorn.${NC}"
 fi
 
 # Verifica se a porta do frontend está em uso
@@ -353,8 +323,12 @@ else
 fi
 
 echo -e "${BLUE}Servidores iniciados!${NC}"
-echo -e "${GREEN}API (nodemon): http://localhost:3000${NC}"
-echo -e "${GREEN}Uvicorn: http://localhost:${RAG_PORT}${NC}"
+echo -e "${GREEN}API (nodemon): http://localhost:${API_PORT}${NC}"
+if [ "$RAG_ENABLED" = "true" ]; then
+    echo -e "${GREEN}Uvicorn: http://localhost:${RAG_PORT}${NC}"
+else
+    echo -e "${BLUE}Uvicorn: desabilitado${NC}"
+fi
 echo -e "${GREEN}Frontend (Vite): http://localhost:${FRONTEND_PORT}${NC}"
 echo ""
 
@@ -363,7 +337,7 @@ NEW_PROCESSES=0
 if [ "$USE_EXISTING_API" != true ]; then
     NEW_PROCESSES=$((NEW_PROCESSES + 1))
 fi
-if [ "$USE_EXISTING_UVICORN" != true ]; then
+if [ "$RAG_ENABLED" = "true" ] && [ "$USE_EXISTING_UVICORN" != true ]; then
     NEW_PROCESSES=$((NEW_PROCESSES + 1))
 fi
 if [ "$USE_EXISTING_FRONTEND" != true ]; then
@@ -382,4 +356,3 @@ else
     echo -e "${BLUE}Pressione Ctrl+C para parar os servidores iniciados${NC}"
     wait
 fi
-

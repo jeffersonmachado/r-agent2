@@ -1,0 +1,260 @@
+.qa-waves-page {
+  padding: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.qa-waves-header {
+  margin-bottom: 1rem;
+}
+
+.qa-waves-title {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+  color: var(--color-text-primary);
+}
+
+.qa-waves-subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.qa-waves-feedback {
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.qa-waves-feedback.error {
+  color: var(--color-status-error);
+}
+
+.qa-waves-feedback.success {
+  color: var(--color-status-success);
+}
+
+.qa-waves-panel {
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg-elevated);
+}
+
+.qa-waves-main {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.qa-waves-sidebar,
+.qa-waves-content {
+  min-height: 0;
+}
+
+.qa-waves-section-title {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-primary);
+}
+
+.qa-waves-filter-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.qa-waves-filter-grid input,
+.qa-waves-filter-grid select,
+.qa-waves-filter-grid button,
+.qa-waves-page button {
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-radius: 0.45rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.qa-waves-filter-grid button,
+.qa-waves-page button {
+  cursor: pointer;
+}
+
+.qa-waves-filter-grid button:hover,
+.qa-waves-page button:hover {
+  background: var(--color-bg-hover);
+}
+
+.qa-waves-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.qa-waves-waves-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.qa-waves-wave-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg-elevated);
+}
+
+.qa-waves-wave-meta {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.qa-waves-replays-table-wrap {
+  overflow: auto;
+  max-height: 52vh;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  background: var(--color-bg-elevated);
+}
+
+.qa-waves-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.qa-waves-table th,
+.qa-waves-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border-default);
+  text-align: left;
+}
+
+.qa-waves-table th {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-elevated);
+  z-index: 1;
+}
+
+.qa-waves-table td {
+  color: var(--color-text-primary);
+}
+
+.qa-waves-actions-cell {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qa-waves-pagination {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.qa-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.qa-status-badge[data-status='success'] {
+  color: var(--color-status-success);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.qa-status-badge[data-status='failure'] {
+  color: var(--color-status-error);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.qa-status-badge[data-status='executing'] {
+  color: var(--color-status-info);
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.qa-status-badge[data-status='pending'] {
+  color: var(--color-status-warning);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.qa-replay-details {
+  margin-top: 1rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg-elevated);
+}
+
+.qa-replay-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qa-replay-details-meta {
+  margin: 0.25rem 0;
+  color: var(--color-text-secondary);
+}
+
+.qa-replay-player {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.qa-replay-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.qa-replay-step-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg-secondary);
+}
+
+.qa-replay-step-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.qa-replay-muted {
+  margin-top: 0.35rem;
+  color: var(--color-text-secondary);
+}
+
+.qa-replay-small {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary);
+}
+
+.qa-replay-typed-empty {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 1100px) {
+  .qa-waves-main {
+    grid-template-columns: 1fr;
+  }
+
+  .qa-waves-waves-grid {
+    max-height: none;
+    overflow: visible;
+  }
+}

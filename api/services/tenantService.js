@@ -283,6 +283,10 @@ function syncTenantContext(tenantId, ramo_atividade, objetivo, site_oficial) {
   logger.debug(`[TenantService] Tenant context sincronizado: ${tenantId}`);
 }
 
+function cacheTenantContext(tenantId, ramo_atividade, objetivo, site_oficial) {
+  syncTenantContext(tenantId, ramo_atividade, objetivo, site_oficial);
+}
+
 /**
  * Indexa o site do tenant como fonte institucional canônica.
  * Executado de forma assíncrona para não bloquear a criação/atualização do tenant.
@@ -1345,6 +1349,7 @@ async function findTenantBySite(site) {
 
 module.exports = {
   initializeTenantContexts,
+  cacheTenantContext,
   createTenant,
   findTenantBySite,
   updateTenant,

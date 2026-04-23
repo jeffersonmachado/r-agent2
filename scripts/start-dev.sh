@@ -151,6 +151,40 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RAG_SERVICE_DIR="${RAG_SERVICE_DIR:-$PROJECT_ROOT/rag-service}"
 RAG_PORT=8001
 
+read_config() {
+    local expr="$1"
+    node -e "
+const fs = require('fs');
+const config = JSON.parse(fs.readFileSync('api/data/config.json', 'utf8'));
+const read = (obj, path) => path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+const value = read(config, process.argv[1]);
+if (value === undefined || value === null) process.exit(1);
+if (typeof value === 'object') {
+  process.stdout.write(JSON.stringify(value));
+} else {
+  process.stdout.write(String(value));
+}
+" "$expr" 2>/dev/null
+}
+
+RAG_ENABLED="${ENABLE_RAG:-$(read_config 'features.enableRAG')}"
+if [ -z "$RAG_ENABLED" ]; then
+    RAG_ENABLED=false
+fi
+
+RAG_PORT_FROM_CONFIG="$(read_config 'rag.port')"
+if [ -n "$RAG_PORT_FROM_CONFIG" ]; then
+    RAG_PORT="$RAG_PORT_FROM_CONFIG"
+else
+    RAG_SERVICE_URL="$(read_config 'rag.serviceUrl')"
+    if [ -n "$RAG_SERVICE_URL" ]; then
+        RAG_PORT_FROM_URL="$(echo "$RAG_SERVICE_URL" | sed -n 's/.*:\([0-9]*\).*/\1/p')"
+        if [ -n "$RAG_PORT_FROM_URL" ]; then
+            RAG_PORT="$RAG_PORT_FROM_URL"
+        fi
+    fi
+fi
+
 # Função para matar processos relacionados ao projeto
 kill_project_processes() {
     echo -e "${YELLOW}Matando processos relacionados ao projeto...${NC}"
@@ -272,6 +306,35 @@ cd "$PROJECT_ROOT"
 if [ -f ".env" ]; then
     export $(grep -v '^#' .env | grep -v '^$' | xargs 2>/dev/null)
 fi
+
+# Garante runtime externo ao workspace para evitar crash da API
+PROJECT_ROOT_ABS="$(cd "$PROJECT_ROOT" && pwd -P)"
+
+if [ -z "$RUNTIME_ROOT" ]; then
+    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+    echo -e "${YELLOW}RUNTIME_ROOT não definido. Usando padrão: $RUNTIME_ROOT${NC}"
+fi
+
+mkdir -p "$RUNTIME_ROOT" 2>/dev/null || true
+RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" 2>/dev/null && pwd -P)"
+
+if [ -z "$RUNTIME_ROOT_ABS" ]; then
+    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+    mkdir -p "$RUNTIME_ROOT"
+    RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
+fi
+
+case "$RUNTIME_ROOT_ABS" in
+    "$PROJECT_ROOT_ABS"|"$PROJECT_ROOT_ABS"/*)
+        RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
+        mkdir -p "$RUNTIME_ROOT"
+        RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
+        echo -e "${YELLOW}RUNTIME_ROOT apontava para dentro do workspace. Ajustado para: $RUNTIME_ROOT_ABS${NC}"
+        ;;
+esac
+
+export RUNTIME_ROOT="$RUNTIME_ROOT_ABS"
+echo -e "${GREEN}✅ RUNTIME_ROOT ativo: $RUNTIME_ROOT${NC}"
 
 PGDATABASE=${PGDATABASE:-r_agent2}
 PGHOST=${PGHOST:-localhost}
@@ -544,57 +607,58 @@ elif [ -f "api/data/config.json" ]; then
     fi
 fi
 
-# Mata processos na porta do RAG se estiver em uso
-if ! kill_port $RAG_PORT "RAG Service"; then
-    echo -e "${YELLOW}⚠️  kill_port retornou erro, mas continuando...${NC}"
-fi
+if [ "$RAG_ENABLED" = "true" ]; then
+    # Mata processos na porta do RAG se estiver em uso
+    if ! kill_port $RAG_PORT "RAG Service"; then
+        echo -e "${YELLOW}⚠️  kill_port retornou erro, mas continuando...${NC}"
+    fi
 
-# Aguarda a porta ficar livre (máximo 10 segundos)
-echo -e "${BLUE}Aguardando porta $RAG_PORT ficar livre...${NC}"
-PORT_FREE=false
-for i in {1..10}; do
-    if ! check_port $RAG_PORT; then
-        PORT_FREE=true
-        break
-    fi
-    if [ $i -eq 1 ] || [ $i -eq 5 ] || [ $i -eq 10 ]; then
-        echo -e "${YELLOW}  Tentativa $i/10 - Porta ainda em uso:${NC}"
-        # Tenta mostrar processos usando todos os métodos disponíveis
-        found_process=false
-        
-        if command -v lsof &> /dev/null; then
-            lsof_output=$(lsof -i :$RAG_PORT 2>/dev/null)
-            if [ -n "$lsof_output" ]; then
-                echo -e "${BLUE}    Processos encontrados via lsof:${NC}"
-                echo "$lsof_output" | head -5 | sed 's/^/      /'
-                found_process=true
+    # Aguarda a porta ficar livre (máximo 10 segundos)
+    echo -e "${BLUE}Aguardando porta $RAG_PORT ficar livre...${NC}"
+    PORT_FREE=false
+    for i in {1..10}; do
+        if ! check_port $RAG_PORT; then
+            PORT_FREE=true
+            break
+        fi
+        if [ $i -eq 1 ] || [ $i -eq 5 ] || [ $i -eq 10 ]; then
+            echo -e "${YELLOW}  Tentativa $i/10 - Porta ainda em uso:${NC}"
+            # Tenta mostrar processos usando todos os métodos disponíveis
+            found_process=false
+            
+            if command -v lsof &> /dev/null; then
+                lsof_output=$(lsof -i :$RAG_PORT 2>/dev/null)
+                if [ -n "$lsof_output" ]; then
+                    echo -e "${BLUE}    Processos encontrados via lsof:${NC}"
+                    echo "$lsof_output" | head -5 | sed 's/^/      /'
+                    found_process=true
+                fi
+            fi
+            
+            if [ "$found_process" = false ] && command -v netstat &> /dev/null; then
+                netstat_output=$(netstat -tlnp 2>/dev/null | grep ":$RAG_PORT ")
+                if [ -n "$netstat_output" ]; then
+                    echo -e "${BLUE}    Processos encontrados via netstat:${NC}"
+                    echo "$netstat_output" | head -3 | sed 's/^/      /'
+                    found_process=true
+                fi
+            fi
+            
+            if [ "$found_process" = false ] && command -v ss &> /dev/null; then
+                ss_output=$(ss -tlnp 2>/dev/null | grep ":$RAG_PORT ")
+                if [ -n "$ss_output" ]; then
+                    echo -e "${BLUE}    Processos encontrados via ss:${NC}"
+                    echo "$ss_output" | head -3 | sed 's/^/      /'
+                    found_process=true
+                fi
+            fi
+            
+            if [ "$found_process" = false ]; then
+                echo -e "${YELLOW}    (nenhum processo encontrado, pode ser socket TIME_WAIT)${NC}"
             fi
         fi
-        
-        if [ "$found_process" = false ] && command -v netstat &> /dev/null; then
-            netstat_output=$(netstat -tlnp 2>/dev/null | grep ":$RAG_PORT ")
-            if [ -n "$netstat_output" ]; then
-                echo -e "${BLUE}    Processos encontrados via netstat:${NC}"
-                echo "$netstat_output" | head -3 | sed 's/^/      /'
-                found_process=true
-            fi
-        fi
-        
-        if [ "$found_process" = false ] && command -v ss &> /dev/null; then
-            ss_output=$(ss -tlnp 2>/dev/null | grep ":$RAG_PORT ")
-            if [ -n "$ss_output" ]; then
-                echo -e "${BLUE}    Processos encontrados via ss:${NC}"
-                echo "$ss_output" | head -3 | sed 's/^/      /'
-                found_process=true
-            fi
-        fi
-        
-        if [ "$found_process" = false ]; then
-            echo -e "${YELLOW}    (nenhum processo encontrado, pode ser socket TIME_WAIT)${NC}"
-        fi
-    fi
-    sleep 1
-done
+        sleep 1
+    done
 
 if [ "$PORT_FREE" = false ]; then
     echo -e "${YELLOW}⚠️  Porta $RAG_PORT ainda está em uso após 10 segundos${NC}"
@@ -900,6 +964,9 @@ else
     echo -e "${YELLOW}Aviso: RAG Service iniciado mas ainda não está respondendo${NC}"
     echo -e "${YELLOW}Verifique os logs: tail -f /tmp/rag-service-dev.log${NC}"
 fi
+else
+    echo -e "${BLUE}RAG desabilitado em api/data/config.json; pulando RAG Service.${NC}"
+fi
 
 # Mata processos na porta do frontend se estiver em uso
 kill_port $FRONTEND_PORT "Frontend"
@@ -914,8 +981,11 @@ cd ..
 echo -e "${BLUE}Servidores iniciados!${NC}"
 echo -e "${GREEN}API: http://localhost:${API_PORT}${NC}"
 echo -e "${GREEN}Frontend: http://localhost:${FRONTEND_PORT}${NC}"
-echo -e "${GREEN}RAG Service: http://localhost:$RAG_PORT${NC}"
+if [ "$RAG_ENABLED" = "true" ]; then
+    echo -e "${GREEN}RAG Service: http://localhost:$RAG_PORT${NC}"
+else
+    echo -e "${BLUE}RAG Service: desabilitado${NC}"
+fi
 
 echo -e "${BLUE}Pressione Ctrl+C para parar todos os servidores${NC}"
 wait
-

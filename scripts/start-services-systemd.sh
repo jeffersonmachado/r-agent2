@@ -51,10 +51,10 @@ sudo systemctl enable r-agent2-rag
 sleep 3
 
 # Verifica RAG Service
-if curl -s http://localhost:8000/rag/health > /dev/null 2>&1; then
+if curl -s http://localhost:8001/rag/health > /dev/null 2>&1; then
     echo -e "${GREEN}✅ RAG Service está rodando${NC}"
     echo -e "${BLUE}   Health check:${NC}"
-    curl -s http://localhost:8000/rag/health | python3 -m json.tool 2>/dev/null || echo "   (Resposta recebida)"
+    curl -s http://localhost:8001/rag/health | python3 -m json.tool 2>/dev/null || echo "   (Resposta recebida)"
 else
     echo -e "${YELLOW}⚠️  RAG Service pode estar iniciando...${NC}"
     echo -e "${YELLOW}   Verifique com: sudo systemctl status r-agent2-rag${NC}"

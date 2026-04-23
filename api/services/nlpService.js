@@ -23,7 +23,7 @@ function safeErrorMessage(err, fallback = '') {
 }
 
 // URL padrão do serviço Python RAG (sem /rag no final, será adicionado no endpoint)
-const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8000');
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 
 /**
  * Analisa texto com NLP.

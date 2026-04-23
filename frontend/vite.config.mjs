@@ -85,7 +85,8 @@ function frontendRoutesPlugin() {
                           url.startsWith('/super-admin') ||
                           url.startsWith('/onboarding') ||
                           url.startsWith('/admin') ||
-                          url.startsWith('/dev') ||
+                          url === '/dev/files' ||
+                          url.startsWith('/dev/files/') ||
                           // /analytics e /export (sem subcaminho) são rotas de página
                           // Já os endpoints de API ficam em /analytics/* e /export/*
                           url.startsWith('/analytics/') ||
@@ -152,7 +153,7 @@ const viteConfig = defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
   const apiProxyTarget =
     process.env.VITE_PROXY_TARGET ||
-    `http://localhost:${config.api?.port || 3000}`;
+    `http://localhost:${config.api?.port || 3001}`;
 
   return {
   base: pwaBasePath,
@@ -512,7 +513,7 @@ const viteConfig = defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
-      '^/dev': {
+      '^/dev/files': {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,

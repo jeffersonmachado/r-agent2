@@ -489,6 +489,34 @@ const schemas = {
     },
   },
 
+  signupSaas: {
+    type: 'object',
+    fields: {
+      name: {
+        type: 'string',
+        required: true,
+        minLength: 2,
+        maxLength: 200,
+      },
+      company: {
+        type: 'string',
+        required: true,
+        minLength: 2,
+        maxLength: 200,
+      },
+      email: {
+        type: 'email',
+        required: true,
+      },
+      password: {
+        type: 'string',
+        required: true,
+        minLength: 8,
+        maxLength: 500,
+      },
+    },
+  },
+
   createAgent: {
     type: 'object',
     fields: {

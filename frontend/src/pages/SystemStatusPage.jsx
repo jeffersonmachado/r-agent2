@@ -81,8 +81,8 @@ export function SystemStatusPage() {
               status: 'unknown',
               error: 'Não foi possível verificar - API indisponível',
               details: {
-                port: 8000,
-                hint: 'Não é possível verificar o status do RAG Service enquanto a API estiver indisponível. Porta padrão: 8000.',
+                port: 8001,
+                hint: 'Não é possível verificar o status do RAG Service enquanto a API estiver indisponível. Porta padrão: 8001.',
               },
             },
             redis: {

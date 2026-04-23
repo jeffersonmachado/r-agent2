@@ -189,6 +189,7 @@ export const navigationMenu = [
         label: 'Execucao',
         children: [
           { id: 'automations', label: 'Automacoes', path: '/automations', permission: { resource: 'config', action: 'update' }, roles: ['admin', 'owner', 'manager', 'supervisor', 'super_admin'] },
+          { id: 'projects', label: 'Projetos', path: '/projects', permission: { resource: 'projects', action: 'read' }, roles: ['operator', 'manager', 'admin', 'owner', 'supervisor', 'super_admin'] },
           { id: 'tasks', label: 'Tarefas', path: '/tasks', permission: { resource: 'config', action: 'update' }, roles: ['admin', 'owner', 'manager', 'supervisor', 'super_admin'] },
           { id: 'generate-system', label: 'Generate System', path: '/generate-system', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },
           { id: 'rpa-test', label: 'RPA Test', path: '/rpa-test', permission: { resource: 'flows', action: 'read' }, hiddenInSidebar: true },
@@ -303,6 +304,7 @@ export const navigationMenu = [
         children: [
           { id: 'super-admin-page', label: 'Super Admin', path: '/super-admin', roles: ['super_admin'] },
           { id: 'dev', label: 'Dev Center', path: '/dev', roles: ['super_admin'] },
+          { id: 'dev-qa-waves', label: 'QA Waves', path: '/dev/qa-waves', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
         ],
       },
     ],

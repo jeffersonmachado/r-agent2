@@ -5,7 +5,7 @@
 
 set -e
 
-BASE_URL="${RAG_SERVICE_URL:-http://localhost:8000}"
+BASE_URL="${RAG_SERVICE_URL:-http://localhost:8001}"
 TENANT_ID="test-tenant-$(date +%s)"
 
 echo "🧪 Testando Serviço RAG"

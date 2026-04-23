@@ -1,0 +1,82 @@
+import React, { useEffect, useState } from 'react';
+import { CrudPageBase } from '../../modules/crud-base';
+import { useRouter } from '../../hooks/useRouter';
+import { useToast } from '../../components/Toast';
+import { getProject, getProjectDashboard } from '../../api/projects';
+import { ProjectKpis } from '../../components/projects/ProjectKpis';
+
+function getProjectIdFromPath(path) {
+  const parts = String(path || '').split('/').filter(Boolean);
+  return parts[1] || null;
+}
+
+export function ProjectDashboardPage() {
+  const { currentPath, navigate } = useRouter();
+  const { ToastContainer, showToast } = useToast();
+  const projectId = getProjectIdFromPath(currentPath);
+  const [project, setProject] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [projectResponse, dashboardResponse] = await Promise.all([
+          getProject(projectId),
+          getProjectDashboard(projectId),
+        ]);
+        setProject(projectResponse?.project || null);
+        setDashboard(dashboardResponse?.dashboard || null);
+      } catch (error) {
+        showToast('Erro ao carregar dashboard do projeto', 'error');
+      }
+    }
+    load();
+  }, [projectId, showToast]);
+
+  const flow = Array.isArray(dashboard?.flow) ? dashboard.flow : [];
+  const byTypeEntries = Object.entries(dashboard?.byType || {});
+
+  return (
+    <CrudPageBase>
+      <ToastContainer />
+      <div className="support-header">
+        <h1>{project?.name || 'Dashboard do Projeto'}</h1>
+        <div className="support-controls" style={{ gap: '12px' }}>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Board</button>
+          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Timeline</button>
+        </div>
+      </div>
+
+      <ProjectKpis dashboard={dashboard} />
+
+      <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-5 shadow-lg">
+          <div className="text-lg font-semibold text-text-primary mb-4">Fluxo por coluna</div>
+          <div className="space-y-3">
+            {flow.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between rounded-xl bg-bg-secondary border border-border-default p-3">
+                <div className="text-text-primary">{entry.name}</div>
+                <div className="text-text-secondary">{entry.count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-5 shadow-lg">
+          <div className="text-lg font-semibold text-text-primary mb-4">Distribuicao por tipo</div>
+          <div className="space-y-3">
+            {byTypeEntries.map(([type, count]) => (
+              <div key={type} className="flex items-center justify-between rounded-xl bg-bg-secondary border border-border-default p-3">
+                <div className="text-text-primary">{type}</div>
+                <div className="text-text-secondary">{count}</div>
+              </div>
+            ))}
+            {byTypeEntries.length === 0 ? <div className="text-sm text-text-secondary">Sem dados ainda.</div> : null}
+          </div>
+        </div>
+      </div>
+    </CrudPageBase>
+  );
+}
+
+export default ProjectDashboardPage;

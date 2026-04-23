@@ -140,6 +140,14 @@ export async function login(username, password) {
   return result;
 }
 
+export async function signupSaas(data) {
+  return fetchJson('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    timeoutMs: AUTH_DEFAULT_TIMEOUT_MS,
+  });
+}
+
 /**
  * Faz logout e remove o token
  */

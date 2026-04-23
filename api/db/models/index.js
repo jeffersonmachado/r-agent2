@@ -118,6 +118,16 @@ const getVerticalEngagementSignal = require('./VerticalEngagementSignal');
 const getBillingTransaction = require('./BillingTransaction');
 const getBillingSubscription = require('./BillingSubscription');
 const getNotificationDelivery = require('./NotificationDelivery');
+const getProject = require('./Project');
+const getProjectMember = require('./ProjectMember');
+const getProjectList = require('./ProjectList');
+const getProjectItem = require('./ProjectItem');
+const getProjectComment = require('./ProjectComment');
+const getProjectAttachment = require('./ProjectAttachment');
+const getProjectActivity = require('./ProjectActivity');
+const getProjectMilestone = require('./ProjectMilestone');
+const getProjectDependency = require('./ProjectDependency');
+const getProjectTemplate = require('./ProjectTemplate');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -235,6 +245,16 @@ const VerticalEngagementSignal = () => getVerticalEngagementSignal();
 const BillingTransaction = () => getBillingTransaction();
 const BillingSubscription = () => getBillingSubscription();
 const NotificationDelivery = () => getNotificationDelivery();
+const Project = () => getProject();
+const ProjectMember = () => getProjectMember();
+const ProjectList = () => getProjectList();
+const ProjectItem = () => getProjectItem();
+const ProjectComment = () => getProjectComment();
+const ProjectAttachment = () => getProjectAttachment();
+const ProjectActivity = () => getProjectActivity();
+const ProjectMilestone = () => getProjectMilestone();
+const ProjectDependency = () => getProjectDependency();
+const ProjectTemplate = () => getProjectTemplate();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -275,6 +295,16 @@ function defineRelationships() {
   const TenantInsightEvidenceModel = TenantInsightEvidence();
   const TenantRecommendationModel = TenantRecommendation();
   const TenantGoalModel = TenantGoal();
+  const ProjectModel = Project();
+  const ProjectMemberModel = ProjectMember();
+  const ProjectListModel = ProjectList();
+  const ProjectItemModel = ProjectItem();
+  const ProjectCommentModel = ProjectComment();
+  const ProjectAttachmentModel = ProjectAttachment();
+  const ProjectActivityModel = ProjectActivity();
+  const ProjectMilestoneModel = ProjectMilestone();
+  const ProjectDependencyModel = ProjectDependency();
+  const ProjectTemplateModel = ProjectTemplate();
 
   TenantInsightModel.hasMany(TenantInsightEvidenceModel, {
     foreignKey: 'insight_id',
@@ -399,6 +429,177 @@ function defineRelationships() {
   // No explicit relationships for CloseReason/TicketTag (tenant_key-based)
   // No explicit relationships for FlowTemplate (tenant_key-based)
   // No explicit relationships for ChannelAccount/ChannelConversation/ChannelMessage/OutboundQueueItem (tenant_key-based)
+
+  TenantModel.hasMany(ProjectModel, {
+    foreignKey: 'tenant_id',
+    as: 'projects',
+  });
+  ProjectModel.belongsTo(TenantModel, {
+    foreignKey: 'tenant_id',
+    as: 'tenant',
+  });
+
+  UserModel.hasMany(ProjectModel, {
+    foreignKey: 'owner_user_id',
+    as: 'ownedProjects',
+  });
+  ProjectModel.belongsTo(UserModel, {
+    foreignKey: 'owner_user_id',
+    as: 'owner',
+  });
+
+  ProjectModel.hasMany(ProjectMemberModel, {
+    foreignKey: 'project_id',
+    as: 'members',
+  });
+  ProjectMemberModel.belongsTo(ProjectModel, {
+    foreignKey: 'project_id',
+    as: 'project',
+  });
+  UserModel.hasMany(ProjectMemberModel, {
+    foreignKey: 'user_id',
+    as: 'projectMemberships',
+  });
+  ProjectMemberModel.belongsTo(UserModel, {
+    foreignKey: 'user_id',
+    as: 'user',
+  });
+
+  ProjectModel.hasMany(ProjectListModel, {
+    foreignKey: 'project_id',
+    as: 'lists',
+  });
+  ProjectListModel.belongsTo(ProjectModel, {
+    foreignKey: 'project_id',
+    as: 'project',
+  });
+
+  ProjectModel.hasMany(ProjectMilestoneModel, {
+    foreignKey: 'project_id',
+    as: 'milestones',
+  });
+  ProjectMilestoneModel.belongsTo(ProjectModel, {
+    foreignKey: 'project_id',
+    as: 'project',
+  });
+
+  ProjectModel.hasMany(ProjectItemModel, {
+    foreignKey: 'project_id',
+    as: 'items',
+  });
+  ProjectItemModel.belongsTo(ProjectModel, {
+    foreignKey: 'project_id',
+    as: 'project',
+  });
+  ProjectListModel.hasMany(ProjectItemModel, {
+    foreignKey: 'list_id',
+    as: 'items',
+  });
+  ProjectItemModel.belongsTo(ProjectListModel, {
+    foreignKey: 'list_id',
+    as: 'list',
+  });
+  ProjectMilestoneModel.hasMany(ProjectItemModel, {
+    foreignKey: 'milestone_id',
+    as: 'items',
+  });
+  ProjectItemModel.belongsTo(ProjectMilestoneModel, {
+    foreignKey: 'milestone_id',
+    as: 'milestone',
+  });
+  ProjectItemModel.hasMany(ProjectItemModel, {
+    foreignKey: 'parent_item_id',
+    as: 'children',
+  });
+  ProjectItemModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'parent_item_id',
+    as: 'parent',
+  });
+  UserModel.hasMany(ProjectItemModel, {
+    foreignKey: 'assignee_user_id',
+    as: 'assignedProjectItems',
+  });
+  ProjectItemModel.belongsTo(UserModel, {
+    foreignKey: 'assignee_user_id',
+    as: 'assignee',
+  });
+  UserModel.hasMany(ProjectItemModel, {
+    foreignKey: 'reporter_user_id',
+    as: 'reportedProjectItems',
+  });
+  ProjectItemModel.belongsTo(UserModel, {
+    foreignKey: 'reporter_user_id',
+    as: 'reporter',
+  });
+
+  ProjectItemModel.hasMany(ProjectCommentModel, {
+    foreignKey: 'item_id',
+    as: 'comments',
+  });
+  ProjectCommentModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'item_id',
+    as: 'item',
+  });
+  UserModel.hasMany(ProjectCommentModel, {
+    foreignKey: 'author_user_id',
+    as: 'projectComments',
+  });
+  ProjectCommentModel.belongsTo(UserModel, {
+    foreignKey: 'author_user_id',
+    as: 'author',
+  });
+
+  ProjectItemModel.hasMany(ProjectAttachmentModel, {
+    foreignKey: 'item_id',
+    as: 'attachments',
+  });
+  ProjectAttachmentModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'item_id',
+    as: 'item',
+  });
+
+  ProjectModel.hasMany(ProjectActivityModel, {
+    foreignKey: 'project_id',
+    as: 'activities',
+  });
+  ProjectActivityModel.belongsTo(ProjectModel, {
+    foreignKey: 'project_id',
+    as: 'project',
+  });
+  ProjectItemModel.hasMany(ProjectActivityModel, {
+    foreignKey: 'item_id',
+    as: 'activities',
+  });
+  ProjectActivityModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'item_id',
+    as: 'item',
+  });
+
+  ProjectItemModel.hasMany(ProjectDependencyModel, {
+    foreignKey: 'predecessor_item_id',
+    as: 'blockingDependencies',
+  });
+  ProjectItemModel.hasMany(ProjectDependencyModel, {
+    foreignKey: 'successor_item_id',
+    as: 'blockedByDependencies',
+  });
+  ProjectDependencyModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'predecessor_item_id',
+    as: 'predecessor',
+  });
+  ProjectDependencyModel.belongsTo(ProjectItemModel, {
+    foreignKey: 'successor_item_id',
+    as: 'successor',
+  });
+
+  TenantModel.hasMany(ProjectTemplateModel, {
+    foreignKey: 'tenant_id',
+    as: 'projectTemplates',
+  });
+  ProjectTemplateModel.belongsTo(TenantModel, {
+    foreignKey: 'tenant_id',
+    as: 'tenant',
+  });
 }
 
 module.exports = {
@@ -517,6 +718,16 @@ module.exports = {
   BillingTransaction,
   BillingSubscription,
   NotificationDelivery,
+  Project,
+  ProjectMember,
+  ProjectList,
+  ProjectItem,
+  ProjectComment,
+  ProjectAttachment,
+  ProjectActivity,
+  ProjectMilestone,
+  ProjectDependency,
+  ProjectTemplate,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -634,4 +845,14 @@ module.exports = {
   getBillingTransaction,
   getBillingSubscription,
   getNotificationDelivery,
+  getProject,
+  getProjectMember,
+  getProjectList,
+  getProjectItem,
+  getProjectComment,
+  getProjectAttachment,
+  getProjectActivity,
+  getProjectMilestone,
+  getProjectDependency,
+  getProjectTemplate,
 };

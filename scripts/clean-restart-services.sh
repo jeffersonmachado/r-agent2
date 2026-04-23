@@ -50,25 +50,25 @@ if [ -n "$UVICORN_PIDS" ]; then
     fi
 fi
 
-# Verifica e libera a porta 8000
-echo -e "${YELLOW}🔍 Verificando porta 8000...${NC}"
-PORT_PIDS=$(lsof -ti:8000 2>/dev/null || true)
+# Verifica e libera a porta 8001
+echo -e "${YELLOW}🔍 Verificando porta 8001...${NC}"
+PORT_PIDS=$(lsof -ti:8001 2>/dev/null || true)
 if [ -n "$PORT_PIDS" ]; then
-    echo -e "${YELLOW}⚠️  Porta 8000 ainda está em uso por PIDs: $PORT_PIDS${NC}"
+    echo -e "${YELLOW}⚠️  Porta 8001 ainda está em uso por PIDs: $PORT_PIDS${NC}"
     for pid in $PORT_PIDS; do
-        echo -e "${YELLOW}   Parando processo na porta 8000: PID $pid${NC}"
+        echo -e "${YELLOW}   Parando processo na porta 8001: PID $pid${NC}"
         sudo kill -9 $pid 2>/dev/null || true
     done
     sleep 2
 fi
 
 # Verifica se a porta está realmente livre
-if lsof -i :8000 > /dev/null 2>&1; then
-    echo -e "${RED}❌ Porta 8000 ainda está em uso após limpeza!${NC}"
-    lsof -i :8000
+if lsof -i :8001 > /dev/null 2>&1; then
+    echo -e "${RED}❌ Porta 8001 ainda está em uso após limpeza!${NC}"
+    lsof -i :8001
     exit 1
 else
-    echo -e "${GREEN}✅ Porta 8000 está livre${NC}"
+    echo -e "${GREEN}✅ Porta 8001 está livre${NC}"
 fi
 
 # Reinicia Redis
@@ -91,7 +91,7 @@ sleep 5
 # Verifica RAG Service
 echo -e "${YELLOW}🔍 Verificando RAG Service...${NC}"
 for i in {1..10}; do
-    RESPONSE=$(curl -s http://localhost:8000/rag/health 2>&1)
+    RESPONSE=$(curl -s http://localhost:8001/rag/health 2>&1)
     if echo "$RESPONSE" | grep -q "healthy\|status"; then
         echo -e "${GREEN}✅ RAG Service está respondendo${NC}"
         echo "$RESPONSE" | python3 -m json.tool 2>/dev/null || echo "$RESPONSE"
@@ -115,7 +115,7 @@ redis-cli -p 6379 ping 2>&1 || echo "   Não disponível"
 
 echo ""
 echo -e "${GREEN}RAG Service:${NC}"
-curl -s http://localhost:8000/rag/health 2>&1 | head -5 || echo "   Não disponível"
+curl -s http://localhost:8001/rag/health 2>&1 | head -5 || echo "   Não disponível"
 
 echo ""
 echo -e "${BLUE}📝 Processos uvicorn ativos:${NC}"

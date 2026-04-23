@@ -1,0 +1,16 @@
+{
+  "name": "qa-waves-ui-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "build": "node -e \"console.log('backend build ok')\"",
+    "test": "QA_WAVES_FORCE_MOCK=1 node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

@@ -9,6 +9,7 @@ function createAuthRoutes({
   schemas,
   ValidationError,
   authLogin,
+  createSaasSignupAccount,
   loginWithRpaToken,
   validateToken,
   authLogout,
@@ -70,6 +71,41 @@ function createAuthRoutes({
       }
       logger.error('Erro ao fazer login:', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar login' });
+    }
+  });
+
+  router.post('/auth/signup', jsonParser, async (req, res) => {
+    try {
+      let validated;
+      try {
+        validated = validateInput(req.body || {}, schemas.signupSaas);
+      } catch (err) {
+        if (err instanceof ValidationError) {
+          badRequest(res, err.message);
+          return;
+        }
+        throw err;
+      }
+
+      const result = await createSaasSignupAccount(validated);
+      if (!result.success) {
+        sendJson(res, 400, { error: 'signup_failed', message: result.error || 'Não foi possível criar conta' });
+        return;
+      }
+
+      sendJson(res, 201, {
+        success: true,
+        message: 'Conta criada com sucesso',
+        tenant: result.tenant,
+        credentials: result.credentials,
+      });
+    } catch (err) {
+      if (err instanceof SyntaxError || err?.type === 'entity.parse.failed') {
+        badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      logger.error('Erro ao criar conta SaaS:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao criar conta' });
     }
   });
 
