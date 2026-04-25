@@ -85,11 +85,11 @@ export function useSupportTicketActions({
     try {
       const updated = await returnToBotTicket(selectedTicket.id, 'user_request');
       const nextTicket = updated?.id ? updated : { ...selectedTicket, mode: 'bot', pauseReason: null };
-      showToast('Atendimento devolvido ao bot (modo bot)', 'success');
+      showToast('Atendimento liberado', 'success');
       refreshTicketCollections(nextTicket);
     } catch (error) {
-      logger.error('Erro ao devolver ao bot', error);
-      showToast('Erro ao devolver ao bot', 'error');
+      logger.error('Erro ao liberar atendimento', error);
+      showToast('Erro ao liberar atendimento', 'error');
     } finally {
       setHandoverLoading(false);
     }

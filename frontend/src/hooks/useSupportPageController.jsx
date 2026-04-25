@@ -112,12 +112,62 @@ export function useSupportPageController({
         new Map(allTickets.map((ticket) => [ticket.id, ticket])).values()
       );
 
-      uniqueTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const normalizedTickets = uniqueTickets.map((ticket) => {
+        const resolvedPhone =
+          ticket?.phoneNumber
+          || ticket?.phone_number
+          || ticket?.phone
+          || ticket?.contactPhone
+          || ticket?.contact_phone
+          || ticket?.contact?.phone
+          || ticket?.context?.metadata?.phoneNumber
+          || ticket?.context?.metadata?.phone_number
+          || ticket?.context?.metadata?.phone
+          || ticket?.context?.variables?.phoneNumber
+          || ticket?.context?.variables?.phone_number
+          || ticket?.context?.variables?.phone
+          || null;
 
-      setTickets(uniqueTickets);
+        const contactFromObject = typeof ticket?.contact === 'object'
+          ? ticket?.contact?.name
+          : ticket?.contact;
+
+        const composedName = [
+          ticket?.firstName || ticket?.first_name,
+          ticket?.lastName || ticket?.last_name,
+        ].filter(Boolean).join(' ').trim();
+
+        const resolvedName =
+          ticket?.contactName
+          || ticket?.contact_name
+          || ticket?.customerName
+          || ticket?.customer_name
+          || contactFromObject
+          || composedName
+          || ticket?.context?.metadata?.contactName
+          || ticket?.context?.metadata?.contact_name
+          || ticket?.context?.metadata?.customerName
+          || ticket?.context?.metadata?.customer_name
+          || ticket?.context?.metadata?.name
+          || ticket?.context?.variables?.customerName
+          || ticket?.context?.variables?.customer_name
+          || ticket?.context?.variables?.name
+          || ticket?.context?.variables?.nome
+          || null;
+
+        return {
+          ...ticket,
+          phoneNumber: resolvedPhone,
+          contactName: resolvedName,
+        };
+      });
+
+      normalizedTickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setTickets(normalizedTickets);
       setSelectedTicket((prevSelected) => {
         if (!prevSelected) return null;
-        const updatedTicket = uniqueTickets.find((t) => t.id === prevSelected.id);
+        const updatedTicket = normalizedTickets.find((t) => t.id === prevSelected.id);
         if (!updatedTicket) return null;
         return updatedTicket;
       });
@@ -178,30 +228,66 @@ export function useSupportPageController({
 
     const resolvedPhone =
       incomingTicket.phoneNumber
+      || incomingTicket.phone_number
       || incomingTicket.phone
       || incomingTicket.contactPhone
+      || incomingTicket.contact_phone
+      || incomingTicket.contact?.phone
       || previousTicket.phoneNumber
+      || previousTicket.phone_number
       || previousTicket.phone
       || previousTicket.contactPhone
+      || previousTicket.contact_phone
+      || previousTicket.contact?.phone
       || previousTicket.context?.metadata?.phoneNumber
+      || previousTicket.context?.metadata?.phone_number
       || previousTicket.context?.metadata?.phone
+      || previousTicket.context?.variables?.phoneNumber
+      || previousTicket.context?.variables?.phone_number
+      || previousTicket.context?.variables?.phone
       || null;
+
+    const incomingComposedName = [
+      incomingTicket.firstName || incomingTicket.first_name,
+      incomingTicket.lastName || incomingTicket.last_name,
+    ].filter(Boolean).join(' ').trim();
+
+    const previousComposedName = [
+      previousTicket.firstName || previousTicket.first_name,
+      previousTicket.lastName || previousTicket.last_name,
+    ].filter(Boolean).join(' ').trim();
 
     const resolvedName =
       incomingTicket.contactName
+      || incomingTicket.contact_name
       || incomingTicket.customerName
+      || incomingTicket.customer_name
       || incomingTicket.contact?.name
+      || (typeof incomingTicket.contact === 'string' ? incomingTicket.contact : null)
+      || incomingComposedName
       || incomingTicket.context?.metadata?.contactName
+      || incomingTicket.context?.metadata?.contact_name
+      || incomingTicket.context?.metadata?.customerName
+      || incomingTicket.context?.metadata?.customer_name
       || incomingTicket.context?.metadata?.name
       || incomingTicket.context?.variables?.customerName
+      || incomingTicket.context?.variables?.customer_name
       || incomingTicket.context?.variables?.name
       || incomingTicket.context?.variables?.nome
       || previousTicket.contactName
+      || previousTicket.contact_name
       || previousTicket.customerName
+      || previousTicket.customer_name
       || previousTicket.contact?.name
+      || (typeof previousTicket.contact === 'string' ? previousTicket.contact : null)
+      || previousComposedName
       || previousTicket.context?.metadata?.contactName
+      || previousTicket.context?.metadata?.contact_name
+      || previousTicket.context?.metadata?.customerName
+      || previousTicket.context?.metadata?.customer_name
       || previousTicket.context?.metadata?.name
       || previousTicket.context?.variables?.customerName
+      || previousTicket.context?.variables?.customer_name
       || previousTicket.context?.variables?.name
       || previousTicket.context?.variables?.nome
       || null;
@@ -601,6 +687,7 @@ export function useSupportPageController({
     getModeLabel,
     formatTicketStatus,
     formatTicketMode,
+    shouldShowTicketModeBadge,
     formatTime,
     formatBadgeCount,
     getPhoneNode,
@@ -609,6 +696,7 @@ export function useSupportPageController({
     getTicketPreview,
     getAssignedLabel,
     getQueueLabel,
+    getTicketDisplayId,
     uiSearchDebounced,
     ticketQueueOptions,
     ticketsView,
@@ -687,6 +775,7 @@ export function useSupportPageController({
       getStatusClass,
       formatTicketStatus,
       formatTicketMode,
+      shouldShowTicketModeBadge,
       formatTime,
       formatBadgeCount,
       highlightText,
@@ -695,6 +784,7 @@ export function useSupportPageController({
       getTicketPreview,
       getAssignedLabel,
       getQueueLabel,
+      getTicketDisplayId,
       getModeLabel,
       getDeliveryStatusBadge,
       renderTimelineMessageContent,

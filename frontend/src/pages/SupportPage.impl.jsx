@@ -22,6 +22,74 @@ import {
 import { SupportDeliveryFailuresModal } from './support/SupportDeliveryFailuresModal';
 import { SupportCloseTicketModal } from './support/SupportCloseTicketModal';
 import { SupportNewConversationModal } from './support/SupportNewConversationModal';
+import {
+  buildSupportAuditSummary,
+  buildSupportEventSummary,
+  formatSupportActor,
+  formatSupportAuditAction,
+  formatSupportEventType,
+  formatSupportMode,
+  formatSupportReason,
+} from '../components/support/supportHumanization';
+
+function parseAiSummary(summary) {
+  if (!summary) return null;
+  if (typeof summary === 'string') {
+    const trimmed = summary.trim();
+    if (!trimmed) return null;
+    try {
+      return parseAiSummary(JSON.parse(trimmed));
+    } catch (_) {
+      return { text: trimmed };
+    }
+  }
+
+  if (typeof summary !== 'object') {
+    return { text: String(summary) };
+  }
+
+  const text = summary.text || summary.summary || summary.content || summary.message || '';
+  return {
+    text: String(text || '').trim(),
+    generatedAt: summary.generatedAt || summary.generated_at || summary.createdAt,
+    generatedBy: summary.generatedBy?.username || summary.generatedBy?.id || summary.generatedBy,
+  };
+}
+
+function AiSummaryContent({ summary, loading }) {
+  const parsed = parseAiSummary(summary);
+
+  if (!parsed?.text) {
+    return (
+      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+        {loading ? 'Preparando resumo automatico para este ticket...' : 'Sem resumo disponivel para este ticket.'}
+      </div>
+    );
+  }
+
+  const lines = parsed.text
+    .split('\n')
+    .map((line) => line.replace(/^[-*\s]+/, '').trim())
+    .filter(Boolean);
+
+  return (
+    <div className="support-ai-summary">
+      <div className="support-ai-summary-list">
+        {lines.map((line, index) => (
+          <div className="support-ai-summary-item" key={`${line}-${index}`}>
+            {line}
+          </div>
+        ))}
+      </div>
+      {(parsed.generatedAt || parsed.generatedBy) ? (
+        <div className="support-ai-summary-meta">
+          {parsed.generatedAt ? `Gerado em ${new Date(parsed.generatedAt).toLocaleString('pt-BR')}` : 'Gerado automaticamente'}
+          {parsed.generatedBy ? ` • ${parsed.generatedBy}` : ''}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Pagina de atendimento para gerenciar tickets.
@@ -86,7 +154,7 @@ export function SupportPage() {
         setShowNewConversationModal={newConversation.setShowNewConversationModal}
       />
 
-      <div className={`support-grid${state.isMobile ? ' is-mobile' : ''}${state.isMobile && !state.isRightPanelCollapsed ? ' right-open' : ''}`}>
+      <div className={`support-grid support-grid--tickets${state.isMobile ? ' is-mobile' : ''}${state.selectedTicket ? ' has-selected' : ''}${state.isMobile && !state.isRightPanelCollapsed ? ' right-open' : ''}`}>
         <div className="support-left-column">
           <SupportFiltersBar
             uiSearch={state.uiSearch}
@@ -107,15 +175,21 @@ export function SupportPage() {
             getContactName={actions.getContactName}
             getPhoneNode={(ticket) => {
               const resolvedPhone = ticket?.phoneNumber
+                || ticket?.phone_number
                 || ticket?.phone
                 || ticket?.contactPhone
+                || ticket?.contact_phone
+                || ticket?.contact?.phone
                 || ticket?.context?.metadata?.phoneNumber
+                || ticket?.context?.metadata?.phone_number
                 || ticket?.context?.metadata?.phone
                 || ticket?.context?.variables?.phoneNumber
+                || ticket?.context?.variables?.phone_number
                 || ticket?.context?.variables?.phone;
               return <MaskedPhone phone={resolvedPhone} mask={state.phoneMaskingEnabled} />;
             }}
             formatTicketMode={actions.formatTicketMode}
+            shouldShowTicketModeBadge={actions.shouldShowTicketModeBadge}
             getStatusClass={actions.getStatusClass}
             formatTicketStatus={actions.formatTicketStatus}
             formatTime={actions.formatTime}
@@ -123,6 +197,7 @@ export function SupportPage() {
             getTicketPreview={actions.getTicketPreview}
             getAssignedLabel={actions.getAssignedLabel}
             getQueueLabel={actions.getQueueLabel}
+            getTicketDisplayId={actions.getTicketDisplayId}
             supportGridColumns={actions.supportGridColumns}
           />
         </div>
@@ -130,7 +205,7 @@ export function SupportPage() {
         <div className="support-details-panel">
           {state.selectedTicket ? (
             <>
-              <div style={{ display: 'flex', gap: '14px', minHeight: 0 }}>
+              <div className="support-details-split" style={{ display: 'flex', gap: '14px', minHeight: 0 }}>
                 <SupportConversationPane
                   isMobile={state.isMobile}
                   selectedTicket={state.selectedTicket}
@@ -180,29 +255,31 @@ export function SupportPage() {
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                       <div style={{ fontWeight: 700 }}>Contato</div>
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        fontSize: '11px',
-                        border: '1px solid #ddd',
-                        background: actions.getModeLabel(state.selectedTicket.mode).bg,
-                        color: actions.getModeLabel(state.selectedTicket.mode).fg,
-                      }}>
-                        {actions.getModeLabel(state.selectedTicket.mode).label}
-                      </span>
+                      {actions.shouldShowTicketModeBadge?.(state.selectedTicket.mode) ? (
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          border: '1px solid #ddd',
+                          background: actions.getModeLabel(state.selectedTicket.mode).bg,
+                          color: actions.getModeLabel(state.selectedTicket.mode).fg,
+                        }}>
+                          {actions.getModeLabel(state.selectedTicket.mode).label}
+                        </span>
+                      ) : null}
                     </div>
                     <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                       <div>📞 <strong><MaskedPhone phone={state.selectedTicket.phoneNumber} mask={state.phoneMaskingEnabled} /></strong></div>
                       <div>Fila: <strong>{state.selectedTicket.queue}</strong></div>
-                      <div>Status: <strong>{state.selectedTicket.status}</strong></div>
+                      <div>Status: <strong>{actions.formatTicketStatus(state.selectedTicket.status)}</strong></div>
                       {state.selectedTicket.pauseReason ? (
-                        <div>Motivo: <strong>{state.selectedTicket.pauseReason}</strong></div>
+                        <div>Motivo: <strong>{formatSupportReason(state.selectedTicket.pauseReason) || state.selectedTicket.pauseReason}</strong></div>
                       ) : null}
                       {state.selectedTicket?.context?.closeReasonName ? (
                         <div>Motivo de fechamento: <strong>{state.selectedTicket.context.closeReasonName}</strong></div>
                       ) : null}
                       {state.selectedTicket.channelType ? <div>Canal: <strong>{state.selectedTicket.channelType}</strong></div> : null}
-                      {state.selectedTicket.conversationId ? <div>ID da conversa: <code>{state.selectedTicket.conversationId}</code></div> : null}
+                      {state.selectedTicket.conversationId ? <div>Conversa vinculada: <strong>Sim</strong></div> : null}
                       <div>Criado: {actions.formatDate(state.selectedTicket.createdAt)}</div>
                     </div>
                   </div>
@@ -216,21 +293,7 @@ export function SupportPage() {
                         </div>
                       ) : null}
                     </div>
-                    {ticketContext.aiSummary ? (
-                      typeof ticketContext.aiSummary === 'string' ? (
-                        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                          {ticketContext.aiSummary}
-                        </div>
-                      ) : (
-                        <pre style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
-                          {JSON.stringify(ticketContext.aiSummary, null, 2)}
-                        </pre>
-                      )
-                    ) : (
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                        {ticketContext.aiSummaryLoading ? 'Preparando resumo automatico para este ticket...' : 'Sem resumo disponivel para este ticket.'}
-                      </div>
-                    )}
+                    <AiSummaryContent summary={ticketContext.aiSummary} loading={ticketContext.aiSummaryLoading} />
                   </div>
 
                   <SupportResolvedEntityCard
@@ -368,9 +431,10 @@ export function SupportPage() {
                           <div key={`${h.timestamp}-${idx}`} style={{ marginBottom: '6px' }}>
                             <div style={{ color: 'var(--color-text-tertiary)' }}>{actions.formatDate(h.timestamp)}</div>
                             <div>
-                              <strong>{h.type}</strong> • {h.mode}
-                              {h.actorUsername ? ` • ${h.actorUsername}` : ''}
-                              {h.reason ? ` • ${h.reason}` : ''}
+                              <strong>{formatSupportEventType(h.type)}</strong>
+                              {h.mode ? ` • ${formatSupportMode(h.mode)}` : ''}
+                              {h.actorUsername ? ` • ${formatSupportActor(h.actorUsername)}` : ''}
+                              {h.reason ? ` • ${formatSupportReason(h.reason) || h.reason}` : ''}
                             </div>
                           </div>
                         ))}
@@ -387,19 +451,30 @@ export function SupportPage() {
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', overflow: 'auto', maxHeight: '220px' }}>
                       {Array.isArray(ticketContext.ticketEvents) && ticketContext.ticketEvents.length > 0 ? (
-                        ticketContext.ticketEvents.slice(0, 20).map((ev) => (
+                        ticketContext.ticketEvents.slice(0, 20).map((ev) => {
+                          const eventView = buildSupportEventSummary(ev);
+                          return (
                           <div key={ev.id} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                              <div style={{ fontWeight: 600 }}>{ev.type}</div>
+                              <div style={{ fontWeight: 600 }}>{formatSupportEventType(ev.type)}</div>
                               <div style={{ color: 'var(--color-text-tertiary)' }}>{actions.formatDate(ev.createdAt)}</div>
                             </div>
-                            {ev?.payload ? (
-                              <div style={{ marginTop: '4px', color: 'var(--color-text-tertiary)' }}>
-                                {typeof ev.payload === 'string' ? ev.payload : JSON.stringify(ev.payload)}
+                            {eventView.summary ? (
+                              <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)' }}>
+                                {eventView.summary}
                               </div>
                             ) : null}
+                            {eventView.technical ? (
+                              <details style={{ marginTop: '6px' }}>
+                                <summary style={{ cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>Detalhe técnico</summary>
+                                <pre style={{ marginTop: '6px', fontSize: '11px', whiteSpace: 'pre-wrap', color: 'var(--color-text-tertiary)' }}>
+                                  {JSON.stringify(eventView.technical, null, 2)}
+                                </pre>
+                              </details>
+                            ) : null}
                           </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div style={{ color: 'var(--color-text-tertiary)' }}>
                           Sem eventos registrados para este ticket.
@@ -421,18 +496,30 @@ export function SupportPage() {
                       ) : (ticketContext.ticketAuditLogs.length === 0 ? (
                         <div style={{ color: 'var(--color-text-tertiary)' }}>Sem logs de auditoria para este ticket.</div>
                       ) : (
-                        ticketContext.ticketAuditLogs.map((l, idx) => (
+                        ticketContext.ticketAuditLogs.map((l, idx) => {
+                          const auditView = buildSupportAuditSummary(l);
+                          return (
                           <div key={`${l.timestamp || l.createdAt || idx}`} style={{ padding: '8px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-secondary)', marginBottom: '8px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                              <div style={{ fontWeight: 600 }}>{l.action || 'action'}</div>
+                              <div style={{ fontWeight: 600 }}>{formatSupportAuditAction(l.action)}</div>
                               <div style={{ color: 'var(--color-text-tertiary)' }}>{actions.formatDate(l.timestamp || l.createdAt)}</div>
                             </div>
-                            <div style={{ marginTop: '4px' }}>
-                              {l.username ? <span><strong>{l.username}</strong></span> : <span><strong>sistema</strong></span>}
-                              {l.details ? <span style={{ color: 'var(--color-text-tertiary)' }}> • {typeof l.details === 'string' ? l.details : JSON.stringify(l.details)}</span> : null}
-                            </div>
+                            {auditView.summary ? (
+                              <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)' }}>
+                                {auditView.summary}
+                              </div>
+                            ) : null}
+                            {auditView.technical ? (
+                              <details style={{ marginTop: '6px' }}>
+                                <summary style={{ cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>Detalhe técnico</summary>
+                                <pre style={{ marginTop: '6px', fontSize: '11px', whiteSpace: 'pre-wrap', color: 'var(--color-text-tertiary)' }}>
+                                  {JSON.stringify(auditView.technical, null, 2)}
+                                </pre>
+                              </details>
+                            ) : null}
                           </div>
-                        ))
+                          );
+                        })
                       ))}
                     </div>
                   </div>

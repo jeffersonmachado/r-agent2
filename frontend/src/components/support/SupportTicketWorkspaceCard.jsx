@@ -1,12 +1,14 @@
 import React from 'react';
 import { MaskedPhone } from '../MaskedPhone';
 import { SupportCard } from './SupportCard';
+import { formatSupportReason } from './supportHumanization';
 
 export function SupportTicketWorkspaceCard({
   ticket,
   phoneMaskingEnabled,
   formatDate,
   modeLabel,
+  formatTicketStatus,
 }) {
   if (!ticket) return null;
 
@@ -31,11 +33,11 @@ export function SupportTicketWorkspaceCard({
       <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'grid', gap: '6px' }}>
         <div>📞 <strong><MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} /></strong></div>
         <div>Fila: <strong>{ticket.queue || 'Sem fila'}</strong></div>
-        <div>Status: <strong>{ticket.status || 'desconhecido'}</strong></div>
-        {ticket.pauseReason ? <div>Motivo: <strong>{ticket.pauseReason}</strong></div> : null}
-        {ticket?.context?.closeReasonName ? <div>Close reason: <strong>{ticket.context.closeReasonName}</strong></div> : null}
+        <div>Status: <strong>{formatTicketStatus ? formatTicketStatus(ticket.status) : (ticket.status || 'desconhecido')}</strong></div>
+        {ticket.pauseReason ? <div>Motivo: <strong>{formatSupportReason(ticket.pauseReason) || ticket.pauseReason}</strong></div> : null}
+        {ticket?.context?.closeReasonName ? <div>Motivo de fechamento: <strong>{ticket.context.closeReasonName}</strong></div> : null}
         {ticket.channelType ? <div>Canal: <strong>{ticket.channelType}</strong></div> : null}
-        {ticket.conversationId ? <div>ConversationId: <code>{ticket.conversationId}</code></div> : null}
+        {ticket.conversationId ? <div>Conversa vinculada: <strong>Sim</strong></div> : null}
         <div>Criado: {formatDate(ticket.createdAt)}</div>
       </div>
     </SupportCard>

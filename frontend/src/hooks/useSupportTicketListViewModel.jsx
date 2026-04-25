@@ -1,5 +1,22 @@
 import React, { useCallback, useMemo } from 'react';
 
+const looksLikePhone = (value) => /^\+?\d[\d\s().-]{7,}$/.test(String(value || '').trim());
+
+const truncateId = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return 'Sem ID';
+  if (raw.length <= 14) return raw;
+  return `${raw.slice(0, 8)}...${raw.slice(-4)}`;
+};
+
+const redactSensitiveText = (value) => {
+  const text = String(value || '');
+  return text
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, 'CPF oculto')
+    .replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, 'CNPJ oculto')
+    .replace(/\+?55?\s?\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}\b/g, 'telefone oculto');
+};
+
 export function useSupportTicketListViewModel({
   tickets,
   uiQueue,
@@ -13,10 +30,11 @@ export function useSupportTicketListViewModel({
   }, []);
 
   const getModeLabel = useCallback((mode) => {
-    const m = (mode || 'bot');
+    const m = (mode || '').toLowerCase();
     if (m === 'human') return { label: 'HUMANO', bg: '#fff7ed', fg: '#9a3412' };
     if (m === 'paused') return { label: 'PAUSADO', bg: '#f3f4f6', fg: '#374151' };
-    return { label: 'BOT', bg: '#ecfdf5', fg: '#065f46' };
+    if (m === 'bot') return { label: 'BOT', bg: '#ecfdf5', fg: '#065f46' };
+    return { label: null, bg: '#f3f4f6', fg: '#374151' };
   }, []);
 
   const formatTicketStatus = useCallback((status) => {
@@ -27,6 +45,10 @@ export function useSupportTicketListViewModel({
   }, []);
 
   const formatTicketMode = useCallback((mode) => getModeLabel(mode).label, [getModeLabel]);
+  const shouldShowTicketModeBadge = useCallback((mode) => {
+    const m = String(mode || '').toLowerCase();
+    return m === 'human' || m === 'paused';
+  }, []);
 
   const formatTime = useCallback((timestamp) => {
     if (!timestamp) return '—';
@@ -39,22 +61,45 @@ export function useSupportTicketListViewModel({
     return String(count);
   }, []);
 
-  const getPhoneNode = useCallback((ticket) => ({ phone: ticket?.phoneNumber, mask: phoneMaskingEnabled }), [phoneMaskingEnabled]);
+  const getPhoneNode = useCallback((ticket) => ({
+    phone: ticket?.phoneNumber || ticket?.phone_number || ticket?.phone || ticket?.contactPhone || ticket?.contact_phone,
+    mask: phoneMaskingEnabled,
+  }), [phoneMaskingEnabled]);
 
-  const getContactName = useCallback((ticket) => (
-    ticket?.contactName
+  const getContactName = useCallback((ticket) => {
+    const composedName = [
+      ticket?.firstName || ticket?.first_name,
+      ticket?.lastName || ticket?.last_name,
+    ].filter(Boolean).join(' ').trim();
+
+    const contactField = typeof ticket?.contact === 'object'
+      ? ticket?.contact?.name
+      : ticket?.contact;
+
+    return (
+      ticket?.contactName
+      || ticket?.contact_name
       || ticket?.customerName
-      || ticket?.contact?.name
+      || ticket?.customer_name
+      || contactField
+      || composedName
       || ticket?.context?.contactName
+      || ticket?.context?.contact_name
       || ticket?.context?.metadata?.contactName
+      || ticket?.context?.metadata?.contact_name
+      || ticket?.context?.metadata?.customerName
+      || ticket?.context?.metadata?.customer_name
       || ticket?.context?.metadata?.name
       || ticket?.context?.contact?.name
       || ticket?.context?.variables?.customerName
+      || ticket?.context?.variables?.customer_name
       || ticket?.context?.variables?.name
-      || ticket?.context?.variables?.nome
-      || ticket?.phoneNumber
-      || 'Sem contato'
-  ), []);
+      || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phoneNumber) ? ticket?.phoneNumber : null)
+      || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone_number) ? ticket?.phone_number : null)
+      || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone) ? ticket?.phone : null)
+      || 'Contato sem nome'
+    );
+  }, [phoneMaskingEnabled]);
 
   const highlightText = useCallback((text, searchTerm) => {
     const rawText = String(text || '');
@@ -72,12 +117,31 @@ export function useSupportTicketListViewModel({
   }, []);
 
   const getTicketPreview = useCallback((ticket, searchTerm) => {
-    const preview = ticket?.lastUserMessage || ticket?.lastMessage || 'Sem mensagens recentes';
+    const rawPreview = ticket?.lastUserMessage || ticket?.lastMessage || 'Sem mensagens recentes';
+    const preview = phoneMaskingEnabled ? redactSensitiveText(rawPreview) : rawPreview;
     return highlightText(preview, searchTerm);
-  }, [highlightText]);
+  }, [highlightText, phoneMaskingEnabled]);
 
-  const getAssignedLabel = useCallback((ticket) => (ticket?.assignedTo ? `Atendente: ${ticket.assignedTo}` : 'Sem responsavel'), []);
+  const getAssignedLabel = useCallback((ticket) => {
+    const assignedName = ticket?.assignedToName
+      || ticket?.assigned_to_name
+      || ticket?.assignedAgentName
+      || ticket?.assigned_agent_name
+      || ticket?.assignedUserName
+      || ticket?.assigned_user_name
+      || ticket?.context?.assignedToName
+      || ticket?.context?.assigned_to_name
+      || ticket?.context?.assignedAgentName
+      || ticket?.context?.metadata?.assignedToName
+      || ticket?.context?.metadata?.assigned_to_name;
+    const assignedRaw = ticket?.assignedTo || ticket?.assigned_to || ticket?.assignee;
+    const assigned = assignedName || assignedRaw;
+    if (!assigned) return 'Sem responsável';
+    if (/^[0-9a-f-]{20,}$/i.test(String(assigned))) return `Atendente: ${truncateId(assigned)}`;
+    return `Atendente: ${assigned}`;
+  }, []);
   const getQueueLabel = useCallback((ticket) => (ticket?.queue ? `Fila: ${ticket.queue}` : 'Sem fila'), []);
+  const getTicketDisplayId = useCallback((ticket) => truncateId(ticket?.id), []);
 
   const uiSearchDebounced = String(uiSearch || '').trim();
 
@@ -93,6 +157,8 @@ export function useSupportTicketListViewModel({
         ticket?.id,
         getContactName(ticket),
         ticket?.phoneNumber,
+        ticket?.phone_number,
+        ticket?.phone,
         ticket?.lastUserMessage,
         ticket?.assignedTo,
         ticket?.queue,
@@ -119,7 +185,9 @@ export function useSupportTicketListViewModel({
       render: (ticket) => (
         <div>
           <span className={`support-ticket-status ${getStatusClass(ticket.status)}`}>{formatTicketStatus(ticket.status)}</span>
-          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{formatTicketMode(ticket.mode)}</div>
+          {shouldShowTicketModeBadge(ticket.mode) ? (
+            <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{formatTicketMode(ticket.mode)}</div>
+          ) : null}
         </div>
       ),
       sortValue: (ticket) => ticket?.status,
@@ -164,6 +232,7 @@ export function useSupportTicketListViewModel({
     getStatusClass,
     getTicketPreview,
     highlightText,
+    shouldShowTicketModeBadge,
     uiSearchDebounced,
   ]);
 
@@ -172,6 +241,7 @@ export function useSupportTicketListViewModel({
     getModeLabel,
     formatTicketStatus,
     formatTicketMode,
+    shouldShowTicketModeBadge,
     formatTime,
     formatBadgeCount,
     getPhoneNode,
@@ -180,6 +250,7 @@ export function useSupportTicketListViewModel({
     getTicketPreview,
     getAssignedLabel,
     getQueueLabel,
+    getTicketDisplayId,
     uiSearchDebounced,
     ticketQueueOptions,
     ticketsView,

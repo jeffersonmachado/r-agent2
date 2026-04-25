@@ -8,6 +8,7 @@ export function SupportTicketList({
   getContactName,
   getPhoneNode,
   formatTicketMode,
+  shouldShowTicketModeBadge,
   getStatusClass,
   formatTicketStatus,
   formatTime,
@@ -15,6 +16,7 @@ export function SupportTicketList({
   getTicketPreview,
   getAssignedLabel,
   getQueueLabel,
+  getTicketDisplayId,
   showOtherAgents = false,
   setShowOtherAgents = null,
   showClosedTickets = false,
@@ -82,8 +84,12 @@ export function SupportTicketList({
                 </span>
               </div>
               <div className="support-ticket-id-row">
-                <span className="support-ticket-id">#{ticket.id}</span>
-                <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
+                <span className="support-ticket-id" title={ticket.id ? `ID completo: ${ticket.id}` : undefined}>
+                  #{getTicketDisplayId ? getTicketDisplayId(ticket) : ticket.id}
+                </span>
+                {shouldShowTicketModeBadge?.(ticket.mode) ? (
+                  <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
+                ) : null}
               </div>
               <div className="support-ticket-top-row">
                 <div className="support-ticket-status-group">

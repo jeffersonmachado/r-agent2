@@ -3,7 +3,7 @@ import { listQuickReplies } from '../api/quickReplies';
 import { useDebounce } from './useDebounce';
 
 const BASE_COMMANDS = {
-  bot: [
+  unassigned: [
     { id: 'take-over', label: '/assumir', description: 'Assume o atendimento em modo humano.' },
     { id: 'quick-replies', label: '/resposta-rapida', description: 'Abre a lista de respostas rapidas.' },
     { id: 'schedule', label: '/agendar', description: 'Abre o fluxo de agendamento do ticket.' },
@@ -11,7 +11,7 @@ const BASE_COMMANDS = {
     { id: 'close-ticket', label: '/fechar-ticket', description: 'Inicia o fechamento do ticket.' },
   ],
   human: [
-    { id: 'return-to-bot', label: '/devolver-bot', description: 'Devolve o atendimento ao bot.' },
+    { id: 'return-to-bot', label: '/liberar', description: 'Libera o atendimento humano.' },
     { id: 'pause', label: '/pausar', description: 'Pausa o atendimento humano.' },
     { id: 'quick-replies', label: '/resposta-rapida', description: 'Abre a lista de respostas rapidas.' },
     { id: 'schedule', label: '/agendar', description: 'Abre o fluxo de agendamento do ticket.' },
@@ -45,8 +45,8 @@ export function useSupportSlashMenu({
       return [];
     }
 
-    const mode = String(selectedTicket.mode || 'bot').toLowerCase();
-    const commands = BASE_COMMANDS[mode] || BASE_COMMANDS.bot;
+    const mode = String(selectedTicket.mode || '').toLowerCase();
+    const commands = BASE_COMMANDS[mode] || BASE_COMMANDS.unassigned;
     const text = String(messageText || '').trim().toLowerCase();
     if (!text.startsWith('/')) {
       return [];

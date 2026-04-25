@@ -1,9 +1,9 @@
 import React from 'react';
 import { SupportCard } from './SupportCard';
+import { formatSupportTechnicalLabel } from './supportHumanization';
 
 function formatEvidenceLabel(value) {
-  if (!value) return 'n/a';
-  return String(value).replace(/_/g, ' ');
+  return formatSupportTechnicalLabel(value);
 }
 
 export function SupportResolvedEntityCard({ identity, loading }) {
@@ -20,7 +20,7 @@ export function SupportResolvedEntityCard({ identity, loading }) {
     >
       {identity ? (
         <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-          <div>Tipo: <strong>{identity.entityType}</strong></div>
+          <div>Tipo: <strong>{formatEvidenceLabel(identity.entityType)}</strong></div>
           <div>ID: <code>{identity.entityId}</code></div>
           <div style={{ marginTop: '8px' }}>
             <div style={{ fontWeight: 600, marginBottom: '4px' }}>Fontes</div>
@@ -39,7 +39,7 @@ export function SupportResolvedEntityCard({ identity, loading }) {
             ) : (
               (identity.relatedEntities || []).slice(0, 8).map((entity) => (
                 <div key={`${entity.type}:${entity.id}`}>
-                  {entity.type}: <code>{entity.id}</code>
+                  {formatEvidenceLabel(entity.type)}: <code>{entity.id}</code>
                 </div>
               ))
             )}

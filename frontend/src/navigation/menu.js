@@ -305,6 +305,23 @@ export const navigationMenu = [
           { id: 'super-admin-page', label: 'Super Admin', path: '/super-admin', roles: ['super_admin'] },
           { id: 'dev', label: 'Central Dev', path: '/dev', roles: ['super_admin'] },
           { id: 'dev-qa-waves', label: 'QA Waves', path: '/dev/qa-waves', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          {
+            id: 'dev-work-management',
+            label: 'Work Management',
+            children: [
+              { id: 'dev-work-management-overview', label: 'Overview', path: '/dev/work-management', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-projects', label: 'Projects', path: '/dev/work-management/projects', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-board', label: 'Board', path: '/dev/work-management/board', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-timeline', label: 'Timeline', path: '/dev/work-management/timeline', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-deliverables', label: 'Deliverables', path: '/dev/work-management/deliverables', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-operations', label: 'Operations', path: '/dev/work-management/operations', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-qa', label: 'QA & Validation', path: '/dev/work-management/qa-validation', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-documents', label: 'Documents', path: '/dev/work-management/documents', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-team', label: 'Team', path: '/dev/work-management/team', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-metrics', label: 'Metrics', path: '/dev/work-management/metrics', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+              { id: 'dev-work-management-ai-suggestions', label: 'AI Suggestions', path: '/dev/work-management/ai-suggestions', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+            ],
+          },
         ],
       },
     ],
@@ -607,4 +624,16 @@ export function getWorkspaceForPath(currentPath) {
 
 export function getAllNavigationEntries() {
   return flattenNavigationLeaves(navigationMenu);
+}
+
+export function getRouteCatalog(nodes = navigationMenu) {
+  return flattenNavigationLeaves(nodes, []).map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    path: entry.path,
+    permission: entry.permission || null,
+    roles: Array.isArray(entry.roles) ? entry.roles : null,
+    hiddenInSidebar: Boolean(entry.hiddenInSidebar),
+    hiddenInSubNav: Boolean(entry.hiddenInSubNav),
+  }));
 }

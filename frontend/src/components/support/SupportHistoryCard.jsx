@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../../styles/Button';
 import { SupportCard } from './SupportCard';
+import { formatSupportTechnicalLabel } from './supportHumanization';
 
 function formatEvidenceLabel(value) {
-  if (!value) return 'n/a';
-  return String(value).replace(/_/g, ' ');
+  return formatSupportTechnicalLabel(value);
 }
 
 function formatOriginLocator(locator) {

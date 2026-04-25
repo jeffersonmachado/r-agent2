@@ -284,16 +284,17 @@ export function buildWorkspaceAreas(filteredMenu = [], currentPath = '/') {
 
     const activeByLeaf = leaves.some((item) => pathMatches(item.path, currentPath));
     const activeByNode = nodes.some((item) => item.path && pathMatches(item.path, currentPath));
+    const activeByPrefix = Array.isArray(area.pathPrefixes) && area.pathPrefixes.some((prefix) => pathMatches(prefix, currentPath));
     const preferredPath = leaves.find((item) => item.path === area.fallbackPath)?.path;
     const fallbackFromMenu = availablePaths.has(area.fallbackPath) ? area.fallbackPath : null;
-    const primaryPath = preferredPath || fallbackFromMenu || leaves[0]?.path || allLeaves[0]?.path || null;
+    const primaryPath = preferredPath || fallbackFromMenu || leaves[0]?.path || allLeaves[0]?.path || area.fallbackPath || null;
 
     return {
       ...area,
       nodes,
       items: leaves,
       path: primaryPath,
-      isActive: activeByLeaf || activeByNode,
+      isActive: activeByLeaf || activeByNode || activeByPrefix,
     };
   }).filter((area) => area.path);
 

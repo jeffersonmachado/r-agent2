@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../styles/Button';
+import {
+  formatSupportActor,
+  formatSupportEventType,
+  formatSupportMode,
+  formatSupportReason,
+} from '../../../components/support/supportHumanization';
 
 const EMOJI_GROUPS = {
   smileys: {
@@ -173,6 +179,7 @@ export function SupportConversationPane({
   }, [emojiPickerOpen]);
 
   const isWaitingTicket = selectedTicket.status === 'waiting';
+  const ticketMode = String(selectedTicket.mode || '').toLowerCase();
   const isInProgressTicket = selectedTicket.status === 'in_progress';
   const showConversationComposer = selectedTicket.status === 'in_progress';
   const showAssignForm = false;
@@ -233,7 +240,7 @@ export function SupportConversationPane({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <span>Status: <strong>{formatTicketStatus ? formatTicketStatus(selectedTicket.status) : selectedTicket.status}</strong></span>
-              <span>Modo: <strong>{selectedTicket.mode || 'bot'}</strong></span>
+              <span>Modo: <strong>{formatSupportMode(selectedTicket.mode)}</strong></span>
               <span>Fila: <strong>{selectedTicket.queue || 'default'}</strong></span>
             </div>
             <div style={{ color: 'var(--color-text-tertiary)' }}>
@@ -246,19 +253,19 @@ export function SupportConversationPane({
           {isWaitingTicket ? (
             <Button onClick={handleAssign} className="support-ticket-action-btn">Atribuir Chamado</Button>
           ) : null}
-          {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'bot' ? (
+          {!isWaitingTicket && ticketMode !== 'human' && ticketMode !== 'paused' ? (
             <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-ticket-action-btn">Assumir atendimento</Button>
           ) : null}
-            {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'human' ? (
+            {!isWaitingTicket && ticketMode === 'human' ? (
             <>
-              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
+              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Liberar atendimento</Button>
               <Button onClick={handlePause} disabled={handoverLoading} className="support-ticket-action-btn">Pausar</Button>
             </>
           ) : null}
-            {!isWaitingTicket && (selectedTicket.mode || 'bot') === 'paused' ? (
+            {!isWaitingTicket && ticketMode === 'paused' ? (
             <>
               <Button onClick={handleResume} disabled={handoverLoading} className="support-ticket-action-btn">Retomar (humano)</Button>
-              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Devolver ao bot</Button>
+              <Button onClick={handleReturnToBot} disabled={handoverLoading} className="support-ticket-action-btn">Liberar atendimento</Button>
             </>
           ) : null}
             {!isWaitingTicket ? (
@@ -284,9 +291,10 @@ export function SupportConversationPane({
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Histórico de handover</div>
             {selectedTicket.context.handoverHistory.slice(-5).map((item, index) => (
               <div key={`${item.timestamp}-${index}`}>
-                {formatDate(item.timestamp)} • {item.mode === 'human' ? 'Humano' : 'Bot'}
-                {item.actorUsername ? ` • ${item.actorUsername}` : ''}
-                {item.reason ? ` • ${item.reason}` : ''}
+                {formatDate(item.timestamp)} • {formatSupportEventType(item.type || 'handover')}
+                {item.mode ? ` • ${formatSupportMode(item.mode)}` : ''}
+                {item.actorUsername ? ` • ${formatSupportActor(item.actorUsername)}` : ''}
+                {item.reason ? ` • ${formatSupportReason(item.reason) || item.reason}` : ''}
               </div>
             ))}
           </div>
@@ -339,7 +347,7 @@ export function SupportConversationPane({
                       const err = raw.lastError || raw.last_error || null;
                       if (!reason && !err) return null;
                       const parts = [];
-                      if (reason) parts.push(reason);
+                      if (reason) parts.push(formatSupportReason(reason) || reason);
                       if (err && err !== reason) parts.push(String(err).slice(0, 180));
                       return (
                         <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '3px', wordBreak: 'break-word', padding: '2px 0' }}>

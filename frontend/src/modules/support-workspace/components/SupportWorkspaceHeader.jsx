@@ -50,17 +50,21 @@ export function SupportWorkspaceHeader({
             setNewConversationQueue?.(queues.length > 0 ? queues[0] : '');
             setShowNewConversationModal?.(true);
           }}
+          className="support-new-conversation-control"
           style={{ backgroundColor: '#25D366', color: 'white' }}
         >
-          ➕ Iniciar Conversa
+          <span aria-hidden="true">➕</span>
+          <span>Iniciar conversa</span>
         </Button>
         <Button
           type="button"
+          className="support-notifications-control"
           title="Ativar notificações web"
           aria-label="Ativar notificações web"
           onClick={() => onEnableNotifications?.()}
         >
-          🔔 Ativar notificações
+          <span aria-hidden="true">🔔</span>
+          <span>Ativar notificações</span>
         </Button>
       </div>
     </div>

@@ -1,10 +1,13 @@
 import React from 'react';
 import { Button } from '../../styles/Button';
 import { SupportCard } from './SupportCard';
+import {
+  formatSupportEvidenceReason,
+  formatSupportTechnicalLabel,
+} from './supportHumanization';
 
 function formatEvidenceLabel(value) {
-  if (!value) return 'n/a';
-  return String(value).replace(/_/g, ' ');
+  return formatSupportTechnicalLabel(value);
 }
 
 function formatEvidenceOrigin(origin) {
@@ -57,15 +60,15 @@ export function SupportEvidenceCard({
               <div>{formatEvidenceLabel(evidence.category)} • origem {formatEvidenceLabel(evidence.source_type)} • força {formatEvidenceLabel(evidence.strength)}</div>
               <div>Modo {formatEvidenceOrigin(evidence.evidence_origin)}</div>
               {evidence.origin_locator ? <div>{formatOriginLocator(evidence.origin_locator)}</div> : null}
-              <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • score {evidence.reasoning?.score || 0}</div>
-              {evidence.reasoning?.matchedBy?.length ? <div>Match: {evidence.reasoning.matchedBy.join(', ')}</div> : null}
+              <div>Confiança {Math.round((evidence.confidence || 0) * 100)}% • pontuação {evidence.reasoning?.score || 0}</div>
+              {evidence.reasoning?.matchedBy?.length ? <div>Critérios de correspondência: {evidence.reasoning.matchedBy.map((item) => formatEvidenceLabel(item)).join(', ')}</div> : null}
               {evidence.source_ref?.ticketId || evidence.source_ref?.conversationId || evidence.source_id ? (
                 <div>
                   {evidence.source_ref?.ticketId ? `ticket ${evidence.source_ref.ticketId}` : null}
                   {evidence.source_ref?.ticketId && evidence.source_ref?.conversationId ? ' • ' : null}
-                  {evidence.source_ref?.conversationId ? `conversation ${evidence.source_ref.conversationId}` : null}
+                  {evidence.source_ref?.conversationId ? `conversa ${evidence.source_ref.conversationId}` : null}
                   {(evidence.source_ref?.ticketId || evidence.source_ref?.conversationId) && evidence.source_id ? ' • ' : null}
-                  {evidence.source_id ? `source ${evidence.source_id}` : null}
+                  {evidence.source_id ? `origem ${evidence.source_id}` : null}
                 </div>
               ) : null}
             </div>
@@ -82,7 +85,7 @@ export function SupportEvidenceCard({
       ) : (
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
           {evidenceResult?.reasoning?.reason
-            ? `Nenhuma evidência forte foi encontrada: ${formatEvidenceLabel(evidenceResult.reasoning.reason)}.`
+            ? `Nenhuma evidência forte foi encontrada: ${formatSupportEvidenceReason(evidenceResult.reasoning.reason) || formatEvidenceLabel(evidenceResult.reasoning.reason)}.`
             : 'Nenhuma evidência histórica relevante foi encontrada para o contexto atual.'}
         </div>
       )}
