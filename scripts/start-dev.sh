@@ -167,10 +167,7 @@ if (typeof value === 'object') {
 " "$expr" 2>/dev/null
 }
 
-RAG_ENABLED="${ENABLE_RAG:-$(read_config 'features.enableRAG')}"
-if [ -z "$RAG_ENABLED" ]; then
-    RAG_ENABLED=false
-fi
+RAG_ENABLED=true
 
 RAG_PORT_FROM_CONFIG="$(read_config 'rag.port')"
 if [ -n "$RAG_PORT_FROM_CONFIG" ]; then
@@ -184,6 +181,27 @@ else
         fi
     fi
 fi
+
+normalize_local_service_urls() {
+    if [ -n "${RAG_SERVICE_URL:-}" ] && echo "$RAG_SERVICE_URL" | grep -qE '://rag-service(:|/|$)'; then
+        export RAG_SERVICE_URL="http://localhost:${RAG_PORT}"
+        echo -e "${YELLOW}RAG_SERVICE_URL apontava para alias Docker. Ajustado para: $RAG_SERVICE_URL${NC}"
+    fi
+
+    local redis_host_port="${REDIS_HOST_PORT:-6379}"
+
+    if [ -n "${REDIS_URL:-}" ] && echo "$REDIS_URL" | grep -qE '^redis://redis(:|/|$)'; then
+        export REDIS_URL="redis://localhost:${redis_host_port}"
+        echo -e "${YELLOW}REDIS_URL apontava para alias Docker. Ajustado para: $REDIS_URL${NC}"
+    fi
+
+    if [ -n "${RATE_LIMIT_REDIS_URL:-}" ] && echo "$RATE_LIMIT_REDIS_URL" | grep -qE '^redis://redis(:|/|$)'; then
+        export RATE_LIMIT_REDIS_URL="redis://localhost:${redis_host_port}"
+        echo -e "${YELLOW}RATE_LIMIT_REDIS_URL apontava para alias Docker. Ajustado para: $RATE_LIMIT_REDIS_URL${NC}"
+    fi
+}
+
+normalize_local_service_urls
 
 # Função para matar processos relacionados ao projeto
 kill_project_processes() {
@@ -956,9 +974,18 @@ if [ -f /tmp/rag-service-dev.log ]; then
     fi
 fi
 
-# Testa o endpoint de health
-sleep 2
-if curl -s http://localhost:$RAG_PORT/rag/health > /dev/null 2>&1; then
+# Testa readiness do endpoint de health com retries para evitar falso-positivo
+RAG_READY=false
+for i in {1..15}; do
+    if curl -fsS --max-time 2 "http://localhost:$RAG_PORT/rag/health" > /dev/null 2>&1 \
+      || curl -fsS --max-time 2 "http://localhost:$RAG_PORT/health" > /dev/null 2>&1; then
+        RAG_READY=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$RAG_READY" = true ]; then
     echo -e "${GREEN}RAG Service iniciado com sucesso!${NC}"
 else
     echo -e "${YELLOW}Aviso: RAG Service iniciado mas ainda não está respondendo${NC}"

@@ -140,10 +140,7 @@ if [ -z "$FRONTEND_PORT" ]; then
     FRONTEND_PORT=5173
 fi
 
-RAG_ENABLED="${ENABLE_RAG:-$(read_config 'features.enableRAG')}"
-if [ -z "$RAG_ENABLED" ]; then
-    RAG_ENABLED=false
-fi
+RAG_ENABLED=true
 
 RAG_PORT="$(read_config 'rag.port')"
 if [ -z "$RAG_PORT" ]; then
@@ -155,6 +152,27 @@ fi
 if [ -z "$RAG_PORT" ]; then
     RAG_PORT=8001
 fi
+
+normalize_local_service_urls() {
+    if [ -n "$RAG_SERVICE_URL" ] && echo "$RAG_SERVICE_URL" | grep -qE '://rag-service(:|/|$)'; then
+        export RAG_SERVICE_URL="http://localhost:${RAG_PORT}"
+        echo -e "${YELLOW}RAG_SERVICE_URL apontava para alias Docker. Ajustado para: $RAG_SERVICE_URL${NC}"
+    fi
+
+    local redis_host_port="${REDIS_HOST_PORT:-6379}"
+
+    if [ -n "${REDIS_URL:-}" ] && echo "$REDIS_URL" | grep -qE '^redis://redis(:|/|$)'; then
+        export REDIS_URL="redis://localhost:${redis_host_port}"
+        echo -e "${YELLOW}REDIS_URL apontava para alias Docker. Ajustado para: $REDIS_URL${NC}"
+    fi
+
+    if [ -n "${RATE_LIMIT_REDIS_URL:-}" ] && echo "$RATE_LIMIT_REDIS_URL" | grep -qE '^redis://redis(:|/|$)'; then
+        export RATE_LIMIT_REDIS_URL="redis://localhost:${redis_host_port}"
+        echo -e "${YELLOW}RATE_LIMIT_REDIS_URL apontava para alias Docker. Ajustado para: $RATE_LIMIT_REDIS_URL${NC}"
+    fi
+}
+
+normalize_local_service_urls
 
 # Verifica se a porta da API está em uso
 if check_port "$API_PORT"; then

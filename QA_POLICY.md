@@ -246,6 +246,29 @@ Conforme `contracts/qa/qa.contract.json`, os seguintes tipos de teste são obrig
 - `PROJECT_RULES.md` - Regras do projeto (seção Testes RPA)
 - `governance/audit/` - Registros de auditoria
 
+### Checklist Obrigatório de Regressão (Support / Tickets)
+
+Para qualquer mudança em frontend/backend que afete `/tickets`, `queueService`, websocket de ticket ou renderização da lista de chamados, é obrigatório validar:
+
+1. **Compatibilidade de contrato camelCase + snake_case**
+   - O card de conversa deve exibir nome e telefone quando o payload vier como:
+     - camelCase: `contactName`, `customerName`, `phoneNumber`
+     - snake_case/legado: `contact_name`, `customer_name`, `phone_number`
+   - Também deve considerar fallback em `context.metadata` e `context.variables`.
+
+2. **Formatação de telefone no card**
+   - Quando houver telefone válido, deve renderizar no formato humano (ex.: `+55 (11) 98888-7777`).
+   - Sem telefone, deve manter fallback explícito (`-`) sem quebrar layout.
+
+3. **Teste automatizado de regressão obrigatório**
+   - Deve existir teste cobrindo payload legado `snake_case` e validação visual/textual de:
+     - nome de contato no card
+     - telefone formatado no card
+   - Arquivo de referência: `frontend/src/__tests__/SupportPage.waqr.test.jsx`.
+
+4. **Critério de bloqueio**
+   - Se qualquer item acima falhar em CI, mudança é bloqueada para merge/deploy até correção.
+
 ### Atualizações
 
 Este documento deve ser revisado:
