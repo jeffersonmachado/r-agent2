@@ -10,6 +10,9 @@ const {
 const logger = require('../../utils/logger');
 const {
   listWaves,
+  listJourneys,
+  listJourneyStatus,
+  listStepStatus,
   listReplays,
   getReplayById,
   queueWaveExecution,
@@ -27,6 +30,9 @@ function buildQaWavesRouteDeps() {
     parseJsonBody,
     logger,
     listWaves,
+    listJourneys,
+    listJourneyStatus,
+    listStepStatus,
     listReplays,
     getReplayById,
     queueWaveExecution,

@@ -26,6 +26,54 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
+  router.get('/api/qa-waves/journeys', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      deps.sendJson(res, 200, deps.listJourneys());
+    } catch (error) {
+      deps.logger.error('Erro ao listar jornadas:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar jornadas' });
+    }
+  });
+
+  router.get('/api/qa-waves/journey-status', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      deps.sendJson(res, 200, deps.listJourneyStatus());
+    } catch (error) {
+      deps.logger.error('Erro ao listar status de jornada:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de jornada' });
+    }
+  });
+
+  router.get('/api/qa-waves/step-status', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      deps.sendJson(res, 200, deps.listStepStatus(req.query || {}));
+    } catch (error) {
+      deps.logger.error('Erro ao listar status de passos:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de passos' });
+    }
+  });
+
   router.get('/api/qa-waves/replays', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);
