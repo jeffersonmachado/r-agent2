@@ -51,8 +51,8 @@ function getTicketModel() {
       },
       mode: {
         type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'human',
+        allowNull: true,
+        defaultValue: null,
       },
       pause_reason: {
         type: DataTypes.STRING,
@@ -149,4 +149,3 @@ function getTicketModel() {
 }
 
 module.exports = getTicketModel;
-

@@ -42,7 +42,7 @@ Contexto do ticket:
 - id: ${ticket.id}
 - fila: ${ticket.queue}
 - status: ${ticket.status}
-- modo: ${ticket.mode || 'bot'}
+- modo: ${ticket.mode || 'não informado'}
 - telefone: ${ticket.phoneNumber}
 - tags: ${(ticket.tags || []).join(', ')}
 - variáveis: ${JSON.stringify(vars)}
@@ -114,4 +114,3 @@ module.exports = {
   generateAiSummary,
   getAiSummary,
 };
-

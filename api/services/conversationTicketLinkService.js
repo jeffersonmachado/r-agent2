@@ -46,6 +46,13 @@ function safeErrorMessage(err, fallback = '') {
   }
 }
 
+function deriveConversationStatusFromTicketMode(mode) {
+  if (mode === 'human') return 'human';
+  if (mode === 'paused') return 'paused';
+  if (mode === 'bot') return 'bot';
+  return 'open';
+}
+
 function newId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -218,7 +225,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     if (dbAvailable() && existingInMemory.id && conversation.current_ticket_id !== existingInMemory.id) {
       await conversation.update({
         current_ticket_id: existingInMemory.id,
-        status: existingInMemory.mode === 'human' ? 'human' : 'bot',
+        status: deriveConversationStatusFromTicketMode(existingInMemory.mode),
         last_message_at: now,
         updated_at: now,
       }).catch(() => null);
@@ -254,14 +261,14 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     // Best-effort sync channel_conversation
     await conversation.update({
       current_ticket_id: existingDbTicket.id,
-      status: existingDbTicket.mode === 'human' ? 'human' : 'bot',
+      status: deriveConversationStatusFromTicketMode(existingDbTicket.mode),
       last_message_at: now,
       updated_at: now,
     }).catch(() => null);
     return { conversation, ticket: existingDbTicket, createdTicket: false };
   }
 
-  // 3) Cria ticket novo (modo BOT por padrão)
+  // 3) Cria ticket novo sem modo de atendimento implícito.
   if (!createOnInbound) {
     return { conversation, ticket: null, createdTicket: false };
   }
@@ -305,7 +312,7 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   // Best-effort: aponta conversa para o ticket atual
   await conversation.update({
     current_ticket_id: ticket.id,
-    status: 'bot',
+    status: deriveConversationStatusFromTicketMode(ticket.mode),
     last_message_at: now,
     updated_at: now,
   }).catch(() => null);

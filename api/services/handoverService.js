@@ -87,7 +87,9 @@ async function updateConversationStatusBestEffort(ticket) {
     if (!row) return;
 
     await row.update({
-      status: ticket.mode === 'human' ? 'human' : (ticket.mode === 'paused' ? 'paused' : 'bot'),
+      status: ticket.mode === 'human'
+        ? 'human'
+        : (ticket.mode === 'paused' ? 'paused' : (ticket.mode === 'bot' ? 'bot' : 'open')),
       current_ticket_id: ticket.id,
       last_message_at: new Date(),
       updated_at: new Date(),
@@ -102,7 +104,7 @@ async function takeOver(ticketId, agent, reason = 'agent_takeover') {
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
   // Se j? est? em humano, idempotente
-  if ((ticket.mode || 'bot') === 'human') {
+  if (ticket.mode === 'human') {
     // Mesmo idempotente, sincroniza status da conversa (best-effort)
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
@@ -154,7 +156,7 @@ async function returnToBot(ticketId, agent, reason = 'user_request') {
   }
 
   // Se j? est? em bot, idempotente
-  if ((ticket.mode || 'bot') === 'bot') {
+  if (ticket.mode === 'bot') {
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
@@ -191,7 +193,7 @@ async function setPaused(ticketId, agent, reason = 'outside_window') {
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
   // Idempotente
-  if ((ticket.mode || 'bot') === 'paused') {
+  if (ticket.mode === 'paused') {
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
@@ -228,7 +230,7 @@ async function resumeHuman(ticketId, agent, reason = 'resume') {
   if (!ticket) return { success: false, error: 'ticket_not_found' };
 
   // Se j? est? em humano, idempotente
-  if ((ticket.mode || 'bot') === 'human') {
+  if (ticket.mode === 'human') {
     await updateConversationStatusBestEffort(ticket);
     return { success: true, ticket };
   }
@@ -280,7 +282,7 @@ function startAutoReturnToBot({ inactivityMinutes = 30, intervalMs = 15000 } = {
       const now = Date.now();
       for (const t of tickets) {
         if (!t || t.status === 'closed') continue;
-        if ((t.mode || 'bot') !== 'human') continue;
+        if (t.mode !== 'human') continue;
         if (t?.context?.allowReturnToBot === false) continue;
 
         const last = new Date(t.updatedAt || t.createdAt || 0).getTime();
@@ -314,4 +316,3 @@ module.exports = {
   startAutoReturnToBot,
   stopAutoReturnToBot,
 };
-

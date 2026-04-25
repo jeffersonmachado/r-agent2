@@ -296,7 +296,7 @@ async function processWhatsAppMessage(message, value, deps) {
   // Regra do handover (Fase 2):
   // - ticket.mode=human => engine não responde automaticamente
   // - ticket.mode=bot => engine continua (ticket existe, mas bot está no controle)
-  const ticketMode = existingTicket ? (existingTicket.mode || 'bot') : null;
+  const ticketMode = existingTicket ? existingTicket.mode : null;
   if (existingTicket && existingTicket.status !== 'closed' && (ticketMode === 'human' || ticketMode === 'paused')) {
     if (replay) {
       replay.recordEvent('ticket_active', { ticketId: existingTicket.id });
@@ -768,7 +768,7 @@ async function processWhatsAppMessage(message, value, deps) {
           },
         });
 
-        // Mesmo já sendo "human" por padrão, garantimos sync do channel_conversation
+        // O handoff define explicitamente modo humano e sincroniza a conversa.
         try {
           // eslint-disable-next-line global-require
           const { takeOver } = require('./handoverService');

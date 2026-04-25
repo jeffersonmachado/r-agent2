@@ -2,6 +2,10 @@
 
 const { safeToString } = require('../../utils/defensiveCoercion');
 
+function normalizeTicketMode(mode) {
+  return mode === 'bot' || mode === 'human' || mode === 'paused' ? mode : null;
+}
+
 function toDbPayload(ticket) {
   return {
     id: ticket.id,
@@ -11,7 +15,7 @@ function toDbPayload(ticket) {
     channel_type: ticket.channelType || null,
     queue: ticket.queue,
     status: ticket.status,
-    mode: ticket.mode || 'bot',
+    mode: normalizeTicketMode(ticket.mode),
     pause_reason: ticket.pauseReason || null,
     takeover_at: ticket.takeoverAt ? new Date(ticket.takeoverAt) : null,
     return_to_bot_at: ticket.returnToBotAt ? new Date(ticket.returnToBotAt) : null,
@@ -41,7 +45,7 @@ function fromDbRow(row) {
     channelType: row.channel_type || (row.session_id && safeToString(row.session_id, '').startsWith('whatsapp_') ? 'whatsapp' : null),
     queue: row.queue,
     status: row.status,
-    mode: row.mode || 'bot',
+    mode: normalizeTicketMode(row.mode),
     pauseReason: row.pause_reason || null,
     takeoverAt: row.takeover_at ? new Date(row.takeover_at).toISOString() : null,
     returnToBotAt: row.return_to_bot_at ? new Date(row.return_to_bot_at).toISOString() : null,

@@ -18,6 +18,10 @@ function buildUserBootstrapMessage(lastUserMessage, now) {
   }];
 }
 
+function normalizeTicketMode(mode) {
+  return mode === 'bot' || mode === 'human' || mode === 'paused' ? mode : null;
+}
+
 function buildNewQueueTicket({ id, tenantId, sessionId, queue, lastUserMessage, context = {}, tags = [], category = null, now }) {
   return {
     id,
@@ -27,7 +31,7 @@ function buildNewQueueTicket({ id, tenantId, sessionId, queue, lastUserMessage, 
     channelType: context.channelType || (sessionId && safeToString(sessionId, '').startsWith('whatsapp_') ? 'whatsapp' : null),
     queue,
     status: 'waiting',
-    mode: context.mode || 'human',
+    mode: normalizeTicketMode(context.mode),
     pauseReason: context.pauseReason || null,
     takeoverAt: context.takeoverAt || null,
     returnToBotAt: context.returnToBotAt || null,

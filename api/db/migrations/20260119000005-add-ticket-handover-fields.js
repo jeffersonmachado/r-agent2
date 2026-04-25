@@ -4,11 +4,11 @@
  * Adds:
  * - conversation_id (links ticket to omnichannel conversation)
  * - channel_type (whatsapp|instagram|webchat)
- * - mode (bot|human)
+ * - mode (bot|human|paused|null)
  * - pause_reason (user_request|agent_takeover|outside_window|failed_delivery|compliance|inactivity)
  *
  * Defaults:
- * - mode defaults to "human" to preserve current behavior (ticket implies human handling).
+ * - mode is nullable; absence of mode should not imply bot or human control.
  */
 
 'use strict';
@@ -60,9 +60,9 @@ module.exports = {
 
     await addColumnIfNotExists(queryInterface, 'tickets', 'mode', {
       type: Sequelize.STRING,
-      allowNull: false,
-      defaultValue: 'human',
-      comment: 'bot | human',
+      allowNull: true,
+      defaultValue: null,
+      comment: 'bot | human | paused | null',
     });
 
     await addColumnIfNotExists(queryInterface, 'tickets', 'pause_reason', {
@@ -95,4 +95,3 @@ module.exports = {
     }
   },
 };
-

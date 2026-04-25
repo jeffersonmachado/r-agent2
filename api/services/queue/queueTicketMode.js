@@ -2,8 +2,8 @@
 
 function buildModeConversationPatch({ mode, ticketId }) {
   return {
-    status: mode === 'human' ? 'human' : (mode === 'bot' ? 'bot' : 'paused'),
-    current_ticket_id: mode === 'human' ? ticketId : (mode === 'bot' ? ticketId : ticketId),
+    status: mode === 'human' ? 'human' : (mode === 'bot' ? 'bot' : (mode === 'paused' ? 'paused' : 'open')),
+    current_ticket_id: ticketId,
     last_message_at: new Date(),
   };
 }
@@ -11,7 +11,7 @@ function buildModeConversationPatch({ mode, ticketId }) {
 function applyTicketMode(ticket, params = {}) {
   const mode = (params.mode === 'bot' || params.mode === 'human' || params.mode === 'paused')
     ? params.mode
-    : 'human';
+    : null;
   const pauseReason = params.pauseReason || null;
 
   ticket.mode = mode;
@@ -31,7 +31,7 @@ function applyTicketMode(ticket, params = {}) {
   if (!Array.isArray(ticket.context.handoverHistory)) ticket.context.handoverHistory = [];
 
   ticket.context.handoverHistory.push({
-    type: mode === 'human' ? 'takeover' : (mode === 'bot' ? 'return_to_bot' : 'paused'),
+    type: mode === 'human' ? 'takeover' : (mode === 'bot' ? 'return_to_bot' : (mode === 'paused' ? 'paused' : 'mode_cleared')),
     mode,
     reason: pauseReason,
     actorId: params.actorId || null,
@@ -46,7 +46,9 @@ function applyTicketMode(ticket, params = {}) {
       ? `Atendimento assumido por humano${pauseReason ? ` (${pauseReason})` : ''}.`
       : (mode === 'bot'
         ? `Atendimento devolvido ao bot${pauseReason ? ` (${pauseReason})` : ''}.`
-        : `Atendimento pausado${pauseReason ? ` (${pauseReason})` : ''}.`),
+        : (mode === 'paused'
+          ? `Atendimento pausado${pauseReason ? ` (${pauseReason})` : ''}.`
+          : 'Modo de atendimento limpo.')),
     sender: 'system',
     timestamp: nowIso,
   });
