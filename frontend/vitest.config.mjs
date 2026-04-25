@@ -9,12 +9,16 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@shared/aiTaskExecutor': join(__dirname, 'src', 'shared', 'aiTaskExecutor.js'),
-      '@shared/typeCompatibility': join(__dirname, 'src', 'shared', 'typeCompatibility.js'),
-      '@shared/templateRenderer': join(__dirname, 'src', 'shared', 'templateRenderer.js'),
-      '@shared/jsonSchemaValidator': join(__dirname, 'src', 'shared', 'jsonSchemaValidator.js'),
-    },
+    alias: [
+      { find: /^react$/, replacement: join(__dirname, 'node_modules', 'react', 'index.js') },
+      { find: /^react-dom$/, replacement: join(__dirname, 'node_modules', 'react-dom', 'index.js') },
+      { find: /^react\/jsx-runtime$/, replacement: join(__dirname, 'node_modules', 'react', 'jsx-runtime.js') },
+      { find: /^react\/jsx-dev-runtime$/, replacement: join(__dirname, 'node_modules', 'react', 'jsx-dev-runtime.js') },
+      { find: '@shared/aiTaskExecutor', replacement: join(__dirname, 'src', 'shared', 'aiTaskExecutor.js') },
+      { find: '@shared/typeCompatibility', replacement: join(__dirname, 'src', 'shared', 'typeCompatibility.js') },
+      { find: '@shared/templateRenderer', replacement: join(__dirname, 'src', 'shared', 'templateRenderer.js') },
+      { find: '@shared/jsonSchemaValidator', replacement: join(__dirname, 'src', 'shared', 'jsonSchemaValidator.js') },
+    ],
   },
   test: {
     // Ambiente de teste - usa happy-dom para evitar problemas de compatibilidade ESM

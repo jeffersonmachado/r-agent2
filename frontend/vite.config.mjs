@@ -187,8 +187,8 @@ const viteConfig = defineConfig(({ mode }) => {
         name: 'R-Agent2',
         short_name: 'R-Agent2',
         description: 'Dashboard de atendimento e operação',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#0a0a0a',
+        background_color: '#0a0a0a',
         display: 'standalone',
         scope: pwaBasePath,
         start_url: pwaBasePath,
@@ -397,6 +397,32 @@ const viteConfig = defineConfig(({ mode }) => {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('[Vite Proxy] Proxying /api request:', {
+              method: req.method,
+              url: req.url,
+              target: `${apiProxyTarget}${req.url}`,
+              timestamp: new Date().toISOString(),
+            });
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('[Vite Proxy] Proxy response for /api:', {
+              method: req.method,
+              url: req.url,
+              statusCode: proxyRes.statusCode,
+              timestamp: new Date().toISOString(),
+            });
+          });
+          proxy.on('error', (err, req, res) => {
+            console.error('[Vite Proxy] Proxy error for /api:', {
+              error: err.message,
+              method: req.method,
+              url: req.url,
+              timestamp: new Date().toISOString(),
+            });
+          });
+        },
       },
       '^/billing': {
         target: apiProxyTarget,

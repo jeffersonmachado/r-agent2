@@ -5,6 +5,7 @@ import { SupportPage } from '../pages/SupportPage';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useAuth } from '../context/authContext';
 import * as ticketsApi from '../api/tickets';
+import * as auditApi from '../api/audit';
 
 const { scheduleModalMock } = vi.hoisted(() => ({
   scheduleModalMock: vi.fn(),
@@ -120,7 +121,7 @@ vi.mock('../api/auth', () => ({
 
 const mockAgent = { id: 'agent1', username: 'agent1', tenantId: 'tenant1' };
 
-async function setup({ wsEvents = [] } = {}) {
+async function setup({ wsEvents = [], expectedPhone = '5511999999999' } = {}) {
   useAuth.mockReturnValue({ agent: mockAgent, isAuthenticated: true, loading: false });
   useWebSocketContext.mockReturnValue({
     connected: true,
@@ -132,7 +133,7 @@ async function setup({ wsEvents = [] } = {}) {
 
   // Aguarda o estado inicial assíncrono para evitar updates fora de act
   await screen.findByRole('heading', { name: /Atendimento/i });
-  await screen.findByLabelText(/Telefone:\s*5511999999999/i);
+  await screen.findByLabelText(new RegExp(`Telefone:\\s*${expectedPhone}`, 'i'));
 }
 
 function getTicketRow() {
@@ -245,7 +246,7 @@ describe('SupportPage WhatsApp QR message flow', () => {
     fireEvent.change(composer, { target: { value: '/' } });
 
     await waitFor(() => {
-      expect(screen.getByText('/devolver-bot')).toBeInTheDocument();
+      expect(screen.getByText('/liberar')).toBeInTheDocument();
       expect(screen.getByText('/pausar')).toBeInTheDocument();
     });
 
@@ -302,6 +303,43 @@ describe('SupportPage WhatsApp QR message flow', () => {
     });
     expect(getAsFile).not.toHaveBeenCalled();
     expect(ticketsApi.uploadSupportMedia).not.toHaveBeenCalled();
+  });
+
+  it('normaliza ticket legado (snake_case) e exibe nome + telefone formatado no card', async () => {
+    ticketsApi.listAllTickets.mockResolvedValueOnce({
+      tickets: [
+        {
+          id: 't-legacy-1',
+          status: 'in_progress',
+          unreadCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          phone_number: '5511988887777',
+          contact_name: 'Maria Legacy',
+          mode: 'human',
+          lastUserMessage: 'Olá via payload legado',
+          assignedTo: 'agent1',
+          tags: [],
+          queue: 'default',
+          context: {
+            metadata: {
+              customer_name: 'Maria Metadata',
+            },
+          },
+          ticketAuditLogs: [],
+          conversationId: 'c-legacy-1',
+        },
+      ],
+    });
+
+    await setup({ wsEvents: ['ticket.message.received'], expectedPhone: '5511988887777' });
+
+    await waitFor(() => {
+      expect(screen.getByText('Maria Legacy')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('+55 (11) 98888-7777')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Telefone:\s*5511988887777/i)).toBeInTheDocument();
   });
 
   it('envia texto normalmente mesmo após paste de imagem sem suporte a anexo', async () => {
@@ -385,5 +423,42 @@ describe('SupportPage WhatsApp QR message flow', () => {
     });
 
     expect(screen.queryByLabelText(/Abrir documento:/i)).not.toBeInTheDocument();
+  });
+
+  it('humaniza eventos tecnicos de handover e auditoria no painel direito', async () => {
+    ticketsApi.getTicketMessages.mockResolvedValueOnce({
+      messages: [
+        { id: 'm1', sender: 'user', text: 'Mensagem WhatsApp QR', timestamp: new Date().toISOString() },
+      ],
+      events: [
+        {
+          id: 'ev-1',
+          type: 'handover.return_to_bot',
+          createdAt: new Date().toISOString(),
+          payload: { mode: 'bot', reason: 'inactivity', actorId: 'system' },
+        },
+      ],
+    });
+
+    auditApi.queryAuditLogs.mockResolvedValueOnce({
+      items: [
+        {
+          action: 'handover',
+          username: 'system',
+          timestamp: new Date().toISOString(),
+          details: { mode: 'bot', reason: 'inactivity' },
+        },
+      ],
+    });
+
+    await setup({ wsEvents: ['ticket.message.received'] });
+    fireEvent.click(getTicketRow());
+
+    await waitFor(() => {
+      expect(screen.getByText('Atendimento liberado')).toBeInTheDocument();
+      expect(screen.getAllByText(/Motivo:\s*Inatividade/i).length).toBeGreaterThan(0);
+      expect(screen.getByText('Mudança de modo')).toBeInTheDocument();
+      expect(screen.getAllByText(/Responsável:\s*Sistema/i).length).toBeGreaterThan(0);
+    });
   });
 });

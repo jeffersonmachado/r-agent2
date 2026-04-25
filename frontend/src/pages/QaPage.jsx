@@ -196,8 +196,15 @@ export function QaPage() {
         <div className="support-controls">
           <button
             type="button"
+            onClick={() => {
+              setLoading(true);
+              loadLatest();
+              loadHistory();
+              loadStats();
+            }}
             className="btn-default px-4 py-2 text-sm"
-            onClick={() => window.location.reload()}
+            disabled={loading}
+            title="Recarregar dados de QA"
           >
             🔄 Atualizar
           </button>
@@ -326,10 +333,10 @@ export function QaPage() {
                         key={index}
                         className={`p-4 rounded-lg border ${
                           blockingFailures
-                            ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                            ? 'bg-status-error/10 border-status-error/30'
                             : check.result === 'FAIL'
-                            ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-                            : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                            ? 'bg-status-warning/10 border-status-warning/30'
+                            : 'bg-status-success/10 border-status-success/30'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -346,7 +353,7 @@ export function QaPage() {
                               {check.result === 'PASS' ? '✅' : '❌'}
                             </span>
                             {check.blocking && (
-                              <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
+                              <span className="text-xs px-2 py-1 bg-status-error/15 text-status-error rounded">
                                 Bloqueante
                               </span>
                             )}

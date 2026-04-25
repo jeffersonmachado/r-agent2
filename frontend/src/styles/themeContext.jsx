@@ -147,6 +147,16 @@ export function ThemeProvider({ children }) {
     
     // Atualizar variáveis CSS dinamicamente para que as classes Tailwind funcionem
     const root = document.documentElement;
+    root.classList.toggle('dark', themeName === 'dark');
+    root.setAttribute('data-theme', themeName);
+    root.style.colorScheme = themeName;
+
+    // Mantem barra do browser/PWA alinhada com o tema atual.
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme.colors.bg.primary);
+    }
+
     root.style.setProperty('--color-bg-primary', theme.colors.bg.primary);
     root.style.setProperty('--color-bg-secondary', theme.colors.bg.secondary);
     root.style.setProperty('--color-bg-tertiary', theme.colors.bg.tertiary);

@@ -243,7 +243,7 @@ describe('SupportPage evidence integration', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText(/abertura direta/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/source msg-1/i)).toBeInTheDocument();
+      expect(screen.getByText(/origem msg-1/i)).toBeInTheDocument();
     });
   });
 });
