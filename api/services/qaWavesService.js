@@ -3,12 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
+const { buildJourneyRegistry, mapScenarioToJourney } = require('../modules/qa-waves/journeyRegistry');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const HISTORY_DIR_CANDIDATES = [
   path.join(ROOT_DIR, 'qa-mesh', 'meshHistory'),
   path.join(ROOT_DIR, 'qa-mesh', 'system-validate', 'meshHistory'),
 ];
+const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
+const screenshotDataUrlCache = new Map();
 
 function toInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -37,6 +40,54 @@ function normalizeChannel(adapter) {
   if (adapter === 'pbx') return 'voice';
   if (adapter === 'rpa') return 'whatsapp';
   return 'webchat';
+}
+
+function detectImageMimeType(filePath) {
+  const ext = path.extname(String(filePath || '')).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
+  return 'image/png';
+}
+
+function buildScreenshotDataUrl(screenshotPath) {
+  const rawPath = String(screenshotPath || '').trim();
+  if (!rawPath) return null;
+
+  if (/^data:image\//i.test(rawPath)) {
+    return rawPath;
+  }
+
+  if (screenshotDataUrlCache.has(rawPath)) {
+    return screenshotDataUrlCache.get(rawPath);
+  }
+
+  const candidatePaths = path.isAbsolute(rawPath)
+    ? [rawPath]
+    : [path.join(ROOT_DIR, rawPath)];
+
+  for (const candidatePath of candidatePaths) {
+    try {
+      if (!fs.existsSync(candidatePath)) continue;
+
+      const stat = fs.statSync(candidatePath);
+      if (!stat.isFile() || stat.size > MAX_SCREENSHOT_SIZE_BYTES) {
+        screenshotDataUrlCache.set(rawPath, null);
+        return null;
+      }
+
+      const mimeType = detectImageMimeType(candidatePath);
+      const base64 = fs.readFileSync(candidatePath, 'base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      screenshotDataUrlCache.set(rawPath, dataUrl);
+      return dataUrl;
+    } catch (_error) {
+      // Ignora falhas de leitura e tenta próximo candidato.
+    }
+  }
+
+  screenshotDataUrlCache.set(rawPath, null);
+  return null;
 }
 
 function extractTypedEntriesFromLogs(logs = []) {
@@ -97,13 +148,15 @@ function extractPlaybackSteps(logs = [], replay = {}) {
 
     if (/screenshot salvo/i.test(message)) {
       const fileMatch = message.match(/screenshot salvo:\s*(.*)$/i);
+      const screenshotPath = fileMatch?.[1]?.trim() || null;
       steps.push({
         id: `shot-${index}`,
         index: steps.length + 1,
         title: 'Screenshot capturado',
         at: log.timestamp || replay.startedAt,
         status: 'success',
-        screenshot: fileMatch?.[1]?.trim() || null,
+        screenshot: screenshotPath,
+        screenshotDataUrl: buildScreenshotDataUrl(screenshotPath),
       });
     }
   });
@@ -178,6 +231,308 @@ function buildWaveItems(registry) {
   }));
 }
 
+function boolFromQuery(value) {
+  if (value === true || value === 'true' || value === '1' || value === 1) return true;
+  return false;
+}
+
+function buildScenarioMetadataIndex() {
+  const registry = qaMeshService.getRegistry() || [];
+  const index = new Map();
+
+  for (const scenario of registry) {
+    const scenarioId = scenario.id || scenario.scenarioId;
+    if (!scenarioId) continue;
+    index.set(scenarioId, scenario);
+  }
+
+  return index;
+}
+
+function collectScenarioLatestStats(maxExecutions = 250) {
+  const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
+  const stats = new Map();
+
+  for (const execution of history) {
+    const results = Array.isArray(execution.results) ? execution.results : [];
+    for (const result of results) {
+      const scenarioId = result.id || result.scenarioId;
+      if (!scenarioId) continue;
+
+      const startedAt = result.startedAt || execution.startedAt || null;
+      const status = normalizeStatus(result.status);
+      const isCritical = ['blocking', 'high'].includes(String(result.criticality || '').toLowerCase());
+
+      const current = stats.get(scenarioId) || {
+        scenarioId,
+        runs: 0,
+        success: 0,
+        failure: 0,
+        executing: 0,
+        pending: 0,
+        lastStatus: null,
+        lastExecutionAt: null,
+        critical: isCritical,
+      };
+
+      current.runs += 1;
+      current.critical = current.critical || isCritical;
+      if (status === 'success') current.success += 1;
+      if (status === 'failure') current.failure += 1;
+      if (status === 'executing') current.executing += 1;
+      if (status === 'pending') current.pending += 1;
+
+      const currentTs = current.lastExecutionAt ? new Date(current.lastExecutionAt).getTime() : -1;
+      const candidateTs = startedAt ? new Date(startedAt).getTime() : -1;
+      if (candidateTs >= currentTs) {
+        current.lastExecutionAt = startedAt;
+        current.lastStatus = status;
+      }
+
+      stats.set(scenarioId, current);
+    }
+  }
+
+  return stats;
+}
+
+function resolveJourneyLabels(mapping, journeyTree) {
+  const fallback = {
+    domainId: mapping.domainId,
+    domainName: mapping.domainId,
+    journeyId: mapping.journeyId,
+    journeyName: mapping.journeyId,
+    stepId: mapping.stepId,
+    stepName: mapping.stepId,
+  };
+
+  if (!journeyTree || !Array.isArray(journeyTree.domains)) return fallback;
+  const domain = journeyTree.domains.find((item) => item.id === mapping.domainId);
+  if (!domain) return fallback;
+
+  const journey = (domain.journeys || []).find((item) => item.id === mapping.journeyId);
+  if (!journey) {
+    return {
+      ...fallback,
+      domainName: domain.name,
+    };
+  }
+
+  const step = (journey.steps || []).find((item) => item.id === mapping.stepId);
+  return {
+    domainId: domain.id,
+    domainName: domain.name,
+    journeyId: journey.id,
+    journeyName: journey.name,
+    stepId: mapping.stepId,
+    stepName: step?.name || mapping.stepId,
+  };
+}
+
+function computeStatusByRule({ scenarioStats = [], totalScenarios = 0 } = {}) {
+  if (totalScenarios <= 0) {
+    return {
+      status: 'WARNING',
+      successRate: 0,
+      executedRate: 0,
+      totalScenarios: 0,
+      executedScenarios: 0,
+      failedScenarios: 0,
+      criticalFailures: 0,
+    };
+  }
+
+  const executedScenarios = scenarioStats.filter((item) => item.runs > 0).length;
+  const failedScenarios = scenarioStats.filter((item) => item.lastStatus === 'failure').length;
+  const successScenarios = scenarioStats.filter((item) => item.lastStatus === 'success').length;
+  const criticalFailures = scenarioStats.filter((item) => item.critical && item.lastStatus === 'failure').length;
+
+  const successRate = Math.round((successScenarios / totalScenarios) * 100);
+  const executedRate = Math.round((executedScenarios / totalScenarios) * 100);
+
+  let status = 'GO';
+  if (criticalFailures > 0) {
+    status = 'NO_GO';
+  } else if (successRate < 80) {
+    status = 'WARNING';
+  }
+
+  return {
+    status,
+    successRate,
+    executedRate,
+    totalScenarios,
+    executedScenarios,
+    failedScenarios,
+    criticalFailures,
+  };
+}
+
+function computeStepStatus(step, scenarioStatsIndex, scenarioIndex) {
+  const subJourneys = Array.isArray(step.subJourneys) ? step.subJourneys : [];
+  const scenarioIds = Array.from(new Set(subJourneys.flatMap((item) => item.scenarios || [])));
+
+  const scenarioStats = scenarioIds.map((scenarioId) => {
+    const stat = scenarioStatsIndex.get(scenarioId) || {
+      scenarioId,
+      runs: 0,
+      success: 0,
+      failure: 0,
+      executing: 0,
+      pending: 0,
+      lastStatus: 'pending',
+      lastExecutionAt: null,
+      critical: ['blocking', 'high'].includes(String(scenarioIndex.get(scenarioId)?.criticality || '').toLowerCase()),
+    };
+
+    return {
+      ...stat,
+      name: scenarioIndex.get(scenarioId)?.flow || scenarioIndex.get(scenarioId)?.name || scenarioId,
+    };
+  });
+
+  const base = computeStatusByRule({ scenarioStats, totalScenarios: scenarioIds.length });
+  const lastExecutionAt = scenarioStats
+    .map((item) => item.lastExecutionAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
+
+  const failureRate = scenarioIds.length > 0
+    ? Math.round((scenarioStats.filter((item) => item.lastStatus === 'failure').length / scenarioIds.length) * 100)
+    : 0;
+
+  const riskScore = Math.min(100, (base.criticalFailures > 0 ? 70 : 0) + failureRate);
+
+  return {
+    stepId: step.id,
+    stepName: step.name,
+    subJourneys: subJourneys.map((subJourney) => ({
+      id: subJourney.id,
+      name: subJourney.name || subJourney.id,
+      scenarios: (subJourney.scenarios || []).map((scenarioId) => {
+        const detail = scenarioStats.find((item) => item.scenarioId === scenarioId);
+        return {
+          id: scenarioId,
+          name: detail?.name || scenarioId,
+          status: detail?.lastStatus || 'pending',
+          critical: Boolean(detail?.critical),
+          lastExecutionAt: detail?.lastExecutionAt || null,
+          runs: detail?.runs || 0,
+        };
+      }),
+    })),
+    scenarios: scenarioStats,
+    scenarioIds,
+    coverage: base.successRate,
+    lastExecutionAt,
+    riskScore,
+    ...base,
+  };
+}
+
+function computeJourneyStatus(journey, scenarioStatsIndex, scenarioIndex) {
+  const steps = Array.isArray(journey.steps) ? journey.steps : [];
+  const stepStatuses = steps.map((step) => computeStepStatus(step, scenarioStatsIndex, scenarioIndex));
+  const allScenarioStats = stepStatuses.flatMap((step) => step.scenarios);
+  const totalScenarios = allScenarioStats.length;
+  const base = computeStatusByRule({ scenarioStats: allScenarioStats, totalScenarios });
+
+  return {
+    journeyId: journey.id,
+    journeyName: journey.name,
+    status: base.status,
+    successRate: base.successRate,
+    executedRate: base.executedRate,
+    totalScenarios: base.totalScenarios,
+    executedScenarios: base.executedScenarios,
+    failedScenarios: base.failedScenarios,
+    criticalFailures: base.criticalFailures,
+    steps: stepStatuses,
+  };
+}
+
+function buildJourneyTreeWithStatus() {
+  const scenarioIndex = buildScenarioMetadataIndex();
+  const scenarioStats = collectScenarioLatestStats();
+  const journeyTree = buildJourneyRegistry({ meshRegistry: Array.from(scenarioIndex.values()) });
+
+  const domains = (journeyTree.domains || []).map((domain) => {
+    const journeys = (domain.journeys || []).map((journey) => computeJourneyStatus(journey, scenarioStats, scenarioIndex));
+    return {
+      id: domain.id,
+      name: domain.name,
+      journeys,
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    domains,
+  };
+}
+
+function listJourneys() {
+  return buildJourneyTreeWithStatus();
+}
+
+function listJourneyStatus() {
+  const tree = buildJourneyTreeWithStatus();
+  return {
+    generatedAt: tree.generatedAt,
+    items: tree.domains.flatMap((domain) =>
+      (domain.journeys || []).map((journey) => ({
+        domainId: domain.id,
+        domainName: domain.name,
+        journeyId: journey.journeyId,
+        journeyName: journey.journeyName,
+        status: journey.status,
+        successRate: journey.successRate,
+        executedRate: journey.executedRate,
+        totalScenarios: journey.totalScenarios,
+        failedScenarios: journey.failedScenarios,
+        criticalFailures: journey.criticalFailures,
+      }))
+    ),
+  };
+}
+
+function listStepStatus(options = {}) {
+  const tree = buildJourneyTreeWithStatus();
+  const journeyFilter = options.journeyId ? String(options.journeyId) : null;
+  const stepFilter = options.stepId ? String(options.stepId) : null;
+
+  const items = [];
+  for (const domain of tree.domains || []) {
+    for (const journey of domain.journeys || []) {
+      if (journeyFilter && journey.journeyId !== journeyFilter) continue;
+      for (const step of journey.steps || []) {
+        if (stepFilter && step.stepId !== stepFilter) continue;
+        items.push({
+          domainId: domain.id,
+          domainName: domain.name,
+          journeyId: journey.journeyId,
+          journeyName: journey.journeyName,
+          stepId: step.stepId,
+          stepName: step.stepName,
+          status: step.status,
+          successRate: step.successRate,
+          executedRate: step.executedRate,
+          totalScenarios: step.totalScenarios,
+          failedScenarios: step.failedScenarios,
+          criticalFailures: step.criticalFailures,
+          riskScore: step.riskScore,
+          lastExecutionAt: step.lastExecutionAt,
+        });
+      }
+    }
+  }
+
+  return {
+    generatedAt: tree.generatedAt,
+    items,
+  };
+}
+
 function listWaves() {
   const registry = qaMeshService.getRegistry() || [];
   const items = buildWaveItems(registry);
@@ -217,6 +572,8 @@ function listWaves() {
 
 function flattenReplays(maxExecutions = 150) {
   const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
+  const scenarioIndex = buildScenarioMetadataIndex();
+  const journeyTree = buildJourneyRegistry({ meshRegistry: Array.from(scenarioIndex.values()) });
   const replays = [];
 
   for (const execution of history) {
@@ -230,6 +587,14 @@ function flattenReplays(maxExecutions = 150) {
       const finishedAt = scenario.finishedAt || execution.finishedAt || startedAt;
       const durationMs = Number(scenario.durationMs)
         || Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime());
+      const scenarioMeta = scenarioIndex.get(scenarioId) || {};
+      const journeyMapping = mapScenarioToJourney({
+        id: scenarioId,
+        domain: scenarioMeta.domain || scenario.domain,
+        flow: scenarioMeta.flow || scenario.flow || scenario.name,
+        type: scenarioMeta.type || scenario.type,
+      });
+      const labels = resolveJourneyLabels(journeyMapping, journeyTree);
 
       replays.push({
         id: `${executionSeed}::${scenarioId}`,
@@ -247,6 +612,12 @@ function flattenReplays(maxExecutions = 150) {
         finishedAt,
         durationMs,
         critical: ['blocking', 'high'].includes(String(scenario.criticality || '').toLowerCase()),
+        domainId: labels.domainId,
+        domainName: labels.domainName,
+        journeyId: labels.journeyId,
+        journeyName: labels.journeyName,
+        stepId: labels.stepId,
+        stepName: labels.stepName,
       });
     }
   }
@@ -266,6 +637,10 @@ function listReplays(options = {}) {
     sortDir = 'desc',
     page = 1,
     pageSize = 10,
+    journeyId,
+    stepId,
+    domainId,
+    failure,
   } = options;
 
   let replays = flattenReplays();
@@ -284,6 +659,18 @@ function listReplays(options = {}) {
   }
   if (waveId) {
     replays = replays.filter((item) => item.waveId === waveId);
+  }
+  if (domainId) {
+    replays = replays.filter((item) => item.domainId === domainId);
+  }
+  if (journeyId) {
+    replays = replays.filter((item) => item.journeyId === journeyId);
+  }
+  if (stepId) {
+    replays = replays.filter((item) => item.stepId === stepId);
+  }
+  if (boolFromQuery(failure)) {
+    replays = replays.filter((item) => item.status === 'failure');
   }
 
   const multiplier = String(sortDir).toLowerCase() === 'asc' ? 1 : -1;
@@ -359,6 +746,10 @@ function reexecuteReplay(replayId) {
 
 module.exports = {
   listWaves,
+  listJourneys,
+  listJourneyStatus,
+  listStepStatus,
+  computeJourneyStatus,
   listReplays,
   getReplayById,
   queueWaveExecution,
