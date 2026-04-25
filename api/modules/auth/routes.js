@@ -28,7 +28,7 @@ function createAuthRoutes({
     return req.headers['user-agent'] || fallback;
   }
 
-  router.post('/auth/login', jsonParser, async (req, res) => {
+  router.post(['/auth/login', '/api/auth/login'], jsonParser, async (req, res) => {
     try {
       let validated;
       try {
@@ -74,7 +74,7 @@ function createAuthRoutes({
     }
   });
 
-  router.post('/auth/signup', jsonParser, async (req, res) => {
+  router.post(['/auth/signup', '/api/auth/signup'], jsonParser, async (req, res) => {
     try {
       let validated;
       try {
@@ -109,7 +109,7 @@ function createAuthRoutes({
     }
   });
 
-  router.post('/auth/rpa/login', jsonParser, async (req, res) => {
+  router.post(['/auth/rpa/login', '/api/auth/rpa/login'], jsonParser, async (req, res) => {
     try {
       const rpaToken = req.body?.token || req.body?.rpaToken;
       const tenantId = req.body?.tenantId;
@@ -155,7 +155,7 @@ function createAuthRoutes({
     }
   });
 
-  router.get('/auth/rpa/token', (req, res) => {
+  router.get(['/auth/rpa/token', '/api/auth/rpa/token'], (req, res) => {
     try {
       const rpaTokenManager = require('../../../core/rpa/utils/rpaTokenManager');
       const token = rpaTokenManager.getOrCreateRpaToken();
@@ -170,7 +170,7 @@ function createAuthRoutes({
     }
   });
 
-  router.post('/auth/logout', (req, res) => {
+  router.post(['/auth/logout', '/api/auth/logout'], (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '') || null;
 
     if (!token) {
@@ -198,7 +198,7 @@ function createAuthRoutes({
     sendJson(res, 200, { success: result.success });
   });
 
-  router.post('/auth/logout-all', (req, res) => {
+  router.post(['/auth/logout-all', '/api/auth/logout-all'], (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '') || null;
 
     if (!token) {
@@ -229,7 +229,7 @@ function createAuthRoutes({
     });
   });
 
-  router.get('/auth/me', (req, res) => {
+  router.get(['/auth/me', '/api/auth/me'], (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '') || null;
 
     if (!token) {

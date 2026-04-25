@@ -59,6 +59,7 @@ const { createVoiceExpressRouter } = require('../composition/voice');
 
 const { createDomainOperationsRoutes } = require('../modules/domain-operations/routes');
 const { createDomainBusinessRoutes } = require('../modules/domain-business/routes');
+const { createCrmRoutes } = require('../modules/crm/routes');
 const { createQueueTicketExpressRouter } = require('../composition/queue-ticket');
 const { createOpsExpressRouter } = require('../composition/ops');
 const { createExecutionLedgerExpressRouter } = require('../composition/execution-ledger');
@@ -93,6 +94,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   // --- Routers de domínio (operations, business, admin, identity, flow) ---
   const domainOperationsRouter = createDomainOperationsRoutes({ buildDeps: buildExtendedRoutingContext });
   const domainBusinessRouter = createDomainBusinessRoutes({ buildDeps: buildExtendedRoutingContext });
+  const crmRouter = createCrmRoutes({ buildDeps: buildExtendedRoutingContext });
   const domainAdminRouter = createDomainAdminExpressRouter({ buildCoreRoutingContext });
   const domainIdentityRouter = createDomainIdentityExpressRouter({ buildCoreRoutingContext });
   const domainFlowRouter = createDomainFlowExpressRouter({ buildCoreRoutingContext });
@@ -190,6 +192,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     whatsAppQrWebhookRouter,
     domainOperationsRouter,
     domainBusinessRouter,
+    crmRouter,
     frontendFallbackRouter,
   });
 

@@ -105,8 +105,8 @@ async function handleInstagramWebhookRoutes({ req, res, method, pathname, deps }
             }
             const effectiveTicket = updatedTicket || ticket;
 
-            if (effectiveTicket && effectiveTicket.status !== 'closed' && ((effectiveTicket.mode || 'bot') === 'human' || (effectiveTicket.mode || 'bot') === 'paused')) {
-              if ((effectiveTicket.mode || 'bot') === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
+            if (effectiveTicket && effectiveTicket.status !== 'closed' && (effectiveTicket.mode === 'human' || effectiveTicket.mode === 'paused')) {
+              if (effectiveTicket.mode === 'human' && !effectiveTicket.assignedTo && effectiveTicket.status === 'waiting') {
                 autoAssignTicket(effectiveTicket.id).catch(() => null);
               }
               try {

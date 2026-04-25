@@ -42,6 +42,7 @@ function createRouteRegistry(routers) {
     { router: routers.whatsAppQrWebhookRouter },
     { router: routers.domainOperationsRouter },
     { router: routers.domainBusinessRouter },
+    { router: routers.crmRouter },
     { router: routers.frontendFallbackRouter },
   ];
 }

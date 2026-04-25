@@ -52,6 +52,15 @@ const RATE_LIMITS_BY_PLAN = {
  * @returns {Promise<boolean>} true se permitido, false se bloqueado
  */
 async function tenantRateLimitMiddleware(req, res, sendJson) {
+  const pathname = req.path || new URL(req.originalUrl || req.url || '/', 'http://localhost').pathname;
+  const normalizedPathname = pathname.startsWith('/api/') ? pathname.slice('/api'.length) : pathname;
+  const isAuthRoute = normalizedPathname === '/auth' || normalizedPathname.startsWith('/auth/');
+
+  // Rotas de auth não devem depender de tenant para evitar bloquear login/logout.
+  if (isAuthRoute) {
+    return true;
+  }
+
   // Em desenvolvimento, rate limit é desativado
   const nodeEnv = process.env.NODE_ENV || 'development';
   if (nodeEnv === 'development') {

@@ -52,6 +52,14 @@ describe('tenantValidation middleware', () => {
       
       expect(tenantId).toBeNull();
     });
+
+    test('deve ignorar tenant_id vindo por query parameter', () => {
+      mockReq.url = '/test?tenant_id=tenant-por-query';
+      mockReq.headers.host = 'localhost';
+      const tenantId = extractTenantId(mockReq);
+
+      expect(tenantId).toBeNull();
+    });
   });
 
   describe('requireTenant', () => {

@@ -24,7 +24,6 @@ const logger = require('../utils/logger');
  * Ordem de prioridade:
  * 1. req.agent.tenantId (do JWT - autentica se necessário)
  * 2. Header X-Tenant-Id
- * 3. Query parameter tenant_id (apenas para desenvolvimento)
  * 
  * @param {http.IncomingMessage} req
  * @returns {string|null}
@@ -50,14 +49,6 @@ function extractTenantId(req) {
     return headerTenantId.trim();
   }
 
-  // 3. Query parameter (apenas para desenvolvimento/testes)
-  if (process.env.NODE_ENV !== 'production') {
-    const queryTenantId = req.url ? new URL(req.url, `http://${req.headers.host}`).searchParams.get('tenant_id') : null;
-    if (queryTenantId) {
-      return queryTenantId.trim();
-    }
-  }
-
   return null;
 }
 
@@ -74,7 +65,7 @@ async function requireTenant(req) {
   if (!tenantId) {
     return {
       valid: false,
-      error: 'tenant_id é obrigatório. Forneça via JWT, header X-Tenant-Id ou query parameter tenant_id',
+      error: 'tenant_id é obrigatório. Forneça via JWT ou header X-Tenant-Id',
     };
   }
 
