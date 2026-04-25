@@ -65,7 +65,7 @@ export function TenantSelectorModal({
   autoConfirmOnTenantClick = false,
   disallowTenantIds = [],
 }) {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTenantId, setSelectedTenantId] = useState(null);
@@ -291,7 +291,7 @@ export function TenantSelectorModal({
   }
 
   console.log('[TenantSelectorModal] Renderizando modal, isOpen:', isOpen, 'tenants:', tenants.length);
-  const isDark = theme.themeName === 'dark';
+  const isDark = themeName === 'dark';
 
   // Filtra tenants baseado no texto de busca
   const filteredTenants = tenants.filter(tenant => {

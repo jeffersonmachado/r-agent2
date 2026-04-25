@@ -125,32 +125,32 @@ export function Toast({
   // Estilos Tailwind CSS puros para cada tipo
   const typeStyles = {
     success: {
-      bg: 'bg-green-50 dark:bg-green-900/20',
-      border: 'border-green-200 dark:border-green-800',
-      text: 'text-green-800 dark:text-green-200',
-      icon: 'text-green-400',
-      iconBg: 'bg-green-100 dark:bg-green-900/40',
+      bg: 'bg-status-success/10',
+      border: 'border-status-success/30',
+      text: 'text-status-success',
+      icon: 'text-status-success',
+      iconBg: 'bg-status-success/20',
     },
     error: {
-      bg: 'bg-red-50 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
-      text: 'text-red-800 dark:text-red-200',
-      icon: 'text-red-400',
-      iconBg: 'bg-red-100 dark:bg-red-900/40',
+      bg: 'bg-status-error/10',
+      border: 'border-status-error/30',
+      text: 'text-status-error',
+      icon: 'text-status-error',
+      iconBg: 'bg-status-error/20',
     },
     warning: {
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-      border: 'border-yellow-200 dark:border-yellow-800',
-      text: 'text-yellow-800 dark:text-yellow-200',
-      icon: 'text-yellow-400',
-      iconBg: 'bg-yellow-100 dark:bg-yellow-900/40',
+      bg: 'bg-status-warning/10',
+      border: 'border-status-warning/30',
+      text: 'text-status-warning',
+      icon: 'text-status-warning',
+      iconBg: 'bg-status-warning/20',
     },
     info: {
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      border: 'border-blue-200 dark:border-blue-800',
-      text: 'text-blue-800 dark:text-blue-200',
-      icon: 'text-blue-400',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+      bg: 'bg-status-info/10',
+      border: 'border-status-info/30',
+      text: 'text-status-info',
+      icon: 'text-status-info',
+      iconBg: 'bg-status-info/20',
     },
   };
 
@@ -182,6 +182,7 @@ export function Toast({
   return (
     <div
       className={`
+        rap-toast rap-toast--${type}
         pointer-events-auto w-full min-w-[320px] max-w-md overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5
         ${styles.bg} ${styles.border}
         transform transition-all duration-300 ease-in-out translate-x-0 opacity-100
@@ -190,16 +191,16 @@ export function Toast({
     >
       <div className="p-4">
         <div className="flex items-start">
-          <div className={`flex-shrink-0 ${styles.icon}`}>
+          <div className={`rap-toast__icon flex-shrink-0 ${styles.icon}`}>
             {icons[type]}
           </div>
           <div className="ml-3 w-0 flex-1 pt-0.5">
             {typeof message === 'string' && message.includes('\n') ? (
-              <div className={`text-sm font-medium ${styles.text} whitespace-pre-line`}>
+              <div className={`rap-toast__text text-sm font-medium ${styles.text} whitespace-pre-line`}>
                 {message}
               </div>
             ) : (
-              <p className={`text-sm font-medium ${styles.text}`}>
+              <p className={`rap-toast__text text-sm font-medium ${styles.text}`}>
                 {message}
               </p>
             )}
@@ -208,7 +209,7 @@ export function Toast({
             <button
               type="button"
               onClick={handleClose}
-              className={`inline-flex rounded-md ${styles.text} hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white ${
+              className={`rap-toast__close inline-flex rounded-md ${styles.text} hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white ${
                 type === 'success' ? 'focus:ring-green-500' :
                 type === 'error' ? 'focus:ring-red-500' :
                 type === 'warning' ? 'focus:ring-yellow-500' :
@@ -235,7 +236,7 @@ export function Toast({
                   className={`rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                     isPrimary
                       ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                      : 'bg-white/70 text-slate-800 hover:bg-white focus:ring-slate-400 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600'
+                      : 'bg-bg-secondary text-text-primary hover:bg-bg-hover focus:ring-border-focus'
                   }`}
                   aria-label={action?.label || `Ação ${index + 1}`}
                 >

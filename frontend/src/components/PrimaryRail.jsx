@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/authContext';
 import { NavigationLink } from './NavigationLink';
 import { filterNavigationTree } from '../utils/menuPermissions';
 import { navigationMenu } from '../navigation/menu';
@@ -64,35 +65,139 @@ function RailIcon({ icon }) {
 }
 
 export function PrimaryRail({ agent, currentPath }) {
+  const { agent: authAgent, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const { areas, activeArea } = useMemo(
     () => buildWorkspaceAreas(filteredMenu, currentPath),
     [filteredMenu, currentPath],
   );
 
+  const normalizedUsername = String(authAgent?.username || agent?.username || '').trim().toLowerCase();
+  const normalizedName = String(authAgent?.name || agent?.name || '').trim().toLowerCase();
+  const normalizedRole = String(authAgent?.role || agent?.role || '').trim().toLowerCase();
+  const isSuperUserFlag = Boolean(
+    authAgent?.isSuperAdmin
+    || authAgent?.is_super_admin
+    || authAgent?.superuser
+    || agent?.isSuperAdmin
+    || agent?.is_super_admin
+    || agent?.superuser,
+  );
+  const canShowDevRail = isSuperUserFlag
+    || normalizedUsername === 'systemadmin'
+    || normalizedUsername === 'superuser'
+    || normalizedName === 'systemadmin'
+    || normalizedName === 'superuser'
+    || normalizedRole === 'super_admin'
+    || normalizedRole === 'superuser';
+
+  const railAreas = useMemo(() => {
+    if (!canShowDevRail || areas.some((area) => area.id === 'dev')) {
+      return areas;
+    }
+
+    const devArea = {
+      id: 'dev',
+      label: 'Dev',
+      shortLabel: 'DEV',
+      icon: 'flow',
+      accent: 'var(--color-status-info)',
+      path: '/dev',
+      fallbackPath: '/dev',
+      isActive: currentPath === '/dev' || currentPath.startsWith('/dev/'),
+    };
+
+    const adminIndex = areas.findIndex((area) => area.id === 'admin');
+    if (adminIndex < 0) {
+      return [...areas, devArea];
+    }
+
+    return [
+      ...areas.slice(0, adminIndex),
+      devArea,
+      ...areas.slice(adminIndex),
+    ];
+  }, [areas, canShowDevRail, currentPath]);
+
+  const activeRailAreaId = useMemo(() => {
+    if (canShowDevRail && (currentPath === '/dev' || currentPath.startsWith('/dev/'))) {
+      return 'dev';
+    }
+    return activeArea?.id || null;
+  }, [activeArea?.id, canShowDevRail, currentPath]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1080px)');
+    const handleViewportChange = (event) => setIsMobileViewport(event.matches);
+
+    setIsMobileViewport(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleViewportChange);
+      return () => mediaQuery.removeEventListener('change', handleViewportChange);
+    }
+
+    mediaQuery.addListener(handleViewportChange);
+    return () => mediaQuery.removeListener(handleViewportChange);
+  }, []);
+
+  // Em mobile, fechar menu após clique para liberar área de conteúdo.
+  const handleNavClick = () => {
+    if (isMobileViewport) {
+      setIsMenuOpen(false);
+    }
+  };
+
   return (
     <aside className="rap-primary-rail" aria-label="Navegacao primaria">
-      <div className="rap-primary-rail-brand">
-        <span className="rap-primary-rail-mark">RAP</span>
+      <div className="rap-primary-rail-header">
+        <div className="rap-primary-rail-brand">
+          <span className="rap-primary-rail-mark">RAP</span>
+        </div>
+        <button 
+          className="rap-primary-rail-toggle"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Abrir menu"
+          aria-expanded={isMenuOpen}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
 
-      <nav className="rap-primary-rail-nav">
-        {areas.map((area) => {
-          // Usa a rota canônica da área quando disponível para evitar desvios por ordenação de leaves.
-          // Exemplo: area "clientes" deve abrir /crm.
-          const targetPath = area.fallbackPath || area.path;
+      <nav className={`rap-primary-rail-nav ${isMenuOpen ? 'is-open' : ''}`}>
+        {/* Mobile: User profile section */}
+        {authAgent && (
+          <div className="rap-primary-rail-mobile-profile">
+            <div className="rap-primary-rail-profile-avatar">
+              {(authAgent.role || '??').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="rap-primary-rail-profile-info">
+              <div className="rap-primary-rail-profile-name">{authAgent.name}</div>
+              <div className="rap-primary-rail-profile-role">{authAgent.role}</div>
+            </div>
+          </div>
+        )}
+
+        {railAreas.map((area) => {
+          const targetPath = area.path || area.fallbackPath;
           return (
             <NavigationLink
               key={area.id}
               to={targetPath}
-              className={`rap-primary-rail-item ${activeArea?.id === area.id ? 'is-active' : ''}`}
+              className={`rap-primary-rail-item ${activeRailAreaId === area.id ? 'is-active' : ''}`}
               title={area.label}
               aria-label={area.label}
+              aria-current={activeRailAreaId === area.id ? 'page' : undefined}
+              onClick={handleNavClick}
             >
               <span className="rap-primary-rail-item-icon" aria-hidden="true">
                 <RailIcon icon={area.icon} />
               </span>
-              <span className="rap-primary-rail-item-label">{area.shortLabel || area.label}</span>
+              <span className="rap-primary-rail-item-label">{isMobileViewport ? area.label : (area.shortLabel || area.label)}</span>
               <span className="rap-primary-rail-item-tooltip" role="tooltip">{area.label}</span>
               <span
                 className="rap-primary-rail-item-accent"
@@ -102,19 +207,20 @@ export function PrimaryRail({ agent, currentPath }) {
             </NavigationLink>
           );
         })}
-      </nav>
-
-      <div className="rap-primary-rail-footer" aria-label="Acoes rapidas">
-        <NavigationLink to="/dashboard" className="rap-primary-rail-quick" title="Dashboard" aria-label="Ir para dashboard">
-          <span aria-hidden="true">D</span>
-        </NavigationLink>
-        <NavigationLink to="/support" className="rap-primary-rail-quick" title="Atendimento" aria-label="Ir para atendimento">
-          <span aria-hidden="true">A</span>
-        </NavigationLink>
-        <div className="rap-primary-rail-profile" aria-label={`Perfil ${agent?.role || 'desconhecido'}`}>
-          {(agent?.role || '??').slice(0, 2).toUpperCase()}
-        </div>
-      </div>
+        {/* Mobile: Botão Sair */}
+        <button
+          className="rap-primary-rail-logout"
+          onClick={async () => { setIsMenuOpen(false); await logout(); }}
+        >
+          <span className="rap-primary-rail-logout-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points="16 17 21 12 16 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span>Sair</span>
+        </button>      </nav>
     </aside>
   );
 }

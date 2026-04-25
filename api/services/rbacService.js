@@ -125,6 +125,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'projects', action: 'manage_templates' },
     { resource: 'projects', action: 'view_all' },
     { resource: 'projects', action: 'run_automation' },
+    // CRM
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
+    { resource: 'crm', action: 'delete' },
   ],
 
   admin: [
@@ -202,6 +207,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'projects', action: 'manage_templates' },
     { resource: 'projects', action: 'view_all' },
     { resource: 'projects', action: 'run_automation' },
+    // CRM
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
+    { resource: 'crm', action: 'delete' },
   ],
 
   supervisor: [
@@ -256,6 +266,10 @@ const ROLE_PERMISSIONS = {
     { resource: 'projects', action: 'manage_templates' },
     { resource: 'projects', action: 'view_all' },
     { resource: 'projects', action: 'run_automation' },
+    // CRM
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
   ],
 
   manager: [
@@ -313,6 +327,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'projects', action: 'manage_templates' },
     { resource: 'projects', action: 'view_all' },
     { resource: 'projects', action: 'run_automation' },
+    // CRM
+    { resource: 'crm', action: 'read' },
+    { resource: 'crm', action: 'create' },
+    { resource: 'crm', action: 'update' },
+    { resource: 'crm', action: 'delete' },
   ],
 
   operator: [
@@ -343,6 +362,8 @@ const ROLE_PERMISSIONS = {
     // Projects
     { resource: 'projects', action: 'read' },
     { resource: 'projects', action: 'comment' },
+    // CRM
+    { resource: 'crm', action: 'read' },
   ],
 
   auditor: [

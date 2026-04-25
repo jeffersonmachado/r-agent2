@@ -918,17 +918,9 @@ export function ConfigPage() {
           scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
         }
       `}</style>
-      <div className="min-h-screen w-full bg-bg-primary p-6 overflow-y-auto config-page-scroll">
+      <div className="min-h-0 w-full bg-bg-primary p-4 sm:p-6 overflow-y-auto config-page-scroll">
         <div className="w-full">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-text-primary mb-2">⚙️ Configuração do Sistema</h1>
-              <p className="text-text-secondary text-sm">Gerencie todas as configurações do sistema em um único lugar</p>
-            </div>
-          </div>
-
+        <div className="mb-6">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3 p-4 bg-bg-elevated rounded-xl border border-border-default">
             <Button 
@@ -1055,7 +1047,7 @@ export function ConfigPage() {
 
         {/* Conteúdo */}
         {viewMode === 'form' && editedConfig ? (
-          <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
+          <div className="bg-transparent sm:bg-bg-elevated rounded-none sm:rounded-xl border-0 sm:border border-border-default p-0 sm:p-6 shadow-none sm:shadow-lg">
             {/* Aba: API */}
             {activeTab === 'api' && (
               <ConfigApiTab editedConfig={editedConfig} renderField={renderField} />

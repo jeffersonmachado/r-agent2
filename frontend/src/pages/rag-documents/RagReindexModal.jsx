@@ -63,10 +63,10 @@ export function RagReindexModal({ isOpen, progress, onClose }) {
         {progress.status === 'completed' && progress.consistencyCheck && (
           <div className={`mb-4 p-4 rounded-lg border-2 ${
             progress.consistencyCheck.isConsistent === true
-              ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+              ? 'bg-status-success/10 border-status-success/30'
               : progress.consistencyCheck.isConsistent === false
-              ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-              : 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+              ? 'bg-status-warning/10 border-status-warning/30'
+              : 'bg-bg-tertiary border-border-default'
           }`}>
             <div className="flex items-start gap-2">
               <span className="text-xl">

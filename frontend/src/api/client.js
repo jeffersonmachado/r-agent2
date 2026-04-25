@@ -12,7 +12,9 @@ import { getAuthHeaders, removeToken } from './auth';
 import { redirectToLogin } from '../utils/index';
 import { getBasePath } from '../utils/index';
 
-const DEFAULT_TIMEOUT_MS = 15000;
+// Timeout aumentado para requisições longas (QA Waves pode demorar ao buscar muitos dados)
+// Em desenvolvimento com proxy do Vite, o timeout pode ser maior
+const DEFAULT_TIMEOUT_MS = process.env.NODE_ENV === 'development' ? 30000 : 15000;
 
 /**
  * Constrói a URL a partir da base e do path relativo.

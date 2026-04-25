@@ -194,7 +194,7 @@ export function FlowEditorRightPanel({
                         <>
                           <div className="text-sm mb-2">
                             <span>Resultado: </span>
-                            <span className={validation.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                            <span className={validation.valid ? 'text-status-success' : 'text-status-error'}>
                               {validation.valid ? 'Válido' : 'Inválido'}
                             </span>
                           </div>
@@ -249,7 +249,7 @@ export function FlowEditorRightPanel({
                                             <span className={`inline-flex items-center px-1.5 py-0.5 mr-2 rounded border text-[10px] font-mono ${meta.className}`}>
                                               {meta.label}
                                             </span>
-                                            <span className="text-gray-600 dark:text-gray-400">[{err.code}]</span>
+                                            <span className="text-text-secondary">[{err.code}]</span>
                                             <span> {err.messageUi || err.message}</span>
                                           </li>
                                         );

@@ -80,6 +80,8 @@ describe('API server (api/server.js)', () => {
     // Força ambiente "development" para não aplicar rate limiting por tenant.
     process.env.NODE_ENV = 'development';
     delete process.env.STRICT_TENANT_MODE;
+    // Evita erro de bootstrap do runtime em ambientes de teste.
+    process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime-jest';
     jest.resetModules();
 
     // eslint-disable-next-line global-require
@@ -257,6 +259,90 @@ describe('API server (api/server.js)', () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'not_found' });
+  });
+
+  test('GET /api/qa-waves/health deve retornar status ok do modulo', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/api/qa-waves/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok', service: 'qa-waves' });
+  });
+
+  test('GET /api/qa-waves/journeys sem token deve retornar 401', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/api/qa-waves/journeys');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'unauthorized');
+  });
+
+  test('GET /api/qa-waves/journey-status sem token deve retornar 401', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/api/qa-waves/journey-status');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'unauthorized');
+  });
+
+  test('GET /api/qa-waves/step-status sem token deve retornar 401', async () => {
+    if (skipServerTests) return;
+    const res = await request(port, 'GET', '/api/qa-waves/step-status?journeyId=fitness_new_customer');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'unauthorized');
+  });
+
+  test('GET endpoints QA Waves com token valido devem responder sem 401', async () => {
+    if (skipServerTests) return;
+
+    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tenantId = `tenant-qa-waves-${unique}`;
+
+    const tokenSeedRes = await request(port, 'GET', '/api/auth/rpa/token');
+    expect(tokenSeedRes.status).toBe(200);
+    expect(tokenSeedRes.body).toHaveProperty('token');
+
+    const loginRes = await request(port, 'POST', '/api/auth/rpa/login', {
+      token: tokenSeedRes.body.token,
+      tenantId,
+    });
+
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body).toHaveProperty('token');
+
+    const authHeaders = { Authorization: `Bearer ${loginRes.body.token}` };
+
+    const journeysRes = await request(port, 'GET', '/api/qa-waves/journeys', undefined, authHeaders);
+    const journeyStatusRes = await request(port, 'GET', '/api/qa-waves/journey-status', undefined, authHeaders);
+    const stepStatusRes = await request(port, 'GET', '/api/qa-waves/step-status?journeyId=fitness_new_customer', undefined, authHeaders);
+
+    expect(journeysRes.status).toBe(200);
+    expect(journeyStatusRes.status).toBe(200);
+    expect(stepStatusRes.status).toBe(200);
+
+    // Shape do payload de jornadas
+    expect(journeysRes.body).toHaveProperty('generatedAt');
+    expect(journeysRes.body).toHaveProperty('domains');
+    expect(Array.isArray(journeysRes.body.domains)).toBe(true);
+
+    // Shape do payload de status por jornada
+    expect(journeyStatusRes.body).toHaveProperty('items');
+    expect(Array.isArray(journeyStatusRes.body.items)).toBe(true);
+    if (journeyStatusRes.body.items.length > 0) {
+      const item = journeyStatusRes.body.items[0];
+      expect(item).toHaveProperty('journeyId');
+      expect(item).toHaveProperty('status');
+    }
+
+    // Shape do payload de status por passo
+    expect(stepStatusRes.body).toHaveProperty('items');
+    expect(Array.isArray(stepStatusRes.body.items)).toBe(true);
+    if (stepStatusRes.body.items.length > 0) {
+      const step = stepStatusRes.body.items[0];
+      expect(step).toHaveProperty('stepId');
+      expect(step).toHaveProperty('status');
+    }
   });
 
   test('GET /config com Accept HTML deve cair no fallback do frontend em development', async () => {

@@ -81,7 +81,7 @@ export function FallbackEventsViewer() {
   if (events.length === 0) {
     return (
       <div className="fallback-events-viewer-empty">
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-sm text-text-secondary">
           Nenhum evento de fallback registrado ainda.
         </div>
       </div>
@@ -92,7 +92,7 @@ export function FallbackEventsViewer() {
     <div className="fallback-events-viewer">
       <div className="fallback-events-viewer-header">
         <h3 className="text-sm font-semibold mb-2">Eventos de Fallback Recentes</h3>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-text-secondary">
           {events.length} evento(s)
         </div>
       </div>

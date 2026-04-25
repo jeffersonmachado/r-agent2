@@ -30,9 +30,15 @@ export function ProjectBoardColumn({ list, items, onDropItem, onOpenItem }) {
   return (
     <div
       className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg"
-      onDragOver={(event) => event.preventDefault()}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'move';
+        }
+      }}
       onDrop={(event) => {
-        const itemId = event.dataTransfer.getData('text/project-item-id');
+        const transfer = event.dataTransfer;
+        const itemId = transfer?.getData('text/project-item-id') || transfer?.getData('text/plain');
         if (itemId) onDropItem(itemId, list.id);
       }}
       style={{ minWidth: '280px' }}
@@ -54,7 +60,13 @@ export function ProjectBoardColumn({ list, items, onDropItem, onOpenItem }) {
             key={item.id}
             type="button"
             draggable
-            onDragStart={(event) => event.dataTransfer.setData('text/project-item-id', item.id)}
+            onDragStart={(event) => {
+              if (!event.dataTransfer) return;
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/project-item-id', item.id);
+              // Safari utiliza text/plain como tipo mais confiável para DnD customizado.
+              event.dataTransfer.setData('text/plain', item.id);
+            }}
             onClick={() => onOpenItem(item)}
             className="text-left rounded-xl border border-border-default bg-bg-secondary p-3 transition hover:border-primary-400"
           >

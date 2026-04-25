@@ -345,9 +345,11 @@ export function Login() {
       alignItems: 'center',
       minHeight: '100vh',
       background: theme.colors.bg.primary,
-      padding: '20px',
+      padding: '72px 16px 20px',
       position: 'relative',
-      overflow: 'hidden',
+      overflowX: 'hidden',
+      overflowY: 'auto',
+      boxSizing: 'border-box',
     }}>
       {/* Background decorativo */}
       <div style={{
@@ -400,13 +402,14 @@ export function Login() {
 
       <div style={{
         background: theme.colors.bg.secondary,
-        padding: '48px',
+        padding: 'clamp(24px, 7vw, 48px)',
         borderRadius: '16px',
         boxShadow: isDark
           ? '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)'
           : '0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: 'min(420px, calc(100vw - 32px))',
+        boxSizing: 'border-box',
         position: 'relative',
         zIndex: 1,
         border: `1px solid ${theme.colors.border.default}`,
@@ -595,30 +598,9 @@ export function Login() {
             <span>Primeiro acesso?</span>
           </div>
           <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            fontFamily: 'var(--font-family-mono)',
-            fontSize: '12px',
+            lineHeight: 1.5,
           }}>
-            <div>
-              <span style={{ color: theme.colors.text.tertiary }}>Username:</span>{' '}
-              <code style={{
-                background: theme.colors.bg.primary,
-                padding: '2px 6px',
-                borderRadius: '4px',
-                color: theme.colors.accent.primary,
-              }}>admin</code>
-            </div>
-            <div>
-              <span style={{ color: theme.colors.text.tertiary }}>Senha:</span>{' '}
-              <code style={{
-                background: theme.colors.bg.primary,
-                padding: '2px 6px',
-                borderRadius: '4px',
-                color: theme.colors.accent.primary,
-              }}>Admin123!</code>
-            </div>
+            Crie sua conta para configurar seu ambiente.
           </div>
 
           <div style={{
@@ -629,12 +611,15 @@ export function Login() {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '8px',
+            flexWrap: 'wrap',
           }}>
-            <span style={{ color: theme.colors.text.tertiary }}>Novo por aqui?</span>
+            <span style={{ color: theme.colors.text.tertiary }}>Ainda nao tem conta?</span>
             <button
               type="button"
               onClick={() => navigate('/saas/signup')}
               style={{
+                flex: '0 1 auto',
+                maxWidth: '100%',
                 border: `1px solid ${theme.colors.accent.primary}`,
                 background: theme.colors.bg.primary,
                 color: theme.colors.accent.primary,
@@ -643,6 +628,8 @@ export function Login() {
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'normal',
+                textAlign: 'center',
               }}
             >
               Criar conta SaaS
@@ -679,4 +666,3 @@ export function Login() {
     </div>
   );
 }
-

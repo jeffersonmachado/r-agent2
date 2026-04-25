@@ -1,3 +1,29 @@
+const path = require('path');
+
+function loadRateLimitModule() {
+  const candidates = [
+    path.resolve(__dirname, '../../../../infra/rate-limit'),
+    '../../../../infra/rate-limit',
+    '../../../infra/rate-limit',
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return require(candidate);
+    } catch (err) {
+      const missingTarget = err && err.code === 'MODULE_NOT_FOUND'
+        && typeof err.message === 'string'
+        && err.message.includes(candidate);
+      if (missingTarget) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(`Cannot find rate limit module. Tried: ${candidates.join(', ')}`);
+}
+
 async function handleSystemGenerationControlRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const {
@@ -63,7 +89,7 @@ async function handleSystemGenerationControlRoutes(ctx) {
       }
 
       // Verifica rate limit sem consumir pontos.
-      const { checkRateLimitStatus } = require('../../../infra/rate-limit');
+      const { checkRateLimitStatus } = loadRateLimitModule();
       const status = await checkRateLimitStatus({
         userId,
         operationType,

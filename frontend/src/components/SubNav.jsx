@@ -3,13 +3,16 @@ import { NavigationLink } from './NavigationLink';
 import { findNavigationTrail, navigationMenu, pathMatches } from '../navigation/menu';
 import { filterNavigationTree } from '../utils/menuPermissions';
 
+// Legacy sub-navigation component kept only for backward compatibility and tests.
+// Official shell uses AreaHeader as contextual command bar.
+
 function titleFromPath(pathname) {
   const cleaned = pathname.split('/').filter(Boolean);
   const last = cleaned[cleaned.length - 1] || 'dashboard';
   return last.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function SubNav({ agent, currentPath, rightSlot = null, tenantLabel = '', verticalLabels = [] }) {
+export function LegacySubNav({ agent, currentPath, rightSlot = null, tenantLabel = '', verticalLabels = [] }) {
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const trail = useMemo(() => findNavigationTrail(filteredMenu, currentPath), [filteredMenu, currentPath]);
   const parentWithLinks = [...trail].reverse().find((node) => Array.isArray(node.children) && node.children.some((child) => child.path));
@@ -73,4 +76,7 @@ export function SubNav({ agent, currentPath, rightSlot = null, tenantLabel = '',
   );
 }
 
-export default SubNav;
+// Backward-compatible export.
+export const SubNav = LegacySubNav;
+
+export default LegacySubNav;

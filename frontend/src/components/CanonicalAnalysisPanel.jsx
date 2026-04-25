@@ -22,19 +22,19 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
   const suggestions = validationReport.suggestions || [];
 
   return (
-    <div className="canonical-analysis-panel border rounded bg-gray-50 dark:bg-gray-900">
+    <div className="canonical-analysis-panel border rounded bg-bg-tertiary border-border-default">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-border-default">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-200">
+          <h3 className="font-semibold text-sm text-text-primary">
             📋 Análise Canônica
           </h3>
           <div className="flex items-center gap-2">
             <span
               className={`px-2 py-1 rounded text-xs font-medium ${
                 isValid
-                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                  : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                  ? 'bg-status-success/10 text-status-success border border-status-success/30'
+                  : 'bg-status-error/10 text-status-error border border-status-error/30'
               }`}
             >
               {isValid ? '✓ Válido' : '✗ Inválido'}
@@ -44,13 +44,13 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="flex border-b border-border-default bg-bg-secondary">
         <button
           onClick={() => setActiveTab('validation')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'validation'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+              ? 'border-status-info text-status-info'
+              : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
         >
           Validação
@@ -64,8 +64,8 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
           onClick={() => setActiveTab('suggestions')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'suggestions'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+              ? 'border-status-info text-status-info'
+              : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
         >
           Sugestões
@@ -79,8 +79,8 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
           onClick={() => setActiveTab('gap')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'gap'
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+              ? 'border-status-info text-status-info'
+              : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
         >
           Gap Analysis
@@ -104,7 +104,7 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
       </div>
 
       {/* Summary Footer */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400">
+      <div className="px-4 py-2 border-t border-border-default bg-bg-tertiary text-xs text-text-secondary">
         <div className="flex gap-4">
           <span>{errors.length} erro(s)</span>
           <span>{warnings.length} alerta(s)</span>
@@ -121,7 +121,7 @@ export function CanonicalAnalysisPanel({ canonical, currentFlow }) {
 function ValidationTab({ errors, warnings }) {
   if (errors.length === 0 && warnings.length === 0) {
     return (
-      <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-6 text-text-secondary">
         <p>✓ Nenhum erro ou alerta encontrado</p>
       </div>
     );
@@ -132,20 +132,20 @@ function ValidationTab({ errors, warnings }) {
       {/* Erros */}
       {errors.length > 0 && (
         <div>
-          <h4 className="font-semibold text-sm mb-2 text-red-700 dark:text-red-300">
+          <h4 className="font-semibold text-sm mb-2 text-status-error">
             🔴 Erros ({errors.length})
           </h4>
           <ul className="space-y-2">
             {errors.map((err, idx) => (
-              <li key={`error-${idx}`} className="text-xs p-2 bg-red-50 dark:bg-red-900 rounded border border-red-200 dark:border-red-700">
-                <div className="font-mono text-red-700 dark:text-red-300 mb-1">
+              <li key={`error-${idx}`} className="text-xs p-2 bg-status-error/10 rounded border border-status-error/30">
+                <div className="font-mono text-status-error mb-1">
                   [{err.code}]
                 </div>
-                <div className="text-gray-700 dark:text-gray-300">
+                <div className="text-text-primary">
                   {err.message}
                 </div>
                 {err.nodeIds && err.nodeIds.length > 0 && (
-                  <div className="mt-1 text-gray-600 dark:text-gray-400">
+                  <div className="mt-1 text-text-secondary">
                     Nós: {err.nodeIds.join(', ')}
                   </div>
                 )}
@@ -158,20 +158,20 @@ function ValidationTab({ errors, warnings }) {
       {/* Alertas */}
       {warnings.length > 0 && (
         <div>
-          <h4 className="font-semibold text-sm mb-2 text-yellow-700 dark:text-yellow-300">
+          <h4 className="font-semibold text-sm mb-2 text-status-warning">
             ⚠️ Alertas ({warnings.length})
           </h4>
           <ul className="space-y-2">
             {warnings.map((warn, idx) => (
-              <li key={`warn-${idx}`} className="text-xs p-2 bg-yellow-50 dark:bg-yellow-900 rounded border border-yellow-200 dark:border-yellow-700">
-                <div className="font-mono text-yellow-700 dark:text-yellow-300 mb-1">
+              <li key={`warn-${idx}`} className="text-xs p-2 bg-status-warning/10 rounded border border-status-warning/30">
+                <div className="font-mono text-status-warning mb-1">
                   [{warn.code}]
                 </div>
-                <div className="text-gray-700 dark:text-gray-300">
+                <div className="text-text-primary">
                   {warn.message}
                 </div>
                 {warn.nodeIds && warn.nodeIds.length > 0 && (
-                  <div className="mt-1 text-gray-600 dark:text-gray-400">
+                  <div className="mt-1 text-text-secondary">
                     Nós: {warn.nodeIds.join(', ')}
                   </div>
                 )}
@@ -192,7 +192,7 @@ function SuggestionsTab({ suggestions, warnings }) {
 
   if (allSuggestions.length === 0) {
     return (
-      <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-6 text-text-secondary">
         <p>✓ Nenhuma sugestão de otimização</p>
       </div>
     );
@@ -201,15 +201,15 @@ function SuggestionsTab({ suggestions, warnings }) {
   return (
     <ul className="space-y-2">
       {allSuggestions.map((sug, idx) => (
-        <li key={`sug-${idx}`} className="text-xs p-2 bg-blue-50 dark:bg-blue-900 rounded border border-blue-200 dark:border-blue-700">
-          <div className="font-mono text-blue-700 dark:text-blue-300 mb-1">
+        <li key={`sug-${idx}`} className="text-xs p-2 bg-status-info/10 rounded border border-status-info/30">
+          <div className="font-mono text-status-info mb-1">
             💡 {sug.code}
           </div>
-          <div className="text-gray-700 dark:text-gray-300">
+          <div className="text-text-primary">
             {sug.message}
           </div>
           {sug.details && (
-            <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-1 rounded">
+            <div className="mt-1 text-xs text-text-secondary bg-bg-secondary p-1 rounded">
               {JSON.stringify(sug.details).substring(0, 100)}...
             </div>
           )}
@@ -247,8 +247,8 @@ function GapAnalysisTab({ processDefinition, nodes }) {
         <span
           className={`px-3 py-1 rounded text-xs font-medium ${
             readiness === 'pronto'
-              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-              : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+              ? 'bg-status-success/10 text-status-success border border-status-success/30'
+              : 'bg-status-warning/10 text-status-warning border border-status-warning/30'
           }`}
         >
           {readiness === 'pronto' ? '✓ Pronto para Execução' : '⚠️ Execução Parcial'}
@@ -257,18 +257,18 @@ function GapAnalysisTab({ processDefinition, nodes }) {
 
       {/* Checklist */}
       <div>
-        <h4 className="font-semibold text-sm mb-2 text-gray-800 dark:text-gray-200">
+        <h4 className="font-semibold text-sm mb-2 text-text-primary">
           Requisitos de Operação
         </h4>
         <ul className="space-y-2">
           {requirements.map((req, idx) => (
             <li key={`req-${idx}`} className="flex items-center gap-2 text-xs">
-              <span className={req.met ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+              <span className={req.met ? 'text-status-success' : 'text-text-tertiary'}>
                 {req.met ? '✓' : '○'}
               </span>
-              <span className={req.met ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}>
+              <span className={req.met ? 'text-text-primary' : 'text-text-secondary'}>
                 {req.name}
-                {req.required === false && <span className="text-gray-400"> (opcional)</span>}
+                {req.required === false && <span className="text-text-tertiary"> (opcional)</span>}
               </span>
             </li>
           ))}
@@ -276,17 +276,17 @@ function GapAnalysisTab({ processDefinition, nodes }) {
       </div>
 
       {/* Process Stats */}
-      <div className="bg-gray-100 dark:bg-gray-800 rounded p-3 text-xs space-y-1">
-        <div className="text-gray-600 dark:text-gray-400">
+      <div className="bg-bg-secondary rounded p-3 text-xs space-y-1">
+        <div className="text-text-secondary">
           <span className="font-semibold">Total de Nós:</span> {nodeCount}
         </div>
         {nodeCount > 0 && (
           <>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-text-secondary">
               <span className="font-semibold">Tipo Predominante:</span>{' '}
               {hasService ? 'Serviços/Integrações' : hasGateway ? 'Lógica de Decisão' : 'Mensagens'}
             </div>
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-text-secondary">
               <span className="font-semibold">Complexidade:</span>{' '}
               {nodeCount <= 3 ? 'Simples' : nodeCount <= 10 ? 'Moderada' : 'Complexa'}
             </div>
@@ -296,11 +296,11 @@ function GapAnalysisTab({ processDefinition, nodes }) {
 
       {/* Recommendations */}
       {!metRequired && (
-        <div className="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded p-3 text-xs">
-          <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+        <div className="bg-status-warning/10 border border-status-warning/30 rounded p-3 text-xs">
+          <p className="font-semibold text-status-warning mb-1">
             ⚠️ Recomendações
           </p>
-          <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300">
+          <ul className="list-disc list-inside space-y-1 text-status-warning">
             {!hasStart && <li>Adicione um nó de início (start)</li>}
             {!hasEnd && <li>Adicione um nó de fim (end)</li>}
           </ul>

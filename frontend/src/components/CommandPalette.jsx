@@ -64,6 +64,7 @@ export function CommandPalette({ agent }) {
           type="text"
           className="rap-command-input"
           placeholder="Buscar modulo, rota ou capacidade..."
+          aria-keyshortcuts="Meta+K Control+K"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

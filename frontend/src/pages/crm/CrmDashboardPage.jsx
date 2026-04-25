@@ -221,8 +221,45 @@ function CrmDashboardContent() {
     return `R$ ${value}`;
   };
 
+  const dashboardPageStyle = {
+    height: 'auto',
+    minHeight: '100%',
+    overflowY: 'visible',
+    overflowX: 'visible',
+  };
+
+  const quickActionBaseStyle = {
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '1rem',
+    padding: '1rem',
+    textAlign: 'left',
+    color: '#ffffff',
+    boxShadow: '0 18px 40px rgba(0, 0, 0, 0.24)',
+    transition: 'transform 160ms ease, box-shadow 160ms ease, filter 160ms ease',
+  };
+
+  const quickActionMetaStyle = {
+    fontSize: '0.75rem',
+    color: 'rgba(255, 255, 255, 0.86)',
+  };
+
+  const quickActionStyles = {
+    accounts: {
+      background: 'linear-gradient(135deg, #5e6ad2, #4651b8)',
+    },
+    leads: {
+      background: 'linear-gradient(135deg, #d97706, #b45309)',
+    },
+    opportunities: {
+      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+    },
+    activities: {
+      background: 'linear-gradient(135deg, #0f766e, #115e59)',
+    },
+  };
+
   return (
-    <CrudPageBase>
+    <CrudPageBase style={dashboardPageStyle}>
       <div className="support-header">
         <h1>🚀 Painel CRM</h1>
         <p>Pilar de Relacionamento com Cliente: gestão comercial end-to-end.</p>
@@ -305,38 +342,42 @@ function CrmDashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <button
           onClick={() => navigate('/crm/accounts')}
-          className="bg-accent-primary hover:opacity-80 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all text-left"
+          className="hover:opacity-95 text-white hover:shadow-xl transition-all"
+          style={{ ...quickActionBaseStyle, ...quickActionStyles.accounts }}
         >
           <div className="text-2xl mb-2">➕</div>
           <div className="font-semibold">Nova Conta</div>
-          <div className="text-xs opacity-90">Cadastrar empresa</div>
+          <div style={quickActionMetaStyle}>Cadastrar empresa</div>
         </button>
 
         <button
           onClick={() => navigate('/crm/leads')}
-          className="bg-status-warning hover:opacity-80 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all text-left"
+          className="hover:opacity-95 text-white hover:shadow-xl transition-all"
+          style={{ ...quickActionBaseStyle, ...quickActionStyles.leads }}
         >
           <div className="text-2xl mb-2">🎯</div>
           <div className="font-semibold">Novo Lead</div>
-          <div className="text-xs opacity-90">Qualificar prospecto</div>
+          <div style={quickActionMetaStyle}>Qualificar prospecto</div>
         </button>
 
         <button
           onClick={() => navigate('/crm/opportunities')}
-          className="bg-accent-info hover:opacity-80 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all text-left"
+          className="hover:opacity-95 text-white hover:shadow-xl transition-all"
+          style={{ ...quickActionBaseStyle, ...quickActionStyles.opportunities }}
         >
           <div className="text-2xl mb-2">💼</div>
           <div className="font-semibold">Nova Oportunidade</div>
-          <div className="text-xs opacity-90">Criar negocio</div>
+          <div style={quickActionMetaStyle}>Criar negocio</div>
         </button>
 
         <button
           onClick={() => navigate('/crm/activities')}
-          className="bg-accent-secondary hover:opacity-80 text-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-all text-left"
+          className="hover:opacity-95 text-white hover:shadow-xl transition-all"
+          style={{ ...quickActionBaseStyle, ...quickActionStyles.activities }}
         >
           <div className="text-2xl mb-2">📞</div>
           <div className="font-semibold">Registrar Atividade</div>
-          <div className="text-xs opacity-90">Log de interação</div>
+          <div style={quickActionMetaStyle}>Log de interação</div>
         </button>
       </div>
 

@@ -3,6 +3,9 @@ import { NavigationLink } from './NavigationLink';
 import { filterNavigationTree } from '../utils/menuPermissions';
 import { findNavigationTrail, getTopLevelNode, navigationMenu, pathMatches, verticalWorkspaces } from '../navigation/menu';
 
+// Legacy navigation component kept only for backward compatibility and tests.
+// Official shell uses PrimaryRail + SecondaryNav + AreaHeader + ContextPanel.
+
 function getInitialOpenMap(nodes, currentPath, previousState) {
   const trailIds = new Set(findNavigationTrail(nodes, currentPath).map((node) => node.id));
   const next = { ...(previousState || {}) };
@@ -99,7 +102,7 @@ function SidebarSection({ node, currentPath, openMap, onToggle, isCurrentSection
   );
 }
 
-export function Sidebar({ agent, currentPath, resolvedVerticalKeys = [] }) {
+export function LegacySidebar({ agent, currentPath, resolvedVerticalKeys = [] }) {
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const [openMap, setOpenMap] = useState(() => getInitialOpenMap(filteredMenu, currentPath));
   const activeTopLevel = useMemo(() => getTopLevelNode(filteredMenu, currentPath), [filteredMenu, currentPath]);
@@ -165,4 +168,7 @@ export function Sidebar({ agent, currentPath, resolvedVerticalKeys = [] }) {
   );
 }
 
-export default Sidebar;
+// Backward-compatible export.
+export const Sidebar = LegacySidebar;
+
+export default LegacySidebar;

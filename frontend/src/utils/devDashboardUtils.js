@@ -264,5 +264,14 @@ export const DEV_FEATURES = [
     color: 'bg-pink-600',
     category: 'RPA',
   },
+  {
+    id: 'qa-waves',
+    title: 'QA Waves',
+    description: 'Monitore ondas, jornadas e replays QA integrados',
+    icon: '🌊',
+    path: '/dev/qa-waves',
+    color: 'bg-cyan-600',
+    category: 'QA',
+  },
 ];
 
