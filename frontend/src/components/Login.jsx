@@ -202,7 +202,7 @@ export function Login() {
         // Usa requestAnimationFrame para garantir que o React processou a atualização do estado
         requestAnimationFrame(() => {
           setTimeout(() => {
-            console.log('[Login] Redirecionando para /support após seleção do tenant');
+            console.log('[Login] Redirecionando para /workspace após seleção do tenant');
             console.log('[Login] Estado antes do redirecionamento:', {
               isAuthenticated,
               agent: !!agent,
@@ -211,7 +211,7 @@ export function Login() {
             
             // Força o redirecionamento usando window.location se navigate não funcionar
             try {
-              navigate('/support');
+              navigate('/workspace');
               console.log('[Login] Comando navigate executado');
               
               // Verifica se o redirecionamento funcionou após um tempo
@@ -219,13 +219,13 @@ export function Login() {
                 if (window.location.pathname.includes('/login')) {
                   console.warn('[Login] ⚠️ Ainda em /login após navigate, tentando window.location');
                   const basePath = window.location.pathname.split('/login')[0] || '';
-                  window.location.href = `${basePath}/support`;
+                  window.location.href = `${basePath}/workspace`;
                 }
               }, 500);
             } catch (err) {
               console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
               const basePath = window.location.pathname.split('/login')[0] || '';
-              window.location.href = `${basePath}/support`;
+              window.location.href = `${basePath}/workspace`;
             }
           }, 300);
         });
@@ -243,8 +243,8 @@ export function Login() {
           setShowTenantModal(false);
           showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
           setTimeout(() => {
-            console.log('[Login] Redirecionando para /support (usando agente do contexto)');
-            navigate('/support');
+            console.log('[Login] Redirecionando para /workspace (usando agente do contexto)');
+            navigate('/workspace');
           }, 200);
         } else {
           console.error('[Login] ❌ Não foi possível atualizar agente: loginResult e agent não disponíveis');
@@ -301,7 +301,7 @@ export function Login() {
 
       // Lógica de redirecionamento após login:
       // 1. Super-admin: SEMPRE abre modal de seleção de tenants
-      // 2. Admin normal com tenantId: redireciona direto para /support (sem modal)
+      // 2. Admin normal com tenantId: redireciona direto para /workspace (sem modal)
       // 3. Outros: abre modal de seleção
       if (isSuperAdmin) {
         // Super-admin: sempre força seleção de tenant
@@ -312,12 +312,12 @@ export function Login() {
         setLoading(false);
       } else if (result.agent?.tenantId) {
         // Admin normal com tenantId já integrado: faz login direto
-        console.log('[Login] Admin normal com tenantId: redirecionando para /support');
+        console.log('[Login] Admin normal com tenantId: redirecionando para /workspace');
         showToast('Login realizado com sucesso!', 'success');
         setLoading(false);
-        // Redireciona imediatamente para /support
+        // Redireciona imediatamente para o RAP Workspace
         setTimeout(() => {
-          navigate('/support');
+          navigate('/workspace');
         }, 100);
       } else {
         // Admin sem tenantId: precisa selecionar

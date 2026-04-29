@@ -42,15 +42,15 @@ export function AnalyticsRoiAndFunnelSection({
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <label className="text-sm text-text-secondary">
-              Periodo
+              Período
               <select
                 value={selectedWindowDays}
                 onChange={(e) => setSelectedWindowDays(Number(e.target.value))}
                 className="ml-2 px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
               >
-                <option value={7}>Ultimos 7 dias</option>
-                <option value={30}>Ultimos 30 dias</option>
-                <option value={90}>Ultimos 90 dias</option>
+                <option value={7}>Últimos 7 dias</option>
+                <option value={30}>Últimos 30 dias</option>
+                <option value={90}>Últimos 90 dias</option>
               </select>
             </label>
             <label className="text-sm text-text-secondary">
@@ -159,7 +159,7 @@ export function AnalyticsRoiAndFunnelSection({
             ))}
           </div>
           <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
-            <div className="text-sm font-medium text-text-primary mb-3">Conversao</div>
+            <div className="text-sm font-medium text-text-primary mb-3">Conversão</div>
             <div className="space-y-2 text-sm text-text-secondary">
               <div className="flex justify-between"><span>Visitante -&gt; Lead</span><strong className="text-text-primary">{formatRate(funnelMetrics?.conversionRates?.visitorToLead)}</strong></div>
               <div className="flex justify-between"><span>Lead -&gt; Cliente</span><strong className="text-text-primary">{formatRate(funnelMetrics?.conversionRates?.leadToCustomer)}</strong></div>
@@ -240,7 +240,7 @@ export function AnalyticsRoiAndFunnelSection({
               ))}
               {attributionRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-text-secondary" align="left">Sem dados de atribuicao para o filtro atual.</td>
+                  <td colSpan={8} className="text-text-secondary" align="left">Sem dados de atribuição para o filtro atual.</td>
                 </tr>
               )}
             </tbody>
@@ -249,7 +249,7 @@ export function AnalyticsRoiAndFunnelSection({
 
         {attributionAlerts.length > 0 && (
           <div className="p-4 rounded-lg border border-border-default bg-bg-secondary mb-6">
-            <div className="text-sm font-medium text-text-primary mb-2">Alertas de eficiencia</div>
+            <div className="text-sm font-medium text-text-primary mb-2">Alertas de eficiência</div>
             <ul className="text-sm text-text-secondary space-y-1">
               {attributionAlerts.map((alert) => (
                 <li key={alert}>- {alert}</li>
@@ -260,14 +260,14 @@ export function AnalyticsRoiAndFunnelSection({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
-            <div className="text-sm text-text-secondary">Order -&gt; Ready</div>
+            <div className="text-sm text-text-secondary">Pedido -&gt; Pronto</div>
             <div className="text-lg font-semibold text-text-primary">{formatSeconds(orderMetrics?.today?.avgOrderToReadySeconds)}</div>
             <div className="text-xs text-text-secondary">
               SLA {orderMetrics?.today?.slaOrderToReadyMinutes || 0}m • Estouro {orderMetrics?.today?.slaOrderToReadyBreachedCount || 0}
             </div>
           </div>
           <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
-            <div className="text-sm text-text-secondary">Order -&gt; Deliver</div>
+            <div className="text-sm text-text-secondary">Pedido -&gt; Entregue</div>
             <div className="text-lg font-semibold text-text-primary">{formatSeconds(orderMetrics?.today?.avgOrderToDeliverSeconds)}</div>
             <div className="text-xs text-text-secondary">
               SLA {orderMetrics?.today?.slaOrderToDeliverMinutes || 0}m • Estouro {orderMetrics?.today?.slaOrderToDeliverBreachedCount || 0}
@@ -332,7 +332,7 @@ export function AnalyticsRoiAndFunnelSection({
             )}
           </>
         ) : (
-          <div className="text-text-secondary">ROI indisponivel.</div>
+          <div className="text-text-secondary">ROI indisponível.</div>
         )}
       </div>
 
@@ -349,7 +349,7 @@ export function AnalyticsRoiAndFunnelSection({
                 <div className="text-lg font-semibold">{funnelMetrics.totals?.leads || 0}</div>
               </div>
               <div>
-                <div className="text-sm text-text-secondary">Submissoes</div>
+                <div className="text-sm text-text-secondary">Submissões</div>
                 <div className="text-lg font-semibold">{funnelMetrics.totals?.formSubmissions || 0}</div>
               </div>
               <div>
@@ -363,7 +363,7 @@ export function AnalyticsRoiAndFunnelSection({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <div className="text-sm text-text-secondary">Conversao Lead -&gt; Cliente</div>
+                <div className="text-sm text-text-secondary">Conversão Lead -&gt; Cliente</div>
                 <div className="text-lg font-semibold">{formatRate(funnelMetrics.conversionRates?.leadToCustomer)}</div>
               </div>
               <div>
@@ -460,7 +460,7 @@ export function AnalyticsRoiAndFunnelSection({
             )}
           </>
         ) : (
-          <div className="text-text-secondary">Funil indisponivel.</div>
+          <div className="text-text-secondary">Funil indisponível.</div>
         )}
       </div>
     </>

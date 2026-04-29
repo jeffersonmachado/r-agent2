@@ -53,7 +53,7 @@ export function CommandPalette({ agent }) {
         <div className="rap-command-header">
           <div>
             <strong>Paleta de Comandos</strong>
-            <p>Ctrl/Cmd + K para abrir atalhos de navegacao</p>
+            <p>Ctrl/Cmd + K para abrir atalhos de navegação</p>
           </div>
           <button type="button" className="rap-command-close" onClick={() => setOpen(false)}>
             Fechar
@@ -63,7 +63,7 @@ export function CommandPalette({ agent }) {
           autoFocus
           type="text"
           className="rap-command-input"
-          placeholder="Buscar modulo, rota ou capacidade..."
+          placeholder="Buscar módulo, rota ou capacidade..."
           aria-keyshortcuts="Meta+K Control+K"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

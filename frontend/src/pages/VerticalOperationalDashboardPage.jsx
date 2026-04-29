@@ -56,7 +56,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Vertical Operational Dashboard</h1>
+        <h1>Painel Operacional Vertical</h1>
         {resolvedWorkspaces.length > 0 && (
           <div className="rap-vertical-dashboard-meta">
             <span className="rap-vertical-dashboard-meta-label">

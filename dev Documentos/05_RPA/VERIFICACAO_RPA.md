@@ -44,13 +44,13 @@
 - ✅ `getRpaExecutionReport()` implementada
 
 ### 6. Frontend - Roteamento (`frontend/src/main.jsx`)
-- ✅ Rota `/rpa-test` configurada
+- ✅ Rota `/dev/rpa-test` configurada
 - ✅ `RpaTestPage` importada e renderizada
 - ✅ Proteção de autenticação
 
 ### 7. Frontend - Proxy Vite (`frontend/vite.config.mjs`)
 - ✅ Rota `/rpa` configurada no proxy
-- ✅ Rota `/rpa-test` configurada para SPA routing
+- ✅ Rota `/dev/rpa-test` configurada para SPA routing
 - ✅ Middleware serve index.html para rotas do frontend
 
 ### 8. Gravações RPA
@@ -77,7 +77,7 @@
 
 ## Próximos Passos para Usar
 
-1. Acesse: `http://localhost:5173/rpa-test`
+1. Acesse: `http://localhost:5173/dev/rpa-test`
 2. Faça login (se necessário)
 3. Clique em uma gravação
 4. Configure a velocidade no diálogo

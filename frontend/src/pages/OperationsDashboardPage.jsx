@@ -1092,15 +1092,15 @@ export function OperationsDashboardPage() {
             <div className="grid gap-3 md:grid-cols-5 mb-3">
               <input
                 className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm md:col-span-3"
-                placeholder="Buscar cliente por nome, documento, subjectId ou codigo"
+                placeholder="Buscar cliente por nome, documento, subjectId ou código"
                 value={beautySearchQuery}
                 onChange={(e) => setBeautySearchQuery(e.target.value)}
               />
-              <button className="bg-accent-primary rounded px-2 py-2 text-sm text-white" onClick={loadBeautySearch} disabled={beautySearchLoading}>
+              <button className="bg-accent-primary rounded px-2 py-2 text-sm text-white cursor-pointer disabled:cursor-not-allowed" onClick={loadBeautySearch} disabled={beautySearchLoading}>
                 {beautySearchLoading ? 'Buscando...' : 'Buscar cliente'}
               </button>
               <button
-                className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm"
+                className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm cursor-pointer disabled:cursor-not-allowed"
                 onClick={() => {
                   if (!selectedBeautySubject) return;
                   loadBeautyDetail(selectedBeautySubject);
@@ -1163,10 +1163,10 @@ export function OperationsDashboardPage() {
                         <div className="text-xs text-text-secondary mb-1">Indicadores</div>
                         <div className="flex flex-wrap gap-2">
                           <span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(riskLevel(beautyDetail.indicators?.noShowRiskScore) === 'alto' ? 'failed' : riskLevel(beautyDetail.indicators?.noShowRiskScore) === 'medio' ? 'pending' : 'success')}`}>
-                            no-show risk: {riskLevel(beautyDetail.indicators?.noShowRiskScore)} ({Number(beautyDetail.indicators?.noShowRiskScore || 0).toFixed(2)})
+                            risco de no-show: {riskLevel(beautyDetail.indicators?.noShowRiskScore)} ({Number(beautyDetail.indicators?.noShowRiskScore || 0).toFixed(2)})
                           </span>
                           <span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(beautyDetail.indicators?.eligibleForReturn ? 'success' : 'pending')}`}>
-                            retorno: {beautyDetail.indicators?.eligibleForReturn ? 'elegivel' : 'nao elegivel'}
+                            retorno: {beautyDetail.indicators?.eligibleForReturn ? 'elegível' : 'não elegível'}
                           </span>
                           <span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(beautyDetail.indicators?.followUpStatus === 'sent' ? 'success' : 'pending')}`}>
                             follow-up: {beautyDetail.indicators?.followUpStatus === 'sent' ? 'enviado' : 'pendente'}
@@ -1176,24 +1176,24 @@ export function OperationsDashboardPage() {
                     </div>
 
                     <div className="bg-bg-elevated border border-border-default rounded p-3">
-                      <div className="text-xs text-text-secondary mb-2">Status da automacao</div>
+                      <div className="text-xs text-text-secondary mb-2">Status da automação</div>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.confirmationSent ? 'success' : 'pending')}`}>confirmacao</span>
+                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.confirmationSent ? 'success' : 'pending')}`}>confirmação</span>
                         <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.reminder24hSent ? 'success' : 'pending')}`}>reminder 24h</span>
-                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.reminderNearSent ? 'success' : 'pending')}`}>reminder proximo</span>
+                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.reminderNearSent ? 'success' : 'pending')}`}>reminder próximo</span>
                         <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.followUpSent ? 'success' : 'pending')}`}>follow-up</span>
-                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.reactivationSent ? 'success' : 'pending')}`}>reativacao</span>
+                        <span className={`px-2 py-1 rounded ${statusBadgeClass(beautyDetail.automation?.reactivationSent ? 'success' : 'pending')}`}>reativação</span>
                       </div>
                     </div>
 
                     <div className="bg-bg-elevated border border-border-default rounded p-3">
-                      <div className="text-xs text-text-secondary mb-2">Pacote / sessoes</div>
+                      <div className="text-xs text-text-secondary mb-2">Pacote / sessões</div>
                       <div className="text-sm">saldo: {beautyDetail.bundle?.remaining ?? '-'} de {beautyDetail.bundle?.total ?? '-'}</div>
                       <div className="text-xs text-text-secondary">tipo: {beautyDetail.bundle?.bundleType || '-'}</div>
                     </div>
 
                     <div className="bg-bg-elevated border border-border-default rounded p-3">
-                      <div className="text-xs text-text-secondary mb-2">Proximo agendamento</div>
+                      <div className="text-xs text-text-secondary mb-2">Próximo agendamento</div>
                       {beautyDetail.nextAppointment ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm">{new Date(beautyDetail.nextAppointment.startAt).toLocaleString('pt-BR')}</span>
@@ -1208,20 +1208,20 @@ export function OperationsDashboardPage() {
                           </button>
                         </div>
                       ) : (
-                        <div className="text-sm text-text-secondary">Nenhum proximo agendamento.</div>
+                        <div className="text-sm text-text-secondary">Nenhum próximo agendamento.</div>
                       )}
                     </div>
 
                     <div>
-                      <div className="text-xs text-text-secondary mb-2">Ultimos atendimentos</div>
+                      <div className="text-xs text-text-secondary mb-2">Últimos atendimentos</div>
                       <div className="overflow-auto border border-border-default rounded">
                         <table className="w-full text-sm">
                           <thead className="bg-bg-elevated text-text-secondary">
                             <tr>
-                              <th className="text-left p-2">Horario</th>
-                              <th className="text-left p-2">Servico</th>
+                              <th className="text-left p-2">Horário</th>
+                              <th className="text-left p-2">Serviço</th>
                               <th className="text-left p-2">Status</th>
-                              <th className="text-left p-2">Acoes</th>
+                              <th className="text-left p-2">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1285,15 +1285,15 @@ export function OperationsDashboardPage() {
             <div className="grid gap-3 md:grid-cols-6 mb-3">
               <input
                 className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm md:col-span-4"
-                placeholder="Buscar aluno por nome, documento, codigo ou subjectId"
+                placeholder="Buscar aluno por nome, documento, código ou subjectId"
                 value={fitnessQuery}
                 onChange={(e) => setFitnessQuery(e.target.value)}
               />
-              <button className="bg-accent-primary rounded px-2 py-2 text-sm text-white" onClick={loadFitnessSearch} disabled={fitnessSearchLoading}>
+              <button className="bg-accent-primary rounded px-2 py-2 text-sm text-white cursor-pointer disabled:cursor-not-allowed" onClick={loadFitnessSearch} disabled={fitnessSearchLoading}>
                 {fitnessSearchLoading ? 'Buscando...' : 'Buscar aluno'}
               </button>
               <button
-                className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm"
+                className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm cursor-pointer disabled:cursor-not-allowed"
                 onClick={() => {
                   if (!selectedFitnessSubject) return;
                   loadFitnessDetail(selectedFitnessSubject);
@@ -1624,7 +1624,7 @@ export function OperationsDashboardPage() {
               <KpiCard title="Executados" value={jobsData?.summary?.executed} />
               <KpiCard title="Sucesso" value={jobsData?.summary?.success} />
               <KpiCard title="Erro" value={jobsData?.summary?.failed} />
-              <KpiCard title="Duracao media (ms)" value={jobsData?.summary?.avgDurationMs} />
+              <KpiCard title="Duração média (ms)" value={jobsData?.summary?.avgDurationMs} />
               <KpiCard title="Retries" value={jobsData?.summary?.retries} />
               <KpiCard title="Pendentes" value={jobsData?.summary?.pending} />
             </div>

@@ -1,5 +1,9 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 jest.mock('../qaMeshService', () => ({
   getRegistry: jest.fn(),
   getMeshHistory: jest.fn(),
@@ -9,9 +13,15 @@ jest.mock('../qaMeshService', () => ({
 
 const qaMeshService = require('../qaMeshService');
 const qaWavesService = require('../qaWavesService');
+const { getRpaReplayDir } = require('../../../lib/rpaPathResolver');
 
 describe('qaWavesService journey model compatibility', () => {
+  let runtimeRoot;
+
   beforeEach(() => {
+    runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-service-'));
+    process.env.RUNTIME_ROOT = runtimeRoot;
+
     qaMeshService.getRegistry.mockReturnValue([
       {
         id: 'fitness::payment_success',
@@ -73,6 +83,13 @@ describe('qaWavesService journey model compatibility', () => {
     ]);
   });
 
+  afterEach(() => {
+    delete process.env.RUNTIME_ROOT;
+    if (runtimeRoot && fs.existsSync(runtimeRoot)) {
+      fs.rmSync(runtimeRoot, { recursive: true, force: true });
+    }
+  });
+
   test('mantem listagem de waves legada', () => {
     const waves = qaWavesService.listWaves();
     const fitnessWave = waves.find((wave) => wave.domain === 'fitness');
@@ -116,5 +133,52 @@ describe('qaWavesService journey model compatibility', () => {
     expect(replaysByJourney.items[0]).toHaveProperty('journeyName');
     expect(replaysByJourney.items[0]).toHaveProperty('stepName');
     expect(replaysByStep.items.every((item) => item.stepId === 'step_10_payment')).toBe(true);
+  });
+
+  test('aceita replayId qa_wave_replay_* e resolve para replay real por executionId', () => {
+    const replayId = 'qa_wave_replay_test_resolve';
+    const replayDir = getRpaReplayDir();
+    fs.mkdirSync(replayDir, { recursive: true });
+    fs.writeFileSync(path.join(replayDir, `${replayId}.json`), JSON.stringify({
+      id: replayId,
+      replayId,
+      type: 'qa_wave_rpa_replay',
+      executionId: 'exec-1',
+      scenarioId: 'fitness_trial_class',
+      journeyId: 'cliente_novo',
+      status: 'queued',
+      startTime: '2026-04-25T23:27:14.826Z',
+    }), 'utf8');
+
+    const details = qaWavesService.getReplayById(replayId);
+
+    expect(details).toBeTruthy();
+    expect(details.executionId).toBe('exec-1');
+    expect(String(details.id)).toContain('exec-1::');
+  });
+
+  test('retorna payload queued quando replay real ainda não existe', () => {
+    const replayId = 'qa_wave_replay_test_pending';
+    const replayDir = getRpaReplayDir();
+    fs.mkdirSync(replayDir, { recursive: true });
+    fs.writeFileSync(path.join(replayDir, `${replayId}.json`), JSON.stringify({
+      id: replayId,
+      replayId,
+      type: 'qa_wave_rpa_replay',
+      executionId: 'exec-unknown',
+      scenarioId: 'fitness_trial_class',
+      status: 'queued',
+      assertions: [
+        { id: 'assert-1', type: 'validate_intent', status: 'pending' },
+      ],
+    }), 'utf8');
+
+    const details = qaWavesService.getReplayById(replayId);
+
+    expect(details).toBeTruthy();
+    expect(details.id).toBe(replayId);
+    expect(details.status).toBe('queued');
+    expect(Array.isArray(details.steps)).toBe(true);
+    expect(details.steps.length).toBe(1);
   });
 });

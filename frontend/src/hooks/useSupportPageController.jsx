@@ -653,7 +653,7 @@ export function useSupportPageController({
     if (wsUiStatus.phase === 'ready') {
       return {
         label: 'Conectado',
-        title: 'WebSocket conectado e autenticado - Atualizacoes em tempo real ativas',
+        title: 'WebSocket conectado e autenticado - Atualizações em tempo real ativas',
         color: 'rgb(37, 211, 102)',
         animated: true,
       };

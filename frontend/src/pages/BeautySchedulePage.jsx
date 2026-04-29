@@ -121,13 +121,13 @@ export function BeautySchedulePage() {
         </div>
 
         <div className="support-details-panel">
-          <h3>Operacao</h3>
+          <h3>Operação</h3>
           {!selected ? <p className="text-sm text-text-secondary">Selecione um agendamento para operar.</p> : (
             <>
               <p><strong>Cliente:</strong> {selected.customerName || selected.customerId || selected.subjectId}</p>
-              <p><strong>Horario:</strong> {formatDate(selected.startAt)}</p>
+              <p><strong>Horário:</strong> {formatDate(selected.startAt)}</p>
               <p><strong>Status:</strong> {selected.status}</p>
-              <p><strong>Servico:</strong> {selected.serviceName || '-'}</p>
+              <p><strong>Serviço:</strong> {selected.serviceName || '-'}</p>
               <p><strong>Profissional:</strong> {selected.professionalName || selected.ownerId || '-'}</p>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
                 <button className="support-button" onClick={() => complete(selected)}>Concluir</button>

@@ -67,6 +67,7 @@ const {
 } = require('./queue/queueTicketLookup');
 const { updateConversationForTicket } = require('./queue/queueTicketConversationSync');
 const { buildNewQueueTicket } = require('./queue/queueTicketFactory');
+const WorkspaceLinkAutomationService = require('./workspace/WorkspaceLinkAutomationService');
 const {
   persistTicketBestEffort: persistTicketBestEffortFromRuntime,
   deleteTicketBestEffort: deleteTicketBestEffortFromRuntime,
@@ -230,6 +231,13 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
 
   // Persistência best-effort em PostgreSQL
   persistTicketBestEffort(ticket);
+
+  setImmediate(() => {
+    const linker = new WorkspaceLinkAutomationService();
+    linker.linkTicketCreated({ tenantId: normalizedTenantId, ticket }).catch((err) => {
+      logger.warn('[QueueService] Workspace ticket link best-effort falhou', { tenantId: normalizedTenantId, ticketId: ticket.id, error: err?.message || String(err) });
+    });
+  });
 
   return ticket;
 }

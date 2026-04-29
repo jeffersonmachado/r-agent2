@@ -1,0 +1,201 @@
+{
+  "projects": [
+    {
+      "id": "1",
+      "code": "PRJ-001",
+      "name": "Projeto Demo",
+      "description": "Projeto de demonstração do sistema",
+      "status": "active",
+      "priority": "high",
+      "health": "on_track",
+      "visibility": "private",
+      "owner_user_id": "admin",
+      "start_date": "2026-01-15T00:00:00Z",
+      "target_end_date": "2026-04-30T00:00:00Z",
+      "actual_end_date": null,
+      "created_at": "2026-01-15T10:00:00Z",
+      "updated_at": "2026-04-28T12:00:00Z"
+    }
+  ],
+  "lists": [
+    {
+      "id": "list-1",
+      "project_id": "1",
+      "name": "Backlog",
+      "slug": "backlog",
+      "color": "#475569",
+      "position": 0,
+      "wip_limit": null
+    },
+    {
+      "id": "list-2",
+      "project_id": "1",
+      "name": "To Do",
+      "slug": "todo",
+      "color": "#2563eb",
+      "position": 1,
+      "wip_limit": 5
+    },
+    {
+      "id": "list-3",
+      "project_id": "1",
+      "name": "Doing",
+      "slug": "doing",
+      "color": "#f59e0b",
+      "position": 2,
+      "wip_limit": 3
+    },
+    {
+      "id": "list-4",
+      "project_id": "1",
+      "name": "Review",
+      "slug": "review",
+      "color": "#8b5cf6",
+      "position": 3,
+      "wip_limit": null
+    },
+    {
+      "id": "list-5",
+      "project_id": "1",
+      "name": "Done",
+      "slug": "done",
+      "color": "#10b981",
+      "position": 5,
+      "wip_limit": null
+    }
+  ],
+  "items": [
+    {
+      "id": "item-1",
+      "project_id": "1",
+      "list_id": "list-2",
+      "title": "Implementar autenticação",
+      "description": "Adicionar sistema de login com JWT",
+      "item_type": "story",
+      "priority": "high",
+      "status": "in_progress",
+      "assigned_to": "dev-1",
+      "created_at": "2026-01-20T10:00:00Z",
+      "updated_at": "2026-04-28T09:00:00Z"
+    },
+    {
+      "id": "item-2",
+      "project_id": "1",
+      "list_id": "list-3",
+      "title": "Criar componentes UI",
+      "description": "Desenvolver componentes React reutilizáveis",
+      "item_type": "story",
+      "priority": "high",
+      "status": "in_progress",
+      "assigned_to": "dev-2",
+      "created_at": "2026-01-25T10:00:00Z",
+      "updated_at": "2026-04-28T08:30:00Z"
+    },
+    {
+      "id": "item-3",
+      "project_id": "1",
+      "list_id": "list-4",
+      "title": "Revisar integração de API",
+      "description": "Validar endpoints e tratamento de erros",
+      "item_type": "task",
+      "priority": "medium",
+      "status": "review",
+      "assigned_to": "qa-1",
+      "created_at": "2026-02-01T10:00:00Z",
+      "updated_at": "2026-04-28T11:00:00Z"
+    },
+    {
+      "id": "item-4",
+      "project_id": "1",
+      "list_id": "list-5",
+      "title": "Configurar CI/CD",
+      "description": "Setup automático de builds e deploy",
+      "item_type": "task",
+      "priority": "medium",
+      "status": "done",
+      "assigned_to": "devops-1",
+      "created_at": "2026-02-05T10:00:00Z",
+      "updated_at": "2026-03-15T14:00:00Z"
+    },
+    {
+      "id": "item-5",
+      "project_id": "1",
+      "list_id": "list-1",
+      "title": "Documentação do projeto",
+      "description": "Criar documentação técnica completa",
+      "item_type": "epic",
+      "priority": "low",
+      "status": "backlog",
+      "assigned_to": null,
+      "created_at": "2026-02-10T10:00:00Z",
+      "updated_at": "2026-02-10T10:00:00Z"
+    }
+  ],
+  "dashboard": {
+    "project_id": "1",
+    "total_items": 5,
+    "completed_items": 1,
+    "blocked_items": 0,
+    "overdue_items": 0,
+    "by_priority": {
+      "high": 2,
+      "medium": 2,
+      "low": 1
+    },
+    "by_status": {
+      "in_progress": 2,
+      "review": 1,
+      "done": 1,
+      "backlog": 1
+    },
+    "by_type": {
+      "story": 2,
+      "task": 2,
+      "epic": 1
+    },
+    "completion_percentage": 20,
+    "velocity": 1.2
+  },
+  "timeline": {
+    "project_id": "1",
+    "milestones": [
+      {
+        "id": "milestone-1",
+        "title": "MVP Launch",
+        "target_date": "2026-03-15T00:00:00Z",
+        "status": "completed",
+        "items_count": 8
+      },
+      {
+        "id": "milestone-2",
+        "title": "Beta Features",
+        "target_date": "2026-04-30T00:00:00Z",
+        "status": "in_progress",
+        "items_count": 12
+      },
+      {
+        "id": "milestone-3",
+        "title": "Production Release",
+        "target_date": "2026-06-15T00:00:00Z",
+        "status": "planned",
+        "items_count": 5
+      }
+    ],
+    "scheduled_items": [
+      {
+        "id": "scheduled-1",
+        "title": "Sprint Planning",
+        "scheduled_date": "2026-04-29T09:00:00Z",
+        "duration_minutes": 60,
+        "type": "meeting"
+      },
+      {
+        "id": "scheduled-2",
+        "title": "Code Review Session",
+        "scheduled_date": "2026-05-02T14:00:00Z",
+        "duration_minutes": 90,
+        "type": "meeting"
+      }
+    ]
+  }
+}

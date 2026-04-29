@@ -52,7 +52,7 @@ export function ChatHumanoDashboardPage() {
     { id: 'whatsapp', title: 'WhatsApp', description: 'Gerencie conexões, IVR e templates do WhatsApp', icon: '🟢', path: '/whatsapp-connections', color: 'bg-green-500', category: 'Omnichannel' },
     { id: 'sla', title: 'SLA', description: 'Políticas de prazo e governança operacional', icon: '⏱️', path: '/sla-policies', color: 'bg-amber-500', category: 'Governança' },
     { id: 'supervisor', title: 'Painel Supervisor', description: 'TME, TMA, abandono e status operacional', icon: '🧭', path: '/supervisor', color: 'bg-teal-500', category: 'Analytics' },
-    { id: 'analytics', title: 'Analises', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
+    { id: 'analytics', title: 'Análises', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
     { id: 'automations', title: 'Automações', description: 'Regras para ganho de escala e consistência', icon: '🧩', path: '/automations', color: 'bg-fuchsia-500', category: 'Automação' },
     { id: 'audit', title: 'Auditoria', description: 'Rastro de eventos para compliance e suporte', icon: '📋', path: '/audit', color: 'bg-slate-500', category: 'Governança' },
   ];
@@ -68,7 +68,7 @@ export function ChatHumanoDashboardPage() {
         <h1>Painel de Chat Humano</h1>
         <p>Pilar 1: cockpit operacional para atendimento omnichannel.</p>
         <div className="support-controls">
-          <button type="button" className="btn-default px-4 py-2 text-sm" onClick={() => window.location.reload()}>
+          <button type="button" className="btn-default px-4 py-2 text-sm cursor-pointer" onClick={() => window.location.reload()}>
             🔄 Atualizar
           </button>
         </div>
@@ -78,7 +78,7 @@ export function ChatHumanoDashboardPage() {
         <DashboardKpiCard label="Módulos" value={features.length} subtitle="atalhos do pilar" />
         <DashboardKpiCard label="Categorias" value={categories.length} subtitle="grupos de navegação" />
         <DashboardKpiCard label="Nucleo" value="Atendimento + Caixa de Entrada" subtitle="execução diária" />
-        <DashboardKpiCard label="Indicadores" value="Supervisor + Analises" subtitle="medição e ajuste" />
+        <DashboardKpiCard label="Indicadores" value="Supervisor + Análises" subtitle="medição e ajuste" />
         <DashboardKpiCard
           label="Mensagens Falhadas"
           value={failedMessages.failed}
@@ -114,7 +114,7 @@ export function ChatHumanoDashboardPage() {
           </div>
           <button
             onClick={() => navigate('/failed-messages')}
-            className="mt-4 w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            className="mt-4 w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium cursor-pointer"
           >
             Ver Todas as Falhas
           </button>

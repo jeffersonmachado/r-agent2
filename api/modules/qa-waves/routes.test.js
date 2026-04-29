@@ -69,6 +69,20 @@ function createDefaultDeps() {
     getReplayById: jest.fn(() => null),
     queueWaveExecution: jest.fn(() => ({ executionId: 'exec-1' })),
     reexecuteReplay: jest.fn(() => ({ executionId: 'replay-1' })),
+    inferWaveScenario: jest.fn((payload) => ({
+      scenario: { id: payload.goal ? 'scenario-from-goal' : 'scenario-1' },
+      validation: { valid: true, errors: [], warnings: [] },
+    })),
+    generateWaveSeeds: jest.fn(() => ({ seeds: [{ id: 'seed_1' }] })),
+    validateWaveScenario: jest.fn(() => ({
+      valid: true,
+      errors: [],
+      warnings: [],
+      normalizedScenario: { id: 'scenario-1' },
+    })),
+    saveWaveScenario: jest.fn(() => ({ scenario: { id: 'scenario-1', version: 'v2' } })),
+    listWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1', version: 'v1' }], history: {} })),
+    runWaveScenario: jest.fn(() => ({ executionId: 'mesh-1', replayId: 'replay-1' })),
   };
 }
 
@@ -158,5 +172,78 @@ describe('qa-waves routes', () => {
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'internal_error', message: 'Erro ao listar status de jornada' });
     expect(deps.logger.error).toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/scenarios deve retornar cenarios versionados', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/scenarios?waveId=fitness-cliente-novo');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('items');
+    expect(deps.listWaveScenarios).toHaveBeenCalledWith(
+      expect.objectContaining({ waveId: 'fitness-cliente-novo' })
+    );
+  });
+
+  test('POST /dev/qa-waves/infer-scenario deve inferir cenario semantico', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        vertical: 'fitness',
+        journey: 'cliente_novo',
+        goal: 'aula experimental',
+      });
+    });
+
+    const res = await request(port, 'POST', '/dev/qa-waves/infer-scenario', {
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('scenario');
+    expect(deps.inferWaveScenario).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/validate-scenario deve normalizar e validar', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({ scenario: { id: 'scenario-1' } });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/validate-scenario', {
+      scenario: { id: 'scenario-1' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      valid: true,
+      errors: [],
+      warnings: [],
+      normalizedScenario: { id: 'scenario-1' },
+    });
+    expect(deps.validateWaveScenario).toHaveBeenCalled();
+  });
+
+  test('POST /dev/qa-waves/run deve executar em modo real e retornar executionId/replayId', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        waveId: 'fitness-cliente-novo',
+        scenarioIds: ['fitness_trial_class'],
+        mode: 'real',
+        replay: true,
+      });
+    });
+
+    const res = await request(port, 'POST', '/dev/qa-waves/run', {
+      waveId: 'fitness-cliente-novo',
+      scenarioIds: ['fitness_trial_class'],
+      mode: 'real',
+      replay: true,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ executionId: 'mesh-1', replayId: 'replay-1' });
+    expect(deps.runWaveScenario).toHaveBeenCalled();
   });
 });

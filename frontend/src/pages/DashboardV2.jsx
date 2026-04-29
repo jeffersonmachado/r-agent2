@@ -101,8 +101,8 @@ export function DashboardV2() {
       tone: 'default',
     },
     {
-      label: 'Versao ativa',
-      value: versionInfo?.version || versionInfo?.tag || 'indisponivel',
+      label: 'Versão ativa',
+      value: versionInfo?.version || versionInfo?.tag || 'indisponível',
       tone: 'default',
     },
   ];
@@ -153,8 +153,8 @@ export function DashboardV2() {
 
         <article className="rap-panel">
           <div className="rap-panel-header">
-            <h2>Operacao</h2>
-            <span>Fila, throughput e ocupacao</span>
+            <h2>Operação</h2>
+            <span>Fila, throughput e ocupação</span>
           </div>
           <div className="rap-kpi-grid">
             <KpiTile label="Tickets abertos" value={general?.openTickets ?? '-'} />
@@ -173,7 +173,7 @@ export function DashboardV2() {
             <KpiTile label="TME" value={formatSecondsCompact(general?.avgFirstResponseTimeSeconds)} />
             <KpiTile label="TMA" value={formatSecondsCompact(general?.avgHandlingTimeSeconds)} />
             <KpiTile label="Abandono" value={formatPct(general?.abandonmentRate)} tone={(general?.abandonmentRate || 0) > 0 ? 'warning' : 'default'} />
-            <KpiTile label="Contencao" value={formatPct(general?.botContainmentRate)} />
+            <KpiTile label="Contenção" value={formatPct(general?.botContainmentRate)} />
           </div>
         </article>
 

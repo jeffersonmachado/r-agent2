@@ -123,7 +123,7 @@ export function LegacySidebar({ agent, currentPath, resolvedVerticalKeys = [] })
         <div className="rap-sidebar-brand-mark">RAP</div>
         <div>
           <div className="rap-sidebar-brand-title">RAP (Results Autonomous Platform)</div>
-          <div className="rap-sidebar-brand-subtitle">Navegacao por capacidades</div>
+          <div className="rap-sidebar-brand-subtitle">Navegação por capacidades</div>
         </div>
       </div>
 

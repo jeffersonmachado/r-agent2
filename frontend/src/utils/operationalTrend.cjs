@@ -1,15 +1,15 @@
 'use strict';
 
-const OPERATIONAL_TREND_FORMULA_TEXT = 'Formula: tendencia = score_atual - score_anterior.';
-const OPERATIONAL_TREND_NO_HISTORY_TEXT = 'Historico insuficiente para calcular delta.';
+const OPERATIONAL_TREND_FORMULA_TEXT = 'Fórmula: tendência = score_atual - score_anterior.';
+const OPERATIONAL_TREND_NO_HISTORY_TEXT = 'Histórico insuficiente para calcular delta.';
 const OPERATIONAL_STATE_LABELS = Object.freeze({
   sectionTitle: 'Estado operacional',
-  health: 'Saude',
+  health: 'Saúde',
   score: 'Score',
   openInsights: 'Insights abertos',
-  openRecommendations: 'Recomendacoes abertas',
-  trend: 'Tendencia',
-  noCriticalAlerts: 'Sem alertas criticos no momento.',
+  openRecommendations: 'Recomendações abertas',
+  trend: 'Tendência',
+  noCriticalAlerts: 'Sem alertas críticos no momento.',
   updatedAt: 'atualizado em:',
 });
 
@@ -26,7 +26,7 @@ function computeOperationalTrend(currentScore, previousScore) {
 
   if (current == null || previous == null) {
     return {
-      label: 'sem historico',
+      label: 'sem histórico',
       detail: '-',
       delta: null,
       current,
@@ -37,7 +37,7 @@ function computeOperationalTrend(currentScore, previousScore) {
   const delta = Math.round(current - previous);
   if (Math.abs(delta) < 1) {
     return {
-      label: 'estavel',
+      label: 'estável',
       detail: '(0)',
       delta: 0,
       current,

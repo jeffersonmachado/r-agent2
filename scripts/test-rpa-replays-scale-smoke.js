@@ -40,7 +40,7 @@ function buildReplayPayload(runId, index) {
     actions: [
       {
         type: 'navigate',
-        target: '/rpa-replays',
+        target: '/dev/rpa-replays',
         at: start.toISOString(),
       },
       {

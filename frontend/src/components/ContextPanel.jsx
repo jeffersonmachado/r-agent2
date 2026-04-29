@@ -8,42 +8,42 @@ const CONTEXT_PRESETS = {
   support: {
     title: 'Atendimento em foco',
     blocks: [
-      { title: 'Contexto rapido', items: ['Cliente e conta', 'Resumo de atendimento', 'Tags e entidades', 'Historico recente'] },
-      { title: 'Fluxo recomendado', items: ['Identificar prioridade', 'Registrar evidencia', 'Atualizar status', 'Encerrar com motivo'] },
+      { title: 'Contexto rápido', items: ['Cliente e conta', 'Resumo de atendimento', 'Tags e entidades', 'Histórico recente'] },
+      { title: 'Fluxo recomendado', items: ['Identificar prioridade', 'Registrar evidência', 'Atualizar status', 'Encerrar com motivo'] },
     ],
   },
   crm: {
     title: 'Pipeline comercial',
     blocks: [
-      { title: 'Visao comercial', items: ['Contas e contatos chave', 'Oportunidades criticas', 'Leads em risco', 'Atividades pendentes'] },
-      { title: 'Acoes rapidas', items: ['Atualizar etapa', 'Registrar interacao', 'Criar tarefa de follow-up', 'Planejar campanha'] },
+      { title: 'Visão comercial', items: ['Contas e contatos chave', 'Oportunidades críticas', 'Leads em risco', 'Atividades pendentes'] },
+      { title: 'Ações rápidas', items: ['Atualizar etapa', 'Registrar interação', 'Criar tarefa de follow-up', 'Planejar campanha'] },
     ],
   },
   operations: {
-    title: 'Operacao em tempo real',
+    title: 'Operação em tempo real',
     blocks: [
-      { title: 'Saude operacional', items: ['Canais e filas', 'Alertas prioritarios', 'Eventos recentes', 'Disponibilidade de servicos'] },
+      { title: 'Saúde operacional', items: ['Canais e filas', 'Alertas prioritários', 'Eventos recentes', 'Disponibilidade de serviços'] },
       { title: 'Resposta operacional', items: ['Escalonar incidente', 'Revisar replay', 'Ajustar capacidade', 'Comunicar stakeholders'] },
     ],
   },
   builder: {
-    title: 'Construcao e validacao',
+    title: 'Construção e validação',
     blocks: [
-      { title: 'Ciclo de entrega', items: ['Fluxos recentes', 'Templates relevantes', 'Testes e validacoes', 'Execucoes monitoradas'] },
-      { title: 'Proximos passos', items: ['Modelar mudanca', 'Executar smoke', 'Publicar versao', 'Acompanhar runtime'] },
+      { title: 'Ciclo de entrega', items: ['Fluxos recentes', 'Templates relevantes', 'Testes e validações', 'Execuções monitoradas'] },
+      { title: 'Próximos passos', items: ['Modelar mudança', 'Executar smoke', 'Publicar versão', 'Acompanhar runtime'] },
     ],
   },
   admin: {
-    title: 'Governanca da plataforma',
+    title: 'Governança da plataforma',
     blocks: [
-      { title: 'Controles essenciais', items: ['Tenant ativo', 'Permissoes e acessos', 'Auditoria recente', 'Integracoes chave'] },
-      { title: 'Higiene operacional', items: ['Revisar politicas', 'Atualizar credenciais', 'Verificar compliance', 'Registrar mudancas'] },
+      { title: 'Controles essenciais', items: ['Tenant ativo', 'Permissões e acessos', 'Auditoria recente', 'Integrações chave'] },
+      { title: 'Higiene operacional', items: ['Revisar políticas', 'Atualizar credenciais', 'Verificar compliance', 'Registrar mudanças'] },
     ],
   },
   overview: {
     title: 'Panorama executivo',
     blocks: [
-      { title: 'Resumo do workspace', items: ['Status atual', 'Pontos de atencao', 'Prioridades do dia', 'Atalhos por area'] },
+      { title: 'Resumo do workspace', items: ['Status atual', 'Pontos de atenção', 'Prioridades do dia', 'Atalhos por área'] },
     ],
   },
 };
@@ -63,7 +63,7 @@ export function ContextPanel({ agent, currentPath, tenantLabel = '' }) {
     <aside className="rap-context-panel" aria-label="Painel de contexto">
       <section className="rap-context-card">
         <h3>{preset.title}</h3>
-        <p>{activeArea?.description || 'Sem area ativa.'}</p>
+        <p>{activeArea?.description || 'Sem área ativa.'}</p>
         <div className="rap-context-meta">
           <span>Perfil: {agent?.role || 'desconhecido'}</span>
           <span>Conta: {tenantLabel || agent?.tenantId || 'n/d'}</span>
@@ -83,13 +83,13 @@ export function ContextPanel({ agent, currentPath, tenantLabel = '' }) {
       ))}
 
       <section className="rap-context-card">
-        <h3>Atalhos da area</h3>
+        <h3>Atalhos da área</h3>
         <div className="rap-context-shortcuts">
           {shortcuts.length > 0 ? shortcuts.map((item) => (
             <NavigationLink key={item.id} to={item.path} className="rap-context-shortcut-link">
               {item.label}
             </NavigationLink>
-          )) : <span className="rap-context-empty">Nenhum atalho disponivel.</span>}
+          )) : <span className="rap-context-empty">Nenhum atalho disponível.</span>}
         </div>
       </section>
 

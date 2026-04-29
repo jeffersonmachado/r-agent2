@@ -38,6 +38,7 @@ const { createQaExpressRouter } = require('../composition/qa');
 const { createQaWavesExpressRouter } = require('../composition/qa-waves');
 const { createQaMeshExpressRouter } = require('../composition/qa-mesh');
 const { createRpaTestsExpressRouter } = require('../composition/rpa-tests');
+const { createTestExecutionsExpressRouter } = require('../composition/test-executions');
 const { createDevManagementExpressRouter } = require('../composition/dev-management');
 const { createIntelligenceExpressRouter } = require('../composition/intelligence');
 const { createMarketIntelligenceExpressRouter } = require('../composition/market-intelligence');
@@ -56,6 +57,7 @@ const { createBillingExpressRouter } = require('../composition/billing');
 const { createWebScrapingExpressRouter } = require('../composition/web-scraping');
 const { createWebhooksExpressRouter } = require('../composition/webhooks');
 const { createVoiceExpressRouter } = require('../composition/voice');
+const { createWorkspaceExpressRouter } = require('../composition/workspace');
 
 const { createDomainOperationsRoutes } = require('../modules/domain-operations/routes');
 const { createDomainBusinessRoutes } = require('../modules/domain-business/routes');
@@ -115,11 +117,13 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const qaWavesRouter = createQaWavesExpressRouter();
   const qaMeshRouter = createQaMeshExpressRouter();
   const rpaTestsRouter = createRpaTestsExpressRouter();
+  const testExecutionsRouter = createTestExecutionsExpressRouter();
   const devManagementRouter = createDevManagementExpressRouter();
   const intelligenceRouter = createIntelligenceExpressRouter();
   const marketIntelligenceRouter = createMarketIntelligenceExpressRouter();
   const accessControlRouter = createAccessControlExpressRouter();
   const voiceRouter = createVoiceExpressRouter();
+  const workspaceRouter = createWorkspaceExpressRouter();
   const analyticsRouter = createAnalyticsExpressRouter();
   const bulkCampaignsRouter = createBulkCampaignsExpressRouter();
   const quickRepliesRouter = createQuickRepliesExpressRouter();
@@ -169,11 +173,13 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaWavesRouter,
     qaMeshRouter,
     rpaTestsRouter,
+    testExecutionsRouter,
     devManagementRouter,
     intelligenceRouter,
     marketIntelligenceRouter,
     accessControlRouter,
     voiceRouter,
+    workspaceRouter,
     analyticsRouter,
     bulkCampaignsRouter,
     quickRepliesRouter,

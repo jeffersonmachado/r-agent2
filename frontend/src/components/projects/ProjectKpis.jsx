@@ -2,7 +2,7 @@ import React from 'react';
 
 const defaultCards = [
   { key: 'items', label: 'Itens', value: 0 },
-  { key: 'done', label: 'Concluidos', value: 0 },
+  { key: 'done', label: 'Concluídos', value: 0 },
   { key: 'blocked', label: 'Bloqueados', value: 0 },
   { key: 'overdue', label: 'Atrasados', value: 0 },
 ];

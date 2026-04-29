@@ -63,8 +63,8 @@ function SaasHeader({ onNavigate }) {
       </button>
       <nav className="saas-nav">
         <button type="button" onClick={() => onNavigate('/saas/products')}>Produtos</button>
-        <button type="button" onClick={() => onNavigate('/saas/solutions')}>Solucoes</button>
-        <button type="button" onClick={() => onNavigate('/saas/pricing')}>Precos</button>
+        <button type="button" onClick={() => onNavigate('/saas/solutions')}>Soluções</button>
+        <button type="button" onClick={() => onNavigate('/saas/pricing')}>Preços</button>
       </nav>
       <div className="saas-header-actions">
         <button type="button" className="saas-btn saas-btn-ghost" onClick={() => onNavigate('/login')}>
@@ -82,15 +82,15 @@ function SaasHero({ onNavigate }) {
   return (
     <section className="saas-hero">
       <div>
-        <p className="saas-kicker">Plataforma SaaS para atendimento e operacao</p>
-        <h1>Centralize suporte, automacoes e inteligencia em um unico produto.</h1>
+        <p className="saas-kicker">Plataforma SaaS para atendimento e operação</p>
+        <h1>Centralize suporte, automações e inteligência em um único produto.</h1>
         <p className="saas-muted">
-          Landing publica separada dos modulos internos da plataforma, com jornada de cadastro, precos,
-          produtos e solucoes para prospects.
+          Landing pública separada dos módulos internos da plataforma, com jornada de cadastro, preços,
+          produtos e soluções para prospects.
         </p>
         <div className="saas-hero-actions">
           <button type="button" className="saas-btn saas-btn-solid" onClick={() => onNavigate('/saas/signup')}>
-            Comecar agora
+            Começar agora
           </button>
           <button type="button" className="saas-btn saas-btn-ghost" onClick={() => onNavigate('/saas/pricing')}>
             Ver planos
@@ -102,7 +102,7 @@ function SaasHero({ onNavigate }) {
         <div className="saas-panel-body">
           <div>
             <strong>16m</strong>
-            <span>tempo medio de resposta</span>
+            <span>tempo médio de resposta</span>
           </div>
           <div>
             <strong>94%</strong>
@@ -110,7 +110,7 @@ function SaasHero({ onNavigate }) {
           </div>
           <div>
             <strong>+22%</strong>
-            <span>eficiencia operacional</span>
+            <span>eficiência operacional</span>
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ function SaasCards({ title, items }) {
 function SaasPricing({ onNavigate }) {
   return (
     <section className="saas-section">
-      <h2>Precos transparentes para escalar com seguranca</h2>
+      <h2>Preços transparentes para escalar com segurança</h2>
       <div className="saas-plan-grid">
         {planItems.map((plan) => (
           <article key={plan.name} className={`saas-plan ${plan.featured ? 'featured' : ''}`}>
@@ -194,8 +194,8 @@ function SignupForm({ onNavigate }) {
   if (submitted) {
     return (
       <section className="saas-section saas-signup-wrap">
-        <h2>Conta em preparacao</h2>
-        <p className="saas-muted">Recebemos seus dados. Proximo passo: validar tenant e iniciar onboarding obrigatorio.</p>
+        <h2>Conta em preparação</h2>
+        <p className="saas-muted">Recebemos seus dados. Próximo passo: validar tenant e iniciar onboarding obrigatório.</p>
         <button type="button" className="saas-btn saas-btn-solid" onClick={() => onNavigate('/login')}>
           Ir para login
         </button>
@@ -236,14 +236,14 @@ function SignupForm({ onNavigate }) {
 function PublicWebchat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { from: 'bot', text: 'Oi. Sou o Webchat de demonstracao do SaaS. Como posso ajudar?' },
+    { from: 'bot', text: 'Oi. Sou o Webchat de demonstração do SaaS. Como posso ajudar?' },
   ]);
   const [draft, setDraft] = useState('');
 
   const send = () => {
     const text = String(draft || '').trim();
     if (!text) return;
-    setMessages((prev) => [...prev, { from: 'user', text }, { from: 'bot', text: 'Obrigado. Um especialista vai falar com voce em instantes.' }]);
+    setMessages((prev) => [...prev, { from: 'user', text }, { from: 'bot', text: 'Obrigado. Um especialista vai falar com você em instantes.' }]);
     setDraft('');
   };
 
@@ -302,22 +302,22 @@ export function SaasPublicPage({ mode = 'landing' }) {
         <>
           <SaasHero onNavigate={navigate} />
           <SaasCards title="Produtos" items={productItems} />
-          <SaasCards title="Solucoes" items={solutionItems} />
+          <SaasCards title="Soluções" items={solutionItems} />
           <SaasPricing onNavigate={navigate} />
         </>
       ) : null}
 
       {mode === 'products' ? <SaasCards title="Produtos" items={productItems} /> : null}
-      {mode === 'solutions' ? <SaasCards title="Solucoes" items={solutionItems} /> : null}
+      {mode === 'solutions' ? <SaasCards title="Soluções" items={solutionItems} /> : null}
       {mode === 'pricing' ? <SaasPricing onNavigate={navigate} /> : null}
       {mode === 'signup' ? <SignupForm onNavigate={navigate} /> : null}
 
       <footer className="saas-footer">
-        <p>Results SaaS - Site publico</p>
+        <p>Results SaaS - Site público</p>
         <div>
           <button type="button" onClick={() => navigate('/saas/products')}>Produtos</button>
-          <button type="button" onClick={() => navigate('/saas/solutions')}>Solucoes</button>
-          <button type="button" onClick={() => navigate('/saas/pricing')}>Precos</button>
+          <button type="button" onClick={() => navigate('/saas/solutions')}>Soluções</button>
+          <button type="button" onClick={() => navigate('/saas/pricing')}>Preços</button>
           <button type="button" onClick={() => navigate('/login')}>Entrar</button>
         </div>
       </footer>

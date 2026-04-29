@@ -415,7 +415,7 @@ export function InboxPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <h1>📥 Inbox</h1>
+        <h1>📥 Caixa de Entrada</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
           <label>
             Status

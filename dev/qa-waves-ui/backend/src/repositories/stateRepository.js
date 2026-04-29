@@ -545,8 +545,14 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function randomStatus() {
-  return Math.random() > 0.18 ? 'success' : 'failure';
+function resolveDeterministicExecutionStatus(item) {
+  const current = state.waveItems.find((waveItem) => waveItem.id === item.itemId);
+  if (current?.lastStatus === 'failure' || current?.lastStatus === 'success') {
+    return current.lastStatus;
+  }
+
+  // TODO(qa-waves-real-mesh): substituir por status retornado pela execucao real da QA Mesh.
+  return 'success';
 }
 
 function toDateTime(date, time, isEnd) {
@@ -753,7 +759,7 @@ function runExecutionQueue(execution) {
     currentItem.status = 'executing';
 
     setTimeout(() => {
-      currentItem.status = randomStatus();
+      currentItem.status = resolveDeterministicExecutionStatus(currentItem);
       currentItem.finishedAt = nowIso();
       updateItemLastStatus(currentItem);
       state.replays.unshift(createReplayFromExecutionItem(currentItem, execution.executionId));

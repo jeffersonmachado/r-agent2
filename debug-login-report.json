@@ -1,0 +1,164 @@
+{
+  "errors": [],
+  "warnings": [],
+  "logs": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": "http://127.0.0.1:5173/@vite/client",
+      "timestamp": "2026-04-26T17:35:18.657Z"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": "http://127.0.0.1:5173/@vite/client",
+      "timestamp": "2026-04-26T17:35:18.698Z"
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "location": "http://127.0.0.1:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=0cfefb93",
+      "timestamp": "2026-04-26T17:35:20.863Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 🚀 fetchJson chamado {path: /config, timestamp: 2026-04-26T17:35:20.882Z, stack: Error\n    at fetchJson (http://127.0.0.1:5173/src/…c/utils/featuresConfig.js?t=1777224898100:147:10)}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.886Z"
+    },
+    {
+      "type": "log",
+      "text": "[buildUrl] Desenvolvimento Vite detectado, usando URL relativa: {path: /config, normalizedPath: /config, port: 5173, hostname: 127.0.0.1}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.888Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 📍 URL construída: {path: /config, url: /config, method: GET, baseUrl: não definido, windowLocation: http://127.0.0.1:5173/login}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.889Z"
+    },
+    {
+      "type": "debug",
+      "text": "[2026-04-26T17:35:20.886Z] [DEBUG] HTTP Request {\n  \"method\": \"GET\",\n  \"url\": \"/config\",\n  \"path\": \"/config\",\n  \"baseUrl\": \"[relative/proxy]\",\n  \"windowLocation\": \"http://127.0.0.1:5173/login\",\n  \"windowPort\": \"5173\"\n}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.890Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 🔄 Requisição em desenvolvimento: {path: /config, url: /config, method: GET, expectedProxy: http://localhost:3001/config, currentLocation: http://127.0.0.1:5173/login}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.892Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 📤 Fazendo requisição fetch: {url: /config, method: GET, headers: Array(1), hasAuth: false}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:20.892Z"
+    },
+    {
+      "type": "info",
+      "text": "[2026-04-26T17:35:21.019Z] [INFO] [WebSocketContext] Conectando... {\n  \"url\": \"ws://localhost:3001/ws\"\n}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:21.022Z"
+    },
+    {
+      "type": "debug",
+      "text": "[2026-04-26T17:35:21.023Z] [DEBUG] [WebSocketContext] Já está conectando, ignorando nova tentativa",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:21.024Z"
+    },
+    {
+      "type": "log",
+      "text": "[TenantSelectorModal] Estado do modal mudou: {isOpen: false, tenantsCount: 0}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:21.141Z"
+    },
+    {
+      "type": "log",
+      "text": "[TenantSelectorModal] Estado do modal mudou: {isOpen: false, tenantsCount: 0}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:21.142Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 🚀 fetchJson chamado {path: /auth/login, timestamp: 2026-04-26T17:35:22.397Z, stack: Error\n    at fetchJson (http://127.0.0.1:5173/src/…rc/context/authContext.jsx?t=1777224898100:117:36}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.403Z"
+    },
+    {
+      "type": "log",
+      "text": "[buildUrl] Desenvolvimento Vite detectado, usando URL relativa: {path: /auth/login, normalizedPath: /auth/login, port: 5173, hostname: 127.0.0.1}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.405Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 📍 URL construída: {path: /auth/login, url: /auth/login, method: POST, baseUrl: não definido, windowLocation: http://127.0.0.1:5173/login}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.405Z"
+    },
+    {
+      "type": "debug",
+      "text": "[2026-04-26T17:35:22.401Z] [DEBUG] HTTP Request {\n  \"method\": \"POST\",\n  \"url\": \"/auth/login\",\n  \"path\": \"/auth/login\",\n  \"baseUrl\": \"[relative/proxy]\",\n  \"windowLocation\": \"http://127.0.0.1:5173/login\",\n  \"windowPort\": \"5173\"\n}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.407Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 🔄 Requisição em desenvolvimento: {path: /auth/login, url: /auth/login, method: POST, expectedProxy: http://localhost:3001/auth/login, currentLocation: http://127.0.0.1:5173/login}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.407Z"
+    },
+    {
+      "type": "log",
+      "text": "[HTTP Client] 📤 Fazendo requisição fetch: {url: /auth/login, method: POST, headers: Array(2), hasAuth: false}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:22.409Z"
+    },
+    {
+      "type": "info",
+      "text": "[2026-04-26T17:35:25.363Z] [INFO] [WebSocketContext] Conectado",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:25.365Z"
+    },
+    {
+      "type": "info",
+      "text": "[2026-04-26T17:35:25.364Z] [WS_RECONNECT] Conectado com sucesso",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:25.365Z"
+    },
+    {
+      "type": "debug",
+      "text": "[2026-04-26T17:35:25.364Z] [DEBUG] [WebSocketContext] Sem token para autenticação (usuário não autenticado ainda)",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:25.365Z"
+    },
+    {
+      "type": "debug",
+      "text": "[2026-04-26T17:35:25.365Z] [DEBUG] [WebSocketContext] Mensagem de conexão {\n  \"type\": \"connection\",\n  \"status\": \"connected\",\n  \"clientId\": \"client-1777224925362-xm1si4z0d\",\n  \"message\": \"Conectado ao servidor WebSocket\"\n}",
+      "location": "http://127.0.0.1:5173/src/utils/logger.js",
+      "timestamp": "2026-04-26T17:35:25.367Z"
+    }
+  ],
+  "network": [
+    {
+      "url": "http://127.0.0.1:5173/login",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2026-04-26T17:35:18.572Z"
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/context/authContext.jsx?t=1777224898100",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2026-04-26T17:35:18.710Z"
+    },
+    {
+      "url": "http://127.0.0.1:5173/src/api/auth.js?t=1777224898100",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2026-04-26T17:35:19.265Z"
+    }
+  ]
+}

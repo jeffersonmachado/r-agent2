@@ -126,6 +126,59 @@
   padding: 0.75rem;
 }
 
+.qa-execution-quick {
+  margin: 0.75rem 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+  background: var(--color-bg-elevated);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.qa-execution-quick p {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.qa-btn-primary {
+  background: var(--color-accent-primary, #2563eb);
+  border-color: var(--color-accent-primary, #2563eb);
+  color: #fff;
+  font-weight: 600;
+}
+
+.qa-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.qa-scenario-editor-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.qa-scenario-list-panel {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.qa-step-editor-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.qa-step-editor-title {
+  min-width: 210px;
+}
+
 .qa-domain-summary-card h3 {
   margin: 0;
   font-size: 0.95rem;
@@ -592,5 +645,34 @@
   .qa-journey-actions-buttons {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .qa-scenario-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .qa-scenario-list-panel {
+    max-height: none;
+  }
+
+  .qa-step-editor-title {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .qa-waves-page {
+    padding: 0.7rem;
+  }
+
+  .qa-waves-panel,
+  .qa-domain-summary-card {
+    padding: 0.6rem;
+  }
+
+  .qa-journey-actions-buttons > button,
+  .qa-journey-actions-buttons > input,
+  .qa-journey-actions-buttons > select {
+    width: 100%;
   }
 }

@@ -212,6 +212,18 @@ export async function fetchJson(path, init) {
     // Inclui headers de autenticação se disponível
     const authHeaders = getAuthHeaders();
     
+    // DEBUG: Log auth headers
+    if (!silent && (path.includes('replay') || path.includes('test-execution'))) {
+      console.log('[HTTP Client] 🔐 Auth status:', {
+        path,
+        hasAuthHeaders: Object.keys(authHeaders).length > 0,
+        hasAuthorization: !!authHeaders.Authorization,
+        authHeaderKeys: Object.keys(authHeaders),
+        tokenLength: authHeaders.Authorization ? authHeaders.Authorization.length : 0,
+        token: authHeaders.Authorization ? authHeaders.Authorization.substring(0, 50) + '...' : 'NO TOKEN'
+      });
+    }
+    
     // Prepara os headers.
     // Regra: só força Content-Type=application/json quando o body NÃO é FormData.
     const hasBody = init && (init.body !== undefined && init.body !== null);
@@ -422,6 +434,15 @@ export async function fetchJson(path, init) {
 	      if (response.status === 401) {
         console.warn('[HTTP Client] ⚠️ 401 detectado. Iniciando tratamento...');
         
+        // Check current token state
+        const currentToken = (() => {
+          try {
+            return localStorage.getItem('auth_token');
+          } catch {
+            return 'N/A';
+          }
+        })();
+        
         const isAuthRoute = path.includes('/auth/') || path.includes('/login');
         const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
         const isOnLoginPage = currentPath.includes('/login');
@@ -439,6 +460,11 @@ export async function fetchJson(path, init) {
           errorBody,
           responseUrl: response.url,
           headers: responseHeadersObj,
+          tokenState: {
+            hasToken: !!currentToken,
+            tokenLength: currentToken ? currentToken.length : 0,
+            tokenPreview: currentToken ? currentToken.substring(0, 30) + '...' : 'NO TOKEN',
+          },
         };
         
         console.warn('[HTTP Client] ⚠️ 401 (Unauthorized) detectado', logData);

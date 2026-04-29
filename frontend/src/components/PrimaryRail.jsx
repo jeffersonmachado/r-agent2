@@ -151,7 +151,7 @@ export function PrimaryRail({ agent, currentPath }) {
   };
 
   return (
-    <aside className="rap-primary-rail" aria-label="Navegacao primaria">
+    <aside className="rap-primary-rail" aria-label="Navegação primária">
       <div className="rap-primary-rail-header">
         <div className="rap-primary-rail-brand">
           <span className="rap-primary-rail-mark">RAP</span>

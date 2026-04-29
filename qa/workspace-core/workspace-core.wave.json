@@ -1,0 +1,23 @@
+{
+  "wave": "workspace-core",
+  "description": "Valida convergencia operacional do RAP Workspace 360.",
+  "steps": [
+    "simulate_incoming_message",
+    "create_ticket",
+    "create_workspace_task",
+    "generate_workspace_insight",
+    "generate_workspace_action"
+  ],
+  "assertions": [
+    "workspace_entity_created",
+    "workspace_entity_links_created",
+    "timeline_uses_links",
+    "insight_persisted",
+    "action_created",
+    "replay_artifact_generated"
+  ],
+  "replay": {
+    "enabled": true,
+    "target": "qa/workspace-core/replays"
+  }
+}

@@ -869,11 +869,16 @@ function buildMetrics(history, currentExecution) {
 function buildSyntheticReplay(scenario, result, baseDir) {
   const replayDir = path.join(baseDir, 'replays');
   ensureDir(replayDir);
-  const type = scenario.source === 'hybrid' ? 'hybrid_replay' : scenario.rpaRecordingId ? 'rpa_replay' : 'api_replay';
+  const summaryType = scenario.source === 'hybrid'
+    ? 'hybrid_replay_summary'
+    : scenario.rpaRecordingId
+      ? 'rpa_replay_summary'
+      : 'api_replay_summary';
   const payload = {
     scenarioId: scenario.id,
     flow: scenario.flow,
-    type,
+    type: 'qa_mesh_replay_summary',
+    summaryType,
     source: scenario.source,
     command: scenario.command ? [scenario.command, ...(scenario.commandArgs || [])] : null,
     recordingId: scenario.rpaRecordingId || null,
@@ -889,7 +894,7 @@ function buildSyntheticReplay(scenario, result, baseDir) {
   return {
     type: 'replay',
     path: writeJson(path.join(replayDir, `${scenario.id}.json`), payload),
-    replayType: type,
+    summaryType,
   };
 }
 

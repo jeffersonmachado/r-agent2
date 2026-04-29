@@ -60,7 +60,7 @@ export function BackupPage() {
 
   if (authLoading) {
     return (
-      <CrudPageBase title="🗄️ Backup / DR">
+      <CrudPageBase title="🗄️ Backup / Recuperação">
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <p>Carregando...</p>
         </div>
@@ -72,7 +72,7 @@ export function BackupPage() {
 
   return (
     <CrudPageBase
-      title="🗄️ Backup / DR"
+      title="🗄️ Backup / Recuperação"
       actions={(
         <button
           type="button"

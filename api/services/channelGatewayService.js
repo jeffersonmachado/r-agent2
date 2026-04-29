@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelAccount, ChannelConversation, ChannelMessage } = require('../db/models');
+const WorkspaceLinkAutomationService = require('./workspace/WorkspaceLinkAutomationService');
 const { encrypt, decrypt } = require('../utils/crypto');
 const { storeTicketMedia } = require('./ticketMediaService');
 const { getTicketBySession } = require('./queueService');
@@ -635,6 +636,17 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
       created_at: now,
       updated_at: now,
     });
+
+    try {
+      const linker = new WorkspaceLinkAutomationService();
+      await linker.linkMessageReceived({
+        tenantId,
+        conversation: conversation.toJSON ? conversation.toJSON() : conversation,
+        messageId: created.id,
+      });
+    } catch (linkErr) {
+      logger.warn('[ChannelGateway] Workspace link best-effort falhou', { tenantId, channelType, error: safeToString(linkErr?.message || linkErr) });
+    }
 
     return { persisted: true, idempotent: false, conversationId: conversation.id, messageId: created.id };
   } catch (err) {

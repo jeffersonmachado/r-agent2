@@ -57,7 +57,7 @@ export function LegacySubNav({ agent, currentPath, rightSlot = null, tenantLabel
         )}
 
         {contextualItems.length > 1 && (
-          <nav className="rap-context-nav" aria-label="Subnavegacao contextual">
+          <nav className="rap-context-nav" aria-label="Subnavegação contextual">
             {contextualItems.map((item) => (
               <NavigationLink
                 key={item.id}

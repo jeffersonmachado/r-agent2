@@ -3,15 +3,20 @@
 const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
-const { buildJourneyRegistry, mapScenarioToJourney } = require('../modules/qa-waves/journeyRegistry');
+const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const HISTORY_DIR_CANDIDATES = [
   path.join(ROOT_DIR, 'qa-mesh', 'meshHistory'),
   path.join(ROOT_DIR, 'qa-mesh', 'system-validate', 'meshHistory'),
+  path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence'),
 ];
+const JOURNEY_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'journey-store.json');
+const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
 const screenshotDataUrlCache = new Map();
+let cachedJourneyStore = null;
+let cachedScenarioStore = null;
 
 function toInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -25,6 +30,38 @@ function combineDateTime(date, time, isEnd = false) {
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return null;
   return dt;
+}
+
+function loadJourneyStore() {
+  if (cachedJourneyStore) return cachedJourneyStore;
+  try {
+    if (fs.existsSync(JOURNEY_STORE_PATH)) {
+      const content = fs.readFileSync(JOURNEY_STORE_PATH, 'utf8');
+      const data = JSON.parse(content);
+      cachedJourneyStore = Array.isArray(data.journeys) ? data.journeys : [];
+      return cachedJourneyStore;
+    }
+  } catch (error) {
+    // Falha ao carregar; retorna vazio
+  }
+  cachedJourneyStore = [];
+  return cachedJourneyStore;
+}
+
+function loadScenarioStore() {
+  if (cachedScenarioStore) return cachedScenarioStore;
+  try {
+    if (fs.existsSync(SCENARIO_STORE_PATH)) {
+      const content = fs.readFileSync(SCENARIO_STORE_PATH, 'utf8');
+      const data = JSON.parse(content);
+      cachedScenarioStore = Array.isArray(data.scenarios) ? data.scenarios : [];
+      return cachedScenarioStore;
+    }
+  } catch (error) {
+    // Falha ao carregar; retorna vazio
+  }
+  cachedScenarioStore = [];
+  return cachedScenarioStore;
 }
 
 function normalizeStatus(status) {
@@ -236,19 +273,6 @@ function boolFromQuery(value) {
   return false;
 }
 
-function buildScenarioMetadataIndex() {
-  const registry = qaMeshService.getRegistry() || [];
-  const index = new Map();
-
-  for (const scenario of registry) {
-    const scenarioId = scenario.id || scenario.scenarioId;
-    if (!scenarioId) continue;
-    index.set(scenarioId, scenario);
-  }
-
-  return index;
-}
-
 function collectScenarioLatestStats(maxExecutions = 250) {
   const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
   const stats = new Map();
@@ -296,172 +320,94 @@ function collectScenarioLatestStats(maxExecutions = 250) {
   return stats;
 }
 
-function resolveJourneyLabels(mapping, journeyTree) {
-  const fallback = {
-    domainId: mapping.domainId,
-    domainName: mapping.domainId,
-    journeyId: mapping.journeyId,
-    journeyName: mapping.journeyId,
-    stepId: mapping.stepId,
-    stepName: mapping.stepId,
-  };
-
-  if (!journeyTree || !Array.isArray(journeyTree.domains)) return fallback;
-  const domain = journeyTree.domains.find((item) => item.id === mapping.domainId);
-  if (!domain) return fallback;
-
-  const journey = (domain.journeys || []).find((item) => item.id === mapping.journeyId);
-  if (!journey) {
-    return {
-      ...fallback,
-      domainName: domain.name,
-    };
-  }
-
-  const step = (journey.steps || []).find((item) => item.id === mapping.stepId);
-  return {
-    domainId: domain.id,
-    domainName: domain.name,
-    journeyId: journey.id,
-    journeyName: journey.name,
-    stepId: mapping.stepId,
-    stepName: step?.name || mapping.stepId,
-  };
-}
-
-function computeStatusByRule({ scenarioStats = [], totalScenarios = 0 } = {}) {
-  if (totalScenarios <= 0) {
-    return {
-      status: 'WARNING',
-      successRate: 0,
-      executedRate: 0,
-      totalScenarios: 0,
-      executedScenarios: 0,
-      failedScenarios: 0,
-      criticalFailures: 0,
-    };
-  }
-
-  const executedScenarios = scenarioStats.filter((item) => item.runs > 0).length;
-  const failedScenarios = scenarioStats.filter((item) => item.lastStatus === 'failure').length;
-  const successScenarios = scenarioStats.filter((item) => item.lastStatus === 'success').length;
-  const criticalFailures = scenarioStats.filter((item) => item.critical && item.lastStatus === 'failure').length;
-
-  const successRate = Math.round((successScenarios / totalScenarios) * 100);
-  const executedRate = Math.round((executedScenarios / totalScenarios) * 100);
-
-  let status = 'GO';
-  if (criticalFailures > 0) {
-    status = 'NO_GO';
-  } else if (successRate < 80) {
-    status = 'WARNING';
-  }
-
-  return {
-    status,
-    successRate,
-    executedRate,
-    totalScenarios,
-    executedScenarios,
-    failedScenarios,
-    criticalFailures,
-  };
-}
-
-function computeStepStatus(step, scenarioStatsIndex, scenarioIndex) {
-  const subJourneys = Array.isArray(step.subJourneys) ? step.subJourneys : [];
-  const scenarioIds = Array.from(new Set(subJourneys.flatMap((item) => item.scenarios || [])));
-
-  const scenarioStats = scenarioIds.map((scenarioId) => {
-    const stat = scenarioStatsIndex.get(scenarioId) || {
-      scenarioId,
-      runs: 0,
-      success: 0,
-      failure: 0,
-      executing: 0,
-      pending: 0,
-      lastStatus: 'pending',
-      lastExecutionAt: null,
-      critical: ['blocking', 'high'].includes(String(scenarioIndex.get(scenarioId)?.criticality || '').toLowerCase()),
-    };
-
-    return {
-      ...stat,
-      name: scenarioIndex.get(scenarioId)?.flow || scenarioIndex.get(scenarioId)?.name || scenarioId,
-    };
-  });
-
-  const base = computeStatusByRule({ scenarioStats, totalScenarios: scenarioIds.length });
-  const lastExecutionAt = scenarioStats
-    .map((item) => item.lastExecutionAt)
-    .filter(Boolean)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
-
-  const failureRate = scenarioIds.length > 0
-    ? Math.round((scenarioStats.filter((item) => item.lastStatus === 'failure').length / scenarioIds.length) * 100)
-    : 0;
-
-  const riskScore = Math.min(100, (base.criticalFailures > 0 ? 70 : 0) + failureRate);
-
-  return {
-    stepId: step.id,
-    stepName: step.name,
-    subJourneys: subJourneys.map((subJourney) => ({
-      id: subJourney.id,
-      name: subJourney.name || subJourney.id,
-      scenarios: (subJourney.scenarios || []).map((scenarioId) => {
-        const detail = scenarioStats.find((item) => item.scenarioId === scenarioId);
-        return {
-          id: scenarioId,
-          name: detail?.name || scenarioId,
-          status: detail?.lastStatus || 'pending',
-          critical: Boolean(detail?.critical),
-          lastExecutionAt: detail?.lastExecutionAt || null,
-          runs: detail?.runs || 0,
-        };
-      }),
-    })),
-    scenarios: scenarioStats,
-    scenarioIds,
-    coverage: base.successRate,
-    lastExecutionAt,
-    riskScore,
-    ...base,
-  };
-}
-
-function computeJourneyStatus(journey, scenarioStatsIndex, scenarioIndex) {
-  const steps = Array.isArray(journey.steps) ? journey.steps : [];
-  const stepStatuses = steps.map((step) => computeStepStatus(step, scenarioStatsIndex, scenarioIndex));
-  const allScenarioStats = stepStatuses.flatMap((step) => step.scenarios);
-  const totalScenarios = allScenarioStats.length;
-  const base = computeStatusByRule({ scenarioStats: allScenarioStats, totalScenarios });
-
-  return {
-    journeyId: journey.id,
-    journeyName: journey.name,
-    status: base.status,
-    successRate: base.successRate,
-    executedRate: base.executedRate,
-    totalScenarios: base.totalScenarios,
-    executedScenarios: base.executedScenarios,
-    failedScenarios: base.failedScenarios,
-    criticalFailures: base.criticalFailures,
-    steps: stepStatuses,
-  };
-}
-
 function buildJourneyTreeWithStatus() {
-  const scenarioIndex = buildScenarioMetadataIndex();
+  const journeyStore = loadJourneyStore();
+  const scenarioStore = loadScenarioStore();
   const scenarioStats = collectScenarioLatestStats();
-  const journeyTree = buildJourneyRegistry({ meshRegistry: Array.from(scenarioIndex.values()) });
 
-  const domains = (journeyTree.domains || []).map((domain) => {
-    const journeys = (domain.journeys || []).map((journey) => computeJourneyStatus(journey, scenarioStats, scenarioIndex));
+  // Agrupar jornadas por vertical (domínio)
+  const byVertical = new Map();
+  for (const journey of journeyStore) {
+    const vertical = journey.vertical || 'core';
+    if (!byVertical.has(vertical)) {
+      byVertical.set(vertical, []);
+    }
+    byVertical.get(vertical).push(journey);
+  }
+
+  const domains = Array.from(byVertical.entries()).map(([vertical, journeys]) => {
+    const journeyDetails = journeys.map((journey) => {
+      // Buscar cenários desta jornada
+      const scenariosForJourney = scenarioStore.filter((s) => s.journeyId === journey.id);
+      
+      // Computar stats dos cenários
+      const stats = scenariosForJourney.map((scenario) => {
+        const stat = scenarioStats.get(scenario.id) || {
+          scenarioId: scenario.id,
+          runs: 0,
+          success: 0,
+          failure: 0,
+          executing: 0,
+          pending: 0,
+          lastStatus: 'pending',
+          lastExecutionAt: null,
+          critical: scenario.criticality === 'blocking' || scenario.criticality === 'high',
+        };
+        return stat;
+      });
+
+      // Contar falhas críticas
+      const failedScenarios = stats.filter((s) => s.lastStatus === 'failure').length;
+      const criticalFailures = stats.filter((s) => s.critical && s.lastStatus === 'failure').length;
+      const totalRuns = stats.reduce((sum, s) => sum + s.runs, 0);
+      const successfulRuns = stats.reduce((sum, s) => sum + s.success, 0);
+      const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+      const executedRate = stats.length > 0 ? Math.round((stats.filter((s) => s.runs > 0).length / stats.length) * 100) : 0;
+
+      const lastExecutionAt = stats
+        .map((s) => s.lastExecutionAt)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
+
+      // Determinar status geral
+      let status = 'pending';
+      if (criticalFailures > 0) status = 'failure';
+      else if (failedScenarios > 0) status = 'warning';
+      else if (successRate === 100 && executedRate > 0) status = 'success';
+      else if (executedRate > 0) status = 'executing';
+
+      // Construir steps a partir de script.steps
+      const steps = ((journey.script && journey.script.steps) || []).map((step, index) => ({
+        stepId: step.id || `step-${index + 1}`,
+        stepName: step.name || `Passo ${index + 1}`,
+        totalScenarios: scenariosForJourney.length,
+        failedScenarios,
+        criticalFailures,
+        status,
+        successRate,
+        executedRate,
+        riskScore: Math.min(100, (criticalFailures > 0 ? 70 : 0) + (100 - successRate)),
+        lastExecutionAt,
+      }));
+
+      return {
+        journeyId: journey.id,
+        journeyName: journey.title || journey.id,
+        status,
+        successRate,
+        executedRate,
+        totalScenarios: scenariosForJourney.length,
+        failedScenarios,
+        criticalFailures,
+        lastExecutionAt,
+        steps,
+      };
+    });
+
     return {
-      id: domain.id,
-      name: domain.name,
-      journeys,
+      id: vertical,
+      name: vertical,
+      journeys: journeyDetails,
     };
   });
 
@@ -572,8 +518,13 @@ function listWaves() {
 
 function flattenReplays(maxExecutions = 150) {
   const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
-  const scenarioIndex = buildScenarioMetadataIndex();
-  const journeyTree = buildJourneyRegistry({ meshRegistry: Array.from(scenarioIndex.values()) });
+  const scenarioStore = loadScenarioStore();
+  const journeyStore = loadJourneyStore();
+  
+  // Criar mapas para busca rápida
+  const scenarioMap = new Map(scenarioStore.map((s) => [s.id, s]));
+  const journeyMap = new Map(journeyStore.map((j) => [j.id, j]));
+  
   const replays = [];
 
   for (const execution of history) {
@@ -587,23 +538,33 @@ function flattenReplays(maxExecutions = 150) {
       const finishedAt = scenario.finishedAt || execution.finishedAt || startedAt;
       const durationMs = Number(scenario.durationMs)
         || Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime());
-      const scenarioMeta = scenarioIndex.get(scenarioId) || {};
-      const journeyMapping = mapScenarioToJourney({
-        id: scenarioId,
-        domain: scenarioMeta.domain || scenario.domain,
-        flow: scenarioMeta.flow || scenario.flow || scenario.name,
-        type: scenarioMeta.type || scenario.type,
-      });
-      const labels = resolveJourneyLabels(journeyMapping, journeyTree);
+      
+      // Buscar no scenario-store explícito
+      const scenarioMeta = scenarioMap.get(scenarioId) || {};
+      const journeyId = scenarioMeta.journeyId || scenario.journeyId;
+      const journey = journeyId ? journeyMap.get(journeyId) : null;
+      
+      // Determinar domain/vertical
+      const vertical = journey?.vertical || scenario.domain || 'core';
+      
+      // Montar labels
+      const domainId = vertical;
+      const domainName = vertical;
+      const journeyName = journey?.title || journeyId || 'Unknown';
+      
+      // Extrair stepId do primeiro passo se houver
+      const steps = journey?.script?.steps || [];
+      const stepId = steps.length > 0 ? steps[0].id : 'step-1';
+      const stepName = steps.length > 0 ? steps[0].name : 'Step 1';
 
       replays.push({
         id: `${executionSeed}::${scenarioId}`,
         executionId: executionSeed,
         scenarioId,
-        waveId: `wave-${scenario.domain || 'core'}`,
-        waveName: `Wave ${scenario.domain || 'core'}`,
+        waveId: `wave-${vertical}`,
+        waveName: `Wave ${vertical}`,
         itemId: scenarioId,
-        itemName: scenario.flow || scenario.name || scenarioId,
+        itemName: scenario.flow || scenario.name || scenarioMeta.title || scenarioId,
         name: `Replay ${scenarioId}`,
         seed: executionSeed,
         channel: normalizeChannel(scenario.adapter),
@@ -611,18 +572,125 @@ function flattenReplays(maxExecutions = 150) {
         startedAt,
         finishedAt,
         durationMs,
-        critical: ['blocking', 'high'].includes(String(scenario.criticality || '').toLowerCase()),
-        domainId: labels.domainId,
-        domainName: labels.domainName,
-        journeyId: labels.journeyId,
-        journeyName: labels.journeyName,
-        stepId: labels.stepId,
-        stepName: labels.stepName,
+        critical: scenarioMeta.criticality === 'blocking' || scenarioMeta.criticality === 'high',
+        domainId,
+        domainName,
+        journeyId: journeyId || 'unknown',
+        journeyName,
+        stepId,
+        stepName,
       });
     }
   }
 
   return replays;
+}
+
+function sortReplaysNewestFirst(replays = []) {
+  return [...replays].sort((a, b) => String(b.startedAt || '').localeCompare(String(a.startedAt || '')));
+}
+
+function loadQueuedReplayArtifactById(id) {
+  if (!id || !String(id).startsWith('qa_wave_replay_')) return null;
+
+  try {
+    const replayPath = path.join(getRpaReplayDir(), `${id}.json`);
+    if (!fs.existsSync(replayPath)) return null;
+    const parsed = JSON.parse(fs.readFileSync(replayPath, 'utf8'));
+    return {
+      replayPath,
+      data: parsed,
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function resolveReplayFromQueuedArtifact(artifact = {}, allReplays = []) {
+  let candidates = sortReplaysNewestFirst(allReplays);
+  const artifactScenarioId = artifact.scenarioId || artifact.recordingId;
+  const platformIds = Array.isArray(artifact.platformScenarioIds) ? artifact.platformScenarioIds.filter(Boolean) : [];
+
+  if (artifact.executionId) {
+    const byExecution = candidates.filter((item) => item.executionId === artifact.executionId);
+    if (byExecution.length === 0) return null;
+    candidates = byExecution;
+  }
+
+  // Busca pelo scenarioId semântico da wave primeiro
+  if (artifactScenarioId) {
+    const byScenario = candidates.filter((item) => (
+      item.scenarioId === artifactScenarioId || item.itemId === artifactScenarioId
+    ));
+    if (byScenario.length > 0) return byScenario[0];
+  }
+
+  // Busca pelos platformScenarioIds (ex: qa-core-auth-login quando business-f1 foi substituído)
+  if (platformIds.length > 0) {
+    const byPlatform = candidates.filter((item) => (
+      platformIds.includes(item.scenarioId) || platformIds.includes(item.itemId)
+    ));
+    if (byPlatform.length > 0) return byPlatform[0];
+  }
+
+  if (artifact.journeyId) {
+    const byJourney = candidates.filter((item) => item.journeyId === artifact.journeyId);
+    if (byJourney.length > 0) return byJourney[0];
+  }
+
+  if (artifact.executionId) return candidates[0] || null;
+  if (artifact.executionId || artifactScenarioId || artifact.journeyId) return null;
+  return candidates[0] || null;
+}
+
+function mapAssertionStatus(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'passed' || normalized === 'success') return 'success';
+  if (normalized === 'failed' || normalized === 'failure' || normalized === 'error') return 'failure';
+  if (normalized === 'queued') return 'pending';
+  return 'pending';
+}
+
+function buildQueuedArtifactReplayPayload(id, artifactData, replayPath) {
+  const assertions = Array.isArray(artifactData?.assertions) ? artifactData.assertions : [];
+  const stepsFromAssertions = assertions.map((item, index) => ({
+    id: item?.id || `assertion-${index + 1}`,
+    index: index + 1,
+    title: item?.type ? `Validacao: ${item.type}` : 'Validacao pendente',
+    at: null,
+    status: mapAssertionStatus(item?.status),
+  }));
+
+  return {
+    id: artifactData?.replayId || artifactData?.id || id,
+    replayId: artifactData?.replayId || artifactData?.id || id,
+    executionId: artifactData?.executionId || null,
+    scenarioId: artifactData?.scenarioId || artifactData?.recordingId || null,
+    waveId: artifactData?.waveId || null,
+    waveName: artifactData?.waveId || null,
+    itemId: artifactData?.scenarioId || artifactData?.recordingId || null,
+    itemName: artifactData?.scenarioName || artifactData?.recordingId || id,
+    name: artifactData?.scenarioName
+      ? `Replay ${artifactData.scenarioName}`
+      : `Replay ${artifactData?.recordingId || id}`,
+    channel: 'webchat',
+    status: String(artifactData?.status || artifactData?.result || 'queued').toLowerCase(),
+    startedAt: artifactData?.startedAt || artifactData?.startTime || null,
+    finishedAt: artifactData?.finishedAt || artifactData?.endTime || null,
+    durationMs: Number(artifactData?.durationMs) || 0,
+    journeyId: artifactData?.journeyId || null,
+    journeyName: artifactData?.journeyId || null,
+    stepId: artifactData?.stepId || null,
+    stepName: artifactData?.stepId || null,
+    steps: stepsFromAssertions,
+    typedEntries: [],
+    source: {
+      executionId: artifactData?.executionId || null,
+      scenarioId: artifactData?.scenarioId || artifactData?.recordingId || null,
+      historyFile: replayPath || null,
+      logsCount: Array.isArray(artifactData?.logs) ? artifactData.logs.length : 0,
+    },
+  };
 }
 
 function listReplays(options = {}) {
@@ -700,8 +768,20 @@ function listReplays(options = {}) {
 }
 
 function getReplayById(id) {
-  const replay = flattenReplays(250).find((entry) => entry.id === id);
-  if (!replay) return null;
+  const allReplays = flattenReplays(250);
+  let replay = allReplays.find((entry) => entry.id === id);
+
+  if (!replay) {
+    const queuedArtifact = loadQueuedReplayArtifactById(id);
+    if (!queuedArtifact) return null;
+
+    const resolvedReplay = resolveReplayFromQueuedArtifact(queuedArtifact.data, allReplays);
+    if (!resolvedReplay) {
+      return buildQueuedArtifactReplayPayload(id, queuedArtifact.data, queuedArtifact.replayPath);
+    }
+
+    replay = resolvedReplay;
+  }
 
   const executionIndex = buildExecutionLogIndex();
   const executionEntry = executionIndex.get(replay.executionId);
@@ -744,14 +824,155 @@ function reexecuteReplay(replayId) {
   return qaMeshService.queueScenarioReplay(replay.scenarioId);
 }
 
+function getExecutionStatus(executionId) {
+  if (!executionId || !String(executionId).trim()) return null;
+
+  const cleanId = String(executionId).trim();
+
+  // Primeiro tenta resolver em memória (fila de execução),
+  // pois o arquivo de histórico pode ainda não existir nos primeiros segundos.
+  const queuedExecution = qaMeshService.getQueuedExecutionStatus(cleanId);
+  if (queuedExecution) {
+    const rawStatus = String(queuedExecution.status || '').toLowerCase();
+    const status = rawStatus === 'completed'
+      ? 'success'
+      : (rawStatus === 'failed' ? 'failed' : 'processing');
+
+    const startedAt = queuedExecution.startedAt || queuedExecution.createdAt || null;
+    const finishedAt = queuedExecution.finishedAt || null;
+    const durationMs = startedAt
+      ? (finishedAt
+        ? Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime())
+        : Math.max(0, Date.now() - new Date(startedAt).getTime()))
+      : 0;
+
+    const progress = Number.isFinite(queuedExecution.progress)
+      ? Math.max(0, Math.min(100, Number(queuedExecution.progress)))
+      : 0;
+
+    const results = Array.isArray(queuedExecution.results) ? queuedExecution.results : [];
+
+    return {
+      executionId: cleanId,
+      status,
+      progress,
+      startedAt,
+      finishedAt,
+      durationMs,
+      summary: queuedExecution.summary || {
+        total: results.length || 0,
+        attempted: results.length || 0,
+        executed: results.length || 0,
+        passed: 0,
+        failed: rawStatus === 'failed' ? 1 : 0,
+        skipped: 0,
+        goNoGo: rawStatus === 'failed' ? 'NO_GO' : 'UNKNOWN',
+        executionCoverage: 0,
+        executionQuality: 'pending',
+      },
+      currentStep: queuedExecution.currentScenarioId
+        ? {
+          scenarioId: queuedExecution.currentScenarioId,
+          scenarioName: queuedExecution.currentScenarioId,
+          status,
+          startedAt,
+          finishedAt,
+        }
+        : null,
+      results,
+    };
+  }
+
+  // Procura o arquivo de histórico com esse executionId
+  for (const historyDir of HISTORY_DIR_CANDIDATES) {
+    if (!fs.existsSync(historyDir)) continue;
+    
+    const filePath = path.join(historyDir, `${cleanId}.json`);
+    // Também tenta procurar em {historyDir}/{executionId}/summary.json para meshEvidence
+    let dataPath = filePath;
+    if (!fs.existsSync(dataPath)) {
+      dataPath = path.join(historyDir, cleanId, 'summary.json');
+    }
+    if (!fs.existsSync(dataPath)) continue;
+
+    try {
+      const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      const summary = data.summary || {};
+      const results = Array.isArray(data.results) ? data.results : [];
+
+      const startedAt = data.startedAt || summary.timestamp;
+      const finishedAt = data.finishedAt;
+      const durationMs = finishedAt
+        ? Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime())
+        : Date.now() - new Date(startedAt).getTime();
+
+      // Determina o status
+      let status = 'processing';
+      if (finishedAt) {
+        status = summary.goNoGo === 'GO' ? 'success' : 'failed';
+      }
+
+      // Calcula o progresso
+      const totalScenarios = summary.total || summary.attempted || results.length || 1;
+      const executed = summary.executed || summary.passed || summary.failed || 0;
+      const progress = Math.round((executed / Math.max(1, totalScenarios)) * 100);
+
+      // Extrai informações de qual step está em execução
+      let currentStep = null;
+      if (results.length > 0) {
+        const lastResult = results[results.length - 1];
+        currentStep = {
+          scenarioId: lastResult.id || lastResult.scenarioId,
+          scenarioName: lastResult.flow || lastResult.name || 'Cenario',
+          status: normalizeStatus(lastResult.status),
+          startedAt: lastResult.startedAt,
+          finishedAt: lastResult.finishedAt,
+        };
+      }
+
+      return {
+        executionId: cleanId,
+        status,
+        progress,
+        startedAt,
+        finishedAt,
+        durationMs,
+        summary: {
+          total: totalScenarios,
+          attempted: summary.attempted || executed,
+          executed,
+          passed: summary.passed || 0,
+          failed: summary.failed || 0,
+          skipped: summary.skipped || 0,
+          goNoGo: summary.goNoGo || 'UNKNOWN',
+          executionCoverage: summary.executionCoverage || 0,
+          executionQuality: summary.executionQuality || 'unknown',
+        },
+        currentStep,
+        results: results.map((r) => ({
+          scenarioId: r.id || r.scenarioId,
+          status: normalizeStatus(r.status),
+          startedAt: r.startedAt,
+          finishedAt: r.finishedAt,
+          durationMs: r.durationMs || 0,
+        })),
+      };
+    } catch (_error) {
+      // Ignora erro de parsing e tenta próximo diretório
+    }
+  }
+
+  return null;
+}
+
 module.exports = {
   listWaves,
   listJourneys,
   listJourneyStatus,
   listStepStatus,
-  computeJourneyStatus,
   listReplays,
   getReplayById,
   queueWaveExecution,
   reexecuteReplay,
+  getExecutionStatus,
 };

@@ -131,7 +131,7 @@ export function DashboardPage() {
   const features = [
     {
       id: 'chat-humano-dashboard',
-      title: 'Dashboard Chat Humano',
+      title: 'Painel de Chat Humano',
       description: 'Pilar 1: cockpit de atendimento omnichannel',
       icon: '💬',
       path: '/chat-humano',
@@ -140,7 +140,7 @@ export function DashboardPage() {
     },
     {
       id: 'queue-physical-dashboard',
-      title: 'Dashboard Fila Física',
+      title: 'Painel da Fila Física',
       description: 'Pilar 2: operação kiosk/station/panel',
       icon: '🎫',
       path: '/fila-fisica',
@@ -212,7 +212,7 @@ export function DashboardPage() {
     },
     {
       id: 'solutions',
-      title: 'Pacotes de Solucao',
+      title: 'Pacotes de Solução',
       description: 'Templates por segmento e checklist operacional',
       icon: '📦',
       path: '/solutions',
@@ -221,12 +221,12 @@ export function DashboardPage() {
     },
     {
       id: 'analytics',
-      title: 'Analises e Metricas',
+      title: 'Análises e Métricas',
       description: 'Painel com KPIs e indicadores',
       icon: '📊',
       path: '/analytics',
       color: 'bg-red-500',
-      category: 'Analytics',
+      category: 'Análises',
     },
     {
       id: 'supervisor',
@@ -235,16 +235,16 @@ export function DashboardPage() {
       icon: '🧭',
       path: '/supervisor',
       color: 'bg-teal-500',
-      category: 'Analytics',
+      category: 'Análises',
     },
     {
       id: 'operations-dashboard',
       title: 'Painel Operacional',
-      description: 'Monitoramento do piloto Beauty/Fitness (jornada, jobs, notificacoes e insights)',
+      description: 'Monitoramento do piloto Beauty/Fitness (jornada, jobs, notificações e insights)',
       icon: '🧭',
       path: '/operations-dashboard',
       color: 'bg-emerald-600',
-      category: 'Operacao',
+      category: 'Operação',
       requiresAdmin: true,
     },
     {
@@ -254,7 +254,7 @@ export function DashboardPage() {
       icon: '📥',
       path: '/export',
       color: 'bg-teal-500',
-      category: 'Analytics',
+      category: 'Análises',
     },
     {
       id: 'ai-tools',
@@ -303,8 +303,8 @@ export function DashboardPage() {
     },
     {
       id: 'backup',
-      title: 'Backup / DR',
-      description: 'Exportar/importar flows e settings',
+      title: 'Backup / Recuperação',
+      description: 'Exportar/importar fluxos e configurações',
       icon: '🗄️',
       path: '/backup',
       color: 'bg-gray-500',
@@ -312,7 +312,7 @@ export function DashboardPage() {
     },
     {
       id: 'dev-dashboard',
-      title: 'Dashboard de Dev',
+      title: 'Painel de Dev',
       description: 'Ferramentas, configurações e funcionalidades de desenvolvimento',
       icon: '🛠️',
       path: '/dev',
@@ -339,7 +339,7 @@ export function DashboardPage() {
     },
     {
       id: 'tenants',
-      title: 'Tenants',
+      title: 'Organizações',
       description: 'Gerencie tenants/clientes e contexto cognitivo',
       icon: '🏢',
       path: '/tenants',
@@ -389,7 +389,7 @@ export function DashboardPage() {
     },
     {
       id: 'developer-keys',
-      title: 'API Keys',
+      title: 'Chaves de API',
       description: 'Chaves e uso da API pública',
       icon: '🔑',
       path: '/developer-keys',
@@ -400,7 +400,7 @@ export function DashboardPage() {
     {
       id: 'automations',
       title: 'Automações',
-      description: 'Builder low-code e execução',
+      description: 'Construtor low-code e execução',
       icon: '🧩',
       path: '/automations',
       color: 'bg-fuchsia-700',
@@ -578,7 +578,7 @@ export function DashboardPage() {
     <CrudPageBase>
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>📊 Dashboard</h1>
+          <h1>📊 Painel</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>
           Bem-vindo, {agent?.name || agent?.username}! Acesse todas as funcionalidades do sistema.
@@ -587,7 +587,7 @@ export function DashboardPage() {
         <div className="support-controls">
           <button
             type="button"
-            className="btn-default px-4 py-2 text-sm"
+            className="btn-default px-4 py-2 text-sm cursor-pointer"
             onClick={() => window.location.reload()}
           >
             🔄 Atualizar
@@ -827,7 +827,7 @@ export function DashboardPage() {
                 <li>• Respostas Rápidas (Quick Replies)</li>
                 <li>• Departamentos</li>
                 <li>• Disparos em Massa</li>
-                <li>• Dashboard de Análise</li>
+                <li>• Painel de Análise</li>
                 <li>• Exportação de Dados</li>
                 <li>• Sugestão de Resposta (IA)</li>
                 <li>• Reescrita Inteligente (IA)</li>

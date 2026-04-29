@@ -129,7 +129,7 @@ export function DeveloperKeysPage() {
     <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
-        <h1>🔑 API Keys</h1>
+        <h1>🔑 Chaves de API</h1>
         <div className="support-controls" style={{ gap: '12px' }}>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={includeToken} onChange={(e) => setIncludeToken(e.target.checked)} />

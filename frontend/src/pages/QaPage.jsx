@@ -180,8 +180,8 @@ export function QaPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h1>✅ Painel de Qualidade (QA)</h1>
           <div className="flex gap-2">
-            <Button onClick={() => navigate('/qa/stability')}>Abrir Stability</Button>
-            <Button onClick={() => navigate('/qa-mesh')}>Abrir QA Mesh</Button>
+            <Button onClick={() => navigate('/qa/stability')}>Abrir Estabilidade</Button>
+            <Button onClick={() => navigate('/qa-mesh')}>Abrir Malha QA</Button>
             {canRunQa && (
               <Button onClick={handleRunQa} disabled={running}>
                 {running ? 'Executando...' : 'Executar QA'}

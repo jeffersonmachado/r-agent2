@@ -172,7 +172,8 @@ export function listRpaReplays(options = {}) {
   if (options.sortOrder) params.set('sortOrder', String(options.sortOrder));
 
   const suffix = params.toString();
-  const url = suffix ? `/tests/rpa/replay?${suffix}` : '/tests/rpa/replay';
+  // Use unified API endpoint /api/test-executions/replays
+  const url = suffix ? `/api/test-executions/replays?${suffix}` : '/api/test-executions/replays';
 
   return fetchJson(url, {
     method: 'GET',
@@ -189,7 +190,7 @@ export function getRpaReplay(filename) {
   if (!filename) {
     return Promise.reject(new Error('getRpaReplay: filename é obrigatório'));
   }
-  return fetchJson(`/tests/rpa/replay/${encodeURIComponent(filename)}`, {
+  return fetchJson(`/api/test-executions/replays/${encodeURIComponent(filename)}`, {
     method: 'GET',
   });
 }

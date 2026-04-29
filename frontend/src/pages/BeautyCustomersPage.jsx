@@ -71,10 +71,10 @@ export function BeautyCustomersPage() {
         channel: 'whatsapp',
         metadata: { triggeredBy: 'beauty_customers_page' },
       });
-      showToast('Reativacao enviada', 'success');
+      showToast('Reativação enviada', 'success');
       await openDetail(detail.customer.subjectId);
     } catch (_) {
-      showToast('Falha ao enviar reativacao', 'error');
+      showToast('Falha ao enviar reativação', 'error');
     }
   }
 
@@ -82,12 +82,12 @@ export function BeautyCustomersPage() {
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
         <h1>Clientes de Beleza</h1>
-        <p className="text-sm text-text-secondary">Consulta de clientes, jornada, bundle, no-show, follow-up e reativacao.</p>
+        <p className="text-sm text-text-secondary">Consulta de clientes, jornada, bundle, no-show, follow-up e reativação.</p>
       </div>
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <input
           className="support-input"
-          placeholder="Nome, documento, telefone ou codigo"
+          placeholder="Nome, documento, telefone ou código"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -102,7 +102,7 @@ export function BeautyCustomersPage() {
           <h3>Clientes</h3>
           {!items.length ? <p className="text-sm text-text-secondary">Nenhum cliente encontrado.</p> : (
             <table className="support-table">
-              <thead><tr><th>Cliente</th><th>Ultimo evento</th><th /></tr></thead>
+              <thead><tr><th>Cliente</th><th>Último evento</th><th /></tr></thead>
               <tbody>
                 {items.map((item) => (
                   <tr key={item.subjectId || item.customerId}>
@@ -131,9 +131,9 @@ export function BeautyCustomersPage() {
               </div>
               <p><strong>Cliente:</strong> {detail?.customer?.name}</p>
               <p><strong>Telefone:</strong> {detail?.customer?.phone || '-'}</p>
-              <p><strong>Proximo agendamento:</strong> {formatDate(detail?.nextAppointment?.startAt)}</p>
+              <p><strong>Próximo agendamento:</strong> {formatDate(detail?.nextAppointment?.startAt)}</p>
               <p><strong>Bundle:</strong> {detail?.bundle?.remaining ?? '-'} restantes de {detail?.bundle?.total ?? '-'}</p>
-              <p><strong>Elegivel para retorno:</strong> {detail?.indicators?.eligibleForReturn ? 'sim' : 'nao'}</p>
+              <p><strong>Elegível para retorno:</strong> {detail?.indicators?.eligibleForReturn ? 'sim' : 'não'}</p>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
                 <button className="support-button" onClick={followUp}>Enviar follow-up</button>
                 <button className="support-button" onClick={reactivate}>Reativar</button>
@@ -143,7 +143,7 @@ export function BeautyCustomersPage() {
                 <strong>Agenda recente</strong>
                 {!detail?.recentAppointments?.length ? <p className="text-sm text-text-secondary">Sem agenda recente.</p> : (
                   <table className="support-table" style={{ marginTop: '0.5rem' }}>
-                    <thead><tr><th>Quando</th><th>Status</th><th>Servico</th></tr></thead>
+                    <thead><tr><th>Quando</th><th>Status</th><th>Serviço</th></tr></thead>
                     <tbody>
                       {detail.recentAppointments.slice(0, 5).map((item) => (
                         <tr key={item.scheduleId}>
@@ -158,7 +158,7 @@ export function BeautyCustomersPage() {
               </div>
 
               <div style={{ marginTop: '1rem' }}>
-                <strong>Timeline / jornada</strong>
+                <strong>Linha do tempo / jornada</strong>
                 {!detail?.journeyEvents?.length ? <p className="text-sm text-text-secondary">Sem eventos recentes.</p> : (
                   <table className="support-table" style={{ marginTop: '0.5rem' }}>
                     <thead><tr><th>Quando</th><th>Evento</th><th>Status</th></tr></thead>

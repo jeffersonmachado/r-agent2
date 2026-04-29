@@ -192,6 +192,7 @@ async function handleRpaReplayRoutes(ctx) {
     fs,
   } = deps;
 
+
   if (method === 'GET' && pathname.startsWith('/tests/rpa/reports/')) {
     if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
 

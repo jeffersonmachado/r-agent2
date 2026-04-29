@@ -73,7 +73,7 @@ export function NodeMarketplacePage() {
       <ToastContainer />
       <div className="support-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h1>🧩 Node Marketplace</h1>
+          <h1>🧩 Mercado de Nós</h1>
         </div>
       </div>
 

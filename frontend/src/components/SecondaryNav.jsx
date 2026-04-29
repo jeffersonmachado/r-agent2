@@ -4,6 +4,31 @@ import { filterNavigationTree } from '../utils/menuPermissions';
 import { navigationMenu, pathMatches } from '../navigation/menu';
 import { buildWorkspaceAreas } from '../navigation/workspaceAreas';
 
+function getProjectIdFromPath(path) {
+  const match = String(path || '').match(/^\/projects\/([^/]+)/);
+  return match?.[1] || null;
+}
+
+function buildProjectContextSection(currentPath) {
+  const projectId = getProjectIdFromPath(currentPath);
+  if (!projectId) return null;
+
+  return {
+    id: 'project-context',
+    label: 'Projeto atual',
+    items: [
+      { id: 'project-board', label: 'Quadro', path: `/projects/${projectId}` },
+      { id: 'project-list', label: 'Lista', path: `/projects/${projectId}/list` },
+      { id: 'project-dashboard', label: 'Painel', path: `/projects/${projectId}/dashboard` },
+      { id: 'project-timeline', label: 'Linha do Tempo', path: `/projects/${projectId}/timeline` },
+      { id: 'project-gantt', label: 'Gantt', path: `/projects/${projectId}/gantt` },
+      { id: 'project-calendar', label: 'Calendário', path: `/projects/${projectId}/calendar` },
+      { id: 'project-activities', label: 'Atividades', path: `/projects/${projectId}/activities` },
+      { id: 'project-settings', label: 'Configurações', path: `/projects/${projectId}/settings` },
+    ],
+  };
+}
+
 function buildSections(activeArea) {
   if (!activeArea) return [];
 
@@ -61,6 +86,11 @@ export function SecondaryNav({ agent, currentPath }) {
   );
 
   const sections = useMemo(() => buildSections(activeArea), [activeArea]);
+  const projectContextSection = useMemo(() => buildProjectContextSection(currentPath), [currentPath]);
+  const sectionsWithContext = useMemo(
+    () => (projectContextSection ? [projectContextSection, ...sections] : sections),
+    [projectContextSection, sections],
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1080px)');
@@ -94,21 +124,21 @@ export function SecondaryNav({ agent, currentPath }) {
   useEffect(() => {
     setCollapsedSections((previous) => {
       const nextState = {};
-      sections.forEach((section, index) => {
+      sectionsWithContext.forEach((section, index) => {
         nextState[section.id] = previous[section.id] ?? index > 0;
       });
       return nextState;
     });
-  }, [sections]);
+  }, [sectionsWithContext]);
 
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
   const filteredSections = useMemo(() => {
     if (!normalizedSearchTerm) {
-      return sections;
+      return sectionsWithContext;
     }
 
-    return sections
+    return sectionsWithContext
       .map((section) => {
         const sectionMatches = section.label.toLowerCase().includes(normalizedSearchTerm);
         const items = sectionMatches
@@ -120,13 +150,13 @@ export function SecondaryNav({ agent, currentPath }) {
         };
       })
       .filter((section) => section.items.length > 0);
-  }, [sections, normalizedSearchTerm]);
+  }, [sectionsWithContext, normalizedSearchTerm]);
 
   function toggleSection(sectionId) {
     setCollapsedSections((previous) => ({
       ...previous,
       ...(isMobileViewport
-        ? sections.reduce((accumulator, section) => {
+        ? sectionsWithContext.reduce((accumulator, section) => {
             accumulator[section.id] = section.id !== sectionId;
             return accumulator;
           }, {})
@@ -138,11 +168,11 @@ export function SecondaryNav({ agent, currentPath }) {
   const isSecondaryBodyCollapsed = isMobileViewport && !isMobilePanelOpen;
 
   return (
-    <aside className="rap-secondary-nav" aria-label="Navegacao secundaria">
+    <aside className="rap-secondary-nav" aria-label="Navegação secundária">
       <header className="rap-secondary-nav-header">
-        <p className="rap-secondary-nav-kicker">Area ativa</p>
-        <h2>{activeArea?.label || 'Navegacao'}</h2>
-        <p>{activeArea?.description || 'Selecione um modulo para continuar.'}</p>
+        <p className="rap-secondary-nav-kicker">Área ativa</p>
+        <h2>{activeArea?.label || 'Navegação'}</h2>
+        <p>{activeArea?.description || 'Selecione um módulo para continuar.'}</p>
         <button
           type="button"
           className="rap-secondary-nav-mobile-toggle"
@@ -163,7 +193,7 @@ export function SecondaryNav({ agent, currentPath }) {
             onChange={(event) => setSearchTerm(event.target.value)}
             className="rap-secondary-nav-search"
             placeholder="Buscar no menu..."
-            aria-label="Buscar itens do menu secundario"
+            aria-label="Buscar itens do menu secundário"
           />
         </div>
 

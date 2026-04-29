@@ -1,0 +1,219 @@
+.execution-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Header */
+.execution-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.execution-progress-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.execution-progress-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(33, 150, 243, 0.3);
+  border-top-color: #2196F3;
+  border-radius: 50%;
+  animation: execution-progress-spin 1s linear infinite;
+}
+
+@keyframes execution-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.execution-progress-status-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.execution-progress-cancel-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.execution-progress-cancel-btn:hover {
+  background: #e53935;
+  transform: scale(1.1);
+}
+
+.execution-progress-cancel-btn:active {
+  transform: scale(0.95);
+}
+
+/* Barra de progresso */
+.execution-progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.execution-progress-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.execution-progress-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.execution-progress-percentage {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  min-width: 35px;
+  text-align: right;
+}
+
+/* Resumo */
+.execution-progress-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.execution-progress-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.execution-progress-summary-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.execution-progress-summary-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.execution-progress-summary-value.success {
+  color: #4CAF50;
+}
+
+.execution-progress-summary-value.failed {
+  color: #f44336;
+}
+
+/* Step atual */
+.execution-progress-current-step {
+  padding: 8px 12px;
+  background: #e3f2fd;
+  border-left: 3px solid #2196F3;
+  border-radius: 4px;
+}
+
+.execution-progress-current-step-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1976D2;
+  margin-bottom: 4px;
+}
+
+.execution-progress-current-step-status {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #2196F3;
+  color: white;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.execution-progress-current-step-status.success {
+  background: #4CAF50;
+}
+
+.execution-progress-current-step-status.failure {
+  background: #f44336;
+}
+
+.execution-progress-current-step-status.processing {
+  background: #FF9800;
+}
+
+/* Duração */
+.execution-progress-duration {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* Go/No-Go */
+.execution-progress-gonogo {
+  padding: 8px;
+  text-align: center;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.execution-progress-gonogo.go {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.execution-progress-gonogo.no_go {
+  background: #ffcdd2;
+  color: #c62828;
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+  .execution-progress-container {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .execution-progress-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .execution-progress-header {
+    flex-wrap: wrap;
+  }
+}

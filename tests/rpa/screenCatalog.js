@@ -60,7 +60,7 @@ const ADMIN_SCREENS = [
   screen('rag-documents', '/rag-documents', { category: 'knowledge' }),
   screen('web-scraping', '/web-scraping', { category: 'ai' }),
   screen('rpa-test', '/rpa-test', { category: 'rpa' }),
-  screen('rpa-replays', '/rpa-replays', {
+  screen('rpa-replays', '/dev/rpa-replays', {
     category: 'rpa',
     awaitApiPath: '/tests/rpa/replay',
     awaitApiTimeoutMs: 20000,

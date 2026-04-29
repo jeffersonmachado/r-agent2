@@ -13,7 +13,7 @@ export function BeautyServicesPage() {
       const out = await listBeautyServices();
       setItems(Array.isArray(out?.items) ? out.items : []);
     } catch (_) {
-      showToast('Erro ao carregar servicos beauty', 'error');
+      showToast('Erro ao carregar serviços beauty', 'error');
     } finally {
       setLoading(false);
     }
@@ -26,7 +26,7 @@ export function BeautyServicesPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Servicos de Beleza</h1>
+        <h1>Serviços de Beleza</h1>
         <p className="text-sm text-text-secondary">Catálogo operacional de serviços usados em campanhas, agenda e cobrança.</p>
       </div>
       <div className="support-controls">
@@ -37,10 +37,10 @@ export function BeautyServicesPage() {
           <table className="support-table">
             <thead>
               <tr>
-                <th>Codigo</th>
-                <th>Servico</th>
-                <th>Duracao</th>
-                <th>Preco</th>
+                <th>Código</th>
+                <th>Serviço</th>
+                <th>Duração</th>
+                <th>Preço</th>
                 <th>Promocional</th>
               </tr>
             </thead>

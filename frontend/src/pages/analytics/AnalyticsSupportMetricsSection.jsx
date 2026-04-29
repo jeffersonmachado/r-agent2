@@ -74,7 +74,7 @@ export function AnalyticsSupportMetricsSection({
               <div className="text-3xl font-bold text-status-success">{metrics.general?.closedTickets || 0}</div>
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-              <div className="text-sm text-text-secondary mb-1">Tempo Medio de Resolucao</div>
+              <div className="text-sm text-text-secondary mb-1">Tempo Médio de Resolução</div>
               <div className="text-3xl font-bold text-accent-primary">{formatTime(metrics.general?.avgResolutionTime)}</div>
             </div>
           </div>
@@ -93,7 +93,7 @@ export function AnalyticsSupportMetricsSection({
               <div className="text-3xl font-bold text-status-warning">{formatRate(metrics.general?.abandonmentRate)}</div>
             </div>
             <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-              <div className="text-sm text-text-secondary mb-1">Contencao Bot</div>
+              <div className="text-sm text-text-secondary mb-1">Contenção Bot</div>
               <div className="text-3xl font-bold text-status-success">{formatRate(metrics.general?.botContainmentRate)}</div>
             </div>
           </div>

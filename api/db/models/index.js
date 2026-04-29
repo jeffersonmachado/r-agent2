@@ -128,6 +128,17 @@ const getProjectActivity = require('./ProjectActivity');
 const getProjectMilestone = require('./ProjectMilestone');
 const getProjectDependency = require('./ProjectDependency');
 const getProjectTemplate = require('./ProjectTemplate');
+const getWorkspaceEntity = require('./WorkspaceEntity');
+const getWorkspaceTimelineEvent = require('./WorkspaceTimelineEvent');
+const getWorkspaceInsight = require('./WorkspaceInsight');
+const getWorkspaceAction = require('./WorkspaceAction');
+const getWorkspaceEntityLink = require('./WorkspaceEntityLink');
+const getTask = require('./Task');
+const getTimesheetEntry = require('./TimesheetEntry');
+const getResource = require('./Resource');
+const getResourceAvailability = require('./ResourceAvailability');
+const getResourceBooking = require('./ResourceBooking');
+const getPaymentEvent = require('./PaymentEvent');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -255,6 +266,17 @@ const ProjectActivity = () => getProjectActivity();
 const ProjectMilestone = () => getProjectMilestone();
 const ProjectDependency = () => getProjectDependency();
 const ProjectTemplate = () => getProjectTemplate();
+const WorkspaceEntity = () => getWorkspaceEntity();
+const WorkspaceTimelineEvent = () => getWorkspaceTimelineEvent();
+const WorkspaceInsight = () => getWorkspaceInsight();
+const WorkspaceAction = () => getWorkspaceAction();
+const WorkspaceEntityLink = () => getWorkspaceEntityLink();
+const Task = () => getTask();
+const TimesheetEntry = () => getTimesheetEntry();
+const Resource = () => getResource();
+const ResourceAvailability = () => getResourceAvailability();
+const ResourceBooking = () => getResourceBooking();
+const PaymentEvent = () => getPaymentEvent();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -305,6 +327,17 @@ function defineRelationships() {
   const ProjectMilestoneModel = ProjectMilestone();
   const ProjectDependencyModel = ProjectDependency();
   const ProjectTemplateModel = ProjectTemplate();
+  const WorkspaceEntityModel = WorkspaceEntity();
+  const WorkspaceTimelineEventModel = WorkspaceTimelineEvent();
+  const WorkspaceInsightModel = WorkspaceInsight();
+  const WorkspaceActionModel = WorkspaceAction();
+  const WorkspaceEntityLinkModel = WorkspaceEntityLink();
+  const TaskModel = Task();
+  const TimesheetEntryModel = TimesheetEntry();
+  const ResourceModel = Resource();
+  const ResourceAvailabilityModel = ResourceAvailability();
+  const ResourceBookingModel = ResourceBooking();
+  const PaymentEventModel = PaymentEvent();
 
   TenantInsightModel.hasMany(TenantInsightEvidenceModel, {
     foreignKey: 'insight_id',
@@ -523,6 +556,72 @@ function defineRelationships() {
     foreignKey: 'assignee_user_id',
     as: 'assignee',
   });
+
+  WorkspaceEntityModel.hasMany(WorkspaceTimelineEventModel, {
+    foreignKey: 'entity_id',
+    as: 'timelineEvents',
+  });
+  WorkspaceTimelineEventModel.belongsTo(WorkspaceEntityModel, {
+    foreignKey: 'entity_id',
+    as: 'entity',
+  });
+  WorkspaceEntityModel.hasMany(WorkspaceInsightModel, {
+    foreignKey: 'entity_id',
+    as: 'insights',
+  });
+  WorkspaceInsightModel.belongsTo(WorkspaceEntityModel, {
+    foreignKey: 'entity_id',
+    as: 'entity',
+  });
+  WorkspaceEntityModel.hasMany(WorkspaceActionModel, {
+    foreignKey: 'entity_id',
+    as: 'actions',
+  });
+  WorkspaceActionModel.belongsTo(WorkspaceEntityModel, {
+    foreignKey: 'entity_id',
+    as: 'entity',
+  });
+
+  WorkspaceEntityModel.hasMany(WorkspaceEntityLinkModel, {
+    foreignKey: 'entity_id',
+    as: 'entityLinks',
+  });
+  WorkspaceEntityLinkModel.belongsTo(WorkspaceEntityModel, {
+    foreignKey: 'entity_id',
+    as: 'entity',
+  });
+  WorkspaceEntityModel.hasMany(TaskModel, {
+    foreignKey: 'entity_id',
+    as: 'workspaceTasks',
+  });
+  TaskModel.belongsTo(WorkspaceEntityModel, {
+    foreignKey: 'entity_id',
+    as: 'entity',
+  });
+  WorkspaceEntityModel.hasMany(TimesheetEntryModel, {
+    foreignKey: 'entity_id',
+    as: 'timesheetEntries',
+  });
+  WorkspaceEntityModel.hasMany(PaymentEventModel, {
+    foreignKey: 'entity_id',
+    as: 'paymentEvents',
+  });
+  ResourceModel.hasMany(ResourceAvailabilityModel, {
+    foreignKey: 'resource_id',
+    as: 'availability',
+  });
+  ResourceAvailabilityModel.belongsTo(ResourceModel, {
+    foreignKey: 'resource_id',
+    as: 'resource',
+  });
+  ResourceModel.hasMany(ResourceBookingModel, {
+    foreignKey: 'resource_id',
+    as: 'bookings',
+  });
+  ResourceBookingModel.belongsTo(ResourceModel, {
+    foreignKey: 'resource_id',
+    as: 'resource',
+  });
   UserModel.hasMany(ProjectItemModel, {
     foreignKey: 'reporter_user_id',
     as: 'reportedProjectItems',
@@ -728,6 +827,17 @@ module.exports = {
   ProjectMilestone,
   ProjectDependency,
   ProjectTemplate,
+  WorkspaceEntity,
+  WorkspaceTimelineEvent,
+  WorkspaceInsight,
+  WorkspaceAction,
+  WorkspaceEntityLink,
+  Task,
+  TimesheetEntry,
+  Resource,
+  ResourceAvailability,
+  ResourceBooking,
+  PaymentEvent,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -855,4 +965,15 @@ module.exports = {
   getProjectMilestone,
   getProjectDependency,
   getProjectTemplate,
+  getWorkspaceEntity,
+  getWorkspaceTimelineEvent,
+  getWorkspaceInsight,
+  getWorkspaceAction,
+  getWorkspaceEntityLink,
+  getTask,
+  getTimesheetEntry,
+  getResource,
+  getResourceAvailability,
+  getResourceBooking,
+  getPaymentEvent,
 };

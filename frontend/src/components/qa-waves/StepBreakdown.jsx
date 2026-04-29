@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import SubJourneyList from './SubJourneyList';
 
-export function StepBreakdown({ steps, onExecuteStep, onExecuteScenario, onReplayScenario }) {
+export function StepBreakdown({ steps, scenarios, onExecuteStep, onExecuteScenario, onReplayScenario }) {
   const safeSteps = (Array.isArray(steps) ? steps : []).filter((step) => {
+    // Novo modelo: usar totalScenarios que vem do backend
     const totalScenarios = Number(step?.totalScenarios || 0);
-    const hasSubJourneyWithScenarios = Array.isArray(step?.subJourneys)
-      && step.subJourneys.some((subJourney) => Array.isArray(subJourney?.scenarios) && subJourney.scenarios.length > 0);
-    return totalScenarios > 0 || hasSubJourneyWithScenarios;
+    return totalScenarios > 0;
   });
   const [expandedStepId, setExpandedStepId] = useState(null);
 
@@ -29,8 +28,8 @@ export function StepBreakdown({ steps, onExecuteStep, onExecuteScenario, onRepla
                   Status: <span className={`qa-business-status qa-business-status--${statusClass}`}>{step.status}</span>
                 </p>
                 <p>
-                  Cobertura: {step.successRate}% | Cenarios: {step.totalScenarios} | Ultima execucao:{' '}
-                  {step.lastExecutionAt ? new Date(step.lastExecutionAt).toLocaleString('pt-BR') : 'Sem execucao'}
+                  Cobertura: {step.successRate}% | Cenários: {step.totalScenarios} | Última execução:{' '}
+                  {step.lastExecutionAt ? new Date(step.lastExecutionAt).toLocaleString('pt-BR') : 'Sem execução'}
                 </p>
               </div>
               <div className="qa-step-actions">
@@ -46,6 +45,7 @@ export function StepBreakdown({ steps, onExecuteStep, onExecuteScenario, onRepla
             {isExpanded ? (
               <SubJourneyList
                 step={step}
+                scenarios={scenarios}
                 onExecuteScenario={onExecuteScenario}
                 onReplayScenario={onReplayScenario}
               />
@@ -53,7 +53,7 @@ export function StepBreakdown({ steps, onExecuteStep, onExecuteScenario, onRepla
           </article>
         );
       })}
-      {safeSteps.length === 0 ? <p className="qa-empty">Nenhum passo disponivel para esta jornada.</p> : null}
+      {safeSteps.length === 0 ? <p className="qa-empty">Nenhum passo disponível para esta jornada.</p> : null}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CrudPageBase } from '../../modules/crud-base';
 import { useRouter } from '../../hooks/useRouter';
 import { useToast } from '../../components/Toast';
-import { getProject, getProjectDashboard } from '../../api/projects';
+import { getProject, getProjectDashboard, listProjects } from '../../api/projects';
 import { ProjectKpis } from '../../components/projects/ProjectKpis';
 
 function getProjectIdFromPath(path) {
@@ -27,11 +27,27 @@ export function ProjectDashboardPage() {
         setProject(projectResponse?.project || null);
         setDashboard(dashboardResponse?.dashboard || null);
       } catch (error) {
-          showToast('Erro ao carregar painel do projeto', 'error');
+        // Se ID for numérico (tipo "1"), provavelmente é um ID inválido - redireciona para o primeiro projeto
+        // O sistema usa UUIDs, não IDs numéricos
+        const isNumericId = /^\d+$/.test(String(projectId || ''));
+        if (isNumericId || error?.status === 404) {
+          try {
+            const projectsResponse = await listProjects();
+            const firstProject = Array.isArray(projectsResponse?.projects) && projectsResponse.projects[0];
+            if (firstProject) {
+              navigate(`/projects/${firstProject.id}/dashboard`);
+              showToast('Redirecionando para o primeiro projeto disponível...', 'info');
+              return;
+            }
+          } catch (fallbackError) {
+            // Falhou ao carregar lista de projetos também
+          }
+        }
+        showToast('Erro ao carregar painel do projeto', 'error');
       }
     }
     load();
-  }, [projectId, showToast]);
+  }, [projectId, showToast, navigate]);
 
   const flow = Array.isArray(dashboard?.flow) ? dashboard.flow : [];
   const byTypeEntries = Object.entries(dashboard?.byType || {});
@@ -41,10 +57,6 @@ export function ProjectDashboardPage() {
       <ToastContainer />
       <div className="support-header">
         <h1>{project?.name || 'Painel do Projeto'}</h1>
-        <div className="support-controls" style={{ gap: '12px' }}>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}`)}>Quadro</button>
-          <button type="button" className="support-button" onClick={() => navigate(`/projects/${projectId}/timeline`)}>Linha do Tempo</button>
-        </div>
       </div>
 
       <ProjectKpis dashboard={dashboard} />
@@ -63,7 +75,7 @@ export function ProjectDashboardPage() {
         </div>
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-5 shadow-lg">
-          <div className="text-lg font-semibold text-text-primary mb-4">Distribuicao por tipo</div>
+          <div className="text-lg font-semibold text-text-primary mb-4">Distribuição por tipo</div>
           <div className="space-y-3">
             {byTypeEntries.map(([type, count]) => (
               <div key={type} className="flex items-center justify-between rounded-xl bg-bg-secondary border border-border-default p-3">

@@ -106,7 +106,7 @@ export function TenantIntelligencePage() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [operationalLoading, setOperationalLoading] = useState(false);
 
-  const [question, setQuestion] = useState('Quais metas do tenant estao em maior risco e quais acoes tem maior impacto no curto prazo?');
+  const [question, setQuestion] = useState('Quais metas do tenant estão em maior risco e quais ações têm maior impacto no curto prazo?');
   const [period, setPeriod] = useState('month');
 
   const [searchResult, setSearchResult] = useState(null);
@@ -173,7 +173,7 @@ export function TenantIntelligencePage() {
   async function handleSearch(event) {
     event.preventDefault();
     if (!question.trim()) {
-      showToast('Informe uma pergunta para a busca estrategica', 'error');
+      showToast('Informe uma pergunta para a busca estratégica', 'error');
       return;
     }
 
@@ -194,10 +194,10 @@ export function TenantIntelligencePage() {
       if (Array.isArray(newInsights)) setInsights(newInsights);
       if (Array.isArray(newRecommendations)) setRecommendations(newRecommendations);
 
-      showToast('Busca estrategica concluida', 'success');
+      showToast('Busca estratégica concluída', 'success');
     } catch (error) {
-      logger.error('[TenantIntelligencePage] Erro na busca estrategica', error);
-      showToast('Erro ao executar busca estrategica', 'error');
+      logger.error('[TenantIntelligencePage] Erro na busca estratégica', error);
+      showToast('Erro ao executar busca estratégica', 'error');
     } finally {
       setSearching(false);
     }
@@ -278,7 +278,7 @@ export function TenantIntelligencePage() {
 
     const parsed = Number(currentValue);
     if (!Number.isFinite(parsed)) {
-      showToast('Valor atual invalido', 'error');
+      showToast('Valor atual inválido', 'error');
       return;
     }
 
@@ -322,8 +322,8 @@ export function TenantIntelligencePage() {
         [insightId]: 1,
       }));
     } catch (error) {
-      logger.error('[TenantIntelligencePage] Erro ao carregar evidencias do insight', error);
-      showToast('Erro ao carregar evidencias do insight', 'error');
+      logger.error('[TenantIntelligencePage] Erro ao carregar evidências do insight', error);
+      showToast('Erro ao carregar evidências do insight', 'error');
     } finally {
       setEvidenceLoadingId(null);
     }
@@ -414,7 +414,7 @@ export function TenantIntelligencePage() {
   const handleExportInsightEvidence = (insightId, format) => {
     const filteredEvidence = getFilteredEvidence(insightId);
     if (!Array.isArray(filteredEvidence) || filteredEvidence.length === 0) {
-      showToast('Nao ha evidencias para exportar no filtro atual', 'error');
+      showToast('Não há evidências para exportar no filtro atual', 'error');
       return;
     }
 
@@ -426,10 +426,10 @@ export function TenantIntelligencePage() {
         const json = JSON.stringify(filteredEvidence, null, 2);
         downloadTextFile(`insight-${insightId}-evidence.json`, json, 'application/json;charset=utf-8');
       }
-      showToast('Exportacao de evidencias concluida', 'success');
+      showToast('Exportação de evidências concluída', 'success');
     } catch (error) {
-      logger.error('[TenantIntelligencePage] Erro ao exportar evidencias', error);
-      showToast('Erro ao exportar evidencias', 'error');
+      logger.error('[TenantIntelligencePage] Erro ao exportar evidências', error);
+      showToast('Erro ao exportar evidências', 'error');
     }
   };
 
@@ -448,7 +448,7 @@ export function TenantIntelligencePage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <h1>🧠 Inteligencia do Tenant</h1>
+        <h1>🧠 Inteligência do Tenant</h1>
         <div className="support-controls" style={{ flexWrap: 'wrap' }}>
           <Button onClick={handleSnapshotRefresh} disabled={snapshotLoading} style={{ width: 'auto' }}>
             {snapshotLoading ? 'Atualizando snapshots...' : 'Atualizar snapshots'}
@@ -507,7 +507,7 @@ export function TenantIntelligencePage() {
         className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg"
         onSubmit={handleSearch}
       >
-        <h3 className="text-lg font-semibold text-text-primary mb-4">Busca estrategica</h3>
+        <h3 className="text-lg font-semibold text-text-primary mb-4">Busca estratégica</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
           <label className="md:col-span-3 text-sm text-text-secondary">
             Pergunta
@@ -516,11 +516,11 @@ export function TenantIntelligencePage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               rows={3}
-              placeholder="Ex: Quais metas estao fora da meta neste mes e quais acoes priorizar?"
+              placeholder="Ex: Quais metas estão fora da meta neste mês e quais ações priorizar?"
             />
           </label>
           <label className="text-sm text-text-secondary">
-            Periodo
+            Período
             <select
               className="support-form-select"
               value={period}
@@ -528,7 +528,7 @@ export function TenantIntelligencePage() {
             >
               <option value="day">Dia</option>
               <option value="week">Semana</option>
-              <option value="month">Mes</option>
+              <option value="month">Mês</option>
               <option value="quarter">Trimestre</option>
             </select>
           </label>
@@ -540,7 +540,7 @@ export function TenantIntelligencePage() {
 
       {searchResult?.answer && (
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-text-primary mb-3">Analise estrategica</h3>
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Análise estratégica</h3>
           <p className="text-sm text-text-primary" style={{ whiteSpace: 'pre-wrap' }}>{searchResult.answer}</p>
         </div>
       )}
@@ -555,12 +555,12 @@ export function TenantIntelligencePage() {
           <div className="text-2xl font-semibold text-status-warning">{offTrackCount ?? '-'}</div>
         </div>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
-          <div className="text-xs text-text-secondary">Confianca RAG</div>
+          <div className="text-xs text-text-secondary">Confiança RAG</div>
           <div className="text-2xl font-semibold text-text-primary">{ragConfidence != null ? toPercent(ragConfidence) : '-'}</div>
         </div>
         <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
           <div className="text-xs text-text-secondary">Objetivo principal</div>
-          <div className="text-sm font-medium text-text-primary">{tenantObjective || 'Nao informado'}</div>
+          <div className="text-sm font-medium text-text-primary">{tenantObjective || 'Não informado'}</div>
         </div>
       </div>
 
@@ -568,14 +568,14 @@ export function TenantIntelligencePage() {
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
           <h3 className="text-lg font-semibold text-text-primary mb-3">Top Insights</h3>
           {topInsights.length === 0 ? (
-            <p className="text-sm text-text-secondary">Nenhum insight disponivel.</p>
+            <p className="text-sm text-text-secondary">Nenhum insight disponível.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {topInsights.map((item) => (
                 <li key={item.id || item.title} className="border border-border-default rounded-lg p-3">
                   <div className="font-medium text-text-primary">{item.title || item.type || 'Insight'}</div>
                   <div className="text-text-secondary">
-                    impacto: {item.impact || '-'} | confianca: {formatNumber(item.confidence, 2)}
+                    impacto: {item.impact || '-'} | confiança: {formatNumber(item.confidence, 2)}
                   </div>
                   {item.id ? (
                     <div style={{ marginTop: '8px' }}>
@@ -586,7 +586,7 @@ export function TenantIntelligencePage() {
                         style={{ width: 'auto' }}
                         onClick={() => handleToggleInsightEvidence(item.id)}
                       >
-                        {expandedInsightId === item.id ? 'Ocultar evidencias' : 'Ver evidencias'}
+                        {expandedInsightId === item.id ? 'Ocultar evidências' : 'Ver evidências'}
                       </Button>
                     </div>
                   ) : null}
@@ -594,7 +594,7 @@ export function TenantIntelligencePage() {
                   {expandedInsightId === item.id ? (
                     <div className="mt-2 text-xs text-text-secondary" style={{ marginTop: '10px' }}>
                       {evidenceLoadingId === item.id ? (
-                        <div>Carregando evidencias...</div>
+                        <div>Carregando evidências...</div>
                       ) : (
                         <>
                           {getEvidenceSourceOptions(item.id).length > 0 ? (
@@ -641,7 +641,7 @@ export function TenantIntelligencePage() {
                                   Exportar CSV
                                 </Button>
                                 <span style={{ alignSelf: 'center' }}>
-                                  {pagination.filteredCount} evidencias no filtro atual
+                                  {pagination.filteredCount} evidências no filtro atual
                                 </span>
                               </div>
                             );
@@ -649,10 +649,10 @@ export function TenantIntelligencePage() {
 
                           <ul className="space-y-1">
                             {getEvidencePagination(item.id).filteredCount === 0 ? (
-                              <li>Nenhuma evidencia para o filtro selecionado.</li>
+                              <li>Nenhuma evidência para o filtro selecionado.</li>
                             ) : null}
                             {(insightEvidenceMap[item.id] || []).length === 0 ? (
-                              <li>Nenhuma evidencia registrada para este insight.</li>
+                              <li>Nenhuma evidência registrada para este insight.</li>
                             ) : (
                               getEvidencePagination(item.id).pagedEvidence.map((evidence) => (
                                 <li key={evidence.id || `${item.id}-${evidence.source_type}-${evidence.source_id || 'na'}`}>
@@ -699,7 +699,7 @@ export function TenantIntelligencePage() {
                                   Anterior
                                 </Button>
                                 <span>
-                                  Pagina {pagination.currentPage} de {pagination.totalPages}
+                                  Página {pagination.currentPage} de {pagination.totalPages}
                                 </span>
                                 <Button
                                   type="button"
@@ -709,7 +709,7 @@ export function TenantIntelligencePage() {
                                   style={{ width: 'auto' }}
                                   onClick={() => handleChangeInsightEvidencePage(item.id, pagination.currentPage + 1)}
                                 >
-                                  Proxima
+                                  Próxima
                                 </Button>
                               </div>
                             );
@@ -725,14 +725,14 @@ export function TenantIntelligencePage() {
         </div>
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-text-primary mb-3">Top Recomendacoes</h3>
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Top Recomendações</h3>
           {topRecommendations.length === 0 ? (
-            <p className="text-sm text-text-secondary">Nenhuma recomendacao disponivel.</p>
+            <p className="text-sm text-text-secondary">Nenhuma recomendação disponível.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {topRecommendations.map((item) => (
                 <li key={item.id || item.title} className="border border-border-default rounded-lg p-3">
-                  <div className="font-medium text-text-primary">{item.title || 'Recomendacao'}</div>
+                  <div className="font-medium text-text-primary">{item.title || 'Recomendação'}</div>
                   <div className="text-text-secondary">
                     prioridade: {item.priority || '-'} | tipo: {item.action_type || '-'}
                   </div>
@@ -785,7 +785,7 @@ export function TenantIntelligencePage() {
               >
                 <option value="day">Dia</option>
                 <option value="week">Semana</option>
-                <option value="month">Mes</option>
+                <option value="month">Mês</option>
                 <option value="quarter">Trimestre</option>
               </select>
               <select
@@ -794,9 +794,9 @@ export function TenantIntelligencePage() {
                 onChange={(e) => setGoalForm((prev) => ({ ...prev, priority: e.target.value }))}
               >
                 <option value="low">Baixa</option>
-                <option value="medium">Media</option>
+                <option value="medium">Média</option>
                 <option value="high">Alta</option>
-                <option value="critical">Critica</option>
+                <option value="critical">Crítica</option>
               </select>
             </div>
             <Button type="submit" style={{ width: 'auto' }}>Criar meta</Button>

@@ -1,0 +1,574 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "fitness_trial_class_interest",
+      "journeyId": "fitness_new_customer",
+      "waveId": "fitness-cliente-novo",
+      "vertical": "fitness",
+      "title": "Cliente demonstra interesse em aula experimental",
+      "description": "Valida entendimento da intenção inicial e oferta correta de aula experimental.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["tenant_fitness_configured", "available_schedule_slots"],
+      "semanticSteps": [
+        { "id": "s1", "type": "send_message", "input": "Quero fazer uma aula experimental" },
+        { "id": "s2", "type": "validate_intent", "expected": "trial_class_interest" },
+        { "id": "s3", "type": "validate_response", "expected": "offer_trial_class" }
+      ],
+      "seeds": [
+        { "id": "fitness_trial_seed_001", "profile": "cliente_direto", "channel": "whatsapp", "input": "Quero fazer uma aula experimental", "expectedIntent": "trial_class_interest", "expectedOutcome": "offer_trial_class", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-f1"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_lead_capture",
+      "journeyId": "fitness_new_customer",
+      "waveId": "fitness-cliente-novo",
+      "vertical": "fitness",
+      "title": "Captação de lead fitness",
+      "description": "Valida coleta e persistência dos dados mínimos do novo aluno.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["tenant_fitness_configured"],
+      "semanticSteps": [
+        { "id": "s1", "type": "provide_data", "input": { "name": "Ana Souza", "phone": "+5511991110001", "goal": "emagrecimento" } },
+        { "id": "s2", "type": "validate_backend", "expected": "lead_created" }
+      ],
+      "seeds": [
+        { "id": "fitness_lead_seed_001", "profile": "cliente_novo", "channel": "chat", "input": "Meu nome é Ana Souza e quero emagrecer", "expectedIntent": "lead_capture", "expectedOutcome": "lead_created", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-fit-flow-student"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_trial_class_booking",
+      "journeyId": "fitness_new_customer",
+      "waveId": "fitness-cliente-novo",
+      "vertical": "fitness",
+      "title": "Agendamento de aula experimental",
+      "description": "Valida disponibilidade e criação do booking da aula experimental.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["available_schedule_slots"],
+      "semanticSteps": [
+        { "id": "s1", "type": "check_availability", "expected": "available_slots" },
+        { "id": "s2", "type": "select_slot", "input": "18:00" },
+        { "id": "s3", "type": "validate_backend", "expected": "booking_created" }
+      ],
+      "seeds": [
+        { "id": "fitness_booking_seed_001", "profile": "cliente_objetivo", "channel": "whatsapp", "input": "Prefiro as 18:00", "expectedIntent": "book_trial_class", "expectedOutcome": "booking_created", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-f1"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_new_customer_activation",
+      "journeyId": "fitness_new_customer",
+      "waveId": "fitness-cliente-novo",
+      "vertical": "fitness",
+      "title": "Ativação do novo aluno",
+      "description": "Valida cobrança, pagamento e ativação do plano do novo aluno.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["billing_sandbox_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "create_payment", "expected": "invoice_created" },
+        { "id": "s2", "type": "validate_backend", "expected": "payment_confirmed" },
+        { "id": "s3", "type": "validate_access_release", "expected": "membership_activated" }
+      ],
+      "seeds": [
+        { "id": "fitness_activation_seed_001", "profile": "cliente_novo_pagante", "channel": "api", "input": "Ativar plano mensal", "expectedIntent": "membership_activation", "expectedOutcome": "membership_activated", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-f1", "business-fit-flow-charge"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_membership_renewal",
+      "journeyId": "fitness_active_customer",
+      "waveId": "fitness-cliente-ativo",
+      "vertical": "fitness",
+      "title": "Renovação de matrícula fitness",
+      "description": "Valida a renovação ou rematrícula do aluno ativo.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["active_membership_seeded"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_context", "expected": "active_member" },
+        { "id": "s2", "type": "validate_response", "expected": "renewal_offer" }
+      ],
+      "seeds": [
+        { "id": "fitness_renewal_seed_001", "profile": "cliente_ativo", "channel": "chat", "input": "Quero renovar minha matrícula", "expectedIntent": "renew_membership", "expectedOutcome": "renewal_offer", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-f2"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_recurring_payment",
+      "journeyId": "fitness_active_customer",
+      "waveId": "fitness-cliente-ativo",
+      "vertical": "fitness",
+      "title": "Pagamento recorrente fitness",
+      "description": "Valida emissão de cobrança e confirmação do pagamento recorrente.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["billing_sandbox_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "create_payment", "expected": "renewal_invoice_created" },
+        { "id": "s2", "type": "validate_backend", "expected": "renewal_payment_confirmed" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-f2", "business-fit-flow-charge"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "fitness_checkin_access",
+      "journeyId": "fitness_active_customer",
+      "waveId": "fitness-cliente-ativo",
+      "vertical": "fitness",
+      "title": "Check-in e acesso fitness",
+      "description": "Valida o registro de presença e liberação operacional do aluno ativo.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["checkin_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "trigger_channel_event", "expected": "checkin_attempt" },
+        { "id": "s2", "type": "validate_backend", "expected": "checkin_recorded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-fit-flow-checkin", "business-fit-scr-03"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_campaign_entry",
+      "journeyId": "beauty_new_customer",
+      "waveId": "beauty-cliente-novo",
+      "vertical": "beauty",
+      "title": "Entrada por campanha beauty",
+      "description": "Valida a entrada por campanha promocional no domínio beauty.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["beauty_campaign_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "send_message", "input": "Vi a promoção de unhas" },
+        { "id": "s2", "type": "validate_context", "expected": "campaign_source" }
+      ],
+      "seeds": [
+        { "id": "beauty_campaign_seed_001", "profile": "cliente_promocional", "channel": "chat", "input": "Quero aproveitar a promoção de unhas", "expectedIntent": "promotion_interest", "expectedOutcome": "promotion_presented", "status": "approved" }
+      ],
+      "platformScenarioIds": ["business-b1", "business-beauty-flow-campaign"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_lead_conversion",
+      "journeyId": "beauty_new_customer",
+      "waveId": "beauty-cliente-novo",
+      "vertical": "beauty",
+      "title": "Conversão de lead beauty",
+      "description": "Valida conversão do lead em cliente no módulo beauty.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["beauty_campaign_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "lead_created" },
+        { "id": "s2", "type": "validate_backend", "expected": "customer_created" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-beauty-flow-lead"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_service_booking",
+      "journeyId": "beauty_new_customer",
+      "waveId": "beauty-cliente-novo",
+      "vertical": "beauty",
+      "title": "Agendamento de serviço beauty",
+      "description": "Valida o agendamento do primeiro serviço beauty.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["beauty_staff_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "check_availability", "expected": "beauty_slots_available" },
+        { "id": "s2", "type": "validate_backend", "expected": "appointment_created" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-beauty-flow-appointment", "business-b1"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_first_payment",
+      "journeyId": "beauty_new_customer",
+      "waveId": "beauty-cliente-novo",
+      "vertical": "beauty",
+      "title": "Pagamento do primeiro serviço beauty",
+      "description": "Valida o preço promocional e confirmação do pagamento.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["beauty_campaign_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "promo_price_applied" },
+        { "id": "s2", "type": "validate_backend", "expected": "payment_confirmed" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-beauty-flow-payment", "business-b1"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_existing_appointment_lookup",
+      "journeyId": "beauty_recurring_customer",
+      "waveId": "beauty-cliente-recorrente",
+      "vertical": "beauty",
+      "title": "Localização de agendamento beauty",
+      "description": "Valida localização do atendimento existente antes do reagendamento.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["beauty_existing_appointment"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "appointment_found" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-b2"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "beauty_reschedule_flow",
+      "journeyId": "beauty_recurring_customer",
+      "waveId": "beauty-cliente-recorrente",
+      "vertical": "beauty",
+      "title": "Reagendamento beauty",
+      "description": "Valida a troca de horário de um atendimento existente.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["beauty_existing_appointment"],
+      "semanticSteps": [
+        { "id": "s1", "type": "select_slot", "input": "2026-05-02T14:00:00" },
+        { "id": "s2", "type": "validate_backend", "expected": "appointment_rescheduled" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-b2"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "pbx_call_event_runtime",
+      "journeyId": "pbx_voice_service",
+      "waveId": "pbx-servico-voz",
+      "vertical": "pbx",
+      "title": "Runtime de evento de chamada",
+      "description": "Valida processamento de eventos de chamada no runtime PBX.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["pbx_runtime_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "wait_for_event", "expected": "call_event_received" },
+        { "id": "s2", "type": "validate_backend", "expected": "call_event_processed" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-pbx-call-events-runtime-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "pbx_tts_asr_flow",
+      "journeyId": "pbx_voice_service",
+      "waveId": "pbx-servico-voz",
+      "vertical": "pbx",
+      "title": "TTS e ASR PBX",
+      "description": "Valida síntese e reconhecimento de fala na operação PBX.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["pbx_runtime_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "trigger_channel_event", "expected": "tts_request" },
+        { "id": "s2", "type": "validate_backend", "expected": "asr_transcribed" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-pbx-voice-tts-asr-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "pbx_ura_publish",
+      "journeyId": "pbx_operation",
+      "waveId": "pbx-operacao",
+      "vertical": "pbx",
+      "title": "Publicação de URA",
+      "description": "Valida a publicação de uma nova versão da URA.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["ura_published_candidate"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "ura_published" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-ura-publish-rollback-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "pbx_ura_rollback",
+      "journeyId": "pbx_operation",
+      "waveId": "pbx-operacao",
+      "vertical": "pbx",
+      "title": "Rollback de URA",
+      "description": "Valida rollback para versão anterior da URA.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["ura_published_candidate"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "ura_rollback_success" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-ura-publish-rollback-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "core_auth_login",
+      "journeyId": "core_platform",
+      "waveId": "core-plataforma",
+      "vertical": "core",
+      "title": "Login core",
+      "description": "Valida o fluxo de autenticação principal da plataforma.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["core_auth_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "session_created" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-core-auth-login"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "core_tenant_create",
+      "journeyId": "core_platform",
+      "waveId": "core-plataforma",
+      "vertical": "core",
+      "title": "Criação de tenant",
+      "description": "Valida criação de tenant no domínio core.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["core_auth_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "tenant_created" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-core-tenants-create"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "core_physical_queue",
+      "journeyId": "core_platform",
+      "waveId": "core-plataforma",
+      "vertical": "core",
+      "title": "Fila física core",
+      "description": "Valida o processamento da fila física.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["core_auth_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "physical_queue_processed" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-physical-queue-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "omnichannel_chatpro_smoke",
+      "journeyId": "omnichannel_operations",
+      "waveId": "omnichannel-operacoes",
+      "vertical": "omnichannel",
+      "title": "Smoke ChatPro",
+      "description": "Valida disponibilidade inicial do ChatPro omnichannel.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["omnichannel_channels_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_backend", "expected": "chatpro_available" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-chatpro-omnichannel-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "omnichannel_whatsapp_connections",
+      "journeyId": "omnichannel_operations",
+      "waveId": "omnichannel-operacoes",
+      "vertical": "omnichannel",
+      "title": "Conexões WhatsApp omnichannel",
+      "description": "Valida a tela de conexões WhatsApp e sua operação básica.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "blocking",
+      "preconditions": ["omnichannel_channels_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "connections_visible" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["rpa-whatsapp-connections-rpa"],
+      "recordingIds": ["whatsapp-connections-rpa"],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "omnichannel_studiooly_rpa",
+      "journeyId": "omnichannel_operations",
+      "waveId": "omnichannel-operacoes",
+      "vertical": "omnichannel",
+      "title": "Fluxo RPA Studiooly",
+      "description": "Agrupa explicitamente os fluxos RPA relevantes para operação omnichannel.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "high",
+      "preconditions": ["omnichannel_channels_available"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_context", "expected": "studiooly_operation" },
+        { "id": "s2", "type": "validate_response", "expected": "recent_rpa_evidence" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": [
+        "rpa-test-flow-3571aa07-20260129T034520103Z",
+        "rpa-test-flow-3b6cada8-20260129T042632607Z",
+        "rpa-test-flow-c0ea1c71-20260129T045514294Z"
+      ],
+      "suggestedPlatformScenarioIds": [
+        { "id": "rpa-test-flow-6e8af7c1-20260129T033828021Z", "confidence": 0.78, "reason": "Fluxo semelhante do Studiooly com cobertura complementar" }
+      ],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "food_orders_screen",
+      "journeyId": "food_customer_journey",
+      "waveId": "food-pedidos",
+      "vertical": "food",
+      "title": "Tela de pedidos food",
+      "description": "Smoke funcional da tela de pedidos do módulo food.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["food_menu_seeded"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "orders_screen_loaded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-food-scr-01"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "clinic_maintenance_screen",
+      "journeyId": "clinic_customer_journey",
+      "waveId": "clinic-manutencao",
+      "vertical": "clinic",
+      "title": "Tela clinic maintenance",
+      "description": "Smoke da tela de manutenção do módulo clinic.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["clinic_module_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "clinic_screen_loaded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-clinic-scr-01"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "services_solutions_screen",
+      "journeyId": "services_customer_journey",
+      "waveId": "services-solucoes",
+      "vertical": "services",
+      "title": "Tela de soluções services",
+      "description": "Smoke funcional do catálogo de soluções.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["services_catalog_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "services_screen_loaded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-serv-scr-01"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "marketplace_nodes_screen",
+      "journeyId": "market_customer_journey",
+      "waveId": "market-marketplace",
+      "vertical": "market",
+      "title": "Tela do marketplace",
+      "description": "Smoke funcional dos nós do marketplace.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["market_nodes_seeded"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "market_screen_loaded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["business-market-scr-01"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    },
+    {
+      "id": "bpmn_editor_smoke",
+      "journeyId": "bpmn_editor_journey",
+      "waveId": "bpmn-editor",
+      "vertical": "bpmn",
+      "title": "Smoke do editor BPMN",
+      "description": "Valida abertura e renderização do editor BPMN.",
+      "status": "active",
+      "source": "manual",
+      "criticality": "medium",
+      "preconditions": ["bpmn_editor_enabled"],
+      "semanticSteps": [
+        { "id": "s1", "type": "validate_response", "expected": "bpmn_editor_loaded" }
+      ],
+      "seeds": [],
+      "platformScenarioIds": ["qa-bpmn-editor-smoke"],
+      "recordingIds": [],
+      "replayPolicy": { "required": true, "maxAgeDays": 7 }
+    }
+  ]
+}

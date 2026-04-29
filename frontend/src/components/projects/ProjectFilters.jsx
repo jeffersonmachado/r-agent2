@@ -10,23 +10,27 @@ export function ProjectFilters({ filters, onChange, onClear }) {
             className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
             value={filters.q || ''}
             onChange={(event) => onChange('q', event.target.value)}
-            placeholder="Nome, codigo ou descricao"
+            placeholder="Nome, código ou descrição"
           />
         </div>
         <div style={{ minWidth: '180px' }}>
           <label className="support-form-label">Status</label>
           <select
-            className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary cursor-pointer"
             value={filters.status || ''}
             onChange={(event) => onChange('status', event.target.value)}
           >
             <option value="">Todos</option>
             <option value="active">Ativo</option>
             <option value="paused">Pausado</option>
-            <option value="done">Concluido</option>
+            <option value="done">Concluído</option>
           </select>
         </div>
-        <button className="support-button" onClick={onClear} type="button">
+        <button
+          className="px-4 py-2 rounded-lg border border-border-default bg-bg-secondary text-text-primary hover:bg-bg-elevated transition-colors cursor-pointer"
+          onClick={onClear}
+          type="button"
+        >
           Limpar
         </button>
       </div>

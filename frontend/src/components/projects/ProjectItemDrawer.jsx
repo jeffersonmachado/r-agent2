@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { createProjectComment, getProjectItem, updateProjectItem } from '../../api/projects';
 
 const ITEM_TYPE_LABELS = {
-  epic: 'Epic',
-  story: 'Historia',
+  epic: 'Épico',
+  story: 'História',
   task: 'Tarefa',
   bug: 'Bug',
   incident: 'Incidente',
   improvement: 'Melhoria',
-  deployment: 'Implantacao',
-  qa_fix: 'Correcao QA',
-  automation: 'Automacao',
+  deployment: 'Implantação',
+  qa_fix: 'Correção QA',
+  automation: 'Automação',
   research: 'Pesquisa',
 };
 
@@ -19,16 +19,27 @@ const STATUS_LABELS = {
   todo: 'A Fazer',
   in_progress: 'Em Andamento',
   blocked: 'Bloqueado',
-  review: 'Revisao',
-  done: 'Concluido',
+  review: 'Revisão',
+  done: 'Concluído',
 };
 
 const PRIORITY_LABELS = {
   low: 'Baixa',
-  medium: 'Media',
+  medium: 'Média',
   high: 'Alta',
-  critical: 'Critica',
+  critical: 'Crítica',
 };
+
+function formatActivityAction(activity) {
+  const raw = String(activity?.action || activity?.event_type || '').toLowerCase();
+  if (raw.includes('create')) return 'Criação';
+  if (raw.includes('update')) return 'Atualização';
+  if (raw.includes('delete')) return 'Remoção';
+  if (raw.includes('move')) return 'Movimentação';
+  if (raw.includes('comment')) return 'Comentário';
+  if (raw.includes('status')) return 'Mudança de status';
+  return activity?.event_type || activity?.action || 'Atividade registrada';
+}
 
 export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast }) {
   const [loading, setLoading] = useState(false);
@@ -96,10 +107,10 @@ export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast
     try {
       await createProjectComment(projectId, item.id, { body: commentBody.trim() });
       setCommentBody('');
-      showToast?.('Comentario adicionado', 'success');
+      showToast?.('Comentário adicionado', 'success');
       onSaved?.();
     } catch (error) {
-      showToast?.('Erro ao adicionar comentario', 'error');
+      showToast?.('Erro ao adicionar comentário', 'error');
     } finally {
       setLoading(false);
     }
@@ -125,26 +136,32 @@ export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast
             <div className="text-xs text-text-secondary mb-1">{ITEM_TYPE_LABELS[details?.item_type] || details?.item_type || 'Tarefa'} • {STATUS_LABELS[details?.status] || details?.status || 'A Fazer'}</div>
             <h2 className="text-xl font-semibold text-text-primary">{details?.title}</h2>
           </div>
-          <button type="button" className="support-button" onClick={onClose}>Fechar</button>
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg border border-border-default bg-bg-secondary text-text-primary hover:bg-bg-elevated transition-colors font-medium cursor-pointer"
+            onClick={onClose}
+          >
+            Fechar
+          </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="support-form-label">Titulo</label>
+            <label className="support-form-label">Título</label>
             <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
           </div>
           <div>
-            <label className="support-form-label">Descricao</label>
+            <label className="support-form-label">Descrição</label>
             <textarea className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary min-h-[120px]" value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} />
           </div>
           <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
             <div>
               <label className="support-form-label">Prioridade</label>
-              <select className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={form.priority} onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}>
+              <select className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary cursor-pointer" value={form.priority} onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}>
                 <option value="low">Baixa</option>
-                <option value="medium">Media</option>
+                <option value="medium">Média</option>
                 <option value="high">Alta</option>
-                <option value="critical">Critica</option>
+                <option value="critical">Crítica</option>
               </select>
             </div>
             <div>
@@ -152,12 +169,26 @@ export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast
               <input type="datetime-local" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={form.dueDate} onChange={(event) => setForm((prev) => ({ ...prev, dueDate: event.target.value }))} />
             </div>
           </div>
-          <button type="button" className="support-button" onClick={handleSave} disabled={loading}>Salvar item</button>
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg border border-border-default bg-bg-secondary text-text-primary hover:bg-bg-elevated transition-colors font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={handleSave}
+            disabled={loading}
+          >
+            Salvar item
+          </button>
 
           <div className="pt-4 border-t border-border-default">
-            <div className="text-lg font-semibold text-text-primary mb-2">Comentarios</div>
-            <textarea className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary min-h-[96px]" value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Adicionar contexto, evidencia ou proximo passo" />
-            <button type="button" className="support-button mt-2" onClick={handleComment} disabled={loading}>Comentar</button>
+            <div className="text-lg font-semibold text-text-primary mb-2">Comentários</div>
+            <textarea className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary min-h-[96px]" value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Adicionar contexto, evidência ou próximo passo" />
+            <button
+              type="button"
+              className="mt-2 px-4 py-2 rounded-lg border border-border-default bg-bg-secondary text-text-primary hover:bg-bg-elevated transition-colors font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleComment}
+              disabled={loading}
+            >
+              Comentar
+            </button>
             <div className="mt-4 space-y-3">
               {comments.map((comment) => (
                 <div key={comment.id} className="rounded-xl border border-border-default bg-bg-secondary p-3">
@@ -165,16 +196,16 @@ export function ProjectItemDrawer({ projectId, item, onClose, onSaved, showToast
                   <div className="text-sm text-text-primary">{comment.body}</div>
                 </div>
               ))}
-              {comments.length === 0 ? <div className="text-sm text-text-secondary">Nenhum comentario ainda.</div> : null}
+              {comments.length === 0 ? <div className="text-sm text-text-secondary">Nenhum comentário ainda.</div> : null}
             </div>
           </div>
 
           <div className="pt-4 border-t border-border-default">
-            <div className="text-lg font-semibold text-text-primary mb-2">Historico</div>
+            <div className="text-lg font-semibold text-text-primary mb-2">Histórico</div>
             <div className="space-y-3">
               {activities.map((activity) => (
                 <div key={activity.id} className="rounded-xl border border-border-default bg-bg-secondary p-3">
-                  <div className="text-xs text-text-secondary mb-1">{activity.event_type}</div>
+                  <div className="text-xs text-text-secondary mb-1">{formatActivityAction(activity)}</div>
                   <div className="text-xs text-text-secondary">{activity.created_at ? new Date(activity.created_at).toLocaleString('pt-BR') : '-'}</div>
                 </div>
               ))}

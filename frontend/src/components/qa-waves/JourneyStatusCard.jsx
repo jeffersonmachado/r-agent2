@@ -30,11 +30,11 @@ export function JourneyStatusCard({ journey, stepStatuses }) {
         </div>
         <div>
           <strong>{journey.executedRate}%</strong>
-          <span>Cobertura de execucao</span>
+          <span>Cobertura de execução</span>
         </div>
         <div>
           <strong>{journey.totalScenarios}</strong>
-          <span>Cenarios</span>
+          <span>Cenários</span>
         </div>
         <div>
           <strong>{journey.failedScenarios}</strong>

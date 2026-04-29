@@ -19,7 +19,7 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/dev/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
@@ -92,8 +92,11 @@ function frontendRoutesPlugin() {
                           url.startsWith('/analytics/') ||
                           url.startsWith('/export/') ||
                           url.startsWith('/conversations') ||
+                          (url === '/projects' && isApiRequest) || // /projects pode ser API (JSON) ou página (HTML)
+                          url.startsWith('/projects/') || // /projects/* (subrotas) são API
+                          url.startsWith('/project-templates') || // /project-templates é API
                           url.startsWith('/tests') || // /tests/rpa/replay é API
-                          (url.startsWith('/rpa/') && url !== '/rpa-test') || // /rpa/recordings é API, mas /rpa-test é página
+                          (url.startsWith('/rpa/') && url !== '/dev/rpa-test') || // /rpa/recordings é API, mas /dev/rpa-test é página
                           (url.startsWith('/web-scraping/') && url !== '/web-scraping') || // /web-scraping/scrape é API
                           (url.startsWith('/audit/') && url !== '/audit') || // /audit/logs, /audit/stats são API
                           // /departments é página quando navegação (text/html), mas API quando Accept: application/json
@@ -476,6 +479,31 @@ const viteConfig = defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
       },
+      '^/projects': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /projects é tanto rota de página SPA quanto de API.
+          // SPA: /projects, /projects/:id, /projects/:id/board, /projects/:id/list, /projects/:id/dashboard (navegação), /projects/:id/timeline (navegação)
+          // API: POST/PATCH/DELETE em qualquer rota, ou GET com Accept: application/json
+          // Distingue pelo Accept header: text/html = SPA, application/json = API
+          if (req.method === 'GET') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return '/index.html'; // Serve SPA index.html
+            }
+          }
+          return undefined; // Proxy para a API
+        },
+      },
+      '^/project-templates': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
       '^/supervisor': {
         target: apiProxyTarget,
         changeOrigin: true,
@@ -570,8 +598,8 @@ const viteConfig = defineConfig(({ mode }) => {
         changeOrigin: true,
         secure: false,
         bypass(req, res, options) {
-          // Se for GET de navegação para /rpa-test (sem subcaminho), serve index.html
-          if (req.method === 'GET' && req.url === '/rpa-test') {
+          // Se for GET de navegação para /dev/rpa-test (sem subcaminho), serve index.html
+          if (req.method === 'GET' && req.url === '/dev/rpa-test') {
             const acceptHeader = req.headers.accept || '';
             const isNavigation = acceptHeader.includes('text/html') && 
                                  !acceptHeader.includes('application/json');

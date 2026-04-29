@@ -38,6 +38,10 @@ import { ProjectBoardPage } from './pages/projects/ProjectBoardPage';
 import { ProjectListPage } from './pages/projects/ProjectListPage';
 import { ProjectDashboardPage } from './pages/projects/ProjectDashboardPage';
 import { ProjectTimelinePage } from './pages/projects/ProjectTimelinePage';
+import { ProjectActivitiesPage } from './pages/projects/ProjectActivitiesPage';
+import { ProjectSettingsPage } from './pages/projects/ProjectSettingsPage';
+import { ProjectGanttPage } from './pages/projects/ProjectGanttPage';
+import { ProjectCalendarViewPage } from './pages/projects/ProjectCalendarViewPage';
 import { SlaPoliciesPage } from './pages/SlaPoliciesPage';
 import { ExportPage } from './pages/ExportPage';
 import { AIToolsPage } from './pages/AIToolsPage';
@@ -62,6 +66,7 @@ import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { QaWavesPage } from './pages/QaWavesPage';
 import { WorkManagementPage } from './pages/WorkManagementPage';
+import { WorkspacePage } from './pages/WorkspacePage';
 import { PbxPage } from './pages/PbxPage';
 import { PbxRoutesPage } from './pages/PbxRoutesPage';
 import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
@@ -223,7 +228,7 @@ function enhanceSupportHeaders({ navigate, currentPath }) {
         window.history.back();
         return;
       }
-      navigate(currentPath === '/dashboard' ? '/support' : '/dashboard');
+      navigate(currentPath === '/dashboard' ? '/workspace' : '/dashboard');
     });
 
     title.classList.add('support-header-title');
@@ -374,6 +379,7 @@ function AppWithAuth() {
   const isEditor = isRoute('/editor');
   const isBpmnEditor = isRoute('/bpmn-editor');
   const isSupport = isRoute('/support');
+  const isWorkspace = isRoute('/workspace');
   const isInbox = isRoute('/inbox');
   const isMaintenance = isRoute('/maintenance');
   const isConfig = isRoute('/config');
@@ -399,7 +405,11 @@ function AppWithAuth() {
   const isProjectList = isProjects && currentPath.endsWith('/list');
   const isProjectDashboard = isProjects && currentPath.endsWith('/dashboard');
   const isProjectTimeline = isProjects && currentPath.endsWith('/timeline');
-  const isProjectBoard = isProjects && !isProjectList && !isProjectDashboard && !isProjectTimeline && currentPath !== '/projects';
+  const isProjectActivities = isProjects && currentPath.endsWith('/activities');
+  const isProjectSettings = isProjects && currentPath.endsWith('/settings');
+  const isProjectGantt = isProjects && currentPath.endsWith('/gantt');
+  const isProjectCalendar = isProjects && currentPath.endsWith('/calendar');
+  const isProjectBoard = isProjects && !isProjectList && !isProjectDashboard && !isProjectTimeline && !isProjectActivities && !isProjectSettings && !isProjectGantt && !isProjectCalendar && currentPath !== '/projects';
   const isTasks = isRoute('/tasks');
   const isAgenda = isRoute('/agenda');
   const isSlaPolicies = isRoute('/sla-policies');
@@ -411,8 +421,8 @@ function AppWithAuth() {
   const isProductDocs = isRoute('/product-docs');
   const isRAGDocuments = isRoute('/rag-documents');
   const isWebScraping = isRoute('/web-scraping');
-  const isRpaTest = isRoute('/rpa-test');
-  const isRpaReplays = isRoute('/rpa-replays');
+  const isRpaTest = isRoute('/dev/rpa-test');
+  const isRpaReplays = isRoute('/dev/rpa-replays');
   const isRpaSeeds = isRoute('/rpa-seeds');
   const isChat = isRoute('/chat');
   const isQaStability = isRoute('/qa/stability');
@@ -502,7 +512,7 @@ function AppWithAuth() {
   // Rotas públicas (sem login): Storefront v1 + site SaaS
   const publicRoutes = ['/', '/saas', '/storefront', '/kiosk', '/panel', '/station']; // além de /login
 
-  // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /dashboard se autenticado
+  // Se a rota não for reconhecida, redireciona para login se não autenticado, ou /workspace se autenticado
   useEffect(() => {
     // Aguarda o loading terminar antes de verificar rotas
     if (loading) return;
@@ -510,8 +520,8 @@ function AppWithAuth() {
     const allRoutes = [
       isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
-      isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isTasks, isAgenda, isSlaPolicies, isExport,
+      isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+      isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
@@ -523,14 +533,14 @@ function AppWithAuth() {
     
     if (!allRoutes.some(route => route)) {
       if (isAuthenticated) {
-        navigate('/support');
+        navigate('/workspace');
       } else {
         navigate('/login');
       }
     }
   }, [
-    isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
-    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isTasks, isAgenda, isSlaPolicies, isExport,
+    isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+    isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
           isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
@@ -549,6 +559,7 @@ function AppWithAuth() {
       '/editor': '📝 Editor de Fluxos',
       '/bpmn-editor': '📐 Editor BPMN',
       '/support': '💬 Atendimento',
+      '/workspace': 'RAP Workspace',
       '/inbox': '📥 Caixa de Entrada',
       '/maintenance': '🔧 Manutenção de Tickets',
       '/config': '⚙️ Configuração do Sistema',
@@ -559,8 +570,8 @@ function AppWithAuth() {
       '/faq': '❓ Perguntas Frequentes',
       '/departments': '🏢 Departamentos',
       '/bulk-messaging': '📢 Disparos em Massa',
-      '/analytics': '📈 Analises e Metricas',
-      '/tenant-intelligence': '🧠 Inteligencia do Tenant',
+      '/analytics': '📈 Análises e Métricas',
+      '/tenant-intelligence': '🧠 Inteligência do Tenant',
       '/supervisor': '🧭 Painel Supervisor',
       '/rbac': '🔐 RBAC',
       '/mfa': '🔐 MFA',
@@ -577,16 +588,16 @@ function AppWithAuth() {
       '/segmentation': '🎯 Segmentação',
       '/whatsapp-templates': '💬 Templates WhatsApp Business API',
       '/knowledge-base': '🧠 Base de Conhecimento',
-      '/product-docs': '📖 Documentacao de Produto',
+      '/product-docs': '📖 Documentação de Produto',
       '/rag-documents': '📚 Gerenciamento de Documentos RAG',
       '/web-scraping': '🕷️ Raspagem de Sites',
-      '/rpa-test': '🚀 Execução de Testes RPA',
-      '/rpa-replays': '📋 Replays RPA',
+      '/dev/rpa-test': '🚀 Execução de Testes RPA',
+      '/dev/rpa-replays': '📋 Replays RPA',
       '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
       '/qa/stability': '📈 Estabilidade QA',
       '/qa': '✅ Painel de Qualidade (QA)',
-      '/qa-mesh': '🕸️ Malha Unificada de Execucao',
+      '/qa-mesh': '🕸️ Malha Unificada de Execução',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
       '/system-status': '📊 Status dos Serviços',
       '/channel-health': '📡 Saúde de Canais',
@@ -622,7 +633,7 @@ function AppWithAuth() {
       '/crm/pipelines': '🛣️ CRM • Pipelines',
       '/crm/opportunities': '💼 CRM • Oportunidades',
       '/crm/activities': '📝 CRM • Atividades',
-      '/crm/analytics': '📈 CRM • Analises',
+      '/crm/analytics': '📈 CRM • Análises',
       '/crm/reports': '📋 CRM • Relatórios',
       '/crm/campaigns': '📣 CRM • Campanhas',
       '/crm/webhooks': '🪝 CRM • Webhooks',
@@ -635,16 +646,16 @@ function AppWithAuth() {
       '/operations-dashboard': '🧭 Painel Operacional',
       '/fitness/students': '🏋️ Fitness • Alunos',
       '/fitness/memberships': '🏋️ Fitness • Memberships',
-      '/fitness/attendance': '🏋️ Fitness • Presenca',
+      '/fitness/attendance': '🏋️ Fitness • Presença',
       '/beauty/schedule': '💄 Beleza • Agenda',
       '/beauty/campaigns': '💄 Beleza • Campanhas',
       '/beauty/leads': '💄 Beleza • Leads',
       '/beauty/customers': '💄 Beleza • Clientes',
       '/beauty/bundles': '💄 Beleza • Bundles',
-      '/beauty/services': '💄 Beleza • Servicos',
+      '/beauty/services': '💄 Beleza • Serviços',
       '/beauty/payments': '💄 Beleza • Pagamentos',
       '/vertical/dashboard': '📊 Painel Vertical',
-      '/solutions': '📦 Pacotes de Solucao',
+      '/solutions': '📦 Pacotes de Solução',
       '/node-marketplace': '🧩 Mercado de Nodes',
       '/sso-scim': '🔐 SSO / SCIM',
       '/backup': '🗄️ Backup / DR',
@@ -710,7 +721,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login e rotas públicas de marketing/storefront
-  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/workspace', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -755,7 +766,7 @@ function AppWithAuth() {
           Seu perfil não possui permissão para acessar este módulo.
         </p>
         <button
-          onClick={() => navigate('/support')}
+          onClick={() => navigate('/workspace')}
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#3b82f6',
@@ -786,6 +797,8 @@ function AppWithAuth() {
     pageContent = <BpmnEditorPage />;
   } else if (isSupport) {
     pageContent = <SupportPage />;
+  } else if (isWorkspace) {
+    pageContent = <WorkspacePage />;
   } else if (isInbox) {
     pageContent = <InboxPage />;
   } else if (isMaintenance) {
@@ -834,6 +847,14 @@ function AppWithAuth() {
     pageContent = <ProjectDashboardPage />;
   } else if (isProjectTimeline) {
     pageContent = <ProjectTimelinePage />;
+  } else if (isProjectActivities) {
+    pageContent = <ProjectActivitiesPage />;
+  } else if (isProjectSettings) {
+    pageContent = <ProjectSettingsPage />;
+  } else if (isProjectGantt) {
+    pageContent = <ProjectGanttPage />;
+  } else if (isProjectCalendar) {
+    pageContent = <ProjectCalendarViewPage />;
   } else if (isProjectBoard) {
     pageContent = <ProjectBoardPage />;
   } else if (isProjects) {
@@ -956,7 +977,7 @@ function AppWithAuth() {
           Apenas super-admins podem acessar o Dashboard de Desenvolvimento.
         </p>
         <button
-          onClick={() => navigate('/support')}
+          onClick={() => navigate('/workspace')}
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#3b82f6',

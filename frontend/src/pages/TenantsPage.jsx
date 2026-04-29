@@ -263,7 +263,7 @@ export function TenantsPage() {
 
   if (!canManageTenants) {
     return (
-      <CrudPageBase title="🏢 Gerenciamento de Tenants">
+      <CrudPageBase title="🏢 Gerenciamento de Organizações">
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
           <p className="text-text-secondary">
             Você não tem permissão para gerenciar tenants. Apenas super-admins podem acessar esta página.
@@ -275,7 +275,7 @@ export function TenantsPage() {
 
   if (loading) {
     return (
-      <CrudPageBase title="🏢 Gerenciamento de Tenants">
+      <CrudPageBase title="🏢 Gerenciamento de Organizações">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
@@ -288,7 +288,7 @@ export function TenantsPage() {
 
   return (
     <CrudPageBase
-      title="🏢 Gerenciamento de Tenants"
+      title="🏢 Gerenciamento de Organizações"
       actions={(
         <>
           <Button onClick={handleCreate} variant="success">
@@ -316,7 +316,7 @@ export function TenantsPage() {
               type="text"
               value={filters.search}
               onChange={(e) => setFilter('search', e.target.value)}
-              placeholder="Tenant ID, nome, site, ramo ou objetivo..."
+              placeholder="ID da organização, nome, site, ramo ou objetivo..."
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all"
             />
           </div>

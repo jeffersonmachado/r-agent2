@@ -406,7 +406,7 @@ export function AutomationsPage() {
             <Input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
           </div>
           <div className="support-form-group">
-            <label className="support-form-label">Builder visual (drag-and-drop)</label>
+            <label className="support-form-label">Construtor visual (arrastar e soltar)</label>
             <div
               style={{
                 display: 'grid',
@@ -572,7 +572,7 @@ export function AutomationsPage() {
             )}
           </div>
           <div className="text-xs text-text-tertiary" style={{ marginTop: '8px' }}>
-            Builder visual em primeiro corte: adicione e reordene passos por drag-and-drop; o JSON permanece editável.
+            Construtor visual em primeiro corte: adicione e reordene passos por arrastar e soltar; o JSON permanece editável.
           </div>
         </div>
 
@@ -703,7 +703,7 @@ export function AutomationsPage() {
         <div className="support-details-panel">
           <div className="support-details-title">Insights de processo</div>
           <div className="text-xs text-text-tertiary" style={{ marginBottom: '8px' }}>
-            Carrega analytics, simulação e inteligência para um processId.
+            Carrega análises, simulação e inteligência para um processId.
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
             <Input
@@ -725,7 +725,7 @@ export function AutomationsPage() {
 
           {runtimeInsights.analytics && (
             <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontWeight: 600, marginBottom: '4px' }}>Analytics</div>
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>Análises</div>
               <div className="text-sm">Total de execuções: {runtimeInsights.analytics?.analytics?.process?.totalExecutions ?? '-'}</div>
               <div className="text-sm">Taxa de sucesso: {formatPercent(runtimeInsights.analytics?.analytics?.process?.successRate)}</div>
               <div className="text-sm">Taxa de falha: {formatPercent(runtimeInsights.analytics?.analytics?.process?.failureRate)}</div>
@@ -746,7 +746,7 @@ export function AutomationsPage() {
           {runtimeInsights.intelligence && (
             <div>
               <div style={{ fontWeight: 600, marginBottom: '4px' }}>Inteligência</div>
-              <div className="text-sm">Bottlenecks: {runtimeInsights.intelligence?.bottlenecks?.length ?? 0}</div>
+              <div className="text-sm">Gargalos: {runtimeInsights.intelligence?.bottlenecks?.length ?? 0}</div>
               <div className="text-sm">Recomendações: {runtimeInsights.intelligence?.intelligence?.recommendations?.length ?? 0}</div>
             </div>
           )}

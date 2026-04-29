@@ -59,7 +59,7 @@ export function VerticalLayout({ agent, verticalKey, verticalKeys = null, curren
         </div>
       </div>
 
-      <nav className="rap-vertical-nav" aria-label={`Subnavegacao da vertical ${headerTitle}`}>
+      <nav className="rap-vertical-nav" aria-label={`Subnavegação da vertical ${headerTitle}`}>
         {dashboardVisible && (
           <div className="rap-vertical-global-nav">
             <NavigationLink

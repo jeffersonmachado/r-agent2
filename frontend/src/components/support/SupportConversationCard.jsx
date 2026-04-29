@@ -8,7 +8,7 @@ export function SupportConversationCard({ selectedTicket, children }) {
     <SupportCard
       id="support-section-conversation"
       title="Atendimento atual"
-      subtitle={`Workspace do ticket #${String(selectedTicket.id || '').slice(0, 12)}`}
+      subtitle={`Contexto do ticket #${String(selectedTicket.id || '').slice(0, 12)}`}
       badge={(
         <span style={{
           padding: '2px 8px',

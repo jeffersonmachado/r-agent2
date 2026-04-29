@@ -89,14 +89,14 @@ export function FitnessStudentsPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Fitness Students</h1>
-        <p className="text-sm text-text-secondary">Busca operacional de alunos com acesso, membership, billing e historico de presenca.</p>
+        <h1>Alunos Fitness</h1>
+        <p className="text-sm text-text-secondary">Busca operacional de alunos com acesso, membership, billing e histórico de presença.</p>
       </div>
 
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <input
           className="support-input"
-          placeholder="Nome, documento, telefone ou codigo"
+          placeholder="Nome, documento, telefone ou código"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {

@@ -40,7 +40,7 @@ export function BeautyBundlesPage() {
           metadata: { source: 'beauty_bundles_page' },
         },
       });
-      showToast('Bundle criado com cobranca', 'success');
+      showToast('Bundle criado com cobrança', 'success');
       await loadData();
     } catch (_) {
       showToast('Falha ao criar bundle', 'error');
@@ -56,8 +56,8 @@ export function BeautyBundlesPage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header">
-        <h1>Beauty Bundles</h1>
-        <p className="text-sm text-text-secondary">Pacotes e bundles ativos, com apoio a criacao + cobranca no mesmo fluxo.</p>
+        <h1>Bundles Beauty</h1>
+        <p className="text-sm text-text-secondary">Pacotes e bundles ativos, com apoio a criação + cobrança no mesmo fluxo.</p>
       </div>
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <input className="support-input" placeholder="subjectId" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} />
@@ -82,7 +82,7 @@ export function BeautyBundlesPage() {
                 <th>Subject</th>
                 <th>Status</th>
                 <th>Billing</th>
-                <th>Sessoes</th>
+                <th>Sessões</th>
               </tr>
             </thead>
             <tbody>

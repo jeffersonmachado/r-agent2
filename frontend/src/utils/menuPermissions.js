@@ -193,6 +193,22 @@ const ROLE_PERMISSIONS = {
   ],
 };
 
+const WORKSPACE_PERMISSIONS = [
+  { resource: 'workspace', action: 'read' },
+  { resource: 'workspace', action: 'write' },
+  { resource: 'workspace', action: 'action' },
+  { resource: 'workspace', action: 'insight' },
+];
+
+for (const rolePermissions of Object.values(ROLE_PERMISSIONS)) {
+  if (!Array.isArray(rolePermissions)) continue;
+  for (const permission of WORKSPACE_PERMISSIONS) {
+    if (!rolePermissions.some((item) => item.resource === permission.resource && item.action === permission.action)) {
+      rolePermissions.push(permission);
+    }
+  }
+}
+
 /**
  * Verifica se um agente tem permissão para uma ação em um recurso.
  *

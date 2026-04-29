@@ -12,7 +12,7 @@ export function AreaHeader({
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const trail = useMemo(() => findNavigationTrail(filteredMenu, currentPath), [filteredMenu, currentPath]);
 
-  const pageTitle = trail[trail.length - 1]?.label || 'Workspace';
+  const pageTitle = trail[trail.length - 1]?.label || 'Espaço de Trabalho';
   const effectiveActions = actionsSlot || rightSlot;
 
   return (
