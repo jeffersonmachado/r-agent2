@@ -144,6 +144,23 @@ export function SupportPage() {
   const selectedTicket = state.selectedTicket;
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    if (!showFilters) return undefined;
+
+    function handleOutsideClick(event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('.support-filters-panel')) return;
+      if (target.closest('.auto-filter-toggle-btn')) return;
+      setShowFilters(false);
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showFilters]);
+
   return (
     <CrudPageBase title="💬 Atendimento" hideHeader>
       <div className="attendance-runtime-shell">
