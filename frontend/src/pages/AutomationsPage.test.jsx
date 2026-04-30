@@ -235,7 +235,7 @@ describe('pages/AutomationsPage', () => {
       expect(screen.getByText('Taxa de sucesso: 75.0%')).toBeInTheDocument();
       expect(screen.getByText('Complexidade: 42')).toBeInTheDocument();
       expect(screen.getByText('Nós inalcançáveis: 1')).toBeInTheDocument();
-      expect(screen.getByText('Bottlenecks: 1')).toBeInTheDocument();
+      expect(screen.getByText('Gargalos: 1')).toBeInTheDocument();
       expect(screen.getByText('Recomendações: 1')).toBeInTheDocument();
     });
   });

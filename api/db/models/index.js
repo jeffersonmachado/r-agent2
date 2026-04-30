@@ -133,6 +133,8 @@ const getWorkspaceTimelineEvent = require('./WorkspaceTimelineEvent');
 const getWorkspaceInsight = require('./WorkspaceInsight');
 const getWorkspaceAction = require('./WorkspaceAction');
 const getWorkspaceEntityLink = require('./WorkspaceEntityLink');
+const getAutoCorrectionRun = require('./AutoCorrectionRun');
+const getAutoCorrectionAction = require('./AutoCorrectionAction');
 const getTask = require('./Task');
 const getTimesheetEntry = require('./TimesheetEntry');
 const getResource = require('./Resource');
@@ -271,6 +273,8 @@ const WorkspaceTimelineEvent = () => getWorkspaceTimelineEvent();
 const WorkspaceInsight = () => getWorkspaceInsight();
 const WorkspaceAction = () => getWorkspaceAction();
 const WorkspaceEntityLink = () => getWorkspaceEntityLink();
+const AutoCorrectionRun = () => getAutoCorrectionRun();
+const AutoCorrectionAction = () => getAutoCorrectionAction();
 const Task = () => getTask();
 const TimesheetEntry = () => getTimesheetEntry();
 const Resource = () => getResource();
@@ -332,6 +336,8 @@ function defineRelationships() {
   const WorkspaceInsightModel = WorkspaceInsight();
   const WorkspaceActionModel = WorkspaceAction();
   const WorkspaceEntityLinkModel = WorkspaceEntityLink();
+  const AutoCorrectionRunModel = AutoCorrectionRun();
+  const AutoCorrectionActionModel = AutoCorrectionAction();
   const TaskModel = Task();
   const TimesheetEntryModel = TimesheetEntry();
   const ResourceModel = Resource();
@@ -590,6 +596,14 @@ function defineRelationships() {
     foreignKey: 'entity_id',
     as: 'entity',
   });
+  AutoCorrectionRunModel.hasMany(AutoCorrectionActionModel, {
+    foreignKey: 'run_id',
+    as: 'actions',
+  });
+  AutoCorrectionActionModel.belongsTo(AutoCorrectionRunModel, {
+    foreignKey: 'run_id',
+    as: 'run',
+  });
   WorkspaceEntityModel.hasMany(TaskModel, {
     foreignKey: 'entity_id',
     as: 'workspaceTasks',
@@ -832,6 +846,8 @@ module.exports = {
   WorkspaceInsight,
   WorkspaceAction,
   WorkspaceEntityLink,
+  AutoCorrectionRun,
+  AutoCorrectionAction,
   Task,
   TimesheetEntry,
   Resource,
@@ -970,6 +986,8 @@ module.exports = {
   getWorkspaceInsight,
   getWorkspaceAction,
   getWorkspaceEntityLink,
+  getAutoCorrectionRun,
+  getAutoCorrectionAction,
   getTask,
   getTimesheetEntry,
   getResource,

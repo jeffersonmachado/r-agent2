@@ -321,6 +321,8 @@ function AppWithAuth() {
   const { isAuthenticated, loading, agent } = useAuth();
   const [newNavigationEnabled, setNewNavigationEnabled] = React.useState(true);
   const [tenantProfile, setTenantProfile] = React.useState(null);
+  const [isContextPanelOpen, setIsContextPanelOpen] = React.useState(false);
+  const [isSecondaryNavCollapsed, setIsSecondaryNavCollapsed] = React.useState(false);
   
   // Monitora falhas de autenticação do WebSocket e redireciona para login
   useWebSocketAuthGuard();
@@ -565,6 +567,8 @@ function AppWithAuth() {
       '/config': '⚙️ Configuração do Sistema',
       '/agents': '👥 Gerenciamento de Agentes',
       '/tenants': '🏢 Gerenciamento de Tenants',
+      '/onboarding': '🧭 Onboarding',
+      '/super-admin': '🛡️ Super Admin',
       '/audit': '🔍 Auditoria',
       '/quick-replies': '⚡ Respostas Rápidas',
       '/faq': '❓ Perguntas Frequentes',
@@ -644,6 +648,9 @@ function AppWithAuth() {
       '/marketing': '🧲 Marketing',
       '/access-control': '🚪 Controle de Acesso',
       '/operations-dashboard': '🧭 Painel Operacional',
+      '/orders': '🧾 Pedidos',
+      '/kitchen': '🍳 Cozinha',
+      '/dispatch': '🚚 Despacho',
       '/fitness/students': '🏋️ Fitness • Alunos',
       '/fitness/memberships': '🏋️ Fitness • Memberships',
       '/fitness/attendance': '🏋️ Fitness • Presença',
@@ -662,6 +669,16 @@ function AppWithAuth() {
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev/qa-waves': '🌊 QA Waves Integrado',
       '/dev/work-management': '🧭 Work Management',
+      '/dev/work-management/projects': '🧭 Work Management • Projetos',
+      '/dev/work-management/board': '🧭 Work Management • Quadro',
+      '/dev/work-management/timeline': '🧭 Work Management • Linha do Tempo',
+      '/dev/work-management/deliverables': '🧭 Work Management • Entregáveis',
+      '/dev/work-management/operations': '🧭 Work Management • Operações',
+      '/dev/work-management/qa-validation': '🧭 Work Management • QA & Validation',
+      '/dev/work-management/documents': '🧭 Work Management • Documentos',
+      '/dev/work-management/team': '🧭 Work Management • Equipe',
+      '/dev/work-management/metrics': '🧭 Work Management • Métricas',
+      '/dev/work-management/ai-suggestions': '🧭 Work Management • Sugestões de IA',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/saas': '🌐 Results SaaS',
       '/saas/products': '🧩 Produtos SaaS',
@@ -1031,9 +1048,13 @@ function AppWithAuth() {
   }
 
   return (
-    <div className="rap-enterprise-shell">
+    <div className={`rap-enterprise-shell ${isContextPanelOpen ? 'is-context-panel-open' : ''} ${isSecondaryNavCollapsed ? 'is-secondary-nav-collapsed' : ''}`}>
       <PrimaryRail agent={agent} currentPath={currentPath} />
-      <SecondaryNav agent={agent} currentPath={currentPath} />
+      <SecondaryNav
+        agent={agent}
+        currentPath={currentPath}
+        onCollapsedChange={setIsSecondaryNavCollapsed}
+      />
 
       <div className="rap-enterprise-main">
         <AreaHeader
@@ -1048,7 +1069,25 @@ function AppWithAuth() {
         </div>
       </div>
 
-      <ContextPanel agent={agent} currentPath={currentPath} tenantLabel={subNavTenantLabel} />
+      <button
+        type="button"
+        className="rap-context-panel-toggle"
+        onClick={() => setIsContextPanelOpen((previous) => !previous)}
+        aria-expanded={isContextPanelOpen}
+        aria-controls="rap-context-panel"
+        aria-label={isContextPanelOpen ? 'Recolher painel de atalhos e informações' : 'Abrir painel de atalhos e informações'}
+        title={isContextPanelOpen ? 'Recolher painel' : 'Abrir atalhos e informações'}
+      >
+        <span aria-hidden="true">{isContextPanelOpen ? '>' : '<'}</span>
+      </button>
+      {isContextPanelOpen ? (
+        <ContextPanel
+          agent={agent}
+          currentPath={currentPath}
+          tenantLabel={subNavTenantLabel}
+          onClose={() => setIsContextPanelOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

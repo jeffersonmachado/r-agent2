@@ -1,23 +1,49 @@
 {
+  "id": "workspace-core",
   "wave": "workspace-core",
-  "description": "Valida convergencia operacional do RAP Workspace 360.",
+  "name": "Workspace Core Journey",
+  "category": "business",
+  "type": "workspace",
+  "adapter": "api-rpa",
+  "script": "scripts/workspace-core-smoke.js",
+  "description": "Validação real do Workspace com suporte a failure injection e autocorrection.",
+  "modes": [
+    "real",
+    "failure"
+  ],
   "steps": [
-    "simulate_incoming_message",
+    "create_workspace_entity",
+    "simulate_inbound_message",
     "create_ticket",
-    "create_workspace_task",
-    "generate_workspace_insight",
-    "generate_workspace_action"
+    "create_task",
+    "validate_timeline_before_evidence",
+    "generate_evidence",
+    "validate_timeline",
+    "generate_insight",
+    "generate_action",
+    "create_autocorrection_run"
   ],
   "assertions": [
     "workspace_entity_created",
     "workspace_entity_links_created",
     "timeline_uses_links",
+    "timeline_contains_message_ticket_task_evidence",
     "insight_persisted",
     "action_created",
-    "replay_artifact_generated"
+    "replay_artifact_generated",
+    "autocorrection_run_created_pending_human_review"
   ],
   "replay": {
     "enabled": true,
-    "target": "qa/workspace-core/replays"
+    "target": "qa/workspace-core/evidence/<timestamp>/replay.json"
+  },
+  "evidence": {
+    "enabled": true,
+    "target": "qa/workspace-core/evidence/<timestamp>"
+  },
+  "autocorrection": {
+    "enabled": true,
+    "safeMode": true,
+    "humanApprovalRequired": true
   }
 }

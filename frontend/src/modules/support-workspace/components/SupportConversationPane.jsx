@@ -395,7 +395,7 @@ export function SupportConversationPane({
                 id="send-message-textarea"
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
-                placeholder="Digite / para abrir comandos e respostas rápidas."
+                placeholder="Digite sua mensagem..."
                 rows={1}
                 className="support-form-textarea support-message-compose-textarea"
                 aria-label="Campo para digitar mensagem"

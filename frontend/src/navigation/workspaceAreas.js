@@ -76,6 +76,7 @@ const AREA_BLUEPRINTS = [
     ],
     legacyAnchorIds: ['inteligencia'],
     fallbackPath: '/knowledge-base',
+    excludeNodeIds: ['governed-insights'],
   },
   {
     id: 'operacoes',
@@ -298,7 +299,19 @@ export function buildWorkspaceAreas(filteredMenu = [], currentPath = '/') {
     };
   }).filter((area) => area.path);
 
-  const activeArea = areas.find((area) => area.isActive)
+  function getAreaMatchScore(area) {
+    const leaves = uniqueByPath(flattenNavigationLeaves(area.nodes || []).filter((item) => item.path));
+    if (leaves.some((item) => item.path === currentPath)) return 100;
+    if (area.path === currentPath || area.fallbackPath === currentPath) return 95;
+    if (leaves.some((item) => pathMatches(item.path, currentPath))) return 80;
+    if ((area.pathPrefixes || []).some((prefix) => prefix === currentPath)) return 70;
+    if ((area.pathPrefixes || []).some((prefix) => pathMatches(prefix, currentPath))) return 60;
+    return area.isActive ? 10 : 0;
+  }
+
+  const activeArea = areas
+    .filter((area) => area.isActive)
+    .sort((left, right) => getAreaMatchScore(right) - getAreaMatchScore(left))[0]
     || areas.find((area) => area.id === 'home')
     || areas[0]
     || null;

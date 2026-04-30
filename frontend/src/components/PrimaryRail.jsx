@@ -5,6 +5,24 @@ import { filterNavigationTree } from '../utils/menuPermissions';
 import { navigationMenu } from '../navigation/menu';
 import { buildWorkspaceAreas } from '../navigation/workspaceAreas';
 
+const RAIL_PREFERRED_PATHS = {
+  home: ['/workspace', '/dashboard'],
+  atendimento: ['/support', '/inbox', '/quick-replies', '/departments'],
+  clientes: ['/crm'],
+  conhecimento: ['/knowledge-base', '/rag-documents', '/faq', '/product-docs', '/web-scraping'],
+  operacoes: ['/supervisor', '/operations-dashboard', '/analytics', '/channel-health', '/pbx'],
+  builder: ['/editor', '/bpmn-editor', '/automations', '/projects'],
+  admin: ['/config', '/agents', '/tenants', '/audit', '/rbac', '/access-control', '/super-admin'],
+};
+
+function resolveRailTargetPath(area) {
+  const availablePaths = new Set((area?.items || []).map((item) => item.path).filter(Boolean));
+  const preferredPaths = RAIL_PREFERRED_PATHS[area?.id] || [];
+  return preferredPaths.find((path) => availablePaths.has(path))
+    || area?.path
+    || area?.fallbackPath;
+}
+
 function RailIcon({ icon }) {
   switch (icon) {
     case 'home':
@@ -183,7 +201,7 @@ export function PrimaryRail({ agent, currentPath }) {
         )}
 
         {railAreas.map((area) => {
-          const targetPath = area.path || area.fallbackPath;
+          const targetPath = resolveRailTargetPath(area);
           return (
             <NavigationLink
               key={area.id}

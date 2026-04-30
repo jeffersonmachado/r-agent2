@@ -146,7 +146,11 @@ afterEach(() => {
 const observers = new Set();
 
 const originalMutationObserver = window.MutationObserver;
-window.MutationObserver = class extends originalMutationObserver {
+const BaseMutationObserver = originalMutationObserver || class {
+  disconnect() {}
+};
+
+window.MutationObserver = class extends BaseMutationObserver {
   constructor(...args) {
     super(...args);
     observers.add(this);
@@ -159,7 +163,11 @@ window.MutationObserver = class extends originalMutationObserver {
 };
 
 const originalIntersectionObserver = window.IntersectionObserver;
-window.IntersectionObserver = class extends originalIntersectionObserver {
+const BaseIntersectionObserver = originalIntersectionObserver || class {
+  disconnect() {}
+};
+
+window.IntersectionObserver = class extends BaseIntersectionObserver {
   constructor(...args) {
     super(...args);
     observers.add(this);

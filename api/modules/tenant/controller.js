@@ -1,4 +1,14 @@
 function createTenantController({ requireAuth, requirePermission, service, emitEvent }) {
+  function isDatabaseUnavailableError(err) {
+    const text = String(err?.message || err || '').toLowerCase();
+    return (
+      text.includes('postgresql não está disponível')
+      || text.includes('connectionmanager.getconnection was called after the connection manager was closed')
+      || text.includes('connection manager was closed')
+      || text.includes('connection terminated unexpectedly')
+    );
+  }
+
   function buildRequestMeta(req) {
     return {
       tenantId: req.tenantId || null,
@@ -12,6 +22,14 @@ function createTenantController({ requireAuth, requirePermission, service, emitE
       res.status(err.httpStatus).json(err.payload || {
         error: err.code || 'internal_error',
         message: err.message,
+      });
+      return true;
+    }
+
+    if (isDatabaseUnavailableError(err)) {
+      res.status(503).json({
+        error: 'database_unavailable',
+        message: 'Banco de dados indisponível temporariamente. Tente novamente em instantes.',
       });
       return true;
     }

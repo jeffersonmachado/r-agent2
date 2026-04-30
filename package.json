@@ -64,6 +64,9 @@
     "qa:mesh:history:reclassify-pipeline": "node scripts/reclassify-qa-mesh-pipeline-history.js",
     "qa:mesh:history:backfill-origin": "node scripts/backfill-qa-mesh-execution-origin.js",
     "qa:mesh:scheduler": "node -e \"const { runScheduledMesh } = require('./qa-mesh/meshScheduler'); runScheduledMesh(process.env.MESH_KIND || 'critical').then((result)=>{ console.log(JSON.stringify(result.summary,null,2)); if(result.summary.goNoGo==='NO_GO') process.exitCode=1; }).catch((error)=>{ console.error(error); process.exit(1); });\"",
+    "qa:mesh:workspace-core": "RUNTIME_ROOT=${RUNTIME_ROOT:-/tmp/ragent2-runtime-qa-mesh} node -e \"const { runMesh } = require('./qa-mesh/meshRunner'); const mode = process.env.WORKSPACE_TEST_MODE || 'real'; const registry = [{ id: 'workspace-core', domain: 'workspace', type: 'smoke', source: 'qa', flow: 'Workspace core QA smoke journey', criticality: 'blocking', adapter: 'api', command: 'node', commandArgs: ['scripts/workspace-core-smoke.js'], assertions: ['Summary técnico consistente', 'Governance decision anexada'] }]; runMesh({ registry, scenarioIds: ['workspace-core'], refreshRegistry: false, scenarioModeById: { 'workspace-core': mode } }).then((result)=>{ const scenario = (result.results || []).find((r)=>r.id==='workspace-core') || null; console.log(JSON.stringify({ mode, summary: result.summary, governance: scenario ? scenario.governance : null, waveSummaryPath: scenario ? scenario.waveSummaryPath : null }, null, 2)); if(result.summary && result.summary.goNoGo==='NO_GO') process.exitCode=1; }).catch((error)=>{ console.error(error); process.exit(1); });\"",
+    "qa:mesh:workspace-core:real": "WORKSPACE_TEST_MODE=real npm run qa:mesh:workspace-core",
+    "qa:mesh:workspace-core:failure": "WORKSPACE_TEST_MODE=failure npm run qa:mesh:workspace-core",
     "qa:final-report": "node qa/final-report.js",
     "qa:waves:analyze": "node scripts/qa-waves-analyze.js",
     "qa:waves:generate-gaps": "node scripts/qa-waves-generate-gaps.js",
@@ -221,7 +224,9 @@
     "rag:fix-port": "sudo ./scripts/fix-rag-port.sh",
     "fix": "sudo ./scripts/clean-restart-services.sh",
     "reset:all": "./scripts/reset-all.sh",
-    "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes"
+    "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes",
+    "test:workspace-core": "WORKSPACE_TEST_MODE=real node scripts/workspace-core-smoke.js",
+    "test:workspace-core:failure": "WORKSPACE_TEST_MODE=failure node scripts/workspace-core-smoke.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",

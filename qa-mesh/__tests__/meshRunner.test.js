@@ -16,7 +16,15 @@ jest.mock('../adapters/pbxAdapter', () => ({
   executeScenario: jest.fn(),
 }));
 
-const { EVIDENCE_DIR, HISTORY_DIR, runMesh, normalizeExecutionRecord } = require('../meshRunner');
+const {
+  EVIDENCE_DIR,
+  HISTORY_DIR,
+  runMesh,
+  run,
+  normalizeExecutionRecord,
+  applyGovernanceIntegrations,
+  loadRegistry,
+} = require('../meshRunner');
 const apiAdapter = require('../adapters/apiAdapter');
 const rpaAdapter = require('../adapters/rpaAdapter');
 const pbxAdapter = require('../adapters/pbxAdapter');
@@ -409,5 +417,342 @@ describe('qa-mesh/meshRunner', () => {
     });
     expect(manualExecution.executionOrigin).toBe('manual_run');
     expect(manualExecution.isCanonicalExecution).toBe(false);
+  });
+
+  test('meshRunner.run aplica mode=failure no workspace-core', async () => {
+    process.env.RUNNING_IN_PIPELINE = '1';
+    const executionId = `mesh-workspace-mode-${Date.now()}`;
+
+    await run('workspace-core', {
+      executionId,
+      refreshRegistry: false,
+      registry: [{
+        id: 'workspace-core',
+        domain: 'workspace',
+        type: 'workspace',
+        source: 'qa',
+        flow: 'Workspace Core Journey',
+        criticality: 'blocking',
+        adapter: 'api',
+        command: 'node',
+        commandArgs: ['scripts/workspace-core-smoke.js'],
+        assertions: ['status coerente'],
+      }],
+      mode: 'failure',
+    });
+
+    expect(apiAdapter.executeScenario).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'workspace-core',
+        env: expect.objectContaining({ WORKSPACE_TEST_MODE: 'failure' }),
+        runtimeMode: 'failure',
+      }),
+      expect.any(Object),
+    );
+  });
+
+  test('governance cria AutoCorrectionRun e Workspace insight/action quando decision=REVIEW', async () => {
+    const fakeDb = {
+      connect: jest.fn().mockResolvedValue(true),
+      close: jest.fn().mockResolvedValue(true),
+      models: {
+        AutoCorrectionRun: () => ({
+          findOne: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({ id: 'run-1' }),
+        }),
+        AutoCorrectionAction: () => ({
+          create: jest.fn().mockResolvedValue({ id: 'auto-action-1' }),
+        }),
+        WorkspaceEntityLink: () => ({
+          findOrCreate: jest.fn().mockResolvedValue([{ id: 'link-1' }, true]),
+        }),
+        WorkspaceInsight: () => ({
+          create: jest.fn().mockResolvedValue({ id: 'insight-1' }),
+        }),
+        WorkspaceAction: () => ({
+          create: jest.fn().mockResolvedValue({ id: 'action-1' }),
+        }),
+        WorkspaceTimelineEvent: () => ({
+          create: jest.fn().mockResolvedValue({ id: 'event-1' }),
+        }),
+        Evidence: () => ({
+          findOne: jest.fn().mockResolvedValue({ toJSON: () => ({ metadata: {} }) }),
+          update: jest.fn().mockResolvedValue([1]),
+        }),
+      },
+    };
+
+    const integration = await applyGovernanceIntegrations({
+      summary: {
+        wave: 'workspace-core',
+        status: 'passed',
+        tenantId: 'tenant-1',
+        entityId: 'entity-1',
+        checks: { entityCreated: true },
+        artifacts: { summaryPath: 'qa/workspace-core/evidence/latest/summary.json', replayPath: 'qa/workspace-core/evidence/latest/replay.json' },
+        records: { evidenceId: 'evidence-1' },
+      },
+      governance: {
+        decision: 'REVIEW',
+        reason: 'High severity checks require technical review',
+        severity: 'high',
+        failedChecks: ['taskLinked'],
+      },
+      scenario: { id: 'workspace-core' },
+      summaryPath: '/opt/results/ria/r-agent2/qa/workspace-core/evidence/latest/summary.json',
+      db: fakeDb,
+    });
+
+    expect(integration.integrated).toBe(true);
+    expect(integration.created.autocorrectionRunId).toBe('run-1');
+    expect(integration.created.workspaceInsightId).toBe('insight-1');
+    expect(integration.created.workspaceActionId).toBe('action-1');
+    expect(fakeDb.connect).toHaveBeenCalled();
+    expect(fakeDb.close).toHaveBeenCalled();
+  });
+
+  test('governance GO_WITH_WARNINGS não cria AutoCorrectionRun e mantém insight/action', async () => {
+    const runFindOne = jest.fn().mockResolvedValue(null);
+    const runCreate = jest.fn().mockResolvedValue({ id: 'run-should-not-exist' });
+    const actionCreate = jest.fn().mockResolvedValue({ id: 'auto-action-should-not-exist' });
+    const workspaceInsightCreate = jest.fn().mockResolvedValue({ id: 'insight-2' });
+    const workspaceActionCreate = jest.fn().mockResolvedValue({ id: 'action-2' });
+
+    const fakeDb = {
+      connect: jest.fn().mockResolvedValue(true),
+      close: jest.fn().mockResolvedValue(true),
+      models: {
+        AutoCorrectionRun: () => ({
+          findOne: runFindOne,
+          create: runCreate,
+        }),
+        AutoCorrectionAction: () => ({
+          create: actionCreate,
+        }),
+        WorkspaceEntityLink: () => ({
+          findOrCreate: jest.fn().mockResolvedValue([{ id: 'link-2' }, true]),
+        }),
+        WorkspaceInsight: () => ({
+          create: workspaceInsightCreate,
+        }),
+        WorkspaceAction: () => ({
+          create: workspaceActionCreate,
+        }),
+        WorkspaceTimelineEvent: () => ({
+          create: jest.fn().mockResolvedValue({ id: 'event-2' }),
+        }),
+        Evidence: () => ({
+          findOne: jest.fn().mockResolvedValue({ toJSON: () => ({ metadata: {} }) }),
+          update: jest.fn().mockResolvedValue([1]),
+        }),
+      },
+    };
+
+    const integration = await applyGovernanceIntegrations({
+      summary: {
+        wave: 'workspace-core',
+        status: 'passed',
+        tenantId: 'tenant-1',
+        entityId: 'entity-1',
+        checks: { metadataComplete: false },
+        artifacts: {
+          summaryPath: 'qa/workspace-core/evidence/latest/summary.json',
+          replayPath: 'qa/workspace-core/evidence/latest/replay.json',
+        },
+        records: { evidenceId: 'evidence-2' },
+      },
+      governance: {
+        decision: 'GO_WITH_WARNINGS',
+        reason: 'Only medium checks failed',
+        severity: 'medium',
+        failedChecks: ['metadataComplete'],
+      },
+      scenario: { id: 'workspace-core' },
+      summaryPath: '/opt/results/ria/r-agent2/qa/workspace-core/evidence/latest/summary.json',
+      db: fakeDb,
+    });
+
+    expect(integration.integrated).toBe(true);
+    expect(integration.created.autocorrectionRunId).toBeNull();
+    expect(integration.created.workspaceInsightId).toBe('insight-2');
+    expect(integration.created.workspaceActionId).toBe('action-2');
+    expect(runFindOne).not.toHaveBeenCalled();
+    expect(runCreate).not.toHaveBeenCalled();
+    expect(actionCreate).not.toHaveBeenCalled();
+    expect(workspaceInsightCreate).toHaveBeenCalled();
+    expect(workspaceActionCreate).toHaveBeenCalled();
+    expect(fakeDb.connect).toHaveBeenCalled();
+    expect(fakeDb.close).toHaveBeenCalled();
+  });
+
+  test('governance pode preservar conexão compartilhada quando executa dentro do servidor', async () => {
+    const fakeDb = {
+      connect: jest.fn().mockResolvedValue(true),
+      close: jest.fn().mockResolvedValue(true),
+      models: {},
+    };
+
+    const integration = await applyGovernanceIntegrations({
+      summary: {
+        wave: 'workspace-core',
+        status: 'passed',
+        tenantId: 'tenant-1',
+        entityId: null,
+        checks: {},
+        artifacts: {},
+        records: {},
+      },
+      governance: {
+        decision: 'GO',
+        reason: 'All critical checks passed',
+        severity: 'low',
+        failedChecks: [],
+      },
+      scenario: { id: 'workspace-core' },
+      closeDbAfterIntegration: false,
+      db: fakeDb,
+    });
+
+    expect(integration.integrated).toBe(true);
+    expect(fakeDb.connect).toHaveBeenCalled();
+    expect(fakeDb.close).not.toHaveBeenCalled();
+  });
+
+  test('governance GO cria apenas timeline leve qa_execution', async () => {
+    const runFindOne = jest.fn().mockResolvedValue(null);
+    const runCreate = jest.fn().mockResolvedValue({ id: 'run-should-not-exist' });
+    const workspaceInsightCreate = jest.fn().mockResolvedValue({ id: 'insight-should-not-exist' });
+    const workspaceActionCreate = jest.fn().mockResolvedValue({ id: 'action-should-not-exist' });
+    const timelineCreate = jest.fn().mockResolvedValue({ id: 'event-go-1' });
+
+    const fakeDb = {
+      connect: jest.fn().mockResolvedValue(true),
+      close: jest.fn().mockResolvedValue(true),
+      models: {
+        AutoCorrectionRun: () => ({
+          findOne: runFindOne,
+          create: runCreate,
+        }),
+        AutoCorrectionAction: () => ({
+          create: jest.fn(),
+        }),
+        WorkspaceEntityLink: () => ({
+          findOrCreate: jest.fn().mockResolvedValue([{ id: 'link-go' }, true]),
+        }),
+        WorkspaceInsight: () => ({
+          create: workspaceInsightCreate,
+        }),
+        WorkspaceAction: () => ({
+          create: workspaceActionCreate,
+        }),
+        WorkspaceTimelineEvent: () => ({
+          create: timelineCreate,
+        }),
+        Evidence: () => ({
+          findOne: jest.fn().mockResolvedValue({ toJSON: () => ({ metadata: {} }) }),
+          update: jest.fn().mockResolvedValue([1]),
+        }),
+      },
+    };
+
+    const integration = await applyGovernanceIntegrations({
+      summary: {
+        wave: 'workspace-core',
+        status: 'passed',
+        tenantId: 'tenant-1',
+        entityId: 'entity-1',
+        checks: {},
+        artifacts: {
+          summaryPath: 'qa/workspace-core/evidence/latest/summary.json',
+          replayPath: 'qa/workspace-core/evidence/latest/replay.json',
+        },
+        records: { evidenceId: 'evidence-go' },
+      },
+      governance: {
+        decision: 'GO',
+        reason: 'All critical checks passed',
+        severity: 'low',
+        failedChecks: [],
+      },
+      scenario: { id: 'workspace-core' },
+      summaryPath: '/opt/results/ria/r-agent2/qa/workspace-core/evidence/latest/summary.json',
+      db: fakeDb,
+    });
+
+    expect(integration.integrated).toBe(true);
+    expect(integration.created.autocorrectionRunId).toBeNull();
+    expect(integration.created.workspaceInsightId).toBeNull();
+    expect(integration.created.workspaceActionId).toBeNull();
+    expect(integration.created.timelineEventId).toBe('event-go-1');
+    expect(runFindOne).not.toHaveBeenCalled();
+    expect(runCreate).not.toHaveBeenCalled();
+    expect(workspaceInsightCreate).not.toHaveBeenCalled();
+    expect(workspaceActionCreate).not.toHaveBeenCalled();
+    expect(timelineCreate).toHaveBeenCalledWith(expect.objectContaining({ type: 'qa_execution' }));
+  });
+
+  test('mantém status técnico original mesmo quando decision=REVIEW', async () => {
+    process.env.RUNNING_IN_PIPELINE = '1';
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-governance-status-'));
+    const summaryPath = path.join(tmpRoot, 'summary.json');
+    fs.writeFileSync(summaryPath, `${JSON.stringify({
+      wave: 'workspace-core',
+      mode: 'real',
+      status: 'passed',
+      tenantId: 'tenant-x',
+      entityId: null,
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+        ticketLinked: false,
+      },
+      errors: [],
+      artifacts: {},
+      records: {},
+      autocorrection: { required: false, created: false, reason: 'n/a' },
+    }, null, 2)}\n`, 'utf8');
+
+    apiAdapter.executeScenario.mockResolvedValueOnce({
+      success: true,
+      logs: [{ message: JSON.stringify({ summaryPath }) }],
+      metrics: { adapter: 'api' },
+      errors: [],
+      artifacts: [],
+    });
+
+    const execution = await runMesh({
+      executionId: `mesh-governance-status-${Date.now()}`,
+      refreshRegistry: false,
+      registry: [{
+        id: 'workspace-core-status-separation',
+        domain: 'workspace',
+        type: 'workspace',
+        source: 'qa',
+        flow: 'workspace status separation',
+        criticality: 'blocking',
+        adapter: 'api',
+        assertions: ['status tecnico preservado'],
+      }],
+    });
+
+    const scenario = execution.results.find((item) => item.id === 'workspace-core-status-separation');
+    expect(scenario).toBeTruthy();
+    expect(scenario.status).toBe('passed');
+    expect(scenario.governance?.decision).toBe('REVIEW');
+  });
+
+  test('meshRegistry contém cenário workspace-core oficial', () => {
+    // Usa loadRegistry() para ser resiliente a drift externo do arquivo JSON.
+    // loadRegistry() chama ensureWorkspaceCoreInRegistry() e garante workspace-core sempre.
+    const registry = loadRegistry();
+    const workspaceCore = registry.find((item) => item.id === 'workspace-core');
+
+    expect(workspaceCore).toBeTruthy();
+    expect(workspaceCore.adapter).toBe('api-rpa');
+    expect(workspaceCore.command).toBe('node');
+    expect(workspaceCore.commandArgs).toEqual(['scripts/workspace-core-smoke.js']);
   });
 });

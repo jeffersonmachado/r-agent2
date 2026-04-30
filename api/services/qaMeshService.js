@@ -193,6 +193,7 @@ function queueMeshRun(options = {}) {
     return runMesh({
       executionId,
       executionOrigin: 'manual_run',
+      closeGovernanceDbAfterIntegration: false,
       scenarioIds: options.scenarioIds,
       domain: options.domain,
       type: options.type,
@@ -236,6 +237,7 @@ function queueScenarioReplay(scenarioId) {
     return runMesh({
       executionId,
       executionOrigin: 'manual_replay',
+      closeGovernanceDbAfterIntegration: false,
       scenarioIds: [scenarioId],
       autoReplayOnFailure: false,
       writeCanonicalOutputs: false,

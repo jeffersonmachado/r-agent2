@@ -1,0 +1,57 @@
+{
+  "wave": "workspace-core",
+  "mode": "real",
+  "status": "passed",
+  "tenantId": "workspace-core-1777527090289",
+  "entityId": "c65ad14e-13e0-497a-b698-261392567201",
+  "startedAt": "2026-04-30T05:31:30.289Z",
+  "finishedAt": "2026-04-30T05:31:30.634Z",
+  "durationMs": 345,
+  "checks": {
+    "entityCreated": true,
+    "messageLinked": true,
+    "conversationLinked": true,
+    "ticketLinked": true,
+    "taskLinked": true,
+    "linksCreated": true,
+    "timelineContainsMessage": true,
+    "timelineContainsTicket": true,
+    "timelineContainsTask": true,
+    "timelineContainsEvidence": true,
+    "timelineConsistent": true,
+    "insightCreated": true,
+    "actionCreated": true,
+    "replayGenerated": true,
+    "evidenceGenerated": true,
+    "metadataComplete": true,
+    "uiHintsAvailable": true
+  },
+  "errors": [],
+  "artifacts": {
+    "summaryPath": "qa/workspace-core/evidence/2026-04-30T05-31-30-289Z/summary.json",
+    "replayPath": "qa/workspace-core/evidence/2026-04-30T05-31-30-289Z/replay.json",
+    "timelinePath": "qa/workspace-core/evidence/2026-04-30T05-31-30-289Z/timeline.json",
+    "autocorrectionPath": "qa/workspace-core/evidence/2026-04-30T05-31-30-289Z/autocorrection.json"
+  },
+  "records": {
+    "conversationId": "conv-workspace-core-1777527090375-7b5cb74e",
+    "messageId": "msg-workspace-core-1777527090375-6c46d2da",
+    "ticketId": "ticket-workspace-core-1777527090400-6ade0790",
+    "taskId": "151a99f0-2b33-4134-a99d-4db9fb8df118",
+    "evidenceId": "ev-workspace-core-1777527090446-2487ea5f",
+    "autocorrectionRunId": null
+  },
+  "failureType": "none",
+  "autocorrection": {
+    "required": false,
+    "created": false,
+    "reason": "Execução real sem falhas críticas."
+  },
+  "governance": {
+    "decision": "GO",
+    "reason": "All critical checks passed",
+    "severity": "low",
+    "failedChecks": [],
+    "requiredActions": []
+  }
+}

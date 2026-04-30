@@ -16,6 +16,16 @@ async function handleSuperAdminRoutes(ctx) {
     adjustTenantPlan,
   } = deps;
 
+  function isDatabaseUnavailableError(err) {
+    const text = String(err?.message || err || '').toLowerCase();
+    return (
+      text.includes('postgresql não está disponível')
+      || text.includes('connectionmanager.getconnection was called after the connection manager was closed')
+      || text.includes('connection manager was closed')
+      || text.includes('connection terminated unexpectedly')
+    );
+  }
+
   if (!pathname.startsWith('/super-admin/')) {
     return false;
   }
@@ -45,7 +55,14 @@ async function handleSuperAdminRoutes(ctx) {
       sendJson(res, 200, { tenants });
     } catch (err) {
       logger.error('Erro ao listar tenants (Super Admin):', err);
-      sendJson(res, 500, { error: 'internal_error' });
+      if (isDatabaseUnavailableError(err)) {
+        sendJson(res, 503, {
+          error: 'database_unavailable',
+          message: 'Banco de dados indisponível temporariamente. Não foi possível listar tenants.',
+        });
+      } else {
+        sendJson(res, 500, { error: 'internal_error' });
+      }
     }
     return true;
   }

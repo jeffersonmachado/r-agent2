@@ -63,6 +63,23 @@ const themes = {
       heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.18), rgba(59, 130, 246, 0.1))',
       overlayBackdrop: 'rgba(10, 10, 10, 0.62)',
     },
+    workspace: {
+      pageBackground: 'linear-gradient(135deg, #101312 0%, #171512 48%, #0d1615 100%)',
+      pageGlowStart: 'rgba(229, 181, 88, 0.20)',
+      pageGlowEnd: 'rgba(57, 171, 148, 0.16)',
+      accentPrimary: '#e5b558',
+      accentLight: 'rgba(229, 181, 88, 0.18)',
+      healthyBg: 'rgba(57, 171, 148, 0.14)',
+      healthyColor: '#9be2d4',
+      healthyDot: '#39ab94',
+      warningBg: 'rgba(229, 181, 88, 0.14)',
+      warningColor: '#f6d58c',
+      warningDot: '#e5b558',
+      criticalBg: 'rgba(225, 92, 92, 0.14)',
+      criticalColor: '#ffb1b1',
+      criticalDot: '#e15c5c',
+      inputBg: 'rgba(255, 251, 238, 0.08)',
+    },
   },
   light: {
     name: 'light',
@@ -124,6 +141,23 @@ const themes = {
       activeBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.14), rgba(59, 130, 246, 0.08))',
       heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.12), rgba(59, 130, 246, 0.07))',
       overlayBackdrop: 'rgba(15, 23, 42, 0.18)',
+    },
+    workspace: {
+      pageBackground: 'linear-gradient(135deg, #f6f7f9 0%, #eff3f9 48%, #f0f4f9 100%)',
+      pageGlowStart: 'rgba(94, 106, 210, 0.08)',
+      pageGlowEnd: 'rgba(59, 130, 246, 0.06)',
+      accentPrimary: '#5e6ad2',
+      accentLight: 'rgba(94, 106, 210, 0.12)',
+      healthyBg: 'rgba(16, 185, 129, 0.12)',
+      healthyColor: '#047857',
+      healthyDot: '#10b981',
+      warningBg: 'rgba(245, 158, 11, 0.12)',
+      warningColor: '#b45309',
+      warningDot: '#f59e0b',
+      criticalBg: 'rgba(239, 68, 68, 0.12)',
+      criticalColor: '#dc2626',
+      criticalDot: '#ef4444',
+      inputBg: 'rgba(31, 41, 55, 0.05)',
     },
   },
 };
@@ -196,6 +230,23 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--rap-active-background', theme.rap.activeBackground);
     root.style.setProperty('--rap-hero-background', theme.rap.heroBackground);
     root.style.setProperty('--rap-overlay-backdrop', theme.rap.overlayBackdrop);
+
+    // Workspace-specific variables
+    root.style.setProperty('--workspace-page-background', theme.workspace.pageBackground);
+    root.style.setProperty('--workspace-page-glow-start', theme.workspace.pageGlowStart);
+    root.style.setProperty('--workspace-page-glow-end', theme.workspace.pageGlowEnd);
+    root.style.setProperty('--workspace-accent-primary', theme.workspace.accentPrimary);
+    root.style.setProperty('--workspace-accent-light', theme.workspace.accentLight);
+    root.style.setProperty('--workspace-healthy-bg', theme.workspace.healthyBg);
+    root.style.setProperty('--workspace-healthy-color', theme.workspace.healthyColor);
+    root.style.setProperty('--workspace-healthy-dot', theme.workspace.healthyDot);
+    root.style.setProperty('--workspace-warning-bg', theme.workspace.warningBg);
+    root.style.setProperty('--workspace-warning-color', theme.workspace.warningColor);
+    root.style.setProperty('--workspace-warning-dot', theme.workspace.warningDot);
+    root.style.setProperty('--workspace-critical-bg', theme.workspace.criticalBg);
+    root.style.setProperty('--workspace-critical-color', theme.workspace.criticalColor);
+    root.style.setProperty('--workspace-critical-dot', theme.workspace.criticalDot);
+    root.style.setProperty('--workspace-input-bg', theme.workspace.inputBg);
 
     // Canvas background colors
     if (themeName === 'dark') {

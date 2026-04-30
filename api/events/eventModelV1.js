@@ -77,6 +77,9 @@ const EVENT_TYPES_V1 = new Set([
 
   // Vertical - Engagement
   'VerticalEngagementSignalComputed',
+
+  // CRM - Operational signals
+  'CrmOperationalEvent',
 ]);
 
 function makeId(prefix) {

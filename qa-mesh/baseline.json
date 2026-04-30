@@ -4,7 +4,7 @@
     "blockingFailures": 0,
     "infraErrors": 0
   },
-  "accepted": true,
+  "accepted": false,
   "bestKnown": {
     "executionId": "mesh-20260410183504-hlzgin",
     "passRate": 1,
@@ -17,6 +17,13 @@
     "updatedAt": "2026-04-10T18:52:17.838Z"
   },
   "history": [
+    {
+      "executionId": "mesh-2026-04-29T22-18-39-510Z",
+      "passRate": 0.5098039215686274,
+      "blockingFailures": 2,
+      "infraErrors": 1,
+      "at": "2026-04-29T22:28:57.412Z"
+    },
     {
       "executionId": "mesh-20260410183504-hlzgin",
       "passRate": 1,
@@ -149,13 +156,6 @@
       "blockingFailures": 7,
       "infraErrors": 28,
       "at": "2026-04-07T15:50:01.044Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T15-37-37-214Z",
-      "passRate": 0.02,
-      "blockingFailures": 7,
-      "infraErrors": 28,
-      "at": "2026-04-07T15:38:45.510Z"
     }
   ]
 }

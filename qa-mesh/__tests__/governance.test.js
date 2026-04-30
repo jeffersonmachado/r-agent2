@@ -1,6 +1,11 @@
 'use strict';
 
-const { MIN_EXECUTION_RATIO, evaluateGoNoGo, summarizeResults } = require('../governance');
+const {
+  MIN_EXECUTION_RATIO,
+  evaluateGoNoGo,
+  summarizeResults,
+  evaluateWaveResult,
+} = require('../governance');
 
 describe('qa-mesh/governance', () => {
   test('marca NO_GO quando nenhum cenário é executado', () => {
@@ -96,5 +101,101 @@ describe('qa-mesh/governance', () => {
     expect(result.goNoGo).toBe('GO');
     expect(result.fallbackPassed).toBe(1);
     expect(result.passed).toBe(2);
+  });
+
+  test('evaluateWaveResult retorna GO com todos checks verdadeiros', () => {
+    const wave = evaluateWaveResult({
+      status: 'passed',
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+        ticketLinked: true,
+        taskLinked: true,
+        insightCreated: true,
+        actionCreated: true,
+      },
+    });
+
+    expect(wave.decision).toBe('GO');
+    expect(wave.severity).toBe('low');
+  });
+
+  test('evaluateWaveResult retorna NO_GO quando check crítico falha', () => {
+    const wave = evaluateWaveResult({
+      status: 'failed',
+      checks: {
+        entityCreated: false,
+        linksCreated: true,
+      },
+    });
+
+    expect(wave.decision).toBe('NO_GO');
+    expect(wave.severity).toBe('critical');
+    expect(wave.failedChecks).toContain('entityCreated');
+  });
+
+  test('evaluateWaveResult retorna REVIEW quando check high falha', () => {
+    const wave = evaluateWaveResult({
+      status: 'passed',
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+        ticketLinked: false,
+      },
+    });
+
+    expect(wave.decision).toBe('REVIEW');
+    expect(wave.severity).toBe('high');
+  });
+
+  test('evaluateWaveResult retorna GO_WITH_WARNINGS quando só medium/low falham', () => {
+    const wave = evaluateWaveResult({
+      status: 'passed',
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+        insightCreated: false,
+      },
+    });
+
+    expect(wave.decision).toBe('GO_WITH_WARNINGS');
+    expect(wave.failedChecks).toContain('insightCreated');
+  });
+
+  test('evaluateWaveResult respeita failureInjection handled', () => {
+    const go = evaluateWaveResult({
+      status: 'passed',
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+      },
+      failureInjection: { enabled: true, type: 'simulated', handled: true },
+    });
+    expect(go.decision).toBe('GO');
+
+    const noGo = evaluateWaveResult({
+      status: 'passed',
+      checks: {
+        entityCreated: true,
+        linksCreated: true,
+        timelineConsistent: true,
+        replayGenerated: true,
+        evidenceGenerated: true,
+      },
+      failureInjection: { enabled: true, type: 'simulated', handled: false },
+    });
+    expect(noGo.decision).toBe('NO_GO');
   });
 });

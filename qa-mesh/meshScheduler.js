@@ -70,6 +70,7 @@ async function runScheduledMesh(kind = 'critical') {
       executionOrigin: 'scheduler',
       executionKind: kind,
       writeCanonicalOutputs: false,
+      closeGovernanceDbAfterIntegration: false,
     });
     writeState({
       activeLock: false,

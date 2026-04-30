@@ -2,6 +2,16 @@ async function handleAuditRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson, queryLogs, getAuditStats } = deps;
 
+  function isDatabaseUnavailableError(err) {
+    const text = String(err?.message || err || '').toLowerCase();
+    return (
+      text.includes('postgresql não está disponível')
+      || text.includes('connectionmanager.getconnection was called after the connection manager was closed')
+      || text.includes('connection manager was closed')
+      || text.includes('connection terminated unexpectedly')
+    );
+  }
+
   if (!pathname.startsWith('/audit/')) {
     return false;
   }
@@ -35,8 +45,16 @@ async function handleAuditRoutes(ctx) {
       offset: urlObj.searchParams.get('offset') || undefined,
     };
 
-    const result = await queryLogs(filters);
-    sendJson(res, 200, result);
+    try {
+      const result = await queryLogs(filters);
+      sendJson(res, 200, result);
+    } catch (err) {
+      if (isDatabaseUnavailableError(err)) {
+        sendJson(res, 200, { total: 0, items: [], degraded: true });
+      } else {
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar auditoria' });
+      }
+    }
     return true;
   }
 
@@ -54,8 +72,23 @@ async function handleAuditRoutes(ctx) {
       return true;
     }
 
-    const stats = await getAuditStats();
-    sendJson(res, 200, stats);
+    try {
+      const stats = await getAuditStats();
+      sendJson(res, 200, stats);
+    } catch (err) {
+      if (isDatabaseUnavailableError(err)) {
+        sendJson(res, 200, {
+          total: 0,
+          byAction: {},
+          byResource: {},
+          byAgent: {},
+          recent: [],
+          degraded: true,
+        });
+      } else {
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar estatísticas de auditoria' });
+      }
+    }
     return true;
   }
 

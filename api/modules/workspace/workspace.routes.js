@@ -12,6 +12,7 @@ function createWorkspaceRoutes({ buildDeps }) {
   router.get('/workspace/entities', (req, res) => controllerFor(req, res).listEntities(req, res));
   router.get('/workspace/entities/:id/timeline', (req, res) => controllerFor(req, res).timeline(req, res));
   router.get('/workspace/entities/:id/insights', (req, res) => controllerFor(req, res).insights(req, res));
+  router.get('/workspace/entities/:id/autocorrections', (req, res) => controllerFor(req, res).autocorrections(req, res));
   router.get('/workspace/entities/:id/actions', (req, res) => controllerFor(req, res).actions(req, res));
   router.post('/workspace/entities/:id/actions/auto', (req, res) => controllerFor(req, res).executeSuggestedActions(req, res));
   router.get('/workspace/entities/:id', (req, res) => controllerFor(req, res).getEntity(req, res));

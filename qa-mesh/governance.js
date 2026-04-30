@@ -2,6 +2,128 @@
 
 const MIN_EXECUTION_RATIO = 0.7;
 
+const CHECK_SEVERITY = {
+  entityCreated: 'critical',
+  linksCreated: 'critical',
+  timelineConsistent: 'critical',
+  replayGenerated: 'critical',
+  evidenceGenerated: 'critical',
+  ticketLinked: 'high',
+  taskLinked: 'high',
+  insightCreated: 'medium',
+  actionCreated: 'medium',
+  metadataComplete: 'low',
+  uiHintsAvailable: 'low',
+};
+
+function collectFailedChecksBySeverity(checks = {}) {
+  const bySeverity = {
+    critical: [],
+    high: [],
+    medium: [],
+    low: [],
+    unknown: [],
+  };
+
+  for (const [checkName, passed] of Object.entries(checks || {})) {
+    if (passed !== false) continue;
+    const severity = CHECK_SEVERITY[checkName] || 'unknown';
+    bySeverity[severity].push(checkName);
+  }
+
+  return bySeverity;
+}
+
+function evaluateWaveResult(summary = {}) {
+  const checks = summary?.checks || {};
+  const bySeverity = collectFailedChecksBySeverity(checks);
+  const failedChecks = [
+    ...bySeverity.critical,
+    ...bySeverity.high,
+    ...bySeverity.medium,
+    ...bySeverity.low,
+    ...bySeverity.unknown,
+  ];
+
+  const failureInjection = summary?.failureInjection || null;
+  const autocorrection = summary?.autocorrection || null;
+  const hasUnhandledFailureInjection = Boolean(
+    failureInjection?.enabled === true
+      && failureInjection?.type === 'simulated'
+      && failureInjection?.handled !== true,
+  );
+
+  if (hasUnhandledFailureInjection) {
+    return {
+      decision: 'NO_GO',
+      reason: 'Simulated failure was not handled correctly',
+      severity: 'critical',
+      failedChecks,
+      requiredActions: ['validar_autocorrection', 'revisar_governance_qa_wave'],
+    };
+  }
+
+  if (autocorrection?.required === true && autocorrection?.created !== true) {
+    return {
+      decision: 'NO_GO',
+      reason: 'Autocorrection required but not created',
+      severity: 'critical',
+      failedChecks,
+      requiredActions: ['executar_autocorrection', 'revisao_humana_obrigatoria'],
+    };
+  }
+
+  if (bySeverity.critical.length > 0 || summary?.status === 'failed') {
+    return {
+      decision: 'NO_GO',
+      reason: bySeverity.critical.length > 0
+        ? 'Critical checks failed'
+        : 'Technical execution failed',
+      severity: 'critical',
+      failedChecks,
+      requiredActions: ['abrir_incidente_tecnico', 'executar_autocorrection', 'revisao_humana_obrigatoria'],
+    };
+  }
+
+  if (bySeverity.high.length > 0) {
+    return {
+      decision: 'REVIEW',
+      reason: 'High severity checks require technical review',
+      severity: 'high',
+      failedChecks,
+      requiredActions: ['revisao_tecnica', 'validar_evidencias_e_replay'],
+    };
+  }
+
+  if (bySeverity.medium.length > 0 || bySeverity.low.length > 0 || bySeverity.unknown.length > 0) {
+    return {
+      decision: 'GO_WITH_WARNINGS',
+      reason: 'Only medium/low checks failed; operation can continue with warnings',
+      severity: 'medium',
+      failedChecks,
+      requiredActions: ['registrar_warning_operacional', 'acompanhar_wave_no_workspace'],
+    };
+  }
+
+  if (failureInjection?.enabled === true && failureInjection?.type === 'simulated' && failureInjection?.handled === true) {
+    return {
+      decision: 'GO',
+      reason: 'Simulated failure was handled correctly',
+      severity: 'low',
+      failedChecks,
+      requiredActions: [],
+    };
+  }
+
+  return {
+    decision: 'GO',
+    reason: 'All critical checks passed',
+    severity: 'low',
+    failedChecks,
+    requiredActions: [],
+  };
+}
+
 function buildDomainSummary(results = []) {
   return results.reduce((acc, item) => {
     const domain = item.domain || 'core';
@@ -111,6 +233,9 @@ function evaluateGoNoGo(results = [], options = {}) {
 
 module.exports = {
   MIN_EXECUTION_RATIO,
+  CHECK_SEVERITY,
+  collectFailedChecksBySeverity,
+  evaluateWaveResult,
   buildDomainSummary,
   summarizeResults,
   evaluateGoNoGo,

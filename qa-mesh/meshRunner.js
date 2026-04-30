@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { SCREEN_SCENARIOS, FLOW_SCENARIOS, JOURNEY_SCENARIOS } = require('../tests/rpa/business/catalog');
 const { getChangedFiles, determineAffectedScopes } = require('../qa/qaRunner');
-const { evaluateGoNoGo } = require('./governance');
+const { evaluateGoNoGo, evaluateWaveResult } = require('./governance');
 const { buildFailureIntelligence } = require('./intelligence/failureIntelligence');
 const rpaAdapter = require('./adapters/rpaAdapter');
 const apiAdapter = require('./adapters/apiAdapter');
@@ -310,9 +310,72 @@ function loadRpaFlowScenarios() {
     .filter(Boolean);
 }
 
+function loadWorkspaceScenarios() {
+  return [
+    toScenarioBase({
+      id: 'workspace-core',
+      name: 'Workspace Core Journey',
+      domain: 'workspace',
+      category: 'business',
+      type: 'workspace',
+      source: 'qa',
+      flow: 'Workspace Core Journey',
+      criticality: 'blocking',
+      adapter: 'api-rpa',
+      replay: true,
+      evidence: true,
+      modes: ['real', 'failure'],
+      script: 'scripts/workspace-core-smoke.js',
+      command: 'node',
+      commandArgs: ['scripts/workspace-core-smoke.js'],
+      description: 'Validação real do Workspace com suporte a failure injection e autocorrection.',
+      steps: [
+        'create_workspace_entity',
+        'simulate_inbound_message',
+        'create_ticket',
+        'create_task',
+        'generate_insight',
+        'generate_action',
+        'validate_timeline',
+        'generate_evidence',
+        'create_autocorrection_run',
+      ],
+      assertions: [
+        'entity criada',
+        'links criados',
+        'timeline correta',
+        'evidence gerada',
+        'replay gerado',
+        'insight critico criado',
+        'action criada',
+        'autocorrection pendente de revisao humana',
+      ],
+      impactScopes: ['workspace', 'qa', 'rpa', 'autocorrection', 'telemetry'],
+      expectedArtifacts: [path.join(ROOT_DIR, 'qa/workspace-core/evidence')],
+    }),
+  ];
+}
+
+function applyScenarioMode(scenario, mode) {
+  const normalizedMode = String(mode || '').trim().toLowerCase();
+  if (!normalizedMode) return scenario;
+  if (scenario.id !== 'workspace-core') return scenario;
+  if (!['real', 'failure'].includes(normalizedMode)) return scenario;
+
+  return {
+    ...scenario,
+    env: {
+      ...(scenario.env || {}),
+      WORKSPACE_TEST_MODE: normalizedMode,
+    },
+    runtimeMode: normalizedMode,
+  };
+}
+
 function buildRegistry() {
   return [
     ...loadQaSmokeScenarios(),
+    ...loadWorkspaceScenarios(),
     ...[...SCREEN_SCENARIOS, ...FLOW_SCENARIOS, ...JOURNEY_SCENARIOS].map(normalizeBusinessScenario),
     ...loadRpaFlowScenarios(),
   ].sort((a, b) => a.id.localeCompare(b.id));
@@ -327,13 +390,20 @@ function refreshRegistry() {
   return saveRegistry(buildRegistry());
 }
 
+function ensureWorkspaceCoreInRegistry(registry) {
+  if (registry.some((item) => item.id === 'workspace-core')) return registry;
+  const [workspaceCore] = loadWorkspaceScenarios();
+  return [...registry, workspaceCore];
+}
+
 function loadRegistry() {
   const current = safeReadJson(REGISTRY_PATH, null);
   if (Array.isArray(current) && current.length > 0) {
-    return current.map((item) => toScenarioBase({
+    const mapped = current.map((item) => toScenarioBase({
       ...item,
       requiresOfficialPipeline: scenarioRequiresOfficialPipeline(item),
     }));
+    return ensureWorkspaceCoreInRegistry(mapped);
   }
   return refreshRegistry();
 }
@@ -387,6 +457,7 @@ function selectScenarios(registry, options = {}) {
 }
 
 function resolveAdapter(adapterName) {
+  if (adapterName === 'api-rpa') return apiAdapter;
   if (adapterName === 'rpa') return rpaAdapter;
   if (adapterName === 'pbx') return pbxAdapter;
   if (adapterName === 'api') return apiAdapter;
@@ -408,6 +479,300 @@ function normalizeErrorList(value) {
 function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return filePath;
+}
+
+function normalizePathFromSummary(value) {
+  if (!value) return null;
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+  return path.isAbsolute(normalized) ? normalized : path.resolve(ROOT_DIR, normalized);
+}
+
+function parseSummaryPathFromLogs(logs = []) {
+  for (const line of logs.map((item) => String(item?.message || ''))) {
+    const match = line.match(/"summaryPath"\s*:\s*"([^"]+)"/);
+    if (match && match[1]) {
+      return normalizePathFromSummary(match[1]);
+    }
+  }
+  return null;
+}
+
+function findLatestWorkspaceSummaryPath() {
+  const baseDir = path.join(ROOT_DIR, 'qa', 'workspace-core', 'evidence');
+  if (!fs.existsSync(baseDir)) return null;
+  const candidates = fs.readdirSync(baseDir)
+    .map((name) => path.join(baseDir, name, 'summary.json'))
+    .filter((filePath) => fs.existsSync(filePath))
+    .map((filePath) => ({ filePath, mtime: fs.statSync(filePath).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime);
+  return candidates[0]?.filePath || null;
+}
+
+function resolveWaveSummaryPath(scenario, result) {
+  const fromLogs = parseSummaryPathFromLogs(result.logs || []);
+  if (fromLogs && fs.existsSync(fromLogs)) return fromLogs;
+  if (scenario.id === 'workspace-core') {
+    return findLatestWorkspaceSummaryPath();
+  }
+  return null;
+}
+
+async function applyGovernanceIntegrations({
+  summary,
+  governance,
+  scenario,
+  summaryPath,
+  db = null,
+  closeDbAfterIntegration = true,
+}) {
+  if (!summary || !governance) {
+    return { integrated: false, reason: 'missing_summary_or_governance' };
+  }
+
+  if (!['GO', 'NO_GO', 'REVIEW', 'GO_WITH_WARNINGS'].includes(governance.decision)) {
+    return { integrated: false, reason: 'unsupported_decision' };
+  }
+
+  const tenantId = summary.tenantId;
+  const entityId = summary.entityId;
+  if (!tenantId) {
+    return { integrated: false, reason: 'missing_tenant_id' };
+  }
+
+  let connect;
+  let close;
+  let models;
+  if (db) {
+    ({ connect, close, models } = db);
+  } else {
+    ({ connect, close } = require('../api/db/sequelize'));
+    models = require('../api/db/models');
+  }
+
+  const summaryPathRel = summary?.artifacts?.summaryPath || (summaryPath ? path.relative(ROOT_DIR, summaryPath) : null);
+  const replayPathRel = summary?.artifacts?.replayPath || null;
+  const evidenceId = summary?.records?.evidenceId || null;
+
+  const mustCreateAutoCorrection = ['NO_GO', 'REVIEW'].includes(governance.decision);
+  const isGo = governance.decision === 'GO';
+  const isGoWithWarnings = governance.decision === 'GO_WITH_WARNINGS';
+
+  const runPayload = {
+    tenant_id: tenantId,
+    source_type: 'qa_mesh_governance',
+    source_id: `${scenario.id}:${summaryPathRel || summary?.wave || 'wave'}`,
+    status: 'pending_review',
+    diagnosis: {
+      affectedModule: 'workspace',
+      rootCause: governance.reason,
+      risk: governance.severity,
+      failedChecks: governance.failedChecks || [],
+      governance,
+      summaryStatus: summary.status,
+    },
+    proposed_patch: {
+      patchSummary: 'Revisão técnica requerida pela governança QA Mesh.',
+      filesToChange: [],
+      testsToRun: [],
+    },
+    validation_result: {
+      status: 'pending_manual_execution',
+      summary: 'Ação técnica pendente por decisão de governança.',
+      governance,
+      evidencePath: summaryPathRel,
+      replayPath: replayPathRel,
+      severity: governance.severity,
+    },
+  };
+
+  const integrationResult = {
+    integrated: false,
+    created: {
+      autocorrectionRunId: null,
+      workspaceInsightId: null,
+      workspaceActionId: null,
+      timelineEventId: null,
+    },
+  };
+
+  await connect(3, 300);
+  try {
+    let run = null;
+    if (mustCreateAutoCorrection) {
+      const existingRun = await models.AutoCorrectionRun().findOne({
+        where: {
+          tenant_id: runPayload.tenant_id,
+          source_type: runPayload.source_type,
+          source_id: runPayload.source_id,
+        },
+        order: [['created_at', 'DESC']],
+      });
+
+      run = existingRun || await models.AutoCorrectionRun().create(runPayload);
+      integrationResult.created.autocorrectionRunId = run.id;
+
+      await models.AutoCorrectionAction().create({
+        run_id: run.id,
+        type: 'human_review',
+        status: 'pending',
+        payload: {
+          wave: summary.wave,
+          decision: governance.decision,
+          failedChecks: governance.failedChecks || [],
+          evidencePath: summaryPathRel,
+          replayPath: replayPathRel,
+          severity: governance.severity,
+          affectedModule: 'workspace',
+        },
+      });
+    }
+
+    if (entityId) {
+      if (run?.id) {
+        await models.WorkspaceEntityLink().findOrCreate({
+          where: {
+            tenant_id: tenantId,
+            source_type: 'autocorrection_run',
+            source_id: run.id,
+          },
+          defaults: {
+            tenant_id: tenantId,
+            entity_id: entityId,
+            source_type: 'autocorrection_run',
+            source_id: run.id,
+            confidence: 0.95,
+          },
+        });
+      }
+
+      if (evidenceId) {
+        await models.WorkspaceEntityLink().findOrCreate({
+          where: {
+            tenant_id: tenantId,
+            source_type: 'evidence',
+            source_id: evidenceId,
+          },
+          defaults: {
+            tenant_id: tenantId,
+            entity_id: entityId,
+            source_type: 'evidence',
+            source_id: evidenceId,
+            confidence: 1,
+          },
+        });
+
+        const evidenceRow = await models.Evidence().findOne({
+          where: { tenant_key: tenantId, id: evidenceId },
+        });
+        if (evidenceRow) {
+          const payload = typeof evidenceRow.toJSON === 'function' ? evidenceRow.toJSON() : evidenceRow;
+          await models.Evidence().update({
+            metadata: {
+              ...(payload.metadata || {}),
+              governance,
+              qaWaveStatus: summary.status,
+              checks: summary.checks || {},
+            },
+          }, {
+            where: { tenant_key: tenantId, id: evidenceId },
+          });
+        }
+      }
+
+      if (!isGo) {
+        const insight = await models.WorkspaceInsight().create({
+          tenant_id: tenantId,
+          entity_id: entityId,
+          type: isGoWithWarnings ? 'qa_governance_warning' : 'qa_governance',
+          description: governance.reason,
+          confidence: governance.severity === 'critical' ? 1 : governance.severity === 'high' ? 0.95 : 0.8,
+          source: 'QA_MESH',
+        });
+        integrationResult.created.workspaceInsightId = insight.id;
+
+        const action = await models.WorkspaceAction().create({
+          tenant_id: tenantId,
+          entity_id: entityId,
+          type: isGoWithWarnings ? 'operational_followup' : 'technical_review',
+          status: isGoWithWarnings ? 'recommended' : 'pending',
+          payload: {
+            wave: summary.wave,
+            decision: governance.decision,
+            failedChecks: governance.failedChecks || [],
+            evidencePath: summaryPathRel,
+            replayPath: replayPathRel,
+            severity: governance.severity,
+            lightweight: isGoWithWarnings,
+          },
+        });
+        integrationResult.created.workspaceActionId = action.id;
+      }
+
+      const timelineEvent = await models.WorkspaceTimelineEvent().create({
+        tenant_id: tenantId,
+        entity_id: entityId,
+        type: isGo ? 'qa_execution' : 'evidence',
+        ref_id: evidenceId || run?.id || null,
+        payload: {
+          source: 'QA_MESH',
+          wave: summary.wave,
+          governance,
+          evidencePath: summaryPathRel,
+          replayPath: replayPathRel,
+          autocorrection: {
+            required: mustCreateAutoCorrection,
+            created: Boolean(run?.id),
+          },
+        },
+      });
+      integrationResult.created.timelineEventId = timelineEvent.id;
+    }
+
+    integrationResult.integrated = true;
+    return integrationResult;
+  } finally {
+    if (closeDbAfterIntegration) {
+      await close().catch(() => {});
+    }
+  }
+}
+
+async function evaluateScenarioGovernance(scenario, result, options = {}) {
+  const summaryPath = resolveWaveSummaryPath(scenario, result);
+  if (!summaryPath || !fs.existsSync(summaryPath)) {
+    return null;
+  }
+
+  const summary = safeReadJson(summaryPath, null);
+  if (!summary || typeof summary !== 'object') {
+    return null;
+  }
+
+  const governance = evaluateWaveResult(summary);
+  const updatedSummary = {
+    ...summary,
+    governance,
+  };
+  writeJson(summaryPath, updatedSummary);
+
+  const integration = await applyGovernanceIntegrations({
+    summary: updatedSummary,
+    governance,
+    scenario,
+    summaryPath,
+    closeDbAfterIntegration: options.closeGovernanceDbAfterIntegration !== false,
+  }).catch((error) => ({
+    integrated: false,
+    error: error.message || String(error),
+  }));
+
+  return {
+    summaryPath,
+    summary: updatedSummary,
+    governance,
+    integration,
+  };
 }
 
 function durationMs(startedAt, finishedAt) {
@@ -1042,25 +1407,27 @@ async function runMesh(options = {}) {
   };
 
   for (const [index, scenario] of scenarios.entries()) {
+    const scenarioMode = (options.scenarioModeById && options.scenarioModeById[scenario.id]) || null;
+    const effectiveScenario = applyScenarioMode(scenario, scenarioMode);
     const scenarioStartedAt = nowIso();
-    console.log('EXECUTING_SCENARIO', scenario.id);
-    appendLog('EXECUTING_SCENARIO', 'info', { scenarioId: scenario.id, index: index + 1, total: registryTotal });
+    console.log('EXECUTING_SCENARIO', effectiveScenario.id);
+    appendLog('EXECUTING_SCENARIO', 'info', { scenarioId: effectiveScenario.id, index: index + 1, total: registryTotal, mode: effectiveScenario.runtimeMode || 'default' });
     options.onScenarioStart?.({
-      scenarioId: scenario.id,
+      scenarioId: effectiveScenario.id,
       index: index + 1,
       total: registryTotal,
     });
 
-    const adapterResult = await executeScenarioWithFallback(scenario, { appendLog });
+    const adapterResult = await executeScenarioWithFallback(effectiveScenario, { appendLog });
     const scenarioFinishedAt = nowIso();
     const result = {
-      id: scenario.id,
-      domain: scenario.domain,
-      type: scenario.type,
-      source: scenario.source,
-      flow: scenario.flow,
-      criticality: scenario.criticality,
-      adapter: scenario.adapter,
+      id: effectiveScenario.id,
+      domain: effectiveScenario.domain,
+      type: effectiveScenario.type,
+      source: effectiveScenario.source,
+      flow: effectiveScenario.flow,
+      criticality: effectiveScenario.criticality,
+      adapter: effectiveScenario.adapter,
       status: adapterResult.status,
       startedAt: scenarioStartedAt,
       finishedAt: scenarioFinishedAt,
@@ -1068,10 +1435,20 @@ async function runMesh(options = {}) {
       metrics: adapterResult.metrics || {},
       errors: normalizeErrorList(adapterResult.errors),
       artifacts: adapterResult.artifacts || [],
-      assertions: scenario.assertions || [],
-      rpaRecordingId: scenario.rpaRecordingId || null,
+      assertions: effectiveScenario.assertions || [],
+      rpaRecordingId: effectiveScenario.rpaRecordingId || null,
+      mode: effectiveScenario.runtimeMode || null,
     };
-    const replayArtifact = buildSyntheticReplay(scenario, result, evidenceDir);
+    const waveGovernance = await evaluateScenarioGovernance(effectiveScenario, result, {
+      closeGovernanceDbAfterIntegration: options.closeGovernanceDbAfterIntegration,
+    });
+    if (waveGovernance) {
+      result.waveSummaryPath = waveGovernance.summaryPath;
+      result.waveSummary = waveGovernance.summary;
+      result.governance = waveGovernance.governance;
+      result.governanceIntegration = waveGovernance.integration;
+    }
+    const replayArtifact = buildSyntheticReplay(effectiveScenario, result, evidenceDir);
     result.artifacts = [...result.artifacts, replayArtifact];
     result.replayArtifact = replayArtifact.path;
     const classifiedResult = classifyScenarioResult(result, priorHistory);
@@ -1092,6 +1469,16 @@ async function runMesh(options = {}) {
   });
 
   const failureAnalysis = aggregateFailures(results);
+  const governanceDecisions = results.reduce((acc, item) => {
+    if (item.governance?.decision) {
+      acc[item.id] = {
+        decision: item.governance.decision,
+        severity: item.governance.severity,
+        reason: item.governance.reason,
+      };
+    }
+    return acc;
+  }, {});
   const repairPlan = buildRepairPlan(results);
 
   const summary = {
@@ -1114,6 +1501,7 @@ async function runMesh(options = {}) {
     // Degradação explícita: cenários que passaram via fallback de adapter (primary falhou)
     fallbackUsed: results.filter((r) => r.status === 'passed_via_fallback').length,
     fallbackBlockingUsed: results.filter((r) => r.status === 'passed_via_fallback' && r.criticality === 'blocking').length,
+    governanceDecisions,
     executionCoverage: governance.executionCoverage,
     executionQuality: governance.executionQuality,
     domains: governance.domains,
@@ -1273,6 +1661,21 @@ async function runMesh(options = {}) {
   return execution;
 }
 
+async function run(scenarioId, options = {}) {
+  if (!scenarioId) {
+    throw new Error('scenarioId é obrigatório para meshRunner.run');
+  }
+
+  const mode = options.mode ? String(options.mode).toLowerCase() : null;
+  const scenarioModeById = mode ? { [scenarioId]: mode } : undefined;
+
+  return runMesh({
+    ...options,
+    scenarioIds: [scenarioId],
+    scenarioModeById,
+  });
+}
+
 async function runFromCli() {
   const args = process.argv.slice(2);
   if (args.includes('--refresh-registry')) {
@@ -1324,6 +1727,9 @@ module.exports = {
   loadRegistry,
   selectScenarios,
   runMesh,
+  run,
+  evaluateScenarioGovernance,
+  applyGovernanceIntegrations,
   loadHistory,
   diffAgainstPrevious,
   executeScenarioWithFallback,

@@ -35,21 +35,23 @@ function buildSections(activeArea) {
   const sections = [];
   const fallbackItems = [];
 
+  const shouldShowInSecondaryNav = (item) => item?.path && !item.hiddenInSubNav;
+
   activeArea.nodes.forEach((node) => {
-    if (node.path && !node.hiddenInSidebar) {
+    if (shouldShowInSecondaryNav(node)) {
       fallbackItems.push(node);
     }
 
     (node.children || []).forEach((child) => {
       if (Array.isArray(child.children) && child.children.length > 0) {
-        const children = child.children.filter((item) => item.path && !item.hiddenInSidebar);
+        const children = child.children.filter(shouldShowInSecondaryNav);
         if (children.length > 0) {
           sections.push({ id: child.id, label: child.label, items: children });
         }
         return;
       }
 
-      if (child.path && !child.hiddenInSidebar) {
+      if (shouldShowInSecondaryNav(child)) {
         fallbackItems.push(child);
       }
     });
@@ -73,7 +75,7 @@ function buildSections(activeArea) {
     .filter((section) => section.items.length > 0);
 }
 
-export function SecondaryNav({ agent, currentPath }) {
+export function SecondaryNav({ agent, currentPath, onCollapsedChange }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedSections, setCollapsedSections] = useState({});
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -94,9 +96,13 @@ export function SecondaryNav({ agent, currentPath }) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1080px)');
-    const handleViewportChange = (event) => setIsMobileViewport(event.matches);
+    const handleViewportChange = (event) => {
+      setIsMobileViewport(event.matches);
+      setIsMobilePanelOpen(!event.matches);
+    };
 
     setIsMobileViewport(mediaQuery.matches);
+    setIsMobilePanelOpen(!mediaQuery.matches);
 
     if (typeof mediaQuery.addEventListener === 'function') {
       mediaQuery.addEventListener('change', handleViewportChange);
@@ -108,18 +114,24 @@ export function SecondaryNav({ agent, currentPath }) {
   }, []);
 
   useEffect(() => {
-    if (!isMobileViewport) {
+    if (searchTerm.trim()) {
       setIsMobilePanelOpen(true);
-      return;
     }
-    setIsMobilePanelOpen(false);
-  }, [isMobileViewport, currentPath]);
+  }, [searchTerm]);
 
   useEffect(() => {
-    if (isMobileViewport && searchTerm.trim()) {
-      setIsMobilePanelOpen(true);
-    }
-  }, [isMobileViewport, searchTerm]);
+    if (!isMobilePanelOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      const panel = event.target?.closest?.('.rap-secondary-nav');
+      if (!panel) {
+        setIsMobilePanelOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideClick);
+    return () => document.removeEventListener('pointerdown', handleOutsideClick);
+  }, [isMobilePanelOpen]);
 
   useEffect(() => {
     setCollapsedSections((previous) => {
@@ -165,10 +177,18 @@ export function SecondaryNav({ agent, currentPath }) {
     }));
   }
 
-  const isSecondaryBodyCollapsed = isMobileViewport && !isMobilePanelOpen;
+  function handleItemClick() {
+    setIsMobilePanelOpen(false);
+  }
+
+  const isSecondaryBodyCollapsed = !isMobilePanelOpen;
+
+  useEffect(() => {
+    onCollapsedChange?.(isSecondaryBodyCollapsed);
+  }, [isSecondaryBodyCollapsed, onCollapsedChange]);
 
   return (
-    <aside className="rap-secondary-nav" aria-label="Navegação secundária">
+    <aside className={`rap-secondary-nav ${isSecondaryBodyCollapsed ? 'is-panel-collapsed' : ''}`} aria-label="Navegação secundária">
       <header className="rap-secondary-nav-header">
         <p className="rap-secondary-nav-kicker">Área ativa</p>
         <h2>{activeArea?.label || 'Navegação'}</h2>
@@ -180,7 +200,7 @@ export function SecondaryNav({ agent, currentPath }) {
           aria-expanded={!isSecondaryBodyCollapsed}
           aria-controls="secondary-nav-body"
         >
-          <span>{isSecondaryBodyCollapsed ? 'Abrir menu da area' : 'Fechar menu da area'}</span>
+          <span>{isSecondaryBodyCollapsed ? 'Abrir menu da area' : 'Recolher menu da area'}</span>
           <span className="rap-secondary-nav-mobile-toggle-icon" aria-hidden="true">▾</span>
         </button>
       </header>
@@ -226,6 +246,7 @@ export function SecondaryNav({ agent, currentPath }) {
                         key={item.id}
                         to={item.path}
                         className={`rap-secondary-nav-item ${pathMatches(item.path, currentPath) ? 'is-active' : ''}`}
+                        onClick={handleItemClick}
                       >
                         <span className="rap-secondary-nav-item-label">{item.label}</span>
                         {item.badge ? <span className="rap-secondary-nav-item-badge">{item.badge}</span> : null}

@@ -34,6 +34,11 @@ function createWorkspaceController({ service, deps }) {
       if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
+    autocorrections: (req, res) => run(req, res, 'insight', async (tenantId) => {
+      const result = await service.getAutoCorrections(tenantId, req.params.id);
+      if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
+      deps.sendJson(res, 200, { ok: true, ...result });
+    }),
     actions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 200, { ok: true, ...(await service.getActions(tenantId, req.params.id)) })),
     createAction: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 201, { ok: true, action: await service.createAction(tenantId, await body(req, res)) }), 201),
     executeSuggestedActions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 201, { ok: true, ...(await service.executeSuggestedActions(tenantId, req.params.id)) }), 201),

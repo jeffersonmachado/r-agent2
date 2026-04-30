@@ -108,7 +108,10 @@ class WorkspaceInsightService {
 
     const aiInsights = await this.generateAiClassifications({ tenantId, entityId, timeline });
     const generated = [...insights, ...aiInsights];
-    const persisted = await this.persistGeneratedInsights({ tenantId, entityId, insights: generated });
+    const persistedGenerated = await this.persistGeneratedInsights({ tenantId, entityId, insights: generated });
+    const persistedExisting = await this.persistedInsights({ tenantId, entityId, limit: 100 });
+    const persisted = [...persistedExisting, ...persistedGenerated]
+      .filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
 
     return { items: generated, persisted, total: generated.length + persisted.length };
   }

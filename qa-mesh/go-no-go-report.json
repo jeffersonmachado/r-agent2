@@ -1,22 +1,22 @@
 {
   "source": "qa-mesh",
-  "executionId": "system-validate-2026-04-21T05-00-07-785Z",
+  "executionId": "mesh-governance-status-1777550648252",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "totals": {
-    "executionId": "system-validate-2026-04-21T05-00-07-785Z",
-    "timestamp": "2026-04-21T05:09:31.524Z",
+    "executionId": "mesh-governance-status-1777550648252",
+    "timestamp": "2026-04-30T12:04:08.474Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 6,
-    "attempted": 6,
-    "executed": 6,
-    "total": 6,
-    "passed": 6,
+    "registryTotal": 1,
+    "attempted": 1,
+    "executed": 1,
+    "total": 1,
+    "passed": 1,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -25,10 +25,17 @@
     "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
+    "governanceDecisions": {
+      "workspace-core-status-separation": {
+        "decision": "REVIEW",
+        "severity": "high",
+        "reason": "High severity checks require technical review"
+      }
+    },
     "executionCoverage": 1,
     "executionQuality": "valid",
     "domains": {
-      "omnichannel": {
+      "workspace": {
         "passed": 1,
         "fallbackPassed": 0,
         "failed": 0,
@@ -37,45 +44,13 @@
         "environment_missing": 0,
         "flaky": 0,
         "total": 1
-      },
-      "core": {
-        "passed": 2,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 2
-      },
-      "pbx": {
-        "passed": 3,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 3
       }
     },
     "goNoGo": "GO",
     "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "omnichannel": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "pbx": {
+      "workspace": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -87,5 +62,5 @@
     "blockingDomains": [],
     "changedFiles": []
   },
-  "generatedAt": "2026-04-21T05:11:32.623Z"
+  "generatedAt": "2026-04-30T12:04:09.258Z"
 }

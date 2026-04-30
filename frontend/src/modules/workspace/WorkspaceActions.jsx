@@ -10,7 +10,7 @@ export function WorkspaceActions({ actions, loading, onCreateSuggested }) {
       <p className="workspace-muted text-sm mb-4">Tarefas, follow-ups, notificações e automações sugeridas.</p>
 
       {suggestion ? (
-        <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 mb-4">
+        <div className="workspace-highlight-card mb-4">
           <span className="workspace-pill">{suggestion.type}</span>
           <h3 className="text-lg font-semibold mt-2">{suggestion.label}</h3>
           <p className="workspace-muted text-sm mt-1">{suggestion.reason}</p>
@@ -20,10 +20,10 @@ export function WorkspaceActions({ actions, loading, onCreateSuggested }) {
         </div>
       ) : null}
 
-      {loading ? <p className="workspace-muted">Carregando ações...</p> : null}
+      {loading ? <div className="workspace-skeleton-stack"><div className="workspace-skeleton h-16"></div><div className="workspace-skeleton h-16"></div></div> : null}
       {!loading && items.length === 0 ? <p className="workspace-muted">Nenhuma ação persistida ainda.</p> : null}
       {items.map((action) => (
-        <article key={action.id} className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+        <article key={action.id} className="workspace-mini-card">
           <div className="flex items-center justify-between gap-3">
             <span className="workspace-pill">{action.type}</span>
             <span className="workspace-muted text-xs">{action.status}</span>

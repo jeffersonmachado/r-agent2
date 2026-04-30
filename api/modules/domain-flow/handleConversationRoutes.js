@@ -16,6 +16,16 @@ async function handleConversationRoutes(ctx) {
     buildConversationReplay,
   } = deps;
 
+  function isDatabaseUnavailableError(err) {
+    const text = String(err?.message || err || '').toLowerCase();
+    return (
+      text.includes('postgresql não está disponível')
+      || text.includes('connectionmanager.getconnection was called after the connection manager was closed')
+      || text.includes('connection manager was closed')
+      || text.includes('connection terminated unexpectedly')
+    );
+  }
+
   if (!pathname.startsWith('/conversations')) {
     return false;
   }
@@ -152,8 +162,13 @@ async function handleConversationRoutes(ctx) {
 
       sendJson(res, 200, { conversationId, messages: result.items, total: result.total });
     } catch (err) {
+      const conversationId = decodeURIComponent(pathname.split('/')[2]);
       logger.error('[Conversations] Erro ao listar mensagens (channels):', err);
-      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens (channels)' });
+      if (isDatabaseUnavailableError(err)) {
+        sendJson(res, 200, { conversationId, messages: [], total: 0, degraded: true });
+      } else {
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar mensagens (channels)' });
+      }
     }
     return true;
   }

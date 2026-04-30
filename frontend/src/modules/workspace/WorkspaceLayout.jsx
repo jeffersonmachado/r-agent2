@@ -5,48 +5,62 @@ import { WorkspaceHeader } from './WorkspaceHeader';
 import { WorkspaceTimeline } from './WorkspaceTimeline';
 import { WorkspaceInsights } from './WorkspaceInsights';
 import { WorkspaceActions } from './WorkspaceActions';
+import { WorkspaceQaRpaPanel } from './WorkspaceQaRpaPanel';
+import { WorkspaceRightRail } from './WorkspaceRightRail';
 
-const tabs = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'QA/RPA', 'Insights IA', 'Ações'];
+const tabs = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'Pagamentos', 'QA/RPA', 'Insights IA', 'Ações'];
 
 export function WorkspaceLayout({
   entities,
   selectedEntity,
+  selectedSummary,
   selectedEntityId,
+  entitySummaries,
   loadingEntities,
   query,
+  sidebarFilter,
   activeTab,
   timeline,
   insights,
   actions,
+  autocorrections,
   loadingTimeline,
   loadingInsights,
   loadingActions,
+  loadingAutoCorrections,
   onQueryChange,
+  onSidebarFilterChange,
   onSelectEntity,
   onTabChange,
   onCreateDemo,
   onLoadMoreTimeline,
   onCreateSuggestedAction,
+  onCreateTask,
+  onCreateFollowUp,
 }) {
-  const showTimeline = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'QA/RPA'].includes(activeTab);
+  const showTimeline = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'Pagamentos'].includes(activeTab);
   const showInsights = ['Resumo', 'Insights IA'].includes(activeTab);
   const showActions = ['Resumo', 'Ações'].includes(activeTab);
+  const showQaPanel = activeTab === 'QA/RPA';
 
   return (
     <div className="workspace-page">
       <div className="workspace-shell">
         <WorkspaceSidebar
           entities={entities}
+          entitySummaries={entitySummaries}
           selectedId={selectedEntityId}
           loading={loadingEntities}
           query={query}
+          activeFilter={sidebarFilter}
           onQueryChange={onQueryChange}
+          onFilterChange={onSidebarFilterChange}
           onSelect={onSelectEntity}
           onCreateDemo={onCreateDemo}
         />
 
         <main className="workspace-panel workspace-main">
-          <WorkspaceHeader entity={selectedEntity} />
+          <WorkspaceHeader entity={selectedEntity} summary={selectedSummary} onCreateTask={onCreateTask} onCreateFollowUp={onCreateFollowUp} />
 
           <nav className="workspace-tabs" aria-label="Workspace tabs">
             {tabs.map((tab) => (
@@ -70,12 +84,25 @@ export function WorkspaceLayout({
             </div>
           ) : (
             <div className="workspace-grid">
-              {showTimeline ? (
+              <div className="workspace-center-column">
+              {showQaPanel ? (
+                <WorkspaceQaRpaPanel autocorrections={autocorrections} loading={loadingAutoCorrections} timeline={timeline} />
+              ) : showTimeline ? (
                 <WorkspaceTimeline timeline={timeline} loading={loadingTimeline} onLoadMore={onLoadMoreTimeline} />
               ) : (
                 <WorkspaceInsights insights={insights} loading={loadingInsights} />
               )}
-              <div className="grid gap-4 min-h-0">
+              </div>
+              <WorkspaceRightRail
+                summary={selectedSummary}
+                insights={insights}
+                actions={actions}
+                autocorrections={autocorrections}
+                loadingInsights={loadingInsights}
+                loadingActions={loadingActions}
+                loadingAutoCorrections={loadingAutoCorrections}
+              />
+              <div className="workspace-detail-stack">
                 {showInsights ? <WorkspaceInsights insights={insights} loading={loadingInsights} /> : null}
                 {showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}
                 {!showInsights && !showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}

@@ -5,6 +5,7 @@ const WorkspaceTimelineService = require('../../services/workspace/WorkspaceTime
 const WorkspaceInsightService = require('../../services/workspace/WorkspaceInsightService');
 const WorkspaceActionService = require('../../services/workspace/WorkspaceActionService');
 const WorkspaceOperationsService = require('../../services/workspace/WorkspaceOperationsService');
+const { AutoCorrectionService } = require('../../services/autocorrection');
 const { clampLimit, offsetValue } = require('../../services/workspace/workspaceUtils');
 
 function createWorkspaceService(deps = {}) {
@@ -13,6 +14,7 @@ function createWorkspaceService(deps = {}) {
   const operationsService = deps.operationsService || new WorkspaceOperationsService({ ...deps, entityService });
   const insightService = deps.insightService || new WorkspaceInsightService({ ...deps, timelineService });
   const actionService = deps.actionService || new WorkspaceActionService({ ...deps, insightService, operationsService });
+  const autoCorrectionService = deps.autoCorrectionService || new AutoCorrectionService({ ...deps, timelineService });
 
   return {
     listEntities: (tenantId, query = {}) => entityService.listEntities({ tenantId, q: query.q, limit: clampLimit(query.limit, 50, 100), offset: offsetValue(query.offset) }),
@@ -20,10 +22,21 @@ function createWorkspaceService(deps = {}) {
     createEntity: (tenantId, body = {}) => entityService.getOrCreateEntityFromContact({ tenantId, contact: { type: body.type, name: body.name, phone: body.phone, email: body.email, source: body.source || 'workspace', refId: body.refId, raw: body.metadata || {} } }),
     linkEntity: (tenantId, body = {}) => entityService.linkEntity({ tenantId, entityId: body.entityId || body.entity_id, sourceType: body.sourceType || body.source_type, sourceId: body.sourceId || body.source_id, confidence: body.confidence ?? 1 }),
     getTimeline: (tenantId, entityId, query = {}) => timelineService.getEntityTimeline({ tenantId, entityId, limit: query.limit, offset: query.offset, type: query.type }),
-    getInsights: (tenantId, entityId) => insightService.generateInsights(entityId, { tenantId }),
+    getInsights: async (tenantId, entityId) => {
+      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
+      if (!timeline) return null;
+      await autoCorrectionService.ensureForEntityFailures({ tenantId, entityId, timeline });
+      return insightService.generateInsights(entityId, { tenantId, timeline });
+    },
     getActions: async (tenantId, entityId) => {
       const [items, suggestion] = await Promise.all([actionService.listActions({ tenantId, entityId }), actionService.suggestNextBestAction({ tenantId, entityId })]);
       return { items, suggestion };
+    },
+    getAutoCorrections: async (tenantId, entityId) => {
+      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
+      if (!timeline) return null;
+      await autoCorrectionService.ensureForEntityFailures({ tenantId, entityId, timeline });
+      return autoCorrectionService.listRunsForEntity({ tenantId, entityId });
     },
     createAction: (tenantId, body = {}) => actionService.createAction({ tenantId, entityId: body.entityId || body.entity_id, type: body.type, status: body.status, payload: body.payload }),
     executeSuggestedActions: async (tenantId, entityId) => {

@@ -48,7 +48,7 @@ const CONTEXT_PRESETS = {
   },
 };
 
-export function ContextPanel({ agent, currentPath, tenantLabel = '' }) {
+export function ContextPanel({ agent, currentPath, tenantLabel = '', onClose }) {
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const { activeArea } = useMemo(
     () => buildWorkspaceAreas(filteredMenu, currentPath),
@@ -60,7 +60,19 @@ export function ContextPanel({ agent, currentPath, tenantLabel = '' }) {
   const preset = CONTEXT_PRESETS[presetKey] || CONTEXT_PRESETS.overview;
 
   return (
-    <aside className="rap-context-panel" aria-label="Painel de contexto">
+    <aside id="rap-context-panel" className="rap-context-panel" aria-label="Painel de contexto">
+      <header className="rap-context-panel-header">
+        <span>Painel de contexto</span>
+        <button
+          type="button"
+          className="rap-context-panel-close"
+          onClick={onClose}
+        aria-label="Recolher painel de contexto"
+        title="Recolher painel"
+      >
+          x
+        </button>
+      </header>
       <section className="rap-context-card">
         <h3>{preset.title}</h3>
         <p>{activeArea?.description || 'Sem área ativa.'}</p>

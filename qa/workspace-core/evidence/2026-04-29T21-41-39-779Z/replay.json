@@ -1,0 +1,1032 @@
+[
+  {
+    "step": "create_workspace_entity",
+    "status": "passed",
+    "input": {
+      "tenantId": "workspace-core-1777498899780",
+      "phone": "5511999899948"
+    },
+    "output": {
+      "entity": {
+        "id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+        "tenant_id": "workspace-core-1777498899780",
+        "type": "contact",
+        "name": "Cliente Workspace Core a16d4a",
+        "phone": "5511999899948",
+        "email": "workspace-core-a16d4a@example.test",
+        "metadata": {
+          "raw": {
+            "wave": "workspace-core",
+            "generatedAt": "2026-04-29T21:41:39.948Z"
+          },
+          "lastSource": "qa_wave",
+          "sourceRefs": {
+            "qa_wave": "contact-a16d4a"
+          }
+        },
+        "updatedAt": "2026-04-29T21:41:39.973Z",
+        "createdAt": "2026-04-29T21:41:39.973Z"
+      }
+    },
+    "timestamp": "2026-04-29T21:41:39.948Z",
+    "finishedAt": "2026-04-29T21:41:39.989Z"
+  },
+  {
+    "step": "simulate_inbound_message",
+    "status": "passed",
+    "input": {
+      "tenantId": "workspace-core-1777498899780",
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+      "phone": "5511999899948"
+    },
+    "output": {
+      "conversation": {
+        "id": "conv-workspace-core-1777498899990-c193889d",
+        "tenant_key": "workspace-core-1777498899780",
+        "channel_type": "whatsapp",
+        "external_id": "wa-5511999899948-a16d4a",
+        "contact_id": "5511999899948",
+        "status": "open",
+        "last_message_at": "2026-04-29T21:41:39.990Z",
+        "updatedAt": "2026-04-29T21:41:39.994Z",
+        "createdAt": "2026-04-29T21:41:39.994Z",
+        "current_ticket_id": null
+      },
+      "message": {
+        "id": "msg-workspace-core-1777498899990-b8645e55",
+        "tenant_key": "workspace-core-1777498899780",
+        "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+        "channel_type": "whatsapp",
+        "direction": "inbound",
+        "type": "text",
+        "body": {
+          "text": "Preciso de ajuda com meu atendimento e quero acompanhar o status."
+        },
+        "external_message_id": "ext-msg-workspace-core-1777498899990-b8645e55",
+        "status": "received",
+        "updatedAt": "2026-04-29T21:41:40.002Z",
+        "createdAt": "2026-04-29T21:41:40.002Z"
+      }
+    },
+    "timestamp": "2026-04-29T21:41:39.989Z",
+    "finishedAt": "2026-04-29T21:41:40.038Z"
+  },
+  {
+    "step": "create_ticket",
+    "status": "passed",
+    "input": {
+      "tenantId": "workspace-core-1777498899780",
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+      "conversationId": "conv-workspace-core-1777498899990-c193889d"
+    },
+    "output": {
+      "ticket": {
+        "id": "ticket-workspace-core-1777498900038-c3aee52c",
+        "tenant_key": "workspace-core-1777498899780",
+        "session_id": "session-ticket-workspace-core-1777498900038-c3aee52c",
+        "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+        "channel_type": "whatsapp",
+        "queue": "workspace-core",
+        "status": "waiting",
+        "mode": "human",
+        "phone_number": "5511999899948",
+        "last_user_message": "Preciso de ajuda com meu atendimento e quero acompanhar o status.",
+        "unread_count": 1,
+        "tags": [
+          "workspace-core",
+          "qa-wave"
+        ],
+        "category": "support",
+        "messages": [
+          {
+            "id": "msg-workspace-core-1777498899990-b8645e55",
+            "direction": "inbound"
+          }
+        ],
+        "context": {
+          "wave": "workspace-core",
+          "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+        },
+        "updatedAt": "2026-04-29T21:41:40.041Z",
+        "createdAt": "2026-04-29T21:41:40.041Z",
+        "pause_reason": null,
+        "takeover_at": null,
+        "return_to_bot_at": null,
+        "takeover_reason": null,
+        "return_reason": null,
+        "first_response_at": null,
+        "resolved_at": null,
+        "waiting_time_seconds": null,
+        "handling_time_seconds": null,
+        "assigned_to": null
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.038Z",
+    "finishedAt": "2026-04-29T21:41:40.065Z"
+  },
+  {
+    "step": "create_task",
+    "status": "passed",
+    "input": {
+      "tenantId": "workspace-core-1777498899780",
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+      "ticketId": "ticket-workspace-core-1777498900038-c3aee52c",
+      "conversationId": "conv-workspace-core-1777498899990-c193889d"
+    },
+    "output": {
+      "task": {
+        "id": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+        "tenant_id": "workspace-core-1777498899780",
+        "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+        "ticket_id": "ticket-workspace-core-1777498900038-c3aee52c",
+        "project_id": null,
+        "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+        "title": "Acompanhar cliente da wave Workspace Core",
+        "description": "Tarefa operacional criada pela jornada QA Mesh workspace-core.",
+        "type": "manual",
+        "priority": "high",
+        "status": "open",
+        "due_date": "2026-04-29T22:41:40.066Z",
+        "assigned_to": "qa-mesh",
+        "updatedAt": "2026-04-29T21:41:40.070Z",
+        "createdAt": "2026-04-29T21:41:40.070Z"
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.066Z",
+    "finishedAt": "2026-04-29T21:41:40.093Z"
+  },
+  {
+    "step": "validate_timeline_before_evidence",
+    "status": "passed",
+    "input": {
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+    },
+    "output": {
+      "timeline": {
+        "items": [
+          {
+            "id": "task:6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "type": "task",
+            "source": "manual",
+            "refId": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "createdAt": "2026-04-29T22:41:40.066Z",
+            "summary": "Tarefa: Acompanhar cliente da wave Workspace Core",
+            "detailUrl": "/tasks?taskId=6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "confidence": 1,
+            "payload": {
+              "id": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+              "tenant_id": "workspace-core-1777498899780",
+              "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+              "ticket_id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "project_id": null,
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "title": "Acompanhar cliente da wave Workspace Core",
+              "description": "Tarefa operacional criada pela jornada QA Mesh workspace-core.",
+              "type": "manual",
+              "priority": "high",
+              "status": "open",
+              "due_date": "2026-04-29T22:41:40.066Z",
+              "assigned_to": "qa-mesh",
+              "createdAt": "2026-04-29T21:41:40.070Z",
+              "updatedAt": "2026-04-29T21:41:40.070Z"
+            }
+          },
+          {
+            "id": "ticket:ticket-workspace-core-1777498900038-c3aee52c",
+            "type": "ticket",
+            "source": "whatsapp",
+            "refId": "ticket-workspace-core-1777498900038-c3aee52c",
+            "createdAt": "2026-04-29T21:41:40.140Z",
+            "summary": "Ticket waiting na fila workspace-core",
+            "detailUrl": "/support?ticketId=ticket-workspace-core-1777498900038-c3aee52c",
+            "confidence": 1,
+            "payload": {
+              "id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "tenant_key": "workspace-core-1777498899780",
+              "session_id": "session-ticket-workspace-core-1777498900038-c3aee52c",
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "channel_type": "whatsapp",
+              "queue": "workspace-core",
+              "status": "waiting",
+              "mode": "human",
+              "pause_reason": null,
+              "takeover_at": null,
+              "return_to_bot_at": null,
+              "takeover_reason": null,
+              "return_reason": null,
+              "first_response_at": null,
+              "resolved_at": null,
+              "waiting_time_seconds": null,
+              "handling_time_seconds": null,
+              "assigned_to": null,
+              "phone_number": "5511999899948",
+              "last_user_message": "Preciso de ajuda com meu atendimento e quero acompanhar o status.",
+              "unread_count": 1,
+              "tags": [
+                "workspace-core",
+                "qa-wave"
+              ],
+              "category": "support",
+              "messages": [
+                {
+                  "id": "msg-workspace-core-1777498899990-b8645e55",
+                  "direction": "inbound"
+                }
+              ],
+              "context": {
+                "wave": "workspace-core",
+                "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+              },
+              "createdAt": "2026-04-29T21:41:40.041Z",
+              "updatedAt": "2026-04-29T21:41:40.041Z"
+            }
+          },
+          {
+            "id": "message:msg-workspace-core-1777498899990-b8645e55",
+            "type": "message",
+            "source": "whatsapp",
+            "refId": "msg-workspace-core-1777498899990-b8645e55",
+            "createdAt": "2026-04-29T21:41:40.135Z",
+            "summary": "inbound: Preciso de ajuda com meu atendimento e quero acompanhar o status.",
+            "detailUrl": "/inbox?conversationId=conv-workspace-core-1777498899990-c193889d",
+            "confidence": 1,
+            "payload": {
+              "id": "msg-workspace-core-1777498899990-b8645e55",
+              "tenant_key": "workspace-core-1777498899780",
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "channel_type": "whatsapp",
+              "direction": "inbound",
+              "type": "text",
+              "body": {
+                "text": "Preciso de ajuda com meu atendimento e quero acompanhar o status."
+              },
+              "external_message_id": "ext-msg-workspace-core-1777498899990-b8645e55",
+              "status": "received",
+              "createdAt": "2026-04-29T21:41:40.002Z",
+              "updatedAt": "2026-04-29T21:41:40.002Z"
+            }
+          },
+          {
+            "id": "conversation:conv-workspace-core-1777498899990-c193889d",
+            "type": "conversation",
+            "source": "whatsapp",
+            "refId": "conv-workspace-core-1777498899990-c193889d",
+            "createdAt": "2026-04-29T21:41:39.990Z",
+            "summary": "Conversa open em whatsapp",
+            "detailUrl": "/inbox?conversationId=conv-workspace-core-1777498899990-c193889d",
+            "confidence": 1,
+            "payload": {
+              "id": "conv-workspace-core-1777498899990-c193889d",
+              "tenant_key": "workspace-core-1777498899780",
+              "channel_type": "whatsapp",
+              "external_id": "wa-5511999899948-a16d4a",
+              "contact_id": "5511999899948",
+              "status": "open",
+              "current_ticket_id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "last_message_at": "2026-04-29T21:41:39.990Z",
+              "createdAt": "2026-04-29T21:41:39.994Z",
+              "updatedAt": "2026-04-29T21:41:40.049Z"
+            }
+          }
+        ],
+        "total": 4,
+        "limit": 100,
+        "offset": 0,
+        "hasMore": false,
+        "links": 4
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.093Z",
+    "finishedAt": "2026-04-29T21:41:40.158Z"
+  },
+  {
+    "step": "generate_evidence",
+    "status": "passed",
+    "input": {
+      "tenantId": "workspace-core-1777498899780",
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+      "mode": "failure"
+    },
+    "output": {
+      "evidence": {
+        "indexed_at": "2026-04-29T21:41:40.166Z",
+        "id": "ev-workspace-core-1777498900159-bd1fc8e8",
+        "tenant_key": "workspace-core-1777498899780",
+        "entity_type": "workspace_entity",
+        "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+        "related_entities": [
+          {
+            "id": "conv-workspace-core-1777498899990-c193889d",
+            "type": "conversation"
+          },
+          {
+            "id": "msg-workspace-core-1777498899990-b8645e55",
+            "type": "message"
+          },
+          {
+            "id": "ticket-workspace-core-1777498900038-c3aee52c",
+            "type": "ticket"
+          },
+          {
+            "id": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "type": "task"
+          }
+        ],
+        "source_type": "qa_wave",
+        "source_id": "workspace-core",
+        "source_ref": {
+          "mode": "failure",
+          "module": "workspace-core",
+          "replayUrl": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+          "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+          "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "timelinePath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/timeline.json",
+          "autocorrectionPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/autocorrection.json"
+        },
+        "category": "workspace",
+        "type": "failure",
+        "theme": "workspace-core-autocorrection",
+        "summary": "Falha QA/RPA simulada na wave workspace-core para validar autocorreção assistida.",
+        "excerpt": "A jornada operacional foi criada; esta evidência injeta uma falha controlada para validar diagnóstico e revisão humana.",
+        "normalized_text": "workspace core qa rpa failure autocorrection replay evidence",
+        "occurred_at": "2026-04-29T21:41:40.165Z",
+        "confidence": 0.98,
+        "strength": "strong",
+        "actor_type": "qa_mesh",
+        "actor_id": "workspace-core",
+        "attachments": [
+          {
+            "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "type": "summary"
+          },
+          {
+            "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+            "type": "replay"
+          },
+          {
+            "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/timeline.json",
+            "type": "timeline"
+          }
+        ],
+        "metadata": {
+          "mode": "failure",
+          "wave": "workspace-core",
+          "reason": "Falha QA/RPA simulada para validar ciclo Evidence -> Replay -> AutoCorrection.",
+          "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+          "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "qaWaveStatus": "failed",
+          "checksSnapshot": {
+            "taskLinked": false,
+            "linksCreated": false,
+            "ticketLinked": false,
+            "actionCreated": false,
+            "entityCreated": false,
+            "messageLinked": false,
+            "insightCreated": false,
+            "replayGenerated": false,
+            "evidenceGenerated": false,
+            "conversationLinked": false,
+            "timelineConsistent": false,
+            "timelineContainsTask": false,
+            "timelineContainsTicket": false,
+            "timelineContainsMessage": false,
+            "timelineContainsEvidence": false,
+            "autocorrectionCreatedOnFailure": false
+          },
+          "expectedFailure": true
+        },
+        "idempotency_key": "workspace-core-1777498899780:workspace-core:2026-04-29T21-41-40-165Z",
+        "updatedAt": "2026-04-29T21:41:40.167Z",
+        "createdAt": "2026-04-29T21:41:40.167Z"
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.158Z",
+    "finishedAt": "2026-04-29T21:41:40.200Z"
+  },
+  {
+    "step": "validate_timeline",
+    "status": "passed",
+    "input": {
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+    },
+    "output": {
+      "timeline": {
+        "items": [
+          {
+            "id": "task:6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "type": "task",
+            "source": "manual",
+            "refId": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "createdAt": "2026-04-29T22:41:40.066Z",
+            "summary": "Tarefa: Acompanhar cliente da wave Workspace Core",
+            "detailUrl": "/tasks?taskId=6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+            "confidence": 1,
+            "payload": {
+              "id": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+              "tenant_id": "workspace-core-1777498899780",
+              "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+              "ticket_id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "project_id": null,
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "title": "Acompanhar cliente da wave Workspace Core",
+              "description": "Tarefa operacional criada pela jornada QA Mesh workspace-core.",
+              "type": "manual",
+              "priority": "high",
+              "status": "open",
+              "due_date": "2026-04-29T22:41:40.066Z",
+              "assigned_to": "qa-mesh",
+              "createdAt": "2026-04-29T21:41:40.070Z",
+              "updatedAt": "2026-04-29T21:41:40.070Z"
+            }
+          },
+          {
+            "id": "ticket:ticket-workspace-core-1777498900038-c3aee52c",
+            "type": "ticket",
+            "source": "whatsapp",
+            "refId": "ticket-workspace-core-1777498900038-c3aee52c",
+            "createdAt": "2026-04-29T21:41:40.231Z",
+            "summary": "Ticket waiting na fila workspace-core",
+            "detailUrl": "/support?ticketId=ticket-workspace-core-1777498900038-c3aee52c",
+            "confidence": 1,
+            "payload": {
+              "id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "tenant_key": "workspace-core-1777498899780",
+              "session_id": "session-ticket-workspace-core-1777498900038-c3aee52c",
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "channel_type": "whatsapp",
+              "queue": "workspace-core",
+              "status": "waiting",
+              "mode": "human",
+              "pause_reason": null,
+              "takeover_at": null,
+              "return_to_bot_at": null,
+              "takeover_reason": null,
+              "return_reason": null,
+              "first_response_at": null,
+              "resolved_at": null,
+              "waiting_time_seconds": null,
+              "handling_time_seconds": null,
+              "assigned_to": null,
+              "phone_number": "5511999899948",
+              "last_user_message": "Preciso de ajuda com meu atendimento e quero acompanhar o status.",
+              "unread_count": 1,
+              "tags": [
+                "workspace-core",
+                "qa-wave"
+              ],
+              "category": "support",
+              "messages": [
+                {
+                  "id": "msg-workspace-core-1777498899990-b8645e55",
+                  "direction": "inbound"
+                }
+              ],
+              "context": {
+                "wave": "workspace-core",
+                "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+              },
+              "createdAt": "2026-04-29T21:41:40.041Z",
+              "updatedAt": "2026-04-29T21:41:40.041Z"
+            }
+          },
+          {
+            "id": "message:msg-workspace-core-1777498899990-b8645e55",
+            "type": "message",
+            "source": "whatsapp",
+            "refId": "msg-workspace-core-1777498899990-b8645e55",
+            "createdAt": "2026-04-29T21:41:40.227Z",
+            "summary": "inbound: Preciso de ajuda com meu atendimento e quero acompanhar o status.",
+            "detailUrl": "/inbox?conversationId=conv-workspace-core-1777498899990-c193889d",
+            "confidence": 1,
+            "payload": {
+              "id": "msg-workspace-core-1777498899990-b8645e55",
+              "tenant_key": "workspace-core-1777498899780",
+              "conversation_id": "conv-workspace-core-1777498899990-c193889d",
+              "channel_type": "whatsapp",
+              "direction": "inbound",
+              "type": "text",
+              "body": {
+                "text": "Preciso de ajuda com meu atendimento e quero acompanhar o status."
+              },
+              "external_message_id": "ext-msg-workspace-core-1777498899990-b8645e55",
+              "status": "received",
+              "createdAt": "2026-04-29T21:41:40.002Z",
+              "updatedAt": "2026-04-29T21:41:40.002Z"
+            }
+          },
+          {
+            "id": "evidence:ev-workspace-core-1777498900159-bd1fc8e8",
+            "type": "evidence",
+            "source": "qa_wave",
+            "refId": "ev-workspace-core-1777498900159-bd1fc8e8",
+            "createdAt": "2026-04-29T21:41:40.165Z",
+            "summary": "Falha QA/RPA simulada na wave workspace-core para validar autocorreção assistida.",
+            "detailUrl": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+            "confidence": 1,
+            "payload": {
+              "id": "ev-workspace-core-1777498900159-bd1fc8e8",
+              "tenant_key": "workspace-core-1777498899780",
+              "entity_type": "workspace_entity",
+              "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+              "related_entities": [
+                {
+                  "id": "conv-workspace-core-1777498899990-c193889d",
+                  "type": "conversation"
+                },
+                {
+                  "id": "msg-workspace-core-1777498899990-b8645e55",
+                  "type": "message"
+                },
+                {
+                  "id": "ticket-workspace-core-1777498900038-c3aee52c",
+                  "type": "ticket"
+                },
+                {
+                  "id": "6a1a206d-23a2-4157-a6a7-f0629fe0e2f6",
+                  "type": "task"
+                }
+              ],
+              "source_type": "qa_wave",
+              "source_id": "workspace-core",
+              "source_ref": {
+                "mode": "failure",
+                "module": "workspace-core",
+                "replayUrl": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+                "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+                "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+                "timelinePath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/timeline.json",
+                "autocorrectionPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/autocorrection.json"
+              },
+              "category": "workspace",
+              "type": "failure",
+              "theme": "workspace-core-autocorrection",
+              "summary": "Falha QA/RPA simulada na wave workspace-core para validar autocorreção assistida.",
+              "excerpt": "A jornada operacional foi criada; esta evidência injeta uma falha controlada para validar diagnóstico e revisão humana.",
+              "normalized_text": "workspace core qa rpa failure autocorrection replay evidence",
+              "occurred_at": "2026-04-29T21:41:40.165Z",
+              "indexed_at": "2026-04-29T21:41:40.166Z",
+              "confidence": 0.98,
+              "strength": "strong",
+              "actor_type": "qa_mesh",
+              "actor_id": "workspace-core",
+              "attachments": [
+                {
+                  "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+                  "type": "summary"
+                },
+                {
+                  "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+                  "type": "replay"
+                },
+                {
+                  "path": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/timeline.json",
+                  "type": "timeline"
+                }
+              ],
+              "metadata": {
+                "mode": "failure",
+                "wave": "workspace-core",
+                "reason": "Falha QA/RPA simulada para validar ciclo Evidence -> Replay -> AutoCorrection.",
+                "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+                "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+                "qaWaveStatus": "failed",
+                "checksSnapshot": {
+                  "taskLinked": false,
+                  "linksCreated": false,
+                  "ticketLinked": false,
+                  "actionCreated": false,
+                  "entityCreated": false,
+                  "messageLinked": false,
+                  "insightCreated": false,
+                  "replayGenerated": false,
+                  "evidenceGenerated": false,
+                  "conversationLinked": false,
+                  "timelineConsistent": false,
+                  "timelineContainsTask": false,
+                  "timelineContainsTicket": false,
+                  "timelineContainsMessage": false,
+                  "timelineContainsEvidence": false,
+                  "autocorrectionCreatedOnFailure": false
+                },
+                "expectedFailure": true
+              },
+              "idempotency_key": "workspace-core-1777498899780:workspace-core:2026-04-29T21-41-40-165Z",
+              "createdAt": "2026-04-29T21:41:40.167Z",
+              "updatedAt": "2026-04-29T21:41:40.167Z",
+              "replayUrl": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json"
+            }
+          },
+          {
+            "id": "conversation:conv-workspace-core-1777498899990-c193889d",
+            "type": "conversation",
+            "source": "whatsapp",
+            "refId": "conv-workspace-core-1777498899990-c193889d",
+            "createdAt": "2026-04-29T21:41:39.990Z",
+            "summary": "Conversa open em whatsapp",
+            "detailUrl": "/inbox?conversationId=conv-workspace-core-1777498899990-c193889d",
+            "confidence": 1,
+            "payload": {
+              "id": "conv-workspace-core-1777498899990-c193889d",
+              "tenant_key": "workspace-core-1777498899780",
+              "channel_type": "whatsapp",
+              "external_id": "wa-5511999899948-a16d4a",
+              "contact_id": "5511999899948",
+              "status": "open",
+              "current_ticket_id": "ticket-workspace-core-1777498900038-c3aee52c",
+              "last_message_at": "2026-04-29T21:41:39.990Z",
+              "createdAt": "2026-04-29T21:41:39.994Z",
+              "updatedAt": "2026-04-29T21:41:40.049Z"
+            }
+          }
+        ],
+        "total": 5,
+        "limit": 100,
+        "offset": 0,
+        "hasMore": false,
+        "links": 5
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.200Z",
+    "finishedAt": "2026-04-29T21:41:40.235Z"
+  },
+  {
+    "step": "generate_insight",
+    "status": "passed",
+    "input": {
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+    },
+    "output": {
+      "insights": {
+        "items": [
+          {
+            "type": "risk",
+            "description": "1 falha(s) QA/RPA relacionadas ao cliente exigem acao tecnica.",
+            "confidence": 0.94,
+            "source": "RPA",
+            "evidence": [
+              "ev-workspace-core-1777498900159-bd1fc8e8"
+            ],
+            "severity": "critical"
+          },
+          {
+            "type": "risk",
+            "description": "Sentimento negativo detectado nas interacoes recentes.",
+            "confidence": 0.68,
+            "source": "AI",
+            "evidence": [],
+            "severity": "high"
+          }
+        ],
+        "persisted": [
+          {
+            "id": "01b4bdcb-4af6-496f-a6e1-29e583086b4b",
+            "tenant_id": "workspace-core-1777498899780",
+            "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+            "type": "risk",
+            "description": "Sentimento negativo detectado nas interacoes recentes.",
+            "confidence": 0.68,
+            "source": "AI",
+            "createdAt": "2026-04-29T21:41:40.373Z"
+          },
+          {
+            "id": "892a8dcc-ce66-48f7-9af4-91b41902b07f",
+            "tenant_id": "workspace-core-1777498899780",
+            "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+            "type": "risk",
+            "description": "1 falha(s) QA/RPA relacionadas ao cliente exigem acao tecnica.",
+            "confidence": 0.94,
+            "source": "RPA",
+            "createdAt": "2026-04-29T21:41:40.367Z"
+          }
+        ],
+        "total": 4
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.235Z",
+    "finishedAt": "2026-04-29T21:41:40.378Z"
+  },
+  {
+    "step": "generate_action",
+    "status": "passed",
+    "input": {
+      "entityId": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218"
+    },
+    "output": {
+      "actions": [
+        {
+          "id": "5e4bc54d-0f58-472c-9a76-f075f2c7bf20",
+          "tenant_id": "workspace-core-1777498899780",
+          "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+          "type": "task",
+          "status": "executed",
+          "payload": {
+            "task": {
+              "id": "4b353571-7cbd-4640-8ec7-2304d20a6b3c",
+              "type": "rpa",
+              "title": "Acionar correcao tecnica QA/RPA",
+              "status": "open",
+              "due_date": null,
+              "priority": "high",
+              "createdAt": "2026-04-29T21:41:40.378Z",
+              "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+              "tenant_id": "workspace-core-1777498899780",
+              "ticket_id": null,
+              "updatedAt": "2026-04-29T21:41:40.378Z",
+              "project_id": null,
+              "assigned_to": null,
+              "description": "1 falha(s) QA/RPA relacionadas ao cliente exigem acao tecnica.",
+              "conversation_id": null
+            },
+            "title": "Acionar correcao tecnica QA/RPA",
+            "sourceInsight": {
+              "type": "risk",
+              "source": "RPA",
+              "evidence": [
+                "ev-workspace-core-1777498900159-bd1fc8e8"
+              ],
+              "severity": "critical",
+              "confidence": 0.94,
+              "description": "1 falha(s) QA/RPA relacionadas ao cliente exigem acao tecnica."
+            }
+          },
+          "createdAt": "2026-04-29T21:41:40.393Z"
+        },
+        {
+          "id": "50ad4ff4-0afa-4ce9-815a-48444e081f72",
+          "tenant_id": "workspace-core-1777498899780",
+          "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+          "type": "task",
+          "status": "executed",
+          "payload": {
+            "task": {
+              "id": "c7c42b72-fa84-4df3-887f-6a5ce5b2ebcb",
+              "type": "ai",
+              "title": "Mitigar risco operacional do cliente",
+              "status": "open",
+              "due_date": null,
+              "priority": "high",
+              "createdAt": "2026-04-29T21:41:40.397Z",
+              "entity_id": "b0f7c24d-29e8-4c3b-af52-fff2ebc26218",
+              "tenant_id": "workspace-core-1777498899780",
+              "ticket_id": null,
+              "updatedAt": "2026-04-29T21:41:40.397Z",
+              "project_id": null,
+              "assigned_to": null,
+              "description": "Sentimento negativo detectado nas interacoes recentes.",
+              "conversation_id": null
+            },
+            "title": "Mitigar risco operacional do cliente",
+            "sourceInsight": {
+              "type": "risk",
+              "source": "AI",
+              "evidence": [],
+              "severity": "high",
+              "confidence": 0.68,
+              "description": "Sentimento negativo detectado nas interacoes recentes."
+            }
+          },
+          "createdAt": "2026-04-29T21:41:40.408Z"
+        }
+      ]
+    },
+    "timestamp": "2026-04-29T21:41:40.378Z",
+    "finishedAt": "2026-04-29T21:41:40.412Z"
+  },
+  {
+    "step": "simulate_failure",
+    "status": "injected",
+    "input": {
+      "reason": "failure_injection_mode"
+    },
+    "output": {
+      "simulatedFailure": true,
+      "module": "workspace-core",
+      "expectedHandling": "autocorrection"
+    },
+    "timestamp": "2026-04-29T21:41:40.418Z",
+    "finishedAt": "2026-04-29T21:41:40.418Z"
+  },
+  {
+    "step": "create_autocorrection_run",
+    "status": "passed",
+    "input": {
+      "sourceType": "qa_wave",
+      "sourceId": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+      "failedChecks": [
+        "simulatedQaFailure"
+      ]
+    },
+    "output": {
+      "run": {
+        "id": "2fadb0b6-7663-4d6e-8f89-feb618dfce26",
+        "tenant_id": "workspace-core-1777498899780",
+        "source_type": "qa_wave",
+        "source_id": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+        "status": "pending_review",
+        "diagnosis": {
+          "risk": "medium",
+          "sourceId": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "tenantId": "workspace-core-1777498899780",
+          "rootCause": "Validacao funcional falhou em assertivas do cenário.",
+          "confidence": 0.66,
+          "sourceType": "qa_wave",
+          "failedChecks": [
+            "simulatedQaFailure"
+          ],
+          "affectedModule": "workspace-core",
+          "recommendedFix": "Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados.",
+          "analyzedArtifacts": {
+            "logFiles": [],
+            "hasReplayJson": false,
+            "hasSummaryJson": false,
+            "sourceEvidenceRef": {
+              "module": "workspace-core",
+              "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+              "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+              "evidencePath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+              "autocorrectionSource": "qa_wave"
+            }
+          },
+          "humanApprovalRequired": true
+        },
+        "proposed_patch": {
+          "diff": "diff --git a/frontend/src/pages/WorkspacePage.jsx b/frontend/src/pages/WorkspacePage.jsx\n--- a/frontend/src/pages/WorkspacePage.jsx\n+++ b/frontend/src/pages/WorkspacePage.jsx\n@@\n- // comportamento atual com falha em workspace-core\n+ // patch candidato sugerido para tratar: Validacao funcional falhou em assertivas do cenário.\n+ // recomendacao: Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados.",
+          "testsToRun": [
+            "npm test -- api/services/__tests__/qaWavesExecutionService.test.js",
+            "node scripts/qa-waves-execute.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "node scripts/test-rpa-replays-scale-smoke.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "npx jest api/services/__tests__/workspaceCore.test.js --runInBand",
+            "npx jest api/modules/workspace/workspace.routes.test.js --runInBand",
+            "cd frontend && npm run test -- src/pages/WorkspacePage.test.jsx",
+            "node scripts/workspace-core-smoke.js"
+          ],
+          "patchSummary": "Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados. Nenhuma aplicacao automatica sera executada sem aprovacao humana.",
+          "filesToChange": [
+            "frontend/src/pages/WorkspacePage.jsx"
+          ],
+          "applyAutomatically": false,
+          "humanApprovalRequired": true
+        },
+        "validation_result": {
+          "steps": [
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "npm test -- api/services/__tests__/qaWavesExecutionService.test.js"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "node scripts/qa-waves-execute.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "node scripts/test-rpa-replays-scale-smoke.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "npx jest api/services/__tests__/workspaceCore.test.js --runInBand"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "npx jest api/modules/workspace/workspace.routes.test.js --runInBand"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "cd frontend && npm run test -- src/pages/WorkspacePage.test.jsx"
+            },
+            {
+              "output": "Execucao automatica desabilitada; aguardar revisao humana.",
+              "status": "suggested",
+              "command": "node scripts/workspace-core-smoke.js"
+            }
+          ],
+          "safety": {
+            "patchApplied": false,
+            "deployExecuted": false,
+            "humanApprovalRequired": true
+          },
+          "status": "pending_manual_execution",
+          "summary": "Validacao controlada concluida: 0 passo(s) aprovados, 0 falhou/falharam, 7 pendente(s).",
+          "sourceId": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "executedAt": "2026-04-29T21:41:40.422Z",
+          "sourceType": "qa_wave",
+          "affectedModule": "workspace-core"
+        },
+        "updatedAt": "2026-04-29T21:41:40.424Z",
+        "createdAt": "2026-04-29T21:41:40.424Z"
+      },
+      "reviewAction": {
+        "id": "0b843fdd-a185-4334-b376-b5d8f3d2994f",
+        "run_id": "2fadb0b6-7663-4d6e-8f89-feb618dfce26",
+        "type": "human_review",
+        "status": "pending",
+        "payload": {
+          "label": "Revisar autocorreção Workspace Core",
+          "replayPath": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+          "summaryPath": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "evidencePath": "qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "failedChecks": [
+            "simulatedQaFailure"
+          ],
+          "approvalRequired": true
+        },
+        "createdAt": "2026-04-29T21:41:40.432Z"
+      },
+      "diagnosis": {
+        "tenantId": "workspace-core-1777498899780",
+        "sourceType": "qa_wave",
+        "sourceId": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+        "rootCause": "Validacao funcional falhou em assertivas do cenário.",
+        "affectedModule": "workspace-core",
+        "confidence": 0.66,
+        "recommendedFix": "Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados.",
+        "risk": "medium",
+        "analyzedArtifacts": {
+          "hasSummaryJson": false,
+          "hasReplayJson": false,
+          "logFiles": [],
+          "sourceEvidenceRef": {
+            "summaryPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "replayPath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/replay.json",
+            "evidencePath": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "autocorrectionSource": "qa_wave",
+            "module": "workspace-core"
+          }
+        }
+      },
+      "proposedPatch": {
+        "filesToChange": [
+          "frontend/src/pages/WorkspacePage.jsx"
+        ],
+        "patchSummary": "Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados. Nenhuma aplicacao automatica sera executada sem aprovacao humana.",
+        "diff": "diff --git a/frontend/src/pages/WorkspacePage.jsx b/frontend/src/pages/WorkspacePage.jsx\n--- a/frontend/src/pages/WorkspacePage.jsx\n+++ b/frontend/src/pages/WorkspacePage.jsx\n@@\n- // comportamento atual com falha em workspace-core\n+ // patch candidato sugerido para tratar: Validacao funcional falhou em assertivas do cenário.\n+ // recomendacao: Criar patch candidato restrito ao modulo workspace-core e validar com testes relacionados.",
+        "testsToRun": [
+          "npm test -- api/services/__tests__/qaWavesExecutionService.test.js",
+          "node scripts/qa-waves-execute.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "node scripts/test-rpa-replays-scale-smoke.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+          "npx jest api/services/__tests__/workspaceCore.test.js --runInBand",
+          "npx jest api/modules/workspace/workspace.routes.test.js --runInBand",
+          "cd frontend && npm run test -- src/pages/WorkspacePage.test.jsx",
+          "node scripts/workspace-core-smoke.js"
+        ]
+      },
+      "validationResult": {
+        "status": "pending_manual_execution",
+        "sourceType": "qa_wave",
+        "sourceId": "/opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+        "affectedModule": "workspace-core",
+        "executedAt": "2026-04-29T21:41:40.422Z",
+        "summary": "Validacao controlada concluida: 0 passo(s) aprovados, 0 falhou/falharam, 7 pendente(s).",
+        "steps": [
+          {
+            "command": "npm test -- api/services/__tests__/qaWavesExecutionService.test.js",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "node scripts/qa-waves-execute.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "node scripts/test-rpa-replays-scale-smoke.js --source /opt/results/ria/r-agent2/qa/workspace-core/evidence/2026-04-29T21-41-39-779Z/summary.json",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "npx jest api/services/__tests__/workspaceCore.test.js --runInBand",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "npx jest api/modules/workspace/workspace.routes.test.js --runInBand",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "cd frontend && npm run test -- src/pages/WorkspacePage.test.jsx",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          },
+          {
+            "command": "node scripts/workspace-core-smoke.js",
+            "status": "suggested",
+            "output": "Execucao automatica desabilitada; aguardar revisao humana."
+          }
+        ],
+        "safety": {
+          "patchApplied": false,
+          "deployExecuted": false,
+          "humanApprovalRequired": true
+        }
+      }
+    },
+    "timestamp": "2026-04-29T21:41:40.419Z",
+    "finishedAt": "2026-04-29T21:41:40.447Z"
+  }
+]

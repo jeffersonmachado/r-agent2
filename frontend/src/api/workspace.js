@@ -16,6 +16,7 @@ export const createWorkspaceEntity = (payload = {}) => fetchJson('/workspace/ent
 export const linkWorkspaceEntity = (payload = {}) => fetchJson('/workspace/links', { method: 'POST', body: JSON.stringify(payload) });
 export const getWorkspaceTimeline = (entityId, params = {}) => fetchJson(`/workspace/entities/${encodeURIComponent(entityId)}/timeline${buildQuery(params)}`, { method: 'GET' });
 export const getWorkspaceInsights = (entityId) => fetchJson(`/workspace/entities/${encodeURIComponent(entityId)}/insights`, { method: 'GET' });
+export const getWorkspaceAutoCorrections = (entityId) => fetchJson(`/workspace/entities/${encodeURIComponent(entityId)}/autocorrections`, { method: 'GET' });
 export const getWorkspaceActions = (entityId) => fetchJson(`/workspace/entities/${encodeURIComponent(entityId)}/actions`, { method: 'GET' });
 export const createWorkspaceAction = (payload = {}) => fetchJson('/workspace/actions', { method: 'POST', body: JSON.stringify(payload) });
 export const executeWorkspaceAutoActions = (entityId) => fetchJson(`/workspace/entities/${encodeURIComponent(entityId)}/actions/auto`, { method: 'POST', body: JSON.stringify({}) });

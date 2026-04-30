@@ -37,6 +37,7 @@ const { createPublicSystemExpressRouter } = require('../composition/public-syste
 const { createQaExpressRouter } = require('../composition/qa');
 const { createQaWavesExpressRouter } = require('../composition/qa-waves');
 const { createQaMeshExpressRouter } = require('../composition/qa-mesh');
+const createOperationalStatusRoutes = require('../routes/operationalStatusRoutes');
 const { createRpaTestsExpressRouter } = require('../composition/rpa-tests');
 const { createTestExecutionsExpressRouter } = require('../composition/test-executions');
 const { createDevManagementExpressRouter } = require('../composition/dev-management');
@@ -116,6 +117,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const qaRouter = createQaExpressRouter();
   const qaWavesRouter = createQaWavesExpressRouter();
   const qaMeshRouter = createQaMeshExpressRouter();
+  const operationalStatusRouter = createOperationalStatusRoutes();
   const rpaTestsRouter = createRpaTestsExpressRouter();
   const testExecutionsRouter = createTestExecutionsExpressRouter();
   const devManagementRouter = createDevManagementExpressRouter();
@@ -172,6 +174,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaRouter,
     qaWavesRouter,
     qaMeshRouter,
+    operationalStatusRouter: { path: '/qa', router: operationalStatusRouter },
     rpaTestsRouter,
     testExecutionsRouter,
     devManagementRouter,
