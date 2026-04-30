@@ -107,6 +107,7 @@ import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
 import { PwaUpdateManager } from './components/PwaUpdateManager';
+import { BundleVersionGuard } from './components/BundleVersionGuard';
 import { PrimaryRail } from './components/PrimaryRail';
 import { SecondaryNav } from './components/SecondaryNav';
 import { AreaHeader } from './components/AreaHeader';
@@ -307,6 +308,7 @@ function App() {
       <AuthProvider>
         <WebSocketProvider>
           <FileUploadProvider>
+            <BundleVersionGuard />
             <PwaUpdateManager />
             <AppWithAuth />
           </FileUploadProvider>

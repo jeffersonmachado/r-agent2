@@ -11,6 +11,8 @@ export function SupportWorkspaceHeader({
   showConversationToggle = false,
   isConversationListVisibleDesktop = false,
   onToggleConversationList,
+  showFilters = false,
+  onToggleFilters,
 }) {
   return (
     <div className="support-header">
@@ -22,8 +24,9 @@ export function SupportWorkspaceHeader({
           type="button"
           className="btn-default px-4 py-2 text-sm auto-filter-toggle-btn"
           aria-label="Mostrar ou ocultar filtros"
-          aria-pressed="false"
-          title="Mostrar filtros"
+          aria-pressed={showFilters ? 'true' : 'false'}
+          title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+          onClick={() => onToggleFilters?.()}
         >
           🔍
         </button>

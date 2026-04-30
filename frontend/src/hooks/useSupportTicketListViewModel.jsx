@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { normalizeContactName } from '../utils/contactName';
 
 const looksLikePhone = (value) => /^\+?\d[\d\s().-]{7,}$/.test(String(value || '').trim());
 
@@ -117,7 +118,7 @@ export function useSupportTicketListViewModel({
       )
       : ticket?.contact;
 
-    return (
+    return normalizeContactName(
       ticket?.contactName
       || ticket?.contact_name
       || ticket?.displayName
@@ -176,7 +177,7 @@ export function useSupportTicketListViewModel({
       || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone_number) ? ticket?.phone_number : null)
       || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone) ? ticket?.phone : null)
       || buildAnonymousContactName(ticket, phoneMaskingEnabled)
-    );
+    ) || buildAnonymousContactName(ticket, phoneMaskingEnabled);
   }, [phoneMaskingEnabled]);
 
   const highlightText = useCallback((text, searchTerm) => {

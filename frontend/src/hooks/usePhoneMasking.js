@@ -3,7 +3,7 @@ import { getTenantSetting } from '../api/tenantSettings';
 import logger from '../utils/logger';
 
 export function usePhoneMasking() {
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -11,7 +11,7 @@ export function usePhoneMasking() {
     try {
       const resp = await getTenantSetting('phone-masking');
       const value = resp?.value || resp?.data?.value || null;
-      let next = true;
+      let next = false;
       if (value && typeof value === 'object' && typeof value.enabled === 'boolean') {
         next = value.enabled;
       } else if (typeof value === 'boolean') {
@@ -24,7 +24,7 @@ export function usePhoneMasking() {
       setEnabled(next);
     } catch (err) {
       logger.warn('[PhoneMasking] Falha ao carregar setting', err);
-      setEnabled(true);
+      setEnabled(false);
     } finally {
       setLoading(false);
     }

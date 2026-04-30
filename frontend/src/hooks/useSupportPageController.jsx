@@ -18,6 +18,7 @@ import { useSupportTicketListViewModel } from './useSupportTicketListViewModel';
 import { useSupportTimelinePresentation } from './useSupportTimelinePresentation';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
+import { normalizeContactName } from '../utils/contactName';
 
 function resolveTicketPhone(ticket) {
   return (
@@ -64,7 +65,7 @@ function resolveTicketName(ticket) {
     ticket?.lastName || ticket?.last_name,
   ].filter(Boolean).join(' ').trim();
 
-  return (
+  return normalizeContactName(
     ticket?.contactName
     || ticket?.contact_name
     || ticket?.displayName

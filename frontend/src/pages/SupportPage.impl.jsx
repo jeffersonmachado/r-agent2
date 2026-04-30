@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -142,6 +142,7 @@ export function SupportPage() {
   });
 
   const selectedTicket = state.selectedTicket;
+  const [showFilters, setShowFilters] = useState(false);
 
   return (
     <CrudPageBase title="💬 Atendimento" hideHeader>
@@ -157,18 +158,22 @@ export function SupportPage() {
             showConversationToggle={Boolean(selectedTicket) && !state.isMobile}
             isConversationListVisibleDesktop={state.isConversationListVisibleDesktop}
             onToggleConversationList={() => actions.setIsConversationListVisibleDesktop((prev) => !prev)}
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters((prev) => !prev)}
           />
 
           <div className={`attendance-runtime-board${selectedTicket && !state.isMobile && !state.isConversationListVisibleDesktop ? ' attendance-runtime-board--conversation-collapsed' : ''}`}>
             <div className="attendance-runtime-col attendance-runtime-col--metrics">
-              <SupportFiltersBar
-                uiSearch={state.uiSearch}
-                setUiSearch={actions.setUiSearch}
-                ticketQueueOptions={state.ticketQueueOptions}
-                uiQueue={state.uiQueue}
-                setUiQueue={actions.setUiQueue}
-                onClear={actions.clearTicketFilters}
-              />
+              {showFilters ? (
+                <SupportFiltersBar
+                  uiSearch={state.uiSearch}
+                  setUiSearch={actions.setUiSearch}
+                  ticketQueueOptions={state.ticketQueueOptions}
+                  uiQueue={state.uiQueue}
+                  setUiQueue={actions.setUiQueue}
+                  onClear={actions.clearTicketFilters}
+                />
+              ) : null}
               <AttendanceMetricsPanel metrics={runtimeViewModel.metrics} />
             </div>
 
