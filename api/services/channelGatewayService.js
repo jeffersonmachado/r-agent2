@@ -576,6 +576,14 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
   const externalId = safeToString(conversationKey.externalId || 'unknown');
   const contactId = conversationKey.contactId ? safeToString(conversationKey.contactId) : null;
 
+  function buildCanonicalSessionId(type, value) {
+    if (!value || type !== 'whatsapp') return `${type}_${safeToString(value).replace(/^\+/, '')}`;
+    const raw = safeToString(value).trim();
+    const digits = raw.replace(/\s+/g, '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+    const canonical = /^\d{10,11}$/.test(digits) ? `55${digits}` : digits;
+    return `whatsapp_${canonical}`;
+  }
+
   // Mapeia ticket existente (compatibilidade com ticket = sessão)
   let currentTicketId = null;
   let derivedStatus = 'bot';
@@ -586,8 +594,8 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     derivedStatus = 'human';
   }
   if (!currentTicketId && channelType === 'whatsapp' && externalId && externalId !== 'unknown') {
-    const sessionId = `whatsapp_${externalId.replace(/^\+/, '')}`;
-    const ticket = getTicketBySession(sessionId);
+    const sessionId = buildCanonicalSessionId(channelType, externalId);
+    const ticket = getTicketBySession(sessionId, tenantId);
     if (ticket && ticket.status !== 'closed') {
       currentTicketId = ticket.id;
       derivedStatus = 'human';

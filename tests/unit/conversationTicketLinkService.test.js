@@ -48,5 +48,18 @@ describe('conversationTicketLinkService', () => {
     expect(matches.length).toBe(1);
     expect(queueService.getTicket(t.id).lastUserMessage).toBe('oi');
   });
+
+  test('buildSessionId normaliza telefone local para DDI 55 (whatsapp)', () => {
+    // eslint-disable-next-line global-require
+    const { buildSessionId } = require('../../api/services/conversationTicketLinkService');
+
+    const sessionId = buildSessionId({
+      channelType: 'whatsapp',
+      externalConversationId: '11988648492',
+      contactPhone: '11988648492',
+    });
+
+    expect(sessionId).toBe('whatsapp_5511988648492');
+  });
 });
 

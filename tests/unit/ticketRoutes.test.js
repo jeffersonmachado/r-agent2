@@ -161,6 +161,35 @@ describe('ticketRoutes handler', () => {
     expect(deps.createTicket).not.toHaveBeenCalled();
   });
 
+  test('POST /tickets usa sessionId canônico e tenant no dedupe', async () => {
+    const res = {};
+    const existingTicket = { id: 't-existing', status: 'in_progress' };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        phoneNumber: '11 98864-8492',
+        queue: 'support',
+      })),
+      getTicketBySession: jest.fn(() => existingTicket),
+    });
+
+    const handled = await handleTicketRoutes({
+      req: makeReq({ url: '/tickets', tenantId: 'tenant-1' }),
+      res,
+      method: 'POST',
+      pathname: '/tickets',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.getTicketBySession).toHaveBeenCalledWith('whatsapp_5511988648492', 'tenant-1');
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      res,
+      409,
+      expect.objectContaining({ error: 'ticket_already_exists' })
+    );
+    expect(deps.createTicket).not.toHaveBeenCalled();
+  });
+
   test('POST /tickets/:id/message rejeita payload sem message e sem media', async () => {
     const res = {};
     const deps = makeDeps({

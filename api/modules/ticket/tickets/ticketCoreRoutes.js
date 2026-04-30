@@ -9,6 +9,20 @@ const {
 const { parseMultipartFormData } = require('../../../utils/multipartParser');
 const { storeTicketMedia, getTicketMediaById } = require('../../../services/ticketMediaService');
 
+function normalizeManualPhone(phoneNumber) {
+  const raw = phoneNumber ? String(phoneNumber).trim() : '';
+  if (!raw) return null;
+
+  const digits = raw.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+  if (!digits) return null;
+
+  // Entrada local sem DDI explícito assume Brasil.
+  const plain = digits.replace(/^\+/, '');
+  if (/^\d{10,11}$/.test(plain)) return `55${plain}`;
+  if (/^[1-9]\d{10,14}$/.test(plain)) return plain;
+  return null;
+}
+
 async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
   const respondInternalError = createInternalErrorResponder(req, res, deps, 'Erro ao processar rota core de tickets');
 
@@ -32,15 +46,14 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const phoneRegex = /^\+?[1-9]\d{10,14}$/;
-      const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/[^\d+]/g, '');
-      if (!phoneRegex.test(cleanPhone)) {
+      const canonicalPhone = normalizeManualPhone(phoneNumber);
+      if (!canonicalPhone) {
         deps.badRequest(res, 'Número de telefone inválido. Use formato: +5511999999999 ou 5511999999999');
         return true;
       }
 
-      const sessionId = `whatsapp_${cleanPhone.replace(/^\+/, '')}`;
-      const existingTicket = deps.getTicketBySession(sessionId);
+      const sessionId = `whatsapp_${canonicalPhone}`;
+      const existingTicket = deps.getTicketBySession(sessionId, req.tenantId);
       if (existingTicket && existingTicket.status !== 'closed') {
         deps.sendJson(res, 409, {
           error: 'ticket_already_exists',
@@ -96,17 +109,17 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
             tenantId: req.tenantId,
             channelType: 'whatsapp',
             conversationId: ticket.conversationId || null,
-            message: { to: cleanPhone, type: 'text', body: { text: initialMessage }, meta: { ticketId: ticket.id, clientMessageId } },
+            message: { to: canonicalPhone, type: 'text', body: { text: initialMessage }, meta: { ticketId: ticket.id, clientMessageId } },
           });
           deps.logger.info('[Ticket] Ticket criado e mensagem inicial enfileirada', {
             ticketId: ticket.id,
-            phoneNumber: cleanPhone,
+            phoneNumber: canonicalPhone,
             agentId: req.agent.id,
           });
         } catch (whatsappError) {
           deps.logger.warn('[Ticket] Ticket criado mas falha ao enfileirar mensagem inicial', {
             ticketId: ticket.id,
-            phoneNumber: cleanPhone,
+            phoneNumber: canonicalPhone,
             error: whatsappError.message,
           });
         }
@@ -115,7 +128,7 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
       deps.triggerWebhooks(req.tenantId, 'ticket.created', {
         ticketId: ticket.id,
         queue: ticket.queue,
-        phoneNumber: cleanPhone,
+        phoneNumber: canonicalPhone,
         agentId: req.agent.id,
       }).catch((err) => {
         deps.logger.error('[Webhook] Erro ao disparar webhook para ticket.created:', err);
@@ -124,7 +137,7 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
       deps.emitEvent('ticket.created', {
         ticketId: ticket.id,
         queue: ticket.queue,
-        phoneNumber: cleanPhone,
+        phoneNumber: canonicalPhone,
         agentId: req.agent.id,
         ticket,
       }, { tenantId: req.tenantId });
@@ -135,7 +148,7 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
         action: 'ticket_create_manual',
         resourceId: ticket.id,
         details: {
-          phoneNumber: cleanPhone,
+          phoneNumber: canonicalPhone,
           queue,
           hasInitialMessage: !!initialMessage,
         },
@@ -204,7 +217,7 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
     if (!ensureTicketPermission({ req, res, deps, permission: 'read' })) return true;
 
     const sessionId = decodeURIComponent(pathname.slice('/tickets/session/'.length));
-    const ticket = deps.getTicketBySession(sessionId);
+    const ticket = deps.getTicketBySession(sessionId, req.tenantId);
     if (!ticket) {
       deps.sendJson(res, 404, { error: 'ticket_not_found' });
       return true;

@@ -77,12 +77,28 @@ function normalizePhone(phone) {
 
   // Se não começa com '+', assume que já está em formato internacional sem '+'
   if (!cleaned.startsWith('+')) {
-    cleaned = `+${cleaned.replace(/^\+/, '')}`;
+    const digitsOnly = cleaned.replace(/\+/g, '');
+    // Brasil (default) para entradas locais sem DDI explícito.
+    if (/^\d{10,11}$/.test(digitsOnly)) {
+      cleaned = `+55${digitsOnly}`;
+    } else {
+      cleaned = `+${digitsOnly}`;
+    }
   }
 
   // Validação mínima E.164: +[1-9]\d{10,14}
   if (!/^\+[1-9]\d{10,14}$/.test(cleaned)) return null;
   return cleaned;
+}
+
+function buildSessionId({ channelType, externalConversationId, contactPhone = null }) {
+  const normalized = normalizePhone(contactPhone || externalConversationId);
+  const sessionKey = normalized
+    ? normalized.replace(/^\+/, '')
+    : safeToString(externalConversationId).replace(/^\+/, '');
+  return channelType === 'whatsapp'
+    ? `whatsapp_${sessionKey}`
+    : `${channelType}_${sessionKey}`;
 }
 
 function ensureTenantId(tenantId) {
@@ -175,9 +191,11 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       return { conversation: null, ticket: null, createdTicket: false };
     }
 
-    const sessionId = channelType === 'whatsapp'
-      ? `whatsapp_${safeToString(externalConversationId).replace(/^\+/, '')}`
-      : `${channelType}_${safeToString(externalConversationId).replace(/^\+/, '')}`;
+    const sessionId = buildSessionId({
+      channelType,
+      externalConversationId,
+      contactPhone: contactRef.phone || null,
+    });
 
     const existing = queueService.getTicketBySession(sessionId, effectiveTenantId);
     if (existing && existing.status !== 'closed') {
@@ -268,7 +286,25 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
     return { conversation, ticket: existingDbTicket, createdTicket: false };
   }
 
-  // 3) Cria ticket novo sem modo de atendimento implícito.
+  const sessionId = buildSessionId({
+    channelType,
+    externalConversationId,
+    contactPhone: contactRef.phone || null,
+  });
+
+  // 3) Tenta reutilizar ticket ativo por sessionId (dedupe por contato canônico).
+  const existingBySession = queueService.getTicketBySession(sessionId, effectiveTenantId);
+  if (existingBySession && existingBySession.status !== 'closed') {
+    await conversation.update({
+      current_ticket_id: existingBySession.id,
+      status: deriveConversationStatusFromTicketMode(existingBySession.mode),
+      last_message_at: now,
+      updated_at: now,
+    }).catch(() => null);
+    return { conversation, ticket: existingBySession, createdTicket: false };
+  }
+
+  // 4) Cria ticket novo sem modo de atendimento implícito.
   if (!createOnInbound) {
     return { conversation, ticket: null, createdTicket: false };
   }
@@ -288,10 +324,6 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   } catch (_) {}
 
   const defaultQueue = config.get('flows.defaultQueue', 'default');
-  const sessionId = channelType === 'whatsapp'
-    ? `whatsapp_${safeToString(externalConversationId).replace(/^\+/, '')}`
-    : `${channelType}_${safeToString(externalConversationId).replace(/^\+/, '')}`;
-
   const ticket = queueService.createTicket({
     tenantId: effectiveTenantId,
     sessionId,
@@ -396,6 +428,7 @@ function appendTicketMessage(ticketId, normalizedMessage = {}) {
 
 module.exports = {
   normalizePhone,
+  buildSessionId,
   resolveOrCreateTicketFromIncomingMessage,
   appendTicketMessage,
 };
