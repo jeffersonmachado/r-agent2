@@ -21,7 +21,7 @@ export function SupportFiltersBar({
   ];
 
   return (
-    <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg auto-filter-section auto-filter-collapsed">
+    <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
       <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
         <span>🔍</span>
         <span>Filtros</span>
