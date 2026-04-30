@@ -2,6 +2,40 @@ import React, { useCallback, useMemo } from 'react';
 
 const looksLikePhone = (value) => /^\+?\d[\d\s().-]{7,}$/.test(String(value || '').trim());
 
+const extractPhone = (ticket) => (
+  ticket?.phoneNumber
+  || ticket?.phone_number
+  || ticket?.phone
+  || ticket?.contactPhone
+  || ticket?.contact_phone
+  || ticket?.contact?.phone
+  || ticket?.contact?.waId
+  || ticket?.contact?.wa_id
+  || ticket?.contact?.whatsapp
+  || ticket?.contact?.whatsappNumber
+  || ticket?.context?.metadata?.phoneNumber
+  || ticket?.context?.metadata?.phone_number
+  || ticket?.context?.metadata?.phone
+  || ticket?.context?.metadata?.waId
+  || ticket?.context?.metadata?.wa_id
+  || ticket?.context?.variables?.phoneNumber
+  || ticket?.context?.variables?.phone_number
+  || ticket?.context?.variables?.phone
+  || ticket?.context?.variables?.waId
+  || ticket?.context?.variables?.wa_id
+  || ticket?.from
+  || ticket?.remoteJid
+  || null
+);
+
+const buildAnonymousContactName = (ticket, phoneMaskingEnabled) => {
+  const phone = String(extractPhone(ticket) || '').replace(/\D/g, '');
+  if (!phone) return 'Contato sem nome';
+  const last4 = phone.slice(-4) || '----';
+  if (phoneMaskingEnabled) return `Contato ••••${last4}`;
+  return `Contato ${phone}`;
+};
+
 const truncateId = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return 'Sem ID';
@@ -62,7 +96,7 @@ export function useSupportTicketListViewModel({
   }, []);
 
   const getPhoneNode = useCallback((ticket) => ({
-    phone: ticket?.phoneNumber || ticket?.phone_number || ticket?.phone || ticket?.contactPhone || ticket?.contact_phone,
+    phone: extractPhone(ticket),
     mask: phoneMaskingEnabled,
   }), [phoneMaskingEnabled]);
 
@@ -73,31 +107,75 @@ export function useSupportTicketListViewModel({
     ].filter(Boolean).join(' ').trim();
 
     const contactField = typeof ticket?.contact === 'object'
-      ? ticket?.contact?.name
+      ? (
+        ticket?.contact?.name
+        || ticket?.contact?.displayName
+        || ticket?.contact?.profileName
+        || ticket?.contact?.pushName
+        || ticket?.contact?.fullName
+        || ticket?.contact?.nome
+      )
       : ticket?.contact;
 
     return (
       ticket?.contactName
       || ticket?.contact_name
+      || ticket?.displayName
+      || ticket?.display_name
+      || ticket?.profileName
+      || ticket?.profile_name
+      || ticket?.pushName
+      || ticket?.push_name
+      || ticket?.fullName
+      || ticket?.full_name
+      || ticket?.name
+      || ticket?.nome
       || ticket?.customerName
       || ticket?.customer_name
       || contactField
       || composedName
       || ticket?.context?.contactName
       || ticket?.context?.contact_name
+      || ticket?.context?.displayName
+      || ticket?.context?.display_name
+      || ticket?.context?.profileName
+      || ticket?.context?.profile_name
+      || ticket?.context?.pushName
+      || ticket?.context?.push_name
       || ticket?.context?.metadata?.contactName
       || ticket?.context?.metadata?.contact_name
       || ticket?.context?.metadata?.customerName
       || ticket?.context?.metadata?.customer_name
       || ticket?.context?.metadata?.name
+      || ticket?.context?.metadata?.displayName
+      || ticket?.context?.metadata?.display_name
+      || ticket?.context?.metadata?.profileName
+      || ticket?.context?.metadata?.profile_name
+      || ticket?.context?.metadata?.pushName
+      || ticket?.context?.metadata?.push_name
+      || ticket?.context?.metadata?.fullName
+      || ticket?.context?.metadata?.full_name
+      || ticket?.context?.metadata?.nome
       || ticket?.context?.contact?.name
+      || ticket?.context?.contact?.displayName
+      || ticket?.context?.contact?.profileName
+      || ticket?.context?.contact?.pushName
       || ticket?.context?.variables?.customerName
       || ticket?.context?.variables?.customer_name
       || ticket?.context?.variables?.name
+      || ticket?.context?.variables?.displayName
+      || ticket?.context?.variables?.display_name
+      || ticket?.context?.variables?.profileName
+      || ticket?.context?.variables?.profile_name
+      || ticket?.context?.variables?.pushName
+      || ticket?.context?.variables?.push_name
+      || ticket?.context?.variables?.fullName
+      || ticket?.context?.variables?.full_name
+      || ticket?.context?.variables?.nome
       || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phoneNumber) ? ticket?.phoneNumber : null)
       || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone_number) ? ticket?.phone_number : null)
       || (!phoneMaskingEnabled && !looksLikePhone(ticket?.phone) ? ticket?.phone : null)
-      || 'Contato sem nome'
+      || buildAnonymousContactName(ticket, phoneMaskingEnabled)
     );
   }, [phoneMaskingEnabled]);
 

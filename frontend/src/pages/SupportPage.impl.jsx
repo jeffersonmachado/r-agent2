@@ -154,9 +154,12 @@ export function SupportPage() {
             queues={state.queues}
             setNewConversationQueue={newConversation.setNewConversationQueue}
             setShowNewConversationModal={newConversation.setShowNewConversationModal}
+            showConversationToggle={Boolean(selectedTicket) && !state.isMobile}
+            isConversationListVisibleDesktop={state.isConversationListVisibleDesktop}
+            onToggleConversationList={() => actions.setIsConversationListVisibleDesktop((prev) => !prev)}
           />
 
-          <div className="attendance-runtime-board">
+          <div className={`attendance-runtime-board${selectedTicket && !state.isMobile && !state.isConversationListVisibleDesktop ? ' attendance-runtime-board--conversation-collapsed' : ''}`}>
             <div className="attendance-runtime-col attendance-runtime-col--metrics">
               <SupportFiltersBar
                 uiSearch={state.uiSearch}
@@ -248,8 +251,10 @@ export function SupportPage() {
                   <ConversationPanel
                     paginationLabel={runtimeViewModel.paginationLabel}
                     isMobile={state.isMobile}
+                    isConversationListVisibleDesktop={state.isConversationListVisibleDesktop}
                     selectedTicket={selectedTicket}
                     setSelectedTicket={actions.setSelectedTicket}
+                    setIsConversationListVisibleDesktop={actions.setIsConversationListVisibleDesktop}
                     setIsRightPanelCollapsed={actions.setIsRightPanelCollapsed}
                     handoverLoading={ticketActions.handoverLoading}
                     handleTakeOver={ticketActions.handleTakeOver}

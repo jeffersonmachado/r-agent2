@@ -32,8 +32,10 @@ const EMOJI_GROUPS = {
 
 export function SupportConversationPane({
   isMobile,
+  isConversationListVisibleDesktop,
   selectedTicket,
   setSelectedTicket,
+  setIsConversationListVisibleDesktop,
   setIsRightPanelCollapsed,
   handoverLoading,
   handleTakeOver,
@@ -200,6 +202,18 @@ export function SupportConversationPane({
                 aria-label="Voltar para lista de chamados"
               >
                 ‹
+              </button>
+            ) : null}
+            {!isMobile ? (
+              <button
+                type="button"
+                className="support-ticket-action-btn"
+                style={{ minHeight: '30px', padding: '4px 10px' }}
+                onClick={() => setIsConversationListVisibleDesktop((prev) => !prev)}
+                aria-label={isConversationListVisibleDesktop ? 'Ocultar lista de conversas' : 'Mostrar lista de conversas'}
+                title={isConversationListVisibleDesktop ? 'Ocultar lista de conversas' : 'Mostrar lista de conversas'}
+              >
+                {isConversationListVisibleDesktop ? 'Ocultar conversas' : 'Mostrar conversas'}
               </button>
             ) : null}
             <span className="support-ticket-title-number">#{selectedTicket.id}</span>

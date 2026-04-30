@@ -3292,6 +3292,17 @@ div:has(svg[data-testid="connection"]) {
   color: var(--color-text-secondary);
 }
 
+.support-conversations-toggle-control {
+  min-height: 36px;
+  font-weight: 700;
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.support-conversations-toggle-control:hover {
+  background: #0284c7;
+}
+
 .support-refresh-icon {
   display: inline-flex;
   align-items: center;
@@ -4066,6 +4077,14 @@ div:has(svg[data-testid="connection"]) {
   flex: 1;
 }
 
+.attendance-runtime-board--conversation-collapsed {
+  grid-template-columns: 190px minmax(0, 1fr) 240px;
+}
+
+.attendance-runtime-board--conversation-collapsed .attendance-runtime-col--tickets {
+  display: none;
+}
+
 .attendance-runtime-col {
   min-height: 0;
 }
@@ -4329,11 +4348,19 @@ div:has(svg[data-testid="connection"]) {
   .attendance-runtime-board {
     grid-template-columns: 180px minmax(300px, 320px) minmax(0, 1fr) 220px;
   }
+
+  .attendance-runtime-board--conversation-collapsed {
+    grid-template-columns: 180px minmax(0, 1fr) 220px;
+  }
 }
 
 @media (max-width: 1280px) {
   .attendance-runtime-board {
     grid-template-columns: 170px minmax(280px, 300px) minmax(0, 1fr);
+  }
+
+  .attendance-runtime-board--conversation-collapsed {
+    grid-template-columns: 170px minmax(0, 1fr);
   }
 
   .attendance-runtime-col--actions {
@@ -4355,6 +4382,10 @@ div:has(svg[data-testid="connection"]) {
 
   .attendance-runtime-board {
     grid-template-columns: 170px minmax(260px, 280px) minmax(0, 1fr);
+  }
+
+  .attendance-runtime-board--conversation-collapsed {
+    grid-template-columns: 170px minmax(0, 1fr);
   }
 }
 
@@ -4729,7 +4760,7 @@ div:has(svg[data-testid="connection"]) {
 
 .support-ticket-actions {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   margin-bottom: 10px;
   flex-wrap: nowrap;
@@ -4741,6 +4772,14 @@ div:has(svg[data-testid="connection"]) {
   margin-top: 0;
   flex: 0 0 auto;
   white-space: nowrap;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-ticket-actions .support-ticket-action-btn.support-button-danger {
+  width: auto;
 }
 
 .support-right-panel-wrap {

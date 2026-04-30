@@ -8,6 +8,9 @@ export function SupportWorkspaceHeader({
   setNewConversationQueue,
   setShowNewConversationModal,
   onEnableNotifications,
+  showConversationToggle = false,
+  isConversationListVisibleDesktop = false,
+  onToggleConversationList,
 }) {
   return (
     <div className="support-header">
@@ -66,6 +69,18 @@ export function SupportWorkspaceHeader({
           <span aria-hidden="true">🔔</span>
           <span>Ativar notificações</span>
         </Button>
+        {showConversationToggle ? (
+          <Button
+            type="button"
+            className="support-conversations-toggle-control"
+            title={isConversationListVisibleDesktop ? 'Ocultar lista de conversas' : 'Mostrar lista de conversas'}
+            aria-label={isConversationListVisibleDesktop ? 'Ocultar lista de conversas' : 'Mostrar lista de conversas'}
+            onClick={() => onToggleConversationList?.()}
+          >
+            <span aria-hidden="true">💬</span>
+            <span>{isConversationListVisibleDesktop ? 'Ocultar conversas' : 'Mostrar conversas'}</span>
+          </Button>
+        ) : null}
       </div>
     </div>
   );

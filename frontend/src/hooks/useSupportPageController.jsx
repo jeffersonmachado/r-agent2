@@ -19,6 +19,98 @@ import { useSupportTimelinePresentation } from './useSupportTimelinePresentation
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
 
+function resolveTicketPhone(ticket) {
+  return (
+    ticket?.phoneNumber
+    || ticket?.phone_number
+    || ticket?.phone
+    || ticket?.contactPhone
+    || ticket?.contact_phone
+    || ticket?.contact?.phone
+    || ticket?.contact?.waId
+    || ticket?.contact?.wa_id
+    || ticket?.contact?.whatsapp
+    || ticket?.contact?.whatsappNumber
+    || ticket?.context?.metadata?.phoneNumber
+    || ticket?.context?.metadata?.phone_number
+    || ticket?.context?.metadata?.phone
+    || ticket?.context?.metadata?.waId
+    || ticket?.context?.metadata?.wa_id
+    || ticket?.context?.variables?.phoneNumber
+    || ticket?.context?.variables?.phone_number
+    || ticket?.context?.variables?.phone
+    || ticket?.context?.variables?.waId
+    || ticket?.context?.variables?.wa_id
+    || ticket?.from
+    || ticket?.remoteJid
+    || null
+  );
+}
+
+function resolveTicketName(ticket) {
+  const contactFromObject = typeof ticket?.contact === 'object'
+    ? (
+      ticket?.contact?.name
+      || ticket?.contact?.displayName
+      || ticket?.contact?.profileName
+      || ticket?.contact?.pushName
+      || ticket?.contact?.fullName
+      || ticket?.contact?.nome
+    )
+    : ticket?.contact;
+
+  const composedName = [
+    ticket?.firstName || ticket?.first_name,
+    ticket?.lastName || ticket?.last_name,
+  ].filter(Boolean).join(' ').trim();
+
+  return (
+    ticket?.contactName
+    || ticket?.contact_name
+    || ticket?.displayName
+    || ticket?.display_name
+    || ticket?.profileName
+    || ticket?.profile_name
+    || ticket?.pushName
+    || ticket?.push_name
+    || ticket?.fullName
+    || ticket?.full_name
+    || ticket?.name
+    || ticket?.nome
+    || ticket?.customerName
+    || ticket?.customer_name
+    || contactFromObject
+    || composedName
+    || ticket?.context?.metadata?.contactName
+    || ticket?.context?.metadata?.contact_name
+    || ticket?.context?.metadata?.customerName
+    || ticket?.context?.metadata?.customer_name
+    || ticket?.context?.metadata?.name
+    || ticket?.context?.metadata?.displayName
+    || ticket?.context?.metadata?.display_name
+    || ticket?.context?.metadata?.profileName
+    || ticket?.context?.metadata?.profile_name
+    || ticket?.context?.metadata?.pushName
+    || ticket?.context?.metadata?.push_name
+    || ticket?.context?.metadata?.fullName
+    || ticket?.context?.metadata?.full_name
+    || ticket?.context?.metadata?.nome
+    || ticket?.context?.variables?.customerName
+    || ticket?.context?.variables?.customer_name
+    || ticket?.context?.variables?.name
+    || ticket?.context?.variables?.nome
+    || ticket?.context?.variables?.displayName
+    || ticket?.context?.variables?.display_name
+    || ticket?.context?.variables?.profileName
+    || ticket?.context?.variables?.profile_name
+    || ticket?.context?.variables?.pushName
+    || ticket?.context?.variables?.push_name
+    || ticket?.context?.variables?.fullName
+    || ticket?.context?.variables?.full_name
+    || null
+  );
+}
+
 export function useSupportPageController({
   agent,
   isAuthenticated,
@@ -35,6 +127,7 @@ export function useSupportPageController({
   const [uiSearch, setUiSearch] = useState('');
   const [uiQueue, setUiQueue] = useState('');
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
+  const [isConversationListVisibleDesktop, setIsConversationListVisibleDesktop] = useState(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false));
   const [tagInput, setTagInput] = useState('');
   const [wsUiStatus, setWsUiStatus] = useState({ phase: 'connecting' });
@@ -113,47 +206,8 @@ export function useSupportPageController({
       );
 
       const normalizedTickets = uniqueTickets.map((ticket) => {
-        const resolvedPhone =
-          ticket?.phoneNumber
-          || ticket?.phone_number
-          || ticket?.phone
-          || ticket?.contactPhone
-          || ticket?.contact_phone
-          || ticket?.contact?.phone
-          || ticket?.context?.metadata?.phoneNumber
-          || ticket?.context?.metadata?.phone_number
-          || ticket?.context?.metadata?.phone
-          || ticket?.context?.variables?.phoneNumber
-          || ticket?.context?.variables?.phone_number
-          || ticket?.context?.variables?.phone
-          || null;
-
-        const contactFromObject = typeof ticket?.contact === 'object'
-          ? ticket?.contact?.name
-          : ticket?.contact;
-
-        const composedName = [
-          ticket?.firstName || ticket?.first_name,
-          ticket?.lastName || ticket?.last_name,
-        ].filter(Boolean).join(' ').trim();
-
-        const resolvedName =
-          ticket?.contactName
-          || ticket?.contact_name
-          || ticket?.customerName
-          || ticket?.customer_name
-          || contactFromObject
-          || composedName
-          || ticket?.context?.metadata?.contactName
-          || ticket?.context?.metadata?.contact_name
-          || ticket?.context?.metadata?.customerName
-          || ticket?.context?.metadata?.customer_name
-          || ticket?.context?.metadata?.name
-          || ticket?.context?.variables?.customerName
-          || ticket?.context?.variables?.customer_name
-          || ticket?.context?.variables?.name
-          || ticket?.context?.variables?.nome
-          || null;
+        const resolvedPhone = resolveTicketPhone(ticket);
+        const resolvedName = resolveTicketName(ticket);
 
         return {
           ...ticket,
@@ -226,71 +280,8 @@ export function useSupportPageController({
       },
     };
 
-    const resolvedPhone =
-      incomingTicket.phoneNumber
-      || incomingTicket.phone_number
-      || incomingTicket.phone
-      || incomingTicket.contactPhone
-      || incomingTicket.contact_phone
-      || incomingTicket.contact?.phone
-      || previousTicket.phoneNumber
-      || previousTicket.phone_number
-      || previousTicket.phone
-      || previousTicket.contactPhone
-      || previousTicket.contact_phone
-      || previousTicket.contact?.phone
-      || previousTicket.context?.metadata?.phoneNumber
-      || previousTicket.context?.metadata?.phone_number
-      || previousTicket.context?.metadata?.phone
-      || previousTicket.context?.variables?.phoneNumber
-      || previousTicket.context?.variables?.phone_number
-      || previousTicket.context?.variables?.phone
-      || null;
-
-    const incomingComposedName = [
-      incomingTicket.firstName || incomingTicket.first_name,
-      incomingTicket.lastName || incomingTicket.last_name,
-    ].filter(Boolean).join(' ').trim();
-
-    const previousComposedName = [
-      previousTicket.firstName || previousTicket.first_name,
-      previousTicket.lastName || previousTicket.last_name,
-    ].filter(Boolean).join(' ').trim();
-
-    const resolvedName =
-      incomingTicket.contactName
-      || incomingTicket.contact_name
-      || incomingTicket.customerName
-      || incomingTicket.customer_name
-      || incomingTicket.contact?.name
-      || (typeof incomingTicket.contact === 'string' ? incomingTicket.contact : null)
-      || incomingComposedName
-      || incomingTicket.context?.metadata?.contactName
-      || incomingTicket.context?.metadata?.contact_name
-      || incomingTicket.context?.metadata?.customerName
-      || incomingTicket.context?.metadata?.customer_name
-      || incomingTicket.context?.metadata?.name
-      || incomingTicket.context?.variables?.customerName
-      || incomingTicket.context?.variables?.customer_name
-      || incomingTicket.context?.variables?.name
-      || incomingTicket.context?.variables?.nome
-      || previousTicket.contactName
-      || previousTicket.contact_name
-      || previousTicket.customerName
-      || previousTicket.customer_name
-      || previousTicket.contact?.name
-      || (typeof previousTicket.contact === 'string' ? previousTicket.contact : null)
-      || previousComposedName
-      || previousTicket.context?.metadata?.contactName
-      || previousTicket.context?.metadata?.contact_name
-      || previousTicket.context?.metadata?.customerName
-      || previousTicket.context?.metadata?.customer_name
-      || previousTicket.context?.metadata?.name
-      || previousTicket.context?.variables?.customerName
-      || previousTicket.context?.variables?.customer_name
-      || previousTicket.context?.variables?.name
-      || previousTicket.context?.variables?.nome
-      || null;
+    const resolvedPhone = resolveTicketPhone(incomingTicket) || resolveTicketPhone(previousTicket);
+    const resolvedName = resolveTicketName(incomingTicket) || resolveTicketName(previousTicket);
 
     return {
       ...merged,
@@ -715,7 +706,11 @@ export function useSupportPageController({
 
   const handleSelectTicket = useCallback((ticket) => {
     setSelectedTicket(ticket);
-    if (isMobile) setIsRightPanelCollapsed(true);
+    if (isMobile) {
+      setIsRightPanelCollapsed(true);
+    } else {
+      setIsConversationListVisibleDesktop(false);
+    }
   }, [isMobile]);
 
   return {
@@ -725,6 +720,7 @@ export function useSupportPageController({
       loading,
       selectedTicket,
       isMobile,
+      isConversationListVisibleDesktop,
       isRightPanelCollapsed,
       uiSearch,
       uiQueue,
@@ -759,6 +755,7 @@ export function useSupportPageController({
     },
     actions: {
       setSelectedTicket,
+      setIsConversationListVisibleDesktop,
       setIsRightPanelCollapsed,
       setUiSearch,
       setUiQueue,
