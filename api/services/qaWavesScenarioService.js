@@ -242,121 +242,55 @@ function toSlug(value) {
     .replace(/^_+|_+$/g, '') || 'scenario';
 }
 
-function buildFitnessExampleSeeds(scenarioId) {
+function buildGenericExampleSeeds(scenarioId) {
   const createdAt = nowIso();
-  return [
-    {
-      id: 'seed_001',
-      scenarioId,
-      source: 'ai_generated',
-      status: 'approved',
-      persona: { type: 'cliente_direto', behavior: 'objetivo', urgency: 'medium' },
-      inputVariants: ['Quero fazer uma aula experimental'],
-      data: {
-        customer: { name: 'Ana Souza', phone: '+5511991110001', goal: 'emagrecimento', preferredTime: '18:00' },
-        fitness: { classType: 'funcional' },
-      },
-      expected: { intent: 'trial_interest', shouldCreateBooking: true },
-      createdAt,
-      updatedAt: createdAt,
-    },
-    {
-      id: 'seed_002',
-      scenarioId,
-      source: 'ai_generated',
-      status: 'approved',
-      persona: { type: 'cliente_indeciso', behavior: 'exploratorio', urgency: 'low' },
-      inputVariants: ['Estou pesquisando academias, posso conhecer?'],
-      data: {
-        customer: { name: 'Carlos Lima', phone: '+5511991110002', goal: 'saude', preferredTime: '19:00' },
-        fitness: { classType: 'musculacao' },
-      },
-      expected: { intent: 'trial_interest', shouldCreateLead: true, shouldCreateBooking: true },
-      createdAt,
-      updatedAt: createdAt,
-    },
-    {
-      id: 'seed_003',
-      scenarioId,
-      source: 'ai_generated',
-      status: 'approved',
-      persona: { type: 'sensivel_preco', behavior: 'negociador', priceSensitivity: 'high', urgency: 'low' },
-      inputVariants: ['Tem aula teste gratis?'],
-      data: {
-        customer: { name: 'Mariana Costa', phone: '+5511991110003', goal: 'condicionamento', preferredTime: '07:00' },
-        fitness: { classType: 'cross' },
-      },
-      expected: { intent: 'trial_interest', shouldCreateLead: true },
-      createdAt,
-      updatedAt: createdAt,
-    },
-    {
-      id: 'seed_004',
-      scenarioId,
-      source: 'ai_generated',
-      status: 'reviewed',
-      persona: { type: 'edge_case_horario', behavior: 'fora_da_janela', urgency: 'high' },
-      inputVariants: ['Quero fazer aula hoje as 23:00'],
-      data: {
-        customer: { name: 'Ricardo Alves', phone: '+5511991110004', goal: 'bem_estar', preferredTime: '23:00' },
-        fitness: { classType: 'funcional' },
-      },
-      expected: { intent: 'trial_interest', nextAction: 'offer_alternative_slot' },
-      createdAt,
-      updatedAt: createdAt,
-    },
-    {
-      id: 'seed_005',
-      scenarioId,
-      source: 'ai_generated',
-      status: 'reviewed',
-      persona: { type: 'edge_case_privacidade', behavior: 'resistente_dados', urgency: 'medium' },
-      inputVariants: ['Quero conhecer, mas nao quero passar telefone'],
-      data: {
-        customer: { name: 'Patricia Gomes', phone: null, goal: 'saude', preferredTime: '17:00' },
-        fitness: { classType: 'pilates' },
-      },
-      expected: { intent: 'trial_interest', nextAction: 'ask_required_contact_or_handoff' },
-      createdAt,
-      updatedAt: createdAt,
-    },
+  const personas = [
+    { type: 'cliente_direto',     behavior: 'objetivo',      urgency: 'medium' },
+    { type: 'cliente_indeciso',   behavior: 'exploratorio',  urgency: 'low'    },
+    { type: 'sensivel_preco',     behavior: 'negociador',    urgency: 'low'    },
+    { type: 'edge_case_horario',  behavior: 'fora_da_janela',urgency: 'high'   },
+    { type: 'edge_case_privacidade', behavior: 'resistente_dados', urgency: 'medium' },
   ];
+  return personas.map((persona, i) => ({
+    id: `seed_${String(i + 1).padStart(3, '0')}`,
+    scenarioId,
+    source: 'ai_generated',
+    status: i < 3 ? 'approved' : 'reviewed',
+    persona,
+    inputVariants: [`Mensagem de entrada ${i + 1}`],
+    data: { customer: { name: `Cliente ${i + 1}`, phone: `+551199111000${i + 1}` } },
+    expected: { intent: 'unknown', shouldValidate: true },
+    createdAt,
+    updatedAt: createdAt,
+  }));
 }
 
-function buildFitnessExampleScenario() {
+function buildGenericExampleScenario(vertical, journey, goal, channels) {
   const createdAt = nowIso();
-  const id = 'fitness_trial_class';
-  const scenario = {
-    id,
-    waveId: 'fitness-cliente-novo',
-    vertical: 'fitness',
-    journey: 'cliente_novo',
-    name: 'Aula experimental',
-    description: 'Cenario semantico de cliente novo para agendamento de aula experimental',
+  const slug = toSlug(`${vertical}_${journey}_${goal || 'scenario'}`);
+  return {
+    id: slug,
+    waveId: `${vertical}-${journey}`,
+    vertical,
+    journey,
+    name: goal || 'Cenario de exemplo',
+    description: `Cenario semantico gerado para ${vertical} / ${journey}`,
     source: 'ai_inferred',
-    status: 'active',
+    status: 'draft',
     executionStatus: 'queued',
     version: 'v1',
-    channels: ['whatsapp', 'chat'],
-    risk: 'high',
-    priority: 'high',
-    preconditions: [
-      { type: 'tenant_ready', description: 'Tenant fitness com agenda ativa' },
-    ],
+    channels: Array.isArray(channels) && channels.length ? channels : ['api'],
+    risk: 'medium',
+    priority: 'medium',
+    preconditions: [{ type: 'tenant_ready', description: 'Tenant ativo' }],
     steps: [
       {
         id: 'step_001_send_message',
         order: 1,
         type: 'send_message',
-        adapter: 'whatsapp',
-        channel: 'whatsapp',
-        input: {
-          variants: [
-            'Tem aula experimental?',
-            'Posso fazer uma aula teste?',
-            'Quero conhecer a academia',
-          ],
-        },
+        adapter: (Array.isArray(channels) && channels[0]) || 'api',
+        channel: (Array.isArray(channels) && channels[0]) || 'api',
+        input: { variants: [goal || 'Mensagem inicial'] },
         enabled: true,
       },
       {
@@ -364,209 +298,50 @@ function buildFitnessExampleScenario() {
         order: 2,
         type: 'validate_intent',
         adapter: 'aiIntentService',
-        expected: { intent: 'trial_interest', confidenceMin: 0.7 },
+        expected: { intent: 'unknown', confidenceMin: 0.6 },
         enabled: true,
       },
       {
-        id: 'step_003_validate_offer_response',
+        id: 'step_003_validate_response',
         order: 3,
         type: 'validate_response',
         adapter: 'ragService',
-        expected: { semantic: 'oferta de aula experimental' },
+        expected: { semantic: goal || 'resposta valida' },
         enabled: true,
       },
       {
-        id: 'step_004_provide_data',
+        id: 'step_004_validate_sla',
         order: 4,
-        type: 'provide_data',
-        adapter: 'api',
-        data: {
-          name: '{{seed.customer.name}}',
-          phone: '{{seed.customer.phone}}',
-          goal: '{{seed.customer.goal}}',
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_005_check_availability',
-        order: 5,
-        type: 'check_availability',
-        adapter: 'schedulingService',
-        enabled: true,
-      },
-      {
-        id: 'step_006_select_slot',
-        order: 6,
-        type: 'select_slot',
-        adapter: 'schedulingService',
-        data: {
-          class_type: '{{seed.fitness.classType}}',
-          time: '{{seed.customer.preferredTime}}',
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_007_validate_backend_booking',
-        order: 7,
-        type: 'validate_backend',
-        adapter: 'api',
-        expected: {
-          backendEntity: 'booking',
-          backendExists: true,
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_008_validate_confirmation',
-        order: 8,
-        type: 'validate_response',
-        adapter: 'ragService',
-        expected: { semantic: 'confirmacao de agendamento' },
-        enabled: true,
-      },
-      {
-        id: 'step_009_validate_sla',
-        order: 9,
         type: 'validate_sla',
         adapter: 'meshValidator',
         data: { maxMs: 15000 },
         enabled: true,
       },
       {
-        id: 'step_010_validate_fallback',
-        order: 10,
-        type: 'validate_fallback',
-        adapter: 'flowEngine',
-        expected: { fallbackTriggered: false },
-        enabled: true,
-      },
-    ],
-    semanticSteps: [
-      {
-        id: 'step_001_send_message',
-        order: 1,
-        type: 'send_message',
-        adapter: 'whatsapp',
-        channel: 'whatsapp',
-        input: {
-          variants: [
-            'Tem aula experimental?',
-            'Posso fazer uma aula teste?',
-            'Quero conhecer a academia',
-          ],
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_002_validate_intent',
-        order: 2,
-        type: 'validate_intent',
-        adapter: 'aiIntentService',
-        expected: { intent: 'trial_interest', confidenceMin: 0.7 },
-        enabled: true,
-      },
-      {
-        id: 'step_003_validate_offer_response',
-        order: 3,
-        type: 'validate_response',
-        adapter: 'ragService',
-        expected: { semantic: 'oferta de aula experimental' },
-        enabled: true,
-      },
-      {
-        id: 'step_004_provide_data',
-        order: 4,
-        type: 'provide_data',
-        adapter: 'api',
-        data: {
-          name: '{{seed.customer.name}}',
-          phone: '{{seed.customer.phone}}',
-          goal: '{{seed.customer.goal}}',
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_005_check_availability',
+        id: 'step_005_validate_fallback',
         order: 5,
-        type: 'check_availability',
-        adapter: 'schedulingService',
-        enabled: true,
-      },
-      {
-        id: 'step_006_select_slot',
-        order: 6,
-        type: 'select_slot',
-        adapter: 'schedulingService',
-        data: {
-          class_type: '{{seed.fitness.classType}}',
-          time: '{{seed.customer.preferredTime}}',
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_007_validate_backend_booking',
-        order: 7,
-        type: 'validate_backend',
-        adapter: 'api',
-        expected: {
-          backendEntity: 'booking',
-          backendExists: true,
-        },
-        enabled: true,
-      },
-      {
-        id: 'step_008_validate_confirmation',
-        order: 8,
-        type: 'validate_response',
-        adapter: 'ragService',
-        expected: { semantic: 'confirmacao de agendamento' },
-        enabled: true,
-      },
-      {
-        id: 'step_009_validate_sla',
-        order: 9,
-        type: 'validate_sla',
-        adapter: 'meshValidator',
-        data: { maxMs: 15000 },
-        enabled: true,
-      },
-      {
-        id: 'step_010_validate_fallback',
-        order: 10,
         type: 'validate_fallback',
         adapter: 'flowEngine',
         expected: { fallbackTriggered: false },
         enabled: true,
       },
     ],
-    seeds: buildFitnessExampleSeeds(id),
-    validators: [
-      { id: 'validator_001', type: 'semantic_intent', expected: 'trial_interest' },
-      { id: 'validator_002', type: 'semantic_response', expected: 'confirmacao de agendamento' },
-    ],
+    seeds: buildGenericExampleSeeds(slug),
     validations: {
       slaMs: 15000,
-      fallbackAllowed: false,
-      requireBackendValidation: true,
+      fallbackAllowed: true,
+      requireBackendValidation: false,
       requireReplay: true,
     },
-    tags: {
-      waveId: 'fitness-cliente-novo',
-      journey: 'cliente_novo',
-      scenario: 'fitness_trial_class',
-      source: 'ai_inferred',
-      vertical: 'fitness',
-    },
-    platform: {
-      platformScenarioIds: ['business-f1'],
-    },
-    platformScenarioIds: ['business-f1'],
+    tags: { waveId: `${vertical}-${journey}`, journey, source: 'ai_inferred', vertical },
+    platform: { platformScenarioIds: [] },
+    platformScenarioIds: [],
     createdAt,
     updatedAt: createdAt,
   };
-
-  return scenario;
 }
+
+
 
 function listLatestScenarios(filters = {}) {
   const store = loadScenarioStore();
@@ -639,33 +414,8 @@ function inferPlatformScenarioIds(scenario) {
 function inferScenario(input = {}) {
   const vertical = String(input.vertical || '').toLowerCase();
   const journey = String(input.journey || '').toLowerCase();
-  const goal = String(input.goal || '').toLowerCase();
 
-  let aiOutput = input.aiOutput;
-  if (!aiOutput && vertical === 'fitness' && journey.includes('cliente_novo') && goal.includes('aula')) {
-    aiOutput = buildFitnessExampleScenario();
-  }
-
-  if (!aiOutput) {
-    const baseName = input.goal || 'cenario_ia';
-    aiOutput = {
-      id: toSlug(`${vertical}_${journey}_${baseName}`),
-      waveId: `${vertical}-${journey}`,
-      vertical,
-      journey,
-      name: input.goal || 'Cenario inferido por IA',
-      source: 'ai_inferred',
-      status: 'draft',
-      channels: Array.isArray(input.channels) ? input.channels : ['api'],
-      steps: [
-        { type: 'send_message', channel: (input.channels || ['api'])[0], input: { text: input.goal || 'mensagem inicial' } },
-        { type: 'validate_intent', expected: { intent: 'unknown', confidenceMin: 0.6 } },
-        { type: 'validate_response', expected: { semantic: input.goal || 'resposta valida' } },
-      ],
-      validations: { requireReplay: true, fallbackAllowed: true, requireBackendValidation: false, slaMs: 15000 },
-      platform: { platformScenarioIds: inferPlatformScenarioIds({ vertical, journey }) },
-    };
-  }
+  const aiOutput = input.aiOutput || buildGenericExampleScenario(vertical, journey, input.goal, input.channels);
 
   const adapted = adaptAiScenario(aiOutput, {
     vertical,
@@ -679,7 +429,7 @@ function inferScenario(input = {}) {
   }
 
   if (input.constraints?.generateSeeds === true && (!adapted.scenario.seeds || adapted.scenario.seeds.length === 0)) {
-    adapted.scenario.seeds = buildFitnessExampleSeeds(adapted.scenario.id).map((seed) => ({
+    adapted.scenario.seeds = buildGenericExampleSeeds(adapted.scenario.id).map((seed) => ({
       ...seed,
       scenarioId: adapted.scenario.id,
     }));
@@ -690,7 +440,7 @@ function inferScenario(input = {}) {
 
 function buildGeneratedSeeds(scenario, count = 5) {
   const now = nowIso();
-  const base = buildFitnessExampleSeeds(scenario.id);
+  const base = buildGenericExampleSeeds(scenario.id);
   const capped = Math.max(1, Math.min(20, Number(count) || 5));
   const seeds = [];
 

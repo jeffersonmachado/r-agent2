@@ -1,0 +1,212 @@
+{
+  "_comment": "Configuração central do QA Waves Registry. Edite este arquivo para adicionar/remover domínios, jornadas, passos e regras de mapeamento sem alterar código.",
+
+  "stepCatalog": [
+    { "id": "step_01_discovery",   "name": "Descoberta" },
+    { "id": "step_02_attraction",  "name": "Atracao" },
+    { "id": "step_03_engagement",  "name": "Engajamento" },
+    { "id": "step_04_qualification","name": "Qualificacao" },
+    { "id": "step_05_lead_capture","name": "Captura de Lead" },
+    { "id": "step_06_conversion",  "name": "Conversao" },
+    { "id": "step_07_registration","name": "Cadastro" },
+    { "id": "step_08_scheduling",  "name": "Agendamento" },
+    { "id": "step_09_checkout",    "name": "Checkout" },
+    { "id": "step_10_payment",     "name": "Pagamento" },
+    { "id": "step_11_confirmation","name": "Confirmacao" },
+    { "id": "step_12_activation",  "name": "Ativacao" },
+    { "id": "step_13_delivery",    "name": "Entrega" },
+    { "id": "step_14_support",     "name": "Suporte" },
+    { "id": "step_15_retention",   "name": "Retencao" }
+  ],
+
+  "defaultStepId": "step_03_engagement",
+
+  "journeyBlueprints": [
+    {
+      "id": "fitness",
+      "name": "Fitness",
+      "journeys": [
+        { "id": "fitness_new_customer",    "name": "Cliente Novo" },
+        { "id": "fitness_active_customer", "name": "Cliente Ativo" }
+      ]
+    },
+    {
+      "id": "beauty",
+      "name": "Beauty",
+      "journeys": [
+        { "id": "beauty_new_customer",       "name": "Cliente Novo" },
+        { "id": "beauty_returning_customer", "name": "Cliente Recorrente" }
+      ]
+    },
+    {
+      "id": "pbx",
+      "name": "PBX",
+      "journeys": [
+        { "id": "pbx_voice_service", "name": "Servico de Voz" },
+        { "id": "pbx_operations",    "name": "Operacao PBX" }
+      ]
+    },
+    {
+      "id": "core",
+      "name": "Core",
+      "journeys": [
+        { "id": "core_customer_journey", "name": "Jornada Core" }
+      ]
+    },
+    {
+      "id": "unmapped",
+      "name": "Unmapped",
+      "journeys": [
+        { "id": "unmapped_journey", "name": "Nao Mapeado" }
+      ]
+    }
+  ],
+
+  "domainAliases": {
+    "ecommerce":      "market",
+    "e_commerce":     "market",
+    "e_comércio":     "market",
+    "varejo":         "market",
+    "servicos":       "services",
+    "servicos_gerais":"services",
+    "serviço":        "services",
+    "serviços":       "services",
+    "clinica":        "clinic",
+    "saude":          "clinic"
+  },
+
+  "domainInferenceRules": [
+    {
+      "domainId": "fitness",
+      "idPrefixes":  ["business-fit-", "fitness::"],
+      "idContains":  ["fitness"],
+      "flowContains": ["fitness"],
+      "reason": "fitness-keyword"
+    },
+    {
+      "domainId": "clinic",
+      "idPrefixes":  ["business-clinic-"],
+      "idContains":  ["clinic"],
+      "flowContains": ["clinic"],
+      "reason": "clinic-keyword"
+    },
+    {
+      "domainId": "food",
+      "idPrefixes":  ["business-food-"],
+      "idContains":  ["food"],
+      "flowContains": ["food"],
+      "reason": "food-keyword"
+    },
+    {
+      "domainId": "market",
+      "idPrefixes":  ["business-market-"],
+      "idContains":  ["market"],
+      "flowContains": ["market"],
+      "reason": "market-keyword"
+    },
+    {
+      "domainId": "services",
+      "idPrefixes":  ["business-serv-"],
+      "idContains":  ["service"],
+      "flowContains": ["service"],
+      "reason": "services-keyword"
+    },
+    {
+      "domainId": "omnichannel",
+      "idPrefixes":  [],
+      "idContains":  ["chatpro", "omnichannel"],
+      "flowContains": ["omnichannel"],
+      "reason": "omnichannel-keyword"
+    },
+    {
+      "domainId": "bpmn",
+      "idPrefixes":  [],
+      "idContains":  ["bpmn"],
+      "flowContains": ["bpmn"],
+      "reason": "bpmn-keyword"
+    },
+    {
+      "domainId": "beauty",
+      "idPrefixes":  ["beauty::"],
+      "idContains":  ["beauty"],
+      "flowContains": ["beauty"],
+      "reason": "legacy-beauty"
+    },
+    {
+      "domainId": "pbx",
+      "idPrefixes":  ["pbx::"],
+      "idContains":  ["pbx", "voice"],
+      "flowContains": ["pbx", "voice"],
+      "reason": "legacy-pbx"
+    },
+    {
+      "domainId": "core",
+      "idPrefixes":  ["core::"],
+      "idContains":  ["core"],
+      "flowContains": ["core"],
+      "reason": "legacy-core"
+    }
+  ],
+
+  "genericFallbackPrefixes": ["business-", "qa-", "rpa-"],
+  "genericFallbackDomainId": "core",
+  "unmappedDomainId": "unmapped",
+  "unmappedJourneyId": "unmapped_journey",
+
+  "journeyInferenceRules": [
+    {
+      "domainId": "fitness",
+      "rules": [
+        { "journeyId": "fitness_active_customer", "keywords": ["renew", "attendance", "membership"] }
+      ],
+      "defaultJourneyId": "fitness_new_customer"
+    },
+    {
+      "domainId": "beauty",
+      "rules": [
+        { "journeyId": "beauty_returning_customer", "keywords": ["return", "reactivation", "retention"] }
+      ],
+      "defaultJourneyId": "beauty_new_customer"
+    },
+    {
+      "domainId": "pbx",
+      "rules": [
+        { "journeyId": "pbx_operations", "keywords": ["route", "trunk", "extension"] }
+      ],
+      "defaultJourneyId": "pbx_voice_service"
+    },
+    { "domainId": "clinic",      "defaultJourneyId": "clinic_customer_journey" },
+    { "domainId": "food",        "defaultJourneyId": "food_customer_journey" },
+    { "domainId": "market",      "defaultJourneyId": "market_customer_journey" },
+    { "domainId": "services",    "defaultJourneyId": "services_customer_journey" },
+    { "domainId": "omnichannel", "defaultJourneyId": "omnichannel_operations" },
+    { "domainId": "bpmn",        "defaultJourneyId": "bpmn_editor_journey" },
+    { "domainId": "core",        "defaultJourneyId": "core_customer_journey" }
+  ],
+
+  "stepKeywords": [
+    { "stepId": "step_10_payment",     "keywords": ["payment", "pagamento", "cobranca", "charge", "invoice"] },
+    { "stepId": "step_08_scheduling",  "keywords": ["schedule", "agendamento", "agenda", "appointment", "slot"] },
+    { "stepId": "step_05_lead_capture","keywords": ["lead", "captura"] },
+    { "stepId": "step_04_qualification","keywords": ["qualify", "qualification", "qualificacao"] },
+    { "stepId": "step_02_attraction",  "keywords": ["campaign", "campanha", "ads", "anuncio", "acquisition"] },
+    { "stepId": "step_06_conversion",  "keywords": ["conversion", "convert", "conversao"] },
+    { "stepId": "step_07_registration","keywords": ["register", "cadastro", "signup", "onboarding"] },
+    { "stepId": "step_09_checkout",    "keywords": ["checkout", "cart", "carrinho"] },
+    { "stepId": "step_11_confirmation","keywords": ["confirm", "confirmacao"] },
+    { "stepId": "step_12_activation",  "keywords": ["activate", "ativacao", "ativar", "enable"] },
+    { "stepId": "step_13_delivery",    "keywords": ["delivery", "entrega", "fulfillment"] },
+    { "stepId": "step_14_support",     "keywords": ["support", "suporte", "ticket"] },
+    { "stepId": "step_15_retention",   "keywords": ["renew", "retention", "reten", "churn", "fidel"] },
+    { "stepId": "step_03_engagement",  "keywords": ["chat", "engage", "engajamento", "interaction"] },
+    { "stepId": "step_01_discovery",   "keywords": ["landing", "discover", "discovery", "home"] }
+  ],
+
+  "subjourneyKeywords": [
+    { "id": "payment_success",   "keywords": ["payment_success", "success", "aprovado"] },
+    { "id": "payment_failed",    "keywords": ["payment_failed", "failed", "failure", "erro"] },
+    { "id": "lead_generation",   "keywords": ["lead", "capture"] },
+    { "id": "schedule_success",  "keywords": ["schedule", "agendamento", "appointment"] },
+    { "id": "support_resolution","keywords": ["support", "suporte", "ticket"] }
+  ]
+}
