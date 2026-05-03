@@ -1239,6 +1239,8 @@ function buildSyntheticReplay(scenario, result, baseDir) {
     : scenario.rpaRecordingId
       ? 'rpa_replay_summary'
       : 'api_replay_summary';
+  const startedAt = result.startedAt || null;
+  const finishedAt = result.finishedAt || null;
   const payload = {
     scenarioId: scenario.id,
     flow: scenario.flow,
@@ -1247,6 +1249,9 @@ function buildSyntheticReplay(scenario, result, baseDir) {
     source: scenario.source,
     command: scenario.command ? [scenario.command, ...(scenario.commandArgs || [])] : null,
     recordingId: scenario.rpaRecordingId || null,
+    startedAt,
+    finishedAt,
+    durationMs: durationMs(startedAt, finishedAt),
     steps: (scenario.steps || []).map((step, index) => ({
       index: index + 1,
       name: typeof step === 'string' ? step : step.type || JSON.stringify(step),
