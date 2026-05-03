@@ -3,58 +3,60 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..');
-const HISTORY_DIR = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'history');
+const HISTORY_DIR = path.join(__dirname, 'history');
 const INDEX_PATH = path.join(HISTORY_DIR, 'index.json');
 
-function ensureDir(dirPath) {
-  fs.mkdirSync(dirPath, { recursive: true });
-}
-
-function safeReadJson(filePath, fallback) {
+function loadIndex() {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (_) {
-    return fallback;
+    return JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
+  } catch {
+    return { entries: [] };
   }
 }
 
+function saveIndex(index) {
+  try {
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    fs.writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2), 'utf8');
+  } catch {
+    // silencioso — histórico não é crítico para o fluxo de execução
+  }
+}
+
+/**
+ * persistStabilitySnapshot — persiste um snapshot de estabilidade no histórico local.
+ * Retorna o índice atualizado com as últimas entradas.
+ */
 function persistStabilitySnapshot(snapshot) {
-  ensureDir(HISTORY_DIR);
-  const dateToken = new Date(snapshot.generatedAt || Date.now()).toISOString().slice(0, 10);
-  const fileName = `stability-${dateToken}.json`;
-  const filePath = path.join(HISTORY_DIR, fileName);
+  if (!snapshot) return { entries: [] };
 
-  let payload = [];
-  if (fs.existsSync(filePath)) {
-    const previous = safeReadJson(filePath, []);
-    payload = Array.isArray(previous) ? previous : [previous];
+  const index = loadIndex();
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `stability-${date}.json`;
+  const filePath = path.join(HISTORY_DIR, filename);
+
+  try {
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    let existing = [];
+    try { existing = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch { existing = []; }
+    if (!Array.isArray(existing)) existing = [];
+    existing.push(snapshot);
+    fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf8');
+  } catch {
+    // silencioso
   }
-  payload.push(snapshot);
 
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  const entry = { date, file: filename, executionId: snapshot.executionId || null };
+  if (!index.entries) index.entries = [];
+  // evita duplicação por executionId
+  const exists = index.entries.some((e) => e.executionId && e.executionId === entry.executionId);
+  if (!exists) {
+    index.entries.unshift(entry);
+    if (index.entries.length > 90) index.entries = index.entries.slice(0, 90);
+    saveIndex(index);
+  }
 
-  const index = safeReadJson(INDEX_PATH, { snapshots: [] });
-  index.snapshots = Array.isArray(index.snapshots) ? index.snapshots : [];
-  index.snapshots.unshift({
-    generatedAt: snapshot.generatedAt,
-    file: fileName,
-    stabilityScore: snapshot.global?.stabilityScore ?? null,
-    releaseReadiness: snapshot.global?.releaseReadiness ?? null,
-    failures: Array.isArray(snapshot.failures) ? snapshot.failures.length : 0,
-  });
-  index.snapshots = index.snapshots.slice(0, 300);
-
-  fs.writeFileSync(INDEX_PATH, `${JSON.stringify(index, null, 2)}\n`, 'utf8');
-
-  return {
-    historyFile: filePath,
-    indexFile: INDEX_PATH,
-  };
+  return index;
 }
 
-module.exports = {
-  persistStabilitySnapshot,
-  HISTORY_DIR,
-  INDEX_PATH,
-};
+module.exports = { persistStabilitySnapshot };
