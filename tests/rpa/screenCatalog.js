@@ -62,7 +62,7 @@ const ADMIN_SCREENS = [
   screen('rpa-test', '/rpa-test', { category: 'rpa' }),
   screen('rpa-replays', '/dev/rpa-replays', {
     category: 'rpa',
-    awaitApiPath: '/tests/rpa/replay',
+    awaitApiPath: '/api/test-executions/replays',
     awaitApiTimeoutMs: 20000,
     postLoadWaitMs: 300,
   }),

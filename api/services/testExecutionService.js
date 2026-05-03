@@ -161,6 +161,130 @@ function makeError(message, code = 'BAD_REQUEST') {
   return error;
 }
 
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+function normalizeText(value) {
+  return String(value || '').toLowerCase();
+}
+
+function getReplayDateTimestamp(replay) {
+  const value = replay.modifiedAt || replay.modified || replay.startTime || replay.startedAt || 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getReplayDurationMs(replay) {
+  const durationMs = Number(replay?.durationMs);
+  if (Number.isFinite(durationMs) && durationMs > 0) return durationMs;
+
+  const duration = Number(replay?.duration);
+  if (Number.isFinite(duration) && duration > 0) return duration;
+
+  const start = new Date(replay?.startTime || replay?.startedAt || 0).getTime();
+  const end = new Date(replay?.endTime || replay?.finishedAt || 0).getTime();
+  if (!Number.isNaN(start) && !Number.isNaN(end) && end >= start) {
+    return end - start;
+  }
+  return 0;
+}
+
+function matchesReplayFilters(replay, filters) {
+  if (filters.search) {
+    const haystacks = [
+      replay.filename,
+      replay.replayId,
+      replay.id,
+      replay.recordingId,
+      replay.executionId,
+      replay.scenarioId,
+    ].map(normalizeText);
+    if (!haystacks.some((value) => value.includes(filters.search))) {
+      return false;
+    }
+  }
+
+  if (filters.result === 'success' && normalizeText(replay.result) !== 'success') {
+    return false;
+  }
+
+  if (filters.result === 'failed') {
+    const result = normalizeText(replay.result);
+    if (!result || result === 'success') {
+      return false;
+    }
+  }
+
+  if (filters.dateRange && filters.dateRange !== 'all') {
+    const replayDate = getReplayDateTimestamp(replay);
+    if (!replayDate) return false;
+
+    const cutoffDate = new Date();
+    if (filters.dateRange === 'today') {
+      cutoffDate.setHours(0, 0, 0, 0);
+    } else if (filters.dateRange === 'week') {
+      cutoffDate.setDate(cutoffDate.getDate() - 7);
+    } else if (filters.dateRange === 'month') {
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+    }
+
+    if (replayDate < cutoffDate.getTime()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function sortReplayFiles(replays, sortBy, sortOrder) {
+  const direction = sortOrder === 'asc' ? 1 : -1;
+  const list = [...replays];
+
+  list.sort((a, b) => {
+    let comparison = 0;
+
+    if (sortBy === 'name') {
+      comparison = normalizeText(a.filename).localeCompare(normalizeText(b.filename));
+    } else if (sortBy === 'size') {
+      comparison = (Number(a.size) || 0) - (Number(b.size) || 0);
+    } else if (sortBy === 'duration') {
+      comparison = getReplayDurationMs(a) - getReplayDurationMs(b);
+    } else if (sortBy === 'replayId') {
+      comparison = normalizeText(a.replayId || a.id).localeCompare(normalizeText(b.replayId || b.id));
+    } else if (sortBy === 'executionId') {
+      comparison = normalizeText(a.executionId).localeCompare(normalizeText(b.executionId));
+    } else if (sortBy === 'scenarioId') {
+      comparison = normalizeText(a.scenarioId).localeCompare(normalizeText(b.scenarioId));
+    } else if (sortBy === 'result') {
+      comparison = normalizeText(a.result).localeCompare(normalizeText(b.result));
+    } else if (sortBy === 'mode') {
+      comparison = normalizeText(a.mode).localeCompare(normalizeText(b.mode));
+    } else if (sortBy === 'actionCount') {
+      comparison = (Number(a.actionCount) || 0) - (Number(b.actionCount) || 0);
+    } else if (sortBy === 'screenCount') {
+      comparison = (Number(a.screenCount) || 0) - (Number(b.screenCount) || 0);
+    } else if (sortBy === 'errorCount') {
+      comparison = (Number(a.errorCount) || 0) - (Number(b.errorCount) || 0);
+    } else if (sortBy === 'startTime') {
+      comparison = new Date(a.startTime || a.startedAt || 0).getTime() - new Date(b.startTime || b.startedAt || 0).getTime();
+    } else if (sortBy === 'endTime') {
+      comparison = new Date(a.endTime || a.finishedAt || 0).getTime() - new Date(b.endTime || b.finishedAt || 0).getTime();
+    } else {
+      comparison = getReplayDateTimestamp(a) - getReplayDateTimestamp(b);
+    }
+
+    if (comparison === 0) {
+      return normalizeText(a.filename).localeCompare(normalizeText(b.filename));
+    }
+    return direction * comparison;
+  });
+
+  return list;
+}
+
 function normalizePublicStatus(status) {
   const raw = String(status || '').toLowerCase();
   if (raw === 'queued' || raw === 'running' || raw === 'processing') return 'processing';
@@ -611,8 +735,32 @@ function getExecutionArtifacts(executionId) {
   };
 }
 
-function listReplayFiles({ limit = 50, offset = 0 } = {}) {
+function listReplayFiles({
+  limit = 50,
+  offset = 0,
+  search = '',
+  result = 'all',
+  dateRange = 'all',
+  sortBy = 'date',
+  sortOrder = 'desc',
+} = {}) {
   const replayDirs = getAllReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+  const filters = {
+    search: normalizeText(search).trim(),
+    result: String(result || 'all'),
+    dateRange: String(dateRange || 'all'),
+  };
+  const safeSortBy = String(sortBy || 'date');
+  const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+  const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
+  const safeLimit = Math.min(parsePositiveInt(limit, 50), 500);
+
+  const paginateResult = (items) => ({
+    total: items.length,
+    files: items.slice(safeOffset, safeOffset + safeLimit),
+    offset: safeOffset,
+    limit: safeLimit,
+  });
   
   // Validar cache com mtime dos diretórios
   const dirMtimes = {};
@@ -627,15 +775,10 @@ function listReplayFiles({ limit = 50, offset = 0 } = {}) {
   
   const cacheKey = JSON.stringify(dirMtimes);
   if (replayListCache && replayListCacheMtimes === cacheKey) {
-    // Cache válido: usar cache para paginação
-    const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
-    const safeLimit = Math.max(1, Math.min(500, Number.parseInt(String(limit), 10) || 50));
-    return {
-      total: replayListCache.length,
-      files: replayListCache.slice(safeOffset, safeOffset + safeLimit),
-      offset: safeOffset,
-      limit: safeLimit,
-    };
+    // Cache válido: aplica filtros/sort em memória antes de paginar
+    const filtered = replayListCache.filter((replay) => matchesReplayFilters(replay, filters));
+    const sorted = sortReplayFiles(filtered, safeSortBy, safeSortOrder);
+    return paginateResult(sorted);
   }
 
   const unique = new Map();
@@ -678,7 +821,7 @@ function listReplayFiles({ limit = 50, offset = 0 } = {}) {
         size: stat.size,
         modifiedAt: stat.mtime.toISOString(),
         ...replayMeta,
-        duration: Math.round(durationMs / 1000),
+        duration: durationMs,
         durationMs,
         actionCount,
         screenCount,
@@ -687,23 +830,17 @@ function listReplayFiles({ limit = 50, offset = 0 } = {}) {
     }
   }
 
-  const sorted = Array.from(unique.values()).sort((a, b) => {
+  const sortedByDateDesc = Array.from(unique.values()).sort((a, b) => {
     return new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime();
   });
 
   // Armazenar em cache
-  replayListCache = sorted;
+  replayListCache = sortedByDateDesc;
   replayListCacheMtimes = cacheKey;
 
-  const safeOffset = Math.max(0, Number.parseInt(String(offset), 10) || 0);
-  const safeLimit = Math.max(1, Math.min(500, Number.parseInt(String(limit), 10) || 50));
-
-  return {
-    total: sorted.length,
-    files: sorted.slice(safeOffset, safeOffset + safeLimit),
-    offset: safeOffset,
-    limit: safeLimit,
-  };
+  const filtered = replayListCache.filter((replay) => matchesReplayFilters(replay, filters));
+  const sorted = sortReplayFiles(filtered, safeSortBy, safeSortOrder);
+  return paginateResult(sorted);
 }
 
 function getReplayFile(filename) {
@@ -723,6 +860,59 @@ function getReportFile(filename) {
   return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 }
 
+function deleteReplayFile(filename) {
+  const safeName = ensureSafeJsonFilename(filename);
+  const replayPath = findFirstExistingFile(getAllReplayReadDirs(), safeName);
+  if (!replayPath) {
+    throw makeError('Replay não encontrado', 'NOT_FOUND');
+  }
+
+  fs.unlinkSync(replayPath);
+  replayListCache = null;
+  replayListCacheMtimes = null;
+
+  return {
+    success: true,
+    deletedFilename: safeName,
+    message: `Replay "${safeName}" removido com sucesso`,
+  };
+}
+
+function deleteAllReplayFiles() {
+  const replayDirs = getAllReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+
+  let deletedRoot = 0;
+  let deletedSystem = 0;
+  for (const replayDir of replayDirs) {
+    const rootEntries = fs.readdirSync(replayDir, { withFileTypes: true });
+    for (const entry of rootEntries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      fs.unlinkSync(path.join(replayDir, entry.name));
+      deletedRoot += 1;
+    }
+
+    const systemDir = path.join(replayDir, 'system');
+    if (!fs.existsSync(systemDir)) continue;
+    const systemEntries = fs.readdirSync(systemDir, { withFileTypes: true });
+    for (const entry of systemEntries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      fs.unlinkSync(path.join(systemDir, entry.name));
+      deletedSystem += 1;
+    }
+  }
+
+  replayListCache = null;
+  replayListCacheMtimes = null;
+
+  return {
+    success: true,
+    deletedCount: deletedRoot + deletedSystem,
+    deletedRootCount: deletedRoot,
+    deletedSystemCount: deletedSystem,
+    message: 'Replays removidos com sucesso',
+  };
+}
+
 module.exports = {
   createExecution,
   getExecutionStatus,
@@ -735,4 +925,6 @@ module.exports = {
   listReplayFiles,
   getReplayFile,
   getReportFile,
+  deleteReplayFile,
+  deleteAllReplayFiles,
 };

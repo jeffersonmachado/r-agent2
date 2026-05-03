@@ -20,6 +20,8 @@ const {
   listReplayFiles,
   getReplayFile,
   getReportFile,
+  deleteReplayFile,
+  deleteAllReplayFiles,
 } = require('../../services/testExecutionService');
 const { createTestExecutionsRoutes } = require('../../modules/test-executions/routes');
 
@@ -42,6 +44,8 @@ function buildTestExecutionsRouteDeps() {
     listReplayFiles,
     getReplayFile,
     getReportFile,
+    deleteReplayFile,
+    deleteAllReplayFiles,
   };
 }
 

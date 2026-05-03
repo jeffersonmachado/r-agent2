@@ -1,18 +1,16 @@
 const { handleRpaRecordingsRoutes } = require('./handleRpaRecordingsRoutes');
 const { handleRpaExecutionRoutes } = require('./handleRpaExecutionRoutes');
-const { handleRpaReplayRoutes } = require('./handleRpaReplayRoutes');
 
 async function handleRpaTestsRoutes(ctx) {
   const { pathname } = ctx;
 
-  const isRpaRoute = pathname.startsWith('/rpa/') || pathname.startsWith('/tests/rpa/');
+  const isRpaRoute = pathname.startsWith('/rpa/');
   if (!isRpaRoute) {
     return false;
   }
 
   if (await handleRpaRecordingsRoutes(ctx)) return true;
   if (await handleRpaExecutionRoutes(ctx)) return true;
-  if (await handleRpaReplayRoutes(ctx)) return true;
 
   return false;
 }

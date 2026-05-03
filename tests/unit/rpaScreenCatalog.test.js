@@ -23,7 +23,7 @@ describe('RPA screen catalog', () => {
     const replaysScreen = SCREEN_CATALOG.find((item) => item.id === 'rpa-replays');
 
     expect(replaysScreen).toBeTruthy();
-    expect(replaysScreen.awaitApiPath).toBe('/tests/rpa/replay');
+    expect(replaysScreen.awaitApiPath).toBe('/api/test-executions/replays');
     expect(replaysScreen.awaitApiTimeoutMs).toBe(20000);
   });
 

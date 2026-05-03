@@ -9,6 +9,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
     if (code === 'BAD_REQUEST') return 400;
     if (code === 'NOT_FOUND') return 404;
     if (code === 'NOT_SUPPORTED') return 409;
+    if (code === 'FORBIDDEN') return 403;
     return 500;
   }
 
@@ -102,8 +103,37 @@ function createTestExecutionsRoutes({ buildDeps }) {
     try {
       const limit = req.query.limit;
       const offset = req.query.offset;
-      const result = deps.listReplayFiles({ limit, offset });
-      deps.sendJson(res, 200, result);
+      const search = req.query.search;
+      const result = req.query.result;
+      const dateRange = req.query.dateRange;
+      const sortBy = req.query.sortBy;
+      const sortOrder = req.query.sortOrder;
+      const replayList = deps.listReplayFiles({
+        limit,
+        offset,
+        search,
+        result,
+        dateRange,
+        sortBy,
+        sortOrder,
+      });
+      const payload = {
+        ...replayList,
+        pagination: {
+          total: replayList.total,
+          limit: replayList.limit,
+          offset: replayList.offset,
+          hasMore: replayList.offset + replayList.files.length < replayList.total,
+        },
+        filters: {
+          search: String(search || '').trim(),
+          result: result || 'all',
+          dateRange: dateRange || 'all',
+          sortBy: sortBy || 'date',
+          sortOrder: sortOrder === 'asc' ? 'asc' : 'desc',
+        },
+      };
+      deps.sendJson(res, 200, payload);
     } catch (error) {
       deps.logger.error('Erro ao listar replays unificados:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar replays' });
@@ -124,6 +154,38 @@ function createTestExecutionsRoutes({ buildDeps }) {
     } catch (error) {
       const status = mapErrorCodeToHttp(error.code);
       deps.sendJson(res, status, { error: error.code === 'BAD_REQUEST' ? 'bad_request' : 'internal_error', message: error.message });
+    }
+  });
+
+  router.delete('/api/test-executions/replays/:filename', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      const result = deps.deleteReplayFile(req.params.filename);
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      const status = mapErrorCodeToHttp(error.code);
+      deps.sendJson(res, status, {
+        error: status === 400 ? 'bad_request' : (status === 404 ? 'not_found' : 'internal_error'),
+        message: error.message,
+      });
+    }
+  });
+
+  router.delete('/api/test-executions/replays', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      const result = deps.deleteAllReplayFiles();
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      const status = mapErrorCodeToHttp(error.code);
+      deps.sendJson(res, status, {
+        error: status === 400 ? 'bad_request' : 'internal_error',
+        message: error.message,
+      });
     }
   });
 

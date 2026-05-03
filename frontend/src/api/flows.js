@@ -206,7 +206,7 @@ export function deleteRpaReplay(filename) {
     return Promise.reject(new Error('deleteRpaReplay: filename é obrigatório'));
   }
   logger.info('Removendo replay RPA', { filename });
-  return fetchJson(`/tests/rpa/replay/${encodeURIComponent(filename)}`, {
+  return fetchJson(`/api/test-executions/replays/${encodeURIComponent(filename)}`, {
     method: 'DELETE',
   }).then(
     (result) => {
@@ -227,7 +227,7 @@ export function deleteRpaReplay(filename) {
  */
 export function deleteAllRpaReplays() {
   logger.info('Removendo todos os replays RPA');
-  return fetchJson('/tests/rpa/replay', {
+  return fetchJson('/api/test-executions/replays', {
     method: 'DELETE',
   }).then(
     (result) => {

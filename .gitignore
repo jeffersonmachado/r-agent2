@@ -74,6 +74,7 @@ rag-service/data/adaptive_learning/*_learning.json
 
 # Evidências locais de QA / release
 qa/release-evidence/
+qa/workspace-core/evidence/
 qa/*-report.json
 qa/*-evidence.json
 qa/smoke/
