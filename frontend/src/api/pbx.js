@@ -204,3 +204,96 @@ export function listCdr(filters = {}) {
   const qs = sp.toString() ? `?${sp.toString()}` : '';
   return fetchJson(`/api/pbx/cdr${qs}`, { method: 'GET' });
 }
+
+export function getOperatorPanelSnapshot(filters = {}) {
+  const sp = new URLSearchParams();
+  if (filters.queueId) sp.set('queueId', String(filters.queueId));
+  if (filters.memberRef) sp.set('memberRef', String(filters.memberRef));
+  if (filters.cdrLimit != null) sp.set('cdrLimit', String(filters.cdrLimit));
+  if (filters.callWindowMinutes != null) sp.set('callWindowMinutes', String(filters.callWindowMinutes));
+  if (filters.activeCallWindowMinutes != null) sp.set('activeCallWindowMinutes', String(filters.activeCallWindowMinutes));
+  const qs = sp.toString() ? `?${sp.toString()}` : '';
+  return fetchJson(`/api/pbx/operator-panel/snapshot${qs}`, { method: 'GET' });
+}
+
+export function setOperatorAgentStatus(payload) {
+  return fetchJson('/api/pbx/operator-panel/agent-status', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+export function setOperatorAgentPauseQueue(payload) {
+  return fetchJson('/api/pbx/operator-panel/agent-pause-queue', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+export function operatorTransfer(payload) {
+  return fetchJson('/api/pbx/operator-panel/transfer', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+export function operatorCallback(payload) {
+  return fetchJson('/api/pbx/operator-panel/callback', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
+/**
+ * Retorna a URL base para o SSE do painel operador.
+ * Deve ser usado com `new EventSource(buildOperatorPanelEventsUrl(filters))`.
+ */
+export function buildOperatorPanelEventsUrl(filters = {}, options = {}) {
+  const sp = new URLSearchParams();
+  if (filters.queueId) sp.set('queueId', String(filters.queueId));
+  if (filters.memberRef) sp.set('memberRef', String(filters.memberRef));
+  if (filters.cdrLimit != null) sp.set('cdrLimit', String(filters.cdrLimit));
+  if (filters.callWindowMinutes != null) sp.set('callWindowMinutes', String(filters.callWindowMinutes));
+  if (filters.activeCallWindowMinutes != null) sp.set('activeCallWindowMinutes', String(filters.activeCallWindowMinutes));
+  if (options.intervalSec != null) sp.set('intervalSec', String(options.intervalSec));
+  if (options.maxDurationSec != null) sp.set('maxDurationSec', String(options.maxDurationSec));
+  const qs = sp.toString() ? `?${sp.toString()}` : '';
+  // Resolve to full URL so EventSource can use it (supports relative paths via window.location.origin)
+  const base = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${base}/api/pbx/operator-panel/events${qs}`;
+}
+
+// ─── CC Queue Reports ─────────────────────────────────────────────────────────
+
+function buildReportQs(filters = {}) {
+  const sp = new URLSearchParams();
+  if (filters.from) sp.set('from', String(filters.from));
+  if (filters.to) sp.set('to', String(filters.to));
+  if (filters.queueName) sp.set('queueName', String(filters.queueName));
+  if (filters.limit) sp.set('limit', String(filters.limit));
+  return sp.toString() ? `?${sp.toString()}` : '';
+}
+
+export function getCcReportAtendidas(filters = {}) {
+  return fetchJson(`/api/cc/reports/atendidas${buildReportQs(filters)}`);
+}
+
+export function getCcReportAbandonadas(filters = {}) {
+  return fetchJson(`/api/cc/reports/abandonadas${buildReportQs(filters)}`);
+}
+
+export function getCcReportAgentes(filters = {}) {
+  return fetchJson(`/api/cc/reports/agentes${buildReportQs(filters)}`);
+}
+
+export function getCcReportPorHora(filters = {}) {
+  return fetchJson(`/api/cc/reports/por-hora${buildReportQs(filters)}`);
+}
+
+export function getCcReportResumoCampanha(filters = {}) {
+  return fetchJson(`/api/cc/reports/resumo-campanha${buildReportQs(filters)}`);
+}
+
+export function getCcReportPesquisa(filters = {}) {
+  return fetchJson(`/api/cc/reports/pesquisa${buildReportQs(filters)}`);
+}

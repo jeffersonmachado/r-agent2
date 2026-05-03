@@ -105,17 +105,17 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Code</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ativo</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Code</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ativo</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPauseReasons.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.code}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.description}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!r.active)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.code}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.description}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!r.active)}</td>
                   </tr>
                 ))}
                 {!filteredPauseReasons.length ? (
@@ -157,17 +157,17 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Code</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ativo</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Code</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ativo</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredContactReasons.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.code}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.description}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!r.active)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.code}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.description}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!r.active)}</td>
                   </tr>
                 ))}
                 {!filteredContactReasons.length ? (
@@ -237,23 +237,23 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>ID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Click2Call</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Gravar</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>ID</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Click2Call</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Gravar</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
                 </tr>
               </thead>
               <tbody>
                 {filteredCampaigns.map((c) => (
                   <tr key={c.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.id}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.status}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!c.click2callEnabled)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!c.recordEnabled)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.id}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.name}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.status}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!c.click2callEnabled)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!c.recordEnabled)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <button
                         onClick={() => setCcSelectedCampaignId(String(c.id))}
                         disabled={loading}
@@ -333,21 +333,21 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>DDD</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Key</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Attempts</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>DDD</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Key</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Attempts</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCampaignList.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.phone}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.ddd || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.key || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.attempts ?? 0}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.phone}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.ddd || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.key || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.attempts ?? 0}</td>
                   </tr>
                 ))}
                 {!filteredCampaignList.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem itens.</td></tr> : null}
@@ -402,23 +402,23 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Quando</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Descricao</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Quando</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredScheduled.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {formatDateTime(it.scheduledAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {it.ddd ? `${it.ddd} ` : ''}{it.phone}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.description || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.description || '—'}</td>
                   </tr>
                 ))}
                 {!filteredScheduled.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum agendado.</td></tr> : null}
@@ -518,23 +518,23 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Quando</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Target</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Campanha</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Quando</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Target</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Campanha</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredC2c.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {formatDateTime(it.createdAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.target}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.status}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{it.campaignId || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.target}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.campaignId || '—'}</td>
                   </tr>
                 ))}
                 {!filteredC2c.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhuma solicitacao.</td></tr> : null}
@@ -551,7 +551,7 @@ export function PbxContactCenterGovernanceTabs({
             Tela para manter compatibilidade com cadastros do RIPABX.
           </div>
           {legacyXmlError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
               <strong>Legado (XML) indisponível.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}>{legacyXmlError}</div>
             </div>
@@ -625,18 +625,18 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>ID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Resumo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>ID</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Resumo</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
                 </tr>
               </thead>
               <tbody>
                 {filteredLegacyXmlItems.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {it.id}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <span style={{ opacity: 0.9 }}>
                         {(Object.keys(it || {})
                           .filter((k) => k !== 'id' && k !== '_attrs')
@@ -645,7 +645,7 @@ export function PbxContactCenterGovernanceTabs({
                           .join(' | ')) || '—'}
                       </span>
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <button
                         onClick={() => handleLegacyXmlEdit(it)}
                         disabled={loading}
@@ -675,7 +675,7 @@ export function PbxContactCenterGovernanceTabs({
       {tab === 'governance' ? (
         <>
           <h3 style={{ marginTop: 0 }}>Governança PBX</h3>
-          <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+          <div style={{ marginBottom: 12, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8 }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div><strong>Token:</strong> {provisioningToken || '—'}</div>
               <div><strong>Status:</strong> {tokenGovernance.message}{tokenGovernance.remainingLabel ? ` (${tokenGovernance.remainingLabel})` : ''}</div>
@@ -706,23 +706,23 @@ export function PbxContactCenterGovernanceTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Timestamp</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ação</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Usuário</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Recurso</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Detalhes</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Timestamp</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ação</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Usuário</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Recurso</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Detalhes</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAuditItems.map((item, idx) => (
                   <tr key={`${item.timestamp || 't'}-${item.action || 'a'}-${idx}`}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {formatDateTime(item.timestamp)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.action || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.username || item.agentId || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{item.resource || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.action || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.username || item.agentId || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.resource || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <span style={{ opacity: 0.9 }}>
                         {(item.details && typeof item.details === 'object'
                           ? Object.entries(item.details).slice(0, 6).map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(' | ')

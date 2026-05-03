@@ -180,6 +180,7 @@ export const navigationMenu = [
           { id: 'pbx-extensions', label: 'Ramais', path: '/pbx/extensions', permission: { resource: 'config', action: 'read' }, hiddenInSubNav: true },
           { id: 'pbx-trunks', label: 'Troncos', path: '/pbx/trunks', permission: { resource: 'config', action: 'read' }, hiddenInSubNav: true },
           { id: 'pbx-routes', label: 'Rotas', path: '/pbx/routes', permission: { resource: 'config', action: 'read' }, hiddenInSubNav: true },
+          { id: 'pbx-operator-panel', label: 'Painel Operador', path: '/pbx/operator-panel', permission: { resource: 'config', action: 'read' } },
           { id: 'pbx-acls', label: 'ACLs', path: '/pbx/acls', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },
           { id: 'pbx-dids', label: 'DIDs', path: '/pbx/dids', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },
           { id: 'pbx-ivr', label: 'IVR', path: '/pbx/ivr', permission: { resource: 'config', action: 'read' }, hiddenInSidebar: true },

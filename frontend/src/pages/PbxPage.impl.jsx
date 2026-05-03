@@ -69,6 +69,12 @@ import { PbxOverviewLegacyTabs } from './pbx/PbxOverviewLegacyTabs';
 import { PbxRoutingTabs } from './pbx/PbxRoutingTabs';
 import { PbxOperationsTabs } from './pbx/PbxOperationsTabs';
 import { PbxContactCenterGovernanceTabs } from './pbx/PbxContactCenterGovernanceTabs';
+import { PbxCcReportsTabs } from './pbx/PbxCcReportsTabs';
+import { PbxFaxTabs } from './pbx/PbxFaxTabs';
+import { PbxInfraConfigTabs } from './pbx/PbxInfraConfigTabs';
+import { PbxCdrAnalysisTabs } from './pbx/PbxCdrAnalysisTabs';
+import { PbxRoutingDetailTabs } from './pbx/PbxRoutingDetailTabs';
+import { PbxConfigDetailTabs } from './pbx/PbxConfigDetailTabs';
 import {
   AGENTS_FIELD_CLASS,
   AGENTS_SELECT_CLASS,
@@ -1805,6 +1811,68 @@ export function PbxPage() {
       ],
     },
     {
+      title: 'Relatórios CDR',
+      items: [
+        { key: 'ccRelAtendidas', label: 'Rel. Atendidas', hint: 'Chamadas atendidas por fila', count: null },
+        { key: 'ccRelAbandonadas', label: 'Rel. Abandonadas', hint: 'Taxa de abandono por fila', count: null },
+        { key: 'ccRelAgentes', label: 'Rel. Agentes', hint: 'Desempenho por agente', count: null },
+        { key: 'ccRelHora', label: 'Rel. Por Hora', hint: 'Volume por hora do dia', count: null },
+        { key: 'ccRelResumoCampanha', label: 'Resumo Campanha', hint: 'Totais por campanha', count: null },
+        { key: 'ccRelPesquisa', label: 'Pesquisa SAC', hint: 'Avaliações pós-atendimento', count: null },
+        { key: 'cdrResumo', label: 'CDR Resumo', hint: 'Totais por par Origem→Destino', count: null },
+        { key: 'cdrHora', label: 'CDR Por Hora', hint: 'Distribuição por hora do dia', count: null },
+        { key: 'cdrOrigem', label: 'CDR Por Origem', hint: 'Ranking por número de origem', count: null },
+        { key: 'cdrDestino', label: 'CDR Por Destino', hint: 'Ranking por número de destino', count: null },
+      ],
+    },
+    {
+      title: 'Manutenção: Detalhe',
+      items: [
+        { key: 'routesDdr', label: 'DDR', hint: 'Discagem Direta a Ramal (inbound)', count: null },
+        { key: 'routesDesvio', label: 'Desvio', hint: 'Regras de desvio de chamada', count: null },
+        { key: 'routesTransbordo', label: 'Transbordo', hint: 'Overflow de fila e ramal', count: null },
+        { key: 'routesRetorno', label: 'Retorno', hint: 'Callback e retorno automático', count: null },
+        { key: 'routesRecusa', label: 'Recusa', hint: 'Rejeição de chamadas', count: null },
+        { key: 'routesFeriado', label: 'Feriado', hint: 'Roteamento por feriado/horário', count: null },
+        { key: 'routesTransferencia', label: 'Transferência', hint: 'Regras de transferência', count: null },
+        { key: 'extensionsGrupos', label: 'Grupos', hint: 'Ring groups e grupos de ramal', count: null },
+        { key: 'extensionsBloqueio', label: 'Bloqueio', hint: 'Ramais com bloqueio de discagem', count: null },
+      ],
+    },
+    {
+      title: 'Configurações: Detalhe',
+      items: [
+        { key: 'trunksOperadoras', label: 'Operadoras', hint: 'Troncos de operadoras SIP/IAX', count: null },
+        { key: 'trunksInterconexao', label: 'Interconexão', hint: 'Troncos PBX-to-PBX', count: null },
+        { key: 'extensionsCategoria', label: 'Categoria', hint: 'Ramais por perfil de discagem', count: null },
+        { key: 'extensionsFacilidades', label: 'Facilidades', hint: 'Feature codes e códigos especiais', count: null },
+        { key: 'queuesSala', label: 'Sala/Conf.', hint: 'Salas de conferência ConfBridge', count: null },
+        { key: 'govConfiguracoes', label: 'Configurações', hint: 'Parâmetros gerais do PBX', count: null },
+        { key: 'govLicenca', label: 'Licença', hint: 'Versão e licenciamento', count: null },
+        { key: 'govAtualizacao', label: 'Atualização', hint: 'Procedimento de update', count: null },
+        { key: 'govAssistencia', label: 'Assistência', hint: 'Diagnóstico e suporte', count: null },
+        { key: 'govRecarga', label: 'Recarga', hint: 'Créditos e billing por ramal', count: null },
+        { key: 'govServicos', label: 'Serviços', hint: 'Módulos e serviços ativos', count: null },
+      ],
+    },
+    {
+      title: 'Fax',
+      items: [
+        { key: 'faxReport', label: 'Relatório Fax', hint: 'Chamadas de fax no CDR', count: null },
+        { key: 'faxConfig', label: 'Configuração Fax', hint: 'Parâmetros de hardware fax', count: null },
+      ],
+    },
+    {
+      title: 'Sistema',
+      items: [
+        { key: 'usuarios', label: 'Usuários', hint: 'Gerenciamento de usuários', count: null },
+        { key: 'networkConfig', label: 'Rede', hint: 'Interfaces e roteamento', count: null },
+        { key: 'dhcpConfig', label: 'DHCP', hint: 'Distribuição de endereços IP', count: null },
+        { key: 'firewallConfig', label: 'Firewall', hint: 'Regras de acesso e portas', count: null },
+        { key: 'vpnConfig', label: 'VPN', hint: 'Túneis IPsec/OpenVPN/WireGuard', count: null },
+      ],
+    },
+    {
       title: 'Referência: XML',
       items: [
         { key: 'legacyXml', label: 'XML', hint: 'Entidades XML de referência', count: legacyXmlItems.length },
@@ -2344,6 +2412,15 @@ export function PbxPage() {
           formatDateTime={formatDateTime}
           PlatformGrid={PlatformGrid}
         />
+        <PbxCcReportsTabs
+          tab={tab}
+          formatDateTime={formatDateTime}
+        />
+        <PbxFaxTabs tab={tab} />
+        <PbxInfraConfigTabs tab={tab} />
+        <PbxCdrAnalysisTabs tab={tab} />
+        <PbxRoutingDetailTabs tab={tab} />
+        <PbxConfigDetailTabs tab={tab} />
       </div>
       </CrudPageBase>
   );

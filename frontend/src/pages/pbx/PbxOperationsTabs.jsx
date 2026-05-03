@@ -95,21 +95,21 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ramal</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Display</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Strategy</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ações</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ramal</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Display</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Strategy</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredQueues.map((q) => (
                   <tr key={q.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q?.options?.queueNumber || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.displayName || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{q.strategy || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q?.options?.queueNumber || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.name}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.displayName || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.strategy || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <Button onClick={() => handleEditQueue(q)} disabled={loading} size="sm" variant="ghost">Editar</Button>
                     </td>
                   </tr>
@@ -147,21 +147,21 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Tipo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Ref</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Penalty</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Paused</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Tipo</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ref</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Penalty</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Paused</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
                 </tr>
               </thead>
               <tbody>
                 {filteredQueueMembers.map((m) => (
                   <tr key={m.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.memberType}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.memberRef}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{m.penalty ?? '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(!!m.paused)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.memberType}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.memberRef}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.penalty ?? '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!m.paused)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <button onClick={() => handleDeleteQueueMember(m.id)} disabled={loading} style={{ padding: '6px 10px' }}>
                         Remover
                       </button>
@@ -186,7 +186,7 @@ export function PbxOperationsTabs({
             {Array.isArray(dialplanRows) ? `Linhas: ${dialplanRows.length}` : 'Clique em Preview para ver o dialplan.'}
           </div>
           {Array.isArray(dialplanRows) ? (
-            <pre style={{ padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', overflow: 'auto' }}>
+            <pre style={{ padding: 12, borderRadius: 8, background: 'var(--color-bg-tertiary)', overflow: 'auto' }}>
               {dialplanRows.slice(0, 500).map((r, idx) => (
                 // eslint-disable-next-line react/no-array-index-key
                 <div key={idx}>
@@ -201,23 +201,23 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Versão</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Assinatura</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Data</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }} />
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Versão</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Assinatura</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Data</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
                 </tr>
               </thead>
               <tbody>
                 {configVersions.map((v) => (
                   <tr key={v.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.version}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v.version}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v.status || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {formatDateTime(v.createdAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <button
                         onClick={() => handleRollbackVersion(v.version)}
                         disabled={loading || !Array.isArray(v?.summary?.dialplan?.rows) || v.summary.dialplan.rows.length === 0}
@@ -239,7 +239,7 @@ export function PbxOperationsTabs({
         <>
           <h3 style={{ marginTop: 0 }}>Mídia (áudios)</h3>
           {audioAssetsError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
               <strong>Não foi possível carregar os áudios.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}><code>{audioAssetsError}</code></div>
             </div>
@@ -259,15 +259,15 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Download</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Download</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAudioAssets.map((a) => (
                   <tr key={a.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{a.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{a.name}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <a href={buildApiUrl(`/api/pbx/audio-assets/file?id=${encodeURIComponent(a.id)}`)}>baixar</a>
                     </td>
                   </tr>
@@ -283,7 +283,7 @@ export function PbxOperationsTabs({
         <>
           <h3 style={{ marginTop: 0 }}>Gravações</h3>
           {recordingsError || recordingPolicyError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid rgba(255,180,0,0.35)', borderRadius: 10, background: 'rgba(255,180,0,0.08)' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
               <strong>Gravações indisponíveis neste ambiente.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}>
                 {recordingPolicyError ? <div>Política: <code>{recordingPolicyError}</code></div> : null}
@@ -294,7 +294,7 @@ export function PbxOperationsTabs({
               </div>
             </div>
           ) : null}
-          <div style={{ marginBottom: 12, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+          <div style={{ marginBottom: 12, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8 }}>
             <strong>Política de gravação (tenant)</strong>
             <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 220px 220px auto', gap: 8, marginTop: 8, alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -337,19 +337,19 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Uniqueid</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Origem</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Destino</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Download</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Uniqueid</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Origem</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Destino</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Download</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecordings.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.uniqueid || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.src || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.dst || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.uniqueid || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.src || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.dst || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       <a href={buildApiUrl(`/api/pbx/recordings/file?id=${encodeURIComponent(r.id)}`)}>baixar</a>
                     </td>
                   </tr>
@@ -377,23 +377,23 @@ export function PbxOperationsTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Calldate</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Src</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Dst</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Disposition</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Duration</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Uniqueid</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Calldate</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Src</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Dst</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Disposition</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Duration</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Uniqueid</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCdrItems.map((c) => (
                   <tr key={c.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.calldate ? new Date(c.calldate).toISOString() : '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.src || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.dst || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.disposition || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.duration ?? '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{c.uniqueid}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.calldate ? new Date(c.calldate).toISOString() : '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.src || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.dst || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.disposition || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.duration ?? '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.uniqueid}</td>
                   </tr>
                 ))}
                 {!filteredCdrItems.length ? <tr><td colSpan={6} style={{ padding: 8, opacity: 0.75 }}>Nenhum CDR encontrado (ainda).</td></tr> : null}

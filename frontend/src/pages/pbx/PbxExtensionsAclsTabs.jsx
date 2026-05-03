@@ -170,7 +170,7 @@ export function PbxExtensionsAclsTabs({
               </div>
             </div>
           ) : null}
-          <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8 }}>
+          <div style={{ marginBottom: 16, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <strong>Token de Provisionamento</strong>
               <span style={{ opacity: 0.75 }}>{provisioningToken || '—'}</span>
@@ -207,7 +207,7 @@ export function PbxExtensionsAclsTabs({
               URL: <code>{buildApiUrl('/provision/<tenant>/<token>/<vendor>/<mac>')}</code>
             </div>
           </div>
-          <div style={{ marginBottom: 16, padding: 12, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ marginBottom: 16, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <strong>Provisionamento em Lote</strong>
               <p style={{ opacity: 0.75, marginTop: 4, marginBottom: 0 }}>

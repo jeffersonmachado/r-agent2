@@ -217,13 +217,14 @@ export function PbxDashboardShell({
                   >
                     {(() => {
                       const palette = getDashboardIconPalette(section.title, itemIndex);
+                      const sectionTitle = String(section?.title || 'PBX');
                       return (
                         <div className="flex items-start justify-between mb-3">
                           <div className={`${palette} w-12 h-12 rounded-lg flex items-center justify-center text-2xl`}>
-                            <PbxDashboardIcon name={getDashboardIconName(item, section.title.replace(/^Referência:\s*/, ''), itemIndex)} />
+                            <PbxDashboardIcon name={getDashboardIconName(item, sectionTitle.replace(/^Referência:\s*/, ''), itemIndex)} />
                           </div>
                           <span className="text-xs text-text-tertiary bg-bg-secondary px-2 py-1 rounded">
-                            {section.title}
+                            {sectionTitle}
                           </span>
                         </div>
                       );

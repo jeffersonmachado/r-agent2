@@ -408,6 +408,64 @@ async function handlePbxContactCenterRoutes(ctx) {
     return true;
   }
 
+  // ─── CC Queue Reports ──────────────────────────────────────────────────────
+  // Prefixo: GET /api/cc/reports/:reportType
+  // Parâmetros de query: from, to, queueName, limit
+  if (method === 'GET' && pathname.startsWith('/api/cc/reports/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+    const tenantKey = requireTenant(req, res);
+    if (!tenantKey) return true;
+
+    const reportType = pathname.replace('/api/cc/reports/', '').split('/')[0];
+    const filters = {
+      from: req.query?.from || null,
+      to: req.query?.to || null,
+      queueName: req.query?.queueName || null,
+      limit: req.query?.limit || 500,
+    };
+
+    const REPORT_MAP = {
+      atendidas: 'getAnsweredReport',
+      abandonadas: 'getAbandonedReport',
+      agentes: 'getAgentsReport',
+      'por-hora': 'getHourlyReport',
+      'resumo-campanha': 'getCampaignSummaryReport',
+      pesquisa: 'getSurveyReport',
+    };
+
+    const fnName = REPORT_MAP[reportType];
+    if (!fnName) {
+      sendJson(res, 404, { error: 'not_found', message: `Relatório '${reportType}' não encontrado` });
+      return true;
+    }
+
+    try {
+      const ccReports = require('../../../services/cc/ccQueueReportsService');
+      const data = await ccReports[fnName]({ tenantKey, filters });
+      sendJson(res, 200, { ok: true, data });
+    } catch (err) {
+      logger.error(`[CC] Erro em GET /api/cc/reports/${reportType}`, err);
+      sendJson(res, 500, buildApiError({
+        code: 'cc_report_error',
+        message: err.message || 'Erro ao gerar relatório',
+        httpStatus: 500,
+        retryable: true,
+        details: null,
+        req,
+      }));
+    }
+    return true;
+  }
+
   return false;
 }
 

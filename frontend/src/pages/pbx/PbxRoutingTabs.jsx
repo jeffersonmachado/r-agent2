@@ -55,19 +55,19 @@ export function PbxRoutingTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Tipo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Transport</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Tipo</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Transport</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTrunks.map((t) => (
                   <tr key={t.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.type}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.transport || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{t.status}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.name}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.type}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.transport || '—'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.status}</td>
                   </tr>
                 ))}
                 {!filteredTrunks.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum tronco encontrado.</td></tr> : null}
@@ -251,19 +251,19 @@ export function PbxRoutingTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>DID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Destino</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Enabled</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>DID</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Destino</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDids.map((d) => (
                   <tr key={d.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{d.did}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{d.did}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
                       {d?.actions?.[0]?.type ? `${d.actions[0].type}${d.actions[0].ref ? `: ${d.actions[0].ref}` : ''}` : '—'}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{d.enabled ? 'sim' : 'não'}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{d.enabled ? 'sim' : 'não'}</td>
                   </tr>
                 ))}
                 {!filteredDids.length ? <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum DID encontrado.</td></tr> : null}
@@ -295,15 +295,15 @@ export function PbxRoutingTabs({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>Enabled</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
+                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredIvrRules.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{r.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{String(r.enabled)}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.name}</td>
+                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(r.enabled)}</td>
                   </tr>
                 ))}
                 {!filteredIvrRules.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhuma regra IVR encontrada.</td></tr> : null}

@@ -72,6 +72,7 @@ import { PbxRoutesPage } from './pages/PbxRoutesPage';
 import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
 import { PbxTrunksPage } from './pages/PbxTrunksPage';
 import { PbxModulePage } from './pages/PbxModulePage';
+import { PbxOperatorPanelPage } from './pages/PbxOperatorPanelPage';
 import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
 import { FailedMessagesPage } from './pages/FailedMessagesPage';
 import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
@@ -440,8 +441,9 @@ function AppWithAuth() {
   const isPbxExtensions = isRoute('/pbx/extensions');
   const isPbxTrunks = isRoute('/pbx/trunks');
   const isPbxRoutes = isRoute('/pbx/routes');
+  const isPbxOperatorPanel = isRoute('/pbx/operator-panel');
   const isPbxBulkProvisioning = isRoute('/pbx/provisioning-lote');
-  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxBulkProvisioning;
+  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxOperatorPanel && !isPbxBulkProvisioning;
   const isPbx = isRoute('/pbx');
   const isChatHumanoDashboard = isRoute('/chat-humano');
   // Suporta CRM com ou sem prefixo /r-agent2 em produção
@@ -526,7 +528,7 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
@@ -545,7 +547,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
           isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -613,6 +615,7 @@ function AppWithAuth() {
       '/pbx/extensions': '📞 PBX • Ramais',
       '/pbx/trunks': '🌐 PBX • Troncos',
       '/pbx/routes': '🧭 PBX • Rotas',
+      '/pbx/operator-panel': '🧭 PBX • Painel Operador',
       '/pbx/acls': '🛡️ PBX • ACLs',
       '/pbx/dids': '📥 PBX • DIDs',
       '/pbx/ivr': '🎛️ PBX • IVR',
@@ -930,6 +933,8 @@ function AppWithAuth() {
     pageContent = <PbxTrunksPage />;
   } else if (isPbxRoutes) {
     pageContent = <PbxRoutesPage />;
+  } else if (isPbxOperatorPanel) {
+    pageContent = <PbxOperatorPanelPage />;
   } else if (isPbxModule) {
     pageContent = <PbxModulePage />;
   } else if (isPbx) {
