@@ -800,7 +800,7 @@ function listReplayFiles({
         status: extractJsonStringField(prefix, 'status'),
         result: extractJsonStringField(prefix, 'result') || extractJsonStringField(prefix, 'status'),
         mode: extractJsonStringField(prefix, 'mode'),
-        startedAt: extractJsonStringField(prefix, 'startedAt') || extractJsonStringField(prefix, 'startTime'),
+        startedAt: extractJsonStringField(prefix, 'startedAt') || extractJsonStringField(prefix, 'startTime') || extractJsonStringField(prefix, 'generatedAt'),
         finishedAt: extractJsonStringField(prefix, 'finishedAt') || extractJsonStringField(prefix, 'endTime'),
       };
 
