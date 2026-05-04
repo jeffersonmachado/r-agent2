@@ -18,6 +18,16 @@ const screenshotDataUrlCache = new Map();
 let cachedJourneyStore = null;
 let cachedScenarioStore = null;
 
+function toLabelFromId(value, fallback = 'Item') {
+  const normalized = String(value || '').trim();
+  if (!normalized) return fallback;
+  return normalized
+    .split(/[_:\-]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 function toInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -62,6 +72,42 @@ function loadScenarioStore() {
   }
   cachedScenarioStore = [];
   return cachedScenarioStore;
+}
+
+function buildJourneyStoreFromScenarioStore(scenarios = []) {
+  const journeys = new Map();
+
+  for (const scenario of scenarios) {
+    const vertical = String(scenario?.vertical || scenario?.domain || '').trim() || 'core';
+    const journeyId = String(scenario?.journeyId || scenario?.journey || '').trim();
+    if (!journeyId) continue;
+
+    const key = `${vertical}::${journeyId}`;
+    const current = journeys.get(key) || {
+      id: journeyId,
+      title: toLabelFromId(journeyId, journeyId),
+      vertical,
+      script: { steps: [] },
+    };
+
+    const steps = Array.isArray(scenario?.steps) && scenario.steps.length > 0
+      ? scenario.steps
+      : (Array.isArray(scenario?.semanticSteps) ? scenario.semanticSteps : []);
+
+    for (const step of steps) {
+      const stepId = String(step?.id || '').trim();
+      if (!stepId) continue;
+      if (current.script.steps.some((item) => item.id === stepId)) continue;
+      current.script.steps.push({
+        id: stepId,
+        name: step?.name || toLabelFromId(stepId, stepId),
+      });
+    }
+
+    journeys.set(key, current);
+  }
+
+  return Array.from(journeys.values());
 }
 
 function normalizeStatus(status) {
@@ -273,6 +319,77 @@ function boolFromQuery(value) {
   return false;
 }
 
+function collectWaveEvidenceStats(stats = new Map()) {
+  const evidenceBaseDir = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
+  if (!fs.existsSync(evidenceBaseDir)) return stats;
+
+  let waveDirs;
+  try {
+    waveDirs = fs.readdirSync(evidenceBaseDir).filter((entry) => {
+      try {
+        return fs.statSync(path.join(evidenceBaseDir, entry)).isDirectory();
+      } catch (_) {
+        return false;
+      }
+    });
+  } catch (_) {
+    return stats;
+  }
+
+  for (const waveDir of waveDirs) {
+    const waveFullDir = path.join(evidenceBaseDir, waveDir);
+    let files;
+    try {
+      files = fs.readdirSync(waveFullDir).filter((f) => f.startsWith('meshq-') && f.endsWith('.json'));
+    } catch (_) {
+      continue;
+    }
+
+    for (const file of files) {
+      try {
+        const raw = fs.readFileSync(path.join(waveFullDir, file), 'utf8');
+        const evidence = JSON.parse(raw);
+        const scenarioId = String(evidence.scenarioId || '').trim();
+        if (!scenarioId) continue;
+
+        const startedAt = evidence.generatedAt || evidence.startedAt || null;
+        const status = normalizeStatus(evidence.status);
+
+        const current = stats.get(scenarioId) || {
+          scenarioId,
+          runs: 0,
+          success: 0,
+          failure: 0,
+          executing: 0,
+          pending: 0,
+          lastStatus: null,
+          lastExecutionAt: null,
+          critical: false,
+        };
+
+        current.runs += 1;
+        if (status === 'success') current.success += 1;
+        if (status === 'failure') current.failure += 1;
+        if (status === 'executing') current.executing += 1;
+        if (status === 'pending') current.pending += 1;
+
+        const currentTs = current.lastExecutionAt ? new Date(current.lastExecutionAt).getTime() : -1;
+        const candidateTs = startedAt ? new Date(startedAt).getTime() : -1;
+        if (candidateTs >= currentTs) {
+          current.lastExecutionAt = startedAt;
+          current.lastStatus = status;
+        }
+
+        stats.set(scenarioId, current);
+      } catch (_) {
+        // Ignora arquivos de evidência malformados
+      }
+    }
+  }
+
+  return stats;
+}
+
 function collectScenarioLatestStats(maxExecutions = 250) {
   const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
   const stats = new Map();
@@ -317,12 +434,99 @@ function collectScenarioLatestStats(maxExecutions = 250) {
     }
   }
 
+  // Complementar com execuções disparadas pela UI (meshEvidence/waveId/meshq-*.json)
+  collectWaveEvidenceStats(stats);
+
   return stats;
 }
 
+function getScenarioCandidateIds(scenario = {}) {
+  const ids = new Set();
+
+  const primaryId = String(scenario.id || scenario.scenarioId || '').trim();
+  if (primaryId) ids.add(primaryId);
+
+  const topLevelPlatformIds = Array.isArray(scenario.platformScenarioIds)
+    ? scenario.platformScenarioIds
+    : [];
+  for (const platformId of topLevelPlatformIds) {
+    const normalized = String(platformId || '').trim();
+    if (normalized) ids.add(normalized);
+  }
+
+  const nestedPlatformIds = Array.isArray(scenario.platform?.platformScenarioIds)
+    ? scenario.platform.platformScenarioIds
+    : [];
+  for (const platformId of nestedPlatformIds) {
+    const normalized = String(platformId || '').trim();
+    if (normalized) ids.add(normalized);
+  }
+
+  return Array.from(ids);
+}
+
+function resolveScenarioStat(scenario = {}, scenarioStats = new Map()) {
+  const candidateIds = getScenarioCandidateIds(scenario);
+  const matches = candidateIds
+    .map((id) => scenarioStats.get(id))
+    .filter(Boolean);
+
+  const fallback = {
+    scenarioId: String(scenario.id || scenario.scenarioId || '').trim(),
+    runs: 0,
+    success: 0,
+    failure: 0,
+    executing: 0,
+    pending: 0,
+    lastStatus: 'pending',
+    lastExecutionAt: null,
+    critical: scenario.criticality === 'blocking' || scenario.criticality === 'high',
+  };
+
+  if (matches.length === 0) {
+    return fallback;
+  }
+
+  const merged = {
+    ...fallback,
+    runs: 0,
+    success: 0,
+    failure: 0,
+    executing: 0,
+    pending: 0,
+  };
+
+  for (const stat of matches) {
+    merged.runs += Number(stat.runs || 0);
+    merged.success += Number(stat.success || 0);
+    merged.failure += Number(stat.failure || 0);
+    merged.executing += Number(stat.executing || 0);
+    merged.pending += Number(stat.pending || 0);
+    merged.critical = merged.critical || Boolean(stat.critical);
+
+    const currentTs = merged.lastExecutionAt ? new Date(merged.lastExecutionAt).getTime() : -1;
+    const candidateTs = stat.lastExecutionAt ? new Date(stat.lastExecutionAt).getTime() : -1;
+    if (candidateTs >= currentTs) {
+      merged.lastExecutionAt = stat.lastExecutionAt || merged.lastExecutionAt;
+      merged.lastStatus = stat.lastStatus || merged.lastStatus;
+    }
+  }
+
+  if (merged.runs > 0 && (!merged.lastStatus || merged.lastStatus === 'pending')) {
+    if (merged.failure > 0) merged.lastStatus = 'failure';
+    else if (merged.executing > 0) merged.lastStatus = 'executing';
+    else if (merged.success > 0) merged.lastStatus = 'success';
+  }
+
+  return merged;
+}
+
 function buildJourneyTreeWithStatus() {
-  const journeyStore = loadJourneyStore();
   const scenarioStore = loadScenarioStore();
+  const storedJourneys = loadJourneyStore();
+  const journeyStore = storedJourneys.length > 0
+    ? storedJourneys
+    : buildJourneyStoreFromScenarioStore(scenarioStore);
   const scenarioStats = collectScenarioLatestStats();
 
   // Agrupar jornadas por vertical (domínio)
@@ -341,20 +545,7 @@ function buildJourneyTreeWithStatus() {
       const scenariosForJourney = scenarioStore.filter((s) => s.journeyId === journey.id);
       
       // Computar stats dos cenários
-      const stats = scenariosForJourney.map((scenario) => {
-        const stat = scenarioStats.get(scenario.id) || {
-          scenarioId: scenario.id,
-          runs: 0,
-          success: 0,
-          failure: 0,
-          executing: 0,
-          pending: 0,
-          lastStatus: 'pending',
-          lastExecutionAt: null,
-          critical: scenario.criticality === 'blocking' || scenario.criticality === 'high',
-        };
-        return stat;
-      });
+      const stats = scenariosForJourney.map((scenario) => resolveScenarioStat(scenario, scenarioStats));
 
       // Contar falhas críticas
       const failedScenarios = stats.filter((s) => s.lastStatus === 'failure').length;
@@ -811,7 +1002,7 @@ function queueWaveExecution(payload = {}) {
     error.code = 'BAD_REQUEST';
     throw error;
   }
-  return qaMeshService.queueMeshRun({ scenarioIds, executionOrigin: 'qa_waves' });
+  return qaMeshService.queueMeshRun({ scenarioIds, executionOrigin: 'qa_waves_real' });
 }
 
 function reexecuteReplay(replayId) {
@@ -975,4 +1166,5 @@ module.exports = {
   queueWaveExecution,
   reexecuteReplay,
   getExecutionStatus,
+  collectScenarioLatestStats,
 };

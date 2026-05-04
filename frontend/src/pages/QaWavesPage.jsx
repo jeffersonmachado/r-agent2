@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJson } from '../api/client';
 import JourneyStatusCard from '../components/qa-waves/JourneyStatusCard';
 import JourneyTree from '../components/qa-waves/JourneyTree';
@@ -7,6 +7,7 @@ import ReplayDetailsModal from '../components/qa-waves/ReplayDetailsModal';
 import { CoverageGapsTab } from '../components/qa-waves/CoverageGapsTab';
 import { useExecutionPolling } from '../components/qa-waves/useExecutionPolling';
 import { ExecutionProgress } from '../components/qa-waves/ExecutionProgress';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import '../components/qa-waves/qaWaves.css';
 
 function toScenarioId(scenario) {
@@ -54,6 +55,7 @@ export function QaWavesPage() {
   const [selectedScenarioId, setSelectedScenarioId] = useState('');
   const [scenarioEditor, setScenarioEditor] = useState('');
   const [inferGoal, setInferGoal] = useState('aula experimental');
+  const [inferenceJourneyId, setInferenceJourneyId] = useState('auto');
   const [runReplayId, setRunReplayId] = useState('');
   const [selectedSeedId, setSelectedSeedId] = useState('');
   const [currentExecutionId, setCurrentExecutionId] = useState('');
@@ -71,14 +73,31 @@ export function QaWavesPage() {
   const [selectedJourneyId, setSelectedJourneyId] = useState('');
   const [activeReplayDetails, setActiveReplayDetails] = useState(null);
   const [activeTab, setActiveTab] = useState('jornadas');
-  const [executionDateStart, setExecutionDateStart] = useState('');
-  const [executionDateEnd, setExecutionDateEnd] = useState('');
+  const [showExecutionsModal, setShowExecutionsModal] = useState(false);
+  const [executionFilterWave, setExecutionFilterWave] = useState('');
+  const [executionFilterJourney, setExecutionFilterJourney] = useState('');
+  const [executionDateTimeStart, setExecutionDateTimeStart] = useState('');
+  const [executionDateTimeEnd, setExecutionDateTimeEnd] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const startedPollingExecutionRef = useRef('');
+  const loadJourneyStatusRef = useRef(null);
+  const loadExecutionsRef = useRef(null);
 
   // Hook de polling para monitorar execução
   const executionPolling = useExecutionPolling(currentExecutionId, 5000);
+
+  // WebSocket: recarregar jornadas/execuções ao receber evento qa-waves
+  const handleWsEvent = useCallback((eventName) => {
+    if (eventName !== 'qa-waves.execution.updated' && eventName !== 'qa-waves.execution.started') return;
+    loadJourneyStatusRef.current?.().catch(() => {});
+    loadExecutionsRef.current?.().catch(() => {});
+  }, []);
+
+  useWebSocketContext({
+    onEvent: handleWsEvent,
+    subscribeEvents: ['qa-waves.execution.updated', 'qa-waves.execution.started'],
+  });
 
   // Inicia polling somente uma vez por executionId para evitar loop agressivo em caso de 404
   useEffect(() => {
@@ -112,6 +131,11 @@ export function QaWavesPage() {
   const selectedJourney = useMemo(
     () => selectedDomain?.journeys?.find((journey) => journey.journeyId === selectedJourneyId) || null,
     [selectedDomain, selectedJourneyId]
+  );
+
+  const availableJourneys = useMemo(
+    () => selectedDomain?.journeys || [],
+    [selectedDomain]
   );
 
   const selectedJourneyScenarios = useMemo(
@@ -193,6 +217,9 @@ export function QaWavesPage() {
     setJourneyStatus(Array.isArray(response.items) ? response.items : []);
   }
 
+  // Mantém o ref atualizado para uso no handler WS (evita stale closure)
+  useEffect(() => { loadJourneyStatusRef.current = loadJourneyStatus; });
+
   async function loadScenarios() {
     const params = new URLSearchParams();
     if (filters.wave) params.set('waveId', filters.wave);
@@ -222,6 +249,9 @@ export function QaWavesPage() {
     const response = await fetchJson('/api/qa-waves/executions?limit=50');
     setExecutionItems(Array.isArray(response.items) ? response.items : []);
   }
+
+  // Mantém o ref atualizado para uso no handler WS (evita stale closure)
+  useEffect(() => { loadExecutionsRef.current = loadExecutions; });
 
   async function loadAll() {
     setError('');
@@ -255,17 +285,13 @@ export function QaWavesPage() {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      loadExecutions().catch(() => {});
-    }, 5000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
     if (selectedJourneyId) {
       loadStepStatus();
     }
+  }, [selectedJourneyId]);
+
+  useEffect(() => {
+    setInferenceJourneyId(selectedJourneyId || 'auto');
   }, [selectedJourneyId]);
 
   useEffect(() => {
@@ -277,6 +303,44 @@ export function QaWavesPage() {
   useEffect(() => {
     loadScenarios().catch((err) => setError(err?.message || 'Falha ao carregar cenários'));
   }, [filters.wave, filters.journey, filters.status, filters.source]);
+
+  useEffect(() => {
+    if (activeTab !== 'jornadas') return undefined;
+
+    let cancelled = false;
+    const refreshData = async () => {
+      try {
+        await Promise.all([
+          loadJourneyStatus(),
+          loadScenarios(),
+          loadExecutions(),
+          selectedJourneyId ? loadStepStatus() : Promise.resolve(),
+        ]);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || 'Falha ao atualizar dados da QA Waves');
+        }
+      }
+    };
+
+    // Mantém a tela sincronizada ao acessar/retornar para a aba e periodicamente.
+    const handleFocus = () => { refreshData(); };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshData();
+    };
+
+    refreshData();
+    const intervalId = window.setInterval(refreshData, 15000);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [activeTab, selectedJourneyId, filters.wave, filters.journey, filters.status, filters.source]);
 
   async function enqueueScenarios(scenarioIds, successMessage) {
     const safeIds = Array.from(new Set((scenarioIds || []).filter(Boolean)));
@@ -313,6 +377,13 @@ export function QaWavesPage() {
     if (!item) return;
     setSelectedScenarioId(item.id);
     setSelectedSeedId(item.seeds?.[0]?.id || '');
+    if (item.vertical) {
+      setSelectedDomainId(item.vertical);
+    }
+    if (item.journeyId) {
+      setSelectedJourneyId(item.journeyId);
+      setInferenceJourneyId(item.journeyId);
+    }
     setScenarioEditor(JSON.stringify(item, null, 2));
   }
 
@@ -325,7 +396,7 @@ export function QaWavesPage() {
         method: 'POST',
         body: JSON.stringify({
           vertical: selectedDomain?.id || 'fitness',
-          journey: selectedJourney?.journeyId || 'cliente_novo',
+          ...(inferenceJourneyId !== 'auto' ? { journeyId: inferenceJourneyId } : {}),
           goal: inferGoal,
           channels,
           constraints: {
@@ -338,6 +409,8 @@ export function QaWavesPage() {
 
       setScenarioEditor(JSON.stringify(response.scenario, null, 2));
       setSelectedScenarioId(response.scenario?.id || '');
+      if (response.scenario?.vertical) setSelectedDomainId(response.scenario.vertical);
+      if (response.scenario?.journeyId) setSelectedJourneyId(response.scenario.journeyId);
       setSuccess('Cenário inferido por IA e normalizado para passos semânticos.');
     } catch (err) {
       setError(err?.message || 'Falha ao inferir cenário com IA');
@@ -442,14 +515,15 @@ export function QaWavesPage() {
     }));
   }
 
-  async function runScenarioReal(targetScenarioIds) {
+  async function runScenarioReal(targetScenarioIds, options = {}) {
     setError('');
     setSuccess('');
     setRunReplayId('');
     setCurrentExecutionId('');
     try {
-      const parsed = JSON.parse(scenarioEditor);
-      const seedIds = selectedSeedId ? [selectedSeedId] : [];
+      const seedIds = Array.isArray(options.seedIds)
+        ? options.seedIds.filter(Boolean)
+        : (selectedSeedId ? [selectedSeedId] : []);
       const response = await fetchJson('/api/test-executions', {
         method: 'POST',
         body: JSON.stringify({
@@ -590,13 +664,49 @@ export function QaWavesPage() {
   function handleSelectJourney(domainId, journeyId) {
     setSelectedDomainId(domainId);
     setSelectedJourneyId(journeyId);
+    setInferenceJourneyId(journeyId || 'auto');
+    const firstScenario = (scenarioItems || []).find((s) => s?.journeyId === journeyId);
+    if (firstScenario) {
+      setSelectedScenarioId(firstScenario.id);
+      setSelectedSeedId(firstScenario.seeds?.[0]?.id || '');
+      setScenarioEditor(JSON.stringify(firstScenario, null, 2));
+    } else {
+      setSelectedScenarioId('');
+      setSelectedSeedId('');
+      setScenarioEditor('');
+    }
+  }
+
+  function labelJourneySource(source) {
+    if (source === 'ai') return 'IA';
+    if (source === 'inferred') return 'Template';
+    if (source === 'manual') return 'Manual';
+    return source || 'n/a';
+  }
+
+  function updateJourneySteps(rawValue) {
+    const nextSteps = String(rawValue || '')
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    updateScenarioEditor((scenario) => ({
+      ...scenario,
+      journeySteps: nextSteps,
+      journeySource: 'manual',
+    }));
   }
 
   const filteredExecutionItems = (executionItems || []).filter((item) => {
     const createdAt = new Date(item.createdAt || item.startedAt || 0).getTime();
-    const byDateStart = !executionDateStart || createdAt >= new Date(`${executionDateStart}T00:00:00`).getTime();
-    const byDateEnd = !executionDateEnd || createdAt <= new Date(`${executionDateEnd}T23:59:59`).getTime();
-    return byDateStart && byDateEnd;
+    const replayArtifact = item.replayArtifacts?.[0] || {};
+    const waveId = String(replayArtifact.waveId || item.waveId || '').toLowerCase();
+    const journeyId = String(replayArtifact.journeyId || item.journeyId || '').toLowerCase();
+    const byWave = !executionFilterWave || waveId.includes(executionFilterWave.toLowerCase());
+    const byJourney = !executionFilterJourney || journeyId.includes(executionFilterJourney.toLowerCase());
+    const byDateStart = !executionDateTimeStart || createdAt >= new Date(executionDateTimeStart).getTime();
+    const byDateEnd = !executionDateTimeEnd || createdAt <= new Date(executionDateTimeEnd).getTime();
+    return byWave && byJourney && byDateStart && byDateEnd;
   });
 
   return (
@@ -610,7 +720,7 @@ export function QaWavesPage() {
       </header>
 
       {/* Navegação de tabs */}
-      <nav style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e7eb', marginBottom: 16 }}>
+      <nav style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border-default)', marginBottom: 16 }}>
         {[
           { id: 'jornadas', label: 'Jornadas e Cenários' },
           { id: 'cobertura', label: 'Cobertura e Gaps' },
@@ -622,10 +732,10 @@ export function QaWavesPage() {
             style={{
               padding: '8px 20px',
               border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+              borderBottom: activeTab === tab.id ? '2px solid var(--color-accent-primary)' : '2px solid transparent',
               background: 'transparent',
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? '#2563eb' : '#6b7280',
+              color: activeTab === tab.id ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
               cursor: 'pointer',
               fontSize: 14,
               marginBottom: -2,
@@ -673,21 +783,60 @@ export function QaWavesPage() {
 
         <section className="qa-waves-panel qa-waves-business-content">
           <div className="qa-journey-actions">
-            <h2 className="qa-waves-section-title">Visão de Jornada</h2>
+            <h2 className="qa-waves-section-title">Jornada e Cenários</h2>
             <div className="qa-journey-actions-buttons">
-              <button type="button" onClick={handleExecuteDomain} disabled={!selectedDomain || domainSummary.totalItems === 0}>
-                ▶ Domínio
-              </button>
-              <button type="button" onClick={handleExecuteJourney} disabled={!selectedJourney}>
-                ▶ Jornada
+              <select value={selectedSeedId} onChange={(event) => setSelectedSeedId(event.target.value)}>
+                <option value="">Todas as seeds</option>
+                {(parsedScenario?.seeds || []).map((seed) => (
+                  <option key={seed.id} value={seed.id}>{seed.id}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => runScenarioReal([selectedScenarioId])}
+                disabled={!selectedScenarioId}
+                className="qa-btn-primary"
+              >
+                ▶ Executar cenário
               </button>
               <button
                 type="button"
-                onClick={() => runScenarioReal((scenarioItems || []).map((item) => item.id))}
-                disabled={scenarioItems.length === 0}
+                onClick={() => runScenarioReal([selectedScenarioId], { seedIds: (parsedScenario?.seeds || []).map((seed) => seed.id) })}
+                disabled={!selectedScenarioId || (parsedScenario?.seeds || []).length === 0}
               >
-                ▶ Wave real
+                ▶ Executar seeds
               </button>
+              <button
+                type="button"
+                onClick={() => openReplayPage(runReplayId)}
+                disabled={!runReplayId}
+              >
+                ↗ Abrir replay
+              </button>
+            </div>
+            <div className="qa-journey-actions-buttons" style={{ marginTop: 8 }}>
+              <input
+                type="text"
+                value={inferGoal}
+                onChange={(event) => setInferGoal(event.target.value)}
+                placeholder="Objetivo para inferência IA"
+              />
+              <select value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)}>
+                {(journeysTree || []).map((domain) => (
+                  <option key={domain.id} value={domain.id}>{domain.name || domain.id}</option>
+                ))}
+              </select>
+              <select value={inferenceJourneyId} onChange={(event) => setInferenceJourneyId(event.target.value)}>
+                <option value="auto">Jornada automática</option>
+                {availableJourneys.map((journey) => (
+                  <option key={journey.journeyId} value={journey.journeyId}>{journey.journeyName}</option>
+                ))}
+              </select>
+              <button type="button" onClick={inferScenario}>✦ IA</button>
+              <button type="button" onClick={validateScenario}>✓ Validar</button>
+              <button type="button" onClick={saveScenario}>⎘ Salvar</button>
+              <button type="button" onClick={generateSeeds}>◎ Seeds</button>
+              <button type="button" onClick={() => setShowExecutionsModal(true)}>▣ Execuções</button>
             </div>
           </div>
           <article className="qa-domain-summary-card">
@@ -708,84 +857,141 @@ export function QaWavesPage() {
             </div>
           </article>
 
-          <article className="qa-domain-summary-card" style={{ marginTop: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <h3>Execuções reais QA Waves</h3>
-              <div className="qa-journey-actions-buttons" style={{ marginBottom: 0 }}>
-                <input
-                  type="date"
-                  value={executionDateStart}
-                  onChange={(event) => setExecutionDateStart(event.target.value)}
-                  title="Filtrar execuções a partir de"
-                />
-                <input
-                  type="date"
-                  value={executionDateEnd}
-                  onChange={(event) => setExecutionDateEnd(event.target.value)}
-                  title="Filtrar execuções até"
-                />
-                <button type="button" onClick={() => loadExecutions()}>
-                  ↻ Atualizar
-                </button>
-              </div>
-            </div>
+          {showExecutionsModal && (
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 1000,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              onClick={(e) => { if (e.target === e.currentTarget) setShowExecutionsModal(false); }}
+            >
+              <div style={{
+                background: 'var(--color-bg-elevated)',
+                borderRadius: 10,
+                padding: 24,
+                width: '90%', maxWidth: 860,
+                maxHeight: '80vh', overflowY: 'auto',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                position: 'relative',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowExecutionsModal(false)}
+                  style={{ position: 'absolute', top: 12, right: 16, fontSize: 20, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
+                  title="Fechar"
+                >✕</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0 }}>Execuções reais QA Waves</h3>
+                  <div className="qa-journey-actions-buttons" style={{ marginBottom: 0 }}>
+                    <input
+                      type="text"
+                      value={executionFilterWave}
+                      onChange={(event) => setExecutionFilterWave(event.target.value)}
+                      placeholder="Filtrar wave"
+                      title="Filtrar replay por wave"
+                    />
+                    <input
+                      type="text"
+                      value={executionFilterJourney}
+                      onChange={(event) => setExecutionFilterJourney(event.target.value)}
+                      placeholder="Filtrar jornada"
+                      title="Filtrar replay por jornada"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={executionDateTimeStart}
+                      onChange={(event) => setExecutionDateTimeStart(event.target.value)}
+                      title="Filtrar execuções a partir de"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={executionDateTimeEnd}
+                      onChange={(event) => setExecutionDateTimeEnd(event.target.value)}
+                      title="Filtrar execuções até"
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '0 4px' }}>
+                      Atualização automática ativa
+                    </span>
+                  </div>
+                </div>
 
-            {filteredExecutionItems.length === 0 ? (
-              <p className="qa-empty">Nenhuma execução real encontrada para o filtro atual.</p>
-            ) : (
-              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-                {filteredExecutionItems.map((execution) => {
-                  const replayId = execution.replayArtifacts?.[0]?.replayId || '';
-                  const liveStatus = execution.executionId === currentExecutionId && executionPolling.status !== 'idle'
-                    ? executionPolling.status
-                    : execution.status;
+                {filteredExecutionItems.length === 0 ? (
+                  <p className="qa-empty">Nenhuma execução real encontrada para o filtro atual.</p>
+                ) : (
+                  <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                    {filteredExecutionItems.map((execution) => {
+                      const replayId = execution.replayArtifacts?.[0]?.replayId || '';
+                      const replayWaveId = execution.replayArtifacts?.[0]?.waveId || execution.waveId || 'n/a';
+                      const replayJourneyId = execution.replayArtifacts?.[0]?.journeyId || execution.journeyId || 'n/a';
+                      const liveStatus = execution.executionId === currentExecutionId && executionPolling.status !== 'idle'
+                        ? executionPolling.status
+                        : execution.status;
+                      const isApiAdapter = (execution.replayArtifacts || []).some(
+                        (a) => a.platformAdapter === 'api',
+                      ) || (execution.replayArtifacts || []).length === 0 && execution.platformAdapter === 'api';
 
-                  return (
-                    <div
-                      key={execution.executionId}
-                      style={{
-                        border: execution.executionId === currentExecutionId ? '2px solid #2563eb' : '1px solid #d1d5db',
-                        borderRadius: 8,
-                        padding: 10,
-                        background: execution.executionId === currentExecutionId ? '#eff6ff' : '#fff',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                        <div>
-                          <strong>{execution.executionId}</strong>
-                          <div style={{ fontSize: 12, color: '#6b7280' }}>
-                            Status: {liveStatus} | Criado em: {execution.createdAt ? new Date(execution.createdAt).toLocaleString('pt-BR') : 'n/a'}
+                      return (
+                        <div
+                          key={execution.executionId}
+                          style={{
+                            border: execution.executionId === currentExecutionId ? '2px solid var(--color-accent-primary)' : '1px solid var(--color-border-default)',
+                            borderRadius: 8,
+                            padding: 10,
+                            background: execution.executionId === currentExecutionId ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                            <div>
+                              <strong>{execution.executionId}</strong>
+                              {isApiAdapter && (
+                                <span
+                                  title="Este cenário usa adapter:api (sem Playwright/RPA). O padrão é adapter:rpa."
+                                  style={{
+                                    marginLeft: 8,
+                                    display: 'inline-block',
+                                    background: '#fff3cd',
+                                    border: '1px solid #ffc107',
+                                    color: '#856404',
+                                    borderRadius: 4,
+                                    padding: '2px 7px',
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    verticalAlign: 'middle',
+                                    letterSpacing: 0.3,
+                                  }}
+                                >
+                                  ⚠ Adapter: API
+                                </span>
+                              )}
+                              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                                Status: {liveStatus} | Criado em: {execution.createdAt ? new Date(execution.createdAt).toLocaleString('pt-BR') : 'n/a'}
+                              </div>
+                            </div>
+                            <div className="qa-journey-actions-buttons" style={{ marginBottom: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => openReplayPage(replayId)}
+                                disabled={!replayId}
+                              >
+                                ↗ Abrir replay
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 12, marginTop: 6 }}>
+                            Wave: {replayWaveId} | Jornada: {replayJourneyId}
+                          </div>
+                          <div style={{ fontSize: 12, marginTop: 4 }}>
+                            Replays: {(execution.replayArtifacts || []).map((artifact) => artifact.replayId).filter(Boolean).join(', ') || 'n/a'}
                           </div>
                         </div>
-                        <div className="qa-journey-actions-buttons" style={{ marginBottom: 0 }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCurrentExecutionId(execution.executionId);
-                              executionPolling.startPolling();
-                            }}
-                          >
-                            ⟳ Monitorar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openReplayPage(replayId)}
-                            disabled={!replayId}
-                          >
-                            ↗ Abrir replay
-                          </button>
-                        </div>
-                      </div>
-
-                      <div style={{ fontSize: 12, marginTop: 6 }}>
-                        Replays: {(execution.replayArtifacts || []).map((artifact) => artifact.replayId).filter(Boolean).join(', ') || 'n/a'}
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </article>
+            </div>
+          )}
 
           <JourneyStatusCard journey={selectedJourney} stepStatuses={selectedJourney?.steps || []} />
           <StepBreakdown
@@ -797,109 +1003,16 @@ export function QaWavesPage() {
           />
 
           <article className="qa-domain-summary-card" style={{ marginTop: 16 }}>
-            <h3>Cenários semânticos e seeds (IA + manual)</h3>
-
-            <div className="qa-execution-quick">
-              <div>
-                <strong>Execução rápida</strong>
-                <p>Selecione um cenário e execute aqui. O replay abre no módulo unificado.</p>
-              </div>
-              <div className="qa-journey-actions-buttons">
-                <select value={selectedSeedId} onChange={(event) => setSelectedSeedId(event.target.value)}>
-                  <option value="">Todas as seeds</option>
-                  {(parsedScenario?.seeds || []).map((seed) => (
-                    <option key={seed.id} value={seed.id}>{seed.id}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => runScenarioReal([selectedScenarioId])}
-                  disabled={!selectedScenarioId}
-                  className="qa-btn-primary"
-                >
-                  ▶ Executar cenário
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openReplayPage(runReplayId)}
-                  disabled={!runReplayId}
-                >
-                  ↗ Abrir replay
-                </button>
-              </div>
-            </div>
-
-            <div className="qa-journey-actions-buttons" style={{ marginBottom: 12 }}>
-              <input
-                type="text"
-                value={inferGoal}
-                onChange={(event) => setInferGoal(event.target.value)}
-                placeholder="Objetivo para inferência IA"
-              />
-              <button type="button" onClick={inferScenario}>✦ IA</button>
-              <button type="button" onClick={validateScenario}>✓ Validar</button>
-              <button type="button" onClick={saveScenario}>⎘ Salvar</button>
-              <button type="button" onClick={generateSeeds}>◎ Seeds</button>
-            </div>
-
-            <div className="qa-journey-actions-buttons" style={{ marginBottom: 12 }}>
-              <input
-                type="text"
-                value={filters.wave}
-                onChange={(event) => setFilters((prev) => ({ ...prev, wave: event.target.value }))}
-                placeholder="Filtro wave"
-              />
-              <input
-                type="text"
-                value={filters.journey}
-                onChange={(event) => setFilters((prev) => ({ ...prev, journey: event.target.value }))}
-                placeholder="Filtro jornada"
-              />
-              <input
-                type="text"
-                value={filters.scenario}
-                onChange={(event) => setFilters((prev) => ({ ...prev, scenario: event.target.value }))}
-                placeholder="Filtro cenário"
-              />
-              <input
-                type="text"
-                value={filters.seed}
-                onChange={(event) => setFilters((prev) => ({ ...prev, seed: event.target.value }))}
-                placeholder="Filtro seed"
-              />
-              <input
-                type="text"
-                value={filters.status}
-                onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
-                placeholder="status"
-              />
-              <input
-                type="text"
-                value={filters.source}
-                onChange={(event) => setFilters((prev) => ({ ...prev, source: event.target.value }))}
-                placeholder="origem"
-              />
-              <input
-                type="date"
-                value={filters.dateStart}
-                onChange={(event) => setFilters((prev) => ({ ...prev, dateStart: event.target.value }))}
-              />
-              <input
-                type="date"
-                value={filters.dateEnd}
-                onChange={(event) => setFilters((prev) => ({ ...prev, dateEnd: event.target.value }))}
-              />
-            </div>
-
             <div className="qa-scenario-editor-grid">
               <div className="qa-scenario-list-panel">
                 {(scenarioItems || [])
                   .filter((item) => {
+                    const byJourney = !selectedJourneyId || item.journeyId === selectedJourneyId;
                     const byScenario = !filters.scenario || `${item.id} ${item.name}`.toLowerCase().includes(filters.scenario.toLowerCase());
                     const bySeed = !filters.seed || (item.seeds || []).some((seed) => String(seed.id).toLowerCase().includes(filters.seed.toLowerCase()));
                     const byDateStart = !filters.dateStart || new Date(item.updatedAt || item.createdAt || 0).getTime() >= new Date(`${filters.dateStart}T00:00:00`).getTime();
                     const byDateEnd = !filters.dateEnd || new Date(item.updatedAt || item.createdAt || 0).getTime() <= new Date(`${filters.dateEnd}T23:59:59`).getTime();
-                    return byScenario && bySeed && byDateStart && byDateEnd;
+                    return byJourney && byScenario && bySeed && byDateStart && byDateEnd;
                   })
                   .map((item) => {
                     const selected = item.id === selectedScenarioId;
@@ -915,9 +1028,9 @@ export function QaWavesPage() {
                           textAlign: 'left',
                           marginBottom: 6,
                           borderRadius: 6,
-                          border: selected ? '2px solid #2563eb' : '1px solid #d1d5db',
+                          border: selected ? '2px solid var(--color-accent-primary)' : '1px solid var(--color-border-default)',
                           padding: 8,
-                          background: selected ? '#eff6ff' : '#fff',
+                          background: selected ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
                         }}
                       >
                         <div style={{ fontWeight: 600 }}>{item.name}</div>
@@ -935,7 +1048,54 @@ export function QaWavesPage() {
                   <div style={{ marginTop: 4 }}>
                     <h4>Edição guiada do cenário</h4>
 
-                    <details style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 8, marginBottom: 10 }}>
+                    <details style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 8, marginBottom: 10 }} open>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Jornada dinâmica</summary>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          Vertical
+                          <input
+                            type="text"
+                            value={parsedScenario.vertical || ''}
+                            onChange={(event) => updateScenarioEditor((scenario) => ({ ...scenario, vertical: event.target.value }))}
+                          />
+                        </label>
+
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          Jornada
+                          <input
+                            type="text"
+                            value={parsedScenario.journeyId || parsedScenario.journey || ''}
+                            onChange={(event) => updateScenarioEditor((scenario) => ({
+                              ...scenario,
+                              journeyId: event.target.value,
+                              journey: event.target.value,
+                              journeySource: 'manual',
+                            }))}
+                          />
+                        </label>
+
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          Origem
+                          <input type="text" value={labelJourneySource(parsedScenario.journeySource)} disabled />
+                        </label>
+
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          Template base
+                          <input type="text" value={parsedScenario.baseTemplateId || 'customer_lifecycle_v1'} disabled />
+                        </label>
+
+                        <label style={{ display: 'grid', gap: 4, gridColumn: '1 / -1' }}>
+                          Steps da jornada
+                          <textarea
+                            value={(parsedScenario.journeySteps || []).join('\n')}
+                            rows={6}
+                            onChange={(event) => updateJourneySteps(event.target.value)}
+                          />
+                        </label>
+                      </div>
+                    </details>
+
+                    <details style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 8, marginBottom: 10 }}>
                       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Dados gerais</summary>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                         <label style={{ display: 'grid', gap: 4 }}>
@@ -985,7 +1145,7 @@ export function QaWavesPage() {
                           </select>
                         </label>
 
-                        <fieldset style={{ gridColumn: '1 / -1', border: '1px solid #d1d5db', borderRadius: 6, padding: 8 }}>
+                        <fieldset style={{ gridColumn: '1 / -1', border: '1px solid var(--color-border-default)', borderRadius: 6, padding: 8 }}>
                           <legend>Canais</legend>
                           <div className="qa-journey-actions-buttons" style={{ marginBottom: 0 }}>
                             {['whatsapp', 'chat', 'email', 'voice'].map((channel) => {
@@ -1012,7 +1172,7 @@ export function QaWavesPage() {
                       </div>
                     </details>
 
-                    <details style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 8, marginBottom: 10 }}>
+                    <details style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 8, marginBottom: 10 }}>
                       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Passos semânticos</summary>
                       <div style={{ marginTop: 8 }}>
                         {(parsedScenario.steps || []).map((step) => (
@@ -1033,7 +1193,7 @@ export function QaWavesPage() {
                       </div>
                     </details>
 
-                    <details style={{ border: '1px solid #d1d5db', borderRadius: 8, padding: 8 }}>
+                    <details style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 8 }}>
                       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Seeds</summary>
                       <div style={{ marginTop: 8 }}>
                         <div className="qa-journey-actions-buttons" style={{ marginBottom: 8 }}>
@@ -1048,7 +1208,7 @@ export function QaWavesPage() {
                         {(parsedScenario.seeds || []).map((seed) => {
                           const sourceBadge = seed.status === 'regression' ? 'Regressao' : (parsedScenario.source === 'ai_inferred' ? 'IA' : 'Manual');
                           return (
-                            <div key={seed.id} style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: 8, marginBottom: 6 }}>
+                            <div key={seed.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: 6, padding: 8, marginBottom: 6 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                                 <strong>{seed.id}</strong>
                                 <span>{sourceBadge}</span>
