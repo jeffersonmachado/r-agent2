@@ -477,7 +477,7 @@ export function DashboardPage() {
       title: 'Status do Sistema',
       description: 'Monitoramento de serviços e saúde do sistema',
       icon: '💚',
-      path: '/system-status',
+      path: '/dev/system-status',
       color: 'bg-green-600',
       category: 'Monitoramento',
     },

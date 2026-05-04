@@ -434,7 +434,7 @@ function AppWithAuth() {
   const isQa = isRoute('/qa');
   const isQaMesh = isRoute('/qa-mesh');
   const isGenerateSystem = isRoute('/generate-system');
-  const isSystemStatus = isRoute('/system-status');
+  const isSystemStatus = isRoute('/dev/system-status');
   const isChannelHealth = isRoute('/channel-health');
   const isChannelAccounts = isRoute('/channel-accounts');
   const isPlanUsage = isRoute('/plan-usage');
@@ -607,7 +607,7 @@ function AppWithAuth() {
       '/qa': '✅ Painel de Qualidade (QA)',
       '/qa-mesh': '🕸️ Malha Unificada de Execução',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
-      '/system-status': '📊 Status dos Serviços',
+      '/dev/system-status': '📊 Status dos Serviços',
       '/channel-health': '📡 Saúde de Canais',
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
@@ -743,7 +743,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login e rotas públicas de marketing/storefront
-  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/workspace', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/workspace', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/dev/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)

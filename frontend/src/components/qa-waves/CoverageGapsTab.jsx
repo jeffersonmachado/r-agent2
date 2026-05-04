@@ -9,7 +9,7 @@ function pct(value) {
 
 function CoverageBar({ value }) {
   const pctNum = Math.round((value || 0) * 100);
-  const color = pctNum >= 80 ? '#16a34a' : pctNum >= 50 ? '#ca8a04' : '#dc2626';
+  const color = pctNum >= 80 ? 'var(--color-status-success)' : pctNum >= 50 ? 'var(--color-status-warning)' : 'var(--color-status-error)';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <div
@@ -17,7 +17,7 @@ function CoverageBar({ value }) {
           flex: 1,
           height: 10,
           borderRadius: 5,
-          background: '#e5e7eb',
+          background: 'var(--color-border-default)',
           overflow: 'hidden',
         }}
       >
@@ -37,15 +37,15 @@ function CoverageBar({ value }) {
 
 function StatusPill({ status }) {
   const map = {
-    draft_ai: { label: 'Rascunho IA', bg: '#fef9c3', color: '#854d0e' },
-    approved: { label: 'Aprovado', bg: '#dcfce7', color: '#166534' },
-    rejected: { label: 'Rejeitado', bg: '#fee2e2', color: '#991b1b' },
-    draft: { label: 'Rascunho', bg: '#f3f4f6', color: '#374151' },
-    reviewed: { label: 'Revisado', bg: '#dbeafe', color: '#1e40af' },
-    active: { label: 'Ativo', bg: '#d1fae5', color: '#065f46' },
-    deprecated: { label: 'Obsoleto', bg: '#f3f4f6', color: '#9ca3af' },
+    draft_ai: { label: 'Rascunho IA', bg: 'var(--color-bg-secondary)', color: 'var(--color-status-warning)' },
+    approved: { label: 'Aprovado', bg: 'var(--color-bg-secondary)', color: 'var(--color-status-success)' },
+    rejected: { label: 'Rejeitado', bg: 'var(--color-bg-secondary)', color: 'var(--color-status-error)' },
+    draft: { label: 'Rascunho', bg: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' },
+    reviewed: { label: 'Revisado', bg: 'var(--color-bg-secondary)', color: 'var(--color-status-info)' },
+    active: { label: 'Ativo', bg: 'var(--color-bg-secondary)', color: 'var(--color-status-success)' },
+    deprecated: { label: 'Obsoleto', bg: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' },
   };
-  const s = map[status] || { label: status, bg: '#f3f4f6', color: '#6b7280' };
+  const s = map[status] || { label: status, bg: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' };
   return (
     <span
       style={{
@@ -236,7 +236,7 @@ export function CoverageGapsTab() {
         </div>
 
         {coverage && (coverage.verticals || []).map((vert) => (
-          <details key={vert.vertical} open style={{ marginBottom: 12, border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+          <details key={vert.vertical} open style={{ marginBottom: 12, border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 12 }}>
             <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', justifyContent: 'space-between' }}>
               <span>{vert.vertical}</span>
               <CoverageBar value={vert.coverage} />
@@ -246,7 +246,7 @@ export function CoverageGapsTab() {
                 <div key={j.journeyId} style={{ paddingLeft: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 13, flex: 1 }}>{j.journeyName || j.journeyId}</span>
-                    <span style={{ fontSize: 12, color: '#6b7280' }}>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
                       {j.totalCovered}/{j.totalRequired} cenários
                     </span>
                     <div style={{ width: 160 }}>
@@ -254,9 +254,9 @@ export function CoverageGapsTab() {
                     </div>
                   </div>
                   {(j.missingCount > 0 || j.weakCount > 0) && (
-                    <div style={{ marginTop: 4, fontSize: 11, color: '#9ca3af' }}>
-                      {j.missingCount > 0 && <span style={{ color: '#dc2626' }}>▼ {j.missingCount} faltando </span>}
-                      {j.weakCount > 0 && <span style={{ color: '#ca8a04' }}>⚠ {j.weakCount} frágeis</span>}
+                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+                      {j.missingCount > 0 && <span style={{ color: 'var(--color-status-error)' }}>▼ {j.missingCount} faltando </span>}
+                      {j.weakCount > 0 && <span style={{ color: 'var(--color-status-warning)' }}>⚠ {j.weakCount} frágeis</span>}
                     </div>
                   )}
                 </div>
@@ -336,7 +336,7 @@ export function CoverageGapsTab() {
         </div>
 
         {gaps && (
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+          <div style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 12, background: 'var(--color-bg-elevated)' }}>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 12 }}>
               <div>
                 <strong>Cobertura</strong>
@@ -352,17 +352,17 @@ export function CoverageGapsTab() {
               </div>
               <div>
                 <strong>Faltando</strong>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#dc2626' }}>{gaps.missingScenarios?.length || 0}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-status-error)' }}>{gaps.missingScenarios?.length || 0}</div>
               </div>
               <div>
                 <strong>Frágeis</strong>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#ca8a04' }}>{gaps.weakScenarios?.length || 0}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-status-warning)' }}>{gaps.weakScenarios?.length || 0}</div>
               </div>
             </div>
 
             {(gaps.missingScenarios || []).length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <strong style={{ fontSize: 13, color: '#dc2626' }}>Cenários faltando:</strong>
+                <strong style={{ fontSize: 13, color: 'var(--color-status-error)' }}>Cenários faltando:</strong>
                 <ul style={{ margin: '4px 0 0 16px', fontSize: 12 }}>
                   {gaps.missingScenarios.map((id) => (
                     <li key={id}>{id}</li>
@@ -373,7 +373,7 @@ export function CoverageGapsTab() {
 
             {(gaps.weakScenarios || []).length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <strong style={{ fontSize: 13, color: '#ca8a04' }}>Cenários frágeis:</strong>
+                <strong style={{ fontSize: 13, color: 'var(--color-status-warning)' }}>Cenários frágeis:</strong>
                 <ul style={{ margin: '4px 0 0 16px', fontSize: 12 }}>
                   {gaps.weakScenarios.map((s) => (
                     <li key={s.id}>
@@ -419,17 +419,17 @@ export function CoverageGapsTab() {
           <div
             key={draft.id}
             style={{
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border-default)',
               borderRadius: 8,
               padding: 12,
               marginBottom: 10,
-              background: draft.status === 'draft_ai' ? '#fefce8' : '#f9fafb',
+              background: draft.status === 'draft_ai' ? 'var(--color-bg-secondary)' : 'var(--color-bg-elevated)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
               <div>
                 <strong style={{ fontSize: 14 }}>{draft.title || draft.id}</strong>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{draft.id}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>{draft.id}</div>
                 <div style={{ fontSize: 12, marginTop: 4 }}>
                   {draft.vertical} / {draft.journey} / {draft.stage}
                 </div>
@@ -442,7 +442,7 @@ export function CoverageGapsTab() {
                       type="button"
                       onClick={() => reviewDraft(draft.id, 'approve')}
                       disabled={loadingReview === draft.id}
-                      style={{ fontSize: 12, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+                      style={{ fontSize: 12, background: 'var(--color-status-success)', color: 'var(--color-bg-primary)', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
                     >
                       ✓ Aprovar
                     </button>
@@ -450,7 +450,7 @@ export function CoverageGapsTab() {
                       type="button"
                       onClick={() => reviewDraft(draft.id, 'reject')}
                       disabled={loadingReview === draft.id}
-                      style={{ fontSize: 12, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+                      style={{ fontSize: 12, background: 'var(--color-status-error)', color: 'var(--color-bg-primary)', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
                     >
                       ✗ Rejeitar
                     </button>
@@ -460,7 +460,7 @@ export function CoverageGapsTab() {
             </div>
 
             {(draft.semanticSteps || []).length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#374151' }}>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-secondary)' }}>
                 <strong>Passos:</strong>{' '}
                 {draft.semanticSteps.map((s, i) => (
                   <span key={i} style={{ marginRight: 6 }}>
@@ -471,7 +471,7 @@ export function CoverageGapsTab() {
             )}
 
             {draft.status === 'draft_ai' && (
-              <div style={{ marginTop: 6, fontSize: 11, color: '#92400e', background: '#fef3c7', borderRadius: 4, padding: '4px 8px' }}>
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-status-warning)', background: 'var(--color-bg-secondary)', borderRadius: 4, padding: '4px 8px' }}>
                 ⚠ Este cenário NÃO será executado até ser aprovado manualmente.
               </div>
             )}
@@ -494,24 +494,24 @@ export function CoverageGapsTab() {
           <div
             key={report.waveId}
             style={{
-              border: `2px solid ${report.status === 'GO' ? '#16a34a' : '#dc2626'}`,
+              border: `2px solid ${report.status === 'GO' ? 'var(--color-status-success)' : 'var(--color-status-error)'}`,
               borderRadius: 8,
               padding: 12,
               marginBottom: 10,
-              background: report.status === 'GO' ? '#f0fdf4' : '#fef2f2',
+              background: 'var(--color-bg-elevated)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <strong style={{ fontSize: 14 }}>{report.waveId}</strong>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
                   Avaliado em: {report.evaluatedAt ? new Date(report.evaluatedAt).toLocaleString('pt-BR') : '—'}
                 </div>
               </div>
               <div style={{
                 fontSize: 20,
                 fontWeight: 800,
-                color: report.status === 'GO' ? '#16a34a' : '#dc2626',
+                color: report.status === 'GO' ? 'var(--color-status-success)' : 'var(--color-status-error)',
               }}>
                 {report.status}
               </div>
@@ -520,7 +520,7 @@ export function CoverageGapsTab() {
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 8, fontSize: 13 }}>
               <div>Cobertura: <strong>{pct(report.coverage)}</strong></div>
               <div>Qualidade: <strong>{pct(report.quality)}</strong></div>
-              <div>Falhas críticas: <strong style={{ color: report.criticalFailures > 0 ? '#dc2626' : 'inherit' }}>{report.criticalFailures}</strong></div>
+              <div>Falhas críticas: <strong style={{ color: report.criticalFailures > 0 ? 'var(--color-status-error)' : 'inherit' }}>{report.criticalFailures}</strong></div>
               <div>Cenários: <strong>{report.coveredScenarios}/{report.totalScenarios}</strong></div>
             </div>
 

@@ -80,6 +80,31 @@ export function StatusTab({ systemStatus }) {
               </div>
             )}
 
+            {/* Aviso operacional Redis */}
+            {key === 'redis' && service.details?.configured === false && service.details?.mode === 'memory' && (
+              <div className="mt-2 p-2 rounded text-sm" style={{
+                backgroundColor: theme.colors.status.warning + '18',
+                border: `1px solid ${theme.colors.status.warning}50`,
+                color: theme.colors.status.warning,
+              }}>
+                {service.details.fallbackEnabled === false ? (
+                  <>
+                    <strong>Atenção:</strong> Redis não configurado e fallback desabilitado.
+                    <div className="mt-1 flex gap-2 flex-wrap">
+                      <a href="/config?tab=rateLimit" className="underline font-medium">🚦 Configurar Redis</a>
+                      <a href="/config?tab=fallbacks" className="underline font-medium">⚙️ Habilitar fallback</a>
+                      <a href="/dev/system-status" className="underline font-medium">📊 Ver detalhes</a>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <strong>Modo degradado:</strong> Redis não configurado; usando memória.{' '}
+                    <a href="/config?tab=rateLimit" className="underline font-medium">Configurar →</a>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Erro */}
             {service.error && (
               <div className="mt-2 p-2 rounded text-sm" style={{ 

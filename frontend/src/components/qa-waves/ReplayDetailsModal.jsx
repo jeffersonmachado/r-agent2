@@ -293,6 +293,14 @@ export function ReplayDetailsModal({ details, onClose }) {
                     <StatusBadge status={activeStep.status} />
                   </div>
                   <div className="text-xs text-text-tertiary">{formatDate(activeStep.at)}</div>
+                  {(activeStep.adapter || activeStep.channel) && (
+                    <div className="mt-2 flex gap-3 text-xs text-text-secondary">
+                      {activeStep.channel && <span>📡 Canal: <span className="font-mono text-text-primary">{activeStep.channel}</span></span>}
+                      {activeStep.adapter && activeStep.adapter !== activeStep.channel && (
+                        <span>⚙️ Adapter: <span className="font-mono text-text-primary">{activeStep.adapter}</span></span>
+                      )}
+                    </div>
+                  )}
                   {activeStepScreenshotSrc && (
                     <div className="mt-3 rounded border border-border-default bg-bg-primary p-2">
                       <img
@@ -305,6 +313,11 @@ export function ReplayDetailsModal({ details, onClose }) {
                   {activeStep.screenshot && (
                     <div className="mt-2 text-xs text-text-secondary">
                       <span>📸 Screenshot:</span> <span className="font-mono break-all">{activeStep.screenshot}</span>
+                    </div>
+                  )}
+                  {!activeStepScreenshotSrc && activeStep.stepType && (
+                    <div className="mt-3 p-2 rounded bg-bg-primary border border-border-default text-xs text-text-tertiary">
+                      📵 Sem captura de tela — testes de canal de mensagem ({activeStep.channel || activeStep.adapter || 'messaging'}) não geram screenshots de browser.
                     </div>
                   )}
                 </div>
@@ -420,6 +433,13 @@ export function ReplayDetailsModal({ details, onClose }) {
                 <div className="text-xs text-text-tertiary mb-2">{totalSteps} passo(s) registrado(s)</div>
                 {steps.map((step, idx) => {
                   const isCurrent = stepByStep && currentStep === idx;
+                  const stepIcon = step.stepType === 'send_message' ? '💬'
+                    : step.stepType === 'validate_intent' ? '🧠'
+                    : step.stepType === 'validate_response' ? '📝'
+                    : step.stepType === 'validate_sla' ? '⏱️'
+                    : step.stepType === 'validate_fallback' ? '🔄'
+                    : step.stepType === 'validate_state' ? '🗂️'
+                    : '🔧';
                   return (
                     <div
                       key={step.id || idx}
@@ -436,7 +456,7 @@ export function ReplayDetailsModal({ details, onClose }) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 mb-1">
-                            <span className="text-xs">🔧</span>
+                            <span className="text-xs">{stepIcon}</span>
                             <div className="font-mono text-text-primary font-semibold truncate">
                               #{step.index ?? idx + 1} {step.title}
                             </div>

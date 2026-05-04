@@ -92,7 +92,7 @@ const AREA_BLUEPRINTS = [
       '/operations-dashboard',
       '/analytics',
       '/tenant-intelligence',
-      '/system-status',
+      '/dev/system-status',
       '/channel-health',
       '/channel-accounts',
       '/plan-usage',

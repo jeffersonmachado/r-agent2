@@ -19,7 +19,7 @@ export function SubJourneyList({ scenarios, onExecuteScenario, onReplayScenario 
               <div>
                 <strong>{scenario.title || scenario.name || scenario.id || scenario.scenarioId}</strong>
                 <div className="qa-subjourney-meta">
-                  <StatusBadge status={scenario.status} />
+                  <StatusBadge status={scenario.executionStatus || scenario.status} />
                   <span>{['blocking', 'high'].includes(String(scenario.criticality || '').toLowerCase()) ? 'Critico' : 'Nao critico'}</span>
                   <span>{scenario.lastExecutionAt ? new Date(scenario.lastExecutionAt).toLocaleString('pt-BR') : 'Sem execucao'}</span>
                 </div>

@@ -42,13 +42,13 @@ export function ExecutionProgress({
   const getStatusColor = () => {
     switch (status) {
       case 'processing':
-        return '#2196F3'; // azul
+        return 'var(--color-status-info)';
       case 'success':
-        return '#4CAF50'; // verde
+        return 'var(--color-status-success)';
       case 'failed':
-        return '#f44336'; // vermelho
+        return 'var(--color-status-error)';
       default:
-        return '#999';
+        return 'var(--color-text-tertiary)';
     }
   };
 

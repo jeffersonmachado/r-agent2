@@ -198,6 +198,54 @@ export function SystemStatusPage() {
     return details.length > 0 ? <div className="mt-2 space-y-1">{details}</div> : null;
   };
 
+  const renderServiceAdvisory = (serviceKey, service) => {
+    if (serviceKey !== 'redis' || !service?.details) return null;
+
+    const configured = service.details.configured;
+    const mode = service.details.mode;
+    const fallbackEnabled = service.details.fallbackEnabled;
+
+    if (configured === false && mode === 'memory' && fallbackEnabled === false) {
+      return (
+        <div className="mt-3 p-3 rounded-lg bg-status-warning/10 border border-status-warning/30 text-status-warning text-sm">
+          <strong>Atenção operacional:</strong> Redis não configurado e fallback Redis→memória desabilitado. Em alguns fluxos de rate limit, a execução pode falhar fora de cenários de bypass.
+          <div className="mt-2 flex gap-2 flex-wrap">
+            <a
+              href="/config?tab=rateLimit"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded bg-status-warning/20 hover:bg-status-warning/30 text-status-warning font-medium transition-colors"
+            >
+              🚦 Configurar Redis (Rate Limiting)
+            </a>
+            <a
+              href="/config?tab=fallbacks"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded bg-status-warning/20 hover:bg-status-warning/30 text-status-warning font-medium transition-colors"
+            >
+              ⚙️ Habilitar fallback memória
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    if (configured === false && mode === 'memory') {
+      return (
+        <div className="mt-3 p-3 rounded-lg bg-status-warning/10 border border-status-warning/30 text-status-warning text-sm">
+          <strong>Modo degradado:</strong> Redis não configurado. O sistema está operando com limiter em memória fora de produção.
+          <div className="mt-2">
+            <a
+              href="/config?tab=rateLimit"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded bg-status-warning/20 hover:bg-status-warning/30 text-status-warning font-medium transition-colors"
+            >
+              🚦 Configurar Redis
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   if (loading && !status) {
     return (
       <CrudPageBase>
@@ -326,6 +374,9 @@ export function SystemStatusPage() {
 
               {/* Detalhes */}
               {formatDetails(service)}
+
+              {/* Aviso operacional contextual */}
+              {renderServiceAdvisory(key, service)}
 
               {/* Erro */}
               {service.error && (
