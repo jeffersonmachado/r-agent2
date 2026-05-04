@@ -5,6 +5,12 @@
 process.env.NODE_ENV = 'test';
 process.env.DISABLE_BACKGROUND_INIT = 'true';
 
+// RUNTIME_ROOT necessário para testes que carregam server.js ou rpaService indiretamente.
+// Usa /tmp para que resolveRuntimeRoot não bloqueie ao validar que não está dentro do workspace.
+if (!process.env.RUNTIME_ROOT) {
+  process.env.RUNTIME_ROOT = '/tmp/r-agent2-test-runtime';
+}
+
 // Timeout global para hooks
 jest.setTimeout(10000);
 

@@ -26,6 +26,13 @@ describe('flowGeneratorService fallback hardening', () => {
   test('generateFlowFromDescription injeta nó fallback quando wrapper não retornar fallback', async () => {
     jest.resetModules();
 
+    const runtimePathsPath = require.resolve('../utils/runtimePaths');
+    jest.doMock(runtimePathsPath, () => ({
+      resolveRuntimePath: (...parts) => require('path').join('/tmp/jest-runtime-mock', ...parts),
+      resolveRuntimeRoot: () => '/tmp/jest-runtime-mock',
+      runtimePathExists: () => false,
+    }));
+
     const adapterPath = require.resolve('../services/aiWrappersAdapter');
     jest.doMock(adapterPath, () => ({
       generateChatbotViaCore: async () => ({
@@ -78,6 +85,13 @@ describe('flowGeneratorService fallback hardening', () => {
   test('generateFlowFromDescription preserva next como objeto ao corrigir destinos inexistentes', async () => {
     jest.resetModules();
 
+    const runtimePathsPath = require.resolve('../utils/runtimePaths');
+    jest.doMock(runtimePathsPath, () => ({
+      resolveRuntimePath: (...parts) => require('path').join('/tmp/jest-runtime-mock', ...parts),
+      resolveRuntimeRoot: () => '/tmp/jest-runtime-mock',
+      runtimePathExists: () => false,
+    }));
+
     const adapterPath = require.resolve('../services/aiWrappersAdapter');
     jest.doMock(adapterPath, () => ({
       generateChatbotViaCore: async () => ({
@@ -123,6 +137,13 @@ describe('flowGeneratorService fallback hardening', () => {
 
   test('generateFlowFromDescription tenta corrigir 3x e consegue na 3ª', async () => {
     jest.resetModules();
+
+    const runtimePathsPath = require.resolve('../utils/runtimePaths');
+    jest.doMock(runtimePathsPath, () => ({
+      resolveRuntimePath: (...parts) => require('path').join('/tmp/jest-runtime-mock', ...parts),
+      resolveRuntimeRoot: () => '/tmp/jest-runtime-mock',
+      runtimePathExists: () => false,
+    }));
 
     let calls = 0;
     const adapterPath = require.resolve('../services/aiWrappersAdapter');
@@ -209,6 +230,13 @@ describe('flowGeneratorService fallback hardening', () => {
 
   test('generateFlowFromDescription tenta corrigir 3x e cai no fallback', async () => {
     jest.resetModules();
+
+    const runtimePathsPath = require.resolve('../utils/runtimePaths');
+    jest.doMock(runtimePathsPath, () => ({
+      resolveRuntimePath: (...parts) => require('path').join('/tmp/jest-runtime-mock', ...parts),
+      resolveRuntimeRoot: () => '/tmp/jest-runtime-mock',
+      runtimePathExists: () => false,
+    }));
 
     let calls = 0;
     const adapterPath = require.resolve('../services/aiWrappersAdapter');

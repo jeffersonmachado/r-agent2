@@ -65,7 +65,7 @@ describe('Redis optional config', () => {
     expect(Redis).not.toHaveBeenCalled();
   });
 
-  test('systemStatusService marca Redis como fallback em memória quando não configurado', async () => {
+  test('systemStatusService marca Redis como degraded quando não configurado fora de produção', async () => {
     jest.doMock('../../api/utils/logger', () => ({
       info: jest.fn(),
       warn: jest.fn(),
@@ -96,10 +96,12 @@ describe('Redis optional config', () => {
     const { checkRedisStatus } = require('../../api/services/systemStatusService');
     const out = await checkRedisStatus();
 
-    expect(out.status).toBe('healthy');
+    expect(out.status).toBe('degraded');
     expect(out.details).toEqual(expect.objectContaining({
       configured: false,
       mode: 'memory',
+      fallbackEnabled: false,
+      environment: 'test',
     }));
   });
 });

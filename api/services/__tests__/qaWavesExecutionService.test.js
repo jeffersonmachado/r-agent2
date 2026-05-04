@@ -57,10 +57,14 @@ describe('qaWavesExecutionService', () => {
     expect(result[0].replayArtifacts).toEqual([
       {
         replayId: 'replay-1',
+        waveId: null,
+        journeyId: null,
+        journeyStep: null,
         scenarioId: 'scenario-1',
         seedId: 'seed-1',
         status: 'completed',
         finishedAt: '2026-04-27T18:00:00.000Z',
+        platformAdapter: null,
       },
     ]);
   });

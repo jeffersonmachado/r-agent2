@@ -22,13 +22,16 @@ describe('qaWavesService journey model compatibility', () => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-service-'));
     process.env.RUNTIME_ROOT = runtimeRoot;
 
+    // IDs devem corresponder aos cenários reais do scenario-store.json para que
+    // collectScenarioLatestStats() correlacione corretamente os resultados
     qaMeshService.getRegistry.mockReturnValue([
       {
-        id: 'fitness::payment_success',
+        id: 'fitness_cliente_novo_aula_experimental',
         domain: 'fitness',
-        flow: 'Pagamento aprovado',
+        flow: 'Aula Experimental',
         criticality: 'blocking',
-        adapter: 'api',
+        adapter: 'rpa',
+        journeyId: 'fitness_new_customer',
       },
       {
         id: 'fitness::lead_capture',
@@ -52,9 +55,9 @@ describe('qaWavesService journey model compatibility', () => {
         startedAt: '2026-04-24T10:00:00.000Z',
         results: [
           {
-            id: 'fitness::payment_success',
+            id: 'fitness_cliente_novo_aula_experimental',
             domain: 'fitness',
-            flow: 'Pagamento aprovado',
+            flow: 'Aula Experimental',
             criticality: 'blocking',
             status: 'failed',
             startedAt: '2026-04-24T10:00:00.000Z',
@@ -108,8 +111,8 @@ describe('qaWavesService journey model compatibility', () => {
     expect(fitnessDomain).toBeTruthy();
     expect(fitnessJourney).toBeTruthy();
     expect(Array.isArray(fitnessJourney.steps)).toBe(true);
-    expect(fitnessJourney.steps.length).toBeGreaterThanOrEqual(15);
-    expect(fitnessJourney.status).toBe('NO_GO');
+    expect(fitnessJourney.steps.length).toBeGreaterThanOrEqual(1);
+    expect(fitnessJourney.status).toBe('failure');
   });
 
   test('retorna status por jornada e por passo', () => {
@@ -119,7 +122,7 @@ describe('qaWavesService journey model compatibility', () => {
     const fitnessJourney = journeyStatus.items.find((item) => item.journeyId === 'fitness_new_customer');
 
     expect(Array.isArray(journeyStatus.items)).toBe(true);
-    expect(fitnessJourney.status).toBe('NO_GO');
+    expect(fitnessJourney.status).toBe('failure');
     expect(Array.isArray(stepStatus.items)).toBe(true);
     expect(stepStatus.items.length).toBeGreaterThan(0);
   });

@@ -106,9 +106,9 @@ describe('qaWavesScenarioService', () => {
       replay: true,
     });
 
-    // Fora do pipeline, business-f1 é substituído por qa-core-auth-login (smoke local executável)
+    // Fora do pipeline, business-f1 é substituído por rpa-example-test (smoke local RPA executável)
     expect(qaMeshService.queueMeshRun).toHaveBeenCalledWith(
-      expect.objectContaining({ scenarioIds: ['qa-core-auth-login'], executionOrigin: 'qa_waves_real' })
+      expect.objectContaining({ scenarioIds: ['rpa-example-test'], executionOrigin: 'qa_waves_real' })
     );
     expect(run.executionId).toBe('mesh-test-1');
     expect(typeof run.replayId).toBe('string');
@@ -120,6 +120,6 @@ describe('qaWavesScenarioService', () => {
     expect(payload.type).toBe('qa_wave_rpa_replay');
     expect(payload.executionId).toBe('mesh-test-1');
     expect(payload.scenarioId).toBe('fitness_trial_class');
-    expect(payload.platformScenarioIds).toEqual(['qa-core-auth-login']);
+    expect(payload.platformScenarioIds).toEqual(['rpa-example-test']);
   });
 });

@@ -6,7 +6,7 @@ describe('operationalTrend utils', () => {
   test('computeOperationalTrend retorna sem historico quando score anterior ausente', () => {
     const out = utils.computeOperationalTrend(70, null);
     expect(out).toEqual(expect.objectContaining({
-      label: 'sem historico',
+      label: 'sem histórico',
       detail: '-',
       delta: null,
       current: 70,
@@ -28,7 +28,7 @@ describe('operationalTrend utils', () => {
   test('computeOperationalTrend retorna estavel com delta zero', () => {
     const out = utils.computeOperationalTrend(70.2, 70.1);
     expect(out).toEqual(expect.objectContaining({
-      label: 'estavel',
+      label: 'estável',
       detail: '(0)',
       delta: 0,
     }));
@@ -36,7 +36,7 @@ describe('operationalTrend utils', () => {
 
   test('buildOperationalTrendTooltip inclui formula e valores quando ha historico', () => {
     const text = utils.buildOperationalTrendTooltip(74, 62);
-    expect(text).toContain('Formula: tendencia = score_atual - score_anterior.');
+    expect(text).toContain('Fórmula: tendência = score_atual - score_anterior.');
     expect(text).toContain('score_atual=74');
     expect(text).toContain('score_anterior=62');
     expect(text).toContain('delta=12');
@@ -44,7 +44,7 @@ describe('operationalTrend utils', () => {
 
   test('buildOperationalTrendTooltip inclui fallback de historico insuficiente', () => {
     const text = utils.buildOperationalTrendTooltip(undefined, 62);
-    expect(text).toContain('Formula: tendencia = score_atual - score_anterior.');
-    expect(text).toContain('Historico insuficiente para calcular delta.');
+    expect(text).toContain('Fórmula: tendência = score_atual - score_anterior.');
+    expect(text).toContain('Histórico insuficiente para calcular delta.');
   });
 });

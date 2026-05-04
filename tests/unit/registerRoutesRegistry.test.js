@@ -42,12 +42,14 @@ describe('route registry', () => {
       whatsAppQrWebhookRouter: 'whatsapp-qr-webhook',
       domainOperationsRouter: 'domain-operations',
       domainBusinessRouter: 'domain-business',
+      crmRouter: 'crm',
       frontendFallbackRouter: 'frontend-fallback',
     });
 
     expect(registry[2]).toEqual({ path: '/tenants', router: 'tenant' });
     expect(registry.find((entry) => entry.router === 'evidence')).toEqual({ router: 'evidence' });
-    expect(registry[registry.length - 2]).toEqual({ router: 'domain-business' });
+    expect(registry[registry.length - 3]).toEqual({ router: 'domain-business' });
+    expect(registry[registry.length - 2]).toEqual({ router: 'crm' });
     expect(registry[registry.length - 1]).toEqual({ router: 'frontend-fallback' });
   });
 });

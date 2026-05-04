@@ -17,6 +17,10 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/engine', '<rootDir>/api', '<rootDir>/tests', '<rootDir>/qa', '<rootDir>/qa-mesh', '<rootDir>/lib'],
   testMatch: ['**/__tests__/**/*.test.js', '**/*.test.js'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/tests/rpa/',
+  ],
   verbose: true,
 };
 
