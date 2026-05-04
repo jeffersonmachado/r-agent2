@@ -1,0 +1,31 @@
+{
+  "wave": "WAVE-TEST-1777858768644",
+  "title": "Teste persistencia",
+  "status": "passed",
+  "startedAt": "2026-05-04T01:39:28.645Z",
+  "finishedAt": "2026-05-04T01:39:28.655Z",
+  "changes": [
+    "change-a"
+  ],
+  "filesCreated": [
+    "qa/checkpoints/tmp-a.json"
+  ],
+  "filesModified": [],
+  "filesRemoved": [],
+  "validation": {
+    "buildBackend": true,
+    "buildFrontend": true,
+    "qaTechnical": true,
+    "qaBusiness": true,
+    "replay": true
+  },
+  "metrics": {
+    "testsPassed": 2,
+    "testsFailed": 0,
+    "warnings": 0,
+    "criticalFlowsValidated": 0,
+    "durationMs": 10
+  },
+  "blockers": [],
+  "nextActions": []
+}
