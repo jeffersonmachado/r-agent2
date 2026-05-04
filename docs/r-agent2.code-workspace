@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../infra"
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			"/^npm exec -- jest tests/unit/ragEphemeralContextRoute\\.test\\.js  2>&1 \\| tail -100$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		}
+	}
+}

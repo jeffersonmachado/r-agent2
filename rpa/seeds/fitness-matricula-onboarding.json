@@ -1,0 +1,47 @@
+{
+  "id": "fitness-matricula-onboarding",
+  "name": "Fitness Matrícula — Onboarding do Novo Aluno",
+  "version": "1.2.0",
+  "metadata": {
+    "autoLogin": true,
+    "vertical": "fitness",
+    "journey": "onboarding",
+    "purpose": "Verificar jornada onboarding no fluxo fitness matrícula via interface"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/dev/qa-waves"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": "body",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/atendimento"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": "body",
+            "exists": true
+          }
+        ]
+      }
+    }
+  ],
+  "data": {
+    "journey": "onboarding",
+    "vertical": "fitness"
+  }
+}

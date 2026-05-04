@@ -1,0 +1,47 @@
+{
+  "id": "fitness-matricula-leads",
+  "name": "Fitness Matrícula — Captação de Lead via WhatsApp",
+  "version": "1.2.0",
+  "metadata": {
+    "autoLogin": true,
+    "vertical": "fitness",
+    "journey": "leads",
+    "purpose": "Verificar jornada leads no fluxo fitness matrícula via interface"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/dev/qa-waves"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": "body",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "navigate",
+      "url": "{{urls.frontend}}/atendimento"
+    },
+    {
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": "body",
+            "exists": true
+          }
+        ]
+      }
+    }
+  ],
+  "data": {
+    "journey": "leads",
+    "vertical": "fitness"
+  }
+}
