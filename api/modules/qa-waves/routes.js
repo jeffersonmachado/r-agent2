@@ -166,6 +166,23 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
+  router.delete('/api/qa-waves/executions', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      const result = deps.clearWaveExecutions();
+      deps.sendJson(res, 200, { ...result, message: 'Execucoes e historico limpos' });
+    } catch (error) {
+      deps.logger.error('Erro ao limpar execucoes QA Waves:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao limpar execucoes' });
+    }
+  });
+
   router.get('/api/qa-waves/executions', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);
@@ -244,6 +261,12 @@ function createQaWavesRoutes({ buildDeps }) {
     try {
       const body = await deps.parseJsonBody(req);
       const execution = deps.queueWaveExecution(body || {});
+      if (deps.emitWavesEvent) {
+        deps.emitWavesEvent('qa-waves.execution.started', {
+          executionId: execution.executionId,
+          scenarioIds: body?.scenarioIds || [],
+        }, { tenantId: req.agent?.tenantId || null });
+      }
       deps.sendJson(res, 202, execution);
     } catch (error) {
       if (error.code === 'BAD_REQUEST') {
@@ -282,13 +305,33 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/infer-scenario', async (deps, body) => {
-    return deps.inferWaveScenario(body || {});
-  });
+  async function handleInferScenario(deps, body, req, res) {
+    try {
+      return await deps.inferWaveScenario({
+        ...(body || {}),
+        tenantId: req.agent?.tenantId || body?.tenantId || 'system',
+        agentId: req.agent?.id || body?.agentId || null,
+      });
+    } catch (error) {
+      if (error.code === 'AI_UNAVAILABLE') {
+        deps.sendJson(res, 503, {
+          error: 'ai_unavailable',
+          message: 'Serviço de IA indisponível para inferência de jornada',
+          detail: error.message,
+        });
+        return { __sent: true };
+      }
+      throw error;
+    }
+  }
 
-  registerJsonPost('/dev/qa-waves/infer-scenario', async (deps, body) => {
-    return deps.inferWaveScenario(body || {});
-  });
+  registerJsonPost('/api/qa-waves/infer-scenario', (deps, body, req, res) =>
+    handleInferScenario(deps, body, req, res)
+  );
+
+  registerJsonPost('/dev/qa-waves/infer-scenario', (deps, body, req, res) =>
+    handleInferScenario(deps, body, req, res)
+  );
 
   registerJsonPost('/api/qa-waves/generate-seeds', async (deps, body) => {
     return deps.generateWaveSeeds(body || {});
@@ -326,12 +369,12 @@ function createQaWavesRoutes({ buildDeps }) {
     return deps.saveWaveScenario(body || {});
   });
 
-  registerJsonPost('/api/qa-waves/run', async (deps, body) => {
-    return deps.runWaveScenario(body || {});
+  registerJsonPost('/api/qa-waves/run', async (deps, body, req) => {
+    return deps.runWaveScenario({ ...(body || {}), tenantId: req.agent?.tenantId || body?.tenantId || null });
   });
 
-  registerJsonPost('/dev/qa-waves/run', async (deps, body) => {
-    return deps.runWaveScenario(body || {});
+  registerJsonPost('/dev/qa-waves/run', async (deps, body, req) => {
+    return deps.runWaveScenario({ ...(body || {}), tenantId: req.agent?.tenantId || body?.tenantId || null });
   });
 
   // ─── Intelligence & Coverage ──────────────────────────────────────────────

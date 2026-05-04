@@ -19,6 +19,122 @@
     { "id": "step_15_retention",   "name": "Retencao" }
   ],
 
+  "baseJourneyTemplates": [
+    {
+      "id": "customer_lifecycle_v1",
+      "name": "Customer Lifecycle Base",
+      "description": "Modelo universal de jornada de cliente",
+      "steps": [
+        "descoberta",
+        "atracao",
+        "engajamento",
+        "qualificacao",
+        "captura_lead",
+        "conversao",
+        "cadastro",
+        "agendamento",
+        "checkout",
+        "pagamento",
+        "confirmacao",
+        "ativacao",
+        "entrega",
+        "suporte",
+        "retencao"
+      ]
+    }
+  ],
+
+  "verticalJourneys": {
+    "fitness": {
+      "fitness_new_customer": {
+        "name": "Cliente Novo Fitness",
+        "steps": [
+          "descoberta",
+          "engajamento",
+          "aula_experimental",
+          "conversao",
+          "agendamento",
+          "ativacao",
+          "retencao"
+        ]
+      },
+      "fitness_active_customer": {
+        "name": "Cliente Ativo Fitness",
+        "steps": [
+          "engajamento",
+          "qualificacao",
+          "agendamento",
+          "pagamento",
+          "confirmacao",
+          "ativacao",
+          "retencao"
+        ]
+      }
+    },
+    "beauty": {
+      "beauty_booking": {
+        "name": "Beauty Booking",
+        "steps": [
+          "descoberta",
+          "engajamento",
+          "selecionar_servico",
+          "agendamento",
+          "confirmacao",
+          "atendimento",
+          "retencao"
+        ]
+      },
+      "beauty_new_customer": {
+        "name": "Cliente Novo Beauty",
+        "steps": [
+          "descoberta",
+          "engajamento",
+          "selecionar_servico",
+          "agendamento",
+          "confirmacao",
+          "atendimento",
+          "retencao"
+        ]
+      },
+      "beauty_returning_customer": {
+        "name": "Cliente Recorrente Beauty",
+        "steps": [
+          "engajamento",
+          "selecionar_servico",
+          "agendamento",
+          "confirmacao",
+          "atendimento",
+          "suporte",
+          "retencao"
+        ]
+      }
+    },
+    "food": {
+      "food_order_flow": {
+        "name": "Food Order Flow",
+        "steps": [
+          "descoberta",
+          "selecionar_produto",
+          "checkout",
+          "pagamento",
+          "entrega"
+        ]
+      },
+      "food_customer_journey": {
+        "name": "Jornada Cliente Food",
+        "steps": [
+          "descoberta",
+          "selecionar_produto",
+          "checkout",
+          "pagamento",
+          "confirmacao",
+          "entrega",
+          "retencao"
+        ]
+      }
+    }
+  },
+
   "defaultStepId": "step_03_engagement",
 
   "journeyBlueprints": [
@@ -36,6 +152,14 @@
       "journeys": [
         { "id": "beauty_new_customer",       "name": "Cliente Novo" },
         { "id": "beauty_returning_customer", "name": "Cliente Recorrente" }
+      ]
+    },
+    {
+      "id": "food",
+      "name": "Food",
+      "journeys": [
+        { "id": "food_order_flow",       "name": "Order Flow" },
+        { "id": "food_customer_journey", "name": "Jornada Cliente Food" }
       ]
     },
     {

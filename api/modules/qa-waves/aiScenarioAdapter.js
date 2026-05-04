@@ -18,7 +18,6 @@ const STEP_DEFAULT_ADAPTER = {
   validate_backend: 'api',
   validate_sla: 'meshValidator',
   validate_context: 'ragService',
-  validate_fallback: 'flowEngine',
   validate_flow_transition: 'flowEngine',
   validate_access_release: 'accessControlService',
   wait_for_event: 'eventMesh',
@@ -88,7 +87,6 @@ function enrichDefaults(scenarioInput, context = {}) {
     seeds: Array.isArray(scenarioInput.seeds) ? scenarioInput.seeds : [],
     validations: {
       slaMs: Number.isFinite(Number(scenarioInput.validations?.slaMs)) ? Number(scenarioInput.validations.slaMs) : 15000,
-      fallbackAllowed: scenarioInput.validations?.fallbackAllowed !== false,
       requireBackendValidation: scenarioInput.validations?.requireBackendValidation !== false,
       requireReplay: scenarioInput.validations?.requireReplay !== false,
       ...(scenarioInput.validations || {}),

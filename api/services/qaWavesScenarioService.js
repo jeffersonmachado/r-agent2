@@ -7,10 +7,12 @@ const { executePreparedWaveScenarios } = require('./qaWavesExecutionService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const { adaptAiScenario } = require('../modules/qa-waves/aiScenarioAdapter');
 const { validateScenarioCompatibility } = require('../modules/qa-waves/waveScenarioSchema');
+const { EXECUTABLE_SCENARIO_STATUS } = require('../modules/qa-waves/waveScenario.constants');
 const { isInPipeline } = require('../../pipeline/guard');
-
-// Cenário de smoke local disponível quando não estamos no pipeline oficial
-const LOCAL_SMOKE_SCENARIO_ID = 'qa-core-auth-login';
+const {
+  inferJourney,
+  inferJourneyHeuristically,
+} = require('../../qa/qa-waves/services/journeyInferenceService');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
@@ -124,14 +126,59 @@ function toSemanticSteps(scenario) {
   return [];
 }
 
+async function resolveJourneyMetadata(input = {}) {
+  const journey = await inferJourney({
+    vertical: input.vertical,
+    journeyId: input.journeyId || input.journey,
+    journey: input.journey,
+    journeySource: input.journeySource,
+    scenarioName: input.name || input.title || input.goal,
+    description: input.description,
+    tenantId: input.tenantId,
+    baseTemplateId: input.baseTemplateId,
+    useAi: input.useAi,
+  });
+
+  return {
+    journeyId: journey.journeyId,
+    journey: journey.journeyId,
+    journeySteps: Array.isArray(input.journeySteps) && input.journeySteps.length > 0
+      ? clone(input.journeySteps)
+      : clone(journey.steps || []),
+    journeySource: input.journeySource || journey.journeySource || 'inferred',
+    baseTemplateId: input.baseTemplateId || journey.baseTemplateId || 'customer_lifecycle_v1',
+  };
+}
+
 function normalizeScenarioRecord(input = {}) {
   const now = nowIso();
   const semanticSteps = toSemanticSteps(input);
-  const platformScenarioIds = toPlatformScenarioIds(input);
+  const explicitPlatformScenarioIds = toPlatformScenarioIds(input);
+  const platformScenarioIds = explicitPlatformScenarioIds.length > 0
+    ? explicitPlatformScenarioIds
+    : tryInferPlatformScenarioIds(input);
+  const inferredJourney = inferJourneyHeuristically({
+    vertical: input.vertical,
+    journeyId: input.journeyId || input.journey,
+    journey: input.journey,
+    journeySource: input.journeySource,
+    scenarioName: input.name || input.title || input.goal,
+    description: input.description,
+    baseTemplateId: input.baseTemplateId,
+    useAi: false,
+  });
+  const resolvedJourneyId = String(input.journeyId || input.journey || inferredJourney.journeyId || '').trim();
+  const resolvedJourneySteps = Array.isArray(input.journeySteps) && input.journeySteps.length > 0
+    ? clone(input.journeySteps)
+    : clone(inferredJourney.steps || []);
   const normalized = {
     ...clone(input),
     id: String(input.id || '').trim(),
-    journeyId: String(input.journeyId || input.journey || '').trim(),
+    journeyId: resolvedJourneyId,
+    journey: resolvedJourneyId,
+    journeySteps: resolvedJourneySteps,
+    journeySource: String(input.journeySource || '').trim() || inferredJourney.journeySource || (resolvedJourneyId ? 'manual' : 'inferred'),
+    baseTemplateId: String(input.baseTemplateId || inferredJourney.baseTemplateId || 'customer_lifecycle_v1').trim(),
     waveId: String(input.waveId || '').trim(),
     platformScenarioIds,
     semanticSteps,
@@ -242,6 +289,22 @@ function toSlug(value) {
     .replace(/^_+|_+$/g, '') || 'scenario';
 }
 
+function inferLegacyScenarioId({ vertical, journey, goal }) {
+  const normalizedVertical = String(vertical || '').toLowerCase();
+  const normalizedJourney = String(journey || '').toLowerCase();
+  const normalizedGoal = String(goal || '').toLowerCase();
+
+  if (
+    normalizedVertical === 'fitness'
+    && ['cliente_novo', 'fitness_new_customer'].includes(normalizedJourney)
+    && /aula experimental|trial class/.test(normalizedGoal)
+  ) {
+    return 'fitness_trial_class';
+  }
+
+  return null;
+}
+
 function buildGenericExampleSeeds(scenarioId) {
   const createdAt = nowIso();
   const personas = [
@@ -267,12 +330,17 @@ function buildGenericExampleSeeds(scenarioId) {
 
 function buildGenericExampleScenario(vertical, journey, goal, channels) {
   const createdAt = nowIso();
-  const slug = toSlug(`${vertical}_${journey}_${goal || 'scenario'}`);
+  const slug = inferLegacyScenarioId({ vertical, journey, goal }) || toSlug(`${vertical}_${journey}_${goal || 'scenario'}`);
+  const journeySteps = [];
   return {
     id: slug,
     waveId: `${vertical}-${journey}`,
     vertical,
+    journeyId: journey,
     journey,
+    journeySteps,
+    journeySource: 'inferred',
+    baseTemplateId: 'customer_lifecycle_v1',
     name: goal || 'Cenario de exemplo',
     description: `Cenario semantico gerado para ${vertical} / ${journey}`,
     source: 'ai_inferred',
@@ -317,19 +385,10 @@ function buildGenericExampleScenario(vertical, journey, goal, channels) {
         data: { maxMs: 15000 },
         enabled: true,
       },
-      {
-        id: 'step_005_validate_fallback',
-        order: 5,
-        type: 'validate_fallback',
-        adapter: 'flowEngine',
-        expected: { fallbackTriggered: false },
-        enabled: true,
-      },
     ],
     seeds: buildGenericExampleSeeds(slug),
     validations: {
       slaMs: 15000,
-      fallbackAllowed: true,
       requireBackendValidation: false,
       requireReplay: true,
     },
@@ -386,34 +445,49 @@ function filterLocalRunnable(scenarioIds) {
   if (isInPipeline()) return scenarioIds;
   const pipelineRequired = getMeshRegistryPipelineRequiredIds();
   const runnable = scenarioIds.filter((id) => !pipelineRequired.has(id));
-  if (runnable.length > 0) return runnable;
-  // Todos os IDs explícitos requerem pipeline → usar smoke local
-  return [LOCAL_SMOKE_SCENARIO_ID];
+  return runnable;
 }
 
-function inferPlatformScenarioIds(scenario) {
-  // Novo modelo: apenas retorna platformScenarioIds explícitos, sem inferência automática
-  // Exceção: omnichannel_studiooly_rpa pode ter suggestedPlatformScenarioIds
-  
+// Versão "soft" — retorna [] sem erro se não houver platformScenarioIds (usado em geração de exemplos)
+function tryInferPlatformScenarioIds(scenario) {
   const explicit = Array.isArray(scenario?.platformScenarioIds)
     ? scenario.platformScenarioIds.filter(Boolean)
     : [];
-  
+
   const platform = Array.isArray(scenario?.platform?.platformScenarioIds)
     ? scenario.platform.platformScenarioIds.filter(Boolean)
     : [];
-  
-  const explicit_v2 = Array.isArray(scenario?.platform?.platformScenarioIds)
-    ? scenario.platform.platformScenarioIds.filter(Boolean)
+
+  const suggested = Array.isArray(scenario?.suggestedPlatformScenarioIds)
+    ? scenario.suggestedPlatformScenarioIds.filter(Boolean)
     : [];
-  
-  // Retorna apenas valores explícitos; sem inferência
-  return Array.from(new Set([...explicit, ...platform, ...explicit_v2]));
+
+  const merged = Array.from(new Set([...explicit, ...platform, ...suggested]));
+  if (merged.length > 0) {
+    return filterLocalRunnable(merged);
+  }
+
+  return []; // Sem IDs = retorna vazio (será validado no schema)
+}
+
+// Versão "hard" — lança erro mandatório se não houver platformScenarioIds (usado na execução)
+function inferPlatformScenarioIds(scenario) {
+  const result = tryInferPlatformScenarioIds(scenario);
+  if (result.length > 0) return result;
+
+  // Sem platformScenarioIds → erro mandatório. Cenários devem declarar explicitamente qual(is) adapters usar.
+  const context = isInPipeline() ? 'pipeline' : 'local';
+  const error = new Error(
+    `Cenário "${scenario?.id}" requer platformScenarioIds explícito para execução (contexto: ${context}). ` +
+    `Configure no Waves ou deixe para a plataforma fornecer.`
+  );
+  error.code = 'MISSING_PLATFORM_SCENARIO_IDS';
+  throw error;
 }
 
 function inferScenario(input = {}) {
   const vertical = String(input.vertical || '').toLowerCase();
-  const journey = String(input.journey || '').toLowerCase();
+  const journey = String(input.journey || input.journeyId || '').toLowerCase();
 
   const aiOutput = input.aiOutput || buildGenericExampleScenario(vertical, journey, input.goal, input.channels);
 
@@ -424,8 +498,13 @@ function inferScenario(input = {}) {
     channels: input.channels,
   });
 
-  if (adapted.scenario && (!adapted.scenario.platform || !Array.isArray(adapted.scenario.platform.platformScenarioIds))) {
-    adapted.scenario.platform = { platformScenarioIds: inferPlatformScenarioIds(adapted.scenario) };
+  if (adapted.scenario) {
+    const platformScenarioIds = tryInferPlatformScenarioIds(adapted.scenario);
+    adapted.scenario.platformScenarioIds = platformScenarioIds;
+    adapted.scenario.platform = {
+      ...(adapted.scenario.platform || {}),
+      platformScenarioIds,
+    };
   }
 
   if (input.constraints?.generateSeeds === true && (!adapted.scenario.seeds || adapted.scenario.seeds.length === 0)) {
@@ -435,7 +514,56 @@ function inferScenario(input = {}) {
     }));
   }
 
+  const journeyMetadata = require('../../qa/qa-waves/services/journeyInferenceService').inferJourneyHeuristically({
+    vertical,
+    journeyId: adapted.scenario.journeyId || adapted.scenario.journey || journey,
+    journey: adapted.scenario.journey,
+    scenarioName: adapted.scenario.name || adapted.scenario.title || input.goal,
+    description: adapted.scenario.description,
+    journeySource: adapted.scenario.journeySource,
+    baseTemplateId: adapted.scenario.baseTemplateId,
+    useAi: false,
+  });
+
+  adapted.scenario = {
+    ...adapted.scenario,
+    journeyId: adapted.scenario.journeyId || journeyMetadata.journeyId,
+    journey: adapted.scenario.journey || journeyMetadata.journeyId,
+    journeySteps: Array.isArray(adapted.scenario.journeySteps) && adapted.scenario.journeySteps.length > 0
+      ? adapted.scenario.journeySteps
+      : journeyMetadata.steps,
+    journeySource: adapted.scenario.journeySource || journeyMetadata.journeySource,
+    baseTemplateId: adapted.scenario.baseTemplateId || journeyMetadata.baseTemplateId,
+  };
+
   return adapted;
+}
+
+async function generateScenarioWithAI(input = {}) {
+  const inferred = inferScenario({
+    ...input,
+    constraints: {
+      ...(input.constraints || {}),
+      generateSeeds: true,
+    },
+  });
+
+  const journeyMetadata = await resolveJourneyMetadata({
+    ...inferred.scenario,
+    ...input,
+    useAi: input.useAi !== false,
+  });
+
+  const scenario = normalizeScenarioRecord({
+    ...inferred.scenario,
+    ...journeyMetadata,
+    status: inferred.scenario.status || 'draft_ai',
+  });
+
+  return {
+    scenario,
+    validation: validateScenarioPayload(scenario),
+  };
 }
 
 function buildGeneratedSeeds(scenario, count = 5) {
@@ -460,7 +588,10 @@ function buildGeneratedSeeds(scenario, count = 5) {
 
 function getLatestScenarioById(scenarioId) {
   const listed = listLatestScenarios();
-  return listed.items.find((item) => item.id === scenarioId) || null;
+  const existing = listed.items.find((item) => item.id === scenarioId) || null;
+  if (existing) return existing;
+
+  return null;
 }
 
 function validateScenarioPayload(payload = {}) {
@@ -476,7 +607,7 @@ function validateScenarioPayload(payload = {}) {
     valid: adapted.validation.valid,
     errors: adapted.validation.errors,
     warnings: adapted.validation.warnings,
-    normalizedScenario: adapted.scenario,
+    normalizedScenario: normalizeScenarioRecord(adapted.scenario),
   };
 }
 
@@ -497,9 +628,12 @@ function saveScenario(payload = {}) {
     .map((item) => item.version);
 
   const version = nextVersion(previousVersions);
+  const effectiveVersion = previousVersions.length === 0
+    ? nextVersion([normalized.version || 'v1'])
+    : version;
   const saved = {
     ...normalized,
-    version,
+    version: effectiveVersion,
     updatedAt: nowIso(),
     createdAt: normalized.createdAt || nowIso(),
     platform: {
@@ -511,7 +645,7 @@ function saveScenario(payload = {}) {
   store.scenarios.push(saved);
   if (!Array.isArray(store.history[scenarioId])) store.history[scenarioId] = [];
   store.history[scenarioId].push({
-    version,
+    version: effectiveVersion,
     changedBy: payload.changedBy || (saved.source === 'manual' ? 'manual' : 'ai_inferred'),
     changedAt: saved.updatedAt,
     changes: Array.isArray(payload.changes) ? payload.changes : ['scenario atualizado'],
@@ -604,7 +738,9 @@ function runScenarioExecution(payload = {}) {
   }
 
   const listed = listLatestScenarios();
-  const scenarios = listed.items.filter((item) => scenarioIds.includes(item.id));
+  const scenarios = scenarioIds
+    .map((scenarioId) => listed.items.find((item) => item.id === scenarioId) || getLatestScenarioById(scenarioId))
+    .filter(Boolean);
   if (scenarios.length === 0) {
     const error = new Error('Nenhum scenario encontrado para execucao');
     error.code = 'NOT_FOUND';
@@ -612,11 +748,23 @@ function runScenarioExecution(payload = {}) {
   }
 
   for (const scenario of scenarios) {
+    const isDevMode = payloadAllowsDevExecution(payload);
     const validation = validateScenarioCompatibility(scenario);
     if (!validation.valid) {
       const error = new Error(`Scenario invalido: ${scenario.id}`);
       error.code = 'BAD_REQUEST';
       error.details = validation;
+      throw error;
+    }
+
+    if (!isDevMode && !EXECUTABLE_SCENARIO_STATUS.includes(String(scenario.status || '').toLowerCase())) {
+      const error = new Error(`Scenario com status nao executavel: ${scenario.id}`);
+      error.code = 'BAD_REQUEST';
+      error.details = {
+        scenarioId: scenario.id,
+        status: scenario.status,
+        allowedStatus: EXECUTABLE_SCENARIO_STATUS,
+      };
       throw error;
     }
   }
@@ -667,11 +815,18 @@ function runScenarioExecution(payload = {}) {
     expanded,
     platformScenarioIds,
     governanceFindings,
+    tenantId: payload.tenantId || null,
   });
+}
+
+function payloadAllowsDevExecution(payload = {}) {
+  if (payload.devMode === true || payload.allowNonExecutableStatus === true) return true;
+  return process.env.NODE_ENV !== 'production';
 }
 
 module.exports = {
   inferScenario,
+  generateScenarioWithAI,
   generateSeeds,
   validateScenarioPayload,
   saveScenario,

@@ -206,6 +206,48 @@ describe('qa-waves routes', () => {
     expect(deps.inferWaveScenario).toHaveBeenCalled();
   });
 
+  test('POST /api/qa-waves/infer-scenario retorna 503 quando IA esta indisponivel', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({ vertical: 'fitness', goal: 'aula' });
+      const aiError = new Error('provider unavailable');
+      aiError.code = 'AI_UNAVAILABLE';
+      d.inferWaveScenario.mockRejectedValue(aiError);
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/infer-scenario', {
+      vertical: 'fitness',
+      goal: 'aula',
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual(
+      expect.objectContaining({ error: 'ai_unavailable' })
+    );
+  });
+
+  test('POST /api/qa-waves/infer-scenario encaminha tenantId default e permite jornada automatica', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        vertical: 'fitness',
+        goal: 'aula experimental',
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/infer-scenario', {
+      vertical: 'fitness',
+      goal: 'aula experimental',
+    });
+
+    expect(res.status).toBe(200);
+    expect(deps.inferWaveScenario).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vertical: 'fitness',
+        goal: 'aula experimental',
+        tenantId: 'system',
+      })
+    );
+  });
+
   test('POST /api/qa-waves/validate-scenario deve normalizar e validar', async () => {
     await startWithDeps((d) => {
       d.parseJsonBody.mockResolvedValue({ scenario: { id: 'scenario-1' } });

@@ -4,9 +4,44 @@ const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const { clearExecutions } = require('../../qa-mesh/executionQueue');
+const logger = require('../utils/logger');
+const { emitEvent } = require('./websocketService');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
+const MESH_REGISTRY_PATH = path.join(ROOT_DIR, 'qa-mesh', 'meshRegistry.json');
+
+let _meshRegistryCache = null;
+function getMeshRegistry() {
+  if (_meshRegistryCache) return _meshRegistryCache;
+  try {
+    _meshRegistryCache = JSON.parse(fs.readFileSync(MESH_REGISTRY_PATH, 'utf8'));
+  } catch (_) {
+    _meshRegistryCache = [];
+  }
+  return _meshRegistryCache;
+}
+
+function resolvePlatformAdapter(platformScenarioIds = []) {
+  if (platformScenarioIds.length === 0) return 'unknown';
+  const registry = getMeshRegistry();
+  const adapters = platformScenarioIds.map((id) => {
+    const entry = registry.find((r) => r.id === id);
+    if (!entry) {
+      logger.error('[QaWavesExecutionService] Cenário não encontrado no mesh registry', {
+        scenarioId: id,
+        registryIds: registry.map((r) => r.id),
+      });
+      const error = new Error(`Cenário "${id}" não encontrado no mesh registry. Verifique platformScenarioIds.`);
+      error.code = 'INVALID_PLATFORM_SCENARIO_ID';
+      throw error;
+    }
+    return entry.adapter || 'api';
+  });
+  // Se qualquer cenário usa rpa, considera rpa; senão api
+  return adapters.includes('rpa') ? 'rpa' : (adapters[0] || 'api');
+}
 const DEFAULT_POLL_INTERVAL_MS = 1000;
 const DEFAULT_MAX_POLLS = 120;
 
@@ -77,10 +112,14 @@ function buildReplayArtifactMeta(replay) {
   return {
     executionId,
     replayId: replay.replayId || replay.id || null,
+    waveId: replay.waveId || null,
+    journeyId: replay.journeyId || null,
+    journeyStep: replay.journeyStep || null,
     scenarioId: replay.scenarioId || null,
     seedId: replay.seedId || null,
     status: replay.status || null,
     finishedAt: replay.finishedAt || null,
+    platformAdapter: replay.platformAdapter || null,
   };
 }
 
@@ -100,10 +139,14 @@ function extractReplayArtifactMeta(filePath) {
   const fastMeta = buildReplayArtifactMeta({
     executionId: extractJsonStringField(prefix, 'executionId'),
     replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id'),
+    waveId: extractJsonStringField(prefix, 'waveId'),
+    journeyId: extractJsonStringField(prefix, 'journeyId'),
+    journeyStep: extractJsonStringField(prefix, 'journeyStep'),
     scenarioId: extractJsonStringField(prefix, 'scenarioId'),
     seedId: extractJsonStringField(prefix, 'seedId'),
     status: extractJsonStringField(prefix, 'status'),
     finishedAt: extractJsonStringField(prefix, 'finishedAt'),
+    platformAdapter: extractJsonStringField(prefix, 'platformAdapter'),
   });
 
   const meta = fastMeta || buildReplayArtifactMeta(safeReadJson(filePath, null));
@@ -122,6 +165,8 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
   ensureDir(replayDir);
   const startedAt = nowIso();
   const scenarioName = scenario.name || scenario.title || scenario.id;
+  const journeyId = scenario.journeyId || scenario.journey || null;
+  const journeySteps = Array.isArray(scenario.journeySteps) ? scenario.journeySteps : [];
   const payload = {
     id: replayId,
     replayId,
@@ -130,9 +175,12 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     executionId,
     executionStatus: 'running',
     waveId: scenario.waveId,
-    journeyId: scenario.journey,
+    journeyId,
+    journeySteps,
+    journeyStep: journeySteps[0] || null,
     scenarioId: scenario.id,
     platformScenarioIds,
+    platformAdapter: resolvePlatformAdapter(platformScenarioIds),
     scenarioName,
     stepId: scenario.steps?.[0]?.id || null,
     seedId: seed?.id || null,
@@ -159,7 +207,7 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     semanticSteps: Array.isArray(scenario.semanticSteps) ? scenario.semanticSteps : (scenario.steps || []),
     tags: {
       waveId: scenario.waveId,
-      journey: scenario.journey,
+      journey: journeyId,
       scenario: scenario.id,
       seed: seed?.id || null,
       source: scenario.source,
@@ -200,7 +248,22 @@ function buildResultLatency(result, execution) {
 
 function findMeshResult(execution, platformScenarioIds = []) {
   const results = Array.isArray(execution?.results) ? execution.results : [];
-  return results.find((result) => platformScenarioIds.includes(result?.id)) || results[0] || null;
+  const matched = results.find((result) => platformScenarioIds.includes(result?.id));
+  
+  if (matched) return matched;
+  
+  // Se não encontrar correspondência exata com platformScenarioIds, é erro de correlação
+  if (results.length > 0 && platformScenarioIds.length > 0) {
+    logger.warn('[QaWavesExecutionService] Falha na correlação de resultado', {
+      platformScenarioIds,
+      availableResultIds: results.map((r) => r?.id),
+      warning: 'Nenhum resultado encontrado para os cenários solicitados. Retornando null.',
+    });
+    return null;
+  }
+  
+  // Se há resultados mas nenhum ID foi solicitado, retorna o primeiro (aceitável em contextos heurísticos)
+  return results[0] || null;
 }
 
 function mapExecutionStatus(execution, result) {
@@ -267,6 +330,7 @@ function buildReplayPatch(replayArtifact, execution) {
       historyPath: execution?.historyPath || null,
       summary: execution?.summary || null,
       resultId: result?.id || null,
+      scenarioContext: execution?.payload?.scenarioContext || [],
     },
     screens,
     screenshots,
@@ -286,6 +350,9 @@ function writeEvidenceArtifact(replayArtifact, execution) {
     executionId: execution.executionId,
     scenarioId: replayArtifact.scenario.id,
     waveId,
+    journeyId: replayArtifact.scenario.journeyId || replayArtifact.scenario.journey || null,
+    journeyStep: replayArtifact.scenario.journeySteps?.[0] || null,
+    journeySteps: Array.isArray(replayArtifact.scenario.journeySteps) ? replayArtifact.scenario.journeySteps : [],
     seedId: replayArtifact.seed?.id || null,
     status: status.evidenceStatus,
     steps: Array.isArray(replayArtifact.scenario.semanticSteps)
@@ -315,7 +382,20 @@ function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
 function monitorExecution(executionId, replayArtifacts, options = {}) {
   const pollIntervalMs = Number(options.pollIntervalMs) || DEFAULT_POLL_INTERVAL_MS;
   const maxPolls = Number(options.maxPolls) || DEFAULT_MAX_POLLS;
+  const tenantId = options.tenantId || null;
   let attempts = 0;
+
+  function emitWsUpdate(status, extra = {}) {
+    const firstArtifact = replayArtifacts[0];
+    emitEvent('qa-waves.execution.updated', {
+      executionId,
+      status,
+      waveId: firstArtifact?.scenario?.waveId || null,
+      journeyId: firstArtifact?.scenario?.journeyId || firstArtifact?.scenario?.journey || null,
+      replayIds: replayArtifacts.map((a) => a.replayId),
+      ...extra,
+    }, { tenantId });
+  }
 
   function poll() {
     attempts += 1;
@@ -330,6 +410,7 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
           error: 'Execução não encontrada para reconciliar replay QA Waves',
           results: [],
         }, replayArtifacts);
+        emitWsUpdate('failed', { error: 'execution_not_found' });
         return;
       }
       setTimeout(poll, pollIntervalMs);
@@ -345,6 +426,7 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
           finishedAt: nowIso(),
           error: 'Timeout aguardando execução QA Waves',
         }, replayArtifacts);
+        emitWsUpdate('failed', { error: 'timeout' });
         return;
       }
       setTimeout(poll, pollIntervalMs);
@@ -352,15 +434,33 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
     }
 
     finalizeExecutionArtifacts(execution, replayArtifacts);
+    const finalStatus = String(execution.status || 'completed').toLowerCase();
+    emitWsUpdate(finalStatus);
   }
 
   setTimeout(poll, pollIntervalMs);
 }
 
-function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings }) {
+function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null }) {
+  const scenarioContext = expanded.map(({ scenario, seed }) => ({
+    scenarioId: scenario.id,
+    seedId: seed?.id || null,
+    waveId: scenario.waveId,
+    journeyId: scenario.journeyId || scenario.journey || null,
+    journeySteps: Array.isArray(scenario.journeySteps) ? scenario.journeySteps : [],
+    semanticSteps: Array.isArray(scenario.semanticSteps) ? scenario.semanticSteps : (scenario.steps || []),
+  }));
+
+  logger.info('[QA_WAVE_EXECUTION] Enfileirando execucao QA Waves', {
+    scenarioCount: expanded.length,
+    platformScenarioIds,
+    scenarioContext,
+  });
+
   const queued = qaMeshService.queueMeshRun({
     scenarioIds: platformScenarioIds,
     executionOrigin: 'qa_waves_real',
+    scenarioContext,
   });
 
   const replayArtifacts = expanded.map(({ scenario, seed }) => writeReplayArtifact({
@@ -372,7 +472,19 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     platformScenarioIds,
   }));
 
-  monitorExecution(queued.executionId, replayArtifacts);
+  logger.info('[QA_REPLAY_LINKED] Replay(s) vinculados a execucao QA Waves', {
+    executionId: queued.executionId,
+    replayIds: replayArtifacts.map((item) => item.replayId),
+    scenarioContext,
+  });
+
+  emitEvent('qa-waves.execution.started', {
+    executionId: queued.executionId,
+    scenarioCount: expanded.length,
+    platformScenarioIds,
+  }, { tenantId });
+
+  monitorExecution(queued.executionId, replayArtifacts, { tenantId });
 
   return {
     executionId: queued.executionId,
@@ -429,10 +541,14 @@ function buildReplayArtifactsIndex(executionIds = null) {
       const existing = byExecutionId.get(executionId) || [];
       existing.push({
         replayId: replay.replayId,
+        waveId: replay.waveId || null,
+        journeyId: replay.journeyId || null,
+        journeyStep: replay.journeyStep || null,
         scenarioId: replay.scenarioId || null,
         seedId: replay.seedId || null,
         status: replay.status || null,
         finishedAt: replay.finishedAt || null,
+        platformAdapter: replay.platformAdapter || null,
       });
       byExecutionId.set(executionId, existing);
       indexedFiles += 1;
@@ -474,9 +590,27 @@ function listWaveExecutions(limit = 20) {
     }));
 }
 
+function clearWaveExecutions() {
+  // 1. Limpa a fila em memória
+  clearExecutions();
+
+  // 2. Remove arquivos de meshHistory
+  const meshHistoryDir = path.join(ROOT_DIR, 'qa-mesh', 'meshHistory');
+  if (fs.existsSync(meshHistoryDir)) {
+    for (const file of fs.readdirSync(meshHistoryDir)) {
+      try {
+        fs.unlinkSync(path.join(meshHistoryDir, file));
+      } catch (_) { /* ignora */ }
+    }
+  }
+
+  return { cleared: true };
+}
+
 module.exports = {
   executePreparedWaveScenarios,
   listWaveExecutions,
+  clearWaveExecutions,
   writeReplayArtifact,
   updateReplayArtifact,
   writeEvidenceArtifact,
