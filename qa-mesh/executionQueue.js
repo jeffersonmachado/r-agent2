@@ -91,10 +91,15 @@ function enqueueExecution(kind, payload, runner) {
   };
 }
 
+function clearExecutions() {
+  executions.clear();
+}
+
 module.exports = {
   appendLog,
   updateExecution,
   getExecution,
   getAllExecutions,
   enqueueExecution,
+  clearExecutions,
 };

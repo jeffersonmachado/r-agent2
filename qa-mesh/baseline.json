@@ -18,6 +18,20 @@
   },
   "history": [
     {
+      "executionId": "mesh-2026-05-04T05-00-00-083Z",
+      "passRate": 0.45098039215686275,
+      "blockingFailures": 4,
+      "infraErrors": 1,
+      "at": "2026-05-04T05:11:21.310Z"
+    },
+    {
+      "executionId": "mesh-2026-05-04T05-00-00-214Z",
+      "passRate": 0.45098039215686275,
+      "blockingFailures": 4,
+      "infraErrors": 1,
+      "at": "2026-05-04T05:11:19.323Z"
+    },
+    {
       "executionId": "mesh-2026-04-29T22-18-39-510Z",
       "passRate": 0.5098039215686274,
       "blockingFailures": 2,
@@ -142,20 +156,6 @@
       "blockingFailures": 6,
       "infraErrors": 32,
       "at": "2026-04-07T16:33:08.320Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T16-00-35-527Z",
-      "passRate": 0.02,
-      "blockingFailures": 7,
-      "infraErrors": 28,
-      "at": "2026-04-07T16:01:43.042Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T15-48-51-825Z",
-      "passRate": 0.02,
-      "blockingFailures": 7,
-      "infraErrors": 28,
-      "at": "2026-04-07T15:50:01.044Z"
     }
   ]
 }

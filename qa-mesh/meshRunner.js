@@ -284,6 +284,32 @@ function inferFlowDomain(recording) {
   return 'core';
 }
 
+function loadRpaSeedScenarios() {
+  const seedsDir = path.join(ROOT_DIR, 'rpa/seeds');
+  if (!fs.existsSync(seedsDir)) return [];
+  return fs.readdirSync(seedsDir)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => {
+      const recording = safeReadJson(path.join(seedsDir, file), null);
+      if (!recording) return null;
+      const domain = inferFlowDomain(recording);
+      return toScenarioBase({
+        id: recording.id || file.replace(/\.json$/, ''),
+        domain,
+        type: 'e2e',
+        source: 'seed',
+        flow: recording.name || recording.id || file,
+        steps: (recording.steps || []).map((step) => step.type || step.url || 'step'),
+        assertions: ['execução RPA seed concluída sem erro crítico'],
+        rpaRecordingId: recording.id || file.replace(/\.json$/, ''),
+        criticality: 'standard',
+        adapter: 'rpa',
+        impactScopes: [domain, recording.metadata?.journey || 'general'],
+      });
+    })
+    .filter(Boolean);
+}
+
 function loadRpaFlowScenarios() {
   const flowsDir = path.join(ROOT_DIR, 'tests/rpa/flows');
   if (!fs.existsSync(flowsDir)) return [];
@@ -378,6 +404,7 @@ function buildRegistry() {
     ...loadWorkspaceScenarios(),
     ...[...SCREEN_SCENARIOS, ...FLOW_SCENARIOS, ...JOURNEY_SCENARIOS].map(normalizeBusinessScenario),
     ...loadRpaFlowScenarios(),
+    ...loadRpaSeedScenarios(),
   ].sort((a, b) => a.id.localeCompare(b.id));
 }
 
