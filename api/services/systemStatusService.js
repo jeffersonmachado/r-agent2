@@ -83,12 +83,23 @@ async function checkRedisStatus() {
   try {
     const redisUrl = getConfiguredRedisUrl();
     if (!redisUrl) {
+      const nodeEnv = process.env.NODE_ENV || 'development';
+      const allowRedisToMemoryFallback = config.get('fallbacks.rateLimitRedisToMemory', false) === true;
+      const isProduction = nodeEnv === 'production';
+
       return {
-        status: 'healthy',
+        status: isProduction ? 'unhealthy' : 'degraded',
+        ...(isProduction ? { error: 'Redis não configurado em produção' } : {}),
         details: {
           configured: false,
           mode: 'memory',
-          note: 'Redis não configurado; fallback em memória ativo fora de produção',
+          fallbackEnabled: allowRedisToMemoryFallback,
+          environment: nodeEnv,
+          note: isProduction
+            ? 'Redis é obrigatório em produção para rate limiting seguro'
+            : allowRedisToMemoryFallback
+              ? 'Redis não configurado; fallback em memória permitido fora de produção'
+              : 'Redis não configurado; fallback Redis→memória desabilitado',
         },
       };
     }

@@ -481,6 +481,59 @@ function selectQaMeshScenarioResult(payload, queuedExecution) {
   return results[0] || null;
 }
 
+const QA_WAVE_STEP_TYPE_LABELS = {
+  send_message: 'Enviar Mensagem',
+  validate_intent: 'Validar Intenção',
+  validate_response: 'Validar Resposta',
+  validate_sla: 'Validar SLA',
+  validate_fallback: 'Validar Fallback',
+  validate_state: 'Validar Estado',
+  wait: 'Aguardar',
+  assert: 'Validar',
+};
+
+function buildQaWaveStepTitle(step) {
+  const baseLabel = QA_WAVE_STEP_TYPE_LABELS[step.type] || String(step.type || 'Passo').replace(/_/g, ' ');
+  if (step.type === 'send_message') {
+    const variants = Array.isArray(step.input?.variants) ? step.input.variants : [];
+    const first = variants[0] ? String(variants[0]).slice(0, 60) : null;
+    return first ? `${baseLabel}: "${first}"` : baseLabel;
+  }
+  if (step.type === 'validate_intent') {
+    const intent = step.expected?.intent;
+    const conf = step.expected?.confidenceMin;
+    if (intent) return `${baseLabel}: ${intent}${conf !== undefined ? ` (conf ≥ ${conf})` : ''}`;
+  }
+  if (step.type === 'validate_response') {
+    const semantic = step.expected?.semantic;
+    return semantic ? `${baseLabel}: "${String(semantic).slice(0, 60)}"` : baseLabel;
+  }
+  return baseLabel;
+}
+
+function isQaWaveStepDefinition(step) {
+  return step && typeof step === 'object' && typeof step.type === 'string' && !('title' in step);
+}
+
+function normalizeQaWaveSteps(steps, payload) {
+  if (!Array.isArray(steps) || steps.length === 0) return steps;
+  if (!steps.some(isQaWaveStepDefinition)) return steps;
+  const overallStatus = String(payload.status || payload.result || 'pending').toLowerCase();
+  const stepStatus = (overallStatus === 'completed' || overallStatus === 'success' || overallStatus === 'passed')
+    ? 'success'
+    : overallStatus === 'failed' || overallStatus === 'failure' ? 'failure' : 'pending';
+  return steps.map((step, idx) => ({
+    id: step.id || `step-${idx + 1}`,
+    index: Number.isFinite(Number(step.order)) ? Number(step.order) : idx + 1,
+    title: step.name || buildQaWaveStepTitle(step),
+    at: payload.startedAt || payload.startTime || null,
+    status: stepStatus,
+    adapter: step.adapter || null,
+    channel: step.channel || null,
+    stepType: step.type || null,
+  }));
+}
+
 function normalizeReplayPayload(payload = {}) {
   const normalized = { ...payload };
 
@@ -521,6 +574,10 @@ function normalizeReplayPayload(payload = {}) {
   // Compatibilidade com páginas antigas que usam campo `duration`.
   if (!Number.isFinite(Number(normalized.duration))) {
     normalized.duration = Number(normalized.durationMs) || 0;
+  }
+
+  if (Array.isArray(normalized.steps)) {
+    normalized.steps = normalizeQaWaveSteps(normalized.steps, normalized);
   }
 
   return normalized;

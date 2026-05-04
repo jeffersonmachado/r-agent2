@@ -407,6 +407,18 @@ async function checkRateLimitStatus(options) {
     throw new Error('operationType é obrigatório para rate limiting');
   }
 
+  // Em desenvolvimento, status de rate limit é informativo e não deve depender de Redis.
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const bypassRateLimit = process.env.RATE_LIMIT_BYPASS === 'true';
+  if (nodeEnv === 'development' || bypassRateLimit) {
+    return {
+      allowed: true,
+      remainingPoints: 999999,
+      totalPoints: 999999,
+      retryAfter: 0,
+    };
+  }
+
   const policy = getPolicy(operationType);
   if (!policy) {
     logger.warn('[RateLimit] Política não encontrada, permitindo execução', { operationType });
