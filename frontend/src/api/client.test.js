@@ -42,6 +42,21 @@ describe('api/client - fetchJson', () => {
       body: errorBody,
     });
   });
+
+  it('falha quando /workspace/entities retorna HTML ao invés de JSON', async () => {
+    // @ts-ignore
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'text/html; charset=utf-8' },
+      text: vi.fn().mockResolvedValue('<!doctype html><html><body>Fallback SPA</body></html>'),
+    });
+
+    await expect(fetchJson('/workspace/entities?limit=60')).rejects.toMatchObject({
+      status: 200,
+      isHtmlResponse: true,
+    });
+  });
 });
 
 

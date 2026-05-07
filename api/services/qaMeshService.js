@@ -6,6 +6,8 @@ const { isInPipeline } = require('../../pipeline/guard');
 const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
 const { buildScheduleStatus, runScheduledMesh, startScheduler } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
+const { emitEvent } = require('./websocketService');
+const qaWavesLogger = require('../utils/qaWavesLogger');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const STABILITY_SNAPSHOT_PATH = path.join(ROOT_DIR, 'qa/mesh/intelligence/stabilitySnapshot.json');
@@ -188,9 +190,65 @@ function getLearnMemory() {
   return getLearnFile('learningMemory.json', { entries: [], stats: {} });
 }
 
+function toPublicExecutionStatus(rawStatus) {
+  const value = String(rawStatus || '').toLowerCase();
+  if (value === 'completed') return 'success';
+  if (value === 'failed') return 'failed';
+  return 'processing';
+}
+
+function buildExecutionRealtimePayload(executionId) {
+  const execution = getExecution(executionId);
+  if (!execution) return null;
+
+  const startedAt = execution.startedAt || execution.createdAt || null;
+  const finishedAt = execution.finishedAt || null;
+  const durationMs = startedAt
+    ? (finishedAt
+      ? Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime())
+      : Math.max(0, Date.now() - new Date(startedAt).getTime()))
+    : 0;
+
+  const currentScenarioId = execution.currentScenarioId || null;
+  const currentStepLabel = typeof execution.currentStep === 'string'
+    ? execution.currentStep.trim()
+    : '';
+
+  return {
+    executionId,
+    source: 'qa_waves',
+    status: toPublicExecutionStatus(execution.status),
+    progress: Number.isFinite(execution.progress) ? Math.max(0, Math.min(100, Number(execution.progress))) : 0,
+    startedAt,
+    finishedAt,
+    durationMs,
+    summary: execution.summary || null,
+    currentStep: (currentScenarioId || currentStepLabel)
+      ? {
+        scenarioId: currentScenarioId,
+        scenarioName: currentScenarioId,
+        label: currentStepLabel || null,
+        status: toPublicExecutionStatus(execution.status),
+        startedAt,
+        finishedAt,
+      }
+      : null,
+    results: Array.isArray(execution.results) ? execution.results : [],
+  };
+}
+
+function emitQaWavesExecutionRealtime(executionId, tenantId, eventName = 'qa-waves.execution.updated') {
+  if (!tenantId) return;
+  const payload = buildExecutionRealtimePayload(executionId);
+  if (!payload) return;
+  emitEvent(eventName, payload, { tenantId });
+}
+
 function queueMeshRun(options = {}) {
   return enqueueExecution('run', options, async (executionId) => {
-    return runMesh({
+    const tenantId = options.tenantId || null;
+    qaWavesLogger.info(`[RUN] Iniciando execução`, { executionId, tenantId, scenarioIds: options.scenarioIds });
+    const result = await runMesh({
       executionId,
       executionOrigin: 'manual_run',
       closeGovernanceDbAfterIntegration: false,
@@ -207,22 +265,49 @@ function queueMeshRun(options = {}) {
         appendLog(executionId, log.message, log.level, log);
       },
       onScenarioStart(meta) {
+        qaWavesLogger.info(`[RUN] Cenário iniciado: ${meta.scenarioId}`, { executionId, index: meta.index, total: meta.total });
         updateExecution(executionId, {
           progress: meta.total > 0 ? Math.round(((meta.index - 1) / meta.total) * 100) : 0,
           currentScenarioId: meta.scenarioId,
         });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
       },
       onScenarioComplete(meta) {
+        qaWavesLogger.info(`[RUN] Cenário concluído: ${meta.scenarioId}`, { executionId, index: meta.index, total: meta.total });
         updateExecution(executionId, {
           progress: meta.total > 0 ? Math.round((meta.index / meta.total) * 100) : 100,
           currentScenarioId: meta.scenarioId,
+          currentStep: null,
         });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
+      },
+      onStepProgress(meta) {
+        qaWavesLogger.debug(`[RUN] Step: ${meta.currentStep?.title || meta.currentStep}`, { executionId, progress: meta.progress });
+        updateExecution(executionId, {
+          progress: meta.progress ?? undefined,
+          currentStep: meta.currentStep ?? null,
+        });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
       },
     });
+    const finalStatus = result?.summary?.goNoGo === 'NO_GO' ? 'failed' : 'completed';
+    qaWavesLogger.info(`[RUN] Execução finalizada: ${finalStatus}`, { executionId, goNoGo: result?.summary?.goNoGo });
+    updateExecution(executionId, {
+      status: finalStatus,
+      finishedAt: new Date().toISOString(),
+      progress: 100,
+      summary: result?.summary || null,
+      results: result?.results || [],
+      historyPath: result?.historyPath || null,
+      evidenceDir: result?.evidenceDir || null,
+      currentStep: null,
+    });
+    emitQaWavesExecutionRealtime(executionId, tenantId);
+    return result;
   });
 }
 
-function queueScenarioReplay(scenarioId) {
+function queueScenarioReplay(scenarioId, options = {}) {
   const registry = loadRegistry();
   const scenario = registry.find((item) => item.id === scenarioId);
   if (!scenario) throw new Error('Cenário não encontrado');
@@ -234,7 +319,9 @@ function queueScenarioReplay(scenarioId) {
     throw error;
   }
   return enqueueExecution('replay', { scenarioId }, async (executionId) => {
-    return runMesh({
+    const tenantId = options.tenantId || null;
+    qaWavesLogger.info(`[REPLAY] Iniciando replay: ${scenarioId}`, { executionId, tenantId });
+    const result = await runMesh({
       executionId,
       executionOrigin: 'manual_replay',
       closeGovernanceDbAfterIntegration: false,
@@ -245,18 +332,45 @@ function queueScenarioReplay(scenarioId) {
         appendLog(executionId, log.message, log.level, log);
       },
       onScenarioStart(meta) {
+        qaWavesLogger.info(`[REPLAY] Cenário iniciado: ${meta.scenarioId}`, { executionId, index: meta.index, total: meta.total });
         updateExecution(executionId, {
           progress: meta.total > 0 ? Math.round(((meta.index - 1) / meta.total) * 100) : 0,
           currentScenarioId: meta.scenarioId,
         });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
       },
       onScenarioComplete(meta) {
+        qaWavesLogger.info(`[REPLAY] Cenário concluído: ${meta.scenarioId}`, { executionId, index: meta.index, total: meta.total });
         updateExecution(executionId, {
           progress: 100,
           currentScenarioId: meta.scenarioId,
+          currentStep: null,
         });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
+      },
+      onStepProgress(meta) {
+        qaWavesLogger.debug(`[REPLAY] Step: ${meta.currentStep?.title || meta.currentStep}`, { executionId, progress: meta.progress });
+        updateExecution(executionId, {
+          progress: meta.progress ?? undefined,
+          currentStep: meta.currentStep ?? null,
+        });
+        emitQaWavesExecutionRealtime(executionId, tenantId);
       },
     });
+    const finalStatus = result?.summary?.goNoGo === 'NO_GO' ? 'failed' : 'completed';
+    qaWavesLogger.info(`[REPLAY] Execução finalizada: ${finalStatus}`, { executionId, goNoGo: result?.summary?.goNoGo });
+    updateExecution(executionId, {
+      status: finalStatus,
+      finishedAt: new Date().toISOString(),
+      progress: 100,
+      summary: result?.summary || null,
+      results: result?.results || [],
+      historyPath: result?.historyPath || null,
+      evidenceDir: result?.evidenceDir || null,
+      currentStep: null,
+    });
+    emitQaWavesExecutionRealtime(executionId, tenantId);
+    return result;
   });
 }
 

@@ -1,96 +1,85 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchJson } from '../../api/client';
+import { useWebSocketContext } from '../../context/WebSocketContext';
 
 /**
- * Hook para fazer polling de status de execução em tempo real.
+ * Hook para acompanhar status de execução em tempo real via WebSocket.
  * 
  * @param {string} executionId - ID da execução a monitorar (ex: meshq-1777208944882-569yzf)
- * @param {number} pollInterval - Intervalo de polling em ms (padrão: 5000ms)
  * @returns {Object} { status, progress, currentStep, summary, error, isPolling }
  */
-export function useExecutionPolling(executionId, pollInterval = 5000) {
-  const MAX_NOT_FOUND_STREAK = 12;
+export function useExecutionPolling(executionId) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [isPolling, setIsPolling] = useState(false);
-  const pollRef = useRef(null);
   const lastDataRef = useRef(null);
-  const notFoundStreakRef = useRef(0);
 
-  const fetchExecutionStatus = useCallback(async () => {
+  const applyExecutionUpdate = useCallback((incoming) => {
+    if (!incoming || typeof incoming !== 'object') return null;
+    const normalized = {
+      executionId: incoming.executionId || executionId,
+      status: incoming.status || 'processing',
+      progress: Number.isFinite(incoming.progress) ? incoming.progress : 0,
+      summary: incoming.summary || null,
+      currentStep: incoming.currentStep || null,
+      results: Array.isArray(incoming.results) ? incoming.results : [],
+      durationMs: Number.isFinite(incoming.durationMs) ? incoming.durationMs : 0,
+      startedAt: incoming.startedAt || null,
+      finishedAt: incoming.finishedAt || null,
+    };
+
+    setData(normalized);
+    setError('');
+    lastDataRef.current = normalized;
+    if (normalized.status === 'success' || normalized.status === 'failed') {
+      setIsPolling(false);
+    }
+    return normalized;
+  }, [executionId]);
+
+  const handleWsEvent = useCallback((eventName, payload) => {
+    if (eventName !== 'qa-waves.execution.updated' && eventName !== 'qa-waves.execution.started') {
+      return;
+    }
+
+    if (!payload || payload.executionId !== executionId) {
+      return;
+    }
+
+    applyExecutionUpdate({
+      ...lastDataRef.current,
+      ...payload,
+    });
+  }, [applyExecutionUpdate, executionId]);
+
+  useWebSocketContext({
+    enabled: Boolean(executionId),
+    onEvent: handleWsEvent,
+    subscribeEvents: ['qa-waves.execution.updated', 'qa-waves.execution.started'],
+  });
+
+  const startPolling = useCallback(() => {
     if (!executionId) return;
 
-    try {
-      const result = await fetchJson(`/api/test-executions/${executionId}`, {
-        method: 'GET',
-        silent: true, // Evita logs em cada polling
-      });
-
-      notFoundStreakRef.current = 0;
-      setData(result);
-      setError('');
-      lastDataRef.current = result;
-      return result;
-    } catch (err) {
-      // 404 pode ocorrer logo após enfileirar; tolera por uma janela antes de desistir.
-      if (err.status === 404) {
-        notFoundStreakRef.current += 1;
-        if (notFoundStreakRef.current <= MAX_NOT_FOUND_STREAK) {
-          setError('Aguardando registro da execução...');
-          return (
-            lastDataRef.current || {
-              executionId,
-              status: 'processing',
-              progress: 0,
-              summary: null,
-              currentStep: null,
-              results: [],
-              durationMs: 0,
-            }
-          );
-        }
-        setError('Execução não encontrada');
-        return null;
-      }
-
-      notFoundStreakRef.current = 0;
-      // Para outros erros, usa a última resposta válida se existir
-      setError(err.message || 'Erro ao buscar status');
-      return lastDataRef.current;
+    setIsPolling(true);
+    setError('');
+    if (!lastDataRef.current || lastDataRef.current.executionId !== executionId) {
+      const optimistic = {
+        executionId,
+        status: 'processing',
+        progress: 0,
+        summary: null,
+        currentStep: null,
+        results: [],
+        durationMs: 0,
+        startedAt: null,
+        finishedAt: null,
+      };
+      setData(optimistic);
+      lastDataRef.current = optimistic;
     }
   }, [executionId]);
 
-  const startPolling = useCallback(() => {
-    if (pollRef.current || !executionId) return;
-
-    notFoundStreakRef.current = 0;
-    setIsPolling(true);
-
-    // Busca inicial
-    fetchExecutionStatus().then((result) => {
-      if (!result || result.status !== 'processing') {
-        setIsPolling(false);
-        return;
-      }
-
-      // Inicia polling contínuo
-      pollRef.current = setInterval(async () => {
-        const latest = await fetchExecutionStatus();
-        if (!latest) return;
-
-        // Para polling quando execução termina
-        if (latest.status === 'success' || latest.status === 'failed') {
-          stopPolling();
-        }
-      }, pollInterval);
-    });
-  }, [executionId, pollInterval, fetchExecutionStatus]);
-
   const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
     setIsPolling(false);
   }, []);
 
@@ -99,10 +88,17 @@ export function useExecutionPolling(executionId, pollInterval = 5000) {
     setData(null);
     setError('');
     lastDataRef.current = null;
-    notFoundStreakRef.current = 0;
   }, [stopPolling]);
 
-  // Limpa polling ao desmontar
+  useEffect(() => {
+    if (!executionId) {
+      setData(null);
+      setError('');
+      setIsPolling(false);
+      lastDataRef.current = null;
+    }
+  }, [executionId]);
+
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
@@ -124,8 +120,8 @@ export function useExecutionPolling(executionId, pollInterval = 5000) {
     stopPolling,
     resetPolling,
 
-    // Fetch manual
-    fetchExecutionStatus,
+    // Compatibilidade
+    fetchExecutionStatus: () => Promise.resolve(lastDataRef.current),
 
     // Conveniências
     isRunning: data?.status === 'processing',

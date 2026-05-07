@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './PbxPage.css';
+import { useToast } from '../components/Toast';
 import {
   dialplanApply,
   dialplanPreview,
@@ -119,6 +120,7 @@ function formatDateTime(value, fallback = '—') {
 
 export function PbxPage() {
   const { currentPath, navigate } = useRouter();
+  const { showToast, ToastContainer } = useToast();
   const isBulkProvisioningScreen = currentPath === '/pbx/provisioning-lote' || currentPath.startsWith('/pbx/provisioning-lote?');
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(false);
@@ -550,7 +552,6 @@ export function PbxPage() {
 
   async function refreshAll() {
     setLoading(true);
-    setError(null);
     try {
       await refreshCore();
       await refreshAux();
@@ -559,7 +560,7 @@ export function PbxPage() {
       setLastUpdatedAt(new Date().toISOString());
     } catch (e) {
       logger.error('[PbxPage] refresh failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -726,7 +727,7 @@ export function PbxPage() {
   useEffect(() => {
     refreshQueueMembers(selectedQueueId).catch((e) => {
       logger.error('[PbxPage] refreshQueueMembers failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedQueueId]);
@@ -743,7 +744,7 @@ export function PbxPage() {
   useEffect(() => {
     refreshCampaignList(ccSelectedCampaignId).catch((e) => {
       logger.error('[PbxPage] refreshCampaignList failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ccSelectedCampaignId]);
@@ -751,7 +752,6 @@ export function PbxPage() {
   async function handleSaveExtension() {
     if (!canSaveExt) return;
     setLoading(true);
-    setError(null);
     try {
       const parseIntOrNull = (v) => {
         const s = String(v || '').trim();
@@ -817,7 +817,7 @@ export function PbxPage() {
       setIsEditingExtension(false);
     } catch (e) {
       logger.error('[PbxPage] save extension failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -883,7 +883,6 @@ export function PbxPage() {
   async function handleSaveAcl() {
     if (!canSaveAcl) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertAcl({
         id: (formAcl.id || '').trim() || undefined,
@@ -904,7 +903,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save acl failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -914,7 +913,6 @@ export function PbxPage() {
     const aclId = (id || '').trim();
     if (!aclId) return;
     setLoading(true);
-    setError(null);
     try {
       await deleteAcl(aclId);
       if (String(formAcl.id || '') === String(aclId)) {
@@ -930,7 +928,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] delete acl failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -938,7 +936,6 @@ export function PbxPage() {
 
   async function handleRotateProvisioningToken() {
     setLoading(true);
-    setError(null);
     try {
       const exp = rotateExpiresInSec ? Number(rotateExpiresInSec) : null;
       const out = await rotateProvisioningToken(Number.isFinite(exp) ? exp : null);
@@ -947,7 +944,7 @@ export function PbxPage() {
         await Promise.all([refreshCore(), refreshPbxAudit()]);
       }
     } catch (e) {
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -956,7 +953,6 @@ export function PbxPage() {
   async function handleQuickRotate(expiresInSec) {
     setRotateExpiresInSec(String(expiresInSec));
     setLoading(true);
-    setError(null);
     try {
       const out = await rotateProvisioningToken(expiresInSec);
       if (out?.ok && out?.token) {
@@ -964,7 +960,7 @@ export function PbxPage() {
         await Promise.all([refreshCore(), refreshPbxAudit()]);
       }
     } catch (e) {
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -972,14 +968,13 @@ export function PbxPage() {
 
   async function handleRevokeProvisioningToken() {
     setLoading(true);
-    setError(null);
     try {
       await revokeProvisioningToken();
       setRotatedToken(null);
       setRotateExpiresInSec('');
       await Promise.all([refreshCore(), refreshPbxAudit()]);
     } catch (e) {
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1013,7 +1008,7 @@ export function PbxPage() {
       setBulkResult(out);
       await refreshCore();
     } catch (e) {
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1057,7 +1052,6 @@ export function PbxPage() {
   async function handleSaveTrunk() {
     if (!canSaveTrunk) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertTrunk({
         name: (formTrunk.name || '').trim(),
@@ -1082,7 +1076,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save trunk failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1091,7 +1085,6 @@ export function PbxPage() {
   async function handleSaveRoute() {
     if (!canSaveRoute) return;
     setLoading(true);
-    setError(null);
     try {
       const mode = String(formRoute.matchMode || 'prefix_any');
       const dialPrefix = String(formRoute.dialPrefix || '').trim();
@@ -1144,7 +1137,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save route failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1153,7 +1146,6 @@ export function PbxPage() {
   async function handleSaveQueue() {
     if (!canSaveQueue) return;
     setLoading(true);
-    setError(null);
     try {
       const toNum = (v) => {
         const s = String(v || '').trim();
@@ -1218,7 +1210,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save queue failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1251,7 +1243,6 @@ export function PbxPage() {
   async function handleSaveDid() {
     if (!canSaveDid) return;
     setLoading(true);
-    setError(null);
     try {
       const t = String(formDid.destinationType || 'extension');
       const ref = String(formDid.destinationRef || '').trim();
@@ -1271,7 +1262,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save did failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1280,7 +1271,6 @@ export function PbxPage() {
   async function handleSaveIvr() {
     if (!canSaveIvr) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertCallRule({
         type: 'ivr_dialplan_text',
@@ -1300,7 +1290,7 @@ export function PbxPage() {
       await refreshCore();
     } catch (e) {
       logger.error('[PbxPage] save ivr failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1309,7 +1299,6 @@ export function PbxPage() {
   async function handleSaveQueueMember() {
     if (!canSaveQm) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertQueueMember({
         queueId: selectedQueueId,
@@ -1322,7 +1311,7 @@ export function PbxPage() {
       await refreshQueueMembers(selectedQueueId);
     } catch (e) {
       logger.error('[PbxPage] save queue member failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1330,13 +1319,12 @@ export function PbxPage() {
 
   async function handleDeleteQueueMember(id) {
     setLoading(true);
-    setError(null);
     try {
       await deleteQueueMember(id);
       await refreshQueueMembers(selectedQueueId);
     } catch (e) {
       logger.error('[PbxPage] delete queue member failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1361,7 +1349,7 @@ export function PbxPage() {
 	      await refreshLegacyXml();
 	    } catch (e) {
 	      logger.error('[PbxPage] legacy xml upsert failed', e);
-	      setError(e?.message || String(e));
+	      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1388,13 +1376,12 @@ export function PbxPage() {
   async function handleLegacyXmlDelete(id) {
     if (!id) return;
     setLoading(true);
-    setError(null);
     try {
       await deleteLegacyXmlEntity(legacyXmlEntity, id);
       await refreshLegacyXml();
     } catch (e) {
       logger.error('[PbxPage] legacy xml delete failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1402,13 +1389,12 @@ export function PbxPage() {
 
   async function handleDialplanPreview() {
     setLoading(true);
-    setError(null);
     try {
       const r = await dialplanPreview();
       setDialplanRows(r?.rows || []);
     } catch (e) {
       logger.error('[PbxPage] dialplan preview failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1416,13 +1402,12 @@ export function PbxPage() {
 
   async function handleDialplanApply() {
     setLoading(true);
-    setError(null);
     try {
       await dialplanApply();
       await Promise.all([handleDialplanPreview(), refreshCore()]);
     } catch (e) {
       logger.error('[PbxPage] dialplan apply failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1431,13 +1416,12 @@ export function PbxPage() {
   async function handleRollbackVersion(version) {
     if (!version) return;
     setLoading(true);
-    setError(null);
     try {
       await rollbackDialplan(version);
       await Promise.all([handleDialplanPreview(), refreshCore()]);
     } catch (e) {
       logger.error('[PbxPage] dialplan rollback failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1445,12 +1429,11 @@ export function PbxPage() {
 
   async function handleAsteriskReload() {
     setLoading(true);
-    setError(null);
     try {
       await pbxReload();
     } catch (e) {
       logger.error('[PbxPage] asterisk reload failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1458,13 +1441,12 @@ export function PbxPage() {
 
   async function handleAudioRefresh() {
     setLoading(true);
-    setError(null);
     try {
       const r = await listAudioAssets(audioKind);
       setAudioAssets(r?.items || []);
     } catch (e) {
       logger.error('[PbxPage] audio refresh failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1472,14 +1454,13 @@ export function PbxPage() {
 
   async function handleAudioUpload() {
     setLoading(true);
-    setError(null);
     try {
       await uploadAudioAsset({ kind: audioKind, file: audioFile });
       setAudioFile(null);
       await handleAudioRefresh();
     } catch (e) {
       logger.error('[PbxPage] audio upload failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1487,13 +1468,12 @@ export function PbxPage() {
 
   async function handleRecordingsRefresh() {
     setLoading(true);
-    setError(null);
     try {
       const r = await listRecordings(200);
       setRecordings(r?.items || []);
     } catch (e) {
       logger.error('[PbxPage] recordings refresh failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1501,13 +1481,12 @@ export function PbxPage() {
 
   async function handleRecordingsScan() {
     setLoading(true);
-    setError(null);
     try {
       await scanRecordings();
       await handleRecordingsRefresh();
     } catch (e) {
       logger.error('[PbxPage] recordings scan failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1515,7 +1494,6 @@ export function PbxPage() {
 
   async function handleSaveRecordingPolicy() {
     setLoading(true);
-    setError(null);
     try {
       const payload = {
         enabled: !!recordingPolicy.enabled,
@@ -1530,7 +1508,7 @@ export function PbxPage() {
       await handleRecordingsRefresh();
     } catch (e) {
       logger.error('[PbxPage] save recording policy failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1538,7 +1516,6 @@ export function PbxPage() {
 
   async function handleCdrSearch() {
     setLoading(true);
-    setError(null);
     try {
       const r = await listCdr({
         ...cdrFilters,
@@ -1551,7 +1528,7 @@ export function PbxPage() {
       setCdrItems(r?.items || []);
     } catch (e) {
       logger.error('[PbxPage] cdr search failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1560,7 +1537,6 @@ export function PbxPage() {
   async function handleSavePauseReason() {
     if (!canSavePauseReason) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertPauseReason({
         code: (formPauseReason.code || '').trim(),
@@ -1571,7 +1547,7 @@ export function PbxPage() {
       await refreshCC();
     } catch (e) {
       logger.error('[PbxPage] save pause reason failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1580,7 +1556,6 @@ export function PbxPage() {
   async function handleSaveContactReason() {
     if (!canSaveContactReason) return;
     setLoading(true);
-    setError(null);
     try {
       await upsertContactReason({
         code: (formContactReason.code || '').trim(),
@@ -1591,7 +1566,7 @@ export function PbxPage() {
       await refreshCC();
     } catch (e) {
       logger.error('[PbxPage] save contact reason failed', e);
-      setError(e?.message || String(e));
+      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1624,7 +1599,7 @@ export function PbxPage() {
 	      await refreshCC();
 	    } catch (e) {
 	      logger.error('[PbxPage] save campaign failed', e);
-	      setError(e?.message || String(e));
+	      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1645,7 +1620,7 @@ export function PbxPage() {
 	      await refreshCampaignList(ccSelectedCampaignId);
 	    } catch (e) {
 	      logger.error('[PbxPage] add campaign list items failed', e);
-	      setError(e?.message || String(e));
+	      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1696,7 +1671,7 @@ export function PbxPage() {
 	      await refreshCC();
 	    } catch (e) {
 	      logger.error('[PbxPage] save scheduled callback failed', e);
-	      setError(e?.message || String(e));
+	      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -1743,7 +1718,7 @@ export function PbxPage() {
 	      await refreshCC();
 	    } catch (e) {
 	      logger.error('[PbxPage] create click2call failed', e);
-	      setError(e?.message || String(e));
+	      showToast(e?.message || String(e), 'error');
     } finally {
       setLoading(false);
     }
@@ -2137,6 +2112,7 @@ export function PbxPage() {
             ) : null}
           </div>
         </div>
+      <ToastContainer />
       </CrudPageBase>
     );
   }
@@ -2422,6 +2398,7 @@ export function PbxPage() {
         <PbxRoutingDetailTabs tab={tab} />
         <PbxConfigDetailTabs tab={tab} />
       </div>
+      <ToastContainer />
       </CrudPageBase>
   );
 }

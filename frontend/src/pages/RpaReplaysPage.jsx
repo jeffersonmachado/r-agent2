@@ -28,6 +28,7 @@ export function RpaReplaysPage() {
   const [replayStepByStep, setReplayStepByStep] = useState(false);
   const [currentReplayStep, setCurrentReplayStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1000); // ms entre passos (1000ms = 1 segundo)
   const [deletingReplay, setDeletingReplay] = useState(null);
   const [deletingAllReplays, setDeletingAllReplays] = useState(false);
@@ -46,6 +47,12 @@ export function RpaReplaysPage() {
   const [searchText, setSearchText] = useState('');
   const [filterResult, setFilterResult] = useState('all'); // 'all', 'success', 'failed'
   const [filterDateRange, setFilterDateRange] = useState('all'); // 'all', 'today', 'week', 'month'
+  const [filterSource, setFilterSource] = useState('');
+  const [filterWaveId, setFilterWaveId] = useState('');
+  const [filterJourneyId, setFilterJourneyId] = useState('');
+  const [filterScenarioId, setFilterScenarioId] = useState('');
+  const [filterSeedId, setFilterSeedId] = useState('');
+  const [filterExecutionId, setFilterExecutionId] = useState('');
   const [sortBy, setSortBy] = useState('date'); // 'date', 'name', 'size', 'duration'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
   const [displayMode, setDisplayMode] = useState(() => localStorage.getItem('rpaReplaysDisplayMode') || 'card');
@@ -94,12 +101,35 @@ export function RpaReplaysPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchText, filterResult, filterDateRange, sortBy, sortOrder, pageSize]);
+  }, [searchText, filterResult, filterDateRange, filterSource, filterWaveId, filterJourneyId, filterScenarioId, filterSeedId, filterExecutionId, sortBy, sortOrder, pageSize]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search || '');
+    const search = params.get('search');
+    const result = params.get('result');
+    const dateRange = params.get('dateRange');
+    const source = params.get('source');
+    const waveId = params.get('waveId');
+    const journeyId = params.get('journeyId');
+    const scenarioId = params.get('scenarioId');
+    const seedId = params.get('seedId');
+    const executionId = params.get('executionId');
+
+    if (search) setSearchText(search);
+    if (result) setFilterResult(result);
+    if (dateRange) setFilterDateRange(dateRange);
+    if (source) setFilterSource(source);
+    if (waveId) setFilterWaveId(waveId);
+    if (journeyId) setFilterJourneyId(journeyId);
+    if (scenarioId) setFilterScenarioId(scenarioId);
+    if (seedId) setFilterSeedId(seedId);
+    if (executionId) setFilterExecutionId(executionId);
+  }, []);
 
   // Carrega lista de replays
   useEffect(() => {
     loadReplays();
-  }, [currentPage, pageSize, searchText, filterResult, filterDateRange, sortBy, sortOrder]);
+  }, [currentPage, pageSize, searchText, filterResult, filterDateRange, filterSource, filterWaveId, filterJourneyId, filterScenarioId, filterSeedId, filterExecutionId, sortBy, sortOrder]);
 
   const loadReplays = async (options = {}) => {
     const requestedPage = options.page || currentPage;
@@ -123,6 +153,12 @@ export function RpaReplaysPage() {
         search: searchText.trim(),
         result: filterResult,
         dateRange: filterDateRange,
+        source: filterSource,
+        waveId: filterWaveId.trim(),
+        journeyId: filterJourneyId.trim(),
+        scenarioId: filterScenarioId.trim(),
+        seedId: filterSeedId.trim(),
+        executionId: filterExecutionId.trim(),
         sortBy,
         sortOrder,
       });
@@ -185,6 +221,7 @@ export function RpaReplaysPage() {
     setReplayStepByStep(false);
     setCurrentReplayStep(0);
     setIsPlaying(false);
+    setShowOnlyFailures(false);
     setIsFullscreen(false);
 
     try {
@@ -225,6 +262,33 @@ export function RpaReplaysPage() {
   // Funções para navegação step-by-step do replay
   const getReplaySteps = () => {
     if (!replayData) return [];
+
+    if (Array.isArray(replayData.steps) && replayData.steps.length > 0) {
+      const traceSteps = replayData.steps.map((step, index) => ({
+        type: 'trace-step',
+        index,
+        data: step,
+        timestamp: step.startedAt || step.timestamp || step.at,
+      }));
+      // Inclui eventos de timeline como entradas de log junto com os trace-steps
+      const timelineEvents = (replayData.timeline || replayData.logs || []).map((event, index) => ({
+        type: 'log-event',
+        index,
+        data: event,
+        timestamp: event.timestamp,
+      }));
+      const screenItems = (replayData.screens || []).map((screen, index) => ({
+        type: 'screen',
+        index,
+        data: screen,
+        timestamp: screen.timestamp,
+      }));
+      return [...traceSteps, ...timelineEvents, ...screenItems].sort((a, b) => {
+        const tA = new Date(a.timestamp || 0).getTime();
+        const tB = new Date(b.timestamp || 0).getTime();
+        return tA - tB;
+      });
+    }
     
     const actions = replayData.actions || [];
     const screens = replayData.screens || [];
@@ -261,6 +325,21 @@ export function RpaReplaysPage() {
   const replaySteps = getReplaySteps();
   const currentStep = replaySteps[currentReplayStep];
   const totalSteps = replaySteps.length;
+  const visibleReplaySteps = showOnlyFailures
+    ? replaySteps.filter((step) => {
+      if (step?.type === 'trace-step') {
+        const st = String(step?.data?.status || '').toLowerCase();
+        return st === 'failed' || st === 'timeout' || !!step?.data?.error;
+      }
+      if (step?.type === 'action') {
+        return step?.data?.success === false;
+      }
+      if (step?.type === 'log-event') {
+        return step?.data?.level === 'error' || step?.data?.level === 'warning';
+      }
+      return false;
+    })
+    : replaySteps;
 
   // Encontra o último screenshot antes do passo atual
   const getLastScreenshot = () => {
@@ -344,6 +423,25 @@ export function RpaReplaysPage() {
       setCurrentReplayStep(0);
     }
     setIsPlaying(!isPlaying);
+  };
+
+  const jumpToFirstErrorStep = () => {
+    const errorIndex = replaySteps.findIndex((step) => {
+      if (!step?.data) return false;
+      if (step.type === 'trace-step') {
+        const st = String(step.data.status || '').toLowerCase();
+        return st === 'failed' || st === 'timeout' || !!step.data.error;
+      }
+      if (step.type === 'action') {
+        return step.data.success === false;
+      }
+      return false;
+    });
+    if (errorIndex >= 0) {
+      setReplayStepByStep(true);
+      setCurrentReplayStep(errorIndex);
+      setIsPlaying(false);
+    }
   };
 
   const handleSpeedChange = (speed) => {
@@ -531,7 +629,15 @@ export function RpaReplaysPage() {
     }
   };
 
-  const hasActiveFilters = searchText.trim() || filterResult !== 'all' || filterDateRange !== 'all';
+  const hasActiveFilters = searchText.trim()
+    || filterResult !== 'all'
+    || filterDateRange !== 'all'
+    || filterSource.trim()
+    || filterWaveId.trim()
+    || filterJourneyId.trim()
+    || filterScenarioId.trim()
+    || filterSeedId.trim()
+    || filterExecutionId.trim();
   const totalReplays = pagination.total || replays.length;
   const totalPages = Math.max(1, Math.ceil(totalReplays / (pagination.limit || pageSize || 1)));
   const pageStart = totalReplays === 0 ? 0 : (pagination.offset || 0) + 1;
@@ -541,6 +647,12 @@ export function RpaReplaysPage() {
     setSearchText('');
     setFilterResult('all');
     setFilterDateRange('all');
+    setFilterSource('');
+    setFilterWaveId('');
+    setFilterJourneyId('');
+    setFilterScenarioId('');
+    setFilterSeedId('');
+    setFilterExecutionId('');
     setSortBy('date');
     setSortOrder('desc');
   };
@@ -562,12 +674,12 @@ export function RpaReplaysPage() {
   };
 
   return (
-    <div className="h-screen w-full bg-bg-primary flex flex-col overflow-hidden">
+    <div className="h-screen w-full bg-bg-primary flex flex-col overflow-hidden" data-testid="rpa-replays-page">
       {/* Header fixo */}
       <div className="flex-shrink-0 p-6 border-b border-border-default bg-bg-elevated">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-text-primary mb-2">
+            <h1 className="text-2xl font-bold text-text-primary mb-2" data-testid="rpa-replays-title">
               📋 Replays RPA
             </h1>
             <p className="text-text-secondary">
@@ -758,6 +870,76 @@ export function RpaReplaysPage() {
               </div>
             </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 border-t border-border-default/60">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Origem</label>
+                  <select
+                    value={filterSource}
+                    onChange={(e) => setFilterSource(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  >
+                    <option value="">Todas</option>
+                    <option value="qa-waves">QA Waves</option>
+                    <option value="qa_waves">QA Waves (legacy)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Wave ID</label>
+                  <input
+                    type="text"
+                    value={filterWaveId}
+                    onChange={(e) => setFilterWaveId(e.target.value)}
+                    placeholder="fitness-wave-01"
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Journey ID</label>
+                  <input
+                    type="text"
+                    value={filterJourneyId}
+                    onChange={(e) => setFilterJourneyId(e.target.value)}
+                    placeholder="journey-01"
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Scenario ID</label>
+                  <input
+                    type="text"
+                    value={filterScenarioId}
+                    onChange={(e) => setFilterScenarioId(e.target.value)}
+                    placeholder="scenario-01"
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Seed ID</label>
+                  <input
+                    type="text"
+                    value={filterSeedId}
+                    onChange={(e) => setFilterSeedId(e.target.value)}
+                    placeholder="seed-01"
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Execution ID</label>
+                  <input
+                    type="text"
+                    value={filterExecutionId}
+                    onChange={(e) => setFilterExecutionId(e.target.value)}
+                    placeholder="mesh-..."
+                    className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-default rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -892,6 +1074,8 @@ export function RpaReplaysPage() {
                         return (
                           <tr
                             key={replay.filename}
+                            data-testid="rpa-replay-item"
+                            data-replay-id={replay.replayId || replay.id || ''}
                             className={`border-b border-border-default/60 hover:bg-bg-primary/60 transition-colors ${isSelected ? 'bg-accent-primary/10' : ''}`}
                           >
                             <td className="px-3 py-3 align-middle">
@@ -957,6 +1141,8 @@ export function RpaReplaysPage() {
                   return (
                     <div
                       key={replay.filename}
+                      data-testid="rpa-replay-item"
+                      data-replay-id={replay.replayId || replay.id || ''}
                       className={`bg-bg-secondary rounded-lg border p-4 hover:border-accent-primary transition-colors ${
                         isSelected ? 'border-accent-primary ring-1 ring-accent-primary/40' : 'border-border-default'
                       }`}
@@ -1136,6 +1322,7 @@ export function RpaReplaysPage() {
           setReplayStepByStep(false);
           setCurrentReplayStep(0);
           setIsPlaying(false);
+          setShowOnlyFailures(false);
           setIsFullscreen(false);
         }}
         title={
@@ -1207,6 +1394,7 @@ export function RpaReplaysPage() {
                         variant="default"
                         size="sm"
                         className="text-xs"
+                        data-testid="replay-play-button"
                       >
                         {replayStepByStep ? '📋 Ver Lista Completa' : '▶️ Play'}
                       </Button>
@@ -1286,6 +1474,22 @@ export function RpaReplaysPage() {
                       <p className="text-status-error text-xs font-semibold">
                         {replayData.errors.length} erro(s) encontrado(s)
                       </p>
+                    </div>
+                  )}
+                  {replayData.tracePath && (
+                    <div>
+                      <span className="text-text-tertiary block mb-1">Trace:</span>
+                      <div className="flex items-center gap-2">
+                        <p className="text-text-primary text-xs font-mono break-all">{replayData.tracePath}</p>
+                        <Button
+                          onClick={() => window.open(replayData.tracePath, '_blank', 'noopener,noreferrer')}
+                          variant="default"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          Abrir trace.zip
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1373,15 +1577,32 @@ export function RpaReplaysPage() {
                           variant={isPlaying ? "danger" : "default"}
                           size="sm"
                           className="text-xs"
+                          data-testid="replay-play-button"
                         >
                           {isPlaying ? '⏸️ Pausar' : '▶️ Reproduzir'}
                         </Button>
                         <span className="text-xs text-text-tertiary">
                           {isPlaying ? 'Reproduzindo...' : 'Pausado'}
                         </span>
+                        <Button
+                          onClick={jumpToFirstErrorStep}
+                          variant="default"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          ⛳ Ir para erro
+                        </Button>
                       </div>
                       
                       <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1 text-xs text-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={showOnlyFailures}
+                            onChange={(e) => setShowOnlyFailures(e.target.checked)}
+                          />
+                          Mostrar apenas falhas
+                        </label>
                         <label className="text-xs text-text-secondary">
                           Velocidade:
                         </label>
@@ -1403,19 +1624,26 @@ export function RpaReplaysPage() {
                   </div>
 
                   {/* Conteúdo do passo atual - APENAS Screenshots */}
-                  {((currentStep.type === 'screen' && currentStep.data.screenshot) || 
-                    (currentStep.type === 'action' && lastScreenshot)) && (
+                  {((currentStep.type === 'screen' && currentStep.data.screenshot)
+                    || (currentStep.type === 'action' && lastScreenshot)
+                    || (currentStep.type === 'trace-step' && (currentStep.data.screenshotAfter || currentStep.data.screenshotBefore))) && (
                     <div className="bg-bg-secondary rounded-lg p-4 border border-border-default">
                       <div className="mb-2">
                         <span className="text-xs font-semibold text-text-tertiary">
                           📸 Tela
                         </span>
-                        {(currentStep.type === 'screen' ? currentStep.data.timestamp : lastScreenshot?.timestamp) && (
+                        {(currentStep.type === 'screen'
+                          ? currentStep.data.timestamp
+                          : (currentStep.type === 'trace-step'
+                            ? (currentStep.data.finishedAt || currentStep.data.startedAt)
+                            : lastScreenshot?.timestamp)) && (
                           <span className="text-xs text-text-tertiary ml-2">
                             {formatDate(
                               currentStep.type === 'screen' 
                                 ? currentStep.data.timestamp 
-                                : lastScreenshot.timestamp
+                                : (currentStep.type === 'trace-step'
+                                  ? (currentStep.data.finishedAt || currentStep.data.startedAt)
+                                  : lastScreenshot.timestamp)
                             )}
                           </span>
                         )}
@@ -1427,8 +1655,11 @@ export function RpaReplaysPage() {
                       </div>
                       <div className="mt-2">
                         <img
-                          src={`data:image/png;base64,${currentStep.type === 'screen' ? currentStep.data.screenshot : lastScreenshot.screenshot}`}
+                          src={currentStep.type === 'trace-step'
+                            ? (currentStep.data.screenshotAfter || currentStep.data.screenshotBefore)
+                            : `data:image/png;base64,${currentStep.type === 'screen' ? currentStep.data.screenshot : lastScreenshot.screenshot}`}
                           alt={`Screenshot do passo ${currentReplayStep + 1}`}
+                          data-testid="replay-image"
                           className="max-w-full h-auto rounded border border-border-default"
                         />
                       </div>
@@ -1477,6 +1708,7 @@ export function RpaReplaysPage() {
                         {replayData.errors.map((error, errorIndex) => (
                           <div
                             key={errorIndex}
+                            data-testid="replay-error"
                             className="p-2 rounded border border-status-error/20 bg-status-error/5 text-xs text-status-error"
                           >
                             {error.message || error}
@@ -1495,6 +1727,7 @@ export function RpaReplaysPage() {
           {/* Painel de log de ações colapsável à direita */}
           <div
             className={`${actionsLogCollapsed ? 'w-12' : ''} min-w-[48px] flex flex-col transition-all duration-200 flow-editor-right-panel border-l border-border-default`}
+            data-testid="replay-sidebar"
             style={!actionsLogCollapsed ? { width: `${actionsLogWidth}px` } : {}}
           >
             {/* Header do painel */}
@@ -1527,9 +1760,10 @@ export function RpaReplaysPage() {
                   {replayData && replaySteps.length > 0 ? (
                     <div className="flex-1 overflow-y-auto p-3 space-y-2" id="actions-log-container">
                       <div className="text-xs text-text-tertiary mb-2">
-                        {replaySteps.length} passo(s) registrado(s)
+                        {visibleReplaySteps.length} passo(s) registrado(s)
                       </div>
-                      {replaySteps.map((step, stepIndex) => {
+                      {visibleReplaySteps.map((step) => {
+                        const stepIndex = replaySteps.indexOf(step);
                         const isCurrentStep = replayStepByStep &&
                           currentReplayStep === stepIndex;
                         
@@ -1546,7 +1780,77 @@ export function RpaReplaysPage() {
                           return String(value);
                         };
 
-                        if (step.type === 'action') {
+                        if (step.type === 'trace-step') {
+                          const traceStep = step.data;
+                          const isFailed = ['failed', 'timeout'].includes(String(traceStep.status || '').toLowerCase()) || !!traceStep.error;
+                          const stepNumber = traceStep.index || stepIndex + 1;
+                          const actionLabel = String(traceStep.action || traceStep.name || 'passo')
+                            .split('_')
+                            .map((part) => part ? part.charAt(0).toUpperCase() + part.slice(1) : '')
+                            .join(' ');
+                          const statusLabel = String(traceStep.status || (isFailed ? 'failed' : 'success')).toLowerCase();
+                          const variantText = traceStep.input?.variants?.[0];
+                          const expectedText = traceStep.expected
+                            ? Object.entries(traceStep.expected)
+                                .map(([key, value]) => `${key}=${typeof value === 'string' ? value : JSON.stringify(value)}`)
+                                .join(', ')
+                            : null;
+                          const durationText = traceStep.durationMs !== undefined
+                            ? `${traceStep.durationMs}ms`
+                            : '0ms (nao registrada)';
+                          return (
+                            <div
+                              key={`trace-step-${traceStep.id || step.index}`}
+                              id={`step-${stepIndex}`}
+                              data-testid="replay-step"
+                              className={`p-2 rounded border text-xs cursor-pointer transition-colors ${
+                                isCurrentStep
+                                  ? 'bg-accent-primary/30 border-accent-primary border-2 shadow-md'
+                                  : isFailed
+                                  ? 'bg-status-error/5 border-status-error/20 hover:bg-status-error/10'
+                                  : 'bg-status-success/5 border-status-success/20 hover:bg-status-success/10'
+                              }`}
+                              onClick={() => {
+                                setReplayStepByStep(true);
+                                setCurrentReplayStep(stepIndex);
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-text-primary font-semibold break-words">
+                                    📌 Passo {stepNumber}: {actionLabel}
+                                  </div>
+                                  <div className="text-text-secondary mt-1 break-words">▶️ Ação: {traceStep.action || '-'}</div>
+                                  {variantText && (
+                                    <div className="text-text-secondary mt-1 break-words">
+                                      📝 Variante: <span className="font-mono">&quot;{variantText}&quot;</span>
+                                    </div>
+                                  )}
+                                  {!variantText && (
+                                    <div className="text-text-secondary mt-1 break-words">
+                                      🎯 Esperado: {expectedText || '(validar SLA nao especificado)'}
+                                    </div>
+                                  )}
+                                  {traceStep.selector && (
+                                    <div className="text-text-secondary mt-1 break-all">
+                                      Seletor: <span className="font-mono">{traceStep.selector}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-text-secondary mt-1">{isFailed ? '❌' : '✅'} Status: {statusLabel}</div>
+                                  <div className="text-text-tertiary mt-1">⏱️ Duração: {durationText}</div>
+                                  {(traceStep.startedAt || traceStep.timestamp) && (
+                                    <div className="text-text-tertiary mt-1">{formatDate(traceStep.startedAt || traceStep.timestamp)}</div>
+                                  )}
+                                  {isFailed && traceStep.error && (
+                                    <div className="mt-2 p-2 rounded bg-status-error/10 border border-status-error/30 text-status-error break-all">
+                                      {traceStep.error?.message || traceStep.error}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        } else if (step.type === 'action') {
                           const action = step.data;
                           return (
                             <div
@@ -1591,11 +1895,6 @@ export function RpaReplaysPage() {
                                       {action.step}
                                     </div>
                                   )}
-                                  {action.timestamp && (
-                                    <div className="text-text-tertiary mt-1 text-xs">
-                                      {formatDate(action.timestamp)}
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="flex-shrink-0 ml-2">
                                   {action.success !== false ? (
@@ -1608,6 +1907,11 @@ export function RpaReplaysPage() {
                               {action.duration && (
                                 <div className="text-text-tertiary mt-1 text-xs">
                                   Duração: {action.duration}ms
+                                </div>
+                              )}
+                              {action.timestamp && (
+                                <div className="text-text-tertiary mt-1 text-xs">
+                                  {formatDate(action.timestamp)}
                                 </div>
                               )}
                               {isCurrentStep && (
@@ -1654,9 +1958,6 @@ export function RpaReplaysPage() {
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex-shrink-0 ml-2">
-                                  <span className="text-xs">📸</span>
-                                </div>
                               </div>
                               {isCurrentStep && (
                                 <div className="mt-2 pt-2 border-t border-accent-primary/30">
@@ -1665,6 +1966,45 @@ export function RpaReplaysPage() {
                                   </div>
                                 </div>
                               )}
+                            </div>
+                          );
+                        } else if (step.type === 'log-event') {
+                          const event = step.data;
+                          const cls =
+                            event.level === 'error' ? 'border-status-error/30 bg-status-error/5' :
+                            event.level === 'warning' ? 'border-status-warning/30 bg-status-warning/5' :
+                            event.level === 'success' ? 'border-status-success/30 bg-status-success/5' :
+                            'border-border-default bg-bg-primary';
+                          return (
+                            <div
+                              key={`log-event-${step.index}`}
+                              id={`step-${stepIndex}`}
+                              className={`p-2 rounded border text-xs ${cls} ${isCurrentStep ? 'ring-2 ring-accent-primary' : ''}`}
+                              onClick={() => { setReplayStepByStep(true); setCurrentReplayStep(stepIndex); }}
+                            >
+                              <div className="flex gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-text-primary break-words">{event.message}</div>
+                                  {event.details && (
+                                    <div className="text-text-secondary text-[10px] mt-0.5 break-words">{event.details}</div>
+                                  )}
+                                  {event.errors && Array.isArray(event.errors) && event.errors.length > 0 && (
+                                    <div className="mt-1 space-y-0.5">
+                                      {event.errors.map((err, i) => (
+                                        <div key={i} className="text-[10px] bg-bg-secondary rounded px-1 py-0.5 break-words text-text-secondary">
+                                          {err.message || String(err)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {event.timestamp && (
+                                    <div className="text-text-tertiary text-[10px] mt-0.5">{formatDate(event.timestamp)}</div>
+                                  )}
+                                </div>
+                                {event.step !== undefined && (
+                                  <span className="text-text-tertiary text-[10px] shrink-0">{event.step}</span>
+                                )}
+                              </div>
                             </div>
                           );
                         }
@@ -1683,6 +2023,59 @@ export function RpaReplaysPage() {
                       </div>
                     </div>
                   )}
+                  {/* Timeline / Logs da Execução — só exibe quando NÃO há steps (replay RPA puro sem timeline integrada) */}
+                  {replayData && !(Array.isArray(replayData.steps) && replayData.steps.length > 0) && (() => {
+                    const timeline = replayData.timeline || replayData.logs || [];
+                    if (timeline.length === 0) return null;
+                    const pageErrors = timeline.filter((e) => e.level === 'warning' || e.level === 'error');
+                    return (
+                      <div className="border-t border-border-default">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-bg-secondary">
+                          <span className="text-xs font-semibold text-text-secondary">📊 Logs da Execução</span>
+                          <span className="text-text-tertiary text-[10px]">{timeline.length} eventos</span>
+                          {pageErrors.length > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-status-warning/20 text-status-warning border border-status-warning/30">
+                              ⚠️ {pageErrors.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="overflow-y-auto max-h-80 p-2 space-y-1">
+                          {timeline.map((event, idx) => {
+                            const cls =
+                              event.level === 'error' ? 'border-status-error/30 bg-status-error/5 text-status-error' :
+                              event.level === 'warning' ? 'border-status-warning/30 bg-status-warning/5 text-status-warning' :
+                              event.level === 'success' ? 'border-status-success/30 bg-status-success/5' :
+                              'border-border-default bg-bg-primary';
+                            return (
+                              <div key={idx} className={`flex gap-2 p-1.5 rounded border text-[11px] ${cls}`}>
+                                <span className="text-text-tertiary font-mono shrink-0 text-[10px] pt-px">
+                                  {event.timestamp ? new Date(event.timestamp).toLocaleTimeString('pt-BR') : `#${idx + 1}`}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-text-primary break-words">{event.message}</span>
+                                  {event.details && (
+                                    <span className="text-text-secondary ml-1 break-words">— {event.details}</span>
+                                  )}
+                                  {event.errors && Array.isArray(event.errors) && event.errors.length > 0 && (
+                                    <div className="mt-1 space-y-0.5">
+                                      {event.errors.map((err, i) => (
+                                        <div key={i} className="text-[10px] bg-bg-secondary rounded px-1 py-0.5 break-words text-text-secondary">
+                                          {err.message || String(err)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {event.step !== undefined && (
+                                  <span className="text-text-tertiary text-[10px] shrink-0">{event.step}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -80,6 +80,31 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
+  router.delete('/api/qa-waves/scenarios/:scenarioId', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      const result = deps.deleteWaveScenario(req.params.scenarioId);
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      if (error.code === 'NOT_FOUND') {
+        deps.sendJson(res, 404, { error: 'not_found', message: error.message });
+        return;
+      }
+      if (error.code === 'BAD_REQUEST') {
+        deps.sendJson(res, 400, { error: 'bad_request', message: error.message });
+        return;
+      }
+      deps.logger.error('Erro ao deletar cenario:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao deletar cenario' });
+    }
+  });
+
   router.get('/api/qa-waves/journeys', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);
@@ -93,6 +118,55 @@ function createQaWavesRoutes({ buildDeps }) {
     } catch (error) {
       deps.logger.error('Erro ao listar jornadas:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar jornadas' });
+    }
+  });
+
+  router.post('/api/qa-waves/journeys', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await deps.parseJsonBody(req);
+      const result = deps.saveWaveJourney(body || {});
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') {
+        deps.sendJson(res, 400, { error: 'bad_request', message: error.message });
+        return;
+      }
+      deps.logger.error('Erro ao salvar jornada:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao salvar jornada' });
+    }
+  });
+
+  router.delete('/api/qa-waves/journeys/:journeyId', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const result = deps.deleteWaveJourney(req.params.journeyId, req.query.vertical);
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      if (error.code === 'NOT_FOUND') {
+        deps.sendJson(res, 404, { error: 'not_found', message: error.message });
+        return;
+      }
+      if (error.code === 'BAD_REQUEST') {
+        deps.sendJson(res, 400, { error: 'bad_request', message: error.message });
+        return;
+      }
+      deps.logger.error('Erro ao deletar jornada:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao deletar jornada' });
     }
   });
 

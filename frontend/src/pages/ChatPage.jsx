@@ -4,6 +4,7 @@ import { listFlows, getFlow } from '../api/flows';
 import { useRouter } from '../hooks/useRouter';
 import { useAuth } from '../context/authContext';
 import { useTheme } from '../styles/themeContext';
+import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 
 /**
@@ -15,11 +16,11 @@ export function ChatPage() {
   const { navigate } = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { theme } = useTheme();
+  const { showToast, ToastContainer } = useToast();
   const [flows, setFlows] = useState([]);
   const [selectedFlowId, setSelectedFlowId] = useState(null);
   const [selectedFlow, setSelectedFlow] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [selectFocused, setSelectFocused] = useState(false);
   const [selectHovered, setSelectHovered] = useState(false);
   const urlFlowIdRef = useRef(null);
@@ -62,7 +63,6 @@ export function ChatPage() {
   const loadFlows = async () => {
     try {
       setLoading(true);
-      setError(null);
       const flowsList = await listFlows();
       const flowsArray = Array.isArray(flowsList) ? flowsList : [];
       setFlows(flowsArray);
@@ -83,7 +83,7 @@ export function ChatPage() {
       }
     } catch (err) {
       logger.error('Erro ao carregar fluxos:', err);
-      setError(err.message || 'Erro ao carregar fluxos');
+      showToast(err.message || 'Erro ao carregar fluxos', 'error');
     } finally {
       setLoading(false);
     }
@@ -92,12 +92,11 @@ export function ChatPage() {
   const loadFlow = async (flowId) => {
     try {
       setLoading(true);
-      setError(null);
       const flow = await getFlow(flowId);
       setSelectedFlow(flow);
     } catch (err) {
       logger.error('Erro ao carregar fluxo:', err);
-      setError(err.message || 'Erro ao carregar fluxo');
+      showToast(err.message || 'Erro ao carregar fluxo', 'error');
       setSelectedFlow((current) => {
         if (current && current.id === flowId) {
           return current;
@@ -217,19 +216,6 @@ export function ChatPage() {
 
       {/* Área de conteúdo */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        {error && (
-          <div style={{
-            padding: '16px',
-            margin: '16px',
-            backgroundColor: `${theme.colors.status.error}15`,
-            border: `1px solid ${theme.colors.status.error}40`,
-            borderRadius: '6px',
-            color: theme.colors.status.error
-          }}>
-            <strong>Erro:</strong> {error}
-          </div>
-        )}
-
         {loading && !selectedFlow && (
           <div style={{
             display: 'flex',
@@ -275,6 +261,7 @@ export function ChatPage() {
           </div>
         )}
       </div>
+      <ToastContainer />
     </div>
   );
 }

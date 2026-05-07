@@ -19,7 +19,7 @@ function frontendRoutesPlugin() {
     name: 'frontend-routes',
     configureServer(server) {
       // Rotas de página do frontend que não devem ser proxyadas
-      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/dev/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation'];
+      const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/dev/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation', '/workspace'];
       
       // IMPORTANTE: Este middleware deve ser executado ANTES do proxy do Vite
       // Para garantir que rotas de API sejam passadas adiante sem modificação
@@ -92,6 +92,8 @@ function frontendRoutesPlugin() {
                           url.startsWith('/analytics/') ||
                           url.startsWith('/export/') ||
                           url.startsWith('/conversations') ||
+                          (url === '/workspace' && isApiRequest) ||
+                          (url.startsWith('/workspace/') && url !== '/workspace') ||
                           (url === '/projects' && isApiRequest) || // /projects pode ser API (JSON) ou página (HTML)
                           url.startsWith('/projects/') || // /projects/* (subrotas) são API
                           url.startsWith('/project-templates') || // /project-templates é API
@@ -592,6 +594,24 @@ const viteConfig = defineConfig(({ mode }) => {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+      },
+      '^/workspace': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /workspace (GET + text/html) é rota SPA.
+          // /workspace/* e GET com Accept application/json são API.
+          if (req.method === 'GET' && req.url === '/workspace') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
+          return undefined;
+        },
       },
       '^/rpa': {
         target: apiProxyTarget,

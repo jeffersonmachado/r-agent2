@@ -252,26 +252,29 @@ export function hasPermission(agent, resource, action) {
  */
 export function isSuperAdmin(agent) {
   if (!agent) return false;
-  
+
+  const normalizedRole = String(agent.role || '').trim().toLowerCase().replace(/-/g, '_');
+
   // Super Admin pode ser:
-  // 1. Role 'super_admin'
+  // 1. Role 'super_admin' (aceita variações de caixa e hífen)
   // 2. Owner do tenant 'system' (verifica tenantId original se disponível, ou atual)
   // 3. Username 'systemadmin' com role 'owner' (para quando tenantId foi alterado temporariamente)
-  if (agent.role === 'super_admin') {
+  if (normalizedRole === 'super_admin') {
     return true;
   }
-  
+
   // Verifica tenantId original (preservado quando systemadmin escolhe outro tenant)
-  const originalTenantId = agent.originalTenantId || agent.tenantId;
-  if (agent.role === 'owner' && originalTenantId === 'system') {
+  const originalTenantId = String(agent.originalTenantId || agent.tenantId || '').trim().toLowerCase();
+  if (normalizedRole === 'owner' && originalTenantId === 'system') {
     return true;
   }
-  
+
   // Fallback: verifica se é o systemadmin pelo username
-  if (agent.role === 'owner' && agent.username === 'systemadmin') {
+  const normalizedUsername = String(agent.username || '').trim().toLowerCase();
+  if (normalizedRole === 'owner' && normalizedUsername === 'systemadmin') {
     return true;
   }
-  
+
   return false;
 }
 

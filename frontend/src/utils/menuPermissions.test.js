@@ -30,4 +30,28 @@ describe('menuPermissions', () => {
     expect(superAdminOnlyItem).toBeTruthy();
     expect(canAccessMenuItem(superAdminAgent, superAdminOnlyItem)).toBe(true);
   });
+
+  it('permite super_admin acessar /qa diretamente', () => {
+    const directSuperAdminAgent = {
+      id: 'agent-direct-super-admin',
+      username: 'root',
+      role: 'super_admin',
+      tenantId: 'tenant-x',
+    };
+
+    expect(isSuperAdmin(directSuperAdminAgent)).toBe(true);
+    expect(canAccessPath(directSuperAdminAgent, '/qa')).toBe(true);
+  });
+
+  it('reconhece variacao de role SUPER-ADMIN como super admin', () => {
+    const variantRoleAgent = {
+      id: 'agent-variant-super-admin',
+      username: 'root',
+      role: 'SUPER-ADMIN',
+      tenantId: 'tenant-y',
+    };
+
+    expect(isSuperAdmin(variantRoleAgent)).toBe(true);
+    expect(canAccessPath(variantRoleAgent, '/qa')).toBe(true);
+  });
 });

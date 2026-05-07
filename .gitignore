@@ -148,3 +148,12 @@ runtime/
 
 # Saída de teste do empacotamento
 dist/test-release/
+
+# Artefatos Playwright/Replay (não versionar)
+playwright-report/
+test-results/
+frontend-e2e/playwright-report/
+frontend-e2e/test-results/
+rpa/traces/
+*.trace.zip
+*.webm

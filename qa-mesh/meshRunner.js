@@ -26,6 +26,7 @@ const METRICS_PATH = process.env.QA_MESH_METRICS_PATH || path.join(__dirname, 'm
 const INTELLIGENCE_DIR = process.env.QA_MESH_INTELLIGENCE_DIR || path.join(__dirname, 'intelligence');
 const QA_MESH_GO_NO_GO_PATH = process.env.QA_MESH_GO_NO_GO_PATH || path.join(__dirname, 'go-no-go-report.json');
 const QA_MESH_RELEASE_GATE_PATH = process.env.QA_MESH_RELEASE_GATE_PATH || path.join(__dirname, 'release-gate-report.json');
+const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -285,6 +286,7 @@ function inferFlowDomain(recording) {
 }
 
 function loadRpaSeedScenarios() {
+  const waveScenarioMap = loadWaveScenarioMapByPlatformId();
   const seedsDir = path.join(ROOT_DIR, 'rpa/seeds');
   if (!fs.existsSync(seedsDir)) return [];
   return fs.readdirSync(seedsDir)
@@ -293,13 +295,20 @@ function loadRpaSeedScenarios() {
       const recording = safeReadJson(path.join(seedsDir, file), null);
       if (!recording) return null;
       const domain = inferFlowDomain(recording);
+      const semantic = waveScenarioMap.get(recording.id || file.replace(/\.json$/, '')) || null;
       return toScenarioBase({
         id: recording.id || file.replace(/\.json$/, ''),
+        scenarioId: semantic?.id || recording.id || file.replace(/\.json$/, ''),
         domain,
         type: 'e2e',
         source: 'seed',
         flow: recording.name || recording.id || file,
-        steps: (recording.steps || []).map((step) => step.type || step.url || 'step'),
+        steps: Array.isArray(semantic?.semanticSteps) && semantic.semanticSteps.length > 0
+          ? semantic.semanticSteps
+          : (recording.steps || []).map((step) => step.type || step.url || 'step'),
+        semanticSteps: Array.isArray(semantic?.semanticSteps) ? semantic.semanticSteps : [],
+        wave: semantic?.waveId || null,
+        executionMode: semantic ? 'semantic' : 'legacy_seed',
         assertions: ['execução RPA seed concluída sem erro crítico'],
         rpaRecordingId: recording.id || file.replace(/\.json$/, ''),
         criticality: 'standard',
@@ -308,6 +317,38 @@ function loadRpaSeedScenarios() {
       });
     })
     .filter(Boolean);
+}
+
+function loadWaveScenarioMapByPlatformId() {
+  const map = new Map();
+  const payload = safeReadJson(SCENARIO_STORE_PATH, null);
+  const scenarios = Array.isArray(payload)
+    ? payload
+    : (Array.isArray(payload?.scenarios) ? payload.scenarios : []);
+
+  for (const scenario of scenarios) {
+    const ids = new Set();
+    ids.add(String(scenario?.id || '').trim());
+    toArray(scenario?.platformScenarioIds).forEach((id) => ids.add(String(id || '').trim()));
+    toArray(scenario?.platform?.platformScenarioIds).forEach((id) => ids.add(String(id || '').trim()));
+
+    ids.forEach((id) => {
+      if (!id) return;
+      map.set(id, {
+        id: scenario.id,
+        waveId: scenario.waveId || null,
+        semanticSteps: Array.isArray(scenario?.semanticSteps)
+          ? scenario.semanticSteps
+          : (Array.isArray(scenario?.steps) ? scenario.steps : []),
+      });
+    });
+  }
+
+  return map;
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 function loadRpaFlowScenarios() {
@@ -1259,6 +1300,23 @@ function buildMetrics(history, currentExecution) {
 }
 
 function buildSyntheticReplay(scenario, result, baseDir) {
+  const existingReplayArtifact = Array.isArray(result?.artifacts)
+    ? result.artifacts.find((item) => item && item.type === 'replay' && item.path)
+    : null;
+
+  if (existingReplayArtifact && fs.existsSync(existingReplayArtifact.path)) {
+    return {
+      type: 'replay',
+      path: existingReplayArtifact.path,
+      summaryType: scenario.source === 'hybrid'
+        ? 'hybrid_replay_summary'
+        : scenario.rpaRecordingId
+          ? 'rpa_replay_summary'
+          : 'api_replay_summary',
+      source: 'adapter_replay',
+    };
+  }
+
   const replayDir = path.join(baseDir, 'replays');
   ensureDir(replayDir);
   const summaryType = scenario.source === 'hybrid'
@@ -1351,7 +1409,7 @@ async function executeScenarioWithFallback(scenario, context) {
   }
 
   try {
-    const adapterResult = await adapter.executeScenario(scenario, { repoRoot: ROOT_DIR });
+    const adapterResult = await adapter.executeScenario(scenario, { repoRoot: ROOT_DIR, onStepProgress: context.onStepProgress });
     return {
       ...adapterResult,
       status: classifyScenarioStatus(adapterResult),
@@ -1450,7 +1508,12 @@ async function runMesh(options = {}) {
       total: registryTotal,
     });
 
-    const adapterResult = await executeScenarioWithFallback(effectiveScenario, { appendLog });
+    const adapterResult = await executeScenarioWithFallback(effectiveScenario, {
+      appendLog,
+      onStepProgress: options.onStepProgress
+        ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
+        : null,
+    });
     const scenarioFinishedAt = nowIso();
     const result = {
       id: effectiveScenario.id,

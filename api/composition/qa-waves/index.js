@@ -12,11 +12,12 @@ const { emitEvent } = require('../../services/websocketService');
 const {
   listWaves,
   listJourneys,
+  saveJourney,
+  deleteJourney,
   listJourneyStatus,
   listStepStatus,
   listReplays,
   getReplayById,
-  queueWaveExecution,
   reexecuteReplay,
   getExecutionStatus,
   collectScenarioLatestStats,
@@ -29,6 +30,7 @@ const {
   saveScenario,
   listLatestScenarios,
   runScenarioExecution,
+  deleteScenario,
 } = require('../../services/qaWavesScenarioService');
 const {
   listWaveExecutions,
@@ -59,16 +61,19 @@ function buildQaWavesRouteDeps() {
     listWaves,
     listJourneys,
     listJourneyStatus,
+    saveWaveJourney: saveJourney,
+    deleteWaveJourney: deleteJourney,
     listStepStatus,
     listReplays,
     getReplayById,
-    queueWaveExecution,
+    queueWaveExecution: runScenarioExecution,
     reexecuteReplay,
     getExecutionStatus,
     inferWaveScenario: generateScenarioWithAI,
     generateWaveSeeds: generateSeeds,
     validateWaveScenario: validateScenarioPayload,
     saveWaveScenario: saveScenario,
+    deleteWaveScenario: deleteScenario,
     listWaveScenarios: (filters) => {
       const result = listLatestScenarios(filters);
       const stats = collectScenarioLatestStats();

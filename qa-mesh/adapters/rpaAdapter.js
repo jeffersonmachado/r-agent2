@@ -27,7 +27,7 @@ function isTransientRpaFailure(result) {
   );
 }
 
-async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000) {
+async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context = {}) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     const status = getExecutionStatus(executionId);
@@ -72,6 +72,11 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000) {
         rawStatus: status,
       };
     }
+    context.onStepProgress?.({
+      progress: status.progress ?? 0,
+      currentStep: status.currentStep ?? null,
+      totalSteps: status.totalSteps ?? 0,
+    });
     await sleep(1000);
   }
   return {
@@ -83,7 +88,7 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000) {
   };
 }
 
-async function executeScenario(scenario) {
+async function executeScenario(scenario, adapterContext = {}) {
   const maxAttempt = Number(process.env.QA_MESH_RPA_MAX_ATTEMPTS || 2);
   const effectiveAttempts = Number.isFinite(maxAttempt) && maxAttempt > 0 ? maxAttempt : 2;
   const requestedWaitTimeout = Number(scenario.timeoutMs);
@@ -106,7 +111,7 @@ async function executeScenario(scenario) {
       scenario.data || {}
     );
 
-    const result = await waitForExecution(start.executionId, effectiveWaitTimeout);
+    const result = await waitForExecution(start.executionId, effectiveWaitTimeout, adapterContext);
     if (result?.success) {
       if (attempt > 1) {
         result.logs = [

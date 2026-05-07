@@ -16,6 +16,13 @@ export function ExecutionProgress({
   const isRunning = status === 'processing';
   const isSuccess = status === 'success';
   const isFailed = status === 'failed';
+  const displayProgress = Math.round(progress);
+  const currentStepTitle = typeof currentStep === 'string'
+    ? currentStep
+    : (currentStep?.scenarioName ? `Executando: ${currentStep.scenarioName}` : null);
+  const currentStepDetail = typeof currentStep === 'object' && currentStep !== null
+    ? (currentStep.label || null)
+    : null;
 
   const formatDuration = (ms) => {
     const seconds = Math.floor(ms / 1000);
@@ -83,12 +90,13 @@ export function ExecutionProgress({
           <div
             className="execution-progress-bar-fill"
             style={{
-              width: `${progress}%`,
+              width: `${displayProgress}%`,
               backgroundColor: getStatusColor(),
+              transition: 'width 0.5s ease-out',
             }}
           />
         </div>
-        <span className="execution-progress-percentage">{progress}%</span>
+        <span className="execution-progress-percentage">{displayProgress}%</span>
       </div>
 
       {/* Informações de resumo */}
@@ -131,14 +139,16 @@ export function ExecutionProgress({
       {/* Step atual */}
       {currentStep && (
         <div className="execution-progress-current-step">
-          <div className="execution-progress-current-step-title">
-            Executando: {currentStep.scenarioName || 'Cenário'}
-          </div>
-          <div
-            className={`execution-progress-current-step-status ${currentStep.status}`}
-          >
-            {currentStep.status}
-          </div>
+          {currentStepTitle && (
+            <div className="execution-progress-current-step-title">
+              {currentStepTitle}
+            </div>
+          )}
+          {currentStepDetail && (
+            <div className="execution-progress-current-step-detail">
+              {currentStepDetail}
+            </div>
+          )}
         </div>
       )}
 

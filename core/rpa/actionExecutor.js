@@ -71,6 +71,8 @@ class ActionExecutor {
     this.debugLogs = [];
     this.consoleLogs = [];
     this.httpErrors = [];
+    this.networkEvents = [];
+    this.tracePath = null;
     this.reliabilityCounters = {
       totalActions: 0,
       failedActions: 0,
@@ -158,20 +160,44 @@ class ActionExecutor {
     });
 
     this.page.on('requestfailed', (request) => {
-      this.errors.push({
+      const event = {
         type: 'request_failed',
         url: request.url(),
         method: request.method(),
         timestamp: new Date().toISOString(),
-      });
+      };
+      this.errors.push(event);
+      this.networkEvents.push(event);
+      if (this.networkEvents.length > 500) this.networkEvents.shift();
+    });
+
+    this.page.on('request', (request) => {
+      const event = {
+        type: 'request',
+        url: request.url(),
+        method: request.method(),
+        timestamp: new Date().toISOString(),
+      };
+      this.networkEvents.push(event);
+      if (this.networkEvents.length > 500) this.networkEvents.shift();
     });
 
     if (this.options.captureHttpErrors) {
       this.page.on('response', async (response) => {
         try {
           const status = response.status();
-          if (status < 400) return;
           const req = response.request();
+          const responseEvent = {
+            type: 'response',
+            status,
+            url: response.url(),
+            method: req.method(),
+            timestamp: new Date().toISOString(),
+          };
+          this.networkEvents.push(responseEvent);
+          if (this.networkEvents.length > 500) this.networkEvents.shift();
+
+          if (status < 400) return;
           const url = response.url();
           const method = req.method();
 
@@ -2506,6 +2532,33 @@ class ActionExecutor {
     }
   }
 
+  async startTracing(options = {}) {
+    if (!this.options.traceEnabled) return null;
+    if (!this.context || !this.context.tracing || typeof this.context.tracing.start !== 'function') {
+      return null;
+    }
+    await this.context.tracing.start({
+      screenshots: options.screenshots !== false,
+      snapshots: options.snapshots !== false,
+      sources: options.sources !== false,
+    });
+    this.tracePath = null;
+    return true;
+  }
+
+  async stopTracing(traceName = null) {
+    if (!this.options.traceEnabled) return null;
+    if (!this.context || !this.context.tracing || typeof this.context.tracing.stop !== 'function') {
+      return null;
+    }
+
+    const targetName = String(traceName || `rpa-trace-${Date.now()}`).replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const targetPath = path.join(this.options.traceDir, `${targetName}.zip`);
+    await this.context.tracing.stop({ path: targetPath });
+    this.tracePath = targetPath;
+    return targetPath;
+  }
+
   async close() {
     if (this.page) {
       try {
@@ -2536,6 +2589,22 @@ class ActionExecutor {
 
   getHttpErrors() {
     return [...this.httpErrors];
+  }
+
+  getNetworkEvents() {
+    return [...this.networkEvents];
+  }
+
+  getConsoleLogs() {
+    return [...this.consoleLogs];
+  }
+
+  getDebugLogs() {
+    return [...this.debugLogs];
+  }
+
+  getTracePath() {
+    return this.tracePath || null;
   }
 
   /**

@@ -57,7 +57,26 @@ function getAllExecutions(limit = 20) {
     .slice(0, limit);
 }
 
+function getActiveExecution() {
+  for (const record of executions.values()) {
+    if (record.status === 'running' || record.status === 'queued') {
+      return record;
+    }
+  }
+  return null;
+}
+
 function enqueueExecution(kind, payload, runner) {
+  const active = getActiveExecution();
+  if (active) {
+    const err = new Error(
+      `Já existe uma execução em andamento (${active.executionId}). Aguarde a conclusão antes de iniciar uma nova onda.`
+    );
+    err.code = 'EXECUTION_ALREADY_RUNNING';
+    err.activeExecutionId = active.executionId;
+    throw err;
+  }
+
   const record = createExecutionRecord(kind, payload);
   queueMicrotask(async () => {
     try {

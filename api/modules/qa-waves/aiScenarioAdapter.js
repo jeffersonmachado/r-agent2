@@ -5,6 +5,10 @@ const {
   FORBIDDEN_STEP_TYPES,
   ALLOWED_ADAPTERS,
   ALLOWED_CHANNELS,
+  STEP_CATEGORY_TYPES,
+  STEP_ACTORS,
+  ACTION_CATEGORY_MAP,
+  CATEGORY_ACTOR_MAP,
 } = require('./waveScenario.constants');
 const { validateScenarioCompatibility } = require('./waveScenarioSchema');
 
@@ -41,19 +45,52 @@ function normalizeStep(step, index, channels) {
     return STEP_DEFAULT_ADAPTER[type] || 'api';
   })();
 
+  // Derivar category e actor a partir do tipo se não fornecidos
+  const category = STEP_CATEGORY_TYPES.includes(step?.category)
+    ? step.category
+    : (ACTION_CATEGORY_MAP[type] || 'SYSTEM_EVENT');
+
+  const actor = STEP_ACTORS.includes(step?.actor)
+    ? step.actor
+    : (CATEGORY_ACTOR_MAP[category] || 'system');
+
+  // Estrutura de evidência com campos padrão
+  const evidence = step?.evidence && typeof step.evidence === 'object'
+    ? {
+        screenshotBefore: step.evidence.screenshotBefore || null,
+        screenshotAfter: step.evidence.screenshotAfter || null,
+        payload: step.evidence.payload || null,
+        apiRequest: step.evidence.apiRequest || null,
+        apiResponse: step.evidence.apiResponse || null,
+        domSnapshot: step.evidence.domSnapshot || null,
+        consoleErrors: step.evidence.consoleErrors || null,
+        networkEvents: step.evidence.networkEvents || null,
+        ticketId: step.evidence.ticketId || null,
+        conversationId: step.evidence.conversationId || null,
+        messageId: step.evidence.messageId || null,
+      }
+    : null;
+
   return {
     id: step?.id || `step_${String(index + 1).padStart(3, '0')}`,
     order: index + 1,
     type,
+    category,
+    actor,
     name: step?.name || null,
     description: step?.description || null,
     adapter,
     channel,
     input: step?.input || undefined,
     expected: step?.expected || undefined,
+    actual: step?.actual || undefined,
     data: step?.data || undefined,
     timeoutMs: Number.isFinite(Number(step?.timeoutMs)) ? Number(step.timeoutMs) : 15000,
     enabled: step?.enabled !== false,
+    evidence,
+    startedAt: step?.startedAt || null,
+    finishedAt: step?.finishedAt || null,
+    durationMs: step?.durationMs != null ? Number(step.durationMs) : null,
   };
 }
 
@@ -100,7 +137,9 @@ function enrichDefaults(scenarioInput, context = {}) {
     platform: {
       platformScenarioIds: Array.isArray(scenarioInput?.platform?.platformScenarioIds)
         ? scenarioInput.platform.platformScenarioIds.filter(Boolean)
-        : [],
+        : (Array.isArray(scenarioInput?.platformScenarioIds)
+          ? scenarioInput.platformScenarioIds.filter(Boolean)
+          : []),
       ...(scenarioInput.platform || {}),
     },
     createdAt: scenarioInput.createdAt || now,

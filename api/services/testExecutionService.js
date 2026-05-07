@@ -207,6 +207,30 @@ function matchesReplayFilters(replay, filters) {
     }
   }
 
+  if (filters.source) {
+    if (normalizeText(replay.source) !== filters.source) return false;
+  }
+
+  if (filters.waveId) {
+    if (normalizeText(replay.waveId) !== filters.waveId) return false;
+  }
+
+  if (filters.journeyId) {
+    if (normalizeText(replay.journeyId) !== filters.journeyId) return false;
+  }
+
+  if (filters.scenarioId) {
+    if (normalizeText(replay.scenarioId) !== filters.scenarioId) return false;
+  }
+
+  if (filters.seedId) {
+    if (normalizeText(replay.seedId) !== filters.seedId) return false;
+  }
+
+  if (filters.executionId) {
+    if (normalizeText(replay.executionId) !== filters.executionId) return false;
+  }
+
   if (filters.result === 'success' && normalizeText(replay.result) !== 'success') {
     return false;
   }
@@ -418,23 +442,39 @@ function inferReplayStatusFromExecution(execution = {}, fallbackStatus = null) {
   return mapped;
 }
 
+function resolveScreenshotToBase64(value) {
+  if (!value || typeof value !== 'string') return null;
+  if (value.startsWith('data:') || !value.startsWith('/')) return value;
+  try {
+    if (fs.existsSync(value)) {
+      return fs.readFileSync(value).toString('base64');
+    }
+  } catch (_) {
+    // arquivo inacessível — retorna null para filtrar
+  }
+  return null;
+}
+
 function normalizeScreensArray(sourceScreens = []) {
   if (!Array.isArray(sourceScreens)) return [];
 
   return sourceScreens
     .map((item, index) => {
       if (typeof item === 'string') {
+        const screenshot = resolveScreenshotToBase64(item);
+        if (!screenshot) return null;
         return {
           screenId: `auto-${index + 1}`,
           step: 'auto',
           timestamp: null,
-          screenshot: item,
+          screenshot,
         };
       }
 
       if (!item || typeof item !== 'object') return null;
 
-      const screenshot = item.screenshot || item.path || item.url || item.file || null;
+      const rawScreenshot = item.screenshot || item.path || item.url || item.file || null;
+      const screenshot = resolveScreenshotToBase64(rawScreenshot);
       return {
         ...item,
         screenId: item.screenId || `auto-${index + 1}`,
@@ -444,19 +484,6 @@ function normalizeScreensArray(sourceScreens = []) {
       };
     })
     .filter(Boolean);
-}
-
-function extractScreensFromArtifacts(result = {}) {
-  const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
-  const screenshots = artifacts
-    .filter((artifact) => String(artifact?.type || '').toLowerCase() === 'screenshot' && artifact?.path)
-    .map((artifact, index) => ({
-      screenId: `artifact-${index + 1}`,
-      step: 'artifact',
-      timestamp: result.finishedAt || result.startedAt || null,
-      screenshot: artifact.path,
-    }));
-  return screenshots;
 }
 
 function selectQaMeshScenarioResult(payload, queuedExecution) {
@@ -512,7 +539,11 @@ function buildQaWaveStepTitle(step) {
 }
 
 function isQaWaveStepDefinition(step) {
-  return step && typeof step === 'object' && typeof step.type === 'string' && !('title' in step);
+  if (!step || typeof step !== 'object') return false;
+  if (step.action || step.name || step.screenshotAfter || step.startedAt || step.durationMs !== undefined) {
+    return false;
+  }
+  return typeof step.type === 'string' && !('title' in step);
 }
 
 function normalizeQaWaveSteps(steps, payload) {
@@ -629,14 +660,6 @@ function reconcileQaWaveReplayPayload(payload = {}) {
       merged.errors = scenarioResult.errors;
     }
 
-    const artifactScreens = extractScreensFromArtifacts(scenarioResult);
-    if (artifactScreens.length > 0) {
-      const existingScreens = Array.isArray(merged.screens) ? merged.screens : merged.screenshots;
-      const normalizedExisting = normalizeScreensArray(existingScreens || []);
-      if (normalizedExisting.length === 0) {
-        merged.screens = artifactScreens;
-      }
-    }
   }
 
   const normalizedMerged = normalizeReplayPayload(merged);
@@ -680,7 +703,7 @@ function persistReplayIfChanged(filePath, originalPayload, nextPayload) {
   }
 }
 
-async function createExecution(payload = {}, { authToken } = {}) {
+async function createExecution(payload = {}, { authToken, tenantId = null } = {}) {
   const source = String(payload.source || 'qa_waves').toLowerCase();
 
   if (source === 'qa_waves') {
@@ -694,10 +717,13 @@ async function createExecution(payload = {}, { authToken } = {}) {
       scenarioIds,
       seedIds: Array.isArray(payload.seedIds) ? payload.seedIds : [],
       replay: payload.replay !== false,
+      tenantId,
     });
 
     return {
       executionId: run.executionId,
+      replayId: run.replayId || null,
+      replayIds: Array.isArray(run.replayIds) ? run.replayIds : [],
       source,
       status: 'processing',
       acceptedAt: new Date().toISOString(),
@@ -800,12 +826,24 @@ function listReplayFiles({
   dateRange = 'all',
   sortBy = 'date',
   sortOrder = 'desc',
+  source = '',
+  waveId = '',
+  journeyId = '',
+  scenarioId = '',
+  seedId = '',
+  executionId = '',
 } = {}) {
   const replayDirs = getAllReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
   const filters = {
     search: normalizeText(search).trim(),
     result: String(result || 'all'),
     dateRange: String(dateRange || 'all'),
+    source: normalizeText(source).trim(),
+    waveId: normalizeText(waveId).trim(),
+    journeyId: normalizeText(journeyId).trim(),
+    scenarioId: normalizeText(scenarioId).trim(),
+    seedId: normalizeText(seedId).trim(),
+    executionId: normalizeText(executionId).trim(),
   };
   const safeSortBy = String(sortBy || 'date');
   const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -854,6 +892,10 @@ function listReplayFiles({
         replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id') || entry.name.replace(/\.json$/i, ''),
         scenarioId: extractJsonStringField(prefix, 'scenarioId'),
         executionId: extractJsonStringField(prefix, 'executionId'),
+        source: extractJsonStringField(prefix, 'source'),
+        waveId: extractJsonStringField(prefix, 'waveId'),
+        journeyId: extractJsonStringField(prefix, 'journeyId'),
+        seedId: extractJsonStringField(prefix, 'seedId'),
         status: extractJsonStringField(prefix, 'status'),
         result: extractJsonStringField(prefix, 'result') || extractJsonStringField(prefix, 'status'),
         mode: extractJsonStringField(prefix, 'mode'),

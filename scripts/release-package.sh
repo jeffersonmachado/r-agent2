@@ -64,6 +64,23 @@ FORBIDDEN_PATTERNS=(
   '(^|/)\.env\..+$'
   '\.env\.production$'
   '(^|/)coverage/'
+  '(^|/)frontend-e2e/playwright-report/'
+  '(^|/)frontend-e2e/test-results/'
+  '(^|/)playwright-report/'
+  '(^|/)test-results/'
+  '(^|/)qa/workspace-core/evidence/'
+  '(^|/)rpa/traces/'
+  '(^|/)rpa/screenshots/'
+  '(^|/)rpa/replay/'
+  '\.trace\.zip$'
+  '\.webm$'
+  '\.har$'
+  '(^|/)artifacts/'
+  '(^|/)logs/'
+  '(^|/)tmp/'
+  '(^|/)temp/'
+  '(^|/)\.cache/'
+  '(^|/)dist-test/'
   '(^|/)remote-dumps/'
   '(^|/)remote-dumps2/'
   '(^|/)frontend_backup/'
@@ -91,6 +108,40 @@ FORBIDDEN_PATTERNS=(
   '(^|/)qa-mesh/isolated-run[^/]*?/'
 )
 
+WORKSPACE_BLOCKING_PATHS=(
+  'frontend-e2e/playwright-report'
+  'frontend-e2e/test-results'
+  'qa/workspace-core/evidence'
+  'rpa/traces'
+  'rpa/screenshots'
+  'rpa/replay'
+)
+
+collect_workspace_contamination() {
+  local found=()
+  local rel
+
+  for rel in "${WORKSPACE_BLOCKING_PATHS[@]}"; do
+    if [[ -e "$PROJECT_ROOT/$rel" ]]; then
+      found+=("$rel/")
+    fi
+  done
+
+  while IFS= read -r match; do
+    [[ -n "$match" ]] && found+=("$match")
+  done < <(
+    cd "$PROJECT_ROOT"
+    find . \
+      \( -path './.git' -o -path './node_modules' -o -path './frontend-e2e/node_modules' -o -path './dist' \) -prune \
+      -o -type f \( -name '*.trace.zip' -o -name '*.webm' -o -name '*.har' \) -print \
+      | sed 's#^\./##'
+  )
+
+  if [[ ${#found[@]} -gt 0 ]]; then
+    printf '%s\n' "${found[@]}" | awk '!seen[$0]++'
+  fi
+}
+
 # ── 1. Pré-condições ──────────────────────────────────────────────────────────
 step "Verificando pré-condições..."
 
@@ -104,6 +155,19 @@ if ! command -v unzip >/dev/null 2>&1; then
 fi
 
 ok "Pré-condições verificadas"
+
+step "Auditando workspace contra artefatos temporários de teste..."
+WORKSPACE_CONTAMINATION="$(collect_workspace_contamination || true)"
+if [[ -n "$WORKSPACE_CONTAMINATION" ]]; then
+  echo -e "${RED}ERRO:${NC}"
+  echo "Release contaminado com artefatos Playwright:"
+  echo "$WORKSPACE_CONTAMINATION" | sed 's/^/* /'
+  echo ""
+  echo "Execute:"
+  echo "npm run clean:test-artifacts"
+  exit 1
+fi
+ok "Workspace limpo para empacotamento"
 
 # ── 2. Gerar ZIP ──────────────────────────────────────────────────────────────
 if [[ -n "$AUDIT_ONLY_ZIP" ]]; then

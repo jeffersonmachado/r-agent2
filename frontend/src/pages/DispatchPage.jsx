@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { listOrders, updateOrderStatus } from '../api/orders';
+import { useToast } from '../components/Toast';
 import { CrudPageBase } from '../modules/crud-base';
 
 export function DispatchPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { showToast, ToastContainer } = useToast();
 
   const load = async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await listOrders({ status: 'ready', limit: 50, offset: 0 });
       setOrders(res?.orders || []);
     } catch (e) {
-      setError(e?.message || 'Erro ao listar pedidos prontos');
+      showToast(e?.message || 'Erro ao listar pedidos prontos', 'error');
     } finally {
       setLoading(false);
     }
@@ -27,9 +27,10 @@ export function DispatchPage() {
   const dispatch = async (orderId) => {
     try {
       await updateOrderStatus(orderId, 'dispatched');
+      showToast('Pedido despachado com sucesso.', 'success');
       await load();
     } catch (e) {
-      setError(e?.body?.message || e?.message || 'Erro ao atualizar status');
+      showToast(e?.body?.message || e?.message || 'Erro ao atualizar status', 'error');
     }
   };
 
@@ -50,12 +51,6 @@ export function DispatchPage() {
         <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
       </div>
 
-      {error ? (
-        <div style={{ padding: '0.75rem', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, margin: '0 1rem 1rem' }}>
-          <strong>Erro:</strong> {error}
-        </div>
-      ) : null}
-
       <div style={{ padding: '0 1rem 1rem' }}>
         {loading ? <p>Carregando...</p> : null}
         {orders.map((o) => (
@@ -71,6 +66,7 @@ export function DispatchPage() {
         ))}
         {!loading && orders.length === 0 ? <p style={{ color: '#6b7280' }}>Nenhum pedido pronto para expedição.</p> : null}
       </div>
+      <ToastContainer />
     </CrudPageBase>
   );
 }

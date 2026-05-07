@@ -10,6 +10,8 @@ const {
   ALLOWED_SEED_SOURCES,
   ALLOWED_RISK_PRIORITY,
   KNOWN_BACKEND_ENTITIES,
+  STEP_CATEGORY_TYPES,
+  STEP_ACTORS,
 } = require('./waveScenario.constants');
 
 function isRecord(value) {
@@ -35,6 +37,16 @@ function validateStep(step, scenario, index, errors, warnings) {
 
   if (FORBIDDEN_STEP_TYPES.includes(step.type)) {
     errors.push({ code: 'forbidden_step_type', message: `Step type proibido detectado: ${step.type}`, stepId: step.id });
+  }
+
+  // Valida category se presente (campo opcional, sem quebrar compatibilidade)
+  if (step.category != null && !STEP_CATEGORY_TYPES.includes(step.category)) {
+    errors.push({ code: 'invalid_step_category', message: `Step category invalida: ${step.category}`, stepId: step.id });
+  }
+
+  // Valida actor se presente (campo opcional, sem quebrar compatibilidade)
+  if (step.actor != null && !STEP_ACTORS.includes(step.actor)) {
+    errors.push({ code: 'invalid_step_actor', message: `Step actor invalido: ${step.actor}`, stepId: step.id });
   }
 
   if (!ALLOWED_ADAPTERS.includes(step.adapter)) {

@@ -18,19 +18,6 @@
   color: var(--color-text-secondary);
 }
 
-.qa-waves-feedback {
-  margin-bottom: 0.75rem;
-  font-size: 0.95rem;
-}
-
-.qa-waves-feedback.error {
-  color: var(--color-status-error);
-}
-
-.qa-waves-feedback.success {
-  color: var(--color-status-success);
-}
-
 .qa-waves-panel {
   margin-bottom: 1rem;
   border: 1px solid var(--color-border-default);
@@ -86,7 +73,8 @@
   border: 1px solid transparent;
 }
 
-.qa-business-status--go {
+.qa-business-status--go,
+.qa-business-status--success {
   color: var(--color-status-success);
   background: rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.4);
@@ -98,10 +86,23 @@
   border-color: rgba(245, 158, 11, 0.4);
 }
 
+.qa-business-status--executing {
+  color: var(--color-status-info);
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.qa-business-status--failure,
 .qa-business-status--no_go {
   color: var(--color-status-error);
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
+}
+
+.qa-business-status--pending {
+  color: var(--color-text-secondary);
+  background: rgba(100, 116, 139, 0.15);
+  border-color: rgba(100, 116, 139, 0.4);
 }
 
 .qa-journey-actions {

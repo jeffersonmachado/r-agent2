@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 import { formatJSON, isJSON } from '../utils/devDashboardUtils';
@@ -37,21 +37,38 @@ export function useDevDashboard() {
   const [fileSaving, setFileSaving] = useState(false);
   const [fileError, setFileError] = useState(null);
   const [jsonData, setJsonData] = useState(null);
+  const refreshInFlightRef = useRef(false);
+
+  const isTransientDashboardError = useCallback((err) => {
+    if (!err) return false;
+    const message = String(err?.message || '').toLowerCase();
+    return (
+      err?.connectionRefused === true ||
+      Number(err?.status) === 0 ||
+      err?.name === 'AbortError' ||
+      message.includes('request timed out') ||
+      message.includes('failed to fetch') ||
+      message.includes('network')
+    );
+  }, []);
 
   // Função para buscar status do sistema
   const fetchSystemStatus = useCallback(async () => {
     try {
       const data = await fetchJson('/system/status', {
         method: 'GET',
-        timeoutMs: 5000,
+        timeoutMs: 10000,
+        suppressErrorLog: true,
       });
       setSystemStatus(data);
       setLastUpdate(new Date());
     } catch (err) {
-      logger.error('[DevDashboard] Erro ao buscar status', err);
+      if (!isTransientDashboardError(err)) {
+        logger.error('[DevDashboard] Erro ao buscar status', err);
+      }
       
       // Se for erro de conexão, define um estado de erro
-      if (err.connectionRefused || err.message === 'Failed to fetch' || err.status === 0) {
+      if (isTransientDashboardError(err)) {
         const errorStatus = {
           timestamp: new Date().toISOString(),
           services: {
@@ -94,49 +111,51 @@ export function useDevDashboard() {
         setLastUpdate(new Date());
       }
     }
-  }, []);
+  }, [isTransientDashboardError]);
 
   // Função para buscar métricas
   const fetchMetrics = useCallback(async () => {
     try {
       const data = await fetchJson('/analytics/metrics', {
         method: 'GET',
-        timeoutMs: 5000,
+        timeoutMs: 10000,
+        suppressErrorLog: true,
       }).catch(() => null);
       setMetrics(data);
     } catch (err) {
       logger.debug('[DevDashboard] Métricas não disponíveis', err);
       // Se for erro de conexão, limpa as métricas
-      if (err.connectionRefused || err.message === 'Failed to fetch' || err.status === 0) {
+      if (isTransientDashboardError(err)) {
         setMetrics(null);
       }
     }
-  }, []);
+  }, [isTransientDashboardError]);
 
   // Função para buscar informações do ambiente
   const fetchEnvInfo = useCallback(async () => {
     try {
       const data = await fetchJson('/version', {
         method: 'GET',
-        timeoutMs: 5000,
+        timeoutMs: 10000,
+        suppressErrorLog: true,
       });
       setEnvInfo(data);
     } catch (err) {
-      logger.error('[DevDashboard] Erro ao buscar info do ambiente', err);
+      if (!isTransientDashboardError(err)) {
+        logger.error('[DevDashboard] Erro ao buscar info do ambiente', err);
+      }
       // Se for erro de conexão, limpa as informações do ambiente
-      if (err.connectionRefused || err.message === 'Failed to fetch' || err.status === 0) {
+      if (isTransientDashboardError(err)) {
         setEnvInfo(null);
       }
     }
-  }, []);
+  }, [isTransientDashboardError]);
 
   // Função para buscar status de rate limit
   const fetchRateLimitStatus = useCallback(async () => {
     try {
       const operations = ['BOOTSTRAP', 'GENERATION_REAL', 'DRY_RUN'];
-      const statuses = {};
-      
-      for (const op of operations) {
+      const pairs = await Promise.all(operations.map(async (op) => {
         try {
           const result = await fetchJson('/system/check-rate-limit', {
             method: 'POST',
@@ -144,55 +163,67 @@ export function useDevDashboard() {
               bootstrap: op === 'BOOTSTRAP',
               executionMode: op === 'DRY_RUN' ? 'dry-run' : 'real',
             }),
-            timeoutMs: 5000,
+            timeoutMs: 10000,
+            suppressErrorLog: true,
           });
-          statuses[op] = result;
+          return [op, result];
         } catch (err) {
-          // Se for erro de conexão, marca como erro de conexão
-          if (err.connectionRefused || err.message === 'Failed to fetch' || err.status === 0) {
-            statuses[op] = { error: 'API não acessível - servidor offline' };
-          } else {
-            statuses[op] = { error: err.message };
+          if (isTransientDashboardError(err)) {
+            return [op, { error: 'API não acessível ou indisponível no momento' }];
           }
+          return [op, { error: err.message }];
         }
-      }
-      
-      setRateLimitStatus(statuses);
+      }));
+
+      setRateLimitStatus(Object.fromEntries(pairs));
     } catch (err) {
-      logger.error('[DevDashboard] Erro ao buscar rate limit', err);
+      if (!isTransientDashboardError(err)) {
+        logger.error('[DevDashboard] Erro ao buscar rate limit', err);
+      }
       // Se for erro de conexão geral, limpa o status
-      if (err.connectionRefused || err.message === 'Failed to fetch' || err.status === 0) {
+      if (isTransientDashboardError(err)) {
         setRateLimitStatus(null);
       }
     }
-  }, []);
+  }, [isTransientDashboardError]);
 
   // Função para buscar conexões WebSocket
   const fetchWsConnections = useCallback(async () => {
     try {
       const data = await fetchJson('/system/websocket', {
         method: 'GET',
-        timeoutMs: 5000,
+        timeoutMs: 10000,
+        suppressErrorLog: true,
       });
       setWsConnections(data);
     } catch (err) {
-      logger.error('[DevDashboard] Erro ao buscar conexões WebSocket', err);
+      if (!isTransientDashboardError(err)) {
+        logger.error('[DevDashboard] Erro ao buscar conexões WebSocket', err);
+      }
       // Sempre limpa em caso de erro
       setWsConnections(null);
     }
-  }, []);
+  }, [isTransientDashboardError]);
 
   // Função para atualizar tudo
   const refreshAll = useCallback(async () => {
+    if (refreshInFlightRef.current) {
+      return;
+    }
+    refreshInFlightRef.current = true;
     setLoading(true);
-    await Promise.all([
-      fetchSystemStatus(),
-      fetchMetrics(),
-      fetchEnvInfo(),
-      fetchRateLimitStatus(),
-      fetchWsConnections(),
-    ]);
-    setLoading(false);
+    try {
+      await Promise.all([
+        fetchSystemStatus(),
+        fetchMetrics(),
+        fetchEnvInfo(),
+        fetchRateLimitStatus(),
+        fetchWsConnections(),
+      ]);
+    } finally {
+      setLoading(false);
+      refreshInFlightRef.current = false;
+    }
   }, [fetchSystemStatus, fetchMetrics, fetchEnvInfo, fetchRateLimitStatus, fetchWsConnections]);
 
   // Função para buscar lista de arquivos

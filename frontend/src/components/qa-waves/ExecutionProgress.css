@@ -151,6 +151,12 @@
   margin-bottom: 4px;
 }
 
+.execution-progress-current-step-detail {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 .execution-progress-current-step-status {
   display: inline-block;
   font-size: 11px;

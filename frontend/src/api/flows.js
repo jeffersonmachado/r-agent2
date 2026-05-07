@@ -170,6 +170,12 @@ export function listRpaReplays(options = {}) {
   if (options.dateRange && options.dateRange !== 'all') params.set('dateRange', String(options.dateRange));
   if (options.sortBy) params.set('sortBy', String(options.sortBy));
   if (options.sortOrder) params.set('sortOrder', String(options.sortOrder));
+  if (options.source) params.set('source', String(options.source));
+  if (options.waveId) params.set('waveId', String(options.waveId));
+  if (options.journeyId) params.set('journeyId', String(options.journeyId));
+  if (options.scenarioId) params.set('scenarioId', String(options.scenarioId));
+  if (options.seedId) params.set('seedId', String(options.seedId));
+  if (options.executionId) params.set('executionId', String(options.executionId));
 
   const suffix = params.toString();
   // Use unified API endpoint /api/test-executions/replays

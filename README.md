@@ -47,6 +47,27 @@ npm run system:release
 npm run system:deploy
 ```
 
+### Gate local no servidor (pré-deploy)
+Use um gate local para bloquear deploy quando validação/release falhar.
+
+```bash
+# validação rápida (sem deploy)
+npm run deploy:gate:quick
+
+# validação oficial completa (sem deploy)
+npm run deploy:gate:official
+
+# validação + deploy automático só se PASS
+npm run deploy:gate -- --profile official --deploy-cmd "npm run deploy:prod:nobuild"
+
+# com rollback opcional em caso de falha no deploy
+npm run deploy:gate -- --profile official --deploy-cmd "npm run deploy:prod" --rollback-cmd "npm run deploy:down && npm run deploy:up"
+```
+
+- Script: `scripts/deploy-gate.sh`
+- Perfis: `official` (usa `system:release`) e `quick` (`system:validate` + `zip:release:clean` + `system:release-gate`)
+- Por padrão, sem `--deploy-cmd`, o fluxo apenas valida e nao executa deploy.
+
 ### Reprodutibilidade de bootstrap/build/smoke
 ```bash
 # caminho padrão (usa dependências já instaladas)

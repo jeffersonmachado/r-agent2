@@ -6,7 +6,10 @@ const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const { clearExecutions } = require('../../qa-mesh/executionQueue');
 const logger = require('../utils/logger');
+const qaWavesLogger = require('../utils/qaWavesLogger');
 const { emitEvent } = require('./websocketService');
+const qaWavesReplayAdapter = require('./qaWavesReplayAdapter');
+const qaWavesExecutionEngine = require('./qaWavesExecutionEngine');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
@@ -246,6 +249,39 @@ function buildResultLatency(result, execution) {
   return end - start;
 }
 
+function normalizeBrowserSession({ result, rpaReplayData, replayArtifact }) {
+  const rawResults = result?.rawStatus?.results || {};
+  const browserName = rpaReplayData?.browser?.name || 'chromium';
+  const browserVersion = rpaReplayData?.browser?.version || null;
+  const viewport = rpaReplayData?.browser?.viewport || rawResults.viewport || { width: 1280, height: 720 };
+
+  return {
+    browser: {
+      name: browserName,
+      version: browserVersion,
+      viewport,
+    },
+    tracePath: rawResults.tracePath || rpaReplayData?.tracePath || null,
+    traceWarning: rawResults.traceWarning || null,
+    rpaReplayPath: replayArtifact?.path || null,
+    steps: Array.isArray(rpaReplayData?.steps) && rpaReplayData.steps.length > 0
+      ? rpaReplayData.steps
+      : (Array.isArray(rawResults.steps) ? rawResults.steps : []),
+  };
+}
+
+function extractPrimaryReplayData(result) {
+  const replayArtifact = Array.isArray(result?.artifacts)
+    ? result.artifacts.find((a) => a.type === 'replay' && !a.summaryType)
+    : null;
+
+  const rpaReplayData = replayArtifact?.path
+    ? safeReadJson(replayArtifact.path, null)
+    : null;
+
+  return { replayArtifact, rpaReplayData };
+}
+
 function findMeshResult(execution, platformScenarioIds = []) {
   const results = Array.isArray(execution?.results) ? execution.results : [];
   const matched = results.find((result) => platformScenarioIds.includes(result?.id));
@@ -288,41 +324,73 @@ function buildReplayPatch(replayArtifact, execution) {
     ? result.errors
     : (execution?.error ? [{ message: execution.error }] : []);
 
-  // Extrai screens/screenshots do replay gerado pelo RpaTestRunner (rpaAdapter).
-  // O artifact sem summaryType é o do rpaAdapter (o sintético do meshRunner tem summaryType).
-  const rpaReplayArtifact = Array.isArray(result?.artifacts)
-    ? result.artifacts.find((a) => a.type === 'replay' && !a.summaryType)
-    : null;
+  const { replayArtifact: rpaReplayArtifact, rpaReplayData } = extractPrimaryReplayData(result);
   let screens = [];
   let screenshots = [];
-  if (rpaReplayArtifact?.path) {
-    const rpaReplayData = safeReadJson(rpaReplayArtifact.path, null);
-    if (rpaReplayData) {
-      screens = Array.isArray(rpaReplayData.screens) ? rpaReplayData.screens : [];
-      screenshots = screens
-        .map((s) => s.screenshot)
-        .filter((s) => typeof s === 'string' && s.length > 0);
-    }
+  if (rpaReplayData) {
+    screens = Array.isArray(rpaReplayData.screens) ? rpaReplayData.screens : [];
+    screenshots = screens
+      .map((s) => s.screenshot)
+      .filter((s) => typeof s === 'string' && s.length > 0);
   }
+
+  const converted = qaWavesReplayAdapter.convertExecutionToReplay({
+    replayId: replayArtifact.replayId,
+    executionId: execution?.executionId || null,
+    waveId: replayArtifact.scenario.waveId,
+    journeyId: replayArtifact.scenario.journeyId || replayArtifact.scenario.journey || null,
+    scenarioId: replayArtifact.scenario.id,
+    seedId: replayArtifact.seed?.id || null,
+    startedAt,
+    finishedAt,
+    durationMs,
+    status: status.publicResult,
+    errors,
+    steps: Array.isArray(replayArtifact.scenario.semanticSteps)
+      ? replayArtifact.scenario.semanticSteps
+      : (replayArtifact.scenario.steps || []),
+    platformAdapter: replayArtifact.payload.platformAdapter || null,
+  }, normalizeBrowserSession({ result, rpaReplayData, replayArtifact: rpaReplayArtifact }));
+
+  const semanticExecution = qaWavesExecutionEngine.executeScenario({
+    semanticSteps: Array.isArray(replayArtifact.scenario.semanticSteps)
+      ? replayArtifact.scenario.semanticSteps
+      : (replayArtifact.scenario.steps || []),
+    runtimeSteps: Array.isArray(converted.steps) ? converted.steps : [],
+  });
+
+  const replayStatus = converted.status;
+  const replayResult = replayStatus === 'success' ? 'success' : 'failed';
 
   return {
     executionStatus: String(execution?.status || 'completed').toLowerCase(),
-    status: status.replayStatus,
-    result: status.publicResult,
+    status: replayStatus,
+    result: replayResult,
+    source: 'qa-waves',
     finishedAt,
     endTime: finishedAt,
     durationMs,
     latency,
-    steps: Array.isArray(replayArtifact.scenario.semanticSteps)
-      ? replayArtifact.scenario.semanticSteps
-      : (replayArtifact.scenario.steps || []),
+    tracePath: converted.tracePath,
+    browser: converted.browser,
+    metadata: {
+      ...(converted.metadata || {}),
+      semanticStatus: semanticExecution.status || null,
+      semanticErrorsCount: Array.isArray(semanticExecution.errors) ? semanticExecution.errors.length : 0,
+    },
+    steps: semanticExecution.steps,
+    journeySteps: semanticExecution.journeySteps,
+    rpaSteps: semanticExecution.rpaSteps,
+    events: semanticExecution.events,
+    decisions: semanticExecution.decisions,
+    evidence: semanticExecution.evidence,
     logs: Array.isArray(result?.logs) ? result.logs : [],
     timeline: Array.isArray(result?.logs) ? result.logs : [],
-    errors,
+    errors: [...converted.errors, ...(semanticExecution.errors || [])],
     assertions: Array.isArray(replayArtifact.payload.assertions)
       ? replayArtifact.payload.assertions.map((assertion) => ({
         ...assertion,
-        status: status.evidenceStatus === 'passed' ? 'passed' : 'failed',
+        status: replayResult === 'success' ? 'passed' : 'failed',
       }))
       : [],
     meshExecution: {
@@ -346,6 +414,13 @@ function writeEvidenceArtifact(replayArtifact, execution) {
   ensureDir(evidenceDir);
   const fileName = `${execution.executionId}${replayArtifact.seed?.id ? `__${replayArtifact.seed.id}` : ''}.json`;
   const fullPath = path.join(evidenceDir, fileName);
+  const semanticExecution = qaWavesExecutionEngine.executeScenario({
+    semanticSteps: Array.isArray(replayArtifact.scenario.semanticSteps)
+      ? replayArtifact.scenario.semanticSteps
+      : (replayArtifact.scenario.steps || []),
+    runtimeSteps: Array.isArray(result?.steps) ? result.steps : [],
+  });
+
   const payload = {
     executionId: execution.executionId,
     scenarioId: replayArtifact.scenario.id,
@@ -355,13 +430,16 @@ function writeEvidenceArtifact(replayArtifact, execution) {
     journeySteps: Array.isArray(replayArtifact.scenario.journeySteps) ? replayArtifact.scenario.journeySteps : [],
     seedId: replayArtifact.seed?.id || null,
     status: status.evidenceStatus,
-    steps: Array.isArray(replayArtifact.scenario.semanticSteps)
-      ? replayArtifact.scenario.semanticSteps
-      : (replayArtifact.scenario.steps || []),
+    steps: semanticExecution.steps,
+    journeyStepsSemantic: semanticExecution.journeySteps,
+    rpaSteps: semanticExecution.rpaSteps,
+    events: semanticExecution.events,
+    decisions: semanticExecution.decisions,
+    evidence: semanticExecution.evidence,
     latency: buildResultLatency(result, execution),
     errors: Array.isArray(result?.errors)
-      ? result.errors
-      : (execution?.error ? [{ message: execution.error }] : []),
+      ? [...result.errors, ...(semanticExecution.errors || [])]
+      : (execution?.error ? [{ message: execution.error }] : [...(semanticExecution.errors || [])]),
     generatedAt: nowIso(),
     replayId: replayArtifact.replayId,
     historyPath: execution?.historyPath || null,
@@ -451,6 +529,10 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     semanticSteps: Array.isArray(scenario.semanticSteps) ? scenario.semanticSteps : (scenario.steps || []),
   }));
 
+  qaWavesLogger.info('[QA_WAVE_EXECUTION] Enfileirando execução QA Waves', {
+    tenantId,
+    scenarioIds: platformScenarioIds,
+  });
   logger.info('[QA_WAVE_EXECUTION] Enfileirando execucao QA Waves', {
     scenarioCount: expanded.length,
     platformScenarioIds,
@@ -461,6 +543,7 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     scenarioIds: platformScenarioIds,
     executionOrigin: 'qa_waves_real',
     scenarioContext,
+    tenantId,
   });
 
   const replayArtifacts = expanded.map(({ scenario, seed }) => writeReplayArtifact({
@@ -472,14 +555,30 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     platformScenarioIds,
   }));
 
+  const replayIds = replayArtifacts.map((item) => item.replayId);
+  const primaryReplayId = replayArtifacts[0]?.replayId || null;
+
+  qaWavesLogger.info('[QA_REPLAY_LINKED] Replay(s) vinculados à execução QA Waves', { replayCount: replayArtifacts.length });
   logger.info('[QA_REPLAY_LINKED] Replay(s) vinculados a execucao QA Waves', {
     executionId: queued.executionId,
-    replayIds: replayArtifacts.map((item) => item.replayId),
+    replayIds,
     scenarioContext,
+  });
+
+  // Log estruturado imediato — permite rastrear a correlação executionId↔replayId
+  // ANTES de qualquer operação assíncrona (monitoramento, WS push, etc.)
+  qaWavesLogger.info('[QA_REPLAY_READY] Replay(s) criado(s) e disponíveis para consulta', { replayCount: replayArtifacts.length });
+  logger.info('[QA_REPLAY_READY] Replay(s) criado(s) e disponivel(is) para consulta', {
+    executionId: queued.executionId,
+    replayId: primaryReplayId,
+    replayIds,
+    replayDir: getRpaReplayDir(),
   });
 
   emitEvent('qa-waves.execution.started', {
     executionId: queued.executionId,
+    replayId: primaryReplayId,
+    replayIds,
     scenarioCount: expanded.length,
     platformScenarioIds,
   }, { tenantId });
@@ -488,8 +587,8 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
 
   return {
     executionId: queued.executionId,
-    replayId: replayArtifacts[0]?.replayId || null,
-    replayIds: replayArtifacts.map((item) => item.replayId),
+    replayId: primaryReplayId,
+    replayIds,
     platformScenarioIds,
     governance: governanceFindings,
   };

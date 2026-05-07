@@ -243,6 +243,10 @@ function createQaMeshRoutes({ buildDeps }) {
       const result = deps.queueMeshRun(body || {});
       deps.sendJson(res, 202, result);
     } catch (error) {
+      if (error.code === 'EXECUTION_ALREADY_RUNNING') {
+        deps.sendJson(res, 409, { error: 'execution_already_running', message: error.message, activeExecutionId: error.activeExecutionId || null });
+        return;
+      }
       deps.logger.error('Erro ao executar qa-mesh:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: error.message || 'Erro ao executar qa-mesh' });
     }
@@ -262,6 +266,10 @@ function createQaMeshRoutes({ buildDeps }) {
       const result = deps.queueScenarioReplay(req.params.scenarioId);
       deps.sendJson(res, 202, result);
     } catch (error) {
+      if (error.code === 'EXECUTION_ALREADY_RUNNING') {
+        deps.sendJson(res, 409, { error: 'execution_already_running', message: error.message, activeExecutionId: error.activeExecutionId || null });
+        return;
+      }
       if (error.code === 'PIPELINE_REQUIRED') {
         deps.sendJson(res, 409, { error: 'pipeline_required', message: error.message });
         return;

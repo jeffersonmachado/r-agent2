@@ -9,6 +9,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
     if (code === 'BAD_REQUEST') return 400;
     if (code === 'NOT_FOUND') return 404;
     if (code === 'NOT_SUPPORTED') return 409;
+    if (code === 'EXECUTION_ALREADY_RUNNING') return 409;
     if (code === 'FORBIDDEN') return 403;
     return 500;
   }
@@ -108,6 +109,12 @@ function createTestExecutionsRoutes({ buildDeps }) {
       const dateRange = req.query.dateRange;
       const sortBy = req.query.sortBy;
       const sortOrder = req.query.sortOrder;
+      const source = req.query.source;
+      const waveId = req.query.waveId;
+      const journeyId = req.query.journeyId;
+      const scenarioId = req.query.scenarioId;
+      const seedId = req.query.seedId;
+      const executionId = req.query.executionId;
       const replayList = deps.listReplayFiles({
         limit,
         offset,
@@ -116,6 +123,12 @@ function createTestExecutionsRoutes({ buildDeps }) {
         dateRange,
         sortBy,
         sortOrder,
+        source,
+        waveId,
+        journeyId,
+        scenarioId,
+        seedId,
+        executionId,
       });
       const payload = {
         ...replayList,
@@ -131,6 +144,12 @@ function createTestExecutionsRoutes({ buildDeps }) {
           dateRange: dateRange || 'all',
           sortBy: sortBy || 'date',
           sortOrder: sortOrder === 'asc' ? 'asc' : 'desc',
+          source: source || '',
+          waveId: waveId || '',
+          journeyId: journeyId || '',
+          scenarioId: scenarioId || '',
+          seedId: seedId || '',
+          executionId: executionId || '',
         },
       };
       deps.sendJson(res, 200, payload);
@@ -226,9 +245,14 @@ function createTestExecutionsRoutes({ buildDeps }) {
       deps.sendJson(res, 202, execution);
     } catch (error) {
       const status = mapErrorCodeToHttp(error.code);
+      let errorCode = 'internal_error';
+      if (status === 400) errorCode = 'bad_request';
+      else if (status === 404) errorCode = 'not_found';
+      else if (status === 409) errorCode = error.code === 'EXECUTION_ALREADY_RUNNING' ? 'execution_already_running' : 'conflict';
       deps.sendJson(res, status, {
-        error: status === 400 ? 'bad_request' : (status === 404 ? 'not_found' : 'internal_error'),
+        error: errorCode,
         message: error.message,
+        ...(error.activeExecutionId ? { activeExecutionId: error.activeExecutionId } : {}),
       });
     }
   });

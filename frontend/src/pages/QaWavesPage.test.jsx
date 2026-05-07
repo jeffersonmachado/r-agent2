@@ -5,6 +5,10 @@ import userEvent from '@testing-library/user-event';
 import { QaWavesPage } from './QaWavesPage';
 import { fetchJson } from '../api/client';
 
+const testDoubles = vi.hoisted(() => ({
+  showToast: vi.fn(),
+}));
+
 vi.mock('../api/client', () => ({
   fetchJson: vi.fn(),
 }));
@@ -19,6 +23,23 @@ vi.mock('../components/qa-waves/JourneyTree', () => ({
 
 vi.mock('../components/qa-waves/StepBreakdown', () => ({
   default: () => <div data-testid="step-breakdown" />,
+}));
+
+vi.mock('../context/WebSocketContext', () => ({
+  useWebSocketContext: () => ({
+    connected: true,
+    authenticated: true,
+    authFailed: false,
+    send: vi.fn(),
+    reconnect: vi.fn(),
+  }),
+}));
+
+vi.mock('../components/Toast', () => ({
+  useToast: () => ({
+    showToast: testDoubles.showToast,
+    ToastContainer: () => null,
+  }),
 }));
 
 const baseScenario = {
@@ -124,6 +145,18 @@ function mockFetchJson(url, init) {
     });
   }
 
+  if (String(url).startsWith('/api/test-executions/replays')) {
+    return Promise.resolve({
+      items: [],
+      pagination: {
+        page: 1,
+        pageSize: 20,
+        totalItems: 0,
+        totalPages: 0,
+      },
+    });
+  }
+
   if (url.startsWith('/api/qa-waves/executions')) {
     return Promise.resolve({ items: [] });
   }
@@ -134,6 +167,7 @@ function mockFetchJson(url, init) {
 describe('pages/QaWavesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    testDoubles.showToast.mockReset();
     fetchJson.mockImplementation(mockFetchJson);
   });
 
@@ -147,17 +181,20 @@ describe('pages/QaWavesPage', () => {
 
     await user.click(screen.getByRole('button', { name: /validar/i }));
     await waitFor(() => {
-      expect(screen.getByText('Cenário válido (0 aviso(s)).')).toBeInTheDocument();
+      expect(testDoubles.showToast).toHaveBeenCalledWith('Cenário válido (0 aviso(s)).', 'success');
     });
 
     await user.click(screen.getByRole('button', { name: /salvar/i }));
     await waitFor(() => {
-      expect(screen.getByText('Cenário salvo com versão v2.')).toBeInTheDocument();
+      expect(testDoubles.showToast).toHaveBeenCalledWith('Cenário salvo com versão v2.', 'success');
     });
 
     await user.click(screen.getByRole('button', { name: /executar cenário/i }));
     await waitFor(() => {
-      expect(screen.getByText(/Execução real enfileirada\./)).toBeInTheDocument();
+      expect(testDoubles.showToast).toHaveBeenCalledWith(
+        expect.stringMatching(/Execução real enfileirada\./),
+        'success'
+      );
     });
 
     const calledUrls = fetchJson.mock.calls.map(([url]) => url);
@@ -232,6 +269,18 @@ describe('pages/QaWavesPage', () => {
         });
       }
 
+      if (String(url).startsWith('/api/test-executions/replays?')) {
+        return Promise.resolve({
+          items: [],
+          pagination: {
+            page: 1,
+            pageSize: 20,
+            totalItems: 0,
+            totalPages: 0,
+          },
+        });
+      }
+
       if (url.startsWith('/api/qa-waves/executions')) {
         return Promise.resolve({ items: [] });
       }
@@ -253,7 +302,10 @@ describe('pages/QaWavesPage', () => {
 
     await user.click(screen.getByRole('button', { name: /executar cenário/i }));
     await waitFor(() => {
-      expect(screen.getByText(/Execução real enfileirada\./)).toBeInTheDocument();
+      expect(testDoubles.showToast).toHaveBeenCalledWith(
+        expect.stringMatching(/Execução real enfileirada\./),
+        'success'
+      );
     });
 
     await user.click(screen.getByRole('button', { name: /abrir replay/i }));

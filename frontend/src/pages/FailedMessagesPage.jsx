@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { fetchJson } from '../api/client';
+import { useToast } from '../components/Toast';
 import { CrudPageBase } from '../modules/crud-base';
 
 export function FailedMessagesPage() {
   const { navigate } = useRouter();
+  const { showToast, ToastContainer } = useToast();
   const [failedMessages, setFailedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,7 +53,9 @@ export function FailedMessagesPage() {
       }));
     } catch (err) {
       console.error('[Messages] Erro ao carregar:', err);
-      setError(err.message || 'Erro ao carregar mensagens');
+      const errorMessage = err.message || 'Erro ao carregar mensagens';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -619,6 +623,7 @@ export function FailedMessagesPage() {
           </div>
         </div>
       )}
+      <ToastContainer />
     </CrudPageBase>
   );
 }

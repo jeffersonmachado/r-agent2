@@ -38,6 +38,12 @@ describe('test-executions replay routes', () => {
         dateRange: 'week',
         sortBy: 'duration',
         sortOrder: 'asc',
+        source: 'qa-waves',
+        waveId: 'wave-01',
+        journeyId: 'journey-01',
+        scenarioId: 'scenario-01',
+        seedId: 'seed-01',
+        executionId: 'exec-01',
       },
       token: 'token',
     };
@@ -53,6 +59,12 @@ describe('test-executions replay routes', () => {
       dateRange: 'week',
       sortBy: 'duration',
       sortOrder: 'asc',
+      source: 'qa-waves',
+      waveId: 'wave-01',
+      journeyId: 'journey-01',
+      scenarioId: 'scenario-01',
+      seedId: 'seed-01',
+      executionId: 'exec-01',
     });
 
     expect(deps.sendJson).toHaveBeenCalledWith(
@@ -73,6 +85,12 @@ describe('test-executions replay routes', () => {
           dateRange: 'week',
           sortBy: 'duration',
           sortOrder: 'asc',
+          source: 'qa-waves',
+          waveId: 'wave-01',
+          journeyId: 'journey-01',
+          scenarioId: 'scenario-01',
+          seedId: 'seed-01',
+          executionId: 'exec-01',
         },
       })
     );

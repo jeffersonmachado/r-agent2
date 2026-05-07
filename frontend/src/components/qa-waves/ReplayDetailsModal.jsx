@@ -18,6 +18,70 @@ function formatDuration(ms) {
   return `${m}m ${rem}s`;
 }
 
+const ACTOR_CONFIG = {
+  customer:  { label: 'Cliente',  icon: '👤', color: 'text-blue-400',   bg: 'bg-blue-400/10 border-blue-400/30' },
+  system:    { label: 'Sistema',  icon: '⚙️', color: 'text-gray-400',   bg: 'bg-gray-400/10 border-gray-400/30' },
+  ai:        { label: 'IA',       icon: '🧠', color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/30' },
+  bot:       { label: 'Bot',      icon: '🤖', color: 'text-teal-400',   bg: 'bg-teal-400/10 border-teal-400/30' },
+  agent:     { label: 'Humano',   icon: '👨‍💼', color: 'text-amber-400',  bg: 'bg-amber-400/10 border-amber-400/30' },
+  api:       { label: 'API',      icon: '🔌', color: 'text-green-400',  bg: 'bg-green-400/10 border-green-400/30' },
+  rpa:       { label: 'RPA',      icon: '🕹️', color: 'text-rose-400',   bg: 'bg-rose-400/10 border-rose-400/30' },
+};
+
+const CATEGORY_ICON = {
+  CLIENT_ACTION: '💬',
+  SYSTEM_EVENT:  '⚡',
+  AI_DECISION:   '🧠',
+  BOT_ACTION:    '🤖',
+  HUMAN_ACTION:  '👨‍💼',
+  API_CALL:      '🔌',
+  RPA_ACTION:    '🕹️',
+  VALIDATION:    '✅',
+  ERROR:         '🚨',
+};
+
+function getStepActorConfig(step) {
+  const actor = step?.actor || step?.stepActor;
+  return ACTOR_CONFIG[actor] || { label: actor || 'Sistema', icon: '⚙️', color: 'text-gray-400', bg: 'bg-gray-400/10 border-gray-400/30' };
+}
+
+function getStepIcon(step) {
+  const category = step?.category || step?.stepCategory;
+  if (CATEGORY_ICON[category]) return CATEGORY_ICON[category];
+  const type = step?.stepType || step?.type;
+  if (type === 'send_message') return '💬';
+  if (type === 'validate_intent') return '🧠';
+  if (type === 'validate_response') return '📝';
+  if (type === 'validate_sla') return '⏱️';
+  if (type === 'validate_backend') return '✅';
+  if (type === 'validate_flow_transition') return '🔀';
+  return '🔧';
+}
+
+/** Separa steps por seção de replay conforme ator/category */
+function groupStepsBySection(steps) {
+  return {
+    waveSteps:    steps.filter((s) => !s.category || ['CLIENT_ACTION','SYSTEM_EVENT','AI_DECISION','BOT_ACTION','HUMAN_ACTION','VALIDATION'].includes(s.category)),
+    rpaActions:   steps.filter((s) => s.category === 'RPA_ACTION'),
+    aiDecisions:  steps.filter((s) => s.category === 'AI_DECISION'),
+    humanActions: steps.filter((s) => s.category === 'HUMAN_ACTION'),
+    errors:       steps.filter((s) => s.category === 'ERROR' || s.status === 'failed' || s.status === 'error' || s.status === 'failure'),
+  };
+}
+
+/** Valida resultado de step: retorna lista de alertas */
+function detectStepResultIssues(step) {
+  const issues = [];
+  const resp = step?.evidence?.apiResponse;
+  if (resp && typeof resp === 'string' && /^\s*<(!DOCTYPE|html)/i.test(resp)) {
+    issues.push({ type: 'html_response', message: 'API retornou HTML em vez de JSON — possível erro de rota ou proxy.' });
+  }
+  if (Array.isArray(step?.evidence?.consoleErrors) && step.evidence.consoleErrors.length > 0) {
+    issues.push({ type: 'console_errors', message: `${step.evidence.consoleErrors.length} erro(s) crítico(s) de console detectado(s).` });
+  }
+  return issues;
+}
+
 export function ReplayDetailsModal({ details, onClose }) {
   const [stepByStep, setStepByStep] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -26,10 +90,23 @@ export function ReplayDetailsModal({ details, onClose }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [logCollapsed, setLogCollapsed] = useState(false);
   const [infoCollapsed, setInfoCollapsed] = useState(false);
+  const [showOnlyFailures, setShowOnlyFailures] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showActorTimeline, setShowActorTimeline] = useState(false);
 
   const steps = details?.steps || [];
   const totalSteps = steps.length;
+  const timeline = details?.timeline || details?.logs || [];
+  const errorsList = details?.errors || [];
+  const pageErrors = timeline.filter((item) => item.level === 'warning' || item.level === 'error');
+  const visibleSteps = showOnlyFailures
+    ? steps.filter((step) => {
+      const status = String(step?.status || '').toLowerCase();
+      return status === 'failed' || status === 'timeout' || !!step?.error;
+    })
+    : steps;
   const screenshotSteps = steps.filter((step) => step?.screenshot || step?.screenshotDataUrl);
+  const stepGroups = groupStepsBySection(steps);
 
   // Atalho F11
   useEffect(() => {
@@ -70,6 +147,25 @@ export function ReplayDetailsModal({ details, onClose }) {
     });
   }, [totalSteps]);
   const goToLast = useCallback(() => { setCurrentStep(totalSteps - 1); setIsPlaying(false); }, [totalSteps]);
+  const jumpToError = useCallback(() => {
+    // Busca erro em steps, timeline e pageErrors (nessa ordem)
+    const stepsIdx = steps.findIndex((step) => {
+      const status = String(step?.status || '').toLowerCase();
+      return status === 'failed' || status === 'timeout' || status === 'error' || status === 'failure' || !!step?.error;
+    });
+    if (stepsIdx >= 0) {
+      setCurrentStep(stepsIdx);
+      setStepByStep(true);
+      setIsPlaying(false);
+      return;
+    }
+    // Se não achou em steps, verifica se há pageErrors/timeline com erros
+    if (pageErrors.length > 0) {
+      setShowTimeline(true);
+      setStepByStep(false);
+      setIsPlaying(false);
+    }
+  }, [steps, pageErrors]);
 
   if (!details) return null;
 
@@ -232,6 +328,253 @@ export function ReplayDetailsModal({ details, onClose }) {
               )}
             </div>
 
+            {/* Actor Timeline — jornada real do cliente no replay */}
+            {totalSteps > 0 && (
+              <div className="bg-bg-secondary rounded-lg border border-border-default">
+                <div className="flex items-center justify-between p-4 border-b border-border-default">
+                  <span className="text-sm font-semibold text-text-primary">🎭 Timeline por Ator</span>
+                  <Button
+                    onClick={() => setShowActorTimeline((v) => !v)}
+                    variant="default"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {showActorTimeline ? '▲ Recolher' : '▼ Expandir'}
+                  </Button>
+                </div>
+                {showActorTimeline && (
+                  <div className="p-4 space-y-3">
+                    {/* Faixa horizontal de atores */}
+                    <div className="flex items-center gap-2 flex-wrap text-xs mb-2">
+                      {Object.entries(ACTOR_CONFIG).map(([key, cfg]) => {
+                        const hasActor = steps.some((s) => (s.actor || s.stepActor) === key);
+                        if (!hasActor) return null;
+                        return (
+                          <span key={key} className={`px-2 py-0.5 rounded border font-semibold ${cfg.bg} ${cfg.color}`}>
+                            {cfg.icon} {cfg.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {/* Linha do tempo */}
+                    <div className="relative space-y-1">
+                      {steps.map((step, idx) => {
+                        const actorCfg = getStepActorConfig(step);
+                        const stepIcon = getStepIcon(step);
+                        const status = String(step?.status || '').toLowerCase();
+                        const isError = status === 'failed' || status === 'error' || status === 'failure' || status === 'timeout' || !!step?.error;
+                        const issues = detectStepResultIssues(step);
+                        return (
+                          <div
+                            key={step.id || idx}
+                            className={`flex items-start gap-3 p-2 rounded border text-xs cursor-pointer transition-colors ${
+                              isError
+                                ? 'bg-status-error/5 border-status-error/20 hover:bg-status-error/10'
+                                : 'bg-bg-primary border-border-default hover:bg-bg-tertiary'
+                            }`}
+                            onClick={() => { setStepByStep(true); setCurrentStep(idx); }}
+                          >
+                            {/* Ator badge */}
+                            <span className={`shrink-0 px-2 py-0.5 rounded border font-semibold ${actorCfg.bg} ${actorCfg.color} min-w-[72px] text-center`}>
+                              {actorCfg.icon} {actorCfg.label}
+                            </span>
+                            {/* Conector */}
+                            <span className="shrink-0 text-text-tertiary mt-0.5">→</span>
+                            {/* Descrição do step */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span>{stepIcon}</span>
+                                <span className="font-semibold text-text-primary truncate">
+                                  {step.name || step.title || step.type || `Step ${idx + 1}`}
+                                </span>
+                                {step.category && (
+                                  <span className="px-1 py-0.5 rounded text-[10px] bg-bg-secondary border border-border-default text-text-tertiary">
+                                    {step.category}
+                                  </span>
+                                )}
+                                {step.wave && (
+                                  <span className="px-1 py-0.5 rounded text-[10px] bg-accent-primary/10 border border-accent-primary/20 text-accent-primary">
+                                    {step.wave}
+                                  </span>
+                                )}
+                              </div>
+                              {step.description && (
+                                <div className="text-text-tertiary mt-0.5 truncate">{step.description}</div>
+                              )}
+                              {issues.map((issue, issueIdx) => (
+                                <div key={issueIdx} className="mt-1 text-status-error text-[10px]">
+                                  🚨 {issue.message}
+                                </div>
+                              ))}
+                            </div>
+                            {/* Status */}
+                            <span className={`shrink-0 text-sm ${isError ? 'text-status-error' : 'text-status-success'}`}>
+                              {isError ? '✗' : '✓'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Resumo por seção */}
+                    {(stepGroups.rpaActions.length > 0 || stepGroups.aiDecisions.length > 0 || stepGroups.humanActions.length > 0 || stepGroups.errors.length > 0) && (
+                      <div className="mt-3 pt-3 border-t border-border-default grid grid-cols-2 gap-2 text-xs">
+                        {stepGroups.aiDecisions.length > 0 && (
+                          <div className="p-2 rounded border border-purple-400/20 bg-purple-400/5">
+                            <div className="font-semibold text-purple-400 mb-1">🧠 Decisões de IA ({stepGroups.aiDecisions.length})</div>
+                            {stepGroups.aiDecisions.map((s, i) => (
+                              <div key={i} className="text-text-secondary truncate">{s.name || s.type}</div>
+                            ))}
+                          </div>
+                        )}
+                        {stepGroups.humanActions.length > 0 && (
+                          <div className="p-2 rounded border border-amber-400/20 bg-amber-400/5">
+                            <div className="font-semibold text-amber-400 mb-1">👨‍💼 Ações Humanas ({stepGroups.humanActions.length})</div>
+                            {stepGroups.humanActions.map((s, i) => (
+                              <div key={i} className="text-text-secondary truncate">{s.name || s.type}</div>
+                            ))}
+                          </div>
+                        )}
+                        {stepGroups.rpaActions.length > 0 && (
+                          <div className="p-2 rounded border border-rose-400/20 bg-rose-400/5">
+                            <div className="font-semibold text-rose-400 mb-1">🕹️ RPA ({stepGroups.rpaActions.length})</div>
+                            {stepGroups.rpaActions.map((s, i) => (
+                              <div key={i} className="text-text-secondary truncate">{s.name || s.type}</div>
+                            ))}
+                          </div>
+                        )}
+                        {stepGroups.errors.length > 0 && (
+                          <div className="p-2 rounded border border-status-error/20 bg-status-error/5">
+                            <div className="font-semibold text-status-error mb-1">🚨 Erros ({stepGroups.errors.length})</div>
+                            {stepGroups.errors.map((s, i) => (
+                              <div key={i} className="text-text-secondary truncate">{s.name || s.type}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Timeline de Execução e Erros */}
+            {timeline.length > 0 && (              <div className="bg-bg-secondary rounded-lg border border-border-default">
+                <div className="flex items-center justify-between p-4 border-b border-border-default">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-text-primary">📊 Execução</span>
+                    {pageErrors.length > 0 && (
+                      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-status-warning/20 text-status-warning border border-status-warning/40">
+                        ⚠️ {pageErrors.length} erro(s)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setShowTimeline(!showTimeline)}
+                      variant="default"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      {showTimeline ? '📋 Ver Resumo' : '📋 Ver Timeline'}
+                    </Button>
+                  </div>
+                </div>
+
+                {showTimeline ? (
+                  <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+                    <div className="text-xs text-text-tertiary mb-2">{timeline.length} evento(s) registrado(s)</div>
+                    {timeline.map((event, idx) => {
+                      const levelColor = 
+                        event.level === 'error' ? 'text-status-error' :
+                        event.level === 'warning' ? 'text-status-warning' :
+                        event.level === 'success' ? 'text-status-success' :
+                        'text-text-secondary';
+                      const bgColor =
+                        event.level === 'error' ? 'bg-status-error/5 border-status-error/20' :
+                        event.level === 'warning' ? 'bg-status-warning/5 border-status-warning/20' :
+                        event.level === 'success' ? 'bg-status-success/5 border-status-success/20' :
+                        'bg-bg-primary border-border-default';
+                      return (
+                        <div key={idx} className={`p-2 rounded border text-xs ${bgColor} ${levelColor}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-text-tertiary mb-1 font-mono text-xs">{formatDate(event.timestamp)}</div>
+                              <div className="text-text-primary break-words">{event.message}</div>
+                              {event.action && <div className="text-text-secondary mt-1">Ação: {event.action}</div>}
+                              {event.details && <div className="text-text-secondary mt-1">Detalhes: {event.details}</div>}
+                            </div>
+                            {event.step && (
+                              <div className="flex-shrink-0 ml-2 text-text-tertiary text-xs">{event.step}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-bg-primary rounded p-2 text-center">
+                        <div className="text-xs text-text-tertiary mb-1">Total de Eventos</div>
+                        <div className="text-lg font-bold text-text-primary">{timeline.length}</div>
+                      </div>
+                      <div className="bg-bg-primary rounded p-2 text-center">
+                        <div className="text-xs text-text-tertiary mb-1">Sucessos</div>
+                        <div className="text-lg font-bold text-status-success">
+                          {timeline.filter((e) => e.level === 'success').length}
+                        </div>
+                      </div>
+                      <div className="bg-bg-primary rounded p-2 text-center">
+                        <div className="text-xs text-text-tertiary mb-1">Avisos</div>
+                        <div className="text-lg font-bold text-status-warning">
+                          {pageErrors.length}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-text-secondary mt-3">
+                      Clique em "Ver Timeline" para ver detalhes de cada evento.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Erros da Página (detectados durante execução) */}
+            {pageErrors.length > 0 && (
+              <div className="bg-status-error/5 rounded-lg border border-status-error/20">
+                <div className="p-4 border-b border-status-error/20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-status-error">🚨 Erros Detectados ({pageErrors.length})</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3 max-h-60 overflow-y-auto">
+                  {pageErrors.map((event, idx) => (
+                    <div key={idx} className="bg-bg-primary rounded p-3 border border-status-error/30">
+                      <div className="flex items-start gap-2">
+                        <span className="text-status-error text-lg flex-shrink-0">⚠️</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-text-tertiary mb-1">{formatDate(event.timestamp)}</div>
+                          <div className="text-sm text-text-primary break-words font-medium">{event.message}</div>
+                          {event.errors && Array.isArray(event.errors) && (
+                            <div className="mt-2 space-y-1">
+                              {event.errors.map((err, errIdx) => (
+                                <div key={errIdx} className="text-xs text-text-secondary bg-bg-secondary rounded p-2 break-words">
+                                  <div className="font-mono text-text-tertiary">{err.type || 'error'}</div>
+                                  <div>{err.message || String(err)}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Modo Step-by-Step */}
             {stepByStep && totalSteps > 0 && activeStep && (
               <div className="space-y-4">
@@ -265,9 +608,18 @@ export function ReplayDetailsModal({ details, onClose }) {
                       >
                         {isPlaying ? '⏸️ Pausar' : '▶️ Reproduzir'}
                       </Button>
+                      <Button onClick={jumpToError} variant="default" size="sm" className="text-xs">⛳ Ir para erro</Button>
                       <span className="text-xs text-text-tertiary">{isPlaying ? 'Reproduzindo...' : 'Pausado'}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1 text-xs text-text-secondary">
+                        <input
+                          type="checkbox"
+                          checked={showOnlyFailures}
+                          onChange={(e) => setShowOnlyFailures(e.target.checked)}
+                        />
+                        Mostrar apenas falhas
+                      </label>
                       <label className="text-xs text-text-secondary">Velocidade:</label>
                       <select
                         value={playbackSpeed}
@@ -288,11 +640,145 @@ export function ReplayDetailsModal({ details, onClose }) {
 
                 {/* Card do passo atual */}
                 <div className="bg-bg-secondary rounded-lg p-4 border border-border-default">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-text-primary">#{activeStep.index ?? currentStep + 1} {activeStep.title}</span>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-sm font-semibold text-text-primary">#{activeStep.index ?? currentStep + 1} {activeStep.title || activeStep.name}</span>
                     <StatusBadge status={activeStep.status} />
+                    {activeStep.category && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
+                        {CATEGORY_ICON[activeStep.category] || ''} {activeStep.category}
+                      </span>
+                    )}
+                    {activeStep.actor && (() => {
+                      const cfg = getStepActorConfig(activeStep);
+                      return (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${cfg.bg} ${cfg.color}`}>
+                          {cfg.icon} {cfg.label}
+                        </span>
+                      );
+                    })()}
+                    {activeStep.error && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-status-error/20 text-status-error border border-status-error/40">ERRO</span>
+                    )}
                   </div>
-                  <div className="text-xs text-text-tertiary">{formatDate(activeStep.at)}</div>
+                  {activeStep.description && (
+                    <div className="text-xs text-text-secondary mb-2">{activeStep.description}</div>
+                  )}
+                  <div className="text-xs text-text-tertiary">{formatDate(activeStep.at || activeStep.startedAt)}</div>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-text-tertiary">Ação:</span> <span className="text-text-primary">{activeStep.action || activeStep.stepType || activeStep.type || '-'}</span></div>
+                    <div><span className="text-text-tertiary">Seletor:</span> <span className="text-text-primary font-mono break-all">{activeStep.selector || '-'}</span></div>
+                    <div><span className="text-text-tertiary">Input:</span> <span className="text-text-primary break-all">{activeStep.input !== undefined ? (typeof activeStep.input === 'object' ? JSON.stringify(activeStep.input) : String(activeStep.input)) : '-'}</span></div>
+                    <div><span className="text-text-tertiary">Expected:</span> <span className="text-text-primary break-all">{activeStep.expected !== undefined ? (typeof activeStep.expected === 'object' ? JSON.stringify(activeStep.expected) : String(activeStep.expected)) : '-'}</span></div>
+                    <div><span className="text-text-tertiary">Actual:</span> <span className="text-text-primary break-all">{activeStep.actual !== undefined ? (typeof activeStep.actual === 'object' ? JSON.stringify(activeStep.actual) : String(activeStep.actual)) : '-'}</span></div>
+                    <div><span className="text-text-tertiary">Duração:</span> <span className="text-text-primary">{activeStep.durationMs !== undefined && activeStep.durationMs !== null ? formatDuration(activeStep.durationMs) : '-'}</span></div>
+                  </div>
+
+                  {/* Alertas de resultado (HTML em vez de JSON, erros de console) */}
+                  {(() => {
+                    const issues = detectStepResultIssues(activeStep);
+                    return issues.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {issues.map((issue, i) => (
+                          <div key={i} className="p-2 rounded bg-status-error/10 border border-status-error/30 text-xs text-status-error">
+                            🚨 {issue.message}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Evidências vinculadas ao step */}
+                  {activeStep.evidence && typeof activeStep.evidence === 'object' && (
+                    <div className="mt-3 pt-3 border-t border-border-default space-y-2">
+                      <div className="text-xs font-semibold text-text-primary">🔍 Evidências do Passo</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {activeStep.evidence.ticketId && (
+                          <div><span className="text-text-tertiary">Ticket:</span> <span className="font-mono text-text-primary">{activeStep.evidence.ticketId}</span></div>
+                        )}
+                        {activeStep.evidence.conversationId && (
+                          <div><span className="text-text-tertiary">Conversa:</span> <span className="font-mono text-text-primary">{activeStep.evidence.conversationId}</span></div>
+                        )}
+                        {activeStep.evidence.messageId && (
+                          <div><span className="text-text-tertiary">Mensagem:</span> <span className="font-mono text-text-primary">{activeStep.evidence.messageId}</span></div>
+                        )}
+                        {activeStep.evidence.payload && (
+                          <div className="col-span-2">
+                            <span className="text-text-tertiary">Payload:</span>
+                            <pre className="mt-1 p-2 bg-bg-primary rounded border border-border-default font-mono text-[10px] overflow-auto max-h-24 text-text-primary">
+                              {typeof activeStep.evidence.payload === 'object' ? JSON.stringify(activeStep.evidence.payload, null, 2) : String(activeStep.evidence.payload)}
+                            </pre>
+                          </div>
+                        )}
+                        {activeStep.evidence.apiRequest && (
+                          <div className="col-span-2">
+                            <span className="text-text-tertiary">API Request:</span>
+                            <pre className="mt-1 p-2 bg-bg-primary rounded border border-border-default font-mono text-[10px] overflow-auto max-h-24 text-text-primary">
+                              {typeof activeStep.evidence.apiRequest === 'object' ? JSON.stringify(activeStep.evidence.apiRequest, null, 2) : String(activeStep.evidence.apiRequest)}
+                            </pre>
+                          </div>
+                        )}
+                        {activeStep.evidence.apiResponse && (
+                          <div className="col-span-2">
+                            <span className="text-text-tertiary">API Response:</span>
+                            <pre className={`mt-1 p-2 rounded border font-mono text-[10px] overflow-auto max-h-24 ${/^\s*<(!DOCTYPE|html)/i.test(String(activeStep.evidence.apiResponse)) ? 'bg-status-error/10 border-status-error/30 text-status-error' : 'bg-bg-primary border-border-default text-text-primary'}`}>
+                              {typeof activeStep.evidence.apiResponse === 'object' ? JSON.stringify(activeStep.evidence.apiResponse, null, 2) : String(activeStep.evidence.apiResponse)}
+                            </pre>
+                          </div>
+                        )}
+                        {Array.isArray(activeStep.evidence.consoleErrors) && activeStep.evidence.consoleErrors.length > 0 && (
+                          <div className="col-span-2">
+                            <span className="text-text-tertiary text-status-error">Console Errors ({activeStep.evidence.consoleErrors.length}):</span>
+                            <div className="mt-1 space-y-1">
+                              {activeStep.evidence.consoleErrors.map((err, i) => (
+                                <div key={i} className="p-1 bg-status-error/10 rounded text-[10px] text-status-error font-mono">{typeof err === 'object' ? JSON.stringify(err) : String(err)}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Screenshots vinculadas ao step */}
+                      {(activeStep.evidence.screenshotBefore || activeStep.evidence.screenshotAfter) && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {activeStep.evidence.screenshotBefore && (
+                            <div>
+                              <div className="text-[10px] text-text-tertiary mb-1">Before</div>
+                              <img src={activeStep.evidence.screenshotBefore} alt="screenshot before" className="max-w-full rounded border border-border-default" />
+                            </div>
+                          )}
+                          {activeStep.evidence.screenshotAfter && (
+                            <div>
+                              <div className="text-[10px] text-text-tertiary mb-1">After</div>
+                              <img src={activeStep.evidence.screenshotAfter} alt="screenshot after" className="max-w-full rounded border border-border-default" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {details.tracePath && (
+                    <div className="mt-2">
+                      <Button
+                        onClick={() => window.open(details.tracePath, '_blank', 'noopener,noreferrer')}
+                        variant="default"
+                        size="sm"
+                        className="text-xs"
+                      >
+                        Abrir trace.zip
+                      </Button>
+                    </div>
+                  )}
+                  {Array.isArray(activeStep.consoleLogs) && activeStep.consoleLogs.length > 0 && (
+                    <div className="mt-2 p-2 rounded bg-bg-primary border border-border-default text-xs text-text-secondary max-h-32 overflow-auto">
+                      {activeStep.consoleLogs.slice(0, 20).map((log, idx) => (
+                        <div key={`log-${idx}`}>{log.level || 'log'}: {log.text || JSON.stringify(log)}</div>
+                      ))}
+                    </div>
+                  )}
+                  {activeStep.error && (
+                    <div className="mt-2 p-2 rounded bg-status-error/10 border border-status-error/30 text-xs text-status-error break-all">
+                      {activeStep.error?.message || String(activeStep.error)}
+                    </div>
+                  )}
                   {(activeStep.adapter || activeStep.channel) && (
                     <div className="mt-2 flex gap-3 text-xs text-text-secondary">
                       {activeStep.channel && <span>📡 Canal: <span className="font-mono text-text-primary">{activeStep.channel}</span></span>}
@@ -395,6 +881,31 @@ export function ReplayDetailsModal({ details, onClose }) {
               </div>
             )}
 
+            {/* Telas capturadas (screens do replay QA Waves) */}
+            {Array.isArray(details.screens) && details.screens.length > 0 && screenshotSteps.length === 0 && (
+              <div className="bg-bg-secondary rounded-lg border border-border-default p-4">
+                <h4 className="text-xs font-semibold text-text-primary mb-2">
+                  {details.screens.length} tela(s) capturada(s) durante a execução
+                </h4>
+                <div className="grid grid-cols-2 gap-2 max-h-96 overflow-y-auto">
+                  {details.screens.map((screen, screenIndex) => (
+                    <div key={screen.screenId || screenIndex} className="border border-border-default rounded p-2">
+                      {screen.screenshot && (
+                        <img
+                          src={`data:image/png;base64,${screen.screenshot}`}
+                          alt={`Screenshot ${screenIndex + 1}`}
+                          className="max-w-full h-auto rounded"
+                        />
+                      )}
+                      {screen.timestamp && (
+                        <div className="text-xs text-text-tertiary mt-1">{formatDate(screen.timestamp)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Modo Lista completa */}
             {!stepByStep && totalSteps === 0 && (
               <div className="text-center py-8 text-text-tertiary text-sm">
@@ -430,16 +941,12 @@ export function ReplayDetailsModal({ details, onClose }) {
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto p-3 space-y-2" id="qa-log-container">
-                <div className="text-xs text-text-tertiary mb-2">{totalSteps} passo(s) registrado(s)</div>
-                {steps.map((step, idx) => {
+                <div className="text-xs text-text-tertiary mb-2">{visibleSteps.length} passo(s) registrado(s)</div>
+                {visibleSteps.map((step) => {
+                  const idx = steps.indexOf(step);
                   const isCurrent = stepByStep && currentStep === idx;
-                  const stepIcon = step.stepType === 'send_message' ? '💬'
-                    : step.stepType === 'validate_intent' ? '🧠'
-                    : step.stepType === 'validate_response' ? '📝'
-                    : step.stepType === 'validate_sla' ? '⏱️'
-                    : step.stepType === 'validate_fallback' ? '🔄'
-                    : step.stepType === 'validate_state' ? '🗂️'
-                    : '🔧';
+                  const stepIcon = getStepIcon(step);
+                  const actorCfg = getStepActorConfig(step);
                   return (
                     <div
                       key={step.id || idx}
@@ -458,9 +965,23 @@ export function ReplayDetailsModal({ details, onClose }) {
                           <div className="flex items-center gap-1 mb-1">
                             <span className="text-xs">{stepIcon}</span>
                             <div className="font-mono text-text-primary font-semibold truncate">
-                              #{step.index ?? idx + 1} {step.title}
+                              #{step.index ?? idx + 1} {step.title || step.name}
                             </div>
                           </div>
+                          {(step.actor || step.category) && (
+                            <div className="flex gap-1 flex-wrap mb-1">
+                              {step.actor && (
+                                <span className={`px-1 py-0.5 rounded text-[10px] border font-semibold ${actorCfg.bg} ${actorCfg.color}`}>
+                                  {actorCfg.icon} {actorCfg.label}
+                                </span>
+                              )}
+                              {step.category && (
+                                <span className="px-1 py-0.5 rounded text-[10px] border border-border-default bg-bg-secondary text-text-tertiary">
+                                  {step.category}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {step.at && (
                             <div className="text-text-tertiary mt-1 text-xs">{formatDate(step.at)}</div>
                           )}

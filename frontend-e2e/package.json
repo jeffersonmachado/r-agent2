@@ -6,9 +6,12 @@
   "scripts": {
     "setup": "npm ci --no-audit --no-fund",
     "test:e2e": "cypress run",
-    "test:e2e:open": "cypress open"
+    "test:e2e:open": "cypress open",
+    "test:pw": "playwright test",
+    "test:pw:qa-waves-replay": "playwright test qa-waves-replay.spec.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "cypress": "^15.10.0"
   }
 }

@@ -94,6 +94,8 @@ const ENV_TO_CONFIG_MAP = {
   'RATE_LIMIT_PUBLIC_TOKENS_STATION_DURATION': 'rateLimit.policies.publicTokens.station.duration',
   'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_POINTS': 'rateLimit.policies.executionQueue.enqueue.points',
   'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_DURATION': 'rateLimit.policies.executionQueue.enqueue.duration',
+  'AUTH_INACTIVITY_TIMEOUT_MINUTES': 'auth.inactivityTimeoutMinutes',
+  'AUTH_TOKEN_EXPIRATION_HOURS': 'auth.tokenExpirationHours',
   'RAG_SERVICE_URL': 'rag.serviceUrl',
   'RAG_TIMEOUT': 'rag.timeout',
   'DATABASE_URL': 'database.url',

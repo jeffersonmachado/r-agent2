@@ -16,6 +16,7 @@ const {
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
+const RPA_SEEDS_DIR = path.join(ROOT_DIR, 'rpa', 'seeds');
 const STORE_DEFAULT_VERSION = 1;
 
 function ensureDir(dirPath) {
@@ -124,6 +125,68 @@ function toSemanticSteps(scenario) {
     return clone(scenario.steps);
   }
   return [];
+}
+
+function loadRpaSeedsIndex() {
+  try {
+    if (!fs.existsSync(RPA_SEEDS_DIR)) return new Map();
+    const files = fs.readdirSync(RPA_SEEDS_DIR).filter((name) => name.endsWith('.json'));
+    const index = new Map();
+
+    for (const fileName of files) {
+      try {
+        const filePath = path.join(RPA_SEEDS_DIR, fileName);
+        const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const seedId = String(raw?.id || fileName.replace(/\.json$/i, '')).trim();
+        if (!seedId) continue;
+        index.set(seedId, { ...raw, __fileName: fileName });
+      } catch (_) {
+        // Ignora seed inválida para não quebrar listagem de cenários.
+      }
+    }
+
+    return index;
+  } catch (_) {
+    return new Map();
+  }
+}
+
+function hydrateScenarioSeedsFromRpa(scenario, rpaSeedsIndex) {
+  const currentSeeds = Array.isArray(scenario?.seeds) ? scenario.seeds : [];
+  if (currentSeeds.length > 0) return scenario;
+
+  const candidateIds = Array.from(new Set([
+    String(scenario?.id || '').trim(),
+    ...toPlatformScenarioIds(scenario),
+  ].filter(Boolean)));
+
+  const hydratedSeeds = [];
+  for (const candidateId of candidateIds) {
+    const seedFile = rpaSeedsIndex.get(candidateId);
+    if (!seedFile) continue;
+    hydratedSeeds.push({
+      id: String(seedFile.id || candidateId),
+      scenarioId: String(scenario.id || candidateId),
+      source: 'from_replay',
+      status: 'approved',
+      persona: {
+        type: String(seedFile?.metadata?.journey || scenario?.journeyId || 'rpa_seed'),
+        behavior: 'recorded',
+        urgency: 'medium',
+      },
+      inputVariants: [String(seedFile?.name || candidateId)],
+      data: seedFile?.data || {},
+      file: seedFile.__fileName,
+      createdAt: scenario?.createdAt || nowIso(),
+      updatedAt: scenario?.updatedAt || nowIso(),
+    });
+  }
+
+  if (hydratedSeeds.length === 0) return scenario;
+  return {
+    ...scenario,
+    seeds: hydratedSeeds,
+  };
 }
 
 async function resolveJourneyMetadata(input = {}) {
@@ -404,6 +467,7 @@ function buildGenericExampleScenario(vertical, journey, goal, channels) {
 
 function listLatestScenarios(filters = {}) {
   const store = loadScenarioStore();
+  const rpaSeedsIndex = loadRpaSeedsIndex();
   const byId = new Map();
   for (const item of store.scenarios) {
     const current = byId.get(item.id);
@@ -416,7 +480,7 @@ function listLatestScenarios(filters = {}) {
     if (candidateVersion >= currentVersion) byId.set(item.id, item);
   }
 
-  let items = Array.from(byId.values());
+  let items = Array.from(byId.values()).map((item) => hydrateScenarioSeedsFromRpa(item, rpaSeedsIndex));
   if (filters.waveId) items = items.filter((item) => item.waveId === filters.waveId);
   if (filters.journey) items = items.filter((item) => item.journeyId === filters.journey || item.journey === filters.journey);
   if (filters.journeyId) items = items.filter((item) => item.journeyId === filters.journeyId);
@@ -638,7 +702,7 @@ function saveScenario(payload = {}) {
     createdAt: normalized.createdAt || nowIso(),
     platform: {
       ...(normalized.platform || {}),
-      platformScenarioIds: inferPlatformScenarioIds(normalized),
+      platformScenarioIds: tryInferPlatformScenarioIds(normalized),
     },
   };
 
@@ -824,6 +888,16 @@ function payloadAllowsDevExecution(payload = {}) {
   return process.env.NODE_ENV !== 'production';
 }
 
+function deleteScenario(scenarioId) {
+  if (!scenarioId) throw Object.assign(new Error('scenarioId é obrigatório'), { code: 'BAD_REQUEST' });
+  const store = loadScenarioStore();
+  const index = store.scenarios.findIndex((s) => s.id === scenarioId);
+  if (index < 0) throw Object.assign(new Error(`Cenário não encontrado: ${scenarioId}`), { code: 'NOT_FOUND' });
+  const [removed] = store.scenarios.splice(index, 1);
+  saveStore(store);
+  return { deleted: true, scenarioId: removed.id };
+}
+
 module.exports = {
   inferScenario,
   generateScenarioWithAI,
@@ -835,4 +909,5 @@ module.exports = {
   loadScenarioStore,
   upsertScenarioStore,
   normalizeScenarioRecord,
+  deleteScenario,
 };

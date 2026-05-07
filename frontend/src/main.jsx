@@ -779,7 +779,8 @@ function AppWithAuth() {
   }
 
   // Guardas de acesso por módulo/ação (RBAC) para evitar bypass por URL direta.
-  const hasRouteAccess = canAccessPath(agent, currentPath);
+  // Super Admin sempre pode acessar rotas existentes no frontend.
+  const hasRouteAccess = isSuperAdmin || canAccessPath(agent, currentPath);
   if (!hasRouteAccess) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>

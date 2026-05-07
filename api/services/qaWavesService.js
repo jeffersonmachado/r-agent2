@@ -514,7 +514,6 @@ function resolveScenarioStat(scenario = {}, scenarioStats = new Map()) {
 
   if (merged.runs > 0 && (!merged.lastStatus || merged.lastStatus === 'pending')) {
     if (merged.failure > 0) merged.lastStatus = 'failure';
-    else if (merged.executing > 0) merged.lastStatus = 'executing';
     else if (merged.success > 0) merged.lastStatus = 'success';
   }
 
@@ -550,6 +549,7 @@ function buildJourneyTreeWithStatus() {
       // Contar falhas críticas
       const failedScenarios = stats.filter((s) => s.lastStatus === 'failure').length;
       const criticalFailures = stats.filter((s) => s.critical && s.lastStatus === 'failure').length;
+      const executingScenarios = stats.filter((s) => s.lastStatus === 'executing').length;
       const totalRuns = stats.reduce((sum, s) => sum + s.runs, 0);
       const successfulRuns = stats.reduce((sum, s) => sum + s.success, 0);
       const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
@@ -564,8 +564,9 @@ function buildJourneyTreeWithStatus() {
       let status = 'pending';
       if (criticalFailures > 0) status = 'failure';
       else if (failedScenarios > 0) status = 'warning';
+      else if (executingScenarios > 0) status = 'executing';
       else if (successRate === 100 && executedRate > 0) status = 'success';
-      else if (executedRate > 0) status = 'executing';
+      else if (executedRate > 0) status = 'warning';
 
       // Construir steps a partir de script.steps
       const steps = ((journey.script && journey.script.steps) || []).map((step, index) => ({
@@ -610,6 +611,51 @@ function buildJourneyTreeWithStatus() {
 
 function listJourneys() {
   return buildJourneyTreeWithStatus();
+}
+
+function saveJourney(journey = {}) {
+  const id = String(journey.id || '').trim();
+  const vertical = String(journey.vertical || '').trim();
+  if (!id) throw Object.assign(new Error('id é obrigatório'), { code: 'BAD_REQUEST' });
+  if (!vertical) throw Object.assign(new Error('vertical é obrigatório'), { code: 'BAD_REQUEST' });
+
+  const store = loadJourneyStore();
+  const now = new Date().toISOString();
+  const index = store.findIndex((j) => j.id === id && j.vertical === vertical);
+  const record = {
+    id,
+    title: String(journey.title || id),
+    vertical,
+    script: journey.script && typeof journey.script === 'object' ? journey.script : { steps: [] },
+    createdAt: index >= 0 ? (store[index].createdAt || now) : now,
+    updatedAt: now,
+  };
+
+  if (index >= 0) {
+    store[index] = { ...store[index], ...record };
+  } else {
+    store.push(record);
+  }
+
+  cachedJourneyStore = store;
+  const dir = require('path').dirname(JOURNEY_STORE_PATH);
+  if (!require('fs').existsSync(dir)) require('fs').mkdirSync(dir, { recursive: true });
+  require('fs').writeFileSync(JOURNEY_STORE_PATH, JSON.stringify({ journeys: store, updatedAt: now }, null, 2), 'utf8');
+  return record;
+}
+
+function deleteJourney(journeyId, vertical) {
+  if (!journeyId) throw Object.assign(new Error('journeyId é obrigatório'), { code: 'BAD_REQUEST' });
+  const store = loadJourneyStore();
+  const index = vertical
+    ? store.findIndex((j) => j.id === journeyId && j.vertical === vertical)
+    : store.findIndex((j) => j.id === journeyId);
+  if (index < 0) throw Object.assign(new Error(`Jornada não encontrada: ${journeyId}`), { code: 'NOT_FOUND' });
+  const [removed] = store.splice(index, 1);
+  cachedJourneyStore = store;
+  const now = new Date().toISOString();
+  require('fs').writeFileSync(JOURNEY_STORE_PATH, JSON.stringify({ journeys: store, updatedAt: now }, null, 2), 'utf8');
+  return { deleted: true, journeyId: removed.id, vertical: removed.vertical };
 }
 
 function listJourneyStatus() {
@@ -960,19 +1006,55 @@ function listReplays(options = {}) {
 
 function getReplayById(id) {
   const allReplays = flattenReplays(250);
-  let replay = allReplays.find((entry) => entry.id === id);
+  const queuedArtifact = loadQueuedReplayArtifactById(id);
 
-  if (!replay) {
-    const queuedArtifact = loadQueuedReplayArtifactById(id);
-    if (!queuedArtifact) return null;
+  if (queuedArtifact) {
+    const artifact = queuedArtifact.data || {};
+    const resolvedReplay = resolveReplayFromQueuedArtifact(artifact, allReplays);
 
-    const resolvedReplay = resolveReplayFromQueuedArtifact(queuedArtifact.data, allReplays);
-    if (!resolvedReplay) {
-      return buildQueuedArtifactReplayPayload(id, queuedArtifact.data, queuedArtifact.replayPath);
-    }
+    const baseReplay = resolvedReplay || buildQueuedArtifactReplayPayload(id, artifact, queuedArtifact.replayPath);
+    const executionIndex = buildExecutionLogIndex();
+    const executionEntry = executionIndex.get(baseReplay.executionId);
+    const scenarioEntry = executionEntry?.get(baseReplay.scenarioId);
+    const logs = Array.isArray(scenarioEntry?.logs) ? scenarioEntry.logs : [];
+    const typedEntries = extractTypedEntriesFromLogs(logs);
 
-    replay = resolvedReplay;
+    const explicitSteps = Array.isArray(artifact.steps) ? artifact.steps : [];
+    const steps = explicitSteps.length > 0
+      ? explicitSteps
+      : extractPlaybackSteps(logs, baseReplay);
+
+    return {
+      ...baseReplay,
+      id: artifact.replayId || artifact.id || baseReplay.id,
+      replayId: artifact.replayId || artifact.id || baseReplay.replayId || baseReplay.id,
+      executionId: artifact.executionId || baseReplay.executionId,
+      scenarioId: artifact.scenarioId || baseReplay.scenarioId,
+      waveId: artifact.waveId || baseReplay.waveId,
+      journeyId: artifact.journeyId || baseReplay.journeyId,
+      startedAt: artifact.startedAt || artifact.startTime || baseReplay.startedAt,
+      finishedAt: artifact.finishedAt || artifact.endTime || baseReplay.finishedAt,
+      durationMs: Number(artifact.durationMs) || baseReplay.durationMs || 0,
+      status: normalizeStatus(artifact.status || artifact.result || baseReplay.status),
+      steps,
+      rpaSteps: Array.isArray(artifact.rpaSteps) ? artifact.rpaSteps : [],
+      journeySteps: Array.isArray(artifact.journeySteps) ? artifact.journeySteps : [],
+      events: Array.isArray(artifact.events) ? artifact.events : [],
+      decisions: Array.isArray(artifact.decisions) ? artifact.decisions : [],
+      evidence: Array.isArray(artifact.evidence) ? artifact.evidence : [],
+      errors: Array.isArray(artifact.errors) ? artifact.errors : [],
+      typedEntries,
+      source: {
+        executionId: artifact.executionId || baseReplay.executionId,
+        scenarioId: artifact.scenarioId || baseReplay.scenarioId,
+        historyFile: scenarioEntry?.sourceFile || queuedArtifact.replayPath || null,
+        logsCount: logs.length,
+      },
+    };
   }
+
+  const replay = allReplays.find((entry) => entry.id === id);
+  if (!replay) return null;
 
   const executionIndex = buildExecutionLogIndex();
   const executionEntry = executionIndex.get(replay.executionId);
@@ -980,7 +1062,9 @@ function getReplayById(id) {
   const logs = Array.isArray(scenarioEntry?.logs) ? scenarioEntry.logs : [];
 
   const typedEntries = extractTypedEntriesFromLogs(logs);
-  const playbackSteps = extractPlaybackSteps(logs, replay);
+  const playbackSteps = Array.isArray(replay.steps) && replay.steps.length > 0
+    ? replay.steps
+    : extractPlaybackSteps(logs, replay);
 
   return {
     ...replay,
@@ -1043,6 +1127,11 @@ function getExecutionStatus(executionId) {
 
     const results = Array.isArray(queuedExecution.results) ? queuedExecution.results : [];
 
+    const currentScenarioId = queuedExecution.currentScenarioId || null;
+    const currentStepLabel = typeof queuedExecution.currentStep === 'string'
+      ? queuedExecution.currentStep.trim()
+      : '';
+
     return {
       executionId: cleanId,
       status,
@@ -1061,10 +1150,11 @@ function getExecutionStatus(executionId) {
         executionCoverage: 0,
         executionQuality: 'pending',
       },
-      currentStep: queuedExecution.currentScenarioId
+      currentStep: (currentScenarioId || currentStepLabel)
         ? {
-          scenarioId: queuedExecution.currentScenarioId,
-          scenarioName: queuedExecution.currentScenarioId,
+          scenarioId: currentScenarioId,
+          scenarioName: currentScenarioId,
+          label: currentStepLabel || null,
           status,
           startedAt,
           finishedAt,
@@ -1159,6 +1249,8 @@ function getExecutionStatus(executionId) {
 module.exports = {
   listWaves,
   listJourneys,
+  saveJourney,
+  deleteJourney,
   listJourneyStatus,
   listStepStatus,
   listReplays,

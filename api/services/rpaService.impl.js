@@ -316,6 +316,69 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         ...data,
       };
 
+      const toTimestamp = (value) => {
+        const parsed = new Date(value).getTime();
+        return Number.isFinite(parsed) ? parsed : Date.now();
+      };
+
+      const pageConsoleEvents = [];
+      const pageNetworkEvents = [];
+      const activePage = runner.executor?.page;
+      if (activePage) {
+        activePage.on('console', (msg) => {
+          pageConsoleEvents.push({
+            timestamp: Date.now(),
+            level: msg.type(),
+            text: msg.text(),
+          });
+          if (pageConsoleEvents.length > 1000) pageConsoleEvents.shift();
+        });
+
+        activePage.on('request', (request) => {
+          pageNetworkEvents.push({
+            timestamp: Date.now(),
+            type: 'request',
+            method: request.method(),
+            url: request.url(),
+          });
+          if (pageNetworkEvents.length > 1000) pageNetworkEvents.shift();
+        });
+
+        activePage.on('response', (response) => {
+          try {
+            const req = response.request();
+            const headers = typeof response.headers === 'function' ? response.headers() : {};
+            pageNetworkEvents.push({
+              timestamp: Date.now(),
+              type: 'response',
+              method: req.method(),
+              status: response.status(),
+              url: response.url(),
+              contentType: headers['content-type'] || headers['Content-Type'] || null,
+            });
+            if (pageNetworkEvents.length > 1000) pageNetworkEvents.shift();
+          } catch (_) {
+            // noop
+          }
+        });
+      }
+
+      let tracingStartWarning = null;
+      try {
+        if (runner.executor?.startTracing) {
+          await runner.executor.startTracing({
+            screenshots: true,
+            snapshots: true,
+            sources: true,
+          });
+        }
+      } catch (traceStartError) {
+        tracingStartWarning = safeErrorMessage(traceStartError);
+        addLog('warning', `⚠️ Falha ao iniciar tracing: ${tracingStartWarning}`, {
+          step: 'trace_start',
+        });
+      }
+
       if (runner.executor?.page) {
         const config = require('../utils/config');
         const authResult = await autoLoginBeforeSteps(runner.executor.page, {
@@ -948,15 +1011,77 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             logger.info(`[RPA Overlay] ⏭️ Condição NÃO atendida - overlay não será injetado (stepByStep=${execution.stepByStep}, continueWithoutPause=${execution.continueWithoutPause})`);
           }
 
+          const stepStartedAtIso = new Date().toISOString();
+          const stepStartedAtMs = toTimestamp(stepStartedAtIso);
+          let screenshotBefore = null;
+          try {
+            screenshotBefore = await runner.executor.captureScreenshot(`before-step-${stepNumber}-${Date.now()}`);
+          } catch (_) {
+            screenshotBefore = null;
+          }
+
           const stepResult = await runner.executor.executeAction(step, mergedData);
+          const stepFinishedAtIso = new Date().toISOString();
+          const stepFinishedAtMs = toTimestamp(stepFinishedAtIso);
+          let screenshotAfter = null;
+          try {
+            screenshotAfter = await runner.executor.captureScreenshot(`after-step-${stepNumber}-${Date.now()}`);
+          } catch (_) {
+            screenshotAfter = null;
+          }
+
+          let domSnapshot = null;
+          try {
+            const currentPage = runner.executor?.page;
+            if (currentPage && !currentPage.isClosed()) {
+              domSnapshot = await currentPage.content();
+            }
+          } catch (_) {
+            domSnapshot = null;
+          }
+
+          const consoleLogs = pageConsoleEvents
+            .filter((entry) => entry.timestamp >= stepStartedAtMs && entry.timestamp <= stepFinishedAtMs)
+            .map((entry) => ({
+              level: entry.level,
+              text: entry.text,
+              at: new Date(entry.timestamp).toISOString(),
+            }));
+
+          const networkEvents = pageNetworkEvents
+            .filter((entry) => entry.timestamp >= stepStartedAtMs && entry.timestamp <= stepFinishedAtMs)
+            .map((entry) => ({
+              ...entry,
+              at: new Date(entry.timestamp).toISOString(),
+            }));
+
+          const normalizedStatus = stepResult.success ? 'success' : 'failed';
+          const inputValue = step.value !== undefined ? step.value : (step.input !== undefined ? step.input : null);
+          const expectedValue = step.expected !== undefined ? step.expected : (step.condition !== undefined ? step.condition : null);
+          const actualValue = stepResult.actual !== undefined ? stepResult.actual : (stepResult.success ? 'ok' : stepResult.error || null);
 
           results.steps.push({
+            id: step.id || `step-${stepNumber}`,
             step: stepNumber,
+            index: stepNumber,
+            name: step.name || `Passo ${stepNumber}`,
             action: step.type,
             selector: step.selector || step.url || null,
+            input: inputValue,
+            expected: expectedValue,
+            actual: actualValue,
+            status: normalizedStatus,
             success: stepResult.success,
             error: stepResult.error || null,
-            timestamp: new Date().toISOString(),
+            timestamp: stepStartedAtIso,
+            startedAt: stepStartedAtIso,
+            finishedAt: stepFinishedAtIso,
+            durationMs: Math.max(0, stepFinishedAtMs - stepStartedAtMs),
+            screenshotBefore: screenshotBefore || screenshotAfter || null,
+            screenshotAfter: screenshotAfter || null,
+            domSnapshot,
+            consoleLogs,
+            networkEvents,
             debug: stepResult.debug || null,
             finalDecision: stepResult.finalDecision || null,
             bugResolution: stepResult.bugResolution || null,
@@ -1045,6 +1170,47 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           addLog('warning', `⚠️ ${pageErrors.length} erro(s) detectado(s) na página`, {
             errors: pageErrors,
           });
+
+          // Erros críticos de runtime tornam a execução inválida (sem falso positivo).
+          results.success = false;
+          results.errors.push({
+            step: 'page_error',
+            action: 'runtime_validation',
+            error: `${pageErrors.length} erro(s) críticos detectados na página`,
+            details: pageErrors,
+          });
+        }
+
+        const htmlApiResponses = pageNetworkEvents.filter((event) => {
+          const type = String(event?.type || '').toLowerCase();
+          const contentType = String(event?.contentType || '').toLowerCase();
+          const url = String(event?.url || '');
+          const isApiLike = url.includes('/api/') || url.includes('/workspace/');
+          return type === 'response' && isApiLike && contentType.includes('text/html');
+        });
+
+        if (htmlApiResponses.length > 0) {
+          results.success = false;
+          results.errors.push({
+            step: 'api_contract',
+            action: 'validate_json_response',
+            error: 'API retornou HTML ao invés de JSON',
+            details: htmlApiResponses.slice(0, 5),
+          });
+          addLog('error', '🛑 API retornou HTML ao invés de JSON em endpoint crítico', {
+            htmlResponses: htmlApiResponses.slice(0, 3),
+          });
+        }
+
+        const criticalConsoleErrors = pageConsoleEvents.filter((entry) => String(entry?.level || '').toLowerCase() === 'error');
+        if (criticalConsoleErrors.length > 0) {
+          results.success = false;
+          results.errors.push({
+            step: 'console',
+            action: 'critical_console_errors',
+            error: `${criticalConsoleErrors.length} erro(s) de console detectados`,
+            details: criticalConsoleErrors.slice(-20),
+          });
         }
 
         // Adiciona screenshots
@@ -1053,11 +1219,26 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           results.screenshots.push(...screenshots);
         }
 
+        try {
+          if (runner.executor?.stopTracing) {
+            results.tracePath = await runner.executor.stopTracing(`rpa-trace-${recordingId}-${Date.now()}`);
+          }
+        } catch (traceStopError) {
+          addLog('warning', `⚠️ Falha ao finalizar tracing: ${safeErrorMessage(traceStopError)}`, {
+            step: 'trace_stop',
+          });
+        }
+
+        if (tracingStartWarning) {
+          results.traceWarning = tracingStartWarning;
+        }
+
         // Atualiza status
         execution.status = results.success ? 'completed' : 'failed';
         execution.progress = 100;
         execution.endTime = new Date().toISOString();
         execution.results = results;
+        execution.tracePath = results.tracePath || null;
         execution.currentStep = null;
 
         if (results.success) {
@@ -1090,7 +1271,16 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         execution.status = 'failed';
         execution.error = stepError.message;
         execution.endTime = new Date().toISOString();
+        execution.tracePath = results.tracePath || null;
         execution.currentStep = null;
+
+        try {
+          if (runner.executor?.stopTracing) {
+            results.tracePath = await runner.executor.stopTracing(`rpa-trace-${recordingId}-error-${Date.now()}`);
+          }
+        } catch (_) {
+          // noop
+        }
         
         try {
           await runner.close();

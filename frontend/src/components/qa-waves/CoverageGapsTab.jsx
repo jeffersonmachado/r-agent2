@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { fetchJson } from '../../api/client';
+import { useToast } from '../Toast';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,8 +74,17 @@ export function CoverageGapsTab() {
   const [loadingGaps, setLoadingGaps] = useState(false);
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [loadingReview, setLoadingReview] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { showToast, ToastContainer } = useToast();
+
+  const notifyError = useCallback((message) => {
+    if (!message) return;
+    showToast(message, 'error');
+  }, [showToast]);
+
+  const notifySuccess = useCallback((message) => {
+    if (!message) return;
+    showToast(message, 'success');
+  }, [showToast]);
 
   // Formulário de gap
   const [gapForm, setGapForm] = useState({
@@ -84,21 +94,24 @@ export function CoverageGapsTab() {
     gap: '',
     context: '',
   });
+  const [analysisFilters, setAnalysisFilters] = useState({
+    vertical: 'fitness',
+    journey: '',
+  });
 
   // ─── Carregamento inicial ────────────────────────────────────────────────
 
   const loadCoverage = useCallback(async () => {
     setLoadingCoverage(true);
-    setError('');
     try {
       const data = await fetchJson('/api/qa-waves/intelligence/coverage');
       setCoverage(data);
     } catch (err) {
-      setError(err?.message || 'Falha ao carregar cobertura');
+      notifyError(err?.message || 'Falha ao carregar cobertura');
     } finally {
       setLoadingCoverage(false);
     }
-  }, []);
+  }, [notifyError]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -126,36 +139,58 @@ export function CoverageGapsTab() {
 
   // ─── Análise de gaps ─────────────────────────────────────────────────────
 
-  async function analyzeGaps() {
+  const analyzeGaps = useCallback(async () => {
+    if (!analysisFilters.vertical?.trim()) {
+      setGaps(null);
+      return;
+    }
+
     setLoadingGaps(true);
     setGaps(null);
-    setError('');
     try {
       const data = await fetchJson('/api/qa-waves/intelligence/analyze-gaps', {
         method: 'POST',
         body: JSON.stringify({
-          vertical: gapForm.vertical,
-          journey: gapForm.journey || undefined,
+          vertical: analysisFilters.vertical,
+          journey: analysisFilters.journey || undefined,
         }),
       });
       setGaps(data);
     } catch (err) {
-      setError(err?.message || 'Falha ao analisar gaps');
+      notifyError(err?.message || 'Falha ao analisar gaps');
     } finally {
       setLoadingGaps(false);
     }
-  }
+  }, [analysisFilters.vertical, analysisFilters.journey, notifyError]);
+
+  const syncAnalysisFilters = useCallback(() => {
+    const nextVertical = gapForm.vertical?.trim() || '';
+    const nextJourney = gapForm.journey?.trim() || '';
+    setAnalysisFilters((prev) => {
+      if (prev.vertical === nextVertical && prev.journey === nextJourney) return prev;
+      return {
+        vertical: nextVertical,
+        journey: nextJourney,
+      };
+    });
+  }, [gapForm.vertical, gapForm.journey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      analyzeGaps();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [analyzeGaps]);
 
   // ─── Geração por IA ──────────────────────────────────────────────────────
 
   async function generateScenario() {
     if (!gapForm.stage || !gapForm.gap) {
-      setError('Preencha etapa e gap para gerar um cenário.');
+      notifyError('Preencha etapa e gap para gerar um cenário.');
       return;
     }
     setLoadingGenerate(true);
-    setError('');
-    setSuccess('');
     try {
       let ctx = {};
       if (gapForm.context) {
@@ -171,10 +206,10 @@ export function CoverageGapsTab() {
           context: ctx,
         }),
       });
-      setSuccess(`Cenário gerado: ${data.id} (status: ${data.status}). Revise e aprove antes de executar.`);
+      notifySuccess(`Cenário gerado: ${data.id} (status: ${data.status}). Revise e aprove antes de executar.`);
       await loadDrafts();
     } catch (err) {
-      setError(err?.message || 'Falha ao gerar cenário por IA');
+      notifyError(err?.message || 'Falha ao gerar cenário por IA');
     } finally {
       setLoadingGenerate(false);
     }
@@ -184,8 +219,6 @@ export function CoverageGapsTab() {
 
   async function reviewDraft(draftId, action) {
     setLoadingReview(draftId);
-    setError('');
-    setSuccess('');
     try {
       const endpoint =
         action === 'approve'
@@ -202,10 +235,10 @@ export function CoverageGapsTab() {
         body: JSON.stringify(body),
       });
 
-      setSuccess(`Cenário ${draftId} ${action === 'approve' ? 'aprovado' : 'rejeitado'} com sucesso.`);
+      notifySuccess(`Cenário ${draftId} ${action === 'approve' ? 'aprovado' : 'rejeitado'} com sucesso.`);
       await loadDrafts();
     } catch (err) {
-      setError(err?.message || 'Falha ao processar revisão');
+      notifyError(err?.message || 'Falha ao processar revisão');
     } finally {
       setLoadingReview(null);
     }
@@ -215,17 +248,6 @@ export function CoverageGapsTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {error && (
-        <div className="qa-waves-feedback error" role="alert">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="qa-waves-feedback success" role="status">
-          {success}
-        </div>
-      )}
-
       {/* ── Cobertura por vertical ── */}
       <section className="qa-waves-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -281,6 +303,7 @@ export function CoverageGapsTab() {
               type="text"
               value={gapForm.vertical}
               onChange={(e) => setGapForm((p) => ({ ...p, vertical: e.target.value }))}
+              onBlur={syncAnalysisFilters}
               placeholder="fitness, beauty, pbx, core"
             />
           </label>
@@ -291,6 +314,7 @@ export function CoverageGapsTab() {
               type="text"
               value={gapForm.journey}
               onChange={(e) => setGapForm((p) => ({ ...p, journey: e.target.value }))}
+              onBlur={syncAnalysisFilters}
               placeholder="fitness_new_customer"
             />
           </label>
@@ -327,13 +351,16 @@ export function CoverageGapsTab() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <button type="button" onClick={analyzeGaps} disabled={loadingGaps} className="qa-btn-primary">
-            {loadingGaps ? 'Analisando…' : '🔍 Analisar Gaps'}
-          </button>
           <button type="button" onClick={generateScenario} disabled={loadingGenerate}>
             {loadingGenerate ? 'Gerando…' : '✦ Gerar Cenário por IA'}
           </button>
         </div>
+
+        {loadingGaps && !gaps && (
+          <p style={{ marginBottom: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            Analisando gaps automaticamente…
+          </p>
+        )}
 
         {gaps && (
           <div style={{ border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 12, background: 'var(--color-bg-elevated)' }}>
@@ -537,6 +564,7 @@ export function CoverageGapsTab() {
           </div>
         ))}
       </section>
+      <ToastContainer />
     </div>
   );
 }
