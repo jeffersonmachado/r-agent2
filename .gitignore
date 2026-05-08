@@ -105,13 +105,18 @@ qa-mesh/meshRegistry.json
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json
 qa/checkpoints/reports/WAVE-MESH.md
+qa/checkpoints/reports/WAVE-TEST-*.md
 qa/checkpoints/reports/final-summary.json
 qa/checkpoints/reports/final-summary.md
 qa/checkpoints/waves/WAVE-MESH.json
+qa/checkpoints/waves/WAVE-TEST-*.json
 qa/mesh/intelligence/history/index.json
 qa/mesh/intelligence/history/stability-*.json
 qa/mesh/intelligence/learning/*.json
 qa/mesh/intelligence/stabilitySnapshot.json
+
+# Gap report operacional efêmero
+qa/qa-waves/operational-gaps-report.json
 
 # Metadados locais de ferramenta
 .codex
