@@ -133,7 +133,6 @@ function buildDomainSummary(results = []) {
     acc[domain].total += 1;
     if (item.status === 'passed') acc[domain].passed += 1;
     else if (item.status === 'passed_via_fallback') {
-      acc[domain].passed += 1; // conta como passed para cobertura
       acc[domain].fallbackPassed += 1; // rastreia degradação
     } else if (item.status === 'failed') acc[domain].failed += 1;
     else if (item.status === 'infra_error') acc[domain].infra_error += 1;
@@ -146,15 +145,15 @@ function buildDomainSummary(results = []) {
 
 function summarizeResults(results = [], registryTotal = results.length) {
   const attempted = results.length;
-  // passed_via_fallback conta como "passed" para cobertura, mas é rastreado separadamente
-  const passed = results.filter((item) => item.status === 'passed' || item.status === 'passed_via_fallback').length;
+  // passed_via_fallback nunca conta como passed em governanca operacional estrita.
+  const passed = results.filter((item) => item.status === 'passed').length;
   const fallbackPassed = results.filter((item) => item.status === 'passed_via_fallback').length;
   const failed = results.filter((item) => item.status === 'failed').length;
   const skipped = results.filter((item) => item.status === 'skipped').length;
   const infraErrors = results.filter((item) => item.status === 'infra_error').length;
   const environmentMissing = results.filter((item) => item.status === 'environment_missing').length;
   const flaky = results.filter((item) => item.status === 'flaky').length;
-  const executed = passed + failed + infraErrors + environmentMissing + flaky;
+  const executed = passed + fallbackPassed + failed + infraErrors + environmentMissing + flaky;
   const executionCoverage = registryTotal > 0 ? executed / registryTotal : 0;
 
   return {
@@ -176,6 +175,11 @@ function summarizeResults(results = [], registryTotal = results.length) {
 
 function evaluateGoNoGo(results = [], options = {}) {
   const criticalDomains = new Set(options.criticalDomains || ['core', 'pbx', 'omnichannel']);
+  const strictMode = options.strictMode !== false;
+  const blockingJourneys = new Set(options.blockingJourneys || [
+    'support_ticket_flow',
+    'fitness_customer_checkin',
+  ]);
   const maxFailureRate = Number.isFinite(options.maxFailureRate) ? options.maxFailureRate : 0.2;
   const registryTotal = Number.isFinite(options.registryTotal) ? options.registryTotal : results.length;
   const summary = summarizeResults(results, registryTotal);
@@ -191,6 +195,23 @@ function evaluateGoNoGo(results = [], options = {}) {
 
   if (results.some((item) => item.status === 'failed' && item.criticality === 'blocking')) {
     reasons.push('BLOCKING_SCENARIO_FAILED');
+  }
+
+  const fallbackUsed = summary.fallbackPassed > 0;
+  const fallbackBlockingUsed = results.filter((item) => (
+    item.status === 'passed_via_fallback'
+    && (
+      item.criticality === 'blocking'
+      || blockingJourneys.has(String(item.journeyId || '').trim())
+    )
+  )).length;
+
+  if (fallbackBlockingUsed > 0) {
+    reasons.push('FALLBACK_ON_BLOCKING_SCENARIO');
+  }
+
+  if (strictMode && fallbackUsed) {
+    reasons.push('FALLBACK_USED_STRICT_MODE');
   }
 
   const failureRate = summary.executed > 0 ? (summary.failed + summary.infraErrors + summary.environmentMissing + summary.flaky) / summary.executed : 1;
@@ -215,6 +236,7 @@ function evaluateGoNoGo(results = [], options = {}) {
     executed: summary.executed,
     passed: summary.passed,
     fallbackPassed: summary.fallbackPassed,
+    fallbackBlockingUsed,
     failed: summary.failed,
     skipped: summary.skipped,
     infraErrors: summary.infraErrors,
@@ -227,6 +249,8 @@ function evaluateGoNoGo(results = [], options = {}) {
       maxFailureRate,
       minExecutionRatio: MIN_EXECUTION_RATIO,
       criticalDomains: Array.from(criticalDomains),
+      strictMode,
+      blockingJourneys: Array.from(blockingJourneys),
     },
   };
 }

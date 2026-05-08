@@ -65,6 +65,7 @@ import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { PlanUsagePage } from './pages/PlanUsagePage';
 import { DevDashboardPage } from './pages/DevDashboardPage';
 import { QaWavesPage } from './pages/QaWavesPage';
+import { QaGapsPage } from './pages/QaGapsPage';
 import { WorkManagementPage } from './pages/WorkManagementPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { PbxPage } from './pages/PbxPage';
@@ -452,6 +453,7 @@ function AppWithAuth() {
   const isQueuePhysicalDashboard = isRoute('/fila-fisica');
   const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
   const isQaWaves = isRoute('/dev/qa-waves');
+  const isQaGaps = isRoute('/dev/qa-gaps');
   const isWorkManagement = currentPath === '/dev/work-management' || currentPath.startsWith('/dev/work-management/');
   const isOrders = isRoute('/orders');
   const isKitchen = isRoute('/kitchen');
@@ -532,7 +534,7 @@ function AppWithAuth() {
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
-      isWorkManagement,
+      isWorkManagement, isQaGaps,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
       isLogin
     ];
@@ -548,7 +550,7 @@ function AppWithAuth() {
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-          isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
+            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -673,6 +675,7 @@ function AppWithAuth() {
       '/backup': '🗄️ Backup / DR',
       '/dev': '🛠️ Dashboard de Desenvolvimento',
       '/dev/qa-waves': '🌊 QA Waves Integrado',
+      '/dev/qa-gaps': '🧭 QA Gaps Operacionais',
       '/dev/work-management': '🧭 Work Management',
       '/dev/work-management/projects': '🧭 Work Management • Projetos',
       '/dev/work-management/board': '🧭 Work Management • Quadro',
@@ -950,6 +953,8 @@ function AppWithAuth() {
     pageContent = <QueuePhysicalDashboardPage />;
   } else if (isQaWaves) {
     pageContent = <QaWavesPage />;
+  } else if (isQaGaps) {
+    pageContent = <QaGapsPage />;
   } else if (isWorkManagement) {
     pageContent = <WorkManagementPage />;
   } else if (isOrders) {

@@ -23,6 +23,7 @@ const {
 
 const { listLatestScenarios } = require('../api/services/qaWavesScenarioService');
 const { getRpaReplayDir } = require('../lib/rpaPathResolver');
+const operationalReplayValidator = require('../api/services/qa/operationalReplayValidator');
 
 function safeReadJson(filePath, fallback = null) {
   try {
@@ -94,6 +95,53 @@ function evaluateReplayIntegrity({ waveId, traceRequired = false }) {
     if (traceRequired && !hasTrace) {
       reasons.push(`Replay ${replayId} sem tracePath obrigatório`);
       continue;
+    }
+
+    const operationalValidation = operationalReplayValidator.validateOperationalReplay(replay);
+    if (!operationalValidation.isOperational) {
+      const blockerReasons = (operationalValidation.blockers || [])
+        .map((blocker) => blocker.reason)
+        .filter(Boolean)
+        .join(', ');
+      reasons.push(`Replay ${replayId} não é operacional: ${blockerReasons || operationalValidation.recommendation}`);
+      continue;
+    }
+
+    if (!replay.beforeSnapshot) {
+      reasons.push(`Replay ${replayId} sem snapshot inicial`);
+      continue;
+    }
+
+    if (!replay.afterSnapshot) {
+      reasons.push(`Replay ${replayId} sem snapshot final`);
+      continue;
+    }
+
+    if (!replay.stateMutation?.valid || Number(replay.stateMutation?.mutationCount || 0) <= 0) {
+      reasons.push(`Replay ${replayId} sem mutação real de estado comprovada`);
+      continue;
+    }
+
+    if (replay.stateSnapshotContract?.valid !== true) {
+      reasons.push(`Replay ${replayId} não cumpriu contrato de snapshot`);
+      continue;
+    }
+
+    // Validação operacional: waves de suporte devem acessar /support
+    const isSupportWave = String(waveId || '').toLowerCase().includes('support');
+    if (isSupportWave) {
+      const accessedSupport = steps.some((step) => {
+        const url = String(step?.url || step?.input?.url || step?.evidence?.url || '');
+        return url.includes('/support');
+      });
+      const hasTicketInteraction = steps.some((step) => {
+        const testid = String(step?.testid || step?.input?.testid || '');
+        return testid.startsWith('ticket-') || testid === 'support-page';
+      });
+      if (!accessedSupport && !hasTicketInteraction && steps.length > 0) {
+        reasons.push(`Replay ${replayId} não evidencia acesso a /support nem interação com tickets (wave operacional de suporte requer operação real)`);
+        continue;
+      }
     }
 
     valid += 1;

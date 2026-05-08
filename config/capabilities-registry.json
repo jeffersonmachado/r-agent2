@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-07T13:25:47.700Z",
+  "capabilities": [
+    {
+      "id": "access_decision",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "access",
+        "decision",
+        "airoutes",
+        "index",
+        "buildextendedoperationsdeps",
+        "20260314130000",
+        "create",
+        "control",
+        "core",
+        "20260318100000",
+        "vertical",
+        "beauty",
+        "fitness",
+        "accessdecision",
+        "accessevent"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/aiRoutes.js",
+        "api/composition/access-control/index.js",
+        "api/composition/extended/buildExtendedOperationsDeps.js",
+        "api/composition/ticket/index.js",
+        "api/db/migrations/20260314130000-create-access-control-core.js",
+        "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
+        "api/db/models/AccessDecision.js",
+        "api/db/models/AccessEvent.js",
+        "api/db/models/VerticalAttendance.js",
+        "api/db/models/index.js"
+      ]
+    },
+    {
+      "id": "attendance_record",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "attendance",
+        "record",
+        "20260318100000",
+        "vertical",
+        "beauty",
+        "fitness",
+        "core",
+        "verticalattendance",
+        "eventmodelv1",
+        "accessdecisionservice",
+        "handlefitnessattendanceroutes",
+        "operationsdashboardsummary",
+        "journeyinferenceservice",
+        "backendcapabilityscanner",
+        "e2ecapabilityscanner"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "frontend"
+      ],
+      "evidence": [
+        "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
+        "api/db/models/VerticalAttendance.js",
+        "api/events/eventModelV1.js",
+        "api/modules/access-control/accessDecisionService.js",
+        "api/modules/vertical/handleFitnessAttendanceRoutes.js",
+        "api/services/operations/operationsDashboardSummary.js",
+        "api/services/qa/journeyInferenceService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/e2eCapabilityScanner.js",
+        "api/services/qa/scanners/frontendCapabilityScanner.js",
+        "frontend/src/api/verticalPilot.js",
+        "frontend/src/pages/FitnessStudentsPage.jsx",
+        "frontend/src/pages/OperationsDashboardPage.jsx"
+      ]
+    },
+    {
+      "id": "billing_validation",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "billing",
+        "validation",
+        "20260326090000",
+        "create",
+        "core",
+        "billingsubscription",
+        "index",
+        "paymentprovider",
+        "handlebillingroutes",
+        "handlefitnessmembershiproutes",
+        "beautylifecycleroutes",
+        "failurediagnosisservice",
+        "patchproposalservice",
+        "billingalertsservice"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/db/migrations/20260326090000-create-billing-core.js",
+        "api/db/models/BillingSubscription.js",
+        "api/db/models/index.js",
+        "api/integrations/paymentProvider.js",
+        "api/modules/billing/handleBillingRoutes.js",
+        "api/modules/vertical/handleFitnessMembershipRoutes.js",
+        "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
+        "api/services/autocorrection/FailureDiagnosisService.js",
+        "api/services/autocorrection/PatchProposalService.js",
+        "api/services/billingAlertsService.js"
+      ]
+    },
+    {
+      "id": "crm_update",
+      "domain": "support",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "crm",
+        "update",
+        "index",
+        "routes",
+        "controller",
+        "handleschedulingsupportroutes",
+        "service",
+        "backendcapabilityscanner",
+        "replaycapabilityscanner"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/db/models/index.js",
+        "api/modules/crm/routes.js",
+        "api/modules/domain-operations/routes.js",
+        "api/modules/marketing/controller.js",
+        "api/modules/scheduling-support/controller.js",
+        "api/modules/scheduling-support/handleSchedulingSupportRoutes.js",
+        "api/modules/scheduling-support/routes.js",
+        "api/modules/scheduling-support/service.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js"
+      ]
+    },
+    {
+      "id": "customer_identification",
+      "domain": "core",
+      "module": "access-control",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "customer",
+        "identification",
+        "constants",
+        "journeyinferenceservice",
+        "backendcapabilityscanner",
+        "devicecapabilityscanner",
+        "e2ecapabilityscanner",
+        "frontendcapabilityscanner",
+        "replaycapabilityscanner",
+        "crypto",
+        "d",
+        "worker",
+        "threads",
+        "protocol",
+        "types"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e"
+      ],
+      "evidence": [
+        "api/modules/access-control/constants.js",
+        "api/services/qa/journeyInferenceService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/deviceCapabilityScanner.js",
+        "api/services/qa/scanners/e2eCapabilityScanner.js",
+        "api/services/qa/scanners/frontendCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js"
+      ]
+    },
+    {
+      "id": "membership_validation",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "membership",
+        "validation",
+        "20260314130000",
+        "create",
+        "access",
+        "control",
+        "core",
+        "20260318100000",
+        "vertical",
+        "beauty",
+        "fitness",
+        "20260326090000",
+        "billing",
+        "accessmembership",
+        "billingsubscription"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/db/migrations/20260314130000-create-access-control-core.js",
+        "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
+        "api/db/migrations/20260326090000-create-billing-core.js",
+        "api/db/models/AccessMembership.js",
+        "api/db/models/BillingSubscription.js",
+        "api/db/models/BillingTransaction.js",
+        "api/db/models/VerticalSessionBundle.js",
+        "api/db/models/index.js",
+        "api/modules/access-control/accessControlService.js",
+        "api/modules/access-control/visitor-access/visitorQrService.js"
+      ]
+    },
+    {
+      "id": "omnichannel_email",
+      "domain": "core",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "omnichannel",
+        "email",
+        "backendcapabilityscanner",
+        "devicecapabilityscanner"
+      ],
+      "confidence": 0.4,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/deviceCapabilityScanner.js"
+      ]
+    },
+    {
+      "id": "omnichannel_pbx",
+      "domain": "beauty",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "omnichannel",
+        "pbx",
+        "20260203010000",
+        "realtime",
+        "core",
+        "20260203011000",
+        "product",
+        "20260204010000",
+        "cc",
+        "menu",
+        "domains",
+        "20260204020000",
+        "create",
+        "event",
+        "ledger"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/db/migrations/20260203010000-pbx-realtime-core.js",
+        "api/db/migrations/20260203011000-pbx-product-core.js",
+        "api/db/migrations/20260204010000-pbx-cc-menu-domains.js",
+        "api/db/migrations/20260204020000-create-event-ledger.js",
+        "api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js",
+        "api/db/models/PbxCallRule.js",
+        "api/db/models/PbxCdr.js",
+        "api/db/models/PbxExtension.js",
+        "api/db/models/index.js",
+        "api/events/eventModelV1.js"
+      ]
+    },
+    {
+      "id": "omnichannel_webchat",
+      "domain": "support",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "omnichannel",
+        "webchat",
+        "20260119000001",
+        "create",
+        "channel",
+        "accounts",
+        "20260119000002",
+        "conversations",
+        "20260119000004",
+        "outbound",
+        "queue",
+        "20260119000005",
+        "add",
+        "ticket",
+        "handover"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "frontend"
+      ],
+      "evidence": [
+        "api/db/migrations/20260119000001-create-channel-accounts.js",
+        "api/db/migrations/20260119000002-create-channel-conversations.js",
+        "api/db/migrations/20260119000004-create-outbound-queue.js",
+        "api/db/migrations/20260119000005-add-ticket-handover-fields.js",
+        "api/services/channelAccountsService.js",
+        "api/services/channelGatewayService.js",
+        "api/services/channelHealthService.js",
+        "api/services/conversationTicketLinkService.js",
+        "api/services/qa/journeyInferenceService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "frontend/src/pages/ChannelAccountsPage.jsx",
+        "frontend/src/pages/ChannelHealthPage.jsx",
+        "frontend/src/pages/InboxPage.jsx",
+        "frontend/src/pages/SaasPublicPage.jsx"
+      ]
+    },
+    {
+      "id": "omnichannel_whatsapp",
+      "domain": "core",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "omnichannel",
+        "whatsapp",
+        "backendcapabilityscanner",
+        "devicecapabilityscanner",
+        "whatsapptemplateservice"
+      ],
+      "confidence": 0.6,
+      "sources": [
+        "backend"
+      ],
+      "evidence": [
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/deviceCapabilityScanner.js",
+        "api/services/whatsappTemplateService.js"
+      ]
+    },
+    {
+      "id": "support_ticket_flow",
+      "domain": "support",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "support",
+        "ticket",
+        "flow",
+        "registerroutes",
+        "routeregistry",
+        "20250111000016",
+        "create",
+        "tickets",
+        "20260323201000",
+        "sanitize",
+        "legacy",
+        "media",
+        "json",
+        "physicalticket",
+        "eventmodelv1"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "frontend"
+      ],
+      "evidence": [
+        "api/app/registerRoutes.js",
+        "api/app/routeRegistry.js",
+        "api/db/migrations/20250111000016-create-tickets.js",
+        "api/db/migrations/20260323201000-sanitize-legacy-support-media-json.js",
+        "api/db/models/PhysicalTicket.js",
+        "api/db/models/Ticket.js",
+        "api/events/eventModelV1.js",
+        "api/modules/domain-operations/routes.js",
+        "api/modules/order/controller.js",
+        "api/modules/order/handleOrderRoutes.js",
+        "frontend/src/Toolbar.jsx",
+        "frontend/src/__tests__/ScheduleModal.test.jsx",
+        "frontend/src/__tests__/SupportModals.test.jsx",
+        "frontend/src/__tests__/SupportPage.evidence.test.jsx",
+        "frontend/src/__tests__/SupportPage.integration.test.jsx",
+        "frontend/src/__tests__/SupportPage.waqr.test.jsx",
+        "frontend/src/api/tickets.js",
+        "frontend/src/bpmn/bpmnRoundTrip.test.js",
+        "frontend/src/components/ContextPanel.jsx",
+        "frontend/src/components/Login.jsx"
+      ]
+    },
+    {
+      "id": "support_ticket_reply",
+      "domain": "support",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "support",
+        "ticket",
+        "reply",
+        "aiwrappersadapterdraftonflowerror",
+        "test",
+        "flowgeneratorservicefallback",
+        "flowgeneratorservicemigratescontains",
+        "flowgeneratorservicevariesbydescription",
+        "airoutes",
+        "processcanonicaladapter",
+        "health",
+        "20260119000002",
+        "create",
+        "channel",
+        "conversations"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "frontend"
+      ],
+      "evidence": [
+        "api/__tests__/aiWrappersAdapterDraftOnFlowError.test.js",
+        "api/__tests__/flowGeneratorServiceFallback.test.js",
+        "api/__tests__/flowGeneratorServiceMigratesContains.test.js",
+        "api/__tests__/flowGeneratorServiceVariesByDescription.test.js",
+        "api/aiRoutes.js",
+        "api/core/process-runtime/processCanonicalAdapter.js",
+        "api/db/health.js",
+        "api/db/migrations/20260119000002-create-channel-conversations.js",
+        "api/db/migrations/20260119000004-create-outbound-queue.js",
+        "api/db/models/QuickReply.js",
+        "frontend/src/__tests__/SupportPage.waqr.test.jsx",
+        "frontend/src/api/tickets.js",
+        "frontend/src/hooks/useSupportPageController.jsx",
+        "frontend/src/modules/support-workspace/components/SupportConversationPane.jsx",
+        "frontend/src/pages/QuickRepliesPage.jsx",
+        "frontend-e2e/support-agent-flow.spec.ts"
+      ]
+    },
+    {
+      "id": "turnstile_release",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "turnstile",
+        "release",
+        "journeyinferenceservice",
+        "backendcapabilityscanner",
+        "devicecapabilityscanner",
+        "e2ecapabilityscanner",
+        "frontendcapabilityscanner",
+        "replaycapabilityscanner",
+        "systemdiscoveryengine",
+        "accesscontrolpage"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "frontend"
+      ],
+      "evidence": [
+        "api/services/qa/journeyInferenceService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/deviceCapabilityScanner.js",
+        "api/services/qa/scanners/e2eCapabilityScanner.js",
+        "api/services/qa/scanners/frontendCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js",
+        "api/services/qa/systemDiscoveryEngine.js",
+        "frontend/src/pages/AccessControlPage.jsx"
+      ]
+    }
+  ]
+}

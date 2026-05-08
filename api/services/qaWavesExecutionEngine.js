@@ -68,11 +68,16 @@ function ensureEvidence(step, runtimeStep, scenarioStep) {
   return {
     screenshotBefore: runtimeStep?.screenshotBefore || null,
     screenshotAfter: runtimeStep?.screenshotAfter || null,
+    url: runtimeStep?.url || runtimeStep?.page || runtimeStep?.route || runtimeStep?.path || runtimeStep?.input?.url || null,
     payload,
     apiResponse,
     domSnapshot: runtimeStep?.domSnapshot || null,
     networkEvents,
     consoleErrors,
+    selectorUsed: runtimeStep?.selectorUsed || runtimeStep?.selector || scenarioStep?.selector || null,
+    evidenceId: runtimeStep?.evidenceId || null,
+    mutationLinkage: runtimeStep?.mutationLinkage || null,
+    stepResult: runtimeStep?.stepResult || null,
   };
 }
 
@@ -186,6 +191,14 @@ function validateOutcome(step, context) {
 }
 
 function executeByCategory(category, step, context) {
+  if (!context.runtimeSteps[context.index]) {
+    return {
+      status: 'failed',
+      actual: null,
+      error: 'missing_runtime_validation_evidence',
+      fallback: true,
+    };
+  }
   switch (category) {
     case 'CLIENT_ACTION':
       return executeClientAction(step, context);
@@ -212,6 +225,91 @@ function executeByCategory(category, step, context) {
   }
 }
 
+/**
+ * Normaliza um step operacional preservando TODOS os artefatos da proof chain.
+ *
+ * NÃO descarta: stepExecutionProof, postStateProof, proofChain, mutationLinkage,
+ * networkProof, snapshotDiff, sideEffectLinkage, observedMutations,
+ * observedSideEffects, proofBlockers, proofGoNoGo, scopedMutations.
+ *
+ * Esta função é o ponto único de normalização de steps — qualquer pipeline
+ * que produza steps deve chamar esta função para garantir preservação da proof chain.
+ *
+ * @param {object} scenarioStep - step semântico do cenário
+ * @param {object} runtimeStep  - step executado em runtime (com artefatos de prova)
+ * @param {number} index        - índice 0-based do step
+ * @param {object[]} runtimeSteps - todos os runtime steps (para executeByCategory)
+ * @returns {object} step normalizado com proof chain preservada
+ */
+function normalizeReplayOperationalStep(scenarioStep = {}, runtimeStep = {}, index = 0, runtimeSteps = []) {
+  const category = normalizeCategory(scenarioStep);
+  const actor = normalizeActor(scenarioStep, category);
+
+  const executionResult = executeByCategory(category, scenarioStep, {
+    index,
+    runtimeSteps: runtimeSteps.length > 0 ? runtimeSteps : [runtimeStep],
+  });
+
+  const evidence = ensureEvidence(scenarioStep, runtimeStep, scenarioStep);
+  const missingEvidence = validateMandatoryEvidence(evidence, category);
+  const apiValidation = evaluateApiResponse(evidence);
+  const criticalConsole = hasCriticalConsoleError(evidence.consoleErrors);
+
+  const startedAt = runtimeStep?.startedAt || scenarioStep?.startedAt || nowIso();
+  const finishedAt = runtimeStep?.finishedAt || scenarioStep?.finishedAt || startedAt;
+  const durationMs = Number(runtimeStep?.durationMs);
+
+  const stepStatus = (
+    executionResult.status === 'success'
+    && missingEvidence.length === 0
+    && apiValidation.ok
+    && !criticalConsole
+    && runtimeStep?.success !== false
+  ) ? 'success' : 'failed';
+
+  return {
+    id: scenarioStep.id || `step_${String(index + 1).padStart(3, '0')}`,
+    index: index + 1,
+    order: index + 1,
+    type: scenarioStep.type || null,
+    category,
+    actor,
+    name: scenarioStep.name || `Step ${index + 1}`,
+    description: scenarioStep.description || null,
+    status: stepStatus,
+    actionType: runtimeStep?.actionType || runtimeStep?.action || scenarioStep?.type || null,
+    url: runtimeStep?.url || runtimeStep?.page || runtimeStep?.route || runtimeStep?.path || runtimeStep?.input?.url || null,
+    selectorUsed: runtimeStep?.selectorUsed || runtimeStep?.selector || scenarioStep?.selector || null,
+    expected: scenarioStep.expected || null,
+    actual: executionResult.actual,
+    startedAt,
+    finishedAt,
+    timestamp: startedAt,
+    durationMs: Number.isFinite(durationMs) ? Math.max(0, durationMs) : 0,
+    evidenceId: runtimeStep?.evidenceId || null,
+    stepResult: runtimeStep?.stepResult || null,
+    mutationLinkage: runtimeStep?.mutationLinkage || null,
+    evidence,
+    error: executionResult.error || null,
+    // ── PROOF CHAIN PRESERVADA ──────────────────────────────────────────────
+    // Estes campos NUNCA devem ser descartados durante normalização.
+    // Representam a cadeia de prova operacional completa do step.
+    stepExecutionProof: runtimeStep?.stepExecutionProof || null,
+    postStateProof: runtimeStep?.postStateProof || null,
+    proofChain: runtimeStep?.proofChain || null,
+    networkProof: runtimeStep?.networkProof || runtimeStep?.stepExecutionProof?.networkProof || null,
+    snapshotDiff: runtimeStep?.snapshotDiff || null,
+    sideEffectLinkage: runtimeStep?.sideEffectLinkage || null,
+    observedMutations: runtimeStep?.observedMutations || [],
+    observedSideEffects: runtimeStep?.observedSideEffects || [],
+    proofBlockers: runtimeStep?.proofBlockers || [],
+    proofGoNoGo: runtimeStep?.proofGoNoGo || null,
+    scopedMutations: runtimeStep?.scopedMutations || null,
+    // Usado internamente para geração de erro no executeScenario
+    _executionFallback: executionResult.fallback || false,
+  };
+}
+
 function executeScenario({ semanticSteps = [], runtimeSteps = [] } = {}) {
   const steps = [];
   const errors = [];
@@ -219,49 +317,16 @@ function executeScenario({ semanticSteps = [], runtimeSteps = [] } = {}) {
   for (let index = 0; index < semanticSteps.length; index += 1) {
     const scenarioStep = semanticSteps[index] || {};
     const runtimeStep = runtimeSteps[index] || {};
-    const category = normalizeCategory(scenarioStep);
-    const actor = normalizeActor(scenarioStep, category);
 
-    const executionResult = executeByCategory(category, scenarioStep, {
-      index,
-      runtimeSteps,
-    });
+    // normalizeReplayOperationalStep é o ponto único de normalização:
+    // preserva toda a proof chain (stepExecutionProof, postStateProof,
+    // proofChain, snapshotDiff, mutationLinkage, sideEffectLinkage, etc.)
+    const normalizedStep = normalizeReplayOperationalStep(scenarioStep, runtimeStep, index, runtimeSteps);
 
-    const evidence = ensureEvidence(scenarioStep, runtimeStep, scenarioStep);
-    const missingEvidence = validateMandatoryEvidence(evidence, category);
-    const apiValidation = evaluateApiResponse(evidence);
-    const criticalConsole = hasCriticalConsoleError(evidence.consoleErrors);
-
-    const startedAt = runtimeStep?.startedAt || scenarioStep?.startedAt || nowIso();
-    const finishedAt = runtimeStep?.finishedAt || scenarioStep?.finishedAt || startedAt;
-    const durationMs = Number(runtimeStep?.durationMs);
-
-    const stepStatus = (
-      executionResult.status === 'success'
-      && missingEvidence.length === 0
-      && apiValidation.ok
-      && !criticalConsole
-      && runtimeStep?.success !== false
-    ) ? 'success' : 'failed';
-
-    const normalizedStep = {
-      id: scenarioStep.id || `step_${String(index + 1).padStart(3, '0')}`,
-      index: index + 1,
-      order: index + 1,
-      type: scenarioStep.type || null,
-      category,
-      actor,
-      name: scenarioStep.name || `Step ${index + 1}`,
-      description: scenarioStep.description || null,
-      status: stepStatus,
-      expected: scenarioStep.expected || null,
-      actual: executionResult.actual,
-      startedAt,
-      finishedAt,
-      durationMs: Number.isFinite(durationMs) ? Math.max(0, durationMs) : 0,
-      evidence,
-      error: executionResult.error || null,
-    };
+    // Derivar condições de erro a partir dos campos do step normalizado
+    const missingEvidence = validateMandatoryEvidence(normalizedStep.evidence, normalizedStep.category);
+    const apiValidation = evaluateApiResponse(normalizedStep.evidence);
+    const criticalConsole = hasCriticalConsoleError(normalizedStep.evidence.consoleErrors);
 
     if (missingEvidence.length > 0) {
       errors.push({
@@ -290,7 +355,7 @@ function executeScenario({ semanticSteps = [], runtimeSteps = [] } = {}) {
     if (normalizedStep.error) {
       errors.push({
         stepId: normalizedStep.id,
-        code: 'step_execution_error',
+        code: normalizedStep._executionFallback ? 'passed_via_fallback_blocked' : 'step_execution_error',
         message: normalizedStep.error,
       });
     }
@@ -314,4 +379,5 @@ function executeScenario({ semanticSteps = [], runtimeSteps = [] } = {}) {
 
 module.exports = {
   executeScenario,
+  normalizeReplayOperationalStep,
 };

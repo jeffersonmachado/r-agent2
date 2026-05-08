@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const operationalStepExecutor = require('./qa/operationalStepExecutor');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const HISTORY_DIR_CANDIDATES = [
@@ -104,6 +105,15 @@ function buildJourneyStoreFromScenarioStore(scenarios = []) {
       });
     }
 
+    // Garante ao menos 1 step sintético quando o cenário não define steps
+    if (steps.length === 0 && current.script.steps.length === 0) {
+      const syntheticId = String(scenario?.id || scenario?.scenarioId || journeyId).trim();
+      current.script.steps.push({
+        id: syntheticId,
+        name: toLabelFromId(syntheticId, syntheticId),
+      });
+    }
+
     journeys.set(key, current);
   }
 
@@ -116,6 +126,7 @@ function normalizeStatus(status) {
   if (normalized === 'failed' || normalized === 'failure' || normalized === 'error') return 'failure';
   if (normalized === 'running' || normalized === 'executing') return 'executing';
   if (normalized === 'pending') return 'pending';
+  if (normalized === 'queued') return 'queued';
   return 'success';
 }
 
@@ -253,6 +264,30 @@ function extractPlaybackSteps(logs = [], replay = {}) {
   }
 
   return steps.sort((a, b) => a.index - b.index);
+}
+
+function enrichReplayStepsWithEvidenceContracts(steps = [], journeyId = '') {
+  const input = Array.isArray(steps) ? steps : [];
+  return input.map((step) => {
+    const audit = operationalStepExecutor.classifyStepEvidenceForAudit(step, journeyId, {
+      executionMode: 'operational_go',
+    });
+
+    return {
+      ...step,
+      actionType: audit.actionType,
+      evidenceContract: audit.evidenceContract,
+      requiredEvidence: audit.requiredEvidence,
+      observedEvidence: audit.observedEvidence,
+      missingEvidence: audit.missingEvidence,
+      blockers: audit.blockers,
+      mutationLinkage: audit.mutationLinkage,
+      sideEffectLinkage: audit.sideEffectLinkage,
+      snapshotDiff: audit.snapshotDiff,
+      evidenceStatus: audit.evidenceStatus,
+      goNoGo: audit.goNoGo,
+    };
+  });
 }
 
 function listHistoryFilesNewestFirst() {
@@ -523,9 +558,22 @@ function resolveScenarioStat(scenario = {}, scenarioStats = new Map()) {
 function buildJourneyTreeWithStatus() {
   const scenarioStore = loadScenarioStore();
   const storedJourneys = loadJourneyStore();
+
+  // Suplementar com itens do registry que têm journeyId definido
+  const registryItems = (qaMeshService.getRegistry() || []).filter(
+    (item) => item && String(item.journeyId || '').trim(),
+  );
+  // Combina scenario store com itens do registry para cobertura de jornadas
+  const combinedScenarios = [
+    ...scenarioStore,
+    ...registryItems.filter(
+      (ri) => !scenarioStore.some((s) => String(s.id || '') === String(ri.id || '')),
+    ),
+  ];
+
   const journeyStore = storedJourneys.length > 0
     ? storedJourneys
-    : buildJourneyStoreFromScenarioStore(scenarioStore);
+    : buildJourneyStoreFromScenarioStore(combinedScenarios);
   const scenarioStats = collectScenarioLatestStats();
 
   // Agrupar jornadas por vertical (domínio)
@@ -540,9 +588,9 @@ function buildJourneyTreeWithStatus() {
 
   const domains = Array.from(byVertical.entries()).map(([vertical, journeys]) => {
     const journeyDetails = journeys.map((journey) => {
-      // Buscar cenários desta jornada
-      const scenariosForJourney = scenarioStore.filter((s) => s.journeyId === journey.id);
-      
+      // Buscar cenários desta jornada (store + registry)
+      const scenariosForJourney = combinedScenarios.filter((s) => s.journeyId === journey.id);
+
       // Computar stats dos cenários
       const stats = scenariosForJourney.map((scenario) => resolveScenarioStat(scenario, scenarioStats));
 
@@ -757,11 +805,15 @@ function flattenReplays(maxExecutions = 150) {
   const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
   const scenarioStore = loadScenarioStore();
   const journeyStore = loadJourneyStore();
-  
+
   // Criar mapas para busca rápida
   const scenarioMap = new Map(scenarioStore.map((s) => [s.id, s]));
   const journeyMap = new Map(journeyStore.map((j) => [j.id, j]));
-  
+
+  // Registry map para resolver journeyId de cenários sem entrada no scenario store
+  const registryItems = qaMeshService.getRegistry() || [];
+  const registryMap = new Map(registryItems.map((item) => [String(item.id || ''), item]));
+
   const replays = [];
 
   for (const execution of history) {
@@ -775,14 +827,15 @@ function flattenReplays(maxExecutions = 150) {
       const finishedAt = scenario.finishedAt || execution.finishedAt || startedAt;
       const durationMs = Number(scenario.durationMs)
         || Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime());
-      
-      // Buscar no scenario-store explícito
+
+      // Buscar no scenario-store explícito; fallback para registry
       const scenarioMeta = scenarioMap.get(scenarioId) || {};
-      const journeyId = scenarioMeta.journeyId || scenario.journeyId;
+      const registryMeta = registryMap.get(scenarioId) || {};
+      const journeyId = scenarioMeta.journeyId || scenario.journeyId || registryMeta.journeyId;
       const journey = journeyId ? journeyMap.get(journeyId) : null;
-      
+
       // Determinar domain/vertical
-      const vertical = journey?.vertical || scenario.domain || 'core';
+      const vertical = journey?.vertical || scenario.domain || registryMeta.domain || 'core';
       
       // Montar labels
       const domainId = vertical;
@@ -1020,16 +1073,37 @@ function getReplayById(id) {
     const typedEntries = extractTypedEntriesFromLogs(logs);
 
     const explicitSteps = Array.isArray(artifact.steps) ? artifact.steps : [];
-    const steps = explicitSteps.length > 0
+    const rawSteps = explicitSteps.length > 0
       ? explicitSteps
-      : extractPlaybackSteps(logs, baseReplay);
+      : (Array.isArray(baseReplay.steps) && baseReplay.steps.length > 0
+        ? baseReplay.steps
+        : extractPlaybackSteps(logs, baseReplay));
+    const steps = enrichReplayStepsWithEvidenceContracts(rawSteps, artifact.journeyId || baseReplay.journeyId);
+
+    const resolvedExecutionId = artifact.executionId || baseReplay.executionId || null;
+    const resolvedScenarioId = artifact.scenarioId || baseReplay.scenarioId || null;
+
+    // Quando o artifact foi resolvido para um replay real, usa o id desse replay;
+    // Quando foi resolvido via executionId que existe no histórico, formata como executionId::scenarioId
+    // para rastreabilidade; caso contrário, mantém o id original do artifact.
+    const executionKnownInHistory = resolvedExecutionId
+      ? (qaMeshService.getMeshHistory({ limit: 10 }) || []).some(
+          (e) => (e.executionId || e.id) === resolvedExecutionId,
+        )
+      : false;
+
+    const resolvedId = resolvedReplay
+      ? (resolvedReplay.id || `${resolvedExecutionId}::${resolvedScenarioId || id}`)
+      : (executionKnownInHistory
+        ? `${resolvedExecutionId}::${resolvedScenarioId || id}`
+        : (artifact.replayId || artifact.id || id));
 
     return {
       ...baseReplay,
-      id: artifact.replayId || artifact.id || baseReplay.id,
+      id: resolvedId,
       replayId: artifact.replayId || artifact.id || baseReplay.replayId || baseReplay.id,
-      executionId: artifact.executionId || baseReplay.executionId,
-      scenarioId: artifact.scenarioId || baseReplay.scenarioId,
+      executionId: resolvedExecutionId,
+      scenarioId: resolvedScenarioId,
       waveId: artifact.waveId || baseReplay.waveId,
       journeyId: artifact.journeyId || baseReplay.journeyId,
       startedAt: artifact.startedAt || artifact.startTime || baseReplay.startedAt,
@@ -1062,9 +1136,10 @@ function getReplayById(id) {
   const logs = Array.isArray(scenarioEntry?.logs) ? scenarioEntry.logs : [];
 
   const typedEntries = extractTypedEntriesFromLogs(logs);
-  const playbackSteps = Array.isArray(replay.steps) && replay.steps.length > 0
+  const playbackStepsRaw = Array.isArray(replay.steps) && replay.steps.length > 0
     ? replay.steps
     : extractPlaybackSteps(logs, replay);
+  const playbackSteps = enrichReplayStepsWithEvidenceContracts(playbackStepsRaw, replay.journeyId);
 
   return {
     ...replay,

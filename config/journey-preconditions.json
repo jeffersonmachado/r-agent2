@@ -1,0 +1,47 @@
+{
+  "support_ticket_flow": {
+    "required": [
+      "authenticated_agent",
+      "tenant_loaded",
+      "open_ticket_exists",
+      "ticket_storage_accessible"
+    ],
+    "optional": ["attachment_storage", "email_gateway"],
+    "timeout": 30000
+  },
+  "fitness_customer_checkin": {
+    "required": [
+      "crm_contact_exists",
+      "membership_exists",
+      "credential_exists",
+      "device_available",
+      "attendance_database_accessible"
+    ],
+    "optional": ["biometric_scanner", "photo_capture"],
+    "timeout": 25000
+  },
+  "crm_contact_creation": {
+    "required": ["crm_service_available", "database_writable"],
+    "optional": [],
+    "timeout": 15000
+  },
+  "billing_charge": {
+    "required": ["payment_gateway_available", "subscription_exists", "ledger_writable"],
+    "optional": ["webhook_endpoint"],
+    "timeout": 20000
+  },
+  "turnstile_release": {
+    "required": [
+      "access_service_available",
+      "device_connected",
+      "release_mechanism_responsive"
+    ],
+    "optional": ["biometric_verification"],
+    "timeout": 10000
+  },
+  "voice_call_routing": {
+    "required": ["pbx_service_available", "agent_available", "call_queue_writable"],
+    "optional": ["recording_storage"],
+    "timeout": 8000
+  }
+}

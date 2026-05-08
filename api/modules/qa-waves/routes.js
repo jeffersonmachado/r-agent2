@@ -545,6 +545,52 @@ function createQaWavesRoutes({ buildDeps }) {
 
   // ─── Governance ───────────────────────────────────────────────────────────
 
+  router.get('/api/qa-waves/operational/summary', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const report = deps.getOperationalSnapshot();
+      deps.sendJson(res, 200, report);
+    } catch (error) {
+      deps.logger.error('Erro ao obter resumo operacional QA Waves:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter resumo operacional' });
+    }
+  });
+
+  registerJsonPost('/api/qa-waves/operational/recompute', async (deps, body) => {
+    const persist = body?.persist !== false;
+    return deps.buildOperationalSnapshot({
+      persist,
+      policy: body?.policy || {},
+    });
+  });
+
+  router.get('/api/qa-waves/operational/gaps', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const report = deps.getOperationalSnapshot();
+      deps.sendJson(res, 200, {
+        summary: report.summary,
+        governance: report.governance,
+        coverage: report.coverage,
+        gaps: report.gaps,
+        autoGeneration: report.autoGeneration,
+      });
+    } catch (error) {
+      deps.logger.error('Erro ao obter gaps operacionais QA Waves:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter gaps operacionais' });
+    }
+  });
+
   router.get('/api/qa-waves/governance', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);
@@ -574,7 +620,268 @@ function createQaWavesRoutes({ buildDeps }) {
       ? allScenarios.filter((s) => scenarioIds.includes(s.id || s.scenarioId))
       : allScenarios;
 
-    return deps.evaluateWaveGovernance({ waveId, scenarios: filtered, policy: policy || {} });
+    const governance = deps.evaluateWaveGovernance({ waveId, scenarios: filtered, policy: policy || {} });
+    const operational = deps.buildOperationalSnapshot({ persist: true });
+
+    return {
+      governance,
+      operationalGovernance: operational.governance,
+      operationalSummary: operational.summary,
+      decision: operational.governance?.goNoGo || governance.status || 'NO_GO',
+    };
+  });
+
+  // ===== AUTONOMOUS GAP CLOSURE ENGINE ENDPOINTS =====
+
+  router.get('/api/qa-waves/closure/analyze-gaps', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      const analysis = await deps.analyzeGapsForAutoClosure({});
+      deps.sendJson(res, 200, analysis);
+    } catch (error) {
+      deps.logger.error('Erro ao analisar gaps:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao analisar gaps' });
+    }
+  });
+
+  router.get('/api/qa-waves/closure/report', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      const report = await deps.generateGapClosureReport({});
+      deps.sendJson(res, 200, report);
+    } catch (error) {
+      deps.logger.error('Erro ao gerar closure report:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao gerar report' });
+    }
+  });
+
+  registerJsonPost('/api/qa-waves/closure/preflight', async (deps, body) => {
+    const { waveId, journeyId, scenarioIds, capabilityIds, tenantId, context } = body;
+    if (!waveId) {
+      const err = new Error('waveId é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const validation = await deps.validatePreflight({
+      waveId,
+      journeyId,
+      scenarioIds: scenarioIds || [],
+      capabilityIds: capabilityIds || [],
+      tenantId,
+      context: context || {},
+    });
+
+    return validation;
+  });
+
+  registerJsonPost('/api/qa-waves/closure/autonomous-loop', async (deps, body) => {
+    const payload = {
+      waveId: body.waveId,
+      journeyId: body.journeyId,
+      scenarioIds: body.scenarioIds || [],
+      capabilityIds: body.capabilityIds || [],
+      tenantId: body.tenantId,
+      context: body.context || {},
+      capabilities: body.capabilities || [],
+      discovery: body.discovery || {},
+      dependencies: body.dependencies || {},
+      journeyContracts: body.journeyContracts || {},
+      policy: body.policy || {},
+      expectedConsequences: body.expectedConsequences || [],
+      maxRetries: body.maxRetries,
+    };
+
+    return deps.executeAutonomousGapClosureLoop(payload);
+  });
+
+  router.get('/api/qa-waves/closure/autonomous-loop/smoke-payload', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+
+    try {
+      const payload = deps.buildStagingAutonomousLoopPayload({
+        waveId: req.query?.waveId || undefined,
+        journeyId: req.query?.journeyId || undefined,
+        tenantId: req.query?.tenantId || undefined,
+        ticketId: req.query?.ticketId || undefined,
+        contactId: req.query?.contactId || undefined,
+        membershipId: req.query?.membershipId || undefined,
+        credentialId: req.query?.credentialId || undefined,
+        deviceId: req.query?.deviceId || undefined,
+        subscriptionId: req.query?.subscriptionId || undefined,
+      });
+
+      const runProbe = String(req.query?.probe || '').trim().toLowerCase();
+      if (runProbe === 'true' || runProbe === '1') {
+        const readiness = await deps.runIntegrationReadinessProbe(payload);
+        deps.sendJson(res, 200, {
+          status: readiness.allReady ? 'ready' : 'not_ready',
+          mode: 'staging_smoke',
+          readiness,
+          payload,
+        });
+        return;
+      }
+
+      deps.sendJson(res, 200, {
+        status: 'ready',
+        mode: 'staging_smoke',
+        payload,
+      });
+    } catch (error) {
+      deps.logger.error('Erro ao montar smoke payload do loop autônomo:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao montar smoke payload' });
+    }
+  });
+
+  registerJsonPost('/api/qa-waves/closure/autonomous-loop/smoke-run', async (deps, body) => {
+    const built = deps.buildStagingAutonomousLoopPayload(body || {});
+    const payload = {
+      ...built,
+      ...body,
+      context: {
+        ...(built.context || {}),
+        ...(body?.context || {}),
+      },
+    };
+    return deps.executeAutonomousGapClosureLoop(payload);
+  });
+
+  registerJsonPost('/api/qa-waves/closure/validate-replay', async (deps, body) => {
+    const { replay } = body;
+    if (!replay) {
+      const err = new Error('replay é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const validation = deps.validateReplayOperationality(replay);
+    return validation;
+  });
+
+  registerJsonPost('/api/qa-waves/closure/classify-operationality', async (deps, body) => {
+    const { executionTrace, chainName } = body;
+    if (!executionTrace) {
+      const err = new Error('executionTrace é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const classification = deps.classifyOperationality(executionTrace, chainName);
+    return classification;
+  });
+
+  // ===== AUTO-GENERATION BOT ENDPOINTS =====
+
+  registerJsonPost('/api/qa-waves/bot/generate-scenarios', async (deps, body) => {
+    const { capabilities, frontendData } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = deps.executeScenarioGeneration(capabilities, frontendData || {}, { persist: true });
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/generate-ui-steps', async (deps, body) => {
+    const { capabilities, frontendData } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = deps.executeUIStepGeneration(capabilities, frontendData || {});
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/generate-validators', async (deps, body) => {
+    const { capabilities } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = deps.executeValidatorGeneration(capabilities);
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/generate-seeds', async (deps, body) => {
+    const { capabilities } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = deps.executeSeedGeneration(capabilities);
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/validate-preflight', async (deps, body) => {
+    const { capabilities, context } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = await deps.validatePreflightForCapabilities(capabilities, { context: context || {} });
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/execute-full-generation', async (deps, body) => {
+    const { capabilities, frontendData, context, generateScenarios, generateUISteps, generateValidators, generateSeeds, validatePreflight } = body;
+    if (!capabilities || !Array.isArray(capabilities)) {
+      const err = new Error('capabilities é obrigatório (array)');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = await deps.executeFullGenerationBot({
+      capabilities,
+      frontendData: frontendData || {},
+      context: context || {},
+      generateScenarios: generateScenarios !== false,
+      generateUISteps: generateUISteps !== false,
+      generateValidators: generateValidators !== false,
+      generateSeeds: generateSeeds !== false,
+      validatePreflight: validatePreflight !== false,
+    });
+
+    return result;
+  });
+
+  registerJsonPost('/api/qa-waves/bot/apply-remediations', async (deps, body) => {
+    const { remediations, capabilities, frontendData } = body;
+    if (!remediations) {
+      const err = new Error('remediations é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const result = deps.applyAutoRemediations(remediations, capabilities || [], frontendData || {});
+    return result;
   });
 
   return router;

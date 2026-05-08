@@ -60,7 +60,7 @@ export function SupportTicketList({
       ) : ticketsView.length === 0 ? (
         <p className="support-tickets-empty">Nenhum chamado disponivel</p>
       ) : (
-        <div className="support-tickets-list" role="list">
+        <div className="support-tickets-list" data-testid="ticket-list" role="list">
           {ticketsView.map((ticket) => (
             <div
               key={ticket.id}
@@ -74,6 +74,9 @@ export function SupportTicketList({
                 }
               }}
               className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
+              data-testid="ticket-card"
+              data-ticket-id={ticket.id}
+              data-ticket-status={ticket.status}
               aria-label={`Chamado ${ticket.id}, ${formatTicketStatus(ticket.status)}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
               aria-selected={selectedTicket?.id === ticket.id}
             >

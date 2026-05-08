@@ -130,7 +130,7 @@ module.exports = {
       reason_detail: { type: Sequelize.TEXT, allowNull: true },
       issued_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
       expires_at: { type: Sequelize.DATE, allowNull: true },
-      signature: { type: Sequelize.STRING, allowNull: true },
+      signature: { type: Sequelize.TEXT, allowNull: true },
       metadata: { type: Sequelize.JSONB, allowNull: false, defaultValue: {} },
       created_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
       updated_at: { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },

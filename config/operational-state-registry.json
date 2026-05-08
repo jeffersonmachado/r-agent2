@@ -1,0 +1,32 @@
+{
+  "support_ticket_flow": {
+    "states": [
+      "ticket_open",
+      "ticket_assigned",
+      "ticket_in_progress",
+      "ticket_replied",
+      "ticket_resolved",
+      "crm_updated"
+    ]
+  },
+  "fitness_customer_checkin": {
+    "states": [
+      "credential_detected",
+      "customer_identified",
+      "membership_validated",
+      "access_decision_allow",
+      "turnstile_opened",
+      "attendance_created",
+      "crm_updated"
+    ]
+  },
+  "booking_flow": {
+    "states": [
+      "booking_requested",
+      "booking_validated",
+      "booking_created",
+      "booking_confirmed",
+      "crm_updated"
+    ]
+  }
+}

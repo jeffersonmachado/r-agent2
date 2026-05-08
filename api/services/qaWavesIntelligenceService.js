@@ -820,6 +820,13 @@ const GOVERNANCE_DEFAULTS = {
   minQuality: 0.8,
   maxCriticalFailures: 0,
   replayRequired: true,
+  strictMode: true,
+  blockingJourneys: ['support_ticket_flow', 'fitness_customer_checkin'],
+  severityByJourney: {
+    support_ticket_flow: 'critical',
+    fitness_customer_checkin: 'critical',
+    booking_flow: 'high',
+  },
 };
 
 /**
@@ -831,6 +838,7 @@ const GOVERNANCE_DEFAULTS = {
 function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, policy = {} }) {
   const rules = { ...GOVERNANCE_DEFAULTS, ...policy };
   const replayIndex = buildReplayIndex();
+  const blockingJourneys = new Set(Array.isArray(rules.blockingJourneys) ? rules.blockingJourneys : []);
 
   let totalScenarios = 0;
   let coveredScenarios = 0;
@@ -848,15 +856,32 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
     const seeds = Array.isArray(scenario.seeds) ? scenario.seeds : [];
     const validators = Array.isArray(scenario.validators) ? scenario.validators : [];
     const criticality = scenario.criticality || 'medium';
-    const isCritical = criticality === 'critical';
+    const journeyId = String(scenario.journeyId || scenario.journey || '').trim();
+    const severity = rules.severityByJourney?.[journeyId] || criticality;
+    const isCritical = criticality === 'critical' || severity === 'critical';
+    const isBlockingJourney = blockingJourneys.has(journeyId);
+    const fallbackUsed = scenario.fallbackUsed === true
+      || String(scenario.executionStatus || '').toLowerCase() === 'passed_via_fallback'
+      || String(scenario.status || '').toLowerCase() === 'passed_via_fallback';
 
     let scenarioQuality = 1.0;
+
+    if (fallbackUsed) {
+      reasons.push(`Fallback operacional detectado: ${id}`);
+      scenarioQuality -= 0.6;
+      if (rules.strictMode || isBlockingJourney || isCritical) {
+        criticalFailures++;
+      }
+    }
 
     // Cobertura: precisa ter replay ou estar aprovado e executado
     if (!replay) {
       if (rules.replayRequired) {
         reasons.push(`Cenário sem replay: ${id}`);
         scenarioQuality -= 0.3;
+        if (isBlockingJourney || isCritical) {
+          criticalFailures++;
+        }
       }
     } else {
       coveredScenarios++;
@@ -872,6 +897,9 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
       if (!replay.hasFresh) {
         reasons.push(`Replay desatualizado: ${id}`);
         scenarioQuality -= 0.2;
+        if (isBlockingJourney && rules.strictMode) {
+          criticalFailures++;
+        }
       }
     }
 
@@ -886,7 +914,18 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
     }
 
     qualityScore += Math.max(0, scenarioQuality);
-    details.push({ id, replay: !!replay, hasFresh: replay?.hasFresh || false, hasFailure: replay?.hasFailure || false, criticality, quality: Math.max(0, scenarioQuality) });
+    details.push({
+      id,
+      replay: !!replay,
+      hasFresh: replay?.hasFresh || false,
+      hasFailure: replay?.hasFailure || false,
+      criticality,
+      journeyId,
+      journeySeverity: severity,
+      blockingJourney: isBlockingJourney,
+      fallbackUsed,
+      quality: Math.max(0, scenarioQuality),
+    });
   }
 
   const coverage = totalScenarios > 0 ? coveredScenarios / totalScenarios : 0;

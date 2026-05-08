@@ -86,6 +86,14 @@ describe('qaWavesScenarioService', () => {
   });
 
   test('generateSeeds deve gerar quantidade solicitada para scenario existente', () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+    });
+    qaWavesScenarioService.saveScenario({ scenario: inferred.scenario, changedBy: 'manual' });
+
     const generated = qaWavesScenarioService.generateSeeds({
       scenarioId: 'fitness_trial_class',
       count: 3,
@@ -97,8 +105,23 @@ describe('qaWavesScenarioService', () => {
     expect(generated.seeds.every((seed) => seed.scenarioId === 'fitness_trial_class')).toBe(true);
   });
 
-  test('runScenarioExecution deve usar QA Mesh real (queueMeshRun) e gerar replay unificado', () => {
-    const run = qaWavesScenarioService.runScenarioExecution({
+  test('runScenarioExecution deve usar QA Mesh real (queueMeshRun) e gerar replay unificado', async () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+    });
+    qaWavesScenarioService.saveScenario({
+      scenario: {
+        ...inferred.scenario,
+        platformScenarioIds: ['rpa-example-test'],
+        platform: { platformScenarioIds: ['rpa-example-test'] },
+      },
+      changedBy: 'manual',
+    });
+
+    const run = await qaWavesScenarioService.runScenarioExecution({
       waveId: 'fitness-cliente-novo',
       scenarioIds: ['fitness_trial_class'],
       seedIds: ['seed_001'],

@@ -1,0 +1,49 @@
+{
+  "ticket_reply_transition": {
+    "journeyId": "support_ticket_flow",
+    "initialState": "ticket_open",
+    "action": "reply_ticket",
+    "expectedTransition": "ticket_replied",
+    "finalState": "crm_updated",
+    "requiredSideEffects": [
+      "crm_updated",
+      "notification_sent",
+      "audit_log_created"
+    ]
+  },
+  "ticket_resolve_transition": {
+    "journeyId": "support_ticket_flow",
+    "initialState": "ticket_replied",
+    "action": "resolve_ticket",
+    "expectedTransition": "ticket_resolved",
+    "finalState": "crm_updated",
+    "requiredSideEffects": [
+      "crm_updated",
+      "audit_log_created"
+    ]
+  },
+  "access_release_transition": {
+    "journeyId": "fitness_customer_checkin",
+    "initialState": "access_decision_allow",
+    "action": "turnstile_release",
+    "expectedTransition": "turnstile_opened",
+    "finalState": "crm_updated",
+    "requiredSideEffects": [
+      "device_event_created",
+      "attendance_recorded",
+      "crm_presence_updated"
+    ]
+  },
+  "booking_create_transition": {
+    "journeyId": "booking_flow",
+    "initialState": "booking_validated",
+    "action": "create_booking",
+    "expectedTransition": "booking_created",
+    "finalState": "crm_updated",
+    "requiredSideEffects": [
+      "booking_created",
+      "crm_updated",
+      "audit_log_created"
+    ]
+  }
+}

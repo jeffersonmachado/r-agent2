@@ -29,10 +29,17 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid color-mix(in srgb, var(--color-status-info) 30%, transparent);
+  border: 2px solid rgba(59, 130, 246, 0.3);
   border-top-color: var(--color-status-info);
   border-radius: 50%;
   animation: execution-progress-spin 1s linear infinite;
+}
+
+@supports (border: 2px solid color-mix(in srgb, red 30%, transparent)) {
+  .execution-progress-spinner {
+    border-color: color-mix(in srgb, var(--color-status-info) 30%, transparent);
+    border-top-color: var(--color-status-info);
+  }
 }
 
 @keyframes execution-progress-spin {

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-07T13:25:47.700Z",
+  "dependencies": {
+    "access_decision": {
+      "dependsOn": []
+    },
+    "attendance_record": {
+      "dependsOn": [
+        "customer_identification",
+        "access_decision"
+      ]
+    },
+    "billing_validation": {
+      "dependsOn": []
+    },
+    "crm_update": {
+      "dependsOn": [
+        "attendance_record"
+      ]
+    },
+    "customer_identification": {
+      "dependsOn": []
+    },
+    "membership_validation": {
+      "dependsOn": [
+        "access_decision"
+      ]
+    },
+    "omnichannel_email": {
+      "dependsOn": []
+    },
+    "omnichannel_pbx": {
+      "dependsOn": []
+    },
+    "omnichannel_webchat": {
+      "dependsOn": [
+        "support_ticket_flow"
+      ]
+    },
+    "omnichannel_whatsapp": {
+      "dependsOn": []
+    },
+    "support_ticket_flow": {
+      "dependsOn": []
+    },
+    "support_ticket_reply": {
+      "dependsOn": [
+        "support_ticket_flow"
+      ]
+    },
+    "turnstile_release": {
+      "dependsOn": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision"
+      ]
+    }
+  }
+}

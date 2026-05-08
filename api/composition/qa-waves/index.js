@@ -47,6 +47,27 @@ const {
   evaluateWaveGovernance,
   listGovernanceReports,
 } = require('../../services/qaWavesIntelligenceService');
+const {
+  buildOperationalSnapshot,
+  getOperationalSnapshot,
+  analyzeGapsForAutoClosure,
+  generateGapClosureReport,
+  validatePreflight,
+  executeAutonomousGapClosureLoop,
+  validateReplayOperationality,
+  classifyOperationality,
+  buildStagingAutonomousLoopPayload,
+  runIntegrationReadinessProbe,
+} = require('../../services/qaWavesOperationalService');
+const {
+  executeScenarioGeneration,
+  executeUIStepGeneration,
+  executeValidatorGeneration,
+  executeSeedGeneration,
+  validatePreflightForCapabilities,
+  executeFullGenerationBot,
+  applyAutoRemediations,
+} = require('../../services/qa/autoGenerationBot');
 const { createQaWavesRoutes } = require('../../modules/qa-waves/routes');
 
 function buildQaWavesRouteDeps() {
@@ -104,6 +125,26 @@ function buildQaWavesRouteDeps() {
     // Governance
     evaluateWaveGovernance,
     listWaveGovernanceReports: listGovernanceReports,
+    // Operational Discovery/Gaps
+    buildOperationalSnapshot,
+    getOperationalSnapshot,
+    // Autonomous Gap Closure Engine
+    analyzeGapsForAutoClosure,
+    generateGapClosureReport,
+    validatePreflight,
+    executeAutonomousGapClosureLoop,
+    validateReplayOperationality,
+    classifyOperationality,
+    buildStagingAutonomousLoopPayload,
+    runIntegrationReadinessProbe,
+    // Auto-Generation Bot
+    executeScenarioGeneration,
+    executeUIStepGeneration,
+    executeValidatorGeneration,
+    executeSeedGeneration,
+    validatePreflightForCapabilities,
+    executeFullGenerationBot,
+    applyAutoRemediations,
     // WS
     emitWavesEvent: (event, payload, options) => emitEvent(event, payload, options),
   };

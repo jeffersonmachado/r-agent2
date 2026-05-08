@@ -237,6 +237,7 @@ export function SupportConversationPane({
 
         {!isWaitingTicket ? (
           <div
+            data-testid="ticket-status-info"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -253,7 +254,7 @@ export function SupportConversationPane({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <span>Status: <strong>{formatTicketStatus ? formatTicketStatus(selectedTicket.status) : selectedTicket.status}</strong></span>
+              <span>Status: <strong data-testid="ticket-status-select">{formatTicketStatus ? formatTicketStatus(selectedTicket.status) : selectedTicket.status}</strong></span>
               <span>Modo: <strong>{formatSupportMode(selectedTicket.mode)}</strong></span>
               <span>Fila: <strong>{selectedTicket.queue || 'default'}</strong></span>
             </div>
@@ -265,7 +266,7 @@ export function SupportConversationPane({
 
         <div className="support-ticket-actions" style={{ flexShrink: 0 }}>
           {isWaitingTicket ? (
-            <Button onClick={handleAssign} className="support-ticket-action-btn">Atribuir Chamado</Button>
+            <Button onClick={handleAssign} className="support-ticket-action-btn" data-testid="ticket-transfer-button">Atribuir Chamado</Button>
           ) : null}
           {!isWaitingTicket && ticketMode !== 'human' && ticketMode !== 'paused' ? (
             <Button onClick={handleTakeOver} disabled={handoverLoading} className="support-ticket-action-btn">Assumir atendimento</Button>
@@ -293,7 +294,7 @@ export function SupportConversationPane({
               >
                 {deliveryFailuresLoading ? 'Carregando falhas...' : 'Falhas de entrega'}
               </Button>
-              <Button onClick={() => handleClose(selectedTicket.id)} className="support-ticket-action-btn support-button-danger" aria-label="Fechar ticket">
+              <Button onClick={() => handleClose(selectedTicket.id)} className="support-ticket-action-btn support-button-danger" data-testid="ticket-close-button" aria-label="Fechar ticket">
                 Fechar ticket
               </Button>
             </>
@@ -319,6 +320,7 @@ export function SupportConversationPane({
             <div
               ref={messagesContainerRef}
               className="support-history-log"
+              data-testid="ticket-message-list"
               role="log"
               aria-label="Histórico de mensagens do chamado"
             >
@@ -326,7 +328,7 @@ export function SupportConversationPane({
                 <p className="support-history-empty">Nenhuma mensagem ainda</p>
               ) : (
                 timelineMessages.map((msg) => (
-                  <div key={msg.key} className={`support-message ${msg.sender === 'user' ? 'is-user' : 'is-other'}`}>
+                    <div key={msg.key} className={`support-message ${msg.sender === 'user' ? 'is-user' : 'is-other'}`} data-testid={msg.sender === 'agent' ? 'message-sent' : 'message-received'}>
                     <div className="support-message-meta">
                       {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'} • {formatDate(msg.timestamp)}
                       {(() => {
@@ -407,6 +409,7 @@ export function SupportConversationPane({
               <textarea
                 ref={composerTextareaRef}
                 id="send-message-textarea"
+                data-testid="ticket-reply-input"
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
                 placeholder="Digite sua mensagem..."
@@ -466,6 +469,7 @@ export function SupportConversationPane({
                 </button>
                 <button
                   type="button"
+                  data-testid="ticket-send-button"
                   onClick={handleSendMessage}
                   className="support-send-icon-button"
                   aria-label="Enviar"

@@ -10,6 +10,27 @@ const qaWavesLogger = require('../utils/qaWavesLogger');
 const { emitEvent } = require('./websocketService');
 const qaWavesReplayAdapter = require('./qaWavesReplayAdapter');
 const qaWavesExecutionEngine = require('./qaWavesExecutionEngine');
+const stateSnapshotService = require('./qa/stateSnapshotService');
+const operationalReplayValidator = require('./qa/operationalReplayValidator');
+const operationalStepExecutor = require('./qa/operationalStepExecutor');
+const browserOperationalRunner = require('./qa/browserOperationalRunner');
+const { computeRealSnapshotDiff } = require('../../qa/evidence/evidenceProofValidator');
+const {
+  deriveStepScopedMutations,
+  POST_STATE_MUTATION_CONTRACTS,
+} = require('../../qa/evidence/postStateProofValidator');
+const { buildSupportTicketFlowSteps } = require('./qa/journeyStepDefinitions/supportTicketFlowSteps');
+const { buildFitnessCheckinFlowSteps } = require('./qa/journeyStepDefinitions/fitnessCheckinFlowSteps');
+const {
+  buildSupportOperationalSeedSpec,
+  provisionSupportSeed,
+  validateSupportSeedPostExecution,
+} = require('./qa/seeds/supportOperationalSeed');
+const {
+  buildFitnessOperationalSeedSpec,
+  provisionFitnessSeed,
+  validateFitnessSeedPostExecution,
+} = require('./qa/seeds/fitnessOperationalSeed');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
@@ -187,6 +208,8 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     scenarioName,
     stepId: scenario.steps?.[0]?.id || null,
     seedId: seed?.id || null,
+    seedEvidence: seed?.seedEvidence || null,
+    operationalSeedStatus: seed?.operationalSeedStatus || null,
     source: scenario.source,
     status,
     startedAt,
@@ -207,6 +230,11 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
       }))
       : [],
     screenshots: [],
+    beforeSnapshot: null,
+    afterSnapshot: null,
+    stateSnapshotContract: null,
+    stateMutation: null,
+    operationalTimeline: [],
     semanticSteps: Array.isArray(scenario.semanticSteps) ? scenario.semanticSteps : (scenario.steps || []),
     tags: {
       waveId: scenario.waveId,
@@ -225,6 +253,489 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
   const fullPath = path.join(replayDir, `${replayId}.json`);
   safeWriteJson(fullPath, payload);
   return { replayId, path: fullPath, payload, scenario, seed };
+}
+
+function buildSnapshotContext(replayArtifact, phase, replay = {}) {
+  const scenario = replayArtifact?.scenario || {};
+  const seed = replayArtifact?.seed || {};
+  const data = seed?.data || {};
+  const seedEvidence = replayArtifact?.payload?.seedEvidence || seed?.seedEvidence || {};
+  const seedProvision = seedEvidence?.provision || {};
+  const inferredJourney = stateSnapshotService.normalizeJourneyId(
+    scenario.journeyId || scenario.journey || scenario.journeySlug || scenario.id || replay.journeyId || ''
+  );
+
+  return {
+    phase,
+    tenantId: replay?.tenantId || data.tenantId || data.tenant_key || process.env.DEFAULT_TENANT_ID || 'system',
+    journeyId: inferredJourney,
+    scenario,
+    seed,
+    seedEvidence,
+    replay,
+    replayId: replayArtifact?.replayId || replay.replayId || replay.id || null,
+    executionId: replayArtifact?.payload?.executionId || replay.executionId || null,
+    ticketId: seedProvision.ticketId || data.ticketId || data.ticket_id || scenario.ticketId || null,
+    conversationId: seedProvision.conversationId || data.conversationId || data.conversation_id || scenario.conversationId || null,
+    contactId: seedProvision.contactId || data.contactId || data.customerId || data.customer_id || null,
+    subjectId: seedProvision.subjectId || data.subjectId || data.subject_id || null,
+    membershipId: seedProvision.membershipId || data.membershipId || data.membership_id || null,
+    credentialId: seedProvision.credentialId || data.credentialId || data.credential_id || null,
+    deviceId: seedProvision.deviceId || data.deviceId || data.device_id || null,
+    deviceMode: seedProvision.deviceMode || data.deviceMode || data.device_mode || null,
+    bookingId: data.bookingId || data.booking_id || null,
+  };
+}
+
+function normalizeOperationalJourneyId(value = '') {
+  return stateSnapshotService.normalizeJourneyId(value);
+}
+
+function isBlockingOperationalJourney(journeyId = '') {
+  return ['support_ticket_flow', 'fitness_customer_checkin'].includes(normalizeOperationalJourneyId(journeyId));
+}
+
+function createInternalHttpClient() {
+  if (typeof fetch !== 'function') return null;
+
+  const baseUrl = process.env.INTERNAL_API_BASE_URL
+    || process.env.API_BASE_URL
+    || `http://127.0.0.1:${process.env.PORT || 3000}`;
+
+  return async function httpClient(request = {}) {
+    const method = request.method || 'GET';
+    const target = new URL(request.url || '/', baseUrl).toString();
+    const headers = {
+      'content-type': 'application/json',
+      ...(request.headers || {}),
+    };
+    const response = await fetch(target, {
+      method,
+      headers,
+      body: request.body !== undefined ? JSON.stringify(request.body) : undefined,
+    });
+    const text = await response.text();
+    let body = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch (_) {
+      body = text;
+    }
+    return {
+      ok: response.ok,
+      status: response.status,
+      body,
+    };
+  };
+}
+
+async function prepareOperationalSeedEntry(entry = {}, tenantId = null, httpClient = null) {
+  const scenario = entry?.scenario || {};
+  const rawSeed = entry?.seed || null;
+  const journeyId = normalizeOperationalJourneyId(scenario.journeyId || scenario.journey || scenario.id || '');
+
+  if (!isBlockingOperationalJourney(journeyId)) {
+    return {
+      ...entry,
+      seed: rawSeed,
+      preExecutionBlockers: [],
+    };
+  }
+
+  const baseSeed = rawSeed || {
+    id: `${journeyId}_operational_seed`,
+    status: 'pending',
+    data: {},
+  };
+  const mergedData = {
+    ...(baseSeed.data || {}),
+    tenantId: tenantId || baseSeed?.data?.tenantId || null,
+  };
+
+  if (!httpClient) {
+    return {
+      ...entry,
+      seed: {
+        ...baseSeed,
+        data: mergedData,
+        operationalSeedStatus: 'missing',
+        seedEvidence: null,
+      },
+      preExecutionBlockers: [{ reason: 'operational_seed_http_client_unavailable', journeyId }],
+    };
+  }
+
+  try {
+    if (journeyId === 'support_ticket_flow') {
+      const seedSpec = buildSupportOperationalSeedSpec({ ...mergedData, tenantId });
+      const provision = await provisionSupportSeed(seedSpec, httpClient);
+      if (!provision.ok) {
+        return {
+          ...entry,
+          seed: {
+            ...baseSeed,
+            data: mergedData,
+            operationalSeedStatus: 'missing',
+            seedEvidence: { journeyId, status: 'missing', provision },
+          },
+          preExecutionBlockers: [{ reason: 'support_operational_seed_missing', journeyId, details: provision.reason || null }],
+        };
+      }
+
+      return {
+        ...entry,
+        seed: {
+          ...baseSeed,
+          status: 'approved',
+          data: {
+            ...mergedData,
+            ticketId: provision.ticketId,
+            conversationId: provision.conversationId,
+            contactId: provision.contactId,
+          },
+          operationalSeedStatus: 'ready',
+          seedEvidence: {
+            journeyId,
+            status: 'ready',
+            ticketId: provision.ticketId,
+            conversationId: provision.conversationId,
+            contactId: provision.contactId,
+            beforeSnapshot: provision.beforeSnapshot || null,
+            provision,
+          },
+        },
+        preExecutionBlockers: [],
+      };
+    }
+
+    if (journeyId === 'fitness_customer_checkin') {
+      const seedSpec = buildFitnessOperationalSeedSpec({ ...mergedData, tenantId });
+      const provision = await provisionFitnessSeed(seedSpec, httpClient);
+      if (!provision.ok) {
+        return {
+          ...entry,
+          seed: {
+            ...baseSeed,
+            data: mergedData,
+            operationalSeedStatus: 'missing',
+            seedEvidence: { journeyId, status: 'missing', provision },
+          },
+          preExecutionBlockers: [{ reason: 'fitness_operational_seed_missing', journeyId, details: provision.reason || null }],
+        };
+      }
+
+      return {
+        ...entry,
+        seed: {
+          ...baseSeed,
+          status: 'approved',
+          data: {
+            ...mergedData,
+            subjectId: provision.subjectId,
+            membershipId: provision.membershipId,
+            credentialId: provision.credentialId,
+            deviceId: provision.deviceId,
+            deviceMode: provision.deviceMode,
+          },
+          operationalSeedStatus: 'ready',
+          seedEvidence: {
+            journeyId,
+            status: 'ready',
+            subjectId: provision.subjectId,
+            membershipId: provision.membershipId,
+            credentialId: provision.credentialId,
+            deviceId: provision.deviceId,
+            deviceMode: provision.deviceMode,
+            beforeSnapshot: provision.beforeSnapshot || null,
+            provision,
+          },
+        },
+        preExecutionBlockers: [],
+      };
+    }
+  } catch (error) {
+    return {
+      ...entry,
+      seed: {
+        ...baseSeed,
+        data: mergedData,
+        operationalSeedStatus: 'missing',
+        seedEvidence: {
+          journeyId,
+          status: 'missing',
+          error: error.message,
+        },
+      },
+      preExecutionBlockers: [{ reason: 'operational_seed_provision_failed', journeyId, details: error.message }],
+    };
+  }
+
+  return {
+    ...entry,
+    seed: {
+      ...baseSeed,
+      data: mergedData,
+      operationalSeedStatus: 'missing',
+      seedEvidence: null,
+    },
+    preExecutionBlockers: [{ reason: 'operational_seed_missing', journeyId }],
+  };
+}
+
+async function hydrateOperationalSeeds(expanded = [], tenantId = null, options = {}) {
+  const httpClient = options.httpClient || createInternalHttpClient();
+  const prepared = [];
+
+  for (const entry of expanded) {
+    prepared.push(await prepareOperationalSeedEntry(entry, tenantId, httpClient));
+  }
+
+  return prepared;
+}
+
+/**
+ * Resolve os step specs para uma jornada.
+ * Para jornadas blocking (support/fitness), usa step definitions reais com execute(page).
+ * Para outras jornadas, usa os steps convertidos do replay adapter.
+ */
+function resolveJourneyStepSpecs(journeyId, runtimeSteps, seedData = {}) {
+  if (journeyId === 'support_ticket_flow') {
+    return buildSupportTicketFlowSteps(seedData);
+  }
+  if (journeyId === 'fitness_customer_checkin') {
+    try {
+      return buildFitnessCheckinFlowSteps(seedData);
+    } catch (err) {
+      // simulated_device proibido => retorna step inválido que gera NO_GO
+      return [{
+        id: 'step_fitness_seed_invalid',
+        actionType: 'preflight_check',
+        selectorUsed: null,
+        journeyId,
+        stepResult: { status: 'failed', error: err.message },
+        screenshotBefore: null,
+        screenshotAfter: null,
+        url: null,
+        domSnapshot: null,
+        networkEvents: [],
+        evidenceId: null,
+        mutationLinkage: null,
+        timestamp: new Date().toISOString(),
+      }];
+    }
+  }
+  return runtimeSteps;
+}
+
+async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, previousReplay }) {
+  const runtimeSteps = Array.isArray(converted?.steps) ? converted.steps : [];
+  const journeyId = normalizeOperationalJourneyId(replayArtifact?.scenario?.journeyId || replayArtifact?.scenario?.journey || replayArtifact?.payload?.journeyId || '');
+  const seedEvidence = replayArtifact?.seed?.seedEvidence || replayArtifact?.payload?.seedEvidence || null;
+  const stateMutation = previousReplay?.stateMutation || null;
+  const replayId = replayArtifact?.replayId || previousReplay?.replayId || null;
+  const executionId = replayArtifact?.payload?.executionId || previousReplay?.executionId || null;
+
+  // Para jornadas blocking: usa browser real + step definitions com execute(page)
+  if (isBlockingOperationalJourney(journeyId)) {
+    const seedData = {
+      ...(replayArtifact?.seed?.data || {}),
+      ...(seedEvidence?.provision || {}),
+      ticketId: seedEvidence?.ticketId || null,
+      conversationId: seedEvidence?.conversationId || null,
+      contactId: seedEvidence?.contactId || null,
+      subjectId: seedEvidence?.subjectId || null,
+      membershipId: seedEvidence?.membershipId || null,
+      credentialId: seedEvidence?.credentialId || null,
+      credentialValue: seedEvidence?.provision?.credentialValue || null,
+      deviceId: seedEvidence?.deviceId || null,
+      deviceMode: seedEvidence?.deviceMode || null,
+      agentReply: replayArtifact?.seed?.data?.agentReply || null,
+      baseUrl: process.env.QA_BROWSER_BASE_URL || process.env.INTERNAL_API_BASE_URL || '',
+    };
+
+    const stepSpecs = resolveJourneyStepSpecs(journeyId, runtimeSteps, seedData);
+
+    const browserResult = await browserOperationalRunner.executeBlockingJourneyWithBrowser(
+      journeyId,
+      stepSpecs,
+      {
+        replayId,
+        executionId,
+        stateMutation,
+        seedEvidence,
+        headless: true,
+        initialUrl: seedData.baseUrl ? `${seedData.baseUrl}` : undefined,
+        extraHTTPHeaders: seedEvidence?.authHeaders || {},
+      }
+    );
+
+    return {
+      steps: browserResult.steps || [],
+      stepResults: browserResult.stepResults || [],
+      blockers: browserResult.blockers || [],
+      goNoGo: browserResult.goNoGo || null,
+      executorUsed: browserResult.executorUsed,
+      browserUsed: browserResult.browserUsed,
+    };
+  }
+
+  // Para jornadas não-blocking: mantém comportamento existente (sem browser real)
+  const stepResults = [];
+  for (const step of runtimeSteps) {
+    const result = await operationalStepExecutor.executeStep(step, null, {
+      journeyId,
+      replayId,
+      executionId,
+      stateMutation,
+      seedEvidence,
+    });
+    stepResults.push(result);
+  }
+
+  return {
+    steps: stepResults.map((item) => item.step),
+    stepResults,
+    blockers: stepResults.flatMap((item) => item.validation?.blockers || []),
+    goNoGo: null,
+    executorUsed: true,
+    browserUsed: false,
+  };
+}
+
+function validateOperationalSeedOutcome({ scenario, seed, replay }) {
+  const journeyId = normalizeOperationalJourneyId(scenario?.journeyId || scenario?.journey || replay?.journeyId || '');
+  if (!isBlockingOperationalJourney(journeyId)) {
+    return { ok: true, blockers: [] };
+  }
+
+  const seedEvidence = seed?.seedEvidence || replay?.seedEvidence || null;
+  if (!seedEvidence) {
+    return { ok: false, blockers: [{ reason: 'operational_seed_missing', journeyId }] };
+  }
+
+  if (journeyId === 'support_ticket_flow') {
+    const result = validateSupportSeedPostExecution(replay?.beforeSnapshot || {}, replay?.afterSnapshot || {});
+    return { ok: result.ok, blockers: result.ok ? [] : result.blockers };
+  }
+
+  if (journeyId === 'fitness_customer_checkin') {
+    const result = validateFitnessSeedPostExecution(replay?.beforeSnapshot || {}, replay?.afterSnapshot || {});
+    return { ok: result.ok, blockers: result.ok ? [] : result.blockers };
+  }
+
+  return { ok: true, blockers: [] };
+}
+
+async function collectAndAttachSnapshot(replayArtifact, phase, replay = {}) {
+  const snapshot = await stateSnapshotService.collectOperationalSnapshot(
+    buildSnapshotContext(replayArtifact, phase, replay)
+  );
+  const field = phase === 'before' ? 'beforeSnapshot' : 'afterSnapshot';
+  const current = safeReadJson(replayArtifact.path, replayArtifact.payload) || replayArtifact.payload;
+  const patch = { [field]: snapshot };
+
+  if (phase === 'after') {
+    const beforeSnapshot = current.beforeSnapshot || replayArtifact.payload.beforeSnapshot || null;
+    const snapshots = stateSnapshotService.captureTransitionSnapshots({
+      before: beforeSnapshot,
+      after: snapshot,
+    });
+    const contract = stateSnapshotService.validateSnapshotContracts({
+      journeyId: snapshot?.metadata?.journeyId || current.journeyId,
+      beforeSnapshot,
+      afterSnapshot: snapshot,
+    });
+    patch.stateMutation = {
+      valid: snapshots.mutationCount > 0,
+      mutationCount: snapshots.mutationCount,
+      sideEffects: snapshots.sideEffects,
+      observedSideEffects: snapshots.observedSideEffects,
+      reason: snapshots.mutationCount > 0 ? null : 'missing_real_state_mutation',
+    };
+    patch.stateSnapshotContract = contract;
+    patch.operationalTimeline = buildOperationalTimeline({
+      replay: current,
+      beforeSnapshot,
+      afterSnapshot: snapshot,
+      stateMutation: patch.stateMutation,
+      stateSnapshotContract: contract,
+    });
+  }
+
+  return updateReplayArtifact(replayArtifact, patch);
+}
+
+function validatePostExecutionProofs(replay = {}) {
+  const journeyContext = {
+    journeyId: replay.journeyId || replay.scenario?.journeyId || '',
+    executionMode: 'operational_go',
+  };
+
+  return operationalStepExecutor.validateJourneyPostStateProofs({
+    beforeSnapshot: replay.beforeSnapshot || null,
+    afterSnapshot: replay.afterSnapshot || null,
+    executedSteps: Array.isArray(replay.steps) ? replay.steps : [],
+    replay,
+    journeyContext,
+  });
+}
+
+function buildOperationalTimeline({ replay = {}, beforeSnapshot = {}, afterSnapshot = {}, stateMutation = {}, stateSnapshotContract = {} }) {
+  const beforeState = beforeSnapshot?.state || replay.initialState || null;
+  const afterState = afterSnapshot?.state || replay.finalState || null;
+  const action = replay.steps?.find((step) => step?.action)?.action
+    || replay.events?.find((event) => event?.action)?.action
+    || 'execute_operational_journey';
+  const sideEffects = Array.isArray(stateMutation?.observedSideEffects)
+    ? stateMutation.observedSideEffects
+    : [];
+  const transitionStatus = stateMutation?.valid && stateSnapshotContract?.valid ? 'GO' : 'NO_GO';
+
+  return [
+    {
+      id: 'initial_state',
+      type: 'state',
+      label: 'ANTES',
+      state: beforeState,
+      status: beforeSnapshot ? 'captured' : 'missing',
+      evidence: beforeSnapshot,
+    },
+    {
+      id: 'action',
+      type: 'action',
+      label: 'ACAO',
+      action,
+      status: replay.status || replay.result || 'unknown',
+    },
+    {
+      id: 'transition',
+      type: 'transition',
+      label: 'TRANSICAO',
+      from: beforeState,
+      to: afterState,
+      status: transitionStatus,
+      blockers: stateSnapshotContract?.missing || [],
+    },
+    {
+      id: 'final_state',
+      type: 'state',
+      label: 'DEPOIS',
+      state: afterState,
+      status: afterSnapshot ? 'captured' : 'missing',
+      evidence: afterSnapshot,
+    },
+    {
+      id: 'side_effects',
+      type: 'side_effects',
+      label: 'SIDE EFFECTS',
+      status: sideEffects.length > 0 ? 'GO' : 'NO_GO',
+      sideEffects,
+      technicalEvidence: {
+        mutationCount: stateMutation?.mutationCount || 0,
+        snapshotContract: stateSnapshotContract?.valid ? 'passed' : 'failed',
+      },
+    },
+  ];
 }
 
 function updateReplayArtifact(replayArtifact, patch = {}) {
@@ -313,7 +824,32 @@ function mapExecutionStatus(execution, result) {
   return { replayStatus: 'failed', publicResult: 'failed', evidenceStatus: 'failed' };
 }
 
-function buildReplayPatch(replayArtifact, execution) {
+/**
+ * Reconstrói o estado de governança do ZERO a partir dos blockers reais.
+ *
+ * NÃO usa governanceBlockers anteriores do replay (evita contaminação por blockers temporários).
+ * Deve ser chamado SOMENTE depois de:
+ *   - afterSnapshot coletado
+ *   - snapshotDiff computado
+ *   - postStateProof validado
+ *   - operationalReplayValidator executado
+ *
+ * @param {object} opts
+ * @param {object[]} opts.blockers - blockers finais (runtime + seed + postState + operationalValidation + stepMutation)
+ * @returns {{ governanceStatus: string, governanceBlockers: object[], result: string }}
+ */
+function rebuildGovernanceState({ blockers = [] } = {}) {
+  const freshBlockers = Array.isArray(blockers) ? blockers.filter(Boolean) : [];
+  const governanceStatus = freshBlockers.length === 0 ? 'GO' : 'NO_GO';
+  const result = freshBlockers.length === 0 ? 'success' : 'failed';
+  return {
+    governanceStatus,
+    governanceBlockers: freshBlockers,
+    result,
+  };
+}
+
+async function buildReplayPatch(replayArtifact, execution) {
   const result = findMeshResult(execution, replayArtifact.payload.platformScenarioIds || []);
   const status = mapExecutionStatus(execution, result);
   const finishedAt = execution?.finishedAt || result?.finishedAt || nowIso();
@@ -352,20 +888,39 @@ function buildReplayPatch(replayArtifact, execution) {
     platformAdapter: replayArtifact.payload.platformAdapter || null,
   }, normalizeBrowserSession({ result, rpaReplayData, replayArtifact: rpaReplayArtifact }));
 
+  const previousReplay = safeReadJson(replayArtifact.path, replayArtifact.payload) || replayArtifact.payload;
+  const operationalRuntime = await normalizeOperationalRuntimeSteps({
+    replayArtifact,
+    converted,
+    previousReplay,
+  });
+
   const semanticExecution = qaWavesExecutionEngine.executeScenario({
     semanticSteps: Array.isArray(replayArtifact.scenario.semanticSteps)
       ? replayArtifact.scenario.semanticSteps
       : (replayArtifact.scenario.steps || []),
-    runtimeSteps: Array.isArray(converted.steps) ? converted.steps : [],
+    runtimeSteps: operationalRuntime.steps,
   });
 
   const replayStatus = converted.status;
-  const replayResult = replayStatus === 'success' ? 'success' : 'failed';
+  const baseReplayResult = replayStatus === 'success' ? 'success' : 'failed';
+  const stateMutation = previousReplay.stateMutation || null;
+  const stateSnapshotContract = previousReplay.stateSnapshotContract || null;
+  const operationalTimeline = Array.isArray(previousReplay.operationalTimeline) ? previousReplay.operationalTimeline : [];
+
+  // validateOperationalSeedOutcome e validateOperationalReplay são executados em
+  // finalizeExecutionArtifacts APÓS collectAfterSnapshot() — nunca antes.
+  // Aqui apenas preservamos o resultado base de execução (mesh status).
+  const replayResult = baseReplayResult;
 
   return {
     executionStatus: String(execution?.status || 'completed').toLowerCase(),
     status: replayStatus,
     result: replayResult,
+    // governanceStatus e governanceBlockers serão reconstruídos do zero em
+    // finalizeExecutionArtifacts depois de afterSnapshot existir.
+    governanceStatus: null,
+    governanceBlockers: [],
     source: 'qa-waves',
     finishedAt,
     endTime: finishedAt,
@@ -377,6 +932,8 @@ function buildReplayPatch(replayArtifact, execution) {
       ...(converted.metadata || {}),
       semanticStatus: semanticExecution.status || null,
       semanticErrorsCount: Array.isArray(semanticExecution.errors) ? semanticExecution.errors.length : 0,
+      executorUsed: operationalRuntime.executorUsed === true,
+      operationalSeedStatus: replayArtifact.seed?.operationalSeedStatus || previousReplay.operationalSeedStatus || null,
     },
     steps: semanticExecution.steps,
     journeySteps: semanticExecution.journeySteps,
@@ -384,13 +941,22 @@ function buildReplayPatch(replayArtifact, execution) {
     events: semanticExecution.events,
     decisions: semanticExecution.decisions,
     evidence: semanticExecution.evidence,
+    beforeSnapshot: previousReplay.beforeSnapshot || null,
+    afterSnapshot: previousReplay.afterSnapshot || null,
+    stateMutation,
+    stateSnapshotContract,
+    seedEvidence: replayArtifact.seed?.seedEvidence || previousReplay.seedEvidence || null,
+    operationalSeedStatus: replayArtifact.seed?.operationalSeedStatus || previousReplay.operationalSeedStatus || null,
+    // operationalValidation será preenchido em finalizeExecutionArtifacts
+    operationalValidation: null,
+    operationalTimeline,
     logs: Array.isArray(result?.logs) ? result.logs : [],
     timeline: Array.isArray(result?.logs) ? result.logs : [],
     errors: [...converted.errors, ...(semanticExecution.errors || [])],
     assertions: Array.isArray(replayArtifact.payload.assertions)
       ? replayArtifact.payload.assertions.map((assertion) => ({
         ...assertion,
-        status: replayResult === 'success' ? 'passed' : 'failed',
+        status: 'pending',
       }))
       : [],
     meshExecution: {
@@ -403,6 +969,9 @@ function buildReplayPatch(replayArtifact, execution) {
     screens,
     screenshots,
     screenCount: screens.length,
+    // _runtimeBlockers: blockers do browser/executor para uso em finalizeExecutionArtifacts.
+    // Não é persistido em disco — extraído antes de updateReplayArtifact.
+    _runtimeBlockers: operationalRuntime.blockers || [],
   };
 }
 
@@ -449,12 +1018,128 @@ function writeEvidenceArtifact(replayArtifact, execution) {
   return { filePath: fullPath, payload };
 }
 
-function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
-  return replayArtifacts.map((replayArtifact) => {
-    const replay = updateReplayArtifact(replayArtifact, buildReplayPatch(replayArtifact, execution));
+async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
+  const finalized = [];
+  for (const replayArtifact of replayArtifacts) {
+    if (replayArtifact.beforeSnapshotPromise && typeof replayArtifact.beforeSnapshotPromise.then === 'function') {
+      try {
+        await replayArtifact.beforeSnapshotPromise;
+      } catch (error) {
+        updateReplayArtifact(replayArtifact, {
+          governanceStatus: 'NO_GO',
+          governanceBlockers: [{
+            reason: 'snapshot_before_collection_failed',
+            phase: 'before',
+            error: error?.message || 'unknown_snapshot_error',
+          }],
+        });
+      }
+    }
+    let currentReplay = safeReadJson(replayArtifact.path, replayArtifact.payload) || replayArtifact.payload;
+    try {
+      // PASSO 1: Executa/adapta runtime e persiste replay-base (somente step execution).
+      const replayBasePatch = await buildReplayPatch(replayArtifact, execution);
+      // Extrair blockers do runtime ANTES de persistir (campo privado, não vai para disco).
+      const runtimeBlockers = Array.isArray(replayBasePatch._runtimeBlockers) ? replayBasePatch._runtimeBlockers : [];
+      delete replayBasePatch._runtimeBlockers;
+      currentReplay = updateReplayArtifact(replayArtifact, replayBasePatch);
+
+      // PASSO 2: Coleta snapshot AFTER real após a execução dos steps.
+      currentReplay = await collectAndAttachSnapshot(replayArtifact, 'after', currentReplay);
+
+      // PASSO 3: Snapshot diff real do replay final (requisito de governança).
+      currentReplay = updateReplayArtifact(replayArtifact, {
+        snapshotDiff: computeRealSnapshotDiff(
+          currentReplay.beforeSnapshot || null,
+          currentReplay.afterSnapshot || null,
+        ),
+      });
+
+      // PASSO 4: Correlacionar mutações por step (step ↔ mutation correlation real).
+      // Determina quais mutações do diff global são atribuíveis a cada step.
+      const journeyStepScopedMutations = deriveStepScopedMutations(
+        Array.isArray(currentReplay.steps) ? currentReplay.steps : [],
+        currentReplay.beforeSnapshot || null,
+        currentReplay.afterSnapshot || null,
+        currentReplay.snapshotDiff || null,
+      );
+      currentReplay = updateReplayArtifact(replayArtifact, {
+        stepScopedMutations: journeyStepScopedMutations,
+      });
+
+      // PASSO 5: Valida prova pós-execução com before/after reais e anexa proof chain.
+      const postStateValidation = validatePostExecutionProofs(currentReplay);
+      currentReplay = updateReplayArtifact(replayArtifact, {
+        steps: postStateValidation.steps,
+        postStateProof: postStateValidation.postStateSummary,
+      });
+
+      // PASSO 6: validateOperationalReplay AGORA que afterSnapshot existe.
+      // (Nunca antes — evita blockers temporários por afterSnapshot ausente.)
+      const operationalValidation = operationalReplayValidator.validateOperationalReplay(currentReplay);
+
+      // PASSO 7: validateOperationalSeedOutcome com afterSnapshot real.
+      const seedValidation = validateOperationalSeedOutcome({
+        scenario: replayArtifact.scenario,
+        seed: replayArtifact.seed,
+        replay: currentReplay,
+      });
+
+      // PASSO 8: Blockers de correlação step ↔ mutation (diff global sem step responsável => NO_GO).
+      const stepMutationBlockers = journeyStepScopedMutations
+        .filter((s) => s.goNoGo === 'NO_GO')
+        .map((s) => ({
+          reason: 'step_mutation_correlation_failed',
+          stepId: s.stepId,
+          actionType: s.actionType,
+          expected: POST_STATE_MUTATION_CONTRACTS[s.stepId] || POST_STATE_MUTATION_CONTRACTS[s.actionType] || [],
+        }));
+
+      // PASSO 9: rebuildGovernanceState DO ZERO — sem blockers antigos/temporários.
+      const freshBlockers = [
+        ...runtimeBlockers,
+        ...(seedValidation.blockers || []),
+        ...(postStateValidation.blockers || []),
+        ...(!operationalValidation.preconditionFailed ? (operationalValidation.blockers || []) : []),
+        ...stepMutationBlockers,
+      ];
+      const governance = rebuildGovernanceState({ blockers: freshBlockers });
+
+      currentReplay = updateReplayArtifact(replayArtifact, {
+        ...governance,
+        operationalValidation: {
+          isOperational: operationalValidation.isOperational,
+          classification: operationalValidation.classification,
+          percentage: operationalValidation.percentage,
+          blockers: operationalValidation.blockers,
+          preconditionFailed: operationalValidation.preconditionFailed || false,
+        },
+        assertions: Array.isArray(replayArtifact.payload.assertions)
+          ? replayArtifact.payload.assertions.map((assertion) => ({
+            ...assertion,
+            status: governance.result === 'success' ? 'passed' : 'failed',
+          }))
+          : [],
+      });
+    } catch (error) {
+      currentReplay = updateReplayArtifact(replayArtifact, {
+        stateMutation: {
+          valid: false,
+          mutationCount: 0,
+          sideEffects: [],
+          observedSideEffects: [],
+          reason: 'snapshot_after_collection_failed',
+          error: error.message,
+        },
+        governanceStatus: 'NO_GO',
+        governanceBlockers: [{ reason: 'snapshot_absent', error: error.message }],
+      });
+    }
+    const replay = currentReplay;
     const evidence = writeEvidenceArtifact(replayArtifact, execution);
-    return { replay, evidence };
-  });
+    finalized.push({ replay, evidence, currentReplay });
+  }
+  return finalized;
 }
 
 function monitorExecution(executionId, replayArtifacts, options = {}) {
@@ -487,7 +1172,7 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
           finishedAt: nowIso(),
           error: 'Execução não encontrada para reconciliar replay QA Waves',
           results: [],
-        }, replayArtifacts);
+        }, replayArtifacts).catch((error) => logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error));
         emitWsUpdate('failed', { error: 'execution_not_found' });
         return;
       }
@@ -503,7 +1188,7 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
           status: 'failed',
           finishedAt: nowIso(),
           error: 'Timeout aguardando execução QA Waves',
-        }, replayArtifacts);
+        }, replayArtifacts).catch((error) => logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error));
         emitWsUpdate('failed', { error: 'timeout' });
         return;
       }
@@ -511,22 +1196,30 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
       return;
     }
 
-    finalizeExecutionArtifacts(execution, replayArtifacts);
-    const finalStatus = String(execution.status || 'completed').toLowerCase();
-    emitWsUpdate(finalStatus);
+    finalizeExecutionArtifacts(execution, replayArtifacts)
+      .then(() => {
+        const finalStatus = String(execution.status || 'completed').toLowerCase();
+        emitWsUpdate(finalStatus);
+      })
+      .catch((error) => {
+        logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error);
+        emitWsUpdate('failed', { error: 'artifact_finalization_failed' });
+      });
   }
 
   setTimeout(poll, pollIntervalMs);
 }
 
-function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null }) {
-  const scenarioContext = expanded.map(({ scenario, seed }) => ({
+async function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null, runtimeOptions = {} }) {
+  const preparedExpanded = await hydrateOperationalSeeds(expanded, tenantId, runtimeOptions);
+  const scenarioContext = preparedExpanded.map(({ scenario, seed }) => ({
     scenarioId: scenario.id,
     seedId: seed?.id || null,
     waveId: scenario.waveId,
     journeyId: scenario.journeyId || scenario.journey || null,
     journeySteps: Array.isArray(scenario.journeySteps) ? scenario.journeySteps : [],
     semanticSteps: Array.isArray(scenario.semanticSteps) ? scenario.semanticSteps : (scenario.steps || []),
+    seedEvidence: seed?.seedEvidence || null,
   }));
 
   qaWavesLogger.info('[QA_WAVE_EXECUTION] Enfileirando execução QA Waves', {
@@ -534,7 +1227,7 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     scenarioIds: platformScenarioIds,
   });
   logger.info('[QA_WAVE_EXECUTION] Enfileirando execucao QA Waves', {
-    scenarioCount: expanded.length,
+    scenarioCount: preparedExpanded.length,
     platformScenarioIds,
     scenarioContext,
   });
@@ -546,17 +1239,42 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     tenantId,
   });
 
-  const replayArtifacts = expanded.map(({ scenario, seed }) => writeReplayArtifact({
-    executionId: queued.executionId,
-    replayId: makeId('qa_wave_replay'),
-    scenario,
-    seed,
-    status: 'running',
-    platformScenarioIds,
-  }));
+  const replayArtifacts = preparedExpanded.map(({ scenario, seed, preExecutionBlockers }) => {
+    const artifact = writeReplayArtifact({
+      executionId: queued.executionId,
+      replayId: makeId('qa_wave_replay'),
+      scenario,
+      seed,
+      status: 'running',
+      platformScenarioIds,
+    });
+    if (Array.isArray(preExecutionBlockers) && preExecutionBlockers.length > 0) {
+      updateReplayArtifact(artifact, {
+        governanceStatus: 'NO_GO',
+        governanceBlockers: preExecutionBlockers,
+        operationalSeedStatus: seed?.operationalSeedStatus || 'missing',
+        seedEvidence: seed?.seedEvidence || null,
+      });
+    }
+    return artifact;
+  });
 
   const replayIds = replayArtifacts.map((item) => item.replayId);
   const primaryReplayId = replayArtifacts[0]?.replayId || null;
+
+  const beforeSnapshotsPromise = Promise.all(replayArtifacts.map((artifact) => collectAndAttachSnapshot(artifact, 'before')))
+    .catch((error) => {
+      logger.error('[QaWavesExecutionService] Falha ao coletar snapshot inicial', error);
+      for (const artifact of replayArtifacts) {
+        updateReplayArtifact(artifact, {
+          governanceStatus: 'NO_GO',
+          governanceBlockers: [{ reason: 'snapshot_absent', phase: 'before', error: error.message }],
+        });
+      }
+    });
+  for (const artifact of replayArtifacts) {
+    artifact.beforeSnapshotPromise = beforeSnapshotsPromise;
+  }
 
   qaWavesLogger.info('[QA_REPLAY_LINKED] Replay(s) vinculados à execução QA Waves', { replayCount: replayArtifacts.length });
   logger.info('[QA_REPLAY_LINKED] Replay(s) vinculados a execucao QA Waves', {
@@ -579,7 +1297,7 @@ function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanc
     executionId: queued.executionId,
     replayId: primaryReplayId,
     replayIds,
-    scenarioCount: expanded.length,
+    scenarioCount: preparedExpanded.length,
     platformScenarioIds,
   }, { tenantId });
 
@@ -707,12 +1425,18 @@ function clearWaveExecutions() {
 }
 
 module.exports = {
+  buildSnapshotContext,
+  hydrateOperationalSeeds,
+  prepareOperationalSeedEntry,
+  normalizeOperationalRuntimeSteps,
   executePreparedWaveScenarios,
   listWaveExecutions,
   clearWaveExecutions,
   writeReplayArtifact,
   updateReplayArtifact,
   writeEvidenceArtifact,
+  validatePostExecutionProofs,
   finalizeExecutionArtifacts,
   monitorExecution,
+  rebuildGovernanceState,
 };

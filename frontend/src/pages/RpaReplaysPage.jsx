@@ -7,6 +7,31 @@ import { Dialog } from '../components/Dialog';
 import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays } from '../api/flows';
 import logger from '../utils/logger';
 
+const STRICT_REASON_LABELS = {
+  page_null_blocking_journey: 'Page nula em jornada blocking',
+  browser_launch_failed: 'Falha ao iniciar browser real',
+  initial_navigation_failed: 'Falha na navegação inicial',
+  blocking_step_missing_evidence: 'Step sem evidência obrigatória',
+  network_events_missing: 'Sem eventos de rede para o step',
+  mutation_linkage_missing: 'Sem vínculo de mutação operacional',
+  screenshot_before_capture_failed: 'Falha no screenshot before',
+  screenshot_after_capture_failed: 'Falha no screenshot after',
+  dom_snapshot_capture_failed: 'Falha no snapshot de DOM',
+  step_execution_failed: 'Falha de execução do step',
+  support_required_selector_missing: 'Selector obrigatório ausente (support)',
+  fitness_required_selector_missing: 'Selector obrigatório ausente (fitness)',
+};
+
+function formatStrictReason(reason, metadata = null) {
+  const key = String(reason || '').trim();
+  if (!key) return 'unknown_strict_reason';
+  const label = STRICT_REASON_LABELS[key] || key.replace(/_/g, ' ');
+  if (!metadata || typeof metadata !== 'object') return label;
+  const selector = metadata.selector ? ` · selector:${metadata.selector}` : '';
+  const field = metadata.field ? ` · field:${metadata.field}` : '';
+  return `${label}${selector}${field}`;
+}
+
 /**
  * Página para listar e visualizar todos os arquivos de replay RPA.
  */
@@ -42,6 +67,7 @@ export function RpaReplaysPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(false);
+  const [replayEvidenceTab, setReplayEvidenceTab] = useState('states');
   
   // Filtros
   const [searchText, setSearchText] = useState('');
@@ -223,6 +249,7 @@ export function RpaReplaysPage() {
     setIsPlaying(false);
     setShowOnlyFailures(false);
     setIsFullscreen(false);
+    setReplayEvidenceTab('states');
 
     try {
       console.log('📂 [RpaReplaysPage] Loading replay:', filename);
@@ -325,6 +352,177 @@ export function RpaReplaysPage() {
   const replaySteps = getReplaySteps();
   const currentStep = replaySteps[currentReplayStep];
   const totalSteps = replaySteps.length;
+  const operationalTimeline = useMemo(() => {
+    if (!replayData) return [];
+    if (Array.isArray(replayData.operationalTimeline) && replayData.operationalTimeline.length > 0) {
+      return replayData.operationalTimeline;
+    }
+    const fallback = replayData.stateMutation || replayData.stateSnapshotContract || replayData.beforeSnapshot || replayData.afterSnapshot
+      ? [
+          {
+            id: 'initial_state',
+            type: 'state',
+            label: 'ANTES',
+            state: replayData.beforeSnapshot?.state || replayData.initialState || null,
+            status: replayData.beforeSnapshot ? 'captured' : 'missing',
+            evidence: replayData.beforeSnapshot || null,
+          },
+          {
+            id: 'transition',
+            type: 'transition',
+            label: 'TRANSICAO',
+            from: replayData.beforeSnapshot?.state || replayData.initialState || null,
+            to: replayData.afterSnapshot?.state || replayData.finalState || null,
+            status: replayData.stateMutation?.valid && replayData.stateSnapshotContract?.valid ? 'GO' : 'NO_GO',
+            blockers: replayData.stateSnapshotContract?.missing || replayData.governanceBlockers || [],
+          },
+          {
+            id: 'final_state',
+            type: 'state',
+            label: 'DEPOIS',
+            state: replayData.afterSnapshot?.state || replayData.finalState || null,
+            status: replayData.afterSnapshot ? 'captured' : 'missing',
+            evidence: replayData.afterSnapshot || null,
+          },
+          {
+            id: 'side_effects',
+            type: 'side_effects',
+            label: 'SIDE EFFECTS',
+            status: replayData.stateMutation?.valid ? 'GO' : 'NO_GO',
+            sideEffects: replayData.stateMutation?.observedSideEffects || [],
+            observedSideEffects: replayData.stateMutation?.observedSideEffects || [],
+            requiredSideEffects: replayData.stateMutation?.requiredSideEffects || replayData.stateSnapshotContract?.contract?.requiredSideEffects || [],
+            evidence: replayData.afterSnapshot || null,
+            technicalEvidence: {
+              mutationCount: replayData.stateMutation?.mutationCount || 0,
+              snapshotContract: replayData.stateSnapshotContract?.valid ? 'passed' : 'failed',
+            },
+          },
+        ]
+      : [];
+    return fallback;
+  }, [replayData]);
+  const mutationDiffEntries = useMemo(() => {
+    const before = replayData?.beforeSnapshot || {};
+    const after = replayData?.afterSnapshot || {};
+    const rows = [];
+    const walk = (left, right, basePath = '') => {
+      const leftObj = left && typeof left === 'object' && !Array.isArray(left) ? left : {};
+      const rightObj = right && typeof right === 'object' && !Array.isArray(right) ? right : {};
+      const keys = new Set([...Object.keys(leftObj), ...Object.keys(rightObj)]);
+      keys.forEach((key) => {
+        const path = basePath ? `${basePath}.${key}` : key;
+        const prev = leftObj[key];
+        const next = rightObj[key];
+        const bothObjects = prev && next && typeof prev === 'object' && typeof next === 'object' && !Array.isArray(prev) && !Array.isArray(next);
+        if (bothObjects) {
+          walk(prev, next, path);
+          return;
+        }
+        if (JSON.stringify(prev) !== JSON.stringify(next)) {
+          rows.push({ path, before: prev, after: next });
+        }
+      });
+    };
+    walk(before, after, '');
+    return rows.slice(0, 120);
+  }, [replayData]);
+  const sideEffectProof = useMemo(() => {
+    const required = replayData?.stateMutation?.requiredSideEffects
+      || replayData?.stateSnapshotContract?.contract?.requiredSideEffects
+      || [];
+    const observed = replayData?.stateMutation?.observedSideEffects || [];
+    return {
+      required,
+      observed,
+      missing: required.filter((item) => !observed.includes(item)),
+    };
+  }, [replayData]);
+  const replayEvidenceMap = useMemo(() => {
+    const steps = Array.isArray(replayData?.steps) ? replayData.steps : [];
+    const mutations = replayData?.mutations || replayData?.mutationDiff || replayData?.stateDiff || [];
+    const seedEvidence = replayData?.seedEvidence || replayData?.metadata?.seedEvidence || null;
+    const contract = replayData?.stateSnapshotContract || null;
+    const sideEffects = replayData?.stateMutation?.observedSideEffects || [];
+    const requiredSideEffects = replayData?.stateMutation?.requiredSideEffects || replayData?.stateSnapshotContract?.contract?.requiredSideEffects || [];
+    return steps.slice(0, 120).map((step, index) => {
+      const stepId = step?.id || `step-${index + 1}`;
+      const actionType = step?.actionType || step?.action || step?.type || 'n/a';
+      const url = step?.url || step?.page || step?.route || step?.path || step?.input?.url || step?.evidence?.url || 'n/a';
+      const timestamp = step?.timestamp || step?.startedAt || step?.at || 'n/a';
+      const screenshotBefore = step?.screenshotBefore || step?.evidence?.screenshotBefore || null;
+      const screenshotAfter = step?.screenshotAfter || step?.screenshot || step?.evidence?.screenshotAfter || step?.evidence?.screenshot || null;
+      const selectorUsed = step?.selectorUsed || step?.selector || step?.evidence?.selectorUsed || step?.dataTestId || null;
+      const networkEvents = Array.isArray(step?.networkEvents)
+        ? step.networkEvents
+        : Array.isArray(step?.evidence?.networkEvents)
+          ? step.evidence.networkEvents
+          : [];
+      const stepResult = step?.stepResult || step?.evidence?.stepResult || null;
+      const evidenceId = step?.evidenceId || step?.evidence?.evidenceId || null;
+      const mutationLinkage = step?.mutationLinkage || step?.evidence?.mutationLinkage || null;
+      const sideEffectLinkage = step?.sideEffectLinkage || step?.evidence?.sideEffectLinkage || null;
+      const proofResult = step?.proofResult || step?.evidence?.proofResult || null;
+      // Mutation associada ao step (por id ou índice)
+      const linkedMutation = Array.isArray(mutations)
+        ? mutations.find((m) => m?.stepId === stepId || m?.step === stepId || m?.stepIndex === index) || null
+        : null;
+      // Fontes de evidência do step
+      const sourceEvidence = step?.evidence?.metadata?.sources
+        || step?.evidence?.sources
+        || step?.technicalEvidence?.sources
+        || {};
+      // Blockers do step
+      const blockers = Array.isArray(step?.blockers) ? step.blockers : [];
+      const missingEvidence = Array.isArray(step?.missingEvidence) ? step.missingEvidence : [];
+      const hasBlocker = blockers.length > 0 || missingEvidence.length > 0;
+      const goNoGo = step?.goNoGo || (hasBlocker ? 'NO_GO' : null);
+      const strictReasonCandidates = [];
+      if (typeof step?.error === 'string' && step.error.trim()) strictReasonCandidates.push({ reason: step.error });
+      if (typeof step?.stepResult?.error === 'string' && step.stepResult.error.trim()) strictReasonCandidates.push({ reason: step.stepResult.error, metadata: step.stepResult?.metadata || null });
+      blockers.forEach((blocker) => {
+        if (blocker?.reason) strictReasonCandidates.push({ reason: blocker.reason, metadata: blocker });
+      });
+      missingEvidence.forEach((field) => {
+        strictReasonCandidates.push({ reason: `step_missing_${field}`, metadata: { field } });
+      });
+      const strictReasons = Array.from(
+        new Set(
+          strictReasonCandidates
+            .map((item) => formatStrictReason(item.reason, item.metadata))
+            .filter(Boolean)
+        )
+      ).slice(0, 6);
+      return {
+        id: stepId,
+        actionType,
+        url,
+        timestamp,
+        screenshot: screenshotAfter,
+        screenshotBefore,
+        screenshotAfter,
+        selectorUsed,
+        networkEvents,
+        networkEventsCount: networkEvents.length,
+        stepResult,
+        evidenceId,
+        mutationLinkage,
+        sideEffectLinkage,
+        proofResult,
+        linkedMutation,
+        sourceEvidence,
+        seedEvidence,
+        contract,
+        sideEffects,
+        requiredSideEffects,
+        blockers,
+        missingEvidence,
+        strictReasons,
+        hasBlocker,
+        goNoGo,
+      };
+    });
+  }, [replayData]);
   const visibleReplaySteps = showOnlyFailures
     ? replaySteps.filter((step) => {
       if (step?.type === 'trace-step') {
@@ -356,6 +554,27 @@ export function RpaReplaysPage() {
   };
 
   const lastScreenshot = getLastScreenshot();
+  const getTimelineScreenshot = (item) => {
+    if (item?.screenshotAfter || item?.screenshot) return item.screenshotAfter || item.screenshot;
+    if (item?.evidence?.screenshotAfter || item?.evidence?.screenshot) return item.evidence.screenshotAfter || item.evidence.screenshot;
+    return lastScreenshot?.screenshot || lastScreenshot?.data || null;
+  };
+  const getEvidenceSources = (item) => {
+    const sources = item?.evidence?.metadata?.sources || item?.technicalEvidence?.sources || {};
+    return Object.entries(sources)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${key}:${value === true ? 'ok' : 'unavailable'}`);
+  };
+  const getEvidenceEntities = (item) => {
+    const evidence = item?.evidence || {};
+    const entities = [];
+    if (evidence.db && Object.keys(evidence.db).length > 0) entities.push(`DB ${Object.keys(evidence.db).join(', ')}`);
+    if (evidence.api && Object.keys(evidence.api).length > 0) entities.push(`API ${Object.keys(evidence.api).join(', ')}`);
+    if (evidence.crm && Object.keys(evidence.crm).length > 0) entities.push(`CRM ${Object.keys(evidence.crm).join(', ')}`);
+    if (evidence.events && Object.keys(evidence.events).length > 0) entities.push(`Eventos ${Object.keys(evidence.events).join(', ')}`);
+    if (evidence.devices && Object.keys(evidence.devices).length > 0) entities.push(`Device ${Object.keys(evidence.devices).join(', ')}`);
+    return entities;
+  };
 
   const goToStep = (stepIndex) => {
     if (stepIndex >= 0 && stepIndex < totalSteps) {
@@ -1324,6 +1543,7 @@ export function RpaReplaysPage() {
           setIsPlaying(false);
           setShowOnlyFailures(false);
           setIsFullscreen(false);
+          setReplayEvidenceTab('states');
         }}
         title={
           <div className="flex items-center justify-between w-full pr-8">
@@ -1492,6 +1712,14 @@ export function RpaReplaysPage() {
                       </div>
                     </div>
                   )}
+                  {(replayData.governanceStatus || replayData.operationalValidation || replayData.stateMutation) && (
+                    <div>
+                      <span className="text-text-tertiary block mb-1">Governança operacional:</span>
+                      <p className={`text-xs font-semibold ${replayData.governanceStatus === 'GO' ? 'text-status-success' : 'text-status-error'}`}>
+                        {replayData.governanceStatus || (replayData.operationalValidation?.isOperational ? 'GO' : 'NO_GO')}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Informações adicionais em uma linha separada se houver timings */}
@@ -1506,6 +1734,504 @@ export function RpaReplaysPage() {
               </div>
             )}
           </div>
+
+              {operationalTimeline.length > 0 && (
+                <div className="bg-bg-secondary rounded-lg border border-border-default mt-4" data-testid="replay-state-timeline">
+                  <div className="flex items-center justify-between gap-2 p-3 border-b border-border-default">
+                    <div className="text-sm font-semibold text-text-primary">Timeline Operacional</div>
+                    <div className="flex items-center gap-1 rounded border border-border-default bg-bg-primary p-1">
+                      {[
+                        ['states', 'Estados'],
+                        ['transitions', 'Transições'],
+                        ['sideEffects', 'Side Effects'],
+                        ['steps', 'Steps'],
+                      ].map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setReplayEvidenceTab(id)}
+                          className={`px-2 py-1 text-xs rounded ${replayEvidenceTab === id ? 'bg-accent-primary text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {operationalTimeline
+                      .filter((item) => {
+                        if (replayEvidenceTab === 'states') return item.type === 'state' || item.id === 'initial_state' || item.id === 'final_state';
+                        if (replayEvidenceTab === 'transitions') return item.type === 'transition' || item.type === 'action';
+                        if (replayEvidenceTab === 'sideEffects') return item.type === 'side_effects';
+                        return true;
+                      })
+                      .map((item) => {
+                        const status = String(item.status || '').toUpperCase();
+                        const go = status === 'GO' || status === 'CAPTURED' || status === 'SUCCESS';
+                        const evidenceSources = getEvidenceSources(item);
+                        const evidenceEntities = getEvidenceEntities(item);
+                        const timelineScreenshot = getTimelineScreenshot(item);
+                        return (
+                          <div key={item.id || item.label} className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="replay-state-timeline-item">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="font-semibold text-text-primary">{item.label || item.type}</div>
+                              <span className={`rounded px-2 py-0.5 font-semibold ${go ? 'bg-status-success/10 text-status-success' : 'bg-status-error/10 text-status-error'}`}>
+                                {status || 'N/A'}
+                              </span>
+                            </div>
+                            {item.state ? <div className="mt-1 text-text-secondary">Estado: <span className="font-mono">{item.state}</span></div> : null}
+                            {item.action ? <div className="mt-1 text-text-secondary">Ação: <span className="font-mono">{item.action}</span></div> : null}
+                            {(item.from || item.to) ? (
+                              <div className="mt-1 text-text-secondary">
+                                {item.from || 'n/a'} → {item.to || 'n/a'}
+                              </div>
+                            ) : null}
+                            {Array.isArray(item.sideEffects) && item.sideEffects.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {item.sideEffects.map((effect) => (
+                                  <span key={effect} className="rounded border border-border-default bg-bg-secondary px-2 py-0.5 text-text-secondary">
+                                    {effect}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            {item.technicalEvidence ? (
+                              <div className="mt-2 text-text-tertiary">
+                                Mutations: {item.technicalEvidence.mutationCount ?? 0} · Snapshot: {item.technicalEvidence.snapshotContract || 'n/a'}
+                              </div>
+                            ) : null}
+                            {(Array.isArray(item.requiredSideEffects) && item.requiredSideEffects.length > 0) || (Array.isArray(item.observedSideEffects) && item.observedSideEffects.length > 0) ? (
+                              <div className="mt-2 grid gap-1 text-text-secondary">
+                                <div>Obrigatórios: {(item.requiredSideEffects || []).join(', ') || 'n/a'}</div>
+                                <div>Observados: {(item.observedSideEffects || item.sideEffects || []).join(', ') || 'n/a'}</div>
+                              </div>
+                            ) : null}
+                            {evidenceEntities.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {evidenceEntities.map((entry) => (
+                                  <span key={entry} className="rounded border border-border-default bg-bg-secondary px-2 py-0.5 text-text-tertiary">
+                                    {entry}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            {evidenceSources.length > 0 ? (
+                              <div className="mt-2 text-text-tertiary break-words">
+                                Fontes: {evidenceSources.join(' · ')}
+                              </div>
+                            ) : null}
+                            {timelineScreenshot ? (
+                              <div className="mt-2 overflow-hidden rounded border border-border-default bg-bg-secondary">
+                                <img src={timelineScreenshot} alt="Screenshot da transição operacional" className="max-h-40 w-full object-contain" />
+                              </div>
+                            ) : null}
+                            {Array.isArray(item.blockers) && item.blockers.length > 0 ? (
+                              <div className="mt-2 space-y-1">
+                                {item.blockers.slice(0, 4).map((blocker, index) => (
+                                  <div key={index} className="rounded bg-status-error/5 border border-status-error/20 px-2 py-1 text-status-error break-words">
+                                    {formatStrictReason(blocker.reason || blocker.entry || 'unknown_blocker', blocker)}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    {replayData.stateSnapshotContract && (
+                      <div className="rounded border border-border-default bg-bg-primary p-3 text-xs">
+                        <div className="font-semibold text-text-primary">Contrato de Snapshot</div>
+                        <div className="mt-1 text-text-secondary">
+                          Status: <span className={replayData.stateSnapshotContract.valid ? 'text-status-success' : 'text-status-error'}>
+                            {replayData.stateSnapshotContract.valid ? 'passed' : 'failed'}
+                          </span>
+                        </div>
+                        {Array.isArray(replayData.stateSnapshotContract.missing) && replayData.stateSnapshotContract.missing.length > 0 ? (
+                          <div className="mt-2 space-y-1">
+                            {replayData.stateSnapshotContract.missing.slice(0, 8).map((item, index) => (
+                              <div key={index} className="rounded bg-status-error/5 border border-status-error/20 px-2 py-1 text-status-error break-words">
+                                {item.phase || 'contract'} · {item.entry || item.path || item.reason || JSON.stringify(item)}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                    <div className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="mutation-diff-viewer">
+                      <div className="font-semibold text-text-primary">Mutation Diff Viewer</div>
+                      <div className="mt-1 text-text-secondary">{mutationDiffEntries.length} mutação(ões) detectada(s)</div>
+                      {mutationDiffEntries.length > 0 ? (
+                        <div className="mt-2 max-h-56 overflow-auto space-y-1">
+                          {mutationDiffEntries.map((entry) => (
+                            <div key={entry.path} className="rounded border border-border-default bg-bg-secondary px-2 py-1">
+                              <div className="font-mono text-text-primary">{entry.path}</div>
+                              <div className="text-text-tertiary">before: {JSON.stringify(entry.before)}</div>
+                              <div className="text-text-tertiary">after: {JSON.stringify(entry.after)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-status-error">Nenhuma mutação operacional comprovada.</div>
+                      )}
+                    </div>
+                    <div className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="snapshot-compare-viewer">
+                      <div className="font-semibold text-text-primary">Snapshot Compare Viewer</div>
+                      <div className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                        <div className="rounded border border-border-default bg-bg-secondary p-2">
+                          <div className="font-semibold text-text-secondary mb-1">Before Snapshot</div>
+                          <pre className="text-text-tertiary whitespace-pre-wrap break-words">{JSON.stringify(replayData.beforeSnapshot || null, null, 2)}</pre>
+                        </div>
+                        <div className="rounded border border-border-default bg-bg-secondary p-2">
+                          <div className="font-semibold text-text-secondary mb-1">After Snapshot</div>
+                          <pre className="text-text-tertiary whitespace-pre-wrap break-words">{JSON.stringify(replayData.afterSnapshot || null, null, 2)}</pre>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="side-effect-proof-viewer">
+                      <div className="font-semibold text-text-primary">Side Effect Proof Viewer</div>
+                      <div className="mt-1 text-text-secondary">Obrigatórios: {sideEffectProof.required.join(', ') || 'n/a'}</div>
+                      <div className="mt-1 text-text-secondary">Observados: {sideEffectProof.observed.join(', ') || 'n/a'}</div>
+                      {sideEffectProof.missing.length > 0 ? (
+                        <div className="mt-2 text-status-error">Ausentes: {sideEffectProof.missing.join(', ')}</div>
+                      ) : (
+                        <div className="mt-2 text-status-success">Todos os side effects obrigatórios foram comprovados.</div>
+                      )}
+                    </div>
+                    <div className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="replay-evidence-map">
+                      <div className="font-semibold text-text-primary">Replay Evidence Map</div>
+                      <div className="mt-1 text-text-secondary">Mapeamento step → ação → URL → timestamp → screenshot</div>
+                      <div className="mt-2 max-h-56 overflow-auto space-y-1">
+                        {replayEvidenceMap.map((entry) => (
+                          <div key={entry.id} className={`rounded border px-2 py-1 ${entry.goNoGo === 'NO_GO' ? 'border-status-error/50 bg-status-error/5' : 'border-border-default bg-bg-secondary'}`}>
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="font-semibold text-text-primary">{entry.id}</div>
+                              {entry.goNoGo === 'NO_GO' && (
+                                <span className="rounded px-1.5 py-0.5 font-bold text-[10px] bg-status-error text-white">NO_GO</span>
+                              )}
+                            </div>
+                            <div className="text-text-tertiary">actionType: {entry.actionType}</div>
+                            <div className="text-text-tertiary break-all">url: {entry.url}</div>
+                            <div className="text-text-tertiary">timestamp: {entry.timestamp}</div>
+                            <div className="text-text-tertiary break-all">screenshot: {entry.screenshotAfter ? 'ok' : 'missing'}{!entry.screenshotBefore ? ' · before:missing' : ''}</div>
+                            {entry.strictReasons.length > 0 && (
+                              <div className="mt-1 text-status-error break-words">motivo estrito: {entry.strictReasons.join(' · ')}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* ── Step Evidence Cards — aba Steps ── */}
+                    {replayEvidenceTab === 'steps' && (
+                      <div className="rounded border border-border-default bg-bg-primary p-3 text-xs" data-testid="step-evidence-cards">
+                        <div className="font-semibold text-text-primary">Step Evidence Cards</div>
+                        <div className="mt-1 text-text-secondary">Screenshot antes/depois · URL · actionType · mutation · blocker por step</div>
+                        {replayEvidenceMap.length === 0 && (
+                          <div className="mt-2 text-status-error">Nenhum step operacional encontrado neste replay.</div>
+                        )}
+                        <div className="mt-2 space-y-3 max-h-[600px] overflow-auto">
+                          {replayEvidenceMap.map((entry, idx) => (
+                            <div
+                              key={entry.id}
+                              className={`rounded border p-3 ${
+                                entry.goNoGo === 'NO_GO'
+                                  ? 'border-status-error/50 bg-status-error/5'
+                                  : 'border-border-default bg-bg-secondary'
+                              }`}
+                              data-testid="step-evidence-card"
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-text-primary">Step {idx + 1}</span>
+                                  <span className="rounded border border-border-default bg-bg-primary px-1.5 py-0.5 text-text-secondary font-mono">{entry.actionType}</span>
+                                </div>
+                                {entry.goNoGo === 'NO_GO' && (
+                                  <span className="rounded px-2 py-0.5 font-bold text-[11px] bg-status-error text-white" data-testid="step-no-go-badge">NO_GO</span>
+                                )}
+                              </div>
+                              <div className="text-text-tertiary break-all mb-1">URL: {entry.url}</div>
+                              <div className="text-text-tertiary mb-2">Timestamp: {entry.timestamp}</div>
+                              <div className="text-text-tertiary mb-1 break-all">Selector: {entry.selectorUsed || 'n/a'}</div>
+                              <div className="text-text-tertiary mb-2 break-all">Evidence ID: {entry.evidenceId || 'missing'}</div>
+                              {entry.stepResult && (
+                                <div className="text-text-tertiary mb-2">Step Result: {entry.stepResult.status || JSON.stringify(entry.stepResult)}</div>
+                              )}
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                <div>
+                                  <div className="text-text-secondary font-semibold mb-1">Before</div>
+                                  {entry.screenshotBefore
+                                    ? <img src={entry.screenshotBefore} alt={`Step ${idx + 1} before`} className="rounded border border-border-default w-full max-h-32 object-contain bg-bg-primary" />
+                                    : <div className="rounded border border-border-default bg-bg-primary px-2 py-4 text-center text-text-tertiary">sem screenshot</div>
+                                  }
+                                </div>
+                                <div>
+                                  <div className="text-text-secondary font-semibold mb-1">After</div>
+                                  {entry.screenshotAfter
+                                    ? <img src={entry.screenshotAfter} alt={`Step ${idx + 1} after`} className="rounded border border-border-default w-full max-h-32 object-contain bg-bg-primary" />
+                                    : <div className="rounded border border-border-default bg-bg-primary px-2 py-4 text-center text-text-tertiary">sem screenshot</div>
+                                  }
+                                </div>
+                              </div>
+                              {entry.linkedMutation && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Mutation</div>
+                                  <div className="font-mono text-text-primary">{entry.linkedMutation.path || entry.linkedMutation.key || JSON.stringify(entry.linkedMutation)}</div>
+                                  {entry.linkedMutation.before !== undefined && (
+                                    <div className="text-text-tertiary">before: {JSON.stringify(entry.linkedMutation.before)}</div>
+                                  )}
+                                  {entry.linkedMutation.after !== undefined && (
+                                    <div className="text-text-tertiary">after: {JSON.stringify(entry.linkedMutation.after)}</div>
+                                  )}
+                                </div>
+                              )}
+                              {entry.mutationLinkage && !entry.linkedMutation && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Mutation Linkage</div>
+                                  <div className="text-text-tertiary break-all">{JSON.stringify(entry.mutationLinkage)}</div>
+                                </div>
+                              )}
+                              {(entry.proofResult || entry.stepExecutionProof || entry.postStateProof) && (() => {
+                                const sepProof = Boolean(entry.stepExecutionProof || entry.postStateProof);
+                                const stepExec = entry.stepExecutionProof || (entry.proofResult ? { ...entry.proofResult, phase: 'step_execution' } : null);
+                                const postState = entry.postStateProof || null;
+                                const overallValid = sepProof
+                                  ? (stepExec?.valid !== false) && (postState == null || postState.valid !== false)
+                                  : entry.proofResult?.valid;
+                                const overallGoNoGo = entry.proofGoNoGo || stepExec?.goNoGo || postState?.goNoGo || entry.proofResult?.goNoGo;
+                                return (
+                                  <div className={`rounded border px-2 py-1 mb-2 ${overallValid ? 'border-status-success' : 'border-status-error'}`}>
+                                    <div className="font-semibold text-text-secondary mb-1">
+                                      Proof Chain
+                                      <span className={`ml-2 text-xs font-bold ${overallValid ? 'text-status-success' : 'text-status-error'}`}>
+                                        {overallValid ? '✓ VALID' : `✗ ${overallGoNoGo || 'FAILED'}`}
+                                      </span>
+                                    </div>
+                                    {/* Proof chain summary badges */}
+                                    {entry.proofChain && (
+                                      <div className="flex flex-wrap gap-1 text-xs mb-2">
+                                        {Object.entries(entry.proofChain).filter(([k]) => !['complete','stepExecutionValid','postStateValid'].includes(k)).map(([k, v]) => (
+                                          <span key={k} className={`px-1 rounded ${v ? 'bg-status-success/20 text-status-success' : 'bg-status-error/20 text-status-error'}`}>
+                                            {k}:{v === true ? '✓' : v === false ? '✗' : String(v ?? '—')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {/* ─── Painel 1: STEP EXECUTION ─────── */}
+                                    {stepExec && (
+                                      <div className={`rounded border mb-2 px-2 py-1 ${stepExec.valid ? 'border-status-success/40 bg-status-success/5' : 'border-status-error/40 bg-status-error/5'}`}>
+                                        <div className="text-xs font-bold text-text-secondary mb-1">
+                                          STEP EXECUTION PROOF
+                                          <span className={`ml-2 ${stepExec.valid ? 'text-status-success' : 'text-status-error'}`}>
+                                            {stepExec.valid ? '✓' : '✗'}
+                                          </span>
+                                        </div>
+                                        {/* Browser fields */}
+                                        <div className="flex flex-wrap gap-1 text-xs mb-1">
+                                          {stepExec.hasUrl !== undefined && (
+                                            <span className={`px-1 rounded ${stepExec.hasUrl ? 'bg-status-success/20 text-status-success' : 'bg-status-error/20 text-status-error'}`}>url:{stepExec.hasUrl ? '✓' : '✗'}</span>
+                                          )}
+                                          {stepExec.hasSelector !== undefined && (
+                                            <span className={`px-1 rounded ${stepExec.hasSelector ? 'bg-status-success/20 text-status-success' : 'bg-status-error/20 text-status-error'}`}>selector:{stepExec.hasSelector ? '✓' : '✗'}</span>
+                                          )}
+                                          {(stepExec.missingBrowserFields || []).length > 0 && (
+                                            <span className="px-1 rounded bg-status-error/20 text-status-error">missing:{stepExec.missingBrowserFields.join(',')}</span>
+                                          )}
+                                        </div>
+                                        {/* Network proof */}
+                                        {stepExec.networkProof && (
+                                          <div className="mb-1">
+                                            <div className={`text-xs font-semibold ${stepExec.networkProof.valid ? 'text-status-success' : stepExec.networkProof.noContract ? 'text-text-tertiary' : 'text-status-error'}`}>
+                                              Network: {stepExec.networkProof.valid ? '✓' : stepExec.networkProof.noContract ? '(sem contrato)' : '✗ FALHOU'}
+                                            </div>
+                                            {(stepExec.networkProof.expectedEndpoints || []).map((ep, i) => (
+                                              <div key={i} className="text-xs text-text-tertiary break-all">↗ {ep}</div>
+                                            ))}
+                                            {(stepExec.networkProof.observedEndpoints || []).slice(0, 4).map((ep, i) => (
+                                              <div key={i} className="text-xs text-text-tertiary break-all">✓ {ep}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {/* Step-time blockers */}
+                                        {(stepExec.blockers || []).length > 0 && (
+                                          <div>
+                                            {stepExec.blockers.slice(0, 3).map((b, i) => (
+                                              <div key={i} className="text-xs text-status-error break-all">✗ {b.reason}{b.missingField ? ` (${b.missingField})` : ''}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {/* ─── Painel 2: POST STATE ─────────── */}
+                                    {postState ? (
+                                      <div className={`rounded border mb-1 px-2 py-1 ${postState.valid ? 'border-status-success/40 bg-status-success/5' : postState.afterSnapshotPresent === false ? 'border-border-default bg-bg-primary' : 'border-status-error/40 bg-status-error/5'}`}>
+                                        <div className="text-xs font-bold text-text-secondary mb-1">
+                                          POST STATE PROOF
+                                          <span className={`ml-2 ${postState.valid ? 'text-status-success' : postState.afterSnapshotPresent === false ? 'text-text-tertiary' : 'text-status-error'}`}>
+                                            {postState.afterSnapshotPresent === false ? '⏳ aguardando snapshot' : postState.valid ? '✓' : '✗'}
+                                          </span>
+                                        </div>
+                                        {/* Snapshot diff */}
+                                        {postState.diff != null && (
+                                          <div className={`text-xs mb-1 ${postState.diff.changed ? 'text-status-success' : 'text-status-error'}`}>
+                                            snapshot: {postState.diff.changed
+                                              ? `${postState.diff.details?.length ?? 0} campo(s) alterado(s)`
+                                              : 'before === after (sem mudança)'}
+                                          </div>
+                                        )}
+                                        {/* Observed mutations */}
+                                        {(postState.observedMutations || []).length > 0 && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Mutações observadas ({postState.mutationCount}):</div>
+                                            {postState.observedMutations.slice(0, 5).map((m, i) => (
+                                              <div key={i} className="text-xs text-status-success">✓ {m}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {/* Expected vs observed mutations */}
+                                        {(postState.expectedMutations || []).length > 0 && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Mutações esperadas:</div>
+                                            {postState.expectedMutations.map((m, i) => {
+                                              const ok = !(postState.missingMutations || []).includes(m);
+                                              return (
+                                                <div key={i} className={`text-xs ${ok ? 'text-status-success' : 'text-status-error'}`}>{ok ? '✓' : '✗'} {m}</div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                        {/* Observed side effects */}
+                                        {(postState.observedSideEffects || []).length > 0 && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Side effects observados:</div>
+                                            {postState.observedSideEffects.slice(0, 5).map((se, i) => (
+                                              <div key={i} className="text-xs text-status-success">✓ {se}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {/* Expected side effects */}
+                                        {(postState.expectedSideEffects || []).length > 0 && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Side effects esperados:</div>
+                                            {postState.expectedSideEffects.map((se, i) => {
+                                              const ok = !(postState.missingSideEffects || []).includes(se);
+                                              return (
+                                                <div key={i} className={`text-xs ${ok ? 'text-status-success' : 'text-status-error'}`}>{ok ? '✓' : '✗'} {se}</div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                        {/* Post-state blockers */}
+                                        {(postState.blockers || []).length > 0 && (
+                                          <div>
+                                            {postState.blockers.slice(0, 3).map((b, i) => (
+                                              <div key={i} className="text-xs text-status-error break-all">✗ {b.reason}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (entry.proofResult?.mutationProof || entry.proofResult?.sideEffectProof || entry.proofResult?.realSnapshotDiff) && (
+                                      /* fallback: legado proofResult sem separação */
+                                      <div className="rounded border border-border-default px-2 py-1 mb-1">
+                                        <div className="text-xs font-bold text-text-secondary mb-1">POST STATE PROOF (legado)</div>
+                                        {entry.proofResult?.mutationProof && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary">mutationCount: {entry.proofResult.mutationProof.mutationCount ?? 'n/a'}</div>
+                                            {(entry.proofResult.mutationProof.observedMutations || []).map((m, i) => (
+                                              <div key={i} className="text-xs text-status-success">✓ {m}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {entry.proofResult?.realSnapshotDiff && (
+                                          <div className={`text-xs ${entry.proofResult.realSnapshotDiff.changed ? 'text-status-success' : 'text-text-tertiary'}`}>
+                                            snapshot: {entry.proofResult.realSnapshotDiff.changed ? 'changed' : 'UNCHANGED'}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {/* All blockers summary */}
+                                    {(entry.proofBlockers || entry.proofResult?.blockers || []).length > 0 && (
+                                      <div className="mt-1">
+                                        <div className="text-status-error text-xs font-semibold">Proof Blockers:</div>
+                                        {(entry.proofBlockers || entry.proofResult?.blockers || []).slice(0, 5).map((b, i) => (
+                                          <div key={i} className="text-xs text-status-error break-all">✗ {b.reason}{b.missingSideEffect ? ` (${b.missingSideEffect})` : ''}</div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                <div className="font-semibold text-text-secondary">Network Events</div>
+                                {entry.networkEventsCount > 0 ? (
+                                  <div className="mt-1 space-y-1">
+                                    {entry.networkEvents.slice(0, 4).map((event, eventIndex) => (
+                                      <div key={eventIndex} className="text-text-tertiary break-all">
+                                        {(event.method || 'METHOD')} {(event.status || 'n/a')} {(event.url || 'n/a')}
+                                        {event.failureReason ? ` · ${event.failureReason}` : ''}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="mt-1 text-status-error">sem network events</div>
+                                )}
+                              </div>
+                              {Object.keys(entry.sourceEvidence).length > 0 && (
+                                <div className="text-text-tertiary mb-1">
+                                  Fontes: {Object.entries(entry.sourceEvidence).map(([k, v]) => `${k}:${v}`).join(' · ')}
+                                </div>
+                              )}
+                              {entry.seedEvidence && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Seed Linkage</div>
+                                  <div className="text-text-tertiary break-all">{JSON.stringify(entry.seedEvidence)}</div>
+                                </div>
+                              )}
+                              {entry.contract && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Contracts</div>
+                                  <div className="text-text-tertiary">valid: {entry.contract.valid ? 'true' : 'false'}</div>
+                                  {Array.isArray(entry.contract.missing) && entry.contract.missing.length > 0 && (
+                                    <div className="text-status-error break-words">missing: {entry.contract.missing.slice(0, 3).map((item) => item.entry || item.path || item.reason || JSON.stringify(item)).join(' · ')}</div>
+                                  )}
+                                </div>
+                              )}
+                              {(entry.sideEffects.length > 0 || entry.requiredSideEffects.length > 0) && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Side Effects</div>
+                                  <div className="text-text-tertiary">observados: {entry.sideEffects.join(', ') || 'n/a'}</div>
+                                  <div className="text-text-tertiary">obrigatórios: {entry.requiredSideEffects.join(', ') || 'n/a'}</div>
+                                </div>
+                              )}
+                              {entry.missingEvidence.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {entry.missingEvidence.map((field) => (
+                                    <span key={field} className="rounded border border-status-error/40 bg-status-error/10 px-1.5 py-0.5 text-status-error text-[11px]">
+                                      missing: {field}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {entry.strictReasons.length > 0 && (
+                                <div className="mt-2 rounded border border-status-error/30 bg-status-error/5 px-2 py-1">
+                                  <div className="font-semibold text-status-error">Motivo estrito</div>
+                                  <div className="mt-1 text-status-error break-words">{entry.strictReasons.join(' · ')}</div>
+                                </div>
+                              )}
+                              {entry.blockers.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {entry.blockers.slice(0, 3).map((blocker, bIdx) => (
+                                    <div key={bIdx} className="rounded bg-status-error/5 border border-status-error/20 px-2 py-1 text-status-error break-words">
+                                      {formatStrictReason(blocker.reason || 'unknown_blocker', blocker)}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Modo Step-by-Step */}
               {replayStepByStep && totalSteps > 0 && currentStep && (

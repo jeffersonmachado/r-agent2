@@ -712,7 +712,7 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
       throw makeError('scenarioIds obrigatorio', 'BAD_REQUEST');
     }
 
-    const run = runScenarioExecution({
+    const run = await runScenarioExecution({
       mode: String(payload.mode || 'real').toLowerCase(),
       scenarioIds,
       seedIds: Array.isArray(payload.seedIds) ? payload.seedIds : [],
@@ -721,7 +721,7 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
     });
 
     return {
-      executionId: run.executionId,
+      executionId: run.executionId || null,
       replayId: run.replayId || null,
       replayIds: Array.isArray(run.replayIds) ? run.replayIds : [],
       source,

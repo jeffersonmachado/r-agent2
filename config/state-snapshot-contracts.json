@@ -1,0 +1,38 @@
+{
+  "support_ticket_flow": {
+    "before": [
+      "db.ticket.exists",
+      "db.ticket.status",
+      "db.ticket.messages.count",
+      "crm.activities.count",
+      "events.audit.count"
+    ],
+    "after": [
+      "db.ticket.messages.count:incremented",
+      "crm.activities.count:incremented",
+      "events.audit.count:incremented"
+    ]
+  },
+  "fitness_customer_checkin": {
+    "before": [
+      "db.crm.contact.exists",
+      "db.membership.active",
+      "db.credential.exists",
+      "db.attendance.not_exists"
+    ],
+    "after": [
+      "api.access.decision.allow",
+      "devices.access.releaseEventCreated:created",
+      "db.attendance.created:created",
+      "crm.presenceActivity.created:created"
+    ]
+  },
+  "booking_flow": {
+    "before": [
+      "db.booking.count"
+    ],
+    "after": [
+      "db.booking.count:incremented"
+    ]
+  }
+}

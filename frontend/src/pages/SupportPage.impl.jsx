@@ -163,7 +163,7 @@ export function SupportPage() {
 
   return (
     <CrudPageBase title="💬 Atendimento" hideHeader>
-      <div className="attendance-runtime-shell">
+      <div className="attendance-runtime-shell" data-testid="support-page">
         <main className="attendance-runtime-main">
           <SupportWorkspaceHeader
             wsStatus={state.wsStatus}
@@ -231,7 +231,7 @@ export function SupportPage() {
               />
             </div>
 
-            <div className="attendance-runtime-col attendance-runtime-col--workspace">
+            <div className="attendance-runtime-col attendance-runtime-col--workspace" data-testid="ticket-updated">
               {selectedTicket ? (
                 <>
                   <div className="attendance-runtime-top-grid">
@@ -412,7 +412,7 @@ export function SupportPage() {
                         placeholder="Adicionar tag"
                         className="support-form-input"
                       />
-                      <Button onClick={actions.handleAddTag} style={{ width: 'auto' }}>
+                      <Button data-testid="ticket-tag-button" onClick={actions.handleAddTag} style={{ width: 'auto' }}>
                         Adicionar
                       </Button>
                     </div>

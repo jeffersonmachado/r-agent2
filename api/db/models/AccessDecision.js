@@ -26,7 +26,7 @@ function getAccessDecisionModel() {
       reason_detail: { type: DataTypes.TEXT, allowNull: true },
       issued_at: { type: DataTypes.DATE, allowNull: false },
       expires_at: { type: DataTypes.DATE, allowNull: true },
-      signature: { type: DataTypes.STRING, allowNull: true },
+      signature: { type: DataTypes.TEXT, allowNull: true },
       metadata: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     }, {
       tableName: 'access_decisions',

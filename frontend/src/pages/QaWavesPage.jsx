@@ -903,6 +903,14 @@ export function QaWavesPage() {
             <p className="qa-waves-subtitle">
               Opera na mesma API e frontend do r-agent2, sem porta adicional.
             </p>
+            <div style={{ marginTop: 8 }}>
+              <a
+                href="/dev/qa-gaps"
+                style={{ fontSize: 13, color: 'var(--color-accent-primary)', textDecoration: 'none', fontWeight: 600 }}
+              >
+                Abrir dashboard operacional de gaps (/dev/qa-gaps)
+              </a>
+            </div>
           </div>
           <div
             className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5"

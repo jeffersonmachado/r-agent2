@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-07T13:25:47.702Z",
+  "journeys": {
+    "omnichannel_engagement": {
+      "requiredCapabilities": [
+        "omnichannel_whatsapp",
+        "omnichannel_webchat",
+        "omnichannel_pbx",
+        "omnichannel_email"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.88
+    },
+    "support_ticket_flow": {
+      "requiredCapabilities": [
+        "support_ticket_flow",
+        "support_ticket_reply"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.86
+    },
+    "fitness_customer_checkin": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.73
+    }
+  }
+}

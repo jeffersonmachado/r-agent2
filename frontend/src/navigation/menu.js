@@ -351,6 +351,7 @@ export const navigationMenu = [
           { id: 'dev', label: 'Central Dev', path: '/dev', roles: ['super_admin'] },
           { id: 'dev-dashboard-alias', label: 'Dashboard Dev', path: '/dev-dashboard', roles: ['super_admin'], hiddenInSidebar: true },
           { id: 'dev-qa-waves', label: 'QA Waves', path: '/dev/qa-waves', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          { id: 'dev-qa-gaps', label: 'QA Gaps', path: '/dev/qa-gaps', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           {
             id: 'dev-work-management',
             label: 'Gestão de Trabalho',

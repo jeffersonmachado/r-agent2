@@ -5,6 +5,7 @@ const path = require('path');
 const { SCREEN_SCENARIOS, FLOW_SCENARIOS, JOURNEY_SCENARIOS } = require('../tests/rpa/business/catalog');
 const { getChangedFiles, determineAffectedScopes } = require('../qa/qaRunner');
 const { evaluateGoNoGo, evaluateWaveResult } = require('./governance');
+const operationalStepExecutor = require('../api/services/qa/operationalStepExecutor');
 const { buildFailureIntelligence } = require('./intelligence/failureIntelligence');
 const rpaAdapter = require('./adapters/rpaAdapter');
 const apiAdapter = require('./adapters/apiAdapter');
@@ -42,6 +43,12 @@ function safeReadJson(filePath, fallback) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function resolveBlockingPageNullDecision(executionMode = 'operational_go') {
+  return String(executionMode || 'operational_go').toLowerCase() === 'diagnostic'
+    ? 'REVIEW'
+    : 'NO_GO';
 }
 
 function determineExecutionOrigin(options = {}) {
@@ -1001,7 +1008,7 @@ function detectFailureType(diagnostics = []) {
   };
 }
 
-function classifyScenarioResult(result, history = []) {
+function classifyScenarioResult(result, history = [], options = {}) {
   if (result.status === 'passed') {
     return {
       ...result,
@@ -1012,13 +1019,34 @@ function classifyScenarioResult(result, history = []) {
     };
   }
 
-  // passed_via_fallback: passou mas via adapter secundário — degradação explícita
-  if (result.status === 'passed_via_fallback') {
+  if (result.status === 'review') {
+    const diagnostics = collectScenarioDiagnostics(result);
     return {
       ...result,
-      failureType: null,
-      errorMessage: null,
-      rootCauseHint: 'Cenário passou via fallback para adapter API (primary adapter falhou).',
+      failureType: 'review_required',
+      errorMessage: diagnostics[0] || 'Execução em modo diagnóstico requer revisão manual.',
+      rootCauseHint: 'Modo diagnóstico permite adapter/fallback, mas não valida GO operacional.',
+      durationMs: durationMs(result.startedAt, result.finishedAt),
+    };
+  }
+
+  // passed_via_fallback: degradação bloqueante em strictMode ou criticality=blocking
+  if (result.status === 'passed_via_fallback') {
+    const isBlockingJourney = result.criticality === 'blocking'
+      || (result.journeyId && ['support_ticket_flow', 'fitness_customer_checkin'].includes(result.journeyId));
+    const isStrict = options.strictMode === true || result.strictMode === true;
+    const isDegradedBlocking = isBlockingJourney || isStrict;
+    return {
+      ...result,
+      // Em jornada blocking ou strictMode: falha real de degradação
+      status: isDegradedBlocking ? 'failed' : 'passed_via_fallback',
+      failureType: isDegradedBlocking ? 'fallback_degradation' : null,
+      errorMessage: isDegradedBlocking
+        ? 'Fallback utilizado em jornada blocking/strict — execução primária falhou, resultado NÃO é operacional.'
+        : null,
+      rootCauseHint: isDegradedBlocking
+        ? 'Fallback em jornada blocking ou strictMode=true bloqueia GO imediatamente (fallback_degradation).'
+        : 'Cenário passou via fallback para adapter API (primary adapter falhou).',
       runtimeMode: result.runtimeMode || 'REAL_FAILED_FALLBACK_USED',
       durationMs: durationMs(result.startedAt, result.finishedAt),
     };
@@ -1074,10 +1102,21 @@ function classifyScenarioResult(result, history = []) {
   };
 }
 
-function aggregateFailures(results = []) {
-  // passed_via_fallback é tratado como não-falha estrutural, mas degradação visível
-  const failures = results.filter((item) => item.status !== 'passed' && item.status !== 'passed_via_fallback');
+function aggregateFailures(results = [], options = {}) {
+  // passed_via_fallback em jornada blocking/strict entra como falha real de degradação
+  const strictMode = options.strictMode === true;
+  const failures = results.filter((item) => {
+    if (item.status === 'passed') return false;
+    if (item.status === 'passed_via_fallback') {
+      // Tratar como falha bloqueante se jornada blocking ou strictMode
+      const isBlockingJourney = item.criticality === 'blocking'
+        || (item.journeyId && ['support_ticket_flow', 'fitness_customer_checkin'].includes(item.journeyId));
+      return strictMode || isBlockingJourney;
+    }
+    return true;
+  });
   const fallbackUsed = results.filter((item) => item.status === 'passed_via_fallback');
+  const fallbackDegradations = results.filter((item) => item.failureType === 'fallback_degradation');
   const failuresByDomain = {};
   const failuresByType = {};
   const errorCount = new Map();
@@ -1396,6 +1435,90 @@ function diffAgainstPrevious(currentExecution) {
 }
 
 async function executeScenarioWithFallback(scenario, context) {
+  const normalizeOperationalResult = async (adapterResult) => {
+    const journeyId = scenario.journeyId || scenario.journey || scenario.id || '';
+    const executionMode = String(context?.executionMode || 'operational_go').toLowerCase();
+    const blockingJourney = operationalStepExecutor.isBlockingJourney(journeyId);
+    const sourceSteps = Array.isArray(adapterResult?.steps) ? adapterResult.steps : [];
+
+    if (blockingJourney && executionMode !== 'diagnostic') {
+      const decision = resolveBlockingPageNullDecision(executionMode);
+      return {
+        ...adapterResult,
+        status: 'failed',
+        steps: [],
+        errors: [
+          ...normalizeErrorList(adapterResult?.errors),
+          {
+            message: 'blocking_journey_requires_browser_operational_runner',
+            reason: 'page_null_blocking_journey',
+            journeyId,
+          },
+        ],
+        operationalExecution: {
+          executorUsed: false,
+          executionMode,
+          decision,
+          blockers: [
+            {
+              reason: 'page_null_blocking_journey',
+              journeyId,
+              requiredRunner: 'browserOperationalRunner',
+              detail: 'Blocking journey nunca deve executar step com page null.',
+            },
+          ],
+        },
+      };
+    }
+
+    const stepExecution = await operationalStepExecutor.executeOperationalSteps(sourceSteps, null, {
+      journeyId,
+      executionId: context?.executionId || null,
+      executionMode,
+    });
+
+    const stepResults = Array.isArray(stepExecution.stepResults) ? stepExecution.stepResults : [];
+    let blockers = Array.isArray(stepExecution.blockers) ? stepExecution.blockers : [];
+    let normalizedSteps = Array.isArray(stepExecution.steps) ? stepExecution.steps : [];
+
+    // Snapshot/post-state só pode ser validado quando before/after existem.
+    if (adapterResult?.beforeSnapshot && adapterResult?.afterSnapshot) {
+      const postStateValidation = operationalStepExecutor.validateJourneyPostStateProofs({
+        beforeSnapshot: adapterResult.beforeSnapshot,
+        afterSnapshot: adapterResult.afterSnapshot,
+        executedSteps: normalizedSteps,
+        replay: adapterResult,
+        journeyContext: {
+          journeyId,
+          executionMode,
+        },
+      });
+
+      normalizedSteps = postStateValidation.steps;
+      blockers = blockers.concat(postStateValidation.blockers || []);
+    }
+
+    const hasBlockingFailure = blockers.some((item) => item.blocking === true)
+      && executionMode !== 'diagnostic';
+    const hasReview = blockers.some((item) => item.blocking === true)
+      && executionMode === 'diagnostic';
+
+    return {
+      ...adapterResult,
+      status: hasBlockingFailure ? 'failed' : (hasReview ? 'review' : classifyScenarioStatus(adapterResult)),
+      steps: normalizedSteps,
+      errors: [
+        ...normalizeErrorList(adapterResult?.errors),
+        ...blockers.map((item) => ({ message: item.reason, ...item })),
+      ],
+      operationalExecution: {
+        executorUsed: true,
+        executionMode,
+        blockers,
+      },
+    };
+  };
+
   let adapter = resolveAdapter(scenario.adapter);
   if (!adapter) {
     context.appendLog?.(`Adapter inválido para ${scenario.id}: ${scenario.adapter}`, 'error');
@@ -1410,10 +1533,7 @@ async function executeScenarioWithFallback(scenario, context) {
 
   try {
     const adapterResult = await adapter.executeScenario(scenario, { repoRoot: ROOT_DIR, onStepProgress: context.onStepProgress });
-    return {
-      ...adapterResult,
-      status: classifyScenarioStatus(adapterResult),
-    };
+    return normalizeOperationalResult(adapterResult);
   } catch (error) {
     if (adapter !== apiAdapter && scenario.command) {
       context.appendLog?.(`Fallback para adapter API em ${scenario.id}`, 'warning');
@@ -1422,7 +1542,7 @@ async function executeScenarioWithFallback(scenario, context) {
         const fallbackStatus = classifyScenarioStatus(fallbackResult);
         // Marcar explicitamente que o resultado passou via fallback — nunca ocultar degradação.
         const degradedStatus = fallbackStatus === 'passed' ? 'passed_via_fallback' : fallbackStatus;
-        return {
+        return normalizeOperationalResult({
           ...fallbackResult,
           status: degradedStatus,
           runtimeMode: 'REAL_FAILED_FALLBACK_USED',
@@ -1431,7 +1551,7 @@ async function executeScenarioWithFallback(scenario, context) {
             fallbackAdapter: 'api',
             primaryAdapterFailed: true,
           },
-        };
+        });
       } catch (fallbackError) {
         return {
           status: 'infra_error',
@@ -1509,6 +1629,7 @@ async function runMesh(options = {}) {
     });
 
     const adapterResult = await executeScenarioWithFallback(effectiveScenario, {
+      executionMode: options.executionMode || options.operationalMode || 'operational_go',
       appendLog,
       onStepProgress: options.onStepProgress
         ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
@@ -1546,7 +1667,7 @@ async function runMesh(options = {}) {
     const replayArtifact = buildSyntheticReplay(effectiveScenario, result, evidenceDir);
     result.artifacts = [...result.artifacts, replayArtifact];
     result.replayArtifact = replayArtifact.path;
-    const classifiedResult = classifyScenarioResult(result, priorHistory);
+    const classifiedResult = classifyScenarioResult(result, priorHistory, options);
     classifiedResult.evidencePath = writeScenarioEvidence(evidenceDir, classifiedResult);
     results.push(classifiedResult);
 
@@ -1563,7 +1684,7 @@ async function runMesh(options = {}) {
     registryTotal,
   });
 
-  const failureAnalysis = aggregateFailures(results);
+  const failureAnalysis = aggregateFailures(results, options);
   const governanceDecisions = results.reduce((acc, item) => {
     if (item.governance?.decision) {
       acc[item.id] = {
@@ -1610,14 +1731,21 @@ async function runMesh(options = {}) {
     changedFiles,
   };
 
-  // Se existem cenários blocking passando via fallback: degradar explicitamente o gate
-  if (summary.fallbackBlockingUsed > 0) {
-    if (summary.goNoGo === 'GO') {
-      summary.goNoGo = 'GO_DEGRADED';
-    }
+  const executionMode = String(options.executionMode || options.operationalMode || 'operational_go').toLowerCase();
+  if (executionMode === 'diagnostic' && summary.goNoGo === 'GO') {
+    summary.goNoGo = 'REVIEW';
     summary.reasons = [
       ...(summary.reasons || []),
-      `${summary.fallbackBlockingUsed} cenário(s) blocking passaram via fallback de adapter (primary falhou) — execução degradada.`,
+      'execution_mode_diagnostic: modo diagnóstico não pode emitir GO operacional.',
+    ];
+  }
+
+  // Fallback em jornada blocking => NO_GO sempre (nunca GO_DEGRADED)
+  if (summary.fallbackBlockingUsed > 0) {
+    summary.goNoGo = 'NO_GO';
+    summary.reasons = [
+      ...(summary.reasons || []),
+      `${summary.fallbackBlockingUsed} cenário(s) blocking passaram via fallback — execução primária falhou (fallback_degradation). GO bloqueado.`,
     ];
   }
 
@@ -1828,5 +1956,7 @@ module.exports = {
   loadHistory,
   diffAgainstPrevious,
   executeScenarioWithFallback,
+  classifyScenarioResult,
+  resolveBlockingPageNullDecision,
   normalizeExecutionRecord,
 };

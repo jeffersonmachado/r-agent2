@@ -34,7 +34,7 @@ function buildSuggestion(result) {
 
 function buildFailureIntelligence(currentExecution, history = [], options = {}) {
   const results = Array.isArray(currentExecution?.results) ? currentExecution.results : [];
-  const failures = results.filter((item) => item.status !== 'passed' && item.status !== 'passed_via_fallback');
+  const failures = results.filter((item) => item.status !== 'passed');
   const fingerprints = new Map();
   const recurring = new Map();
   const stability = new Map();
@@ -44,10 +44,10 @@ function buildFailureIntelligence(currentExecution, history = [], options = {}) 
       const domain = item.domain || 'core';
       const stats = stability.get(domain) || { passed: 0, total: 0 };
       stats.total += 1;
-      if (item.status === 'passed' || item.status === 'passed_via_fallback') stats.passed += 1;
+      if (item.status === 'passed') stats.passed += 1;
       stability.set(domain, stats);
 
-      if (item.status === 'passed' || item.status === 'passed_via_fallback') continue;
+      if (item.status === 'passed') continue;
       const fingerprint = fingerprintFor(item);
       recurring.set(fingerprint, (recurring.get(fingerprint) || 0) + 1);
     }

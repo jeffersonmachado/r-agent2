@@ -69,7 +69,7 @@ describe('qa-mesh/governance', () => {
     expect(summary.domains.pbx.flaky).toBe(1);
   });
 
-  test('passed_via_fallback conta como passed para cobertura e rastreia fallbackPassed', () => {
+  test('passed_via_fallback nao conta como passed e rastreia fallbackPassed', () => {
     const summary = summarizeResults(
       [
         { status: 'passed', domain: 'core' },
@@ -79,16 +79,16 @@ describe('qa-mesh/governance', () => {
       3
     );
 
-    expect(summary.passed).toBe(2); // passed + passed_via_fallback
+    expect(summary.passed).toBe(1);
     expect(summary.fallbackPassed).toBe(1);
     expect(summary.failed).toBe(1);
     expect(summary.executed).toBe(3);
     expect(summary.executionCoverage).toBeCloseTo(1);
-    expect(summary.domains.core.passed).toBe(2);
+    expect(summary.domains.core.passed).toBe(1);
     expect(summary.domains.core.fallbackPassed).toBe(1);
   });
 
-  test('evaluateGoNoGo retorna GO mas reporte fallbackPassed quando cenário passou via fallback', () => {
+  test('evaluateGoNoGo retorna NO_GO em strict mode quando existe fallback', () => {
     const result = evaluateGoNoGo(
       [
         { id: 'ok', domain: 'core', criticality: 'medium', status: 'passed' },
@@ -97,10 +97,29 @@ describe('qa-mesh/governance', () => {
       { registryTotal: 2 }
     );
 
-    // GO porque nenhum blocking falhou — degradação é visível mas não bloqueia se não-blocking
-    expect(result.goNoGo).toBe('GO');
+    expect(result.goNoGo).toBe('NO_GO');
     expect(result.fallbackPassed).toBe(1);
-    expect(result.passed).toBe(2);
+    expect(result.passed).toBe(1);
+    expect(result.reasons).toContain('FALLBACK_USED_STRICT_MODE');
+  });
+
+  test('evaluateGoNoGo retorna NO_GO quando fallback ocorre em jornada blocking mesmo sem strict mode', () => {
+    const result = evaluateGoNoGo(
+      [
+        {
+          id: 'fall-support',
+          domain: 'core',
+          criticality: 'medium',
+          status: 'passed_via_fallback',
+          journeyId: 'support_ticket_flow',
+        },
+      ],
+      { registryTotal: 1, strictMode: false }
+    );
+
+    expect(result.goNoGo).toBe('NO_GO');
+    expect(result.fallbackBlockingUsed).toBe(1);
+    expect(result.reasons).toContain('FALLBACK_ON_BLOCKING_SCENARIO');
   });
 
   test('evaluateWaveResult retorna GO com todos checks verdadeiros', () => {

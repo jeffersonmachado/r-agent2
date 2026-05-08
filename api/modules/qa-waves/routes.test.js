@@ -83,6 +83,103 @@ function createDefaultDeps() {
     saveWaveScenario: jest.fn(() => ({ scenario: { id: 'scenario-1', version: 'v2' } })),
     listWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1', version: 'v1' }], history: {} })),
     runWaveScenario: jest.fn(() => ({ executionId: 'mesh-1', replayId: 'replay-1' })),
+    getOperationalSnapshot: jest.fn(() => ({
+      summary: { goNoGo: 'NO_GO', capabilities: 3, journeys: 1 },
+      governance: { goNoGo: 'NO_GO', blockers: [{ capability: 'turnstile_release', reason: 'capability_sem_replay' }] },
+      coverage: {},
+      gaps: { implementation: [], e2e: [], replay: [], ux: [], operational: [] },
+      autoGeneration: [],
+    })),
+    buildOperationalSnapshot: jest.fn(() => ({
+      summary: { goNoGo: 'NO_GO', capabilities: 3, journeys: 1 },
+      governance: { goNoGo: 'NO_GO', blockers: [] },
+      coverage: {},
+      gaps: { implementation: [], e2e: [], replay: [], ux: [], operational: [] },
+      autoGeneration: [],
+    })),
+    listWaveGovernanceReports: jest.fn(() => []),
+    evaluateWaveGovernance: jest.fn(() => ({ status: 'NO_GO', reasons: ['legacy_policy'] })),
+    // Auto-Generation Bot deps
+    executeScenarioGeneration: jest.fn(() => ({
+      status: 'success',
+      generatedCount: 1,
+      scenarios: [{ id: 'generated-scenario-1' }],
+      persisted: true,
+    })),
+    executeUIStepGeneration: jest.fn(() => ({
+      status: 'success',
+      generatedCount: 5,
+      coverage: 0.8,
+      steps: [{ capability: 'support_ticket_flow', steps: [] }],
+    })),
+    executeValidatorGeneration: jest.fn(() => ({
+      status: 'success',
+      generatedCount: 3,
+      byType: { data_persisted: 2, state_changed: 1 },
+    })),
+    executeSeedGeneration: jest.fn(() => ({
+      status: 'success',
+      generatedCount: 12,
+      byPath: { happy_path: 3, edge_cases: 4, failure: 5 },
+    })),
+    validatePreflightForCapabilities: jest.fn(() => ({
+      status: 'success',
+      validated: 2,
+      passed: 1,
+      failed: 1,
+    })),
+    executeAutonomousGapClosureLoop: jest.fn(() => ({
+      status: 'completed',
+      governance: { goNoGo: 'GO', blockers: [] },
+    })),
+    buildStagingAutonomousLoopPayload: jest.fn(() => ({
+      waveId: 'wave-staging-smoke-fixed',
+      journeyId: 'support_ticket_flow',
+      scenarioIds: ['staging-smoke-scenario-1'],
+      capabilityIds: ['support_ticket_flow'],
+      tenantId: 'system',
+      context: { tenantId: 'system', integrations: {} },
+    })),
+    runIntegrationReadinessProbe: jest.fn(async () => ({
+      readinessAt: '2026-05-07T00:00:00.000Z',
+      goNoGo: 'GO',
+      allReady: true,
+      notReady: [],
+      integrations: {
+        crm: { ok: true, evidence: { contactsDetected: 2 } },
+        payment_gateway: { ok: true, evidence: { provider: 'sandbox' } },
+        pbx: { ok: true, evidence: { tenantConfigured: true } },
+        release_mechanism: { ok: false, reason: 'device_id_missing' },
+      },
+    })),
+    executeFullGenerationBot: jest.fn(() => ({
+      status: 'success',
+      duration: 1234,
+      steps: {
+        scenarios: { status: 'success', count: 1 },
+        uiSteps: { status: 'success', count: 5 },
+        validators: { status: 'success', count: 3 },
+        seeds: { status: 'success', count: 12 },
+        preflight: { status: 'success', count: 2 },
+      },
+      summary: {
+        scenariosGenerated: 1,
+        uiStepsGenerated: 5,
+        validatorsGenerated: 3,
+        seedsGenerated: 12,
+        preflightValidated: 2,
+      },
+      persisted: true,
+    })),
+    applyAutoRemediations: jest.fn(() => ({
+      status: 'success',
+      appliedCount: 3,
+      results: [
+        { type: 'scenario_generation', status: 'success' },
+        { type: 'validator_generation', status: 'success' },
+        { type: 'seed_generation', status: 'success' },
+      ],
+    })),
   };
 }
 
@@ -287,5 +384,360 @@ describe('qa-waves routes', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ executionId: 'mesh-1', replayId: 'replay-1' });
     expect(deps.runWaveScenario).toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/operational/summary deve retornar snapshot operacional', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/operational/summary');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('summary');
+    expect(deps.getOperationalSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  test('GET /api/qa-waves/operational/gaps deve retornar gaps consolidados', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/operational/gaps');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        summary: expect.any(Object),
+        governance: expect.any(Object),
+        coverage: expect.any(Object),
+        gaps: expect.any(Object),
+      })
+    );
+  });
+
+  test('POST /api/qa-waves/operational/recompute deve recomputar snapshot', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({ persist: true });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/operational/recompute', { persist: true });
+
+    expect(res.status).toBe(200);
+    expect(deps.buildOperationalSnapshot).toHaveBeenCalledWith({ persist: true, policy: {} });
+  });
+
+  test('POST /api/qa-waves/governance/evaluate deve retornar decisao consolidada operacional', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({ waveId: 'support-agent-operations-wave' });
+      d.listWaveScenarios.mockReturnValue({ items: [{ id: 'support-agent-open-ticket-flow' }] });
+      d.evaluateWaveGovernance.mockReturnValue({ status: 'NO_GO', reasons: ['legacy_policy'] });
+      d.buildOperationalSnapshot.mockReturnValue({
+        summary: { goNoGo: 'NO_GO' },
+        governance: { goNoGo: 'NO_GO', blockers: [{ capability: 'support_ticket_flow', reason: 'capability_sem_replay' }] },
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/governance/evaluate', {
+      waveId: 'support-agent-operations-wave',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        decision: 'NO_GO',
+        governance: expect.any(Object),
+        operationalGovernance: expect.any(Object),
+      })
+    );
+  });
+
+  // ===== AUTO-GENERATION BOT TESTS =====
+
+  test('POST /api/qa-waves/bot/generate-scenarios deve gerar cenarios', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'support_ticket_flow', name: 'Support Ticket Flow' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/generate-scenarios', {
+      capabilities: [{ id: 'support_ticket_flow' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        generatedCount: 1,
+        scenarios: expect.any(Array),
+        persisted: true,
+      })
+    );
+    expect(deps.executeScenarioGeneration).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/generate-ui-steps deve gerar passos de UI', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'fitness_checkin' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/generate-ui-steps', {
+      capabilities: [{ id: 'fitness_checkin' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        generatedCount: 5,
+      })
+    );
+    expect(deps.executeUIStepGeneration).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/generate-validators deve gerar validadores', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'support_ticket_flow' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/generate-validators', {
+      capabilities: [{ id: 'support_ticket_flow' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        generatedCount: 3,
+      })
+    );
+    expect(deps.executeValidatorGeneration).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/generate-seeds deve gerar dados de teste', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'support_ticket_flow' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/generate-seeds', {
+      capabilities: [{ id: 'support_ticket_flow' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        generatedCount: 12,
+      })
+    );
+    expect(deps.executeSeedGeneration).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/validate-preflight deve validar precondicions', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'support_ticket_flow', journey: 'support_ticket' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/validate-preflight', {
+      capabilities: [{ id: 'support_ticket_flow' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        validated: 2,
+      })
+    );
+    expect(deps.validatePreflightForCapabilities).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/execute-full-generation deve executar bot completo', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        capabilities: [{ id: 'support_ticket_flow' }],
+        generateScenarios: true,
+        generateUISteps: true,
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/execute-full-generation', {
+      capabilities: [{ id: 'support_ticket_flow' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        duration: expect.any(Number),
+        steps: expect.any(Object),
+        summary: expect.any(Object),
+        persisted: true,
+      })
+    );
+    expect(deps.executeFullGenerationBot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        capabilities: expect.any(Array),
+        generateScenarios: expect.any(Boolean),
+      })
+    );
+  });
+
+  test('POST /api/qa-waves/bot/apply-remediations deve aplicar remediações', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        remediations: [{ type: 'scenario_generation', capabilityId: 'support_ticket_flow' }],
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/apply-remediations', {
+      remediations: [{ type: 'scenario_generation' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'success',
+        appliedCount: expect.any(Number),
+        results: expect.any(Array),
+      })
+    );
+    expect(deps.applyAutoRemediations).toHaveBeenCalled();
+  });
+
+  test('POST /api/qa-waves/bot/generate-scenarios retorna 400 sem capabilities', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({});
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/generate-scenarios', {});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        error: 'bad_request',
+        message: expect.stringContaining('capabilities'),
+      })
+    );
+  });
+
+  test('GET /api/qa-waves/closure/autonomous-loop/smoke-payload deve retornar payload pronto para staging', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/closure/autonomous-loop/smoke-payload?tenantId=tenant-a');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: 'ready',
+        mode: 'staging_smoke',
+        payload: expect.any(Object),
+      })
+    );
+    expect(res.body).not.toHaveProperty('readiness');
+    expect(deps.buildStagingAutonomousLoopPayload).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-a' })
+    );
+  });
+
+  test('GET smoke-payload?probe=true deve incluir diagnostico de readiness por integracao', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/closure/autonomous-loop/smoke-payload?probe=true&tenantId=tenant-a');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        mode: 'staging_smoke',
+        readiness: expect.objectContaining({
+          goNoGo: expect.stringMatching(/^(GO|NO_GO)$/),
+          allReady: expect.any(Boolean),
+          notReady: expect.any(Array),
+          integrations: expect.any(Object),
+        }),
+        payload: expect.any(Object),
+      })
+    );
+    expect(deps.runIntegrationReadinessProbe).toHaveBeenCalledTimes(1);
+  });
+
+  test('GET smoke-payload?probe=true com NOT_GO reporta status not_ready', async () => {
+    await startWithDeps((d) => {
+      d.runIntegrationReadinessProbe.mockResolvedValue({
+        readinessAt: '2026-05-07T00:00:00.000Z',
+        goNoGo: 'NO_GO',
+        allReady: false,
+        notReady: [{ integration: 'release_mechanism', reason: 'device_id_missing' }],
+        integrations: {
+          crm: { ok: true },
+          payment_gateway: { ok: true },
+          pbx: { ok: true },
+          release_mechanism: { ok: false, reason: 'device_id_missing' },
+        },
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/closure/autonomous-loop/smoke-payload?probe=true');
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('not_ready');
+    expect(res.body.readiness.goNoGo).toBe('NO_GO');
+    expect(res.body.readiness.notReady).toHaveLength(1);
+    expect(res.body.readiness.notReady[0].integration).toBe('release_mechanism');
+  });
+
+  test('POST /api/qa-waves/closure/autonomous-loop/smoke-run deve executar loop com payload smoke', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        waveId: 'wave-custom',
+        context: { ticketId: 'ticket-123' },
+      });
+      d.buildStagingAutonomousLoopPayload.mockReturnValue({
+        waveId: 'wave-staging-smoke-fixed',
+        journeyId: 'support_ticket_flow',
+        scenarioIds: ['staging-smoke-scenario-1'],
+        capabilityIds: ['support_ticket_flow'],
+        tenantId: 'system',
+        context: { tenantId: 'system', integrations: { crm: { health: jest.fn() } } },
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/closure/autonomous-loop/smoke-run', {
+      waveId: 'wave-custom',
+      context: { ticketId: 'ticket-123' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(deps.executeAutonomousGapClosureLoop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waveId: 'wave-custom',
+        context: expect.objectContaining({
+          tenantId: 'system',
+          ticketId: 'ticket-123',
+          integrations: expect.any(Object),
+        }),
+      })
+    );
+  });
+
+  test('POST /api/qa-waves/bot/apply-remediations retorna 400 sem remediations', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({});
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/bot/apply-remediations', {});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        error: 'bad_request',
+        message: expect.stringContaining('remediations'),
+      })
+    );
   });
 });
