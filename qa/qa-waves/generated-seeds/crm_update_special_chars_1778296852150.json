@@ -1,0 +1,12 @@
+{
+  "scenarioId": "crm_update_special_chars_1778296852150",
+  "capabilityId": "crm_update",
+  "journeyId": "crm_update",
+  "seedType": "special_chars",
+  "seed": {
+    "firstName": "John<script>alert(1)</script>",
+    "lastName": "Doe\" OR \"1\"=\"1",
+    "email": "admin'--"
+  },
+  "generatedAt": "2026-05-09T03:20:52.171Z"
+}

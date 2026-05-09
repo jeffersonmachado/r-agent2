@@ -1,0 +1,12 @@
+{
+  "scenarioId": "billing_validation_happy_path_1778296852148",
+  "capabilityId": "billing_validation",
+  "journeyId": "billing_validation",
+  "seedType": "happy_path",
+  "seed": {
+    "subscriptionId": "SUB-001",
+    "amount": 99.99,
+    "currency": "BRL"
+  },
+  "generatedAt": "2026-05-09T03:20:52.168Z"
+}

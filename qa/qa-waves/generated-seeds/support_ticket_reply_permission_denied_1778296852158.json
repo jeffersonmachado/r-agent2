@@ -1,0 +1,12 @@
+{
+  "scenarioId": "support_ticket_reply_permission_denied_1778296852158",
+  "capabilityId": "support_ticket_reply",
+  "journeyId": "support_ticket_reply",
+  "seedType": "permission_denied",
+  "seed": {
+    "ticketId": "TICKET-001",
+    "agentId": "UNAUTHORIZED_AGENT",
+    "reply": "test"
+  },
+  "generatedAt": "2026-05-09T03:20:52.182Z"
+}

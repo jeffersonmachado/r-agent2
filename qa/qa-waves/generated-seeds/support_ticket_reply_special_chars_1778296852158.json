@@ -1,0 +1,32 @@
+{
+  "scenarioId": "support_ticket_reply_special_chars_1778296852158",
+  "capabilityId": "support_ticket_reply",
+  "journeyId": "support_ticket_reply",
+  "seedType": "special_chars",
+  "seed": {
+    "journeyId": "support_ticket_flow",
+    "provisioning": {
+      "guaranteedTicketProvisioning": true,
+      "requireOpenTicket": true,
+      "requireConversation": true
+    },
+    "expectedOperationalActions": [
+      "access_support_module",
+      "list_tickets",
+      "open_ticket",
+      "reply_ticket",
+      "change_ticket_status"
+    ],
+    "expectedSideEffects": [
+      "ticket_status_changed",
+      "crm_updated",
+      "audit_log_created",
+      "notification_sent"
+    ],
+    "ticketId": "TICKET-STRICT-001",
+    "agentId": "AGENT-STRICT-001",
+    "reply": "Resposta operacional validada com persistência e auditoria.",
+    "attachments": []
+  },
+  "generatedAt": "2026-05-09T03:20:52.182Z"
+}

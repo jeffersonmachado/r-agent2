@@ -1,0 +1,12 @@
+{
+  "scenarioId": "access_decision_timeout_condition_1778296852146",
+  "capabilityId": "access_decision",
+  "journeyId": "access_decision",
+  "seedType": "timeout_condition",
+  "seed": {
+    "accessDecision": "ALLOW",
+    "deviceId": "DEV-001",
+    "contactId": "CONT-001"
+  },
+  "generatedAt": "2026-05-09T03:20:52.166Z"
+}

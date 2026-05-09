@@ -1,0 +1,12 @@
+{
+  "scenarioId": "support_ticket_reply_invalid_format_1778296852158",
+  "capabilityId": "support_ticket_reply",
+  "journeyId": "support_ticket_reply",
+  "seedType": "invalid_format",
+  "seed": {
+    "ticketId": "invalid_id",
+    "agentId": "invalid_agent",
+    "reply": "test"
+  },
+  "generatedAt": "2026-05-09T03:20:52.182Z"
+}

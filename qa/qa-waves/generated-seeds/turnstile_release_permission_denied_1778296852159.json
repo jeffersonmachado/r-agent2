@@ -1,0 +1,11 @@
+{
+  "scenarioId": "turnstile_release_permission_denied_1778296852159",
+  "capabilityId": "turnstile_release",
+  "journeyId": "turnstile_release",
+  "seedType": "permission_denied",
+  "seed": {
+    "accessDecision": "DENY",
+    "reason": "ACCESS_DENIED"
+  },
+  "generatedAt": "2026-05-09T03:20:52.183Z"
+}

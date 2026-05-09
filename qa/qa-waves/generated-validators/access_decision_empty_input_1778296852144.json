@@ -1,0 +1,54 @@
+{
+  "scenarioId": "access_decision_empty_input_1778296852144",
+  "capabilityId": "access_decision",
+  "validators": [
+    {
+      "name": "access_granted",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "security",
+      "inferred": true
+    },
+    {
+      "name": "permission_verified",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "security",
+      "inferred": true
+    },
+    {
+      "name": "authorization_checked",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "security",
+      "inferred": true
+    }
+  ],
+  "governanceRules": [
+    {
+      "rule": "require_real_execution",
+      "enabled": true
+    },
+    {
+      "rule": "require_real_replay",
+      "enabled": true
+    },
+    {
+      "rule": "forbid_fake_selectors",
+      "enabled": true
+    },
+    {
+      "rule": "require_operational_consequence",
+      "enabled": true
+    }
+  ],
+  "replayRequirements": {
+    "requireHumanUser": true,
+    "requireRealModule": true,
+    "requireScreenshots": true,
+    "requireStateChange": true,
+    "requireOperationalConsequence": true,
+    "requireJourneyPath": true
+  },
+  "generatedAt": "2026-05-09T03:20:52.165Z"
+}

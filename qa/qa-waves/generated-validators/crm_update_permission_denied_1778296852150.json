@@ -1,0 +1,75 @@
+{
+  "scenarioId": "crm_update_permission_denied_1778296852150",
+  "capabilityId": "crm_update",
+  "validators": [
+    {
+      "name": "data_in_database",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "data_persisted",
+      "inferred": true
+    },
+    {
+      "name": "api_call_made",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "data_persisted",
+      "inferred": true
+    },
+    {
+      "name": "backend_updated",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "data_persisted",
+      "inferred": true
+    },
+    {
+      "name": "state_changed",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "state_changed",
+      "inferred": true
+    },
+    {
+      "name": "status_updated",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "state_changed",
+      "inferred": true
+    },
+    {
+      "name": "property_changed",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "state_changed",
+      "inferred": true
+    }
+  ],
+  "governanceRules": [
+    {
+      "rule": "require_real_execution",
+      "enabled": true
+    },
+    {
+      "rule": "require_real_replay",
+      "enabled": true
+    },
+    {
+      "rule": "forbid_fake_selectors",
+      "enabled": true
+    },
+    {
+      "rule": "require_operational_consequence",
+      "enabled": true
+    }
+  ],
+  "replayRequirements": {
+    "requireHumanUser": true,
+    "requireRealModule": true,
+    "requireScreenshots": true,
+    "requireStateChange": true,
+    "requireOperationalConsequence": true,
+    "requireJourneyPath": true
+  },
+  "generatedAt": "2026-05-09T03:20:52.171Z"
+}

@@ -1,0 +1,13 @@
+{
+  "scenarioId": "crm_update_happy_path_1778296852149",
+  "capabilityId": "crm_update",
+  "journeyId": "crm_update",
+  "seedType": "happy_path",
+  "seed": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "phone": "+55 11 99999-9999"
+  },
+  "generatedAt": "2026-05-09T03:20:52.170Z"
+}

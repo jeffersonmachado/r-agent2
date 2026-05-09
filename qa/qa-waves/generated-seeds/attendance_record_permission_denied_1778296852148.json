@@ -1,0 +1,8 @@
+{
+  "scenarioId": "attendance_record_permission_denied_1778296852148",
+  "capabilityId": "attendance_record",
+  "journeyId": "attendance_record",
+  "seedType": "permission_denied",
+  "seed": {},
+  "generatedAt": "2026-05-09T03:20:52.168Z"
+}

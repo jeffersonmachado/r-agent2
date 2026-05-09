@@ -1,0 +1,13 @@
+{
+  "scenarioId": "crm_update_invalid_format_1778296852150",
+  "capabilityId": "crm_update",
+  "journeyId": "crm_update",
+  "seedType": "invalid_format",
+  "seed": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "not-an-email",
+    "phone": "not-a-phone"
+  },
+  "generatedAt": "2026-05-09T03:20:52.171Z"
+}

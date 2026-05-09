@@ -1,0 +1,12 @@
+{
+  "scenarioId": "access_decision_happy_path_1778296852144",
+  "capabilityId": "access_decision",
+  "journeyId": "access_decision",
+  "seedType": "happy_path",
+  "seed": {
+    "accessDecision": "ALLOW",
+    "deviceId": "DEV-001",
+    "contactId": "CONT-001"
+  },
+  "generatedAt": "2026-05-09T03:20:52.164Z"
+}

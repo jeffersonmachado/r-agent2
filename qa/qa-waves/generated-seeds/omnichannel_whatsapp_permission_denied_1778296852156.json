@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_whatsapp_permission_denied_1778296852156",
+  "capabilityId": "omnichannel_whatsapp",
+  "journeyId": "omnichannel_whatsapp",
+  "seedType": "permission_denied",
+  "seed": {},
+  "generatedAt": "2026-05-09T03:20:52.179Z"
+}

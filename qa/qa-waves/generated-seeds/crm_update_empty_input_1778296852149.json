@@ -1,0 +1,12 @@
+{
+  "scenarioId": "crm_update_empty_input_1778296852149",
+  "capabilityId": "crm_update",
+  "journeyId": "crm_update",
+  "seedType": "empty_input",
+  "seed": {
+    "firstName": "",
+    "lastName": "",
+    "email": ""
+  },
+  "generatedAt": "2026-05-09T03:20:52.170Z"
+}

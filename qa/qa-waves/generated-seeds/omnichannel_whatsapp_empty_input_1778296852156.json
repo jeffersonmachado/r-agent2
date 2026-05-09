@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_whatsapp_empty_input_1778296852156",
+  "capabilityId": "omnichannel_whatsapp",
+  "journeyId": "omnichannel_whatsapp",
+  "seedType": "empty_input",
+  "seed": {},
+  "generatedAt": "2026-05-09T03:20:52.179Z"
+}

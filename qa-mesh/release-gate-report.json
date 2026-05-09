@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-governance-status-1777859128025",
+  "executionId": "mesh-governance-status-1778281086084",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -12,11 +12,16 @@
       "core",
       "pbx",
       "omnichannel"
+    ],
+    "strictMode": true,
+    "blockingJourneys": [
+      "support_ticket_flow",
+      "fitness_customer_checkin"
     ]
   },
   "totals": {
-    "executionId": "mesh-governance-status-1777859128025",
-    "timestamp": "2026-05-04T01:45:28.039Z",
+    "executionId": "mesh-governance-status-1778281086084",
+    "timestamp": "2026-05-08T22:58:06.107Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -71,5 +76,5 @@
     "changedFiles": []
   },
   "reasons": [],
-  "generatedAt": "2026-05-04T01:45:28.165Z"
+  "generatedAt": "2026-05-08T22:58:06.250Z"
 }

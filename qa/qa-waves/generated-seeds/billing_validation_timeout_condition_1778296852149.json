@@ -1,0 +1,13 @@
+{
+  "scenarioId": "billing_validation_timeout_condition_1778296852149",
+  "capabilityId": "billing_validation",
+  "journeyId": "billing_validation",
+  "seedType": "timeout_condition",
+  "seed": {
+    "subscriptionId": "SUB-001",
+    "amount": 99.99,
+    "currency": "BRL",
+    "networkDelay": 10000
+  },
+  "generatedAt": "2026-05-09T03:20:52.170Z"
+}
