@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { getOperationalStepContract, resolveJourneyId } = require('../../../qa/contracts/operationalStepRegistry');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const SNAPSHOT_CONTRACTS_PATH = path.join(ROOT_DIR, 'config', 'state-snapshot-contracts.json');
@@ -104,6 +105,28 @@ async function countModel(models, modelName, where) {
   };
 }
 
+async function countModelWithFallback(models, modelName, primaryWhere, fallbackWhere) {
+  const primary = await countModel(models, modelName, primaryWhere);
+  const hasFallback = isObject(fallbackWhere) && Object.keys(fallbackWhere).length > 0;
+  const sameWhere = hasFallback && JSON.stringify(primaryWhere || {}) === JSON.stringify(fallbackWhere || {});
+
+  if (!hasFallback || sameWhere || primary.count > 0) {
+    return { ...primary, fallbackApplied: false };
+  }
+
+  const fallback = await countModel(models, modelName, fallbackWhere);
+  if (fallback.ok && fallback.count > 0) {
+    return {
+      count: fallback.count,
+      ok: primary.ok || fallback.ok,
+      reason: fallback.reason || primary.reason || null,
+      fallbackApplied: true,
+    };
+  }
+
+  return { ...primary, fallbackApplied: false };
+}
+
 async function findOneModel(models, modelName, where, options = {}) {
   const result = await modelCall(models, modelName, 'findOne', [{ where, ...options }]);
   return {
@@ -114,11 +137,7 @@ async function findOneModel(models, modelName, where, options = {}) {
 }
 
 function normalizeJourneyId(journeyId = '') {
-  const value = String(journeyId || '').toLowerCase();
-  if (value.includes('support') || value.includes('ticket')) return 'support_ticket_flow';
-  if (value.includes('fitness') || value.includes('checkin') || value.includes('check-in')) return 'fitness_customer_checkin';
-  if (value.includes('booking') || value.includes('calendar')) return 'booking_flow';
-  return String(journeyId || '');
+  return resolveJourneyId(journeyId) || String(journeyId || '');
 }
 
 function getRequiredSources(journeyId) {
@@ -144,14 +163,14 @@ function normalizeSnapshotContext(options = {}) {
   return {
     tenantId: options.tenantId || context.tenantId || seedData.tenantId || seedData.tenant_key || 'system',
     journeyId: normalizeJourneyId(options.journeyId || scenario.journeyId || scenario.journey || scenario.id || ''),
-    ticketId: options.ticketId || context.ticketId || seedProvision.ticketId || seedData.ticketId || seedData.ticket_id || null,
-    conversationId: options.conversationId || context.conversationId || seedProvision.conversationId || seedData.conversationId || seedData.conversation_id || null,
-    contactId: options.contactId || context.contactId || seedProvision.contactId || seedData.contactId || seedData.customerId || seedData.customer_id || null,
-    subjectId: options.subjectId || context.subjectId || seedProvision.subjectId || seedData.subjectId || seedData.subject_id || null,
-    membershipId: options.membershipId || context.membershipId || seedProvision.membershipId || seedData.membershipId || seedData.membership_id || null,
-    credentialId: options.credentialId || context.credentialId || seedProvision.credentialId || seedData.credentialId || seedData.credential_id || null,
-    deviceId: options.deviceId || context.deviceId || seedProvision.deviceId || seedData.deviceId || seedData.device_id || null,
-    deviceMode: options.deviceMode || context.deviceMode || seedProvision.deviceMode || seedData.deviceMode || seedData.device_mode || null,
+    ticketId: options.ticketId || context.ticketId || seedEvidence.ticketId || seedProvision.ticketId || seedProvision.ticket_id || seedData.ticketId || seedData.ticket_id || null,
+    conversationId: options.conversationId || context.conversationId || seedEvidence.conversationId || seedEvidence.conversation_id || seedProvision.conversationId || seedProvision.conversation_id || seedData.conversationId || seedData.conversation_id || null,
+    contactId: options.contactId || context.contactId || seedEvidence.contactId || seedEvidence.contact_id || seedEvidence.customerId || seedEvidence.customer_id || seedProvision.contactId || seedProvision.contact_id || seedProvision.customerId || seedProvision.customer_id || seedData.contactId || seedData.contact_id || seedData.customerId || seedData.customer_id || null,
+    subjectId: options.subjectId || context.subjectId || seedEvidence.subjectId || seedEvidence.subject_id || seedProvision.subjectId || seedProvision.subject_id || seedData.subjectId || seedData.subject_id || null,
+    membershipId: options.membershipId || context.membershipId || seedEvidence.membershipId || seedEvidence.membership_id || seedProvision.membershipId || seedProvision.membership_id || seedData.membershipId || seedData.membership_id || null,
+    credentialId: options.credentialId || context.credentialId || seedEvidence.credentialId || seedEvidence.credential_id || seedProvision.credentialId || seedProvision.credential_id || seedData.credentialId || seedData.credential_id || null,
+    deviceId: options.deviceId || context.deviceId || seedEvidence.deviceId || seedEvidence.device_id || seedProvision.deviceId || seedProvision.device_id || seedData.deviceId || seedData.device_id || null,
+    deviceMode: options.deviceMode || context.deviceMode || seedEvidence.deviceMode || seedEvidence.device_mode || seedProvision.deviceMode || seedProvision.device_mode || seedData.deviceMode || seedData.device_mode || null,
     bookingId: options.bookingId || context.bookingId || seedData.bookingId || seedData.booking_id || null,
     replayId: options.replayId || context.replayId || null,
     executionId: options.executionId || context.executionId || null,
@@ -251,27 +270,41 @@ async function collectFitnessCheckinSnapshot(ctx, models) {
     id: ctx.credentialId,
     subject_id: subjectId,
   }));
-  const decisions = await countModel(models, 'AccessDecision', buildWhere(tenantWhere, {
+  const decisions = await countModelWithFallback(models, 'AccessDecision', buildWhere(tenantWhere, {
     subject_id: subjectId,
     credential_id: ctx.credentialId,
     device_id: ctx.deviceId,
+  }), buildWhere(tenantWhere, {
+    subject_id: subjectId,
   }));
-  const accessEvents = await countModel(models, 'AccessEvent', buildWhere(tenantWhere, {
+  const accessEvents = await countModelWithFallback(models, 'AccessEvent', buildWhere(tenantWhere, {
     subject_id: subjectId,
     credential_id: ctx.credentialId,
     device_id: ctx.deviceId,
+  }), buildWhere(tenantWhere, {
+    subject_id: subjectId,
   }));
-  const attendance = await countModel(models, 'VerticalAttendance', buildWhere(tenantWhere, {
+  const attendance = await countModelWithFallback(models, 'VerticalAttendance', buildWhere(tenantWhere, {
     subject_id: subjectId,
     membership_id: membershipId,
     device_id: ctx.deviceId,
+  }), buildWhere({
+    ...tenantWhere,
+    vertical: 'fitness',
+  }, {
+    subject_id: subjectId,
   }));
-  const crmEvents = await countModel(models, 'VerticalJourneyEvent', buildWhere({
+  const crmEvents = await countModelWithFallback(models, 'VerticalJourneyEvent', buildWhere({
     ...tenantWhere,
     vertical: 'fitness',
   }, {
     subject_id: subjectId,
     membership_id: membershipId,
+  }), buildWhere({
+    ...tenantWhere,
+    vertical: 'fitness',
+  }, {
+    subject_id: subjectId,
   }));
 
   const membershipRow = membership.item || {};
@@ -279,6 +312,7 @@ async function collectFitnessCheckinSnapshot(ctx, models) {
   const membershipActive = membershipRow.status === 'active' && membershipRow.billing_status === 'active';
   const credentialExists = Boolean(credentialRow.id);
   const deviceMode = ctx.deviceMode || (ctx.deviceId ? 'device_real_candidate' : 'simulated_device');
+  const filterApplied = Boolean(decisions.fallbackApplied || accessEvents.fallbackApplied || attendance.fallbackApplied || crmEvents.fallbackApplied);
 
   return {
     state: attendance.count > 0 ? 'attendance_created' : (membershipActive && credentialExists ? 'membership_validated' : null),
@@ -338,6 +372,7 @@ async function collectFitnessCheckinSnapshot(ctx, models) {
         crmEvents.reason,
       ].filter(Boolean),
       deviceEvidence: deviceMode,
+      filterApplied,
     },
   };
 }
@@ -365,6 +400,221 @@ async function collectBookingSnapshot(ctx, models) {
       sourceErrors: [booking.reason, bookingCount.reason].filter(Boolean),
     },
   };
+}
+
+async function collectSupportStepScopedSnapshot(ctx, models, stepId) {
+  const contract = getOperationalStepContract(stepId);
+  const entityScope = Array.isArray(contract?.entityScope) ? contract.entityScope : [];
+  const tenantWhere = buildWhere({ tenant_key: ctx.tenantId }, {});
+  const ticketWhere = buildWhere(tenantWhere, { id: ctx.ticketId });
+  const ticket = ctx.ticketId
+    ? await findOneModel(models, 'Ticket', ticketWhere)
+    : await findOneModel(models, 'Ticket', tenantWhere, { order: [['updated_at', 'DESC']] });
+  const ticketRow = ticket.item || {};
+  const ticketId = ticketRow.id || ctx.ticketId || null;
+  const conversationId = ticketRow.conversation_id || ctx.conversationId || null;
+  const snapshot = {
+    state: ticketRow.status ? inferStateFromSnapshot({ db: { ticketStatus: ticketRow.status } }, 'ticket_open') : null,
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [],
+      entityScope,
+      filterApplied: false,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  if (entityScope.some((entity) => entity === 'ticket' || entity === 'ticket.status' || entity === 'messages' || entity === 'audit' || entity === 'crm' || entity === 'notifications')) {
+    snapshot.db.ticket = {
+      exists: Boolean(ticketRow.id),
+      id: ticketRow.id || null,
+      status: ticketRow.status || null,
+      updatedAt: ticketRow.updatedAt || ticketRow.updated_at || null,
+    };
+    snapshot.api.support = { ticketId, conversationId };
+  }
+
+  if (entityScope.includes('messages')) {
+    const messageWhere = conversationId
+      ? buildWhere({ tenant_key: ctx.tenantId, conversation_id: conversationId }, {})
+      : ticketWhere;
+    const messageCount = await countModel(models, 'ChannelMessage', messageWhere);
+    snapshot.db.messages = { count: messageCount.count };
+    snapshot.events.messages = { count: messageCount.count, available: messageCount.ok };
+    snapshot.metadata.sources.messages = messageCount.ok;
+    snapshot.metadata.sourceErrors.push(messageCount.reason);
+  }
+
+  if (entityScope.includes('audit')) {
+    const auditEvents = await countModel(models, 'AuditEvent', buildWhere({ tenant_key: ctx.tenantId }, { resource_id: ticketId }));
+    const auditLogs = await countModel(models, 'AuditLog', buildWhere({}, { entity_id: ticketId }));
+    snapshot.events.audit = {
+      count: auditEvents.count + auditLogs.count,
+      auditEventsAvailable: auditEvents.ok,
+      auditLogsAvailable: auditLogs.ok,
+    };
+    snapshot.metadata.sources.audit = auditEvents.ok || auditLogs.ok;
+    snapshot.metadata.sourceErrors.push(auditEvents.reason, auditLogs.reason);
+  }
+
+  if (entityScope.includes('crm')) {
+    const crmEvents = await countModel(models, 'VerticalJourneyEvent', buildWhere({ tenant_key: ctx.tenantId }, { customer_id: ctx.contactId }));
+    snapshot.crm.activities = { count: crmEvents.count, source: 'VerticalJourneyEvent', available: crmEvents.ok };
+    snapshot.metadata.sources.crm = crmEvents.ok;
+    snapshot.metadata.sourceErrors.push(crmEvents.reason);
+  }
+
+  if (entityScope.includes('notifications')) {
+    const notificationWhere = buildWhere({ tenant_key: ctx.tenantId }, { customer_id: ctx.contactId });
+    const notifications = await countModel(models, 'NotificationDelivery', notificationWhere);
+    snapshot.events.notifications = {
+      count: notifications.count,
+      sent: notifications.count,
+      available: notifications.ok,
+    };
+    snapshot.metadata.sources.notifications = notifications.ok;
+    snapshot.metadata.sourceErrors.push(notifications.reason);
+  }
+
+  snapshot.metadata.sources.db = Boolean(ticket.ok);
+  snapshot.metadata.sources.support = Boolean(ticket.ok);
+  snapshot.metadata.sources.ticket = Boolean(ticket.ok);
+  snapshot.metadata.sourceErrors = snapshot.metadata.sourceErrors.filter(Boolean);
+  return normalizeSnapshot(snapshot);
+}
+
+async function collectFitnessStepScopedSnapshot(ctx, models, stepId) {
+  const contract = getOperationalStepContract(stepId);
+  const entityScope = Array.isArray(contract?.entityScope) ? contract.entityScope : [];
+  const tenantWhere = { tenant_key: ctx.tenantId };
+  const subjectWhere = buildWhere(tenantWhere, {
+    id: ctx.subjectId,
+    customer_id: ctx.contactId,
+    membership_id: ctx.membershipId,
+  });
+  const subject = Object.keys(subjectWhere).length > 1
+    ? await findOneModel(models, 'AccessSubject', subjectWhere)
+    : await findOneModel(models, 'AccessSubject', tenantWhere, { order: [['updated_at', 'DESC']] });
+  const subjectRow = subject.item || {};
+  const subjectId = ctx.subjectId || subjectRow.id || null;
+  const membershipId = ctx.membershipId || subjectRow.membership_id || null;
+
+  const membership = await findOneModel(models, 'AccessMembership', buildWhere(tenantWhere, {
+    id: membershipId,
+    subject_id: subjectId,
+  }));
+  const credential = await findOneModel(models, 'AccessCredential', buildWhere(tenantWhere, {
+    id: ctx.credentialId,
+    subject_id: subjectId,
+  }));
+  const decisions = await countModelWithFallback(models, 'AccessDecision', buildWhere(tenantWhere, {
+    subject_id: subjectId,
+    credential_id: ctx.credentialId,
+    device_id: ctx.deviceId,
+  }), buildWhere(tenantWhere, {
+    subject_id: subjectId,
+  }));
+  const accessEvents = await countModelWithFallback(models, 'AccessEvent', buildWhere(tenantWhere, {
+    subject_id: subjectId,
+    credential_id: ctx.credentialId,
+    device_id: ctx.deviceId,
+  }), buildWhere(tenantWhere, {
+    subject_id: subjectId,
+  }));
+  const attendance = await countModelWithFallback(models, 'VerticalAttendance', buildWhere(tenantWhere, {
+    subject_id: subjectId,
+    membership_id: membershipId,
+    device_id: ctx.deviceId,
+  }), buildWhere({
+    ...tenantWhere,
+    vertical: 'fitness',
+  }, {
+    subject_id: subjectId,
+  }));
+  const crmEvents = await countModelWithFallback(models, 'VerticalJourneyEvent', buildWhere({
+    ...tenantWhere,
+    vertical: 'fitness',
+  }, {
+    subject_id: subjectId,
+    membership_id: membershipId,
+  }), buildWhere({
+    ...tenantWhere,
+    vertical: 'fitness',
+  }, {
+    subject_id: subjectId,
+  }));
+
+  const membershipRow = membership.item || {};
+  const credentialRow = credential.item || {};
+  const membershipActive = membershipRow.status === 'active' && membershipRow.billing_status === 'active';
+  const credentialExists = Boolean(credentialRow.id);
+  const deviceMode = ctx.deviceMode || (ctx.deviceId ? 'device_real_candidate' : 'simulated_device');
+  const filterApplied = Boolean(decisions.fallbackApplied || accessEvents.fallbackApplied || attendance.fallbackApplied || crmEvents.fallbackApplied);
+
+  const snapshot = {
+    state: attendance.count > 0 ? 'attendance_created' : (membershipActive && credentialExists ? 'membership_validated' : null),
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [],
+      entityScope,
+      filterApplied,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  if (entityScope.includes('attendance')) {
+    snapshot.db.attendance = { count: attendance.count, created: attendance.count > 0, not_exists: attendance.count === 0 };
+    snapshot.metadata.sources.attendance = attendance.ok;
+  }
+  if (entityScope.includes('access_decision')) {
+    snapshot.api.access = { decision: { count: decisions.count, allow: decisions.count > 0 } };
+    snapshot.metadata.sources.accessDecision = decisions.ok;
+  }
+  if (entityScope.includes('access_event')) {
+    snapshot.devices = {
+      mode: deviceMode,
+      deviceId: ctx.deviceId,
+      access: {
+        decisions: decisions.count,
+        events: accessEvents.count,
+        releaseEventCreated: accessEvents.count > 0,
+      },
+    };
+    snapshot.events.access = { count: accessEvents.count, available: accessEvents.ok };
+    snapshot.metadata.sources.accessEvent = accessEvents.ok;
+  }
+  if (entityScope.some((entity) => entity === 'crm_journey' || entity === 'crm')) {
+    snapshot.crm.presenceActivity = { count: crmEvents.count, created: crmEvents.count > 0 };
+    snapshot.metadata.sources.crm = crmEvents.ok;
+  }
+
+  snapshot.metadata.sources.db = Boolean(subject.ok && membership.ok && credential.ok && attendance.ok);
+  snapshot.metadata.sources.subject = subject.ok;
+  snapshot.metadata.sources.membership = membership.ok;
+  snapshot.metadata.sources.credential = credential.ok;
+  snapshot.metadata.sourceErrors = [
+    subject.reason,
+    membership.reason,
+    credential.reason,
+    decisions.reason,
+    accessEvents.reason,
+    attendance.reason,
+    crmEvents.reason,
+  ].filter(Boolean);
+
+  return normalizeSnapshot(snapshot);
 }
 
 async function collectUiState(page = null) {
@@ -807,10 +1057,181 @@ function inferStateFromSnapshot(snapshot = {}, fallback = null) {
   return fallback;
 }
 
+// ---------------------------------------------------------------------------
+// Entity-scoped snapshot collection (Phase 2: semantic consistency)
+// ---------------------------------------------------------------------------
+
+/**
+ * Filtra um snapshot global para conter apenas entidades relevantes a um step.
+ *
+ * Utiliza o registry para determinar quais entidades capturar, reduzindo ruído.
+ *
+ * @param {object} globalSnapshot - snapshot completo coletado
+ * @param {string} stepId - identificador do step
+ * @returns {object} snapshot filtrado com apenas entidades do escopo
+ */
+function filterSnapshotByEntityScope(globalSnapshot = {}, stepId = '', options = {}) {
+  // GUARD: Esta fun\u00e7\u00e3o \u00e9 LEGADO/DIAGN\u00d3STICO. No pipeline operacional usar collectEntityScopedSnapshot().
+  // Chamar sem { diagnosticMode: true } em contexto operacional \u00e9 erro de causalidade.
+  if (options?.diagnosticMode !== true) {
+    throw new Error(
+      `filterSnapshotByEntityScope: uso proibido em contexto operacional para step "${stepId}". ` +
+      'Use collectEntityScopedSnapshot() no pipeline operacional. ' +
+      'Para diagn\u00f3stico/testes pass options.diagnosticMode = true.'
+    );
+  }
+  const registry = require('../../../qa/contracts/operationalStepRegistry');
+  const { getEntityScopeForStep } = registry;
+
+  const entityScope = getEntityScopeForStep(stepId);
+  if (!Array.isArray(entityScope) || entityScope.length === 0) {
+    // Se não há escopo definido, retorna snapshot global (backward compat)
+    return normalizeSnapshot(globalSnapshot);
+  }
+
+  const normalized = normalizeSnapshot(globalSnapshot);
+  const filtered = {
+    state: normalized.state || null,
+    db: {},
+    api: {},
+    ui: normalized.ui || {},
+    replay: normalized.replay || {},
+    events: {},
+    crm: {},
+    devices: {},
+    metadata: {
+      ...normalized.metadata,
+      entityScope: entityScope,
+      filterApplied: true,
+    },
+  };
+
+  // Mapear nomes de entidades a buckets de snapshot
+  const entityBucketMap = {
+    // Database entities
+    ticket: 'db',
+    messages: 'db',
+    message: 'db',
+    audit: 'db',
+    attendance: 'db',
+    access_decision: 'db',
+    access_event: 'db',
+    subject: 'db',
+
+    // CRM entities
+    crm: 'crm',
+    crm_activity: 'crm',
+    crm_journey: 'crm',
+    crm_presence: 'crm',
+    crm_updated: 'crm',
+
+    // Access Control
+    access_control: 'db',
+    turnstile: 'devices',
+  };
+
+  // Filtrar db bucket
+  for (const entity of entityScope) {
+    const bucket = entityBucketMap[entity.toLowerCase()];
+    if (bucket === 'db' && normalized.db && typeof normalized.db === 'object') {
+      // Manter apenas campos relevantes
+      const dbKey = entity.toLowerCase();
+      if (normalized.db[dbKey]) {
+        filtered.db[dbKey] = normalized.db[dbKey];
+      }
+      // Também manter singular + 's'
+      if (entity.endsWith('s') && normalized.db[entity.substring(0, entity.length - 1)]) {
+        filtered.db[entity.substring(0, entity.length - 1)] = 
+          normalized.db[entity.substring(0, entity.length - 1)];
+      }
+    }
+  }
+
+  // Filtrar crm bucket
+  for (const entity of entityScope) {
+    const bucket = entityBucketMap[entity.toLowerCase()];
+    if ((bucket === 'crm' || entity.toLowerCase().startsWith('crm')) && 
+        normalized.crm && typeof normalized.crm === 'object') {
+      const crmKey = entity.toLowerCase();
+      if (normalized.crm[crmKey]) {
+        filtered.crm[crmKey] = normalized.crm[crmKey];
+      }
+    }
+  }
+
+  // Manter events se solicitado
+  if (entityScope.some((e) => e.toLowerCase().includes('event'))) {
+    filtered.events = normalized.events || {};
+  }
+
+  // Manter devices/access se solicitado
+  if (entityScope.some((e) => e.toLowerCase().includes('device') || e.toLowerCase().includes('access'))) {
+    filtered.devices = normalized.devices || {};
+  }
+
+  return filtered;
+}
+
+/**
+ * Coleta snapshot entity-scoped para um step específico.
+ *
+ * Reduz ruído coletando apenas estado relevante ao step em questão.
+ *
+ * @param {object} options
+ * @param {string} options.stepId - qual step
+ * @param {string} options.journeyId - qual jornada
+ * @param {string} [options.phase] - fase da coleta
+ * @param {object} [options.page] - página Playwright (opcional)
+ * @param {object} [options.replay] - estado de replay (opcional)
+ * @param {object} [options.models] - models ORM (opcional)
+ * @returns {Promise<object>} snapshot filtrado
+ */
+async function collectEntityScopedSnapshot(options = {}) {
+  const stepId = options.stepId || '';
+  if (!stepId) {
+    throw new Error('collectEntityScopedSnapshot requires options.stepId');
+  }
+  const stepContract = getOperationalStepContract(stepId);
+  if (!stepContract) {
+    throw new Error(`collectEntityScopedSnapshot requires registered stepId: ${stepId}`);
+  }
+
+  const models = options.models || getDefaultModels();
+  const ctx = normalizeSnapshotContext(options);
+
+  if (stepContract.journeyId === 'support_ticket_flow') {
+    return collectSupportStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  if (stepContract.journeyId === 'fitness_customer_checkin') {
+    return collectFitnessStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  return normalizeSnapshot({
+    state: null,
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: ['entity_scoped_collector_not_configured'],
+      entityScope: stepContract.entityScope || [],
+      filterApplied: false,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  });
+}
+
 module.exports = {
   captureTransitionSnapshots,
   collectSideEffects,
   collectOperationalSnapshot,
+  collectEntityScopedSnapshot,
+  __diagnosticOnlyFilterSnapshotByEntityScope: filterSnapshotByEntityScope,
+  __testOnlyNormalizeSnapshotContext: normalizeSnapshotContext,
   collectReplayState,
   getRequiredSources,
   inferObservedSideEffectsFromSnapshots,

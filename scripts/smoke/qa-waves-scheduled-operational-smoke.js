@@ -1,0 +1,140 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const { runFinalOperationalSmoke } = require('./qa-waves-operational-final-smoke');
+
+const SCHEDULED_MODES = {
+  hourly_lightweight: {
+    id: 'hourly_lightweight',
+    label: 'Hourly lightweight validation',
+    realStack: false,
+    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency'],
+  },
+  nightly_full_replay: {
+    id: 'nightly_full_replay',
+    label: 'Nightly full replay validation',
+    realStack: true,
+    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'exact_mutations', 'exact_side_effects'],
+  },
+  pre_release_governance: {
+    id: 'pre_release_governance',
+    label: 'Pre-release governance validation',
+    realStack: true,
+    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'tenant_isolation'],
+  },
+  production_health: {
+    id: 'production_health',
+    label: 'Production health validation',
+    realStack: true,
+    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'operational_confidence'],
+  },
+};
+
+function resolveMode(value) {
+  const mode = String(value || process.env.QA_WAVES_SCHEDULED_MODE || 'hourly_lightweight');
+  return SCHEDULED_MODES[mode] || SCHEDULED_MODES.hourly_lightweight;
+}
+
+function summarizeFlow(flow = {}) {
+  const replay = flow.replay || {};
+  const governance = flow.governance || {};
+  const steps = Array.isArray(replay.steps) ? replay.steps : [];
+  const failedSteps = steps.filter((step) => step?.status === 'failed');
+  const missingEvidence = steps.flatMap((step) => Array.isArray(step?.missingEvidence) ? step.missingEvidence : []);
+  return {
+    journeyId: flow.journeyId,
+    goNoGo: governance.goNoGo || (governance.isOperational ? 'GO' : 'NO_GO'),
+    replayHash: replay.replayHash || null,
+    replayChecksum: replay.replayChecksum || null,
+    governanceSignature: replay.governanceSignature || null,
+    integrityValid: governance?.replayIntegrity?.valid !== false,
+    failedResidualSteps: failedSteps.map((step) => step.id || step.stepId || 'unknown'),
+    missingEvidence,
+    actionTypes: steps.map((step) => ({
+      stepId: step.id || step.stepId || null,
+      actionType: step.actionType || null,
+      semanticContractActionType: step.semanticContract?.actionType || null,
+    })),
+  };
+}
+
+async function runScheduledOperationalSmoke(options = {}) {
+  const scheduledMode = resolveMode(options.mode);
+  const forceRealStack = options.realStack ?? scheduledMode.realStack;
+  const previousProdLike = process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE;
+  if (forceRealStack) {
+    process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = '1';
+  } else if (!previousProdLike) {
+    process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = '0';
+  }
+
+  const summary = await runFinalOperationalSmoke({
+    outDir: options.outDir,
+    headless: options.headless,
+    timeout: options.timeout,
+  });
+
+  if (previousProdLike === undefined) {
+    delete process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE;
+  } else {
+    process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = previousProdLike;
+  }
+
+  const flows = Array.isArray(summary.flows) ? summary.flows.map(summarizeFlow) : [];
+  const blockers = flows.flatMap((flow) => [
+    ...flow.failedResidualSteps.map((stepId) => ({ journeyId: flow.journeyId, reason: 'failed_residual_step', stepId })),
+    ...flow.missingEvidence.map((field) => ({ journeyId: flow.journeyId, reason: 'missing_evidence', field })),
+    ...(flow.integrityValid ? [] : [{ journeyId: flow.journeyId, reason: 'replay_integrity_invalid' }]),
+  ]);
+  const governanceStatus = forceRealStack
+    ? (summary.productionReadiness?.decision || summary.status || 'NO_GO')
+    : (summary.status || 'NO_GO');
+  const report = {
+    generatedAt: new Date().toISOString(),
+    scheduledMode,
+    status: governanceStatus === 'GO' && blockers.length === 0 ? 'GO' : 'NO_GO',
+    governanceStatus,
+    checks: scheduledMode.checks,
+    journeys: scheduledMode.journeys,
+    flows,
+    blockers,
+    evidencePath: summary.evidencePath || null,
+  };
+
+  const outDir = options.outDir || path.join(process.cwd(), 'qa', 'smoke');
+  fs.mkdirSync(outDir, { recursive: true });
+  const outPath = path.join(outDir, 'qa-waves-scheduled-operational-smoke.json');
+  fs.writeFileSync(outPath, JSON.stringify(report, null, 2) + '\n', 'utf8');
+  report.scheduledEvidencePath = outPath;
+  return report;
+}
+
+if (require.main === module) {
+  runScheduledOperationalSmoke()
+    .then((report) => {
+      console.log(JSON.stringify({
+        status: report.status,
+        mode: report.scheduledMode.id,
+        governanceStatus: report.governanceStatus,
+        scheduledEvidencePath: report.scheduledEvidencePath,
+        blockers: report.blockers,
+      }, null, 2));
+      if (report.status !== 'GO') process.exitCode = 1;
+    })
+    .catch((error) => {
+      console.error('[qa-waves-scheduled-operational-smoke] FAIL', error?.stack || error?.message || error);
+      process.exit(1);
+    });
+}
+
+module.exports = {
+  SCHEDULED_MODES,
+  runScheduledOperationalSmoke,
+  resolveMode,
+};

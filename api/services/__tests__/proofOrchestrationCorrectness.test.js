@@ -20,8 +20,11 @@ const { rebuildGovernanceState } = require('../qaWavesExecutionService');
 const { normalizeReplayOperationalStep, executeScenario } = require('../qaWavesExecutionEngine');
 const {
   deriveStepScopedMutations,
-  POST_STATE_MUTATION_CONTRACTS,
 } = require('../../../qa/evidence/postStateProofValidator');
+const {
+  getExpectedMutationsForStep,
+  getExpectedSideEffectsForStep,
+} = require('../../../qa/contracts/operationalStepRegistry');
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -86,7 +89,7 @@ function makeChangeStatusStep(overrides = {}) {
 
 function makeCheckinStep(overrides = {}) {
   return {
-    id: 'step_identify_customer',
+    id: 'step_submit_checkin',
     actionType: 'checkin_submit',
     selectorUsed: '[data-testid="checkin-submit"]',
     screenshotBefore: 'data:image/png;base64,before',
@@ -97,11 +100,20 @@ function makeCheckinStep(overrides = {}) {
       {
         type: 'response',
         method: 'POST',
-        url: 'http://localhost/api/access/checkin',
+        url: 'http://localhost/api/fitness/checkin',
         status: 200,
       },
     ],
     ...overrides,
+  };
+}
+
+function withStepSnapshots(step, beforeStepSnapshot, afterStepSnapshot) {
+  return {
+    ...step,
+    beforeStepSnapshot,
+    afterStepSnapshot,
+    mutationExpected: true,
   };
 }
 
@@ -450,12 +462,12 @@ describe('4. executeScenario — não remove mutation proof dos steps', () => {
 // ---------------------------------------------------------------------------
 
 describe('5. deriveStepScopedMutations — diff global sem step responsável => NO_GO', () => {
-  const beforeSnapshot = { messages_count: 1, status: 'open' };
-  const afterSnapshot = { messages_count: 2, status: 'open' }; // message_created no diff
+  const beforeSnapshot = { db: { messages: { count: 1 }, ticket: { status: 'open' } } };
+  const afterSnapshot = { db: { messages: { count: 2 }, ticket: { status: 'open' } } };
 
   test('step_reply_ticket com message_created no diff => GO', () => {
     const result = deriveStepScopedMutations(
-      [makeReplyStep()],
+      [withStepSnapshots(makeReplyStep(), beforeSnapshot, afterSnapshot)],
       beforeSnapshot,
       afterSnapshot,
     );
@@ -468,10 +480,9 @@ describe('5. deriveStepScopedMutations — diff global sem step responsável => 
   });
 
   test('step_reply_ticket SEM message_created no diff => NO_GO', () => {
-    // Diff que NÃO inclui mudança em messages_count
-    const sameMessages = { messages_count: 1, status: 'replied' };
+    const sameMessages = { db: { messages: { count: 1 }, ticket: { status: 'replied' } } };
     const result = deriveStepScopedMutations(
-      [makeReplyStep()],
+      [withStepSnapshots(makeReplyStep(), beforeSnapshot, sameMessages)],
       beforeSnapshot,
       sameMessages,
     );
@@ -482,19 +493,19 @@ describe('5. deriveStepScopedMutations — diff global sem step responsável => 
     expect(result[0].mutationMissing).toBe(true);
   });
 
-  test('correlationBasis é "contract" quando contrato existe para o step', () => {
+  test('correlationBasis é "step_incremental" em correlação causal por step', () => {
     const result = deriveStepScopedMutations(
-      [makeReplyStep()],
+      [withStepSnapshots(makeReplyStep(), beforeSnapshot, afterSnapshot)],
       beforeSnapshot,
       afterSnapshot,
     );
 
-    expect(result[0].correlationBasis).toBe('contract');
+    expect(result[0].correlationBasis).toBe('step_incremental');
   });
 
   test('networkCorrelation captura network events do step', () => {
     const result = deriveStepScopedMutations(
-      [makeReplyStep()],
+      [withStepSnapshots(makeReplyStep(), beforeSnapshot, afterSnapshot)],
       beforeSnapshot,
       afterSnapshot,
     );
@@ -510,7 +521,7 @@ describe('5. deriveStepScopedMutations — diff global sem step responsável => 
   });
 
   test('diff null retorna mutations vazias para step com contrato', () => {
-    const result = deriveStepScopedMutations([makeReplyStep()], null, null, null);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeReplyStep(), null, null)], null, null, null);
 
     expect(result[0].scopedMutations).toHaveLength(0);
     expect(result[0].goNoGo).toBe('NO_GO');
@@ -524,26 +535,27 @@ describe('5. deriveStepScopedMutations — diff global sem step responsável => 
 
 describe('6. reply_ticket sem message_created => NO_GO', () => {
   test('step_reply_ticket: contrato exige message_created', () => {
-    expect(POST_STATE_MUTATION_CONTRACTS['step_reply_ticket']).toContain('message_created');
+    const mutations = getExpectedMutationsForStep('step_reply_ticket');
+    expect(mutations).toContain('message_created');
   });
 
-  test('diff sem messages_count aumentado => goNoGo=NO_GO para step_reply_ticket', () => {
-    // Snapshot antes e depois sem mudança em messages_count
-    const before = { messages_count: 5, status: 'open' };
-    const after = { messages_count: 5, status: 'open' };  // sem mudança
+  test('diff sem db.messages.count aumentado => goNoGo=NO_GO para step_reply_ticket', () => {
+    const before = { db: { messages: { count: 5 }, ticket: { status: 'open' } } };
+    const after = { db: { messages: { count: 5 }, ticket: { status: 'open' } } };
 
-    const result = deriveStepScopedMutations([makeReplyStep()], before, after);
+    const step = withStepSnapshots(makeReplyStep(), before, after);
+    const result = deriveStepScopedMutations([step], before, after);
 
     expect(result[0].goNoGo).toBe('NO_GO');
     expect(result[0].scopedMutations).not.toContain('message_created');
     expect(result[0].mutationMissing).toBe(true);
   });
 
-  test('diff com messages_count aumentado => goNoGo=null para step_reply_ticket', () => {
-    const before = { messages_count: 5 };
-    const after = { messages_count: 6 };
+  test('diff com db.messages.count aumentado => goNoGo=null para step_reply_ticket', () => {
+    const before = { db: { messages: { count: 5 } } };
+    const after = { db: { messages: { count: 6 } } };
 
-    const result = deriveStepScopedMutations([makeReplyStep()], before, after);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeReplyStep(), before, after)], before, after);
 
     expect(result[0].goNoGo).toBeNull();
     expect(result[0].scopedMutations).toContain('message_created');
@@ -557,24 +569,25 @@ describe('6. reply_ticket sem message_created => NO_GO', () => {
 
 describe('7. change_status sem status_changed => NO_GO', () => {
   test('step_change_status: contrato exige ticket_status_changed', () => {
-    expect(POST_STATE_MUTATION_CONTRACTS['step_change_status']).toContain('ticket_status_changed');
+    const mutations = getExpectedMutationsForStep('step_change_status');
+    expect(mutations).toContain('ticket_status_changed');
   });
 
   test('diff sem mudança de status => goNoGo=NO_GO para step_change_status', () => {
-    const before = { status: 'open' };
-    const after = { status: 'open' };  // sem mudança de status
+    const before = { db: { ticket: { status: 'open' } } };
+    const after = { db: { ticket: { status: 'open' } } };
 
-    const result = deriveStepScopedMutations([makeChangeStatusStep()], before, after);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeChangeStatusStep(), before, after)], before, after);
 
     expect(result[0].goNoGo).toBe('NO_GO');
     expect(result[0].mutationMissing).toBe(true);
   });
 
   test('diff com status mudado => goNoGo=null para step_change_status', () => {
-    const before = { status: 'open' };
-    const after = { status: 'resolved' };
+    const before = { db: { ticket: { status: 'open' } } };
+    const after = { db: { ticket: { status: 'resolved' } } };
 
-    const result = deriveStepScopedMutations([makeChangeStatusStep()], before, after);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeChangeStatusStep(), before, after)], before, after);
 
     expect(result[0].goNoGo).toBeNull();
     expect(result[0].scopedMutations).toContain('ticket_status_changed');
@@ -586,28 +599,29 @@ describe('7. change_status sem status_changed => NO_GO', () => {
 // ---------------------------------------------------------------------------
 
 describe('8. checkin_submit sem attendance_created => NO_GO', () => {
-  test('step_identify_customer: contrato exige access_decision_created', () => {
-    expect(POST_STATE_MUTATION_CONTRACTS['step_identify_customer']).toContain('access_decision_created');
+  test('step_submit_checkin: contrato exige attendance_created', () => {
+    const mutations = getExpectedMutationsForStep('step_submit_checkin');
+    expect(mutations).toContain('attendance_created');
   });
 
-  test('diff sem attendance_count aumentado => goNoGo=NO_GO para checkin_submit', () => {
-    const before = { attendance_count: 0, access_decision: null };
-    const after = { attendance_count: 0, access_decision: null };  // sem criação de attendance
+  test('diff sem db.attendance.count aumentado => goNoGo=NO_GO para checkin_submit', () => {
+    const before = { db: { attendance: { count: 0 } }, api: { access: { decision: { count: 0 } } } };
+    const after = { db: { attendance: { count: 0 } }, api: { access: { decision: { count: 0 } } } };
 
-    const result = deriveStepScopedMutations([makeCheckinStep()], before, after);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeCheckinStep(), before, after)], before, after);
 
     expect(result[0].goNoGo).toBe('NO_GO');
     expect(result[0].mutationMissing).toBe(true);
   });
 
-  test('diff com access_decision criado => goNoGo=null para checkin_submit', () => {
-    const before = { attendance_count: 0, access_decision: null };
-    const after = { attendance_count: 1, access_decision: 'allow' };
+  test('diff com db.attendance.count aumentado => goNoGo=null para checkin_submit', () => {
+    const before = { db: { attendance: { count: 0 } }, api: { access: { decision: { count: 0 } } } };
+    const after = { db: { attendance: { count: 1 } }, api: { access: { decision: { count: 1 } } } };
 
-    const result = deriveStepScopedMutations([makeCheckinStep()], before, after);
+    const result = deriveStepScopedMutations([withStepSnapshots(makeCheckinStep(), before, after)], before, after);
 
     expect(result[0].goNoGo).toBeNull();
-    expect(result[0].scopedMutations).toContain('access_decision_created');
+    expect(result[0].scopedMutations).toContain('attendance_created');
   });
 });
 
@@ -617,12 +631,12 @@ describe('8. checkin_submit sem attendance_created => NO_GO', () => {
 
 describe('9. Correlação múltiplos steps — jornada completa support_ticket_flow', () => {
   test('jornada completa: cada step tem suas mutações correlacionadas', () => {
-    const before = { messages_count: 1, status: 'open', attendance_count: 0 };
-    const after = { messages_count: 2, status: 'replied', attendance_count: 0 };
+    const before = { db: { messages: { count: 1 }, ticket: { status: 'open' } } };
+    const after = { db: { messages: { count: 2 }, ticket: { status: 'replied' } } };
 
     const steps = [
-      makeReplyStep(),        // message_created
-      makeChangeStatusStep(), // ticket_status_changed
+      withStepSnapshots(makeReplyStep(), { db: { messages: { count: 1 }, ticket: { status: 'open' } } }, { db: { messages: { count: 2 }, ticket: { status: 'open' } } }),
+      withStepSnapshots(makeChangeStatusStep(), { db: { ticket: { status: 'open' } } }, { db: { ticket: { status: 'replied' } } }),
     ];
 
     const result = deriveStepScopedMutations(steps, before, after);

@@ -17,8 +17,11 @@ const browserOperationalRunner = require('./qa/browserOperationalRunner');
 const { computeRealSnapshotDiff } = require('../../qa/evidence/evidenceProofValidator');
 const {
   deriveStepScopedMutations,
-  POST_STATE_MUTATION_CONTRACTS,
 } = require('../../qa/evidence/postStateProofValidator');
+const {
+  getOperationalStepContract,
+  getExpectedMutationsForStep,
+} = require('../../qa/contracts/operationalStepRegistry');
 const { buildSupportTicketFlowSteps } = require('./qa/journeyStepDefinitions/supportTicketFlowSteps');
 const { buildFitnessCheckinFlowSteps } = require('./qa/journeyStepDefinitions/fitnessCheckinFlowSteps');
 const {
@@ -256,10 +259,26 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
 }
 
 function buildSnapshotContext(replayArtifact, phase, replay = {}) {
-  const scenario = replayArtifact?.scenario || {};
-  const seed = replayArtifact?.seed || {};
-  const data = seed?.data || {};
-  const seedEvidence = replayArtifact?.payload?.seedEvidence || seed?.seedEvidence || {};
+  const artifactScenario = replayArtifact?.scenario || {};
+  const replayScenario = replay?.scenario || {};
+  const scenario = { ...artifactScenario, ...replayScenario };
+  const artifactSeed = replayArtifact?.seed || {};
+  const replaySeed = replay?.seed || {};
+  const seed = { ...artifactSeed, ...replaySeed };
+  const data = {
+    ...(artifactSeed?.data || {}),
+    ...(replaySeed?.data || {}),
+  };
+  const artifactSeedEvidence = replayArtifact?.payload?.seedEvidence || artifactSeed?.seedEvidence || {};
+  const replaySeedEvidence = replay?.payload?.seedEvidence || replay?.seedEvidence || replaySeed?.seedEvidence || {};
+  const seedEvidence = {
+    ...artifactSeedEvidence,
+    ...replaySeedEvidence,
+    provision: {
+      ...(artifactSeedEvidence?.provision || {}),
+      ...(replaySeedEvidence?.provision || {}),
+    },
+  };
   const seedProvision = seedEvidence?.provision || {};
   const inferredJourney = stateSnapshotService.normalizeJourneyId(
     scenario.journeyId || scenario.journey || scenario.journeySlug || scenario.id || replay.journeyId || ''
@@ -285,6 +304,72 @@ function buildSnapshotContext(replayArtifact, phase, replay = {}) {
     deviceMode: seedProvision.deviceMode || data.deviceMode || data.device_mode || null,
     bookingId: data.bookingId || data.booking_id || null,
   };
+}
+
+function createStepSnapshotCollector(replayArtifact) {
+  return async function collectStepSnapshot({ phase = 'before', stepSpec = {}, stepResult = {} } = {}) {
+    const currentReplay = safeReadJson(replayArtifact.path, replayArtifact.payload) || replayArtifact.payload;
+    const snapshotContext = buildSnapshotContext(replayArtifact, `step_${phase}`, currentReplay);
+    const stepId = stepResult?.id || stepSpec?.id || stepSpec?.stepId || null;
+    const semanticContract = getOperationalStepContract(stepId);
+
+    if (!semanticContract) {
+      throw new Error(`operational_step_contract_missing:${stepId || 'unknown'}`);
+    }
+
+    snapshotContext.step = {
+      id: stepId,
+      actionType: stepResult?.actionType || stepSpec?.actionType || stepSpec?.action || stepSpec?.type || null,
+      semanticContract,
+    };
+
+    const snapshot = await stateSnapshotService.collectEntityScopedSnapshot({
+      ...snapshotContext,
+      stepId,
+    });
+
+    const collector = String(snapshot?.metadata?.collector || '').toLowerCase();
+    if (collector !== 'entity_scoped' || snapshot?.metadata?.filterApplied === true) {
+      throw new Error(`invalid_step_snapshot_collector:${stepId}`);
+    }
+
+    assertSnapshotDomainScope(stepId, snapshot);
+
+    return snapshot;
+  };
+}
+
+function assertSnapshotDomainScope(stepId, snapshot = {}) {
+  const serialized = JSON.stringify(snapshot || {}).toLowerCase();
+  const supportSteps = new Set([
+    'step_wait_ticket_list',
+    'step_select_ticket',
+    'step_reply_ticket',
+    'step_change_status',
+    'step_assert_ticket_ui',
+    'step_assert_ticket_backend',
+  ]);
+  const fitnessSteps = new Set([
+    'step_load_checkin_screen',
+    'step_submit_checkin',
+    'step_confirm_attendance',
+  ]);
+
+  if (supportSteps.has(stepId)) {
+    const forbidden = ['"attendance"', '"access"', '"devices"'];
+    const found = forbidden.find((token) => serialized.includes(token));
+    if (found) {
+      throw new Error(`entity_scope_unrelated_data:${stepId}`);
+    }
+  }
+
+  if (fitnessSteps.has(stepId)) {
+    const forbidden = ['"ticket"', '"conversation"', '"messages"'];
+    const found = forbidden.find((token) => serialized.includes(token));
+    if (found) {
+      throw new Error(`entity_scope_unrelated_data:${stepId}`);
+    }
+  }
 }
 
 function normalizeOperationalJourneyId(value = '') {
@@ -534,6 +619,7 @@ async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, pre
   const stateMutation = previousReplay?.stateMutation || null;
   const replayId = replayArtifact?.replayId || previousReplay?.replayId || null;
   const executionId = replayArtifact?.payload?.executionId || previousReplay?.executionId || null;
+  const collectStepSnapshot = createStepSnapshotCollector(replayArtifact);
 
   // Para jornadas blocking: usa browser real + step definitions com execute(page)
   if (isBlockingOperationalJourney(journeyId)) {
@@ -563,6 +649,7 @@ async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, pre
         executionId,
         stateMutation,
         seedEvidence,
+        collectStepSnapshot,
         headless: true,
         initialUrl: seedData.baseUrl ? `${seedData.baseUrl}` : undefined,
         extraHTTPHeaders: seedEvidence?.authHeaders || {},
@@ -588,6 +675,7 @@ async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, pre
       executionId,
       stateMutation,
       seedEvidence,
+      collectStepSnapshot,
     });
     stepResults.push(result);
   }
@@ -650,6 +738,8 @@ async function collectAndAttachSnapshot(replayArtifact, phase, replay = {}) {
       mutationCount: snapshots.mutationCount,
       sideEffects: snapshots.sideEffects,
       observedSideEffects: snapshots.observedSideEffects,
+      evidenceClassification: 'journey_summary_only',
+      source: 'stateMutation',
       reason: snapshots.mutationCount > 0 ? null : 'missing_real_state_mutation',
     };
     patch.stateSnapshotContract = contract;
@@ -733,6 +823,8 @@ function buildOperationalTimeline({ replay = {}, beforeSnapshot = {}, afterSnaps
       technicalEvidence: {
         mutationCount: stateMutation?.mutationCount || 0,
         snapshotContract: stateSnapshotContract?.valid ? 'passed' : 'failed',
+        evidenceClassification: 'journey_summary_only',
+        source: 'stateMutation',
       },
     },
   ];
@@ -1092,7 +1184,7 @@ async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
           reason: 'step_mutation_correlation_failed',
           stepId: s.stepId,
           actionType: s.actionType,
-          expected: POST_STATE_MUTATION_CONTRACTS[s.stepId] || POST_STATE_MUTATION_CONTRACTS[s.actionType] || [],
+          expected: getExpectedMutationsForStep(getOperationalStepContract(s.stepId)),
         }));
 
       // PASSO 9: rebuildGovernanceState DO ZERO — sem blockers antigos/temporários.
@@ -1128,6 +1220,8 @@ async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
           mutationCount: 0,
           sideEffects: [],
           observedSideEffects: [],
+          evidenceClassification: 'journey_summary_only',
+          source: 'stateMutation',
           reason: 'snapshot_after_collection_failed',
           error: error.message,
         },
@@ -1426,6 +1520,7 @@ function clearWaveExecutions() {
 
 module.exports = {
   buildSnapshotContext,
+  createStepSnapshotCollector,
   hydrateOperationalSeeds,
   prepareOperationalSeedEntry,
   normalizeOperationalRuntimeSteps,

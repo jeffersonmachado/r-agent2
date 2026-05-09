@@ -1,5 +1,15 @@
 'use strict';
 
+const {
+  getStepSpec,
+  getExpectedMutationsForStep,
+  getExpectedSideEffectsForStep,
+  getEntityScopeForStep,
+  getExpectedNetworkEventsForStep,
+  isMutationExpectedStep: registryIsMutationExpectedStep,
+  matchExpectedNetworkEvent,
+} = require('../../qa/contracts/operationalStepRegistry');
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -34,6 +44,43 @@ function toDurationMs(startedAt, finishedAt, fallback = 0) {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+/**
+ * Enrich observed mutations with provenance: where they came from and why they were attributed to this step
+ */
+function computeMutationProvenanceForReplay(step, entityScope = []) {
+  const observedMutations = safeArray(step?.observedMutations);
+  const networkEvents = safeArray(step?.networkEvents);
+  const beforeSnapshotHash = step?.beforeSnapshotHash || null;
+  const afterSnapshotHash = step?.afterSnapshotHash || null;
+  const stepId = step?.id || step?.stepId || null;
+  const semanticContract = stepId ? getStepSpec(stepId) : null;
+  const actionType = semanticContract?.actionType || step?.actionType || step?.action || step?.type || 'unknown';
+
+  // CAUSALIDADE: usar matchExpectedNetworkEvent do contrato, não primeiro response com status 2xx
+  const contractMatchedEvent = stepId ? matchExpectedNetworkEvent(stepId, networkEvents) : null;
+  return observedMutations.map((mutation) => {
+    const hasMatchedNetworkEvent = Boolean(contractMatchedEvent);
+    const originatingNetworkEvent = hasMatchedNetworkEvent ? contractMatchedEvent : null;
+    const originatingNetworkEvents = hasMatchedNetworkEvent ? [contractMatchedEvent] : [];
+
+    return {
+      mutation,
+      originatingStepId: stepId,
+      originatingActionType: actionType,
+      originatingNetworkEvent,
+      originatingNetworkEvents,
+      entityScope: Array.isArray(entityScope) ? entityScope : [],
+      beforeStepSnapshotHash: beforeSnapshotHash,
+      afterStepSnapshotHash: afterSnapshotHash,
+      beforeSnapshotHash,
+      afterSnapshotHash,
+      correlatedBy: hasMatchedNetworkEvent ? 'network_linkage' : 'expected_network_event_not_found',
+      valid: hasMatchedNetworkEvent,
+      reason: hasMatchedNetworkEvent ? null : 'expected_network_event_not_found',
+    };
+  });
+}
+
 function normalizeStep(step, index = 0, replayStatus = 'failed') {
   const action = step?.action || step?.type || 'unknown';
   const startedAt = toIso(step?.startedAt || step?.timestamp || step?.at, null);
@@ -44,8 +91,52 @@ function normalizeStep(step, index = 0, replayStatus = 'failed') {
   const consoleLogs = safeArray(step?.consoleLogs || step?.consoleErrors);
   const networkEvents = safeArray(step?.networkEvents);
 
+  // Query semantic contract from registry
+  const stepId = step?.id || step?.stepId || `step-${index + 1}`;
+  const registrySpec = getStepSpec(stepId);
+  const semanticContract = registrySpec || null;
+  const mutationExpected = registrySpec ? registryIsMutationExpectedStep(registrySpec) : false;
+  const expectedMutations = registrySpec ? getExpectedMutationsForStep(registrySpec) : [];
+  const expectedSideEffects = registrySpec ? getExpectedSideEffectsForStep(registrySpec) : [];
+  const entityScope = registrySpec ? getEntityScopeForStep(stepId) : [];
+  const expectedNetworkEvents = registrySpec ? getExpectedNetworkEventsForStep(stepId) : [];
+  const evidenceClassification = step?.evidenceClassification === 'diagnostic_only'
+    ? 'diagnostic_only'
+    : 'operational';
+  const observedNetworkEvents = networkEvents
+    .filter((event) => event && event.type === 'response')
+    .map((event) => ({
+      method: event.method || null,
+      url: event.url || null,
+      status: event.status || null,
+    }));
+  const matchedNetworkEvent = stepId ? matchExpectedNetworkEvent(stepId, networkEvents) : null;
+  const networkCorrelation = Array.isArray(step?.networkCorrelation)
+    ? step.networkCorrelation
+    : Array.isArray(step?.postStateProof?.networkCorrelation)
+      ? step.postStateProof.networkCorrelation
+      : matchedNetworkEvent
+        ? [{
+            method: matchedNetworkEvent.method || null,
+            url: matchedNetworkEvent.url || null,
+            status: matchedNetworkEvent.status || null,
+            correlatedBy: 'expected_network_event',
+          }]
+        : [];
+
+  // Compute mutation provenance
+  const observedMutations = safeArray(step?.observedMutations);
+  const mutationProvenance = safeArray(step?.mutationProvenance).length > 0
+    ? safeArray(step.mutationProvenance)
+    : computeMutationProvenanceForReplay(step, entityScope);
+  const provenanceInvalid = mutationProvenance.find((record) => record?.valid !== true) || null;
+  const provenance = {
+    valid: mutationProvenance.length === 0 ? mutationExpected === false : !provenanceInvalid,
+    reason: provenanceInvalid ? (provenanceInvalid.reason || 'expected_network_event_not_found') : null,
+  };
+
   return {
-    id: step?.id || `step-${index + 1}`,
+    id: stepId,
     index: Number.isFinite(Number(step?.index)) ? Number(step.index) : index + 1,
     order: Number.isFinite(Number(step?.order)) ? Number(step.order) : (index + 1),
     type: step?.type || null,
@@ -54,7 +145,7 @@ function normalizeStep(step, index = 0, replayStatus = 'failed') {
     name: step?.name || step?.title || `Passo ${index + 1}`,
     description: step?.description || null,
     action,
-    actionType: step?.actionType || action,
+    actionType: semanticContract?.actionType || step?.actionType || action,
     url: step?.url || step?.page || step?.route || step?.path || step?.input?.url || step?.evidence?.url || null,
     selector: step?.selector || null,
     selectorUsed: step?.selectorUsed || step?.selector || step?.dataTestId || null,
@@ -75,6 +166,27 @@ function normalizeStep(step, index = 0, replayStatus = 'failed') {
     evidenceId: step?.evidenceId || null,
     stepResult: step?.stepResult || null,
     mutationLinkage: step?.mutationLinkage || null,
+    stepExecutionProof: step?.stepExecutionProof || null,
+    postStateProof: step?.postStateProof || null,
+    proofChain: step?.proofChain || null,
+    beforeStepSnapshot: step?.beforeStepSnapshot || null,
+    afterStepSnapshot: step?.afterStepSnapshot || null,
+    incrementalDiff: step?.incrementalDiff || null,
+    observedMutations,
+    observedSideEffects: Array.isArray(step?.observedSideEffects) ? step.observedSideEffects : [],
+    observedNetworkEvents,
+    networkCorrelation,
+    evidenceClassification,
+    executionMode: step?.executionMode || 'operational_go',
+    // SEMANTIC CONSISTENCY: Phase 2 fields
+    semanticContract,
+    mutationExpected,
+    expectedMutations,
+    expectedSideEffects,
+    expectedNetworkEvents,
+    entityScope,
+    provenance,
+    mutationProvenance,
     evidence: {
       screenshotBefore,
       screenshotAfter,
@@ -88,6 +200,27 @@ function normalizeStep(step, index = 0, replayStatus = 'failed') {
       evidenceId: step?.evidenceId || null,
       mutationLinkage: step?.mutationLinkage || null,
       stepResult: step?.stepResult || null,
+      stepExecutionProof: step?.stepExecutionProof || null,
+      postStateProof: step?.postStateProof || null,
+      proofChain: step?.proofChain || null,
+      beforeStepSnapshot: step?.beforeStepSnapshot || null,
+      afterStepSnapshot: step?.afterStepSnapshot || null,
+      incrementalDiff: step?.incrementalDiff || null,
+      observedMutations,
+      observedSideEffects: Array.isArray(step?.observedSideEffects) ? step.observedSideEffects : [],
+      observedNetworkEvents,
+      networkCorrelation,
+      evidenceClassification,
+      executionMode: step?.executionMode || 'operational_go',
+      // SEMANTIC CONSISTENCY: Phase 2 fields
+      semanticContract,
+      mutationExpected,
+      expectedMutations,
+      expectedSideEffects,
+      expectedNetworkEvents,
+      entityScope,
+      provenance,
+      mutationProvenance,
     },
     error: step?.error ? {
       message: typeof step.error === 'string' ? step.error : (step.error.message || String(step.error)),
@@ -117,7 +250,11 @@ function convertExecutionToReplay(execution = {}, browserSession = {}) {
   const sourceSteps = safeArray(browserSession.steps).length > 0
     ? browserSession.steps
     : safeArray(execution.steps);
-  const steps = sourceSteps.map((step, index) => normalizeStep(step, index, replayStatus));
+  const normalizedSteps = sourceSteps.map((step, index) => normalizeStep(step, index, replayStatus));
+  const executionMode = String(execution?.executionMode || execution?.mode || 'operational_go').toLowerCase();
+  const steps = executionMode === 'operational_go'
+    ? normalizedSteps.filter((step) => step.evidenceClassification === 'operational')
+    : normalizedSteps;
 
   const replay = {
     replayId: execution.replayId || execution.id || `qa-wave-replay-${Date.now()}`,
@@ -143,6 +280,7 @@ function convertExecutionToReplay(execution = {}, browserSession = {}) {
       traceWarning: browserSession.traceWarning || execution.traceWarning || null,
       platformAdapter: execution.platformAdapter || null,
       rpaReplayPath: browserSession.rpaReplayPath || null,
+      executionMode,
       generatedAt: nowIso(),
     },
   };
@@ -152,4 +290,6 @@ function convertExecutionToReplay(execution = {}, browserSession = {}) {
 
 module.exports = {
   convertExecutionToReplay,
+  normalizeStep,
+  normalizeErrors,
 };

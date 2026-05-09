@@ -16,9 +16,9 @@
  *   6. network proof correto mas sem mutation → FALHA no post_state (não no step_execution)
  *   7. mutation correta mas sem side effect esperado → FALHA no post_state
  *   8. pipeline completo: step_execution PASS + post_state PASS
- *   9. deriveObservedMutations: messages_count++ → ['message_created']
- *  10. deriveObservedMutations: attendance_count++ → inclui attendance_created
- *  11. deriveObservedSideEffects: campo messages_count → inclui audit_log_created, crm_updated
+ *   9. deriveObservedMutations: db.messages.count++ → ['message_created']
+ *  10. deriveObservedMutations: db.attendance.count++ → inclui attendance_created
+ *  11. deriveObservedSideEffects: paths exatos de audit/crm → side effects canônicos
  *  12. appendProofChainToReplay retorna proofChain consolidado
  */
 
@@ -63,11 +63,24 @@ function makeStep(overrides = {}) {
 }
 
 function makeSnapshotBefore() {
-  return { messages_count: 3, status: 'open', attendance_count: 0 };
+  return {
+    db: { messages: { count: 3 }, ticket: { status: 'open' }, attendance: { count: 0 } },
+    events: { audit: { count: 0 }, notifications: { count: 0 }, access: { count: 0 } },
+    crm: { activities: { count: 0 }, presenceActivity: { count: 0 } },
+    api: { access: { decision: { count: 0 } } },
+    devices: { access: { events: 0 } },
+  };
 }
 
 function makeSnapshotAfter(overrides = {}) {
-  return { messages_count: 4, status: 'open', attendance_count: 0, ...overrides };
+  return {
+    db: { messages: { count: 4 }, ticket: { status: 'open' }, attendance: { count: 0 } },
+    events: { audit: { count: 1 }, notifications: { count: 1 }, access: { count: 0 } },
+    crm: { activities: { count: 1 }, presenceActivity: { count: 0 } },
+    api: { access: { decision: { count: 0 } } },
+    devices: { access: { events: 0 } },
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -199,18 +212,7 @@ describe('Fase 2 — validatePostStateProof (post-state)', () => {
 
   test('11. DEVE PASSAR quando todas as mutações e side effects são observados', () => {
     const before = makeSnapshotBefore();
-    const after = makeSnapshotAfter(); // messages_count: 3 → 4
-
-    // Para step type_and_send / step_reply_ticket com messages_count++:
-    // expected mutations: ['message_created']
-    // observedMutations derivadas: ['message_created'] (via deriveObservedMutations)
-    // expected side effects: ['audit_log_created', 'crm_updated']
-    // observedSideEffects: audit_log_created, crm_updated via SIDE_EFFECT_DERIVATION_RULES
-
-    // Nota: o contrato para type_and_send espera ['message_created']
-    // O diff vai ter messages_count: 3→4 → deriveObservedMutations → ['message_created'] ✓
-    // Side effects esperados para type_and_send: ['audit_log_created']
-    // Side effects derivados do campo messages_count: audit_log_created, crm_updated ✓
+    const after = makeSnapshotAfter();
 
     const result = validatePostStateProof({
       beforeSnapshot: before,
@@ -277,33 +279,33 @@ describe('Fase 2 — validatePostStateProof (post-state)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Derivation engine', () => {
-  test('14. messages_count++ → deriveObservedMutations inclui message_created', () => {
+  test('14. db.messages.count++ → deriveObservedMutations inclui message_created', () => {
     const diff = {
       changed: true,
-      details: [{ field: 'messages_count', before: 3, after: 4 }],
+      details: [{ field: 'db.messages.count', before: 3, after: 4 }],
     };
 
-    const result = deriveObservedMutations(diff);
+    const result = deriveObservedMutations(diff, { id: 'step_reply_ticket' });
     expect(result).toContain('message_created');
   });
 
-  test('15. attendance_count++ → inclui attendance_created', () => {
+  test('15. db.attendance.count++ → inclui attendance_created', () => {
     const diff = {
       changed: true,
-      details: [{ field: 'attendance_count', before: 0, after: 1 }],
+      details: [{ field: 'db.attendance.count', before: 0, after: 1 }],
     };
 
-    const result = deriveObservedMutations(diff);
+    const result = deriveObservedMutations(diff, { id: 'step_submit_checkin' });
     expect(result).toContain('attendance_created');
   });
 
-  test('16. status changed → inclui ticket_status_changed', () => {
+  test('16. db.ticket.status changed → inclui ticket_status_changed', () => {
     const diff = {
       changed: true,
-      details: [{ field: 'status', before: 'open', after: 'resolved' }],
+      details: [{ field: 'db.ticket.status', before: 'open', after: 'resolved' }],
     };
 
-    const result = deriveObservedMutations(diff);
+    const result = deriveObservedMutations(diff, { id: 'step_change_status' });
     expect(result).toContain('ticket_status_changed');
   });
 
@@ -313,24 +315,27 @@ describe('Derivation engine', () => {
     expect(result).toHaveLength(0);
   });
 
-  test('18. campo messages_count → deriveObservedSideEffects inclui audit_log_created e crm_updated', () => {
+  test('18. paths exatos de reply → deriveObservedSideEffects inclui audit_log_created e crm_updated', () => {
     const diff = {
       changed: true,
-      details: [{ field: 'messages_count', before: 3, after: 4 }],
+      details: [
+        { field: 'events.audit.count', before: 0, after: 1 },
+        { field: 'crm.activities.count', before: 0, after: 1 },
+      ],
     };
 
-    const result = deriveObservedSideEffects(diff);
+    const result = deriveObservedSideEffects(diff, { id: 'step_reply_ticket' });
     expect(result).toContain('audit_log_created');
     expect(result).toContain('crm_updated');
   });
 
-  test('19. campo attendance_count → inclui crm_journey_updated', () => {
+  test('19. crm.presenceActivity.count → inclui crm_journey_updated', () => {
     const diff = {
       changed: true,
-      details: [{ field: 'attendance_count', before: 0, after: 1 }],
+      details: [{ field: 'crm.presenceActivity.count', before: 0, after: 1 }],
     };
 
-    const result = deriveObservedSideEffects(diff);
+    const result = deriveObservedSideEffects(diff, { id: 'step_submit_checkin' });
     expect(result).toContain('crm_journey_updated');
   });
 

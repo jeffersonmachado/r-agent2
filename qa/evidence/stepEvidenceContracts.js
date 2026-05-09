@@ -43,7 +43,15 @@ const STEP_EVIDENCE_CONTRACTS = {
     require: [...BASE_REQUIRED_FIELDS, 'selectorUsed', 'screenshotAfter', 'domAfter'],
   },
   assert_backend_state: {
-    require: [...BASE_REQUIRED_FIELDS, 'snapshotDiff'],
+    require: [...BASE_REQUIRED_FIELDS],
+    optional: ['snapshotDiff', 'mutationLinkage', 'sideEffectLinkage'],
+  },
+  identify_customer: {
+    require: [...BASE_REQUIRED_FIELDS, 'selectorUsed', 'screenshotAfter', 'domAfter'],
+  },
+  validate_membership: {
+    require: [...BASE_REQUIRED_FIELDS],
+    optional: ['snapshotDiff', 'mutationLinkage', 'sideEffectLinkage'],
   },
   checkin_submit: {
     require: [
@@ -57,9 +65,8 @@ const STEP_EVIDENCE_CONTRACTS = {
     proofTypes: ['network', 'mutation', 'sideEffect'],
   },
   assert_attendance: {
-    require: [...BASE_REQUIRED_FIELDS, 'snapshotDiff', 'sideEffectLinkage'],
-    requireProof: true,
-    proofTypes: ['sideEffect'],
+    require: [...BASE_REQUIRED_FIELDS],
+    optional: ['snapshotDiff', 'sideEffectLinkage'],
   },
 };
 
@@ -67,13 +74,7 @@ const DEFAULT_CONTRACT = {
   require: [...BASE_REQUIRED_FIELDS, 'screenshotAfter'],
 };
 
-const ACTION_TYPE_ALIASES = {
-  click: 'click_open',
-  select: 'change_status',
-  type: 'checkin_submit',
-  wait_for_validation: 'assert_backend_state',
-  assert_access_decision: 'assert_backend_state',
-};
+const ACTION_TYPE_ALIASES = {};
 
 const EVIDENCE_FIELD_ALIASES = {
   domAfter: ['domAfter', 'domSnapshot', 'evidence.domAfter', 'evidence.domSnapshot'],

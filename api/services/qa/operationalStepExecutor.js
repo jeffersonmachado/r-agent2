@@ -6,17 +6,26 @@
  * Executor de steps operacionais browser-first.
  *
  * Pipeline de prova temporalmente correto:
- *   1. executeStep()                   — browser action
+ *   1. collectStepBeforeSnapshot()     — snapshot entity-scoped antes do step
+ *   2. executeStep()                   — browser action
  *   2. validateStepExecutionProof()    — browser + network (step-time)
- *   3. collectAfterSnapshot()          — pós execução
- *   4. computeRealSnapshotDiff()       — diff real
- *   5. deriveObservedMutations(diff)   — mutações REAIS do diff
- *   6. deriveObservedSideEffects(diff) — side effects REAIS do diff
- *   7. validatePostStateProof()        — prova de estado pós-step
- *   8. appendProofChainToReplay()      — proof chain completa
+ *   4. collectStepAfterSnapshot()      — snapshot entity-scoped pós-step
+ *   5. computeIncrementalStepDiff()    — diff incremental real
+ *   6. deriveObservedMutations(diff)   — ids canônicos exatos
+ *   7. deriveObservedSideEffects(diff) — ids canônicos exatos
+ *   8. buildMutationLinkage()          — somente após incrementalDiff
+ *   9. validatePostStateProof()        — prova de estado pós-step
  */
 
 const { assertOperationalCondition, BlockingOperationalError } = require('./operationalAssertions');
+const {
+  getOperationalStepContract,
+  isMutationExpectedStep,
+  matchExpectedNetworkEvent,
+  resolveJourneyId,
+  getExpectedMutationsForStep,
+  getExpectedSideEffectsForStep,
+} = require('../../../qa/contracts/operationalStepRegistry');
 const {
   validateEvidenceByContract,
   resolveActionType,
@@ -24,12 +33,15 @@ const {
 } = require('../../../qa/evidence/stepEvidenceContracts');
 const { validateStepExecutionProof } = require('../../../qa/evidence/stepExecutionProofValidator');
 const { computeRealSnapshotDiff } = require('../../../qa/evidence/evidenceProofValidator');
+const postStateProofModule = require('../../../qa/evidence/postStateProofValidator');
 const {
   validatePostStateProof,
   deriveObservedMutations,
   deriveObservedSideEffects,
   appendProofChainToReplay,
-} = require('../../../qa/evidence/postStateProofValidator');
+  computeIncrementalStepDiff,
+  computeMutationProvenance,
+} = postStateProofModule;
 
 const BLOCKING_JOURNEYS = ['support_ticket_flow', 'fitness_customer_checkin'];
 
@@ -37,13 +49,8 @@ const BLOCKING_JOURNEYS = ['support_ticket_flow', 'fitness_customer_checkin'];
  * Verifica se uma jornada é blocking.
  */
 function isBlockingJourney(journeyId = '') {
-  const id = String(journeyId).toLowerCase();
-  return (
-    BLOCKING_JOURNEYS.includes(id)
-    || id.includes('support')
-    || id.includes('fitness')
-    || id.includes('checkin')
-  );
+  const resolved = resolveJourneyId(journeyId) || String(journeyId || '').toLowerCase();
+  return BLOCKING_JOURNEYS.includes(resolved);
 }
 
 /**
@@ -87,18 +94,48 @@ function makeEvidenceId(step = {}, options = {}) {
 }
 
 function buildMutationLinkage(step = {}, options = {}) {
-  const explicit = step?.mutationLinkage || step?.mutation || options.mutationLinkage || null;
-  if (explicit) return explicit;
-  if (options.stateMutation?.valid && Number(options.stateMutation?.mutationCount || 0) > 0) {
+  if (step?.mutationLinkage?.source === 'stateMutation' || options?.mutationLinkage?.source === 'stateMutation') {
+    throw new BlockingOperationalError('state_mutation_not_allowed_as_step_proof', {
+      stepId: step?.id || step?.stepId || null,
+      source: 'stateMutation',
+    });
+  }
+
+  const stepId = step?.id || step?.stepId || null;
+  const isStepMutational = isMutationExpectedStep(stepId);
+  const executionMode = String(options.executionMode || 'operational_go').toLowerCase();
+  const incremental = options?.incrementalDiff || step?.incrementalDiff || null;
+  const mutationCount = Number(incremental?.mutationCount || 0);
+
+  // Causalidade válida exige snapshot incremental por step.
+  if (mutationCount > 0) {
+    if (isStepMutational) {
+      return {
+        replayId: options.replayId || step?.replayId || null,
+        executionId: options.executionId || step?.executionId || null,
+        stepId,
+        mutationCount,
+        expectedMutations: getExpectedMutationsForStep(stepId),
+        observedMutations: Array.isArray(incremental?.observedMutations) ? incremental.observedMutations : [],
+        expectedSideEffects: getExpectedSideEffectsForStep(stepId),
+        observedSideEffects: Array.isArray(incremental?.observedSideEffects) ? incremental.observedSideEffects : [],
+        correlatedBy: 'step_incremental',
+        evidenceClassification: 'operational',
+      };
+    }
+
+    if (executionMode !== 'diagnostic') return null;
+
     return {
       replayId: options.replayId || step?.replayId || null,
       executionId: options.executionId || step?.executionId || null,
-      stepId: step?.id || step?.stepId || null,
-      mutationCount: Number(options.stateMutation.mutationCount || 0),
-      observedSideEffects: Array.isArray(options.stateMutation?.observedSideEffects)
-        ? options.stateMutation.observedSideEffects
+      stepId,
+      mutationCount,
+      observedSideEffects: Array.isArray(incremental?.observedSideEffects)
+        ? incremental.observedSideEffects
         : [],
       correlatedBy: 'journey_transition',
+      evidenceClassification: 'diagnostic_only',
     };
   }
   return null;
@@ -108,21 +145,24 @@ function buildSideEffectLinkage(step = {}, options = {}, mutationLinkage = null)
   const explicit = step?.sideEffectLinkage || options.sideEffectLinkage || null;
   if (explicit) return explicit;
 
+  const stepId = step?.id || step?.stepId || null;
+  const incremental = options?.incrementalDiff || step?.incrementalDiff || null;
   const expectedFromMutation = Array.isArray(mutationLinkage?.expectedSideEffects)
     ? mutationLinkage.expectedSideEffects
-    : [];
-  const observedFromState = Array.isArray(options?.stateMutation?.observedSideEffects)
-    ? options.stateMutation.observedSideEffects
+    : getExpectedSideEffectsForStep(stepId);
+  const observedFromIncremental = Array.isArray(incremental?.observedSideEffects)
+    ? incremental.observedSideEffects
     : [];
 
-  if (expectedFromMutation.length === 0 && observedFromState.length === 0) {
+  if (expectedFromMutation.length === 0 && observedFromIncremental.length === 0) {
     return null;
   }
 
   return {
     expectedSideEffects: expectedFromMutation,
-    observedSideEffects: observedFromState,
-    correlatedBy: mutationLinkage?.correlatedBy || 'side_effect_inference',
+    observedSideEffects: observedFromIncremental,
+    correlatedBy: 'step_incremental',
+    evidenceClassification: mutationLinkage?.evidenceClassification || (String(options.executionMode || 'operational_go').toLowerCase() === 'diagnostic' ? 'diagnostic_only' : 'operational'),
   };
 }
 
@@ -130,16 +170,29 @@ function buildSnapshotDiff(step = {}, options = {}) {
   const explicit = step?.snapshotDiff || options?.snapshotDiff || null;
   if (explicit) return explicit;
 
-  if (options?.stateMutation) {
+  const incremental = options?.incrementalDiff || step?.incrementalDiff || null;
+  if (incremental?.diff) {
     return {
-      mutationCount: Number(options.stateMutation?.mutationCount || 0),
-      sideEffects: Array.isArray(options.stateMutation?.sideEffects)
-        ? options.stateMutation.sideEffects
-        : [],
-      observedSideEffects: Array.isArray(options.stateMutation?.observedSideEffects)
-        ? options.stateMutation.observedSideEffects
-        : [],
-      valid: options.stateMutation?.valid === true,
+      changed: Boolean(incremental?.changed),
+      details: Array.isArray(incremental?.diff?.details) ? incremental.diff.details : [],
+      observedMutations: Array.isArray(incremental?.observedMutations) ? incremental.observedMutations : [],
+      observedSideEffects: Array.isArray(incremental?.observedSideEffects) ? incremental.observedSideEffects : [],
+      mutationCount: Number(incremental?.mutationCount || 0),
+      valid: Boolean(incremental?.changed),
+    };
+  }
+
+  if (options?.beforeStepSnapshot != null && options?.afterStepSnapshot != null) {
+    const diff = computeRealSnapshotDiff(options.beforeStepSnapshot, options.afterStepSnapshot);
+    const observedMutations = deriveObservedMutations(diff, step);
+    const observedSideEffects = deriveObservedSideEffects(diff, step);
+    return {
+      changed: Boolean(diff?.changed),
+      details: Array.isArray(diff?.details) ? diff.details : [],
+      observedMutations,
+      observedSideEffects,
+      mutationCount: observedMutations.length,
+      valid: Boolean(diff?.changed),
     };
   }
 
@@ -219,6 +272,67 @@ function startNetworkCapture(playwrightPage) {
   };
 }
 
+function isStepSnapshotRequired(stepSpec = {}) {
+  const stepId = stepSpec?.id || stepSpec?.stepId || null;
+  const contract = getOperationalStepContract(stepId);
+  if (contract) {
+    return contract.snapshotRequired === true;
+  }
+  return isMutationExpectedStep(stepSpec);
+}
+
+async function collectStepBeforeSnapshot(stepSpec = {}, options = {}) {
+  if (stepSpec?.beforeStepSnapshot != null) return stepSpec.beforeStepSnapshot;
+  if (!isStepSnapshotRequired(stepSpec)) return null;
+  if (typeof options.collectStepSnapshot !== 'function') return null;
+  try {
+    return await options.collectStepSnapshot({
+      phase: 'before',
+      stepSpec,
+      stepId: stepSpec?.id || stepSpec?.stepId || null,
+      actionType: stepSpec?.actionType || stepSpec?.action || stepSpec?.type || null,
+    });
+  } catch (err) {
+    const stepId = stepSpec?.id || stepSpec?.stepId || null;
+    const contract = getOperationalStepContract(stepId);
+    const isBlocking = BLOCKING_JOURNEYS.includes(contract?.journeyId);
+    if (contract?.snapshotRequired && isBlocking) {
+      throw new BlockingOperationalError('snapshot_before_collection_failed', {
+        stepId,
+        error: err?.message || String(err),
+      });
+    }
+    return null;
+  }
+}
+
+async function collectStepAfterSnapshot(stepSpec = {}, stepResult = {}, options = {}) {
+  if (stepResult?.afterStepSnapshot != null) return stepResult.afterStepSnapshot;
+  if (stepSpec?.afterStepSnapshot != null) return stepSpec.afterStepSnapshot;
+  if (!isStepSnapshotRequired(stepSpec)) return null;
+  if (typeof options.collectStepSnapshot !== 'function') return null;
+  try {
+    return await options.collectStepSnapshot({
+      phase: 'after',
+      stepSpec,
+      stepResult,
+      stepId: stepResult?.id || stepSpec?.id || stepSpec?.stepId || null,
+      actionType: stepResult?.actionType || stepSpec?.actionType || stepSpec?.action || stepSpec?.type || null,
+    });
+  } catch (err) {
+    const stepId = stepResult?.id || stepSpec?.id || stepSpec?.stepId || null;
+    const contract = getOperationalStepContract(stepId);
+    const isBlocking = BLOCKING_JOURNEYS.includes(contract?.journeyId);
+    if (contract?.snapshotRequired && isBlocking) {
+      throw new BlockingOperationalError('snapshot_after_collection_failed', {
+        stepId,
+        error: err?.message || String(err),
+      });
+    }
+    return null;
+  }
+}
+
 /**
  * Valida array completo de steps de um replay.
  * Se algum step blocking vier sem evidência => goNoGo = NO_GO.
@@ -268,24 +382,49 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
   let screenshotAfter = stepSpec.screenshotAfter || null;
   let url = stepSpec.url || stepSpec.page || stepSpec.route || null;
   const actionType = resolveActionType(stepSpec.actionType || stepSpec.action || stepSpec.type || 'unknown');
+  const operationalContract = getOperationalStepContract(stepId);
   const timestamp = stepSpec.timestamp || stepSpec.startedAt || new Date().toISOString();
   let domSnapshot = stepSpec.domSnapshot || null;
   let networkEvents = stepSpec.networkEvents || [];
   const selectorUsed = stepSpec.selectorUsed || stepSpec.selector || stepSpec.dataTestId || null;
   const evidenceId = stepSpec.evidenceId || makeEvidenceId({ ...stepSpec, id: stepId }, options);
-  let mutationLinkage = buildMutationLinkage({ ...stepSpec, id: stepId }, options);
-  let sideEffectLinkage = buildSideEffectLinkage({ ...stepSpec, id: stepId }, options, mutationLinkage);
-  let snapshotDiff = buildSnapshotDiff({ ...stepSpec, id: stepId }, options);
+  let mutationLinkage = null;
+  let sideEffectLinkage = null;
+  let snapshotDiff = null;
   let stepResult = stepSpec.stepResult || null;
   let status = stepSpec.status || 'executed';
+  const mutationExpected = isMutationExpectedStep(stepSpec);
+  let beforeStepSnapshot = null;
+  let afterStepSnapshot = null;
+  let incrementalDiff = null;
   const networkCapture = startNetworkCapture(playwrightPage);
 
   try {
+    assertOperationalCondition(
+      stepSpec?.mutationLinkage?.source !== 'stateMutation',
+      {
+        reason: 'state_mutation_not_allowed_as_step_proof',
+        journeyId,
+        stepId,
+      }
+    );
+
+    assertOperationalCondition(
+      executionMode === 'diagnostic' || stepSpec?.mutationLinkage == null,
+      {
+        reason: 'mutation_linkage_declarative_not_allowed',
+        journeyId,
+        stepId,
+      }
+    );
+
     assertOperationalCondition(!blocking || executionMode === 'diagnostic' || Boolean(playwrightPage), {
       reason: 'page_null_blocking_journey',
       journeyId,
       stepId,
     });
+
+    beforeStepSnapshot = await collectStepBeforeSnapshot(stepSpec, options);
 
     // Se temos page Playwright, coletar evidências reais
     if (playwrightPage && typeof playwrightPage.screenshot === 'function') {
@@ -339,9 +478,13 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
             networkEvents,
             selectorUsed,
             evidenceId,
-            mutationLinkage,
-            sideEffectLinkage,
-            snapshotDiff,
+            mutationLinkage: null,
+            sideEffectLinkage: null,
+            snapshotDiff: null,
+            mutationExpected,
+            beforeStepSnapshot,
+            afterStepSnapshot: null,
+            incrementalDiff: null,
             stepResult: {
               status: 'failed',
               error: blockingError.reason || err.message,
@@ -406,13 +549,41 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       networkEvents = Array.isArray(stepSpec.networkEvents) ? stepSpec.networkEvents : [];
     }
 
-    mutationLinkage = buildMutationLinkage({ ...stepSpec, id: stepId }, {
-      ...options,
-      mutationLinkage,
+    afterStepSnapshot = await collectStepAfterSnapshot(stepSpec, {
+      ...stepSpec,
+      id: stepId,
+      actionType,
+      networkEvents,
+      screenshotBefore,
+      screenshotAfter,
+      url,
+      domSnapshot,
+      selectorUsed,
+      evidenceId,
+      mutationLinkage: null,
+      sideEffectLinkage: null,
+      snapshotDiff: null,
+    }, options);
+
+    incrementalDiff = computeIncrementalStepDiff({
+      step: {
+        ...stepSpec,
+        id: stepId,
+        actionType,
+        mutationExpected,
+      },
+      beforeStepSnapshot,
+      afterStepSnapshot,
     });
 
-    // Blocking journeys: step with expected mutations requires network evidence
-    if (blocking && Number(mutationLinkage?.mutationCount || 0) > 0 && networkEvents.length === 0) {
+    mutationLinkage = buildMutationLinkage({ ...stepSpec, id: stepId }, {
+      ...options,
+      executionMode,
+      incrementalDiff,
+    });
+
+    // Blocking journeys: mutational steps require step-scoped network evidence.
+    if (blocking && mutationExpected && networkEvents.length === 0) {
       assertOperationalCondition(false, {
         reason: 'network_events_missing',
         journeyId,
@@ -421,8 +592,22 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       });
     }
 
-    sideEffectLinkage = buildSideEffectLinkage({ ...stepSpec, id: stepId }, options, mutationLinkage);
-    snapshotDiff = buildSnapshotDiff({ ...stepSpec, id: stepId }, options);
+    sideEffectLinkage = buildSideEffectLinkage({ ...stepSpec, id: stepId }, {
+      ...options,
+      executionMode,
+      incrementalDiff,
+    }, mutationLinkage);
+    snapshotDiff = buildSnapshotDiff({ ...stepSpec, id: stepId }, {
+      ...options,
+      incrementalDiff,
+      beforeStepSnapshot,
+      afterStepSnapshot,
+    });
+
+    const evidenceClassification =
+      executionMode === 'diagnostic' || mutationLinkage?.evidenceClassification === 'diagnostic_only'
+        ? 'diagnostic_only'
+        : 'operational';
 
     status = stepSpec.status || 'executed';
     stepResult = stepResult || {
@@ -445,7 +630,18 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       evidenceId,
       mutationLinkage,
       sideEffectLinkage,
-      snapshotDiff,
+      snapshotDiff: incrementalDiff?.diff || snapshotDiff,
+      mutationExpected,
+      beforeStepSnapshot,
+      afterStepSnapshot,
+      incrementalDiff,
+      evidenceClassification,
+      observedMutations: Array.isArray(incrementalDiff?.observedMutations)
+        ? incrementalDiff.observedMutations
+        : [],
+      observedSideEffects: Array.isArray(incrementalDiff?.observedSideEffects)
+        ? incrementalDiff.observedSideEffects
+        : [],
       stepResult,
       status,
     };
@@ -489,13 +685,14 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
         screenshotAfter: Boolean(enriched.screenshotAfter),
         domCaptured: Boolean(enriched.domSnapshot || enriched.domAfter),
         urlCaptured: Boolean(enriched.url),
-        snapshotDiff: null,
-        observedMutations: [],
-        observedSideEffects: [],
-        mutationCount: 0,
-        finalStateProof: false,
+        snapshotDiff: incrementalDiff?.changed ?? null,
+        observedMutations: incrementalDiff?.observedMutations || [],
+        observedSideEffects: incrementalDiff?.observedSideEffects || [],
+        mutationCount: incrementalDiff?.mutationCount || 0,
+        finalStateProof: Boolean(afterStepSnapshot),
         stepExecutionValid: stepExecutionProof.valid ?? true,
         postStateValid: null,
+        evidenceClassification,
         complete: null,
       },
     };
@@ -528,6 +725,7 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       });
 
     networkEvents = networkCapture.stop();
+    const evidenceClassification = executionMode === 'diagnostic' ? 'diagnostic_only' : 'operational';
     const failedStep = {
       ...stepSpec,
       id: stepId,
@@ -543,6 +741,11 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       mutationLinkage,
       sideEffectLinkage,
       snapshotDiff,
+      mutationExpected,
+      beforeStepSnapshot,
+      afterStepSnapshot,
+      incrementalDiff,
+      evidenceClassification,
       stepResult: {
         status: 'failed',
         error: blockingError.reason,
@@ -626,8 +829,6 @@ function validateJourneyPostStateProofs({
 
   const blockers = [];
   const journeyDiff = computeRealSnapshotDiff(beforeSnapshot, afterSnapshot);
-  const journeyObservedMutations = deriveObservedMutations(journeyDiff);
-  const journeyObservedSideEffects = deriveObservedSideEffects(journeyDiff);
 
   if (afterSnapshot == null) {
     blockers.push({
@@ -660,6 +861,13 @@ function validateJourneyPostStateProofs({
   const enrichedSteps = (Array.isArray(executedSteps) ? executedSteps : []).map((step) => {
     const stepId = step?.id || step?.stepId || 'unknown';
     const actionType = step?.actionType || 'unknown';
+    const semanticContract = getOperationalStepContract(stepId);
+    const expectedMutations = Array.isArray(semanticContract?.expectedMutations)
+      ? semanticContract.expectedMutations
+      : [];
+    const expectedSideEffects = Array.isArray(semanticContract?.expectedSideEffects)
+      ? semanticContract.expectedSideEffects
+      : [];
 
     const stepExecutionProof = step?.stepExecutionProof || validateStepExecutionProof(step, {
       isBlockingJourney: blocking,
@@ -676,10 +884,27 @@ function validateJourneyPostStateProofs({
       });
     }
 
+    if (executionMode !== 'diagnostic' && step?.mutationLinkage?.correlatedBy === 'journey_transition') {
+      blockers.push({
+        reason: 'operational_journey_transition_not_allowed',
+        stepId,
+        actionType,
+      });
+    }
+
+    if (step?.mutationLinkage?.source === 'stateMutation') {
+      blockers.push({
+        reason: 'state_mutation_not_allowed_as_step_proof',
+        stepId,
+        actionType,
+      });
+    }
+
     const postStateProof = validatePostStateProof({
-      beforeSnapshot,
-      afterSnapshot,
+      beforeSnapshot: step?.beforeStepSnapshot || null,
+      afterSnapshot: step?.afterStepSnapshot || null,
       step,
+      incrementalDiff: step?.incrementalDiff || null,
       journeyContext: {
         journeyId,
         executionMode,
@@ -687,21 +912,50 @@ function validateJourneyPostStateProofs({
       },
     });
 
-    const observedMutations = (postStateProof.observedMutations || []).length > 0
-      ? postStateProof.observedMutations
-      : journeyObservedMutations;
-    const observedSideEffects = (postStateProof.observedSideEffects || []).length > 0
-      ? postStateProof.observedSideEffects
-      : journeyObservedSideEffects;
+    const observedMutations = postStateProof.observedMutations || [];
+    const observedSideEffects = postStateProof.observedSideEffects || [];
+    const mutationProvenance = computeMutationProvenance({
+      step,
+      observedMutations,
+      beforeStepSnapshot: step?.beforeStepSnapshot || null,
+      afterStepSnapshot: step?.afterStepSnapshot || null,
+    });
+
+    const matchedNetworkEvent = matchExpectedNetworkEvent(stepId, Array.isArray(step?.networkEvents) ? step.networkEvents : []);
+    const networkCorrelation = matchedNetworkEvent
+      ? [{
+          method: matchedNetworkEvent.method || null,
+          url: matchedNetworkEvent.url || null,
+          status: matchedNetworkEvent.status || null,
+          correlatedBy: 'expected_network_event',
+        }]
+      : [];
 
     const correlatedPostState = {
       ...postStateProof,
-      diff: postStateProof.diff || journeyDiff,
+      diff: postStateProof.diff || null,
       observedMutations,
       observedSideEffects,
+      mutationProvenance,
+      networkCorrelation,
       mutationCount: observedMutations.length,
-      finalStateProof: Boolean(afterSnapshot),
+      finalStateProof: Boolean(step?.afterStepSnapshot),
     };
+
+    if (semanticContract?.mutationExpected === true) {
+      const invalidProvenance = mutationProvenance.filter((record) => record?.valid !== true);
+      if (invalidProvenance.length > 0) {
+        blockers.push({
+          reason: 'post_state_provenance_invalid',
+          stepId,
+          actionType,
+          details: invalidProvenance.map((record) => ({
+            mutation: record?.mutation || null,
+            reason: record?.reason || 'unknown',
+          })),
+        });
+      }
+    }
 
     if (observedMutations.length > 0 && observedSideEffects.length === 0) {
       blockers.push({
@@ -711,30 +965,36 @@ function validateJourneyPostStateProofs({
       });
     }
 
-    // Correlação obrigatória: reply_ticket -> message_created -> audit/crm
-    if (actionType === 'type_and_send' || stepId === 'step_reply_ticket') {
-      if (!observedMutations.includes('message_created')) {
-        blockers.push({ reason: 'correlation_reply_ticket_missing_message_created', stepId, actionType });
-      }
-      if (!observedSideEffects.includes('audit_log_created')) {
-        blockers.push({ reason: 'correlation_reply_ticket_missing_audit_log', stepId, actionType });
-      }
-      if (!observedSideEffects.includes('crm_updated')) {
-        blockers.push({ reason: 'correlation_reply_ticket_missing_crm_updated', stepId, actionType });
-      }
-    }
+    // Correlação obrigatória baseada no contrato semântico do step.
+    if (semanticContract?.mutationExpected === true) {
+      const missingMutations = expectedMutations.filter(
+        (mutation) => !observedMutations.some((observed) => String(observed) === String(mutation))
+      );
 
-    // Correlação obrigatória: checkin_submit -> attendance/access_event -> CRM journey
-    if (actionType === 'checkin_submit' || stepId === 'step_assert_attendance') {
-      if (!observedMutations.includes('attendance_created')) {
-        blockers.push({ reason: 'correlation_checkin_missing_attendance_created', stepId, actionType });
+      const missingSideEffects = expectedSideEffects.filter(
+        (sideEffect) => !observedSideEffects.some((observed) => String(observed) === String(sideEffect))
+      );
+
+      if (missingMutations.length > 0) {
+        blockers.push({
+          reason: 'correlation_expected_mutations_missing',
+          stepId,
+          actionType,
+          expectedMutations,
+          observedMutations,
+          missingMutations,
+        });
       }
-      if (!observedMutations.includes('access_event_created')
-        && !observedSideEffects.includes('access_event_created')) {
-        blockers.push({ reason: 'correlation_checkin_missing_access_event', stepId, actionType });
-      }
-      if (!observedSideEffects.includes('crm_journey_updated')) {
-        blockers.push({ reason: 'correlation_checkin_missing_crm_journey', stepId, actionType });
+
+      if (missingSideEffects.length > 0) {
+        blockers.push({
+          reason: 'correlation_expected_side_effects_missing',
+          stepId,
+          actionType,
+          expectedSideEffects,
+          observedSideEffects,
+          missingSideEffects,
+        });
       }
     }
 
@@ -747,16 +1007,33 @@ function validateJourneyPostStateProofs({
   const valid = blockers.length === 0;
   const goNoGo = valid ? null : (blocking ? (executionMode === 'diagnostic' ? 'REVIEW' : 'NO_GO') : null);
 
+  const summarySteps = enrichedSteps.map((step) => step?.postStateProof || {});
+  const consolidatedObservedMutations = Array.from(new Set(
+    summarySteps.flatMap((proof) => Array.isArray(proof?.observedMutations) ? proof.observedMutations : [])
+  ));
+  const consolidatedObservedSideEffects = Array.from(new Set(
+    summarySteps.flatMap((proof) => Array.isArray(proof?.observedSideEffects) ? proof.observedSideEffects : [])
+  ));
+  const consolidatedMutationProvenance = summarySteps.flatMap((proof) =>
+    Array.isArray(proof?.mutationProvenance) ? proof.mutationProvenance : []
+  );
+  const consolidatedNetworkCorrelation = summarySteps.flatMap((proof) =>
+    Array.isArray(proof?.networkCorrelation) ? proof.networkCorrelation : []
+  );
+
   return {
     valid,
     goNoGo,
     blockers,
     steps: enrichedSteps,
     postStateSummary: {
-      snapshotDiff: journeyDiff,
-      observedMutations: journeyObservedMutations,
-      observedSideEffects: journeyObservedSideEffects,
-      mutationCount: journeyObservedMutations.length,
+      summaryBasis: 'step_consolidated',
+      stepsChecked: enrichedSteps.length,
+      observedMutations: consolidatedObservedMutations,
+      observedSideEffects: consolidatedObservedSideEffects,
+      mutationProvenance: consolidatedMutationProvenance,
+      networkCorrelation: consolidatedNetworkCorrelation,
+      mutationCount: consolidatedObservedMutations.length,
       finalStateProof: Boolean(afterSnapshot),
     },
   };
@@ -801,34 +1078,41 @@ function classifyStepEvidenceForAudit(step = {}, journeyId = '', options = {}) {
 }
 
 /**
- * Pipeline completo de prova com afterSnapshot fornecido externamente.
+ * Helper legado diagnostic-only com afterSnapshot fornecido externamente.
  *
- * Use esta função quando o orquestrador já tem before/afterSnapshot disponíveis
- * e quer executar o pipeline de 8 passos de uma só vez.
+ * O pipeline operacional final não deve usar esta função. Em operational_go ela
+ * falha imediatamente para impedir proof fora da ordem temporal correta.
  *
  * @param {object} stepSpec - spec do step
  * @param {object} playwrightPage - página Playwright
  * @param {object} options - { journeyId, executionMode, beforeSnapshot, afterSnapshot }
- * @returns {Promise<object>} step enriquecido com proofChain completo
+ * @returns {Promise<object>} step diagnóstico enriquecido com proofChain completo
  */
 async function executeAndEnrichStepWithPostStateProof(stepSpec, playwrightPage, options = {}) {
   const { journeyId = '', executionMode = 'operational_go', beforeSnapshot = null } = options;
+  if (String(executionMode || 'operational_go').toLowerCase() !== 'diagnostic') {
+    throw new BlockingOperationalError('legacy_post_state_helper_not_allowed_operational_go', {
+      journeyId,
+      stepId: stepSpec?.id || stepSpec?.stepId || null,
+    });
+  }
 
-  // Passos 1-2: executeStep + step-time proof (afterSnapshot=null, válido)
+  // Diagnostic-only: executa o step e deixa o executor coletar o diff incremental.
   const result = await executeAndEnrichStep(stepSpec, playwrightPage, {
     journeyId,
     executionMode,
     beforeSnapshot,
-    afterSnapshot: null, // não temos ainda
+    afterSnapshot: null,
   });
 
-  // Se caller forneceu afterSnapshot, executa pós-state agora
+  // Diagnostic-only: permite anexar post-state externo sem participar do GO operacional.
   if (options.afterSnapshot != null) {
     const blocking = isBlockingJourney(journeyId);
     const postStateProof = validatePostStateProof({
-      beforeSnapshot,
-      afterSnapshot: options.afterSnapshot,
+      beforeSnapshot: result.step?.beforeStepSnapshot || beforeSnapshot,
+      afterSnapshot: result.step?.afterStepSnapshot || options.afterSnapshot,
       step: result.step,
+      incrementalDiff: result.step?.incrementalDiff || null,
       journeyContext: { isBlockingJourney: blocking, executionMode, journeyId },
     });
 
@@ -861,6 +1145,9 @@ module.exports = {
   resolveEvidenceContract,
   isBlockingJourney,
   BLOCKING_JOURNEYS,
+  collectStepBeforeSnapshot,
+  collectStepAfterSnapshot,
+  computeIncrementalStepDiff,
   // exports do proof pipeline para uso externo
   validateStepExecutionProof,
   validatePostStateProof,

@@ -99,11 +99,45 @@ describe('operationalStepExecutor evidence contracts by actionType', () => {
     expect(result.goNoGo).toBeNull();
   });
 
-  test('assert_backend_state sem snapshotDiff => FALHA', () => {
+  test('assert_backend_state sem snapshotDiff => PASSA', () => {
     const step = buildStep('assert_backend_state', { snapshotDiff: null, selectorUsed: null });
     const result = validateStepEvidence(step, 'support_ticket_flow');
+    expect(result.valid).toBe(true);
+    expect(result.goNoGo).toBeNull();
+    expect(result.missingEvidence).not.toContain('snapshotDiff');
+  });
+
+  test('assert_backend_state sem mutationLinkage => PASSA', () => {
+    const step = buildStep('assert_backend_state', { mutationLinkage: null });
+    const result = validateStepEvidence(step, 'support_ticket_flow');
+    expect(result.valid).toBe(true);
+    expect(result.goNoGo).toBeNull();
+    expect(result.missingEvidence).not.toContain('mutationLinkage');
+  });
+
+  test('assert_backend_state sem provenance => PASSA', () => {
+    const step = buildStep('assert_backend_state', {
+      mutationProvenance: null,
+      postStateProof: null,
+    });
+    const result = validateStepEvidence(step, 'support_ticket_flow');
+    expect(result.valid).toBe(true);
+    expect(result.goNoGo).toBeNull();
+    expect(result.missingEvidence).not.toContain('mutationProvenance');
+  });
+
+  test('step_reply_ticket continua exigindo diff operacional via mutationLinkage => PASS', () => {
+    const step = buildStep('type_and_send', { id: 'step_reply_ticket', mutationLinkage: null });
+    const result = validateStepEvidence(step, 'support_ticket_flow');
     expect(result.goNoGo).toBe('NO_GO');
-    expect(result.missingEvidence).toContain('snapshotDiff');
+    expect(result.missingEvidence).toContain('mutationLinkage');
+  });
+
+  test('step_change_status continua exigindo provenance/linkage operacional => PASS', () => {
+    const step = buildStep('change_status', { id: 'step_change_status', mutationLinkage: null });
+    const result = validateStepEvidence(step, 'support_ticket_flow');
+    expect(result.goNoGo).toBe('NO_GO');
+    expect(result.missingEvidence).toContain('mutationLinkage');
   });
 
   test('checkin_submit sem networkEvents => FALHA', () => {

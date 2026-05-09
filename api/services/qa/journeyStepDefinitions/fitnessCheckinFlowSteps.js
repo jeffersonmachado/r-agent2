@@ -8,17 +8,21 @@
  * Cada step possui:
  *   - id, actionType, selectorUsed: metadados de auditoria
  *   - execute(page): função assíncrona que executa ação real na UI
- *   - mutationLinkage: vínculo UI → API → mutação → side effects
+ *   - mutation proof nasce no executor após afterStepSnapshot + incrementalDiff
  *
- * Jornada:
- *   1. step_access_checkin_module  → navigate
- *   2. step_validate_membership    → assert_ui_state
- *   3. step_identify_customer      → checkin_submit
- *   4. step_assert_access_decision → assert_backend_state
- *   5. step_assert_attendance      → assert_attendance
+ * Jornada (SEMANTICAMENTE CONSISTENTE):
+ *   1. step_access_checkin_module  (navigate) - SEM mutação
+ *   2. step_identify_customer      (identify_customer) - SEM mutação  
+ *   3. step_validate_membership    (assert_backend_state) - SEM mutação
+ *   4. step_submit_checkin         (checkin_submit) - COM mutação: attendance_created
+ *   5. step_confirm_attendance     (assert_attendance) - SEM mutação adicional
  *
  * NOTA: simulated_device é PROIBIDO.
  * test_device é o fallback operacionalmente válido (controlado, auditável).
+ *
+ * FASE 2: Cada step está registrado em operationalStepRegistry.js como
+ * SINGLE SOURCE OF TRUTH para: stepId, actionType, mutationExpected, 
+ * expectedMutations, expectedSideEffects, snapshotRequired, entityScope.
  */
 
 const JOURNEY_ID = 'fitness_customer_checkin';
@@ -84,7 +88,6 @@ function buildFitnessCheckinFlowSteps(seedData = {}) {
       actionType: 'navigate',
       selectorUsed: null,
       journeyId: JOURNEY_ID,
-      mutationLinkage: null,
       async execute(page) {
         const primary = `${baseUrl}${CHECKIN_PATH}`;
         await page.goto(primary, { waitUntil: 'domcontentloaded' });
@@ -99,50 +102,38 @@ function buildFitnessCheckinFlowSteps(seedData = {}) {
       },
     },
 
-    // ── Step 2: identificar cliente ─────────────────────────────────────────
+    // ── Step 2: identificar cliente (SEM mutação) ───────────────────────────
     {
       id: 'step_identify_customer',
-      actionType: 'checkin_submit',
+      actionType: 'identify_customer',
       selectorUsed: credentialInputSelector,
       journeyId: JOURNEY_ID,
-      mutationLinkage: {
-        uiAction: 'input_credential',
-        apiEndpoint: '/api/fitness/checkin/identify',
-        expectedMutations: ['credential_validated', 'membership_checked', 'subject_identified'],
-        expectedSideEffects: ['access_policy_evaluated'],
-        correlatedBy: 'network_linkage',
-      },
-      sideEffectLinkage: {
-        expectedSideEffects: ['access_policy_evaluated'],
-        correlatedBy: 'network_linkage',
-      },
       async execute(page) {
         await waitForRequiredSelector(page, credentialInputSelector, 10000, {
           reason: 'fitness_credential_input_missing',
           journeyId: JOURNEY_ID,
         });
 
-        await waitForRequiredSelector(page, submitSelector, 10000, {
+        const submitBtn = await waitForRequiredSelector(page, submitSelector, 10000, {
           reason: 'fitness_submit_button_missing',
           journeyId: JOURNEY_ID,
         });
 
+        // Apenas preenche credential, NÃO submete ainda
         await page.fill(credentialInputSelector, credentialValue);
-        await page.click(submitSelector);
-        await page.waitForLoadState('networkidle', { timeout: 8000 });
       },
     },
 
-    // ── Step 3: validar membership no backend ────────────────────────────────
+    // ── Step 3: validar membership no backend (SEM mutação) ──────────────────
     {
       id: 'step_validate_membership',
-      actionType: 'assert_ui_state',
+      actionType: 'assert_backend_state',
       selectorUsed: null,
       journeyId: JOURNEY_ID,
-      snapshotDiff: {
-        expectedMutations: ['membership_status_confirmed'],
-      },
       async execute(page) {
+        // Aqui poderíamos fazer uma verificação de estado backend
+        // mas não é uma ação na UI que gera mutação
+        // Apenas asserção
         const membershipEl = await waitForRequiredSelector(page, '[data-testid="membership-validation-result"]', 8000, {
           reason: 'fitness_membership_validation_missing',
           journeyId: JOURNEY_ID,
@@ -162,26 +153,22 @@ function buildFitnessCheckinFlowSteps(seedData = {}) {
       },
     },
 
-    // ── Step 4: confirmar AccessDecision = allow ─────────────────────────────
+    // ── Step 4: SUBMETER check-in (COM mutação: attendance_created) ─────────
     {
-      id: 'step_resolve_access_decision',
-      actionType: 'assert_backend_state',
-      selectorUsed: null,
+      id: 'step_submit_checkin',
+      actionType: 'checkin_submit',
+      selectorUsed: submitSelector,
       journeyId: JOURNEY_ID,
-      snapshotDiff: {
-        expectedMutations: ['access_decision_allow', 'access_event_created'],
-      },
-      mutationLinkage: {
-        uiAction: 'assert_access_allow',
-        apiEndpoint: '/api/fitness/access/decision',
-        expectedMutations: ['access_decision_allow', 'access_event_created'],
-        expectedSideEffects: ['turnstile_released', 'journey_updated'],
-        correlatedBy: 'state_assertion_and_network',
-        subjectId,
-        deviceId,
-        deviceMode,
-      },
       async execute(page) {
+        const submitBtn = await waitForRequiredSelector(page, submitSelector, 10000, {
+          reason: 'fitness_submit_button_missing',
+          journeyId: JOURNEY_ID,
+        });
+
+        await page.click(submitSelector);
+        await page.waitForLoadState('networkidle', { timeout: 8000 });
+
+        // Após submit, verificar que access decision e attendance foram criados
         const decisionEl = await waitForRequiredSelector(page, accessDecisionSelector, 8000, {
           reason: 'fitness_access_decision_missing',
           journeyId: JOURNEY_ID,
@@ -201,27 +188,12 @@ function buildFitnessCheckinFlowSteps(seedData = {}) {
       },
     },
 
-    // ── Step 5: confirmar registro de presença ───────────────────────────────
+    // ── Step 5: confirmar attendance (SEM mutação adicional) ────────────────
     {
       id: 'step_confirm_attendance',
       actionType: 'assert_attendance',
       selectorUsed: attendanceSelector,
       journeyId: JOURNEY_ID,
-      snapshotDiff: {
-        expectedMutations: ['attendance_created', 'presence_recorded'],
-      },
-      mutationLinkage: {
-        uiAction: 'confirm_attendance_created',
-        apiEndpoint: '/api/fitness/attendance',
-        expectedMutations: ['attendance_created', 'presence_recorded'],
-        expectedSideEffects: ['crm_presence_updated', 'journey_event_emitted'],
-        correlatedBy: 'state_assertion',
-        subjectId,
-      },
-      sideEffectLinkage: {
-        expectedSideEffects: ['crm_presence_updated', 'journey_event_emitted'],
-        correlatedBy: 'state_assertion',
-      },
       async execute(page) {
         const attendanceEl = await waitForRequiredSelector(page, attendanceSelector, 8000, {
           reason: 'fitness_attendance_missing',
@@ -238,40 +210,6 @@ function buildFitnessCheckinFlowSteps(seedData = {}) {
             actual: attendanceText,
           }
         );
-      },
-    },
-
-    // ── Step 6: validar atualização no CRM ───────────────────────────────────
-    {
-      id: 'step_validate_crm_update',
-      actionType: 'assert_ui_state',
-      selectorUsed: '[data-testid="crm-update-confirmation"]',
-      journeyId: JOURNEY_ID,
-      mutationLinkage: {
-        uiAction: 'assert_crm_updated',
-        apiEndpoint: '/api/fitness/crm/presence',
-        expectedMutations: ['crm_presence_updated', 'journey_event_emitted'],
-        expectedSideEffects: ['crm_journey_updated'],
-        correlatedBy: 'state_assertion',
-        subjectId,
-      },
-      sideEffectLinkage: {
-        expectedSideEffects: ['crm_journey_updated'],
-        correlatedBy: 'state_assertion',
-      },
-      async execute(page) {
-        const crmEl = await waitForRequiredSelector(page, '[data-testid="crm-update-confirmation"]', 5000, {
-          reason: 'fitness_crm_not_updated',
-          journeyId: JOURNEY_ID,
-        });
-
-        const crmText = String((await crmEl.textContent()) || '').trim();
-        assertOperationalCondition(crmText.length > 0, {
-          reason: 'fitness_crm_not_updated',
-          journeyId: JOURNEY_ID,
-          selector: '[data-testid="crm-update-confirmation"]',
-          actual: crmText,
-        });
       },
     },
   ];

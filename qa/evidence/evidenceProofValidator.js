@@ -1,95 +1,60 @@
 'use strict';
 
+const {
+  JOURNEY_STEPS_REGISTRY,
+  getOperationalStepContract,
+  getExpectedMutationsForStep,
+  getExpectedSideEffectsForStep,
+  getEntityScopeForStep,
+  isMutationExpectedStep: registryIsMutationExpectedStep,
+} = require('../contracts/operationalStepRegistry');
+
 /**
  * evidenceProofValidator.js
  *
  * Prova operacional de evidência — além de verificar que campos existem,
  * verifica que:
  *   - o endpoint CORRETO foi chamado (método + path + status)
- *   - mutação REAL ocorreu (before != after, mutationCount > 0)
- *   - side effects REAIS foram observados
- *   - snapshotDiff é computado comparando before vs after (não estático)
+ *   - snapshot incremental real ocorreu (before != after)
+ *   - mutations/side effects canônicos foram observados por provenance determinística
+ *   - snapshotDiff é computado comparando before vs after do próprio step
  *   - a proof chain UI→network→mutation→side-effect→state está completa
  */
 
 // ---------------------------------------------------------------------------
-// Network proof contracts por actionType/stepId
+// Network proof contracts / side effects / mutations are derived from the registry.
 // ---------------------------------------------------------------------------
 
-/**
- * Mapa de contratos de proof de rede por stepId e actionType.
- * Cada entrada define endpoints esperados: { method, pathPattern, status }.
- */
-const NETWORK_PROOF_CONTRACTS = {
-  // Support flow
-  step_reply_ticket: [
-    { method: 'POST', pathPattern: /\/tickets\/[^/]+\/reply/, status: [200, 201] },
-  ],
-  step_change_status: [
-    { method: 'PATCH', pathPattern: /\/tickets\/[^/]+\/(status|change-status)/, status: [200, 201] },
-  ],
-  // Fitness flow
-  step_identify_customer: [
-    {
-      method: 'POST',
-      pathPattern: /\/(checkin|access-control\/decisions\/resolve|access\/checkin|fitness\/checkin)/,
-      status: [200, 201],
-    },
-  ],
-  step_assert_access_decision: [
-    {
-      method: /GET|POST/,
-      pathPattern: /\/access-control\/(decisions|events)/,
-      status: [200, 201],
-    },
-  ],
-  step_assert_attendance: [
-    {
-      method: /GET|POST/,
-      pathPattern: /\/fitness\/(attendance|subject)/,
-      status: [200, 201],
-    },
-  ],
-  // actionType-level fallback contracts
-  type_and_send: [
-    { method: /POST|PUT|PATCH/, pathPattern: /.*/, status: [200, 201, 204] },
-  ],
-  change_status: [
-    { method: /PATCH|PUT|POST/, pathPattern: /.*/, status: [200, 201, 204] },
-  ],
-  checkin_submit: [
-    { method: 'POST', pathPattern: /.*/, status: [200, 201, 204] },
-  ],
-};
+function buildContractIndexes() {
+  const indexes = {
+    network: Object.create(null),
+    mutation: Object.create(null),
+    sideEffect: Object.create(null),
+    actionType: Object.create(null),
+  };
 
-/**
- * Side effects esperados por stepId / actionType.
- */
-const SIDE_EFFECT_PROOF_CONTRACTS = {
-  step_reply_ticket: ['message_created', 'audit_log_created', 'crm_updated'],
-  step_change_status: ['ticket_status_changed', 'audit_log_created'],
-  step_identify_customer: ['access_policy_evaluated'],
-  step_assert_access_decision: ['access_decision_allow', 'access_event_created'],
-  step_assert_attendance: ['attendance_created', 'crm_presence_updated'],
-  type_and_send: ['message_created', 'audit_log_created'],
-  change_status: ['ticket_status_changed'],
-  checkin_submit: ['access_policy_evaluated'],
-  assert_attendance: ['attendance_created'],
-};
+  for (const journey of Object.values(JOURNEY_STEPS_REGISTRY || {})) {
+    for (const spec of Object.values(journey || {})) {
+      if (!spec?.stepId) continue;
+      if (spec.networkProofRequired && Array.isArray(spec.networkEndpoints) && spec.networkEndpoints.length > 0) {
+        indexes.network[spec.stepId] = spec.networkEndpoints;
+      }
+      indexes.mutation[spec.stepId] = Array.isArray(spec.expectedMutations) ? spec.expectedMutations : [];
+      indexes.sideEffect[spec.stepId] = Array.isArray(spec.expectedSideEffects) ? spec.expectedSideEffects : [];
 
-/**
- * Mutações esperadas por stepId / actionType.
- */
-const MUTATION_PROOF_CONTRACTS = {
-  step_reply_ticket: ['message_created'],
-  step_change_status: ['ticket_status_changed'],
-  step_identify_customer: ['subject_identified', 'access_decision_created'],
-  step_assert_access_decision: ['access_decision_allow'],
-  step_assert_attendance: ['attendance_created'],
-  type_and_send: ['message_created'],
-  change_status: ['ticket_status_changed'],
-  checkin_submit: ['access_decision_created'],
-};
+      if (spec.actionType && !indexes.actionType[spec.actionType]) {
+        indexes.actionType[spec.actionType] = spec;
+      }
+    }
+  }
+
+  return indexes;
+}
+
+const CONTRACT_INDEXES = buildContractIndexes();
+const NETWORK_PROOF_CONTRACTS = CONTRACT_INDEXES.network;
+const MUTATION_PROOF_CONTRACTS = CONTRACT_INDEXES.mutation;
+const SIDE_EFFECT_PROOF_CONTRACTS = CONTRACT_INDEXES.sideEffect;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -97,12 +62,18 @@ const MUTATION_PROOF_CONTRACTS = {
 
 function matchMethod(method = '', pattern) {
   if (pattern instanceof RegExp) return pattern.test(String(method).toUpperCase());
+  if (typeof pattern === 'string' && pattern.includes('|')) {
+    return pattern
+      .split('|')
+      .map((item) => item.trim().toUpperCase())
+      .includes(String(method).toUpperCase());
+  }
   return String(method).toUpperCase() === String(pattern).toUpperCase();
 }
 
 function matchPath(url = '', pattern) {
   if (pattern instanceof RegExp) return pattern.test(url);
-  return String(url).includes(String(pattern));
+  return String(url) === String(pattern);
 }
 
 function matchStatus(status, allowed) {
@@ -115,6 +86,14 @@ function matchStatus(status, allowed) {
  */
 function getResponses(networkEvents = []) {
   return (networkEvents || []).filter((e) => e?.type === 'response' && e?.status != null);
+}
+
+function getOperationalContractForProof(stepId = '', actionType = '') {
+  const normalizedStepId = String(stepId || '').trim();
+  if (normalizedStepId) {
+    return getOperationalStepContract(normalizedStepId);
+  }
+  return CONTRACT_INDEXES.actionType[actionType] || null;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,13 +110,19 @@ function getResponses(networkEvents = []) {
  * @returns {{ valid: boolean, matched: object[], missing: string[], blockers: object[] }}
  */
 function validateNetworkProof(networkEvents = [], stepId = '', actionType = '') {
-  const contracts =
-    NETWORK_PROOF_CONTRACTS[stepId] ||
-    NETWORK_PROOF_CONTRACTS[actionType] ||
-    null;
+  const contract = getOperationalContractForProof(stepId, actionType);
 
-  // Sem contrato específico: pass-through (não bloqueia)
-  if (!contracts || contracts.length === 0) {
+  if (!contract) {
+    return {
+      valid: false,
+      matched: [],
+      missing: ['operational_step_contract_missing'],
+      blockers: [{ reason: 'operational_step_contract_missing', stepId, actionType }],
+      noContract: false,
+    };
+  }
+
+  if (contract.networkProofRequired !== true || !Array.isArray(contract.networkEndpoints) || contract.networkEndpoints.length === 0) {
     return { valid: true, matched: [], missing: [], blockers: [], noContract: true };
   }
 
@@ -146,18 +131,18 @@ function validateNetworkProof(networkEvents = [], stepId = '', actionType = '') 
   const missing = [];
   const blockers = [];
 
-  for (const contract of contracts) {
+  for (const endpoint of contract.networkEndpoints) {
     const hit = responses.find(
       (e) =>
-        matchMethod(e.method, contract.method) &&
-        matchPath(e.url, contract.pathPattern) &&
-        matchStatus(e.status, contract.status),
+        matchMethod(e.method, endpoint.method) &&
+        matchPath(e.url, endpoint.pathPattern) &&
+        matchStatus(e.status, endpoint.status),
     );
 
     if (hit) {
-      matched.push({ contract, event: hit });
+      matched.push({ contract: endpoint, event: hit });
     } else {
-      const desc = `${String(contract.method)} ${contract.pathPattern} [${(contract.status || []).join(',')}]`;
+      const desc = `${String(endpoint.method)} ${endpoint.pathPattern} [${(endpoint.status || []).join(',')}]`;
       missing.push(desc);
       blockers.push({
         reason: 'network_proof_missing_endpoint',
@@ -183,8 +168,9 @@ function validateNetworkProof(networkEvents = [], stepId = '', actionType = '') 
 // ---------------------------------------------------------------------------
 
 /**
- * Compara dois snapshots (before / after) e retorna diff real com
- * mutações observadas e contagem.
+ * Compara dois snapshots (before / after) e retorna apenas o diff estrutural.
+ * Este helper NÃO infere mutation ids. Mutation proof operacional é derivado
+ * exclusivamente por regras canônicas exatas no postStateProofValidator.
  *
  * Aceita snapshots estruturados como objetos ou arrays.
  *
@@ -209,37 +195,12 @@ function computeRealSnapshotDiff(before, after) {
     };
   }
 
-  const mutations = [];
-  const sideEffects = [];
   const details = [];
 
-  // Heurísticas de diff por campos convencionais
-  const COUNTER_FIELDS = [
-    'messages_count', 'messagesCount', 'message_count', 'messageCount',
-    'count', 'total', 'items_count', 'itemsCount',
-    'attendance_count', 'attendanceCount',
-    'events_count', 'eventsCount',
-    'activities_count', 'activitiesCount',
-  ];
-
-  const STATUS_FIELDS = [
-    'status', 'ticket_status', 'ticketStatus',
-    'access_decision', 'decision',
-    'membership_status', 'membershipStatus',
-  ];
-
-  const SIDE_EFFECT_FIELDS = [
-    'audit_log_count', 'auditLogCount',
-    'crm_activities_count', 'crmActivitiesCount',
-    'notifications_sent', 'notificationsSent',
-  ];
-
-  // Conta campos escalares que mudaram
   function diffObject(b, a, prefix = '') {
     if (typeof b !== 'object' || typeof a !== 'object' || b == null || a == null) {
       if (b !== a) {
         details.push({ field: prefix || 'root', before: b, after: a });
-        mutations.push(`field_changed:${prefix || 'root'}`);
       }
       return;
     }
@@ -257,20 +218,6 @@ function computeRealSnapshotDiff(before, after) {
 
       if (bVal !== aVal) {
         details.push({ field: fieldPath, before: bVal, after: aVal });
-
-        const lkey = key.toLowerCase();
-        if (COUNTER_FIELDS.some((f) => f.toLowerCase() === lkey)) {
-          const bNum = Number(bVal || 0);
-          const aNum = Number(aVal || 0);
-          if (aNum > bNum) mutations.push(`${lkey}_incremented`);
-          else mutations.push(`${lkey}_changed`);
-        } else if (STATUS_FIELDS.some((f) => f.toLowerCase() === lkey)) {
-          mutations.push(`${lkey}_changed:${bVal}=>${aVal}`);
-        } else if (SIDE_EFFECT_FIELDS.some((f) => f.toLowerCase() === lkey)) {
-          sideEffects.push(`${lkey}_changed`);
-        } else {
-          mutations.push(`field_changed:${fieldPath}`);
-        }
       }
     }
   }
@@ -278,10 +225,10 @@ function computeRealSnapshotDiff(before, after) {
   diffObject(before, after);
 
   return {
-    changed: mutations.length > 0 || sideEffects.length > 0,
-    mutations,
-    sideEffects,
-    mutationCount: mutations.length,
+    changed: details.length > 0,
+    mutations: [],
+    sideEffects: [],
+    mutationCount: 0,
     details,
   };
 }
@@ -298,7 +245,7 @@ function computeRealSnapshotDiff(before, after) {
  */
 function validateMutationProof(beforeSnapshot, afterSnapshot, observedMutations = [], stepId = '', actionType = '') {
   const diff = computeRealSnapshotDiff(beforeSnapshot, afterSnapshot);
-  const allMutations = [...diff.mutations, ...(observedMutations || [])];
+  const allMutations = [...(observedMutations || [])];
   const mutationCount = allMutations.length;
 
   const blockers = [];
@@ -323,13 +270,11 @@ function validateMutationProof(beforeSnapshot, afterSnapshot, observedMutations 
   }
 
   // Verificar mutações esperadas por contrato
-  const expectedMutations =
-    MUTATION_PROOF_CONTRACTS[stepId] ||
-    MUTATION_PROOF_CONTRACTS[actionType] ||
-    [];
+  const operationalContract = getOperationalContractForProof(stepId, actionType);
+  const expectedMutations = operationalContract ? getExpectedMutationsForStep(operationalContract) : [];
 
   const missingExpectedMutations = expectedMutations.filter(
-    (m) => !allMutations.some((obs) => String(obs).includes(m) || m.includes(String(obs).split(':')[0])),
+    (m) => !allMutations.some((obs) => String(obs) === String(m)),
   );
 
   if (missingExpectedMutations.length > 0) {
@@ -368,9 +313,9 @@ function validateMutationProof(beforeSnapshot, afterSnapshot, observedMutations 
 function validateSideEffectProof(observedSideEffects = [], stepId = '', actionType = '', overrideExpected = null) {
   const expectedSideEffects =
     overrideExpected ||
-    SIDE_EFFECT_PROOF_CONTRACTS[stepId] ||
-    SIDE_EFFECT_PROOF_CONTRACTS[actionType] ||
-    [];
+    (getOperationalContractForProof(stepId, actionType)
+      ? getExpectedSideEffectsForStep(getOperationalContractForProof(stepId, actionType))
+      : []);
 
   if (expectedSideEffects.length === 0) {
     return { valid: true, observed: observedSideEffects, missing: [], blockers: [], noContract: true };
@@ -378,7 +323,7 @@ function validateSideEffectProof(observedSideEffects = [], stepId = '', actionTy
 
   const observed = observedSideEffects || [];
   const missing = expectedSideEffects.filter(
-    (se) => !observed.some((obs) => String(obs).includes(se) || se.includes(obs)),
+    (se) => !observed.some((obs) => String(obs) === String(se)),
   );
 
   const blockers = missing.map((se) => ({
@@ -444,25 +389,26 @@ function validateEvidenceProof({
     ...(Array.isArray(evidence?.observedSideEffects) ? evidence.observedSideEffects : []),
   ];
 
-  // Decidir se este actionType requer provas de mutação
-  const MUTATION_REQUIRED_TYPES = new Set([
-    'type_and_send', 'change_status', 'checkin_submit',
-  ]);
-  const SIDE_EFFECT_REQUIRED_TYPES = new Set([
-    'type_and_send', 'change_status', 'checkin_submit', 'assert_attendance',
-  ]);
-  const NETWORK_REQUIRED_TYPES = new Set([
-    'type_and_send', 'change_status', 'checkin_submit',
-  ]);
+  const operationalContract = getOperationalContractForProof(stepId, actionType);
+  if (!operationalContract) {
+    return {
+      valid: false,
+      stepId,
+      actionType,
+      networkProof: { valid: false, matched: [], missing: ['operational_step_contract_missing'], blockers: [{ reason: 'operational_step_contract_missing', stepId, actionType }], noContract: false, expectedEndpoints: [], observedEndpoints: getResponses(events).map((e) => `${e.method} ${e.url} [${e.status}]`) },
+      mutationProof: { valid: false, diff: null, observedMutations, mutationCount: 0, blockers: [{ reason: 'operational_step_contract_missing', stepId, actionType }], expectedMutations: [] },
+      sideEffectProof: { valid: false, observed: observedSideEffects, missing: [], blockers: [{ reason: 'operational_step_contract_missing', stepId, actionType }], expectedSideEffects: [] },
+      realSnapshotDiff: computeRealSnapshotDiff(beforeSnapshot, afterSnapshot),
+      proofChain: { uiAction: Boolean(step?.selectorUsed || evidence?.selectorUsed || step?.actionType), networkProof: false, mutationProof: false, sideEffectProof: false, finalStateProof: Boolean(afterSnapshot), complete: false },
+      blockers: [{ reason: 'operational_step_contract_missing', stepId, actionType }],
+      goNoGo: blocking ? (executionMode === 'diagnostic' ? 'REVIEW' : 'NO_GO') : null,
+    };
+  }
 
-  const requiresMutationProof = MUTATION_REQUIRED_TYPES.has(actionType);
-  const requiresSideEffectProof = SIDE_EFFECT_REQUIRED_TYPES.has(actionType);
-  const requiresNetworkProof = NETWORK_REQUIRED_TYPES.has(actionType);
-
-  // Step-specific overrides (step definitions can also require proof for specific IDs)
-  const stepRequiresNetworkProof = requiresNetworkProof || Boolean(NETWORK_PROOF_CONTRACTS[stepId]);
-  const stepRequiresMutationProof = requiresMutationProof || Boolean(MUTATION_PROOF_CONTRACTS[stepId]);
-  const stepRequiresSideEffectProof = requiresSideEffectProof || Boolean(SIDE_EFFECT_PROOF_CONTRACTS[stepId]);
+  const stepRequiresNetworkProof = operationalContract.networkProofRequired === true;
+  const stepRequiresMutationProof = operationalContract.mutationExpected === true;
+  const expectedSideEffectsForContract = getExpectedSideEffectsForStep(operationalContract);
+  const stepRequiresSideEffectProof = expectedSideEffectsForContract.length > 0;
 
   const allBlockers = [];
 
@@ -515,18 +461,18 @@ function validateEvidenceProof({
     actionType,
     networkProof: {
       ...networkProof,
-      expectedEndpoints: (NETWORK_PROOF_CONTRACTS[stepId] || NETWORK_PROOF_CONTRACTS[actionType] || []).map(
-        (c) => `${String(c.method)} ${c.pathPattern} [${(c.status || []).join(',')}]`,
-      ),
+      expectedEndpoints: Array.isArray(operationalContract.networkEndpoints)
+        ? operationalContract.networkEndpoints.map((c) => `${String(c.method)} ${c.pathPattern} [${(c.status || []).join(',')}]`)
+        : [],
       observedEndpoints: getResponses(events).map((e) => `${e.method} ${e.url} [${e.status}]`),
     },
     mutationProof: {
       ...mutationProof,
-      expectedMutations: MUTATION_PROOF_CONTRACTS[stepId] || MUTATION_PROOF_CONTRACTS[actionType] || [],
+      expectedMutations: getExpectedMutationsForStep(operationalContract),
     },
     sideEffectProof: {
       ...sideEffectProof,
-      expectedSideEffects: SIDE_EFFECT_PROOF_CONTRACTS[stepId] || SIDE_EFFECT_PROOF_CONTRACTS[actionType] || [],
+      expectedSideEffects: expectedSideEffectsForContract,
     },
     realSnapshotDiff,
     proofChain,

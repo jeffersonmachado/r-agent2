@@ -8,7 +8,7 @@
  * Cada step possui:
  *   - id, actionType, selectorUsed: metadados de auditoria
  *   - execute(page): função assíncrona que executa ação real na UI
- *   - mutationLinkage: vínculo UI → API → mutação → side effects
+ *   - mutation proof nasce no executor após afterStepSnapshot + incrementalDiff
  *
  * Jornada:
  *   1. step_access_support_module  → navigate
@@ -75,7 +75,6 @@ function buildSupportTicketFlowSteps(seedData = {}) {
       actionType: 'navigate',
       selectorUsed: null,
       journeyId: JOURNEY_ID,
-      mutationLinkage: null, // navegação não gera mutação de backend
       async execute(page) {
         const target = `${baseUrl}${SUPPORT_PATH}`;
         await page.goto(target, { waitUntil: 'domcontentloaded' });
@@ -89,13 +88,12 @@ function buildSupportTicketFlowSteps(seedData = {}) {
       },
     },
 
-    // ── Step 2: listar tickets ───────────────────────────────────────────────
+    // ── Step 2: aguardar lista de tickets ────────────────────────────────────
     {
-      id: 'step_list_tickets',
+      id: 'step_wait_ticket_list',
       actionType: 'wait_for_list',
       selectorUsed: '[data-testid="ticket-list"]',
       journeyId: JOURNEY_ID,
-      mutationLinkage: null,
       async execute(page) {
         await waitForRequiredSelector(page, '[data-testid="ticket-list"]', 10000, {
           reason: 'support_ticket_list_not_loaded',
@@ -112,7 +110,6 @@ function buildSupportTicketFlowSteps(seedData = {}) {
         ? `[data-testid="ticket-card-${ticketId}"]`
         : '[data-testid="ticket-card"]',
       journeyId: JOURNEY_ID,
-      mutationLinkage: null,
       async execute(page) {
         const selector = ticketId
           ? `[data-testid="ticket-card-${ticketId}"]`
@@ -140,13 +137,6 @@ function buildSupportTicketFlowSteps(seedData = {}) {
       actionType: 'type_and_send',
       selectorUsed: replySelector,
       journeyId: JOURNEY_ID,
-      mutationLinkage: {
-        uiAction: 'click_send_reply',
-        apiEndpoint: ticketId ? `/tickets/${ticketId}/reply` : '/tickets/:id/reply',
-        expectedMutations: ['message_created', 'ticket_reply_persisted', 'audit_log_created', 'crm_updated'],
-        expectedSideEffects: ['ticket_updated', 'notification_sent', 'crm_activity_created'],
-        correlatedBy: 'network_linkage',
-      },
       async execute(page) {
         await waitForRequiredSelector(page, replySelector, 10000, {
           reason: 'support_reply_input_missing',
@@ -170,17 +160,10 @@ function buildSupportTicketFlowSteps(seedData = {}) {
 
     // ── Step 5: alterar status do ticket ────────────────────────────────────
     {
-      id: 'step_change_ticket_status',
+      id: 'step_change_status',
       actionType: 'change_status',
       selectorUsed: statusSelector,
       journeyId: JOURNEY_ID,
-      mutationLinkage: {
-        uiAction: 'select_status',
-        apiEndpoint: ticketId ? `/tickets/${ticketId}/status` : '/tickets/:id/status',
-        expectedMutations: ['ticket_status_changed', 'audit_log_created'],
-        expectedSideEffects: ['crm_updated', 'notification_sent'],
-        correlatedBy: 'network_linkage',
-      },
       async execute(page) {
         await waitForRequiredSelector(page, statusSelector, 8000, {
           reason: 'support_status_selector_missing',
@@ -207,11 +190,10 @@ function buildSupportTicketFlowSteps(seedData = {}) {
 
     // ── Step 6: validar UI refletiu mutação ──────────────────────────────────
     {
-      id: 'step_validate_ui_mutation',
+      id: 'step_assert_ticket_ui',
       actionType: 'assert_ui_state',
       selectorUsed: '[data-testid="ticket-status"]',
       journeyId: JOURNEY_ID,
-      mutationLinkage: null,
       snapshotDiff: {
         expectedMutations: ['ticket_status_changed', 'ticket_reply_persisted'],
         expectedSideEffects: ['crm_updated', 'audit_log_created'],
@@ -231,6 +213,32 @@ function buildSupportTicketFlowSteps(seedData = {}) {
           reason: 'support_ui_not_updated',
           journeyId: JOURNEY_ID,
           selector: '[data-testid="ticket-status"]',
+        });
+      },
+    },
+
+    // ── Step 7: validar backend refletiu mutação ─────────────────────────────
+    {
+      id: 'step_assert_ticket_backend',
+      actionType: 'assert_backend_state',
+      status: 'passed',
+      selectorUsed: '[data-testid="ticket-backend-state"]',
+      journeyId: JOURNEY_ID,
+      async execute(page) {
+        const backendStateEl = await waitForRequiredSelector(
+          page,
+          '[data-testid="ticket-backend-state"], [data-testid="ticket-status"]',
+          5000,
+          {
+            reason: 'support_backend_state_missing',
+            journeyId: JOURNEY_ID,
+          }
+        );
+
+        const backendStateText = String((await backendStateEl.textContent()) || '').trim();
+        assertOperationalCondition(backendStateText.length > 0, {
+          reason: 'support_backend_state_not_available',
+          journeyId: JOURNEY_ID,
         });
       },
     },

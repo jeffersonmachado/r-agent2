@@ -277,4 +277,74 @@ describe('operationalReplayValidator strict replay gates', () => {
     expect(transitionFailure).toBeTruthy();
     expect((transitionFailure.transition?.blockers || []).some((item) => item.reason === 'missing_side_effects')).toBe(true);
   });
+
+  test('retorna NO_GO quando mutation provenance nao possui entityScope', () => {
+    const replay = makeStrictSupportReplay();
+    replay.steps[2] = {
+      ...replay.steps[2],
+      id: 'step_reply_ticket',
+      actionType: 'type_and_send',
+      observedMutations: ['message_created'],
+      mutationProvenance: [{
+        mutation: 'message_created',
+        originatingStepId: 'step_reply_ticket',
+        originatingActionType: 'type_and_send',
+        originatingNetworkEvent: { method: 'POST', url: '/api/support/tickets/TICKET-1/reply', status: 200 },
+        beforeStepSnapshotHash: 'aaaa1111',
+        afterStepSnapshotHash: 'bbbb2222',
+      }],
+    };
+
+    const result = operationalReplayValidator.validateOperationalReplay(replay, { journeyId: 'support_ticket_flow' });
+
+    expect(result.isOperational).toBe(false);
+    expect(result.blockers.some((item) => item.reason === 'mutation_provenance_incomplete' && (item.missingFields || []).includes('entityScope'))).toBe(true);
+  });
+
+  test('retorna NO_GO quando mutation provenance nao possui originatingNetworkEvent', () => {
+    const replay = makeStrictSupportReplay();
+    replay.steps[2] = {
+      ...replay.steps[2],
+      id: 'step_reply_ticket',
+      actionType: 'type_and_send',
+      observedMutations: ['message_created'],
+      mutationProvenance: [{
+        mutation: 'message_created',
+        originatingStepId: 'step_reply_ticket',
+        originatingActionType: 'type_and_send',
+        entityScope: ['ticket', 'messages'],
+        beforeStepSnapshotHash: 'aaaa1111',
+        afterStepSnapshotHash: 'bbbb2222',
+      }],
+    };
+
+    const result = operationalReplayValidator.validateOperationalReplay(replay, { journeyId: 'support_ticket_flow' });
+
+    expect(result.isOperational).toBe(false);
+    expect(result.blockers.some((item) => item.reason === 'mutation_provenance_incomplete' && (item.missingFields || []).includes('originatingNetworkEvent'))).toBe(true);
+  });
+
+  test('retorna NO_GO quando step mutacional ignora contrato do registry', () => {
+    const replay = makeStrictSupportReplay();
+    replay.steps[2] = {
+      ...replay.steps[2],
+      id: 'step_mutation_without_contract',
+      actionType: 'type_and_send',
+      observedMutations: ['message_created'],
+      mutationProvenance: [{
+        mutation: 'message_created',
+        originatingStepId: 'step_mutation_without_contract',
+        originatingActionType: 'type_and_send',
+        originatingNetworkEvent: { method: 'POST', url: '/api/support/tickets/TICKET-1/reply', status: 200 },
+        entityScope: ['ticket', 'messages'],
+        beforeStepSnapshotHash: 'aaaa1111',
+        afterStepSnapshotHash: 'bbbb2222',
+      }],
+    };
+
+    const result = operationalReplayValidator.validateOperationalReplay(replay, { journeyId: 'support_ticket_flow' });
+
+    expect(result.isOperational).toBe(false);
+    expect(result.blockers.some((item) => item.reason === 'operational_step_contract_missing')).toBe(true);
+  });
 });

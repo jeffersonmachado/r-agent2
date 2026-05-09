@@ -331,18 +331,18 @@ describe('Cenário 6 — replay sem screenshots reais => NO_GO', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GRUPO 7 — mutation sem network linkage => NO_GO
+// GRUPO 7 — mutation proof runtime
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('Cenário 7 — mutation sem network linkage => NO_GO', () => {
-  test('step sem mutationLinkage em support => NO_GO', () => {
-    const step = buildCompleteStep({ mutationLinkage: null });
+describe('Cenário 7 — mutation proof runtime', () => {
+  test('step sem incrementalDiff em support => NO_GO', () => {
+    const step = buildCompleteStep({ mutationLinkage: null, incrementalDiff: null });
     const result = validateStepEvidence(step, 'support_ticket_flow');
     expect(result.goNoGo).toBe('NO_GO');
     expect(result.missingEvidence).toContain('mutationLinkage');
   });
 
-  test('step sem mutationLinkage em fitness => NO_GO', () => {
+  test('step sem mutationLinkage gerado em fitness => NO_GO', () => {
     const step = buildCompleteStep({ mutationLinkage: undefined });
     const result = validateStepEvidence(step, 'fitness_customer_checkin');
     expect(result.goNoGo).toBe('NO_GO');
@@ -364,25 +364,22 @@ describe('Cenário 7 — mutation sem network linkage => NO_GO', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GRUPO 8 — support flow sem UI mutation => NO_GO (step definitions)
+// GRUPO 8 — support flow: step definitions não trazem mutationLinkage declarativo
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('Cenário 8 — support flow sem UI mutation: step definitions têm mutationLinkage', () => {
-  test('buildSupportTicketFlowSteps: step reply_ticket tem mutationLinkage', () => {
+describe('Cenário 8 — support flow sem mutationLinkage declarativo', () => {
+  test('buildSupportTicketFlowSteps: step reply_ticket não tem mutationLinkage', () => {
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1', agentReply: 'teste' });
     const replyStep = steps.find((s) => s.id === 'step_reply_ticket');
     expect(replyStep).toBeDefined();
-    expect(replyStep.mutationLinkage).not.toBeNull();
-    expect(replyStep.mutationLinkage.expectedMutations).toContain('message_created');
-    expect(replyStep.mutationLinkage.correlatedBy).toBe('network_linkage');
+    expect(Object.prototype.hasOwnProperty.call(replyStep, 'mutationLinkage')).toBe(false);
   });
 
-  test('buildSupportTicketFlowSteps: step change_status tem mutationLinkage', () => {
+  test('buildSupportTicketFlowSteps: step change_status não tem mutationLinkage', () => {
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
-    const statusStep = steps.find((s) => s.id === 'step_change_ticket_status');
+    const statusStep = steps.find((s) => s.id === 'step_change_status');
     expect(statusStep).toBeDefined();
-    expect(statusStep.mutationLinkage.expectedMutations).toContain('ticket_status_changed');
-    expect(statusStep.mutationLinkage.expectedSideEffects).toContain('crm_updated');
+    expect(Object.prototype.hasOwnProperty.call(statusStep, 'mutationLinkage')).toBe(false);
   });
 
   test('buildSupportTicketFlowSteps: todos os steps têm actionType e selectorUsed', () => {
@@ -434,20 +431,19 @@ describe('Cenário 8 — support flow sem UI mutation: step definitions têm mut
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Cenário 9 — fitness flow sem AccessEvent: step definitions requerem access decision', () => {
-  test('buildFitnessCheckinFlowSteps: step resolve_access_decision tem mutationLinkage com access_event_created', () => {
+  test('buildFitnessCheckinFlowSteps: step submit_checkin não tem mutationLinkage declarativo', () => {
     const steps = buildFitnessCheckinFlowSteps({
       subjectId: 'subject-1',
       credentialValue: 'QA-FIT-001',
       deviceId: 'device-1',
       deviceMode: 'test_device',
     });
-    const decisionStep = steps.find((s) => s.id === 'step_resolve_access_decision');
+    const decisionStep = steps.find((s) => s.id === 'step_submit_checkin');
     expect(decisionStep).toBeDefined();
-    expect(decisionStep.mutationLinkage.expectedMutations).toContain('access_event_created');
-    expect(decisionStep.mutationLinkage.expectedMutations).toContain('access_decision_allow');
+    expect(Object.prototype.hasOwnProperty.call(decisionStep, 'mutationLinkage')).toBe(false);
   });
 
-  test('buildFitnessCheckinFlowSteps: step confirm_attendance tem mutationLinkage com attendance_created', () => {
+  test('buildFitnessCheckinFlowSteps: step confirm_attendance não tem mutationLinkage', () => {
     const steps = buildFitnessCheckinFlowSteps({
       subjectId: 'subject-1',
       credentialValue: 'QA-FIT-001',
@@ -456,8 +452,7 @@ describe('Cenário 9 — fitness flow sem AccessEvent: step definitions requerem
     });
     const attendanceStep = steps.find((s) => s.id === 'step_confirm_attendance');
     expect(attendanceStep).toBeDefined();
-    expect(attendanceStep.mutationLinkage.expectedMutations).toContain('attendance_created');
-    expect(attendanceStep.mutationLinkage.expectedSideEffects).toContain('crm_presence_updated');
+    expect(Object.prototype.hasOwnProperty.call(attendanceStep, 'mutationLinkage')).toBe(false);
   });
 
   test('buildFitnessCheckinFlowSteps: todos os steps têm execute function', () => {
@@ -488,7 +483,7 @@ describe('Cenário 9 — fitness flow sem AccessEvent: step definitions requerem
       '[data-testid="checkin-credential-input"]',
       'QA-FIT-001'
     );
-    expect(page.click).toHaveBeenCalledWith('[data-testid="checkin-submit-button"]');
+    expect(page.click).not.toHaveBeenCalledWith('[data-testid="checkin-submit-button"]');
   });
 });
 
@@ -609,7 +604,6 @@ describe('Cenário 12 — executeStep com page mock: captura evidências reais',
       id: 'step-with-execute',
       actionType: 'click',
       selectorUsed: '[data-testid="ticket-send-button"]',
-      mutationLinkage: { mutationCount: 1, correlatedBy: 'network_linkage' },
       stepResult: { status: 'success' },
       networkEvents: [{ type: 'response', url: '/api/tickets/1/reply', status: 201 }],
       async execute(p) {
@@ -664,31 +658,31 @@ describe('Cenário 12 — executeStep com page mock: captura evidências reais',
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Cenário 13 — invariantes dos step definitions', () => {
-  test('support steps: 6 steps na sequência correta', () => {
+  test('support steps: 7 steps na sequência correta', () => {
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
-    expect(steps.length).toBe(6);
+    expect(steps.length).toBe(7);
     expect(steps[0].id).toBe('step_access_support_module');
-    expect(steps[1].id).toBe('step_list_tickets');
+    expect(steps[1].id).toBe('step_wait_ticket_list');
     expect(steps[2].id).toBe('step_open_ticket');
     expect(steps[3].id).toBe('step_reply_ticket');
-    expect(steps[4].id).toBe('step_change_ticket_status');
-    expect(steps[5].id).toBe('step_validate_ui_mutation');
+    expect(steps[4].id).toBe('step_change_status');
+    expect(steps[5].id).toBe('step_assert_ticket_ui');
+    expect(steps[6].id).toBe('step_assert_ticket_backend');
   });
 
-  test('fitness steps: 6 steps na sequência correta', () => {
+  test('fitness steps: 5 steps na sequência correta', () => {
     const steps = buildFitnessCheckinFlowSteps({
       subjectId: 'subject-1',
       credentialValue: 'QA-001',
       deviceId: 'device-1',
       deviceMode: 'test_device',
     });
-    expect(steps.length).toBe(6);
+    expect(steps.length).toBe(5);
     expect(steps[0].id).toBe('step_access_checkin_module');
     expect(steps[1].id).toBe('step_identify_customer');
     expect(steps[2].id).toBe('step_validate_membership');
-    expect(steps[3].id).toBe('step_resolve_access_decision');
+    expect(steps[3].id).toBe('step_submit_checkin');
     expect(steps[4].id).toBe('step_confirm_attendance');
-    expect(steps[5].id).toBe('step_validate_crm_update');
   });
 
   test('support steps: journey_id é support_ticket_flow em todos', () => {
@@ -782,7 +776,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       waitForSelector: rejectSelector('[data-testid="ticket-list"]'),
     });
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1', baseUrl: 'https://app.test' });
-    const step = steps.find((s) => s.id === 'step_list_tickets');
+    const step = steps.find((s) => s.id === 'step_wait_ticket_list');
 
     const result = await executeStep(step, page, {
       journeyId: 'support_ticket_flow',
@@ -839,7 +833,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       }),
     });
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1', resolvedStatus: 'resolved' });
-    const step = steps.find((s) => s.id === 'step_change_ticket_status');
+    const step = steps.find((s) => s.id === 'step_change_status');
 
     const result = await executeStep(step, page, {
       journeyId: 'support_ticket_flow',
@@ -893,7 +887,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       url: jest.fn(() => 'https://app.example.com/fitness/checkin'),
     });
     const steps = buildFitnessCheckinFlowSteps({ credentialValue: 'QA-FIT-1', deviceMode: 'test_device' });
-    const step = steps.find((s) => s.id === 'step_validate_crm_update');
+    const step = steps.find((s) => s.id === 'step_submit_checkin');
 
     const result = await executeStep(step, page, {
       journeyId: 'fitness_customer_checkin',
@@ -902,7 +896,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
     });
 
     expect(result.goNoGo).toBe('NO_GO');
-    expect(result.step.error).toBe('fitness_crm_not_updated');
+    expect(result.step.error).toBe('fitness_access_decision_not_allow');
   });
 
   test('network call ausente => NO_GO', async () => {
@@ -912,10 +906,9 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       url: jest.fn(() => 'https://app.example.com/support'),
     });
     const step = {
-      id: 'step-network-missing',
-      actionType: 'click',
+      id: 'step_reply_ticket',
+      actionType: 'type_and_send',
       selectorUsed: '[data-testid="btn"]',
-      mutationLinkage: { mutationCount: 1 },
       async execute() {},
     };
 
@@ -937,7 +930,6 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       id: 'step-screenshot-missing',
       actionType: 'click',
       selectorUsed: '[data-testid="btn"]',
-      mutationLinkage: { mutationCount: 1 },
       async execute() {},
     };
 
@@ -956,7 +948,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       waitForSelector: rejectSelector('[data-testid="ticket-list"]'),
     });
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
-    const step = steps.find((s) => s.id === 'step_list_tickets');
+    const step = steps.find((s) => s.id === 'step_wait_ticket_list');
 
     const result = await executeStep(step, page, {
       journeyId: 'support_ticket_flow',
@@ -974,7 +966,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
       waitForSelector: rejectSelector('[data-testid="ticket-list"]'),
     });
     const steps = buildSupportTicketFlowSteps({});
-    const step = steps.find((s) => s.id === 'step_list_tickets');
+    const step = steps.find((s) => s.id === 'step_wait_ticket_list');
 
     await expect(step.execute(page)).rejects.toBeInstanceOf(BlockingOperationalError);
   });

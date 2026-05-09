@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-07T13:25:47.702Z",
+  "generatedAt": "2026-05-09T03:20:52.120Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -30,7 +30,7 @@
         "crm_update"
       ],
       "missingCapabilities": [],
-      "confidence": 0.73
+      "confidence": 0.82
     }
   }
 }

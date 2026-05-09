@@ -11,7 +11,7 @@
  *   - domSnapshot real
  *   - url real (page.url())
  *   - networkEvents reais (request/response/requestfailed)
- *   - mutationLinkage
+ *   - mutationLinkage gerado após afterStepSnapshot + incrementalDiff
  *   - evidenceId
  *
  * Se page === null em jornada blocking => NO_GO imediato.
@@ -24,6 +24,7 @@
 
 const logger = require('../../utils/logger');
 const operationalStepExecutor = require('./operationalStepExecutor');
+const fs = require('fs');
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,14 @@ const BLOCKING_JOURNEYS = ['support_ticket_flow', 'fitness_customer_checkin'];
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_NAV_TIMEOUT_MS = 45000;
+const SYSTEM_CHROME_CANDIDATES = [
+  process.env.PLAYWRIGHT_CHROME_EXECUTABLE,
+  process.env.CHROME_BIN,
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+].filter(Boolean);
 
 // ── Playwright lazy loader ────────────────────────────────────────────────────
 
@@ -45,6 +54,16 @@ function getChromium() {
   } catch (_) {
     return null;
   }
+}
+
+function resolveSystemChromeExecutable() {
+  return SYSTEM_CHROME_CANDIDATES.find((candidate) => {
+    try {
+      return fs.existsSync(candidate);
+    } catch (_) {
+      return false;
+    }
+  }) || null;
 }
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
@@ -87,7 +106,19 @@ async function launchBrowserPage(options = {}) {
   const viewport = options.viewport || DEFAULT_VIEWPORT;
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
 
-  const browser = await chromium.launch({ headless });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless });
+  } catch (err) {
+    const executablePath = resolveSystemChromeExecutable();
+    if (!executablePath) throw err;
+    logger.warn(`[BrowserOperationalRunner] Chromium Playwright indisponível; usando Chrome do sistema: ${executablePath}`);
+    browser = await chromium.launch({
+      headless,
+      executablePath,
+      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    });
+  }
   const context = await browser.newContext({
     viewport,
     extraHTTPHeaders: options.extraHTTPHeaders || {},
@@ -177,7 +208,7 @@ async function captureDomSnapshot(page, journeyId) {
  *   4. domSnapshot
  *   5. URL real
  *   6. networkEvents reais (já coletados pelo startNetworkCapture do operationalStepExecutor)
- *   7. mutationLinkage
+ *   7. mutationLinkage gerado após incrementalDiff
  *   8. evidenceId
  *   9. Validação → NO_GO imediato se falta evidência em jornada blocking
  *
@@ -276,6 +307,7 @@ async function executeBlockingJourneyWithBrowser(journeyId, stepSpecs = [], opti
       executionId: options.executionId || null,
       stateMutation: options.stateMutation || null,
       seedEvidence: options.seedEvidence || null,
+      collectStepSnapshot: options.collectStepSnapshot,
     });
   } catch (execErr) {
     logger.error(`[BrowserOperationalRunner] Execução de steps falhou: ${execErr.message}`);
@@ -320,6 +352,7 @@ async function _executeWithoutBrowser(journeyId, stepSpecs = [], options = {}) {
     executionId: options.executionId || null,
     stateMutation: options.stateMutation || null,
     seedEvidence: options.seedEvidence || null,
+    collectStepSnapshot: options.collectStepSnapshot,
   });
 
   return {

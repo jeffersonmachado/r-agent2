@@ -47,6 +47,7 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
       validatePostStateProof: validatePostStateProofMock,
       deriveObservedMutations: jest.fn(() => []),
       deriveObservedSideEffects: jest.fn(() => []),
+      computeIncrementalStepDiff: jest.fn(() => null),
       appendProofChainToReplay: jest.fn((step) => step),
     }));
 
@@ -81,10 +82,24 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
 
   test('validateJourneyPostStateProofs com diff válido => PASSA', () => {
     const executor = loadExecutorUnmocked();
+    const before = {
+      db: { messages: { count: 1 } },
+      events: { audit: { count: 0 }, notifications: { count: 0 } },
+      crm: { activities: { count: 0 } },
+    };
+    const after = {
+      db: { messages: { count: 2 } },
+      events: { audit: { count: 1 }, notifications: { count: 1 } },
+      crm: { activities: { count: 1 } },
+    };
     const result = executor.validateJourneyPostStateProofs({
-      beforeSnapshot: { messages_count: 1, status: 'open' },
-      afterSnapshot: { messages_count: 2, status: 'open' },
-      executedSteps: [makeReplyStep()],
+      beforeSnapshot: before,
+      afterSnapshot: after,
+      executedSteps: [makeReplyStep({
+        beforeStepSnapshot: before,
+        afterStepSnapshot: after,
+        mutationExpected: true,
+      })],
       replay: { journeyId: 'support_ticket_flow', snapshotDiff: { changed: true } },
       journeyContext: makeBlockingContext(),
     });
@@ -100,7 +115,11 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
     const result = executor.validateJourneyPostStateProofs({
       beforeSnapshot: same,
       afterSnapshot: same,
-      executedSteps: [makeReplyStep()],
+      executedSteps: [makeReplyStep({
+        beforeStepSnapshot: same,
+        afterStepSnapshot: same,
+        mutationExpected: true,
+      })],
       replay: { journeyId: 'support_ticket_flow', snapshotDiff: { changed: false } },
       journeyContext: makeBlockingContext(),
     });
@@ -113,13 +132,13 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
   test('mutation sem side effect => NO_GO', () => {
     const executor = loadExecutorUnmocked();
     const result = executor.validateJourneyPostStateProofs({
-      beforeSnapshot: { custom_count: 1 },
-      afterSnapshot: { custom_count: 2 },
-      executedSteps: [{
-        id: 'step_backend_probe',
-        actionType: 'assert_backend_state',
-        screenshotAfter: 'data:image/png;base64,after',
-      }],
+      beforeSnapshot: { db: { messages: { count: 1 } } },
+      afterSnapshot: { db: { messages: { count: 2 } } },
+      executedSteps: [makeReplyStep({
+        mutationExpected: true,
+        beforeStepSnapshot: { db: { messages: { count: 1 } } },
+        afterStepSnapshot: { db: { messages: { count: 2 } } },
+      })],
       replay: { journeyId: 'support_ticket_flow', snapshotDiff: { changed: true } },
       journeyContext: makeBlockingContext(),
     });
@@ -134,7 +153,12 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
     const result = executor.validateJourneyPostStateProofs({
       beforeSnapshot: { messages_count: 1 },
       afterSnapshot: { messages_count: 2 },
-      executedSteps: [makeReplyStep({ networkEvents: [] })],
+      executedSteps: [makeReplyStep({
+        networkEvents: [],
+        beforeStepSnapshot: { messages_count: 1 },
+        afterStepSnapshot: { messages_count: 2 },
+        mutationExpected: true,
+      })],
       replay: { journeyId: 'support_ticket_flow', snapshotDiff: { changed: true } },
       journeyContext: makeBlockingContext(),
     });
@@ -149,7 +173,11 @@ describe('proof temporal pipeline - regras obrigatórias', () => {
     const result = executor.validateJourneyPostStateProofs({
       beforeSnapshot: { messages_count: 1 },
       afterSnapshot: { messages_count: 2 },
-      executedSteps: [makeReplyStep()],
+      executedSteps: [makeReplyStep({
+        beforeStepSnapshot: { messages_count: 1 },
+        afterStepSnapshot: { messages_count: 2 },
+        mutationExpected: true,
+      })],
       replay: { journeyId: 'support_ticket_flow' },
       journeyContext: makeBlockingContext(),
     });

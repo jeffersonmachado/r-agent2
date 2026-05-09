@@ -7,261 +7,281 @@
  *
  * Valida o que só é possível provar depois de ter o afterSnapshot real:
  *   - snapshot diff real (before !== after)
- *   - observedMutations derivadas do diff (não expectedMutations como proxy)
- *   - observedSideEffects derivados do diff
+ *   - observedMutations canônicas derivadas do diff incremental por paths exatos
+ *   - observedSideEffects canônicos derivados do diff incremental por paths exatos
  *   - mutationCount > 0
  *   - estado final comprovado
  *
- * Pipeline obrigatório para chamar este módulo:
- *   1. executeStep()
- *   2. validateStepExecutionProof()   ← já passou
- *   3. collectAfterSnapshot()         ← obrigatório antes deste módulo
- *   4. computeRealSnapshotDiff()
- *   5. deriveObservedMutations(diff)
- *   6. deriveObservedSideEffects(diff)
- *   7. validatePostStateProof()       ← este módulo
- *   8. appendProofChainToReplay()
+ * Pipeline operacional obrigatório:
+ *   1. collectStepBeforeSnapshot()
+ *   2. executeStep()
+ *   3. validateStepExecutionProof()
+ *   4. collectStepAfterSnapshot()
+ *   5. computeIncrementalStepDiff()
+ *   6. deriveObservedMutations() / deriveObservedSideEffects()
+ *   7. buildMutationLinkage()
+ *   8. validatePostStateProof()
+ *   9. appendProofChainToReplay()
  */
 
 const { computeRealSnapshotDiff } = require('./evidenceProofValidator');
+const {
+  getExpectedMutationsForStep,
+  getExpectedSideEffectsForStep,
+  getEntityScopeForStep,
+  isMutationExpectedStep: registryIsMutationExpectedStep,
+  getStepSpec,
+  matchExpectedNetworkEvent,
+} = require('../contracts/operationalStepRegistry');
 
 // ---------------------------------------------------------------------------
-// Derivation rules: campo do diff → mutação observada
+// Canonical derivation rules: exact diff path + exact operator → canonical id
 // ---------------------------------------------------------------------------
 
-/**
- * Regras de derivação campo → mutation.
- * Cada regra: { match: fn(fieldPath, before, after), mutation: string }
- */
-const MUTATION_DERIVATION_RULES = [
-  // Messages / tickets
-  {
-    match: (f, b, a) => /messages?_?count/i.test(f) && Number(a) > Number(b),
-    mutation: 'message_created',
-  },
-  {
-    match: (f, b, a) => /messages?_?count/i.test(f) && Number(a) < Number(b),
-    mutation: 'message_deleted',
-  },
-  // Ticket status
-  {
-    match: (f, b, a) => /^(status|ticket_?status)$/i.test(f) && b !== a,
-    mutation: 'ticket_status_changed',
-  },
-  // Attendance / checkin
-  {
-    match: (f, b, a) => /attendance_?count/i.test(f) && Number(a) > Number(b),
-    mutation: 'attendance_created',
-  },
-  {
-    match: (f, b, a) => /access_?decision/i.test(f) && b !== a,
-    mutation: 'access_decision_created',
-  },
-  {
-    match: (f, b, a) => /subject_?identified|subject_?id/i.test(f) && !b && a,
-    mutation: 'subject_identified',
-  },
-  // Access events
-  {
-    match: (f, b, a) => /access_?event_?count/i.test(f) && Number(a) > Number(b),
-    mutation: 'access_event_created',
-  },
-  // Generic item count up
-  {
-    match: (f, b, a) => /(items?|total|count)$/i.test(f) && Number(a) > Number(b),
-    mutation: 'item_created',
-  },
-  // Generic field changed (fallback)
-  {
-    match: (f, b, a) => b !== a,
-    mutation: (f) => `field_changed:${f}`,
-  },
+const CANONICAL_MUTATION_RULES = [
+  { stepId: 'step_reply_ticket', path: 'db.messages.count', op: 'incremented', mutation: 'message_created' },
+  { stepId: 'step_reply_ticket', path: 'events.messages.count', op: 'incremented', mutation: 'message_created' },
+  { stepId: 'step_change_status', path: 'db.ticket.status', op: 'changed', mutation: 'ticket_status_changed' },
+  { stepId: 'step_change_status', path: 'db.ticketStatus', op: 'changed', mutation: 'ticket_status_changed' },
+  { stepId: 'step_submit_checkin', path: 'db.attendance.count', op: 'incremented', mutation: 'attendance_created' },
+  { stepId: 'step_submit_checkin', path: 'db.attendance.created', op: 'became_true', mutation: 'attendance_created' },
 ];
 
-/**
- * Regras de derivação campo do diff → side effect observado.
- * Ativadas por mudanças de campos correlacionados.
- */
-const SIDE_EFFECT_DERIVATION_RULES = [
-  // CRM / activities
-  {
-    match: (f) => /crm_?activit|crm_?updat/i.test(f),
-    sideEffect: 'crm_updated',
-  },
-  {
-    match: (f) => /crm_?journ/i.test(f),
-    sideEffect: 'crm_journey_updated',
-  },
-  {
-    match: (f) => /crm_?presence/i.test(f),
-    sideEffect: 'crm_presence_updated',
-  },
-  // Audit log
-  {
-    match: (f) => /audit_?log|audit_?count/i.test(f),
-    sideEffect: 'audit_log_created',
-  },
-  // Notifications
-  {
-    match: (f) => /notification/i.test(f),
-    sideEffect: 'notification_sent',
-  },
-  // Access events
-  {
-    match: (f) => /access_?event/i.test(f),
-    sideEffect: 'access_event_created',
-  },
-  // Presence / attendance trigger CRM journey update
-  {
-    match: (f) => /attendance_?count/i.test(f),
-    sideEffect: 'crm_journey_updated',
-  },
-  // Ticket status change triggers audit
-  {
-    match: (f) => /^(status|ticket_?status)$/i.test(f),
-    sideEffect: 'audit_log_created',
-  },
-  // Message created triggers audit + CRM
-  {
-    match: (f) => /messages?_?count/i.test(f),
-    sideEffect: 'audit_log_created',
-  },
-  {
-    match: (f) => /messages?_?count/i.test(f),
-    sideEffect: 'crm_updated',
-  },
+const CANONICAL_SIDE_EFFECT_RULES = [
+  { stepId: 'step_reply_ticket', path: 'events.audit.count', op: 'incremented', sideEffect: 'audit_log_created' },
+  { stepId: 'step_reply_ticket', path: 'crm.activities.count', op: 'incremented', sideEffect: 'crm_updated' },
+  { stepId: 'step_reply_ticket', path: 'events.notifications.count', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_reply_ticket', path: 'events.notifications.sent', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_change_status', path: 'events.audit.count', op: 'incremented', sideEffect: 'audit_log_created' },
+  { stepId: 'step_submit_checkin', path: 'api.access.decision.count', op: 'incremented', sideEffect: 'access_decision_created' },
+  { stepId: 'step_submit_checkin', path: 'api.access.decision.allow', op: 'became_true', sideEffect: 'access_decision_created' },
+  { stepId: 'step_submit_checkin', path: 'devices.access.events', op: 'incremented', sideEffect: 'access_event_created' },
+  { stepId: 'step_submit_checkin', path: 'events.access.count', op: 'incremented', sideEffect: 'access_event_created' },
+  { stepId: 'step_submit_checkin', path: 'crm.presenceActivity.count', op: 'incremented', sideEffect: 'crm_journey_updated' },
+  { stepId: 'step_submit_checkin', path: 'crm.presenceActivity.created', op: 'became_true', sideEffect: 'crm_journey_updated' },
 ];
+
+function getStepId(step = {}) {
+  return typeof step === 'string' ? step : (step?.id || step?.stepId || null);
+}
+
+function detailMatchesRule(detail = {}, rule = {}, stepId = null) {
+  if (stepId && rule.stepId !== stepId) return false;
+  if (String(detail.field || '') !== String(rule.path || '')) return false;
+  if (rule.op === 'changed') return detail.before !== detail.after;
+  if (rule.op === 'incremented') return Number(detail.after) > Number(detail.before);
+  if (rule.op === 'became_true') return detail.before !== true && detail.after === true;
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Mutation derivation engine
 // ---------------------------------------------------------------------------
 
 /**
- * Deriva as mutações OBSERVADAS a partir do diff real.
- *
- * Usa as regras de derivação para mapear cada detalhe de diff em
- * uma ou mais mutações observadas concretas.
+ * Deriva mutações OBSERVADAS a partir do diff incremental do step.
+ * Somente regras canônicas por stepId + path exato são aceitas.
  *
  * @param {object} diff - resultado de computeRealSnapshotDiff()
  * @returns {string[]} observedMutations
  */
-function deriveObservedMutations(diff = {}) {
+function deriveObservedMutations(diff = {}, step = {}) {
   if (!diff || !diff.changed || !Array.isArray(diff.details) || diff.details.length === 0) {
     return [];
   }
 
+  const stepId = getStepId(step);
   const mutations = new Set();
 
   for (const detail of diff.details) {
-    const fieldPath = String(detail.field || '').toLowerCase();
-    const before = detail.before;
-    const after = detail.after;
-
-    for (const rule of MUTATION_DERIVATION_RULES) {
-      if (rule.match(fieldPath, before, after)) {
-        const mutation = typeof rule.mutation === 'function'
-          ? rule.mutation(fieldPath)
-          : rule.mutation;
-        mutations.add(mutation);
-        // Pare no primeiro match que não seja o fallback genérico
-        if (rule.mutation !== MUTATION_DERIVATION_RULES[MUTATION_DERIVATION_RULES.length - 1].mutation) {
-          break;
-        }
+    for (const rule of CANONICAL_MUTATION_RULES) {
+      if (detailMatchesRule(detail, rule, stepId)) {
+        mutations.add(rule.mutation);
       }
     }
-  }
-
-  // Inclui mutações já presentes no diff (de computeRealSnapshotDiff)
-  for (const m of diff.mutations || []) {
-    mutations.add(m);
   }
 
   return Array.from(mutations);
 }
 
 /**
- * Deriva os side effects OBSERVADOS a partir do diff real.
+ * Deriva side effects OBSERVADOS a partir do diff incremental do step.
+ * Somente regras canônicas por stepId + path exato são aceitas.
  *
  * @param {object} diff - resultado de computeRealSnapshotDiff()
  * @returns {string[]} observedSideEffects
  */
-function deriveObservedSideEffects(diff = {}) {
+function deriveObservedSideEffects(diff = {}, step = {}) {
   if (!diff || !diff.changed || !Array.isArray(diff.details) || diff.details.length === 0) {
     return [];
   }
 
+  const stepId = getStepId(step);
   const sideEffects = new Set();
 
   for (const detail of diff.details) {
-    const fieldPath = String(detail.field || '').toLowerCase();
-
-    for (const rule of SIDE_EFFECT_DERIVATION_RULES) {
-      if (rule.match(fieldPath)) {
+    for (const rule of CANONICAL_SIDE_EFFECT_RULES) {
+      if (detailMatchesRule(detail, rule, stepId)) {
         sideEffects.add(rule.sideEffect);
       }
     }
-  }
-
-  // Inclui side effects já presentes no diff (de computeRealSnapshotDiff)
-  for (const se of diff.sideEffects || []) {
-    sideEffects.add(se);
   }
 
   return Array.from(sideEffects);
 }
 
 // ---------------------------------------------------------------------------
-// Expected proof contracts por actionType / stepId
+// Mutation provenance tracking
 // ---------------------------------------------------------------------------
 
-const POST_STATE_MUTATION_CONTRACTS = {
-  step_reply_ticket: ['message_created'],
-  step_change_status: ['ticket_status_changed'],
-  step_identify_customer: ['access_decision_created'],
-  step_assert_access_decision: ['access_decision_created'],
-  step_assert_attendance: ['attendance_created'],
-  type_and_send: ['message_created'],
-  change_status: ['ticket_status_changed'],
-  checkin_submit: ['access_decision_created'],
-};
-
-const POST_STATE_SIDE_EFFECT_CONTRACTS = {
-  step_reply_ticket: ['audit_log_created', 'crm_updated'],
-  step_change_status: ['audit_log_created'],
-  step_assert_attendance: ['crm_journey_updated'],
-  type_and_send: ['audit_log_created'],
-  change_status: ['audit_log_created'],
-};
+/**
+ * Estrutura de provenance para uma mutação:
+ * {
+ *   mutation: string (nome da mutação observada)
+ *   originatingStepId: string (qual step a causou)
+ *   originatingNetworkEvents: [{method, url, status}] (evento esperado exato)
+ *   beforeSnapshotHash: string (hash do snapshot antes, primeiros 8 chars)
+ *   afterSnapshotHash: string (hash do snapshot depois, primeiros 8 chars)
+ *   correlatedBy: 'network_linkage' | 'expected_network_event_not_found' (tipo de prova)
+ *   valid: boolean
+ *   reason: string|null
+ * }
+ */
 
 /**
- * ActionTypes que requerem validação de post-state proof.
+ * Computa provenance determinística de cada mutação observada.
+ * Rastreia qual step + expectedNetworkEvent exato causou cada mutação.
+ *
+ * @param {object} step - step que possivelmente causou a mutação
+ * @param {string[]} observedMutations - mutações derivadas do diff do step
+ * @param {object|null} beforeStepSnapshot
+ * @param {object|null} afterStepSnapshot
+ * @returns {object[]} array de provenance records
  */
-const POST_STATE_REQUIRED_TYPES = new Set([
-  'type_and_send',
-  'change_status',
-  'checkin_submit',
-  'assert_attendance',
-]);
+function computeMutationProvenance({
+  step = {},
+  observedMutations = [],
+  beforeStepSnapshot = null,
+  afterStepSnapshot = null,
+} = {}) {
+  if (!Array.isArray(observedMutations) || observedMutations.length === 0) {
+    return [];
+  }
 
-const POST_STATE_REQUIRED_STEP_IDS = new Set([
-  'step_reply_ticket',
-  'step_change_status',
-  'step_identify_customer',
-  'step_assert_access_decision',
-  'step_assert_attendance',
-]);
+  const crypto = require('crypto');
+  const stepId = step.id || step.stepId || 'unknown';
+  const contract = getStepSpec(stepId);
+  const actionType = contract?.actionType || step.actionType || step.action || step.type || 'unknown';
+  const entityScope = getEntityScopeForStep(stepId);
+  const allNetworkEvents = Array.isArray(step.networkEvents) ? step.networkEvents : [];
+
+  // CAUSALIDADE: usar matchExpectedNetworkEvent do contrato, não primeiro 2xx
+  const contractMatchedEvent = matchExpectedNetworkEvent(stepId, allNetworkEvents);
+  // Compute hashes for snapshot identification
+  const beforeHash = beforeStepSnapshot
+    ? crypto
+        .createHash('sha256')
+        .update(JSON.stringify(beforeStepSnapshot))
+        .digest('hex')
+        .substring(0, 8)
+    : null;
+  const afterHash = afterStepSnapshot
+    ? crypto
+        .createHash('sha256')
+        .update(JSON.stringify(afterStepSnapshot))
+        .digest('hex')
+        .substring(0, 8)
+    : null;
+
+  // Correlate each mutation with network events
+  return observedMutations.map((mutation) => {
+    const hasMatchedNetworkEvent = Boolean(contractMatchedEvent);
+    const originatingNetworkEvent = hasMatchedNetworkEvent ? contractMatchedEvent : null;
+    const originatingNetworkEvents = hasMatchedNetworkEvent ? [contractMatchedEvent] : [];
+
+    return {
+      mutation,
+      originatingStepId: stepId,
+      originatingActionType: actionType,
+      originatingNetworkEvent,
+      originatingNetworkEvents,
+      entityScope,
+      beforeStepSnapshotHash: beforeHash,
+      afterStepSnapshotHash: afterHash,
+      beforeSnapshotHash: beforeHash,
+      afterSnapshotHash: afterHash,
+      correlatedBy: hasMatchedNetworkEvent ? 'network_linkage' : 'expected_network_event_not_found',
+      valid: hasMatchedNetworkEvent,
+      reason: hasMatchedNetworkEvent ? null : 'expected_network_event_not_found',
+    };
+  });
+}
+
+/**
+ * Verifica se step DEVE gerar mutações.
+ * BASEADO EXCLUSIVAMENTE no registry, nunca em heurística.
+ *
+ * @param {string|object} stepIdOrSpec
+ * @returns {boolean}
+ */
+function isMutationExpectedStep(stepIdOrSpec) {
+  return registryIsMutationExpectedStep(stepIdOrSpec);
+}
+
+/**
+ * Computa diff incremental por step usando snapshots before/after do próprio step.
+ *
+ * Retorna sempre estrutura canônica para facilitar validação causal.
+ */
+function computeIncrementalStepDiff({
+  step = {},
+  beforeStepSnapshot = null,
+  afterStepSnapshot = null,
+} = {}) {
+  const stepId = step.id || step.stepId || 'unknown';
+  const actionType = step.actionType || step.action || step.type || 'unknown';
+  const hasSnapshots = beforeStepSnapshot != null && afterStepSnapshot != null;
+
+  if (!hasSnapshots) {
+    return {
+      stepId,
+      actionType,
+      changed: false,
+      hasSnapshots: false,
+      diff: null,
+      observedMutations: [],
+      observedSideEffects: [],
+      mutationCount: 0,
+    };
+  }
+
+  const diff = computeRealSnapshotDiff(beforeStepSnapshot, afterStepSnapshot);
+  const observedMutations = deriveObservedMutations(diff, { ...step, id: stepId, actionType });
+  const observedSideEffects = deriveObservedSideEffects(diff, { ...step, id: stepId, actionType });
+
+  return {
+    stepId,
+    actionType,
+    changed: Boolean(diff?.changed),
+    hasSnapshots: true,
+    diff,
+    observedMutations,
+    observedSideEffects,
+    mutationCount: observedMutations.length,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // validatePostStateProof
 // ---------------------------------------------------------------------------
 
 /**
- * Valida o estado pós-execução: snapshot diff real, mutações observadas,
- * side effects observados, e estado final.
+ * Valida o estado pós-execução: diff incremental real, mutações observadas,
+ * side effects observados, provenance determinística e estado final.
  *
  * DEVE ser chamado somente após:
- *   - afterSnapshot coletado
- *   - diff computado via computeRealSnapshotDiff(before, after)
+ *   - afterStepSnapshot coletado
+ *   - diff incremental computado via computeIncrementalStepDiff()
  *
  * @param {object} params
  * @param {object|null} params.beforeSnapshot - snapshot coletado antes do step
@@ -274,6 +294,7 @@ function validatePostStateProof({
   beforeSnapshot = null,
   afterSnapshot = null,
   step = {},
+  incrementalDiff = null,
   journeyContext = {},
 } = {}) {
   const stepId = step.id || step.stepId || 'unknown';
@@ -281,8 +302,7 @@ function validatePostStateProof({
   const blocking = Boolean(journeyContext.isBlockingJourney);
   const executionMode = String(journeyContext.executionMode || 'operational_go').toLowerCase();
 
-  const requiresPostState =
-    POST_STATE_REQUIRED_TYPES.has(actionType) || POST_STATE_REQUIRED_STEP_IDS.has(stepId);
+  const requiresPostState = isMutationExpectedStep(step);
 
   const blockers = [];
 
@@ -311,13 +331,20 @@ function validatePostStateProof({
     };
   }
 
-  // ── 1. Compute real snapshot diff ─────────────────────────────────────────
-  const diff = computeRealSnapshotDiff(beforeSnapshot, afterSnapshot);
-
-  // ── 2. Derive observed mutations e side effects ───────────────────────────
-  const observedMutations = deriveObservedMutations(diff);
-  const observedSideEffects = deriveObservedSideEffects(diff);
-  const mutationCount = observedMutations.length;
+  // ── 1. Compute incremental step diff (causalidade por step) ───────────────
+  const incremental = incrementalDiff || computeIncrementalStepDiff({
+    step,
+    beforeStepSnapshot: beforeSnapshot,
+    afterStepSnapshot: afterSnapshot,
+  });
+  const diff = incremental.diff;
+  const observedMutations = Array.isArray(incremental.observedMutations)
+    ? incremental.observedMutations
+    : [];
+  const observedSideEffects = Array.isArray(incremental.observedSideEffects)
+    ? incremental.observedSideEffects
+    : [];
+  const mutationCount = Number(incremental.mutationCount || 0);
 
   if (!requiresPostState) {
     // Passos não-mutacionais: apenas registrar diff sem falhar
@@ -337,8 +364,17 @@ function validatePostStateProof({
     };
   }
 
+  if (!incremental.hasSnapshots) {
+    blockers.push({
+      reason: 'post_state_proof_missing_step_snapshots',
+      stepId,
+      actionType,
+      message: 'beforeStepSnapshot/afterStepSnapshot ausentes para step mutacional',
+    });
+  }
+
   // ── 3. Snapshot must have changed ────────────────────────────────────────
-  if (!diff.changed) {
+  if (!incremental.changed) {
     blockers.push({
       reason: 'post_state_proof_snapshot_unchanged',
       stepId,
@@ -360,14 +396,11 @@ function validatePostStateProof({
     });
   }
 
-  // ── 5. Validate expected mutations por contrato ───────────────────────────
-  const expectedMutations =
-    POST_STATE_MUTATION_CONTRACTS[stepId] || POST_STATE_MUTATION_CONTRACTS[actionType] || [];
+  // ── 5. Validate expected mutations por registry ───────────────────────────
+  const expectedMutations = getExpectedMutationsForStep(step);
 
   const missingMutations = expectedMutations.filter(
-    (em) => !observedMutations.some(
-      (om) => om === em || om.startsWith(em) || em.startsWith(om.split(':')[0]),
-    ),
+    (em) => !observedMutations.some((om) => String(om) === String(em)),
   );
 
   if (missingMutations.length > 0) {
@@ -381,13 +414,12 @@ function validatePostStateProof({
     });
   }
 
-  // ── 6. Validate expected side effects por contrato ────────────────────────
-  const expectedSideEffects =
-    POST_STATE_SIDE_EFFECT_CONTRACTS[stepId] || POST_STATE_SIDE_EFFECT_CONTRACTS[actionType] || [];
+  // ── 6. Validate expected side effects por registry ────────────────────────
+  const expectedSideEffects = getExpectedSideEffectsForStep(step);
 
   const missingSideEffects = expectedSideEffects.filter(
     (es) => !observedSideEffects.some(
-      (os) => os === es || os.includes(es) || es.includes(os),
+      (os) => os === es,
     ),
   );
 
@@ -481,6 +513,7 @@ function appendProofChainToReplay(enrichedStep = {}, stepExecutionProof = {}, po
     snapshotDiff: postStateProof.diff || enrichedStep.snapshotDiff || null,
     observedMutations: postStateProof.observedMutations || [],
     observedSideEffects: postStateProof.observedSideEffects || [],
+    mutationProvenance: postStateProof.mutationProvenance || enrichedStep.mutationProvenance || [],
     proofBlockers: allBlockers,
     proofGoNoGo: goNoGo,
   };
@@ -493,13 +526,15 @@ function appendProofChainToReplay(enrichedStep = {}, stepExecutionProof = {}, po
 /**
  * Correlaciona cada step executado com as mutações que ele causou.
  *
- * Usa o diff global da jornada + contratos de actionType/stepId para determinar
- * quais mutações são atribuíveis a cada step.  Retorna goNoGo='NO_GO' para
- * qualquer step que exige mutação por contrato mas nenhuma foi observada no diff.
+ * Usa exclusivamente o diff incremental do próprio step, snapshots entity-scoped
+ * e matching exato entre mutations/side effects esperados e observados.
+ * Retorna goNoGo='NO_GO' para qualquer step que exige mutação por contrato mas
+ * nenhuma mutação canônica exata foi observada no diff incremental.
  *
  * Pipeline esperado:
- *   executeOperationalSteps() → collectAfterSnapshot() → computeRealSnapshotDiff()
- *   → deriveStepScopedMutations()   ← este módulo
+ *   collectStepBeforeSnapshot() → executeStep() → collectStepAfterSnapshot()
+ *   → computeIncrementalStepDiff() → deriveObservedMutations()
+ *   → deriveObservedSideEffects() → deriveStepScopedMutations()
  *
  * @param {object[]} steps           - steps executados (com id, actionType, networkEvents)
  * @param {object|null} beforeSnapshot
@@ -512,56 +547,63 @@ function appendProofChainToReplay(enrichedStep = {}, stepExecutionProof = {}, po
 function deriveStepScopedMutations(steps = [], beforeSnapshot = null, afterSnapshot = null, diff = null) {
   if (!Array.isArray(steps) || steps.length === 0) return [];
 
-  const activeDiff = diff || computeRealSnapshotDiff(beforeSnapshot, afterSnapshot);
-  const allMutations = deriveObservedMutations(activeDiff);
-  const allSideEffects = deriveObservedSideEffects(activeDiff);
-
   return steps.map((step) => {
     const stepId = step?.id || step?.stepId || 'unknown';
     const actionType = step?.actionType || step?.action || step?.type || 'unknown';
 
-    const contractMutations =
-      POST_STATE_MUTATION_CONTRACTS[stepId] || POST_STATE_MUTATION_CONTRACTS[actionType] || [];
-    const contractSideEffects =
-      POST_STATE_SIDE_EFFECT_CONTRACTS[stepId] || POST_STATE_SIDE_EFFECT_CONTRACTS[actionType] || [];
+    const contractMutations = getExpectedMutationsForStep(step);
+    const contractSideEffects = getExpectedSideEffectsForStep(step);
 
-    // Mutações do diff atribuíveis a este step pelo contrato
-    const scopedMutations =
-      contractMutations.length > 0
-        ? allMutations.filter((m) =>
-            contractMutations.some(
-              (cm) => m === cm || m.startsWith(cm) || cm.startsWith(m.split(':')[0]),
-            ),
-          )
-        : POST_STATE_REQUIRED_TYPES.has(actionType) || POST_STATE_REQUIRED_STEP_IDS.has(stepId)
-          ? allMutations
-          : [];
+    const incremental = computeIncrementalStepDiff({
+      step,
+      beforeStepSnapshot: step?.beforeStepSnapshot || null,
+      afterStepSnapshot: step?.afterStepSnapshot || null,
+    });
 
-    const scopedSideEffects =
-      contractSideEffects.length > 0
-        ? allSideEffects.filter((s) =>
-            contractSideEffects.some((cs) => s === cs || s.includes(cs) || cs.includes(s)),
-          )
-        : [];
+    // Mutações do diff incremental atribuíveis a este step pelo contrato
+    const scopedMutations = contractMutations.length > 0
+      ? incremental.observedMutations.filter((m) =>
+          contractMutations.some((cm) => String(m) === String(cm)),
+        )
+      : incremental.observedMutations;
 
-    // Correlação via network events do step (evidência de causalidade)
+    const scopedSideEffects = contractSideEffects.length > 0
+      ? incremental.observedSideEffects.filter((s) =>
+          contractSideEffects.some((cs) => String(s) === String(cs)),
+        )
+      : incremental.observedSideEffects;
+
     const networkEvents = Array.isArray(step.networkEvents) ? step.networkEvents : [];
-    const networkCorrelation = networkEvents
-      .filter((e) => e.type === 'response' && Number(e.status) >= 200 && Number(e.status) < 300)
-      .map((e) => ({ method: e.method || null, url: e.url || null, status: e.status || null }));
+    const matchedNetworkEvent = matchExpectedNetworkEvent(stepId, networkEvents);
+    const networkCorrelation = matchedNetworkEvent
+      ? [{
+          method: matchedNetworkEvent.method || null,
+          url: matchedNetworkEvent.url || null,
+          status: matchedNetworkEvent.status || null,
+          correlatedBy: 'expected_network_event',
+        }]
+      : [];
 
-    const requiresMutation =
-      POST_STATE_REQUIRED_TYPES.has(actionType) || POST_STATE_REQUIRED_STEP_IDS.has(stepId);
+    const requiresMutation = isMutationExpectedStep(step);
     const mutationMissing =
-      requiresMutation && contractMutations.length > 0 && scopedMutations.length === 0;
+      requiresMutation && (!incremental.hasSnapshots
+      || !incremental.changed
+      || (contractMutations.length > 0 && scopedMutations.length === 0));
 
     return {
       stepId,
       actionType,
+      changed: incremental.changed,
+      incrementalDiff: incremental.diff,
+      observedMutations: incremental.observedMutations,
+      observedSideEffects: incremental.observedSideEffects,
+      mutationCount: incremental.mutationCount,
+      beforeStepSnapshotPresent: Boolean(step?.beforeStepSnapshot),
+      afterStepSnapshotPresent: Boolean(step?.afterStepSnapshot),
       scopedMutations,
       scopedSideEffects,
       networkCorrelation,
-      correlationBasis: contractMutations.length > 0 ? 'contract' : 'inferred',
+      correlationBasis: 'step_incremental',
       requiresMutation,
       mutationMissing,
       goNoGo: mutationMissing ? 'NO_GO' : null,
@@ -575,7 +617,7 @@ module.exports = {
   deriveObservedSideEffects,
   appendProofChainToReplay,
   deriveStepScopedMutations,
-  POST_STATE_MUTATION_CONTRACTS,
-  POST_STATE_SIDE_EFFECT_CONTRACTS,
-  POST_STATE_REQUIRED_TYPES,
+  computeIncrementalStepDiff,
+  isMutationExpectedStep,
+  computeMutationProvenance,
 };

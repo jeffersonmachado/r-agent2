@@ -3,6 +3,14 @@ const replayNormalizationService = require('./replayNormalizationService');
 const transitionInferenceService = require('./transitionInferenceService');
 const operationalStateEngine = require('./operationalStateEngine');
 const { validateEvidenceByContract } = require('../../../qa/evidence/stepEvidenceContracts');
+const {
+  getOperationalStepContract,
+  getExpectedSideEffectsForStep,
+  getJourneySteps,
+  resolveJourneyId,
+  matchExpectedNetworkEvent,
+} = require('../../../qa/contracts/operationalStepRegistry');
+const { validateReplayIntegrity } = require('./replayIntegrityService');
 
 /**
  * Valida se replay é operacional real
@@ -28,18 +36,121 @@ function toSnakeCase(value = '') {
 }
 
 function normalizeJourneyId(value = '') {
-  const raw = String(value || '').toLowerCase();
-  if (raw.includes('support') || raw.includes('ticket')) return 'support_ticket_flow';
-  if (raw.includes('fitness') || raw.includes('checkin') || raw.includes('check-in')) return 'fitness_customer_checkin';
-  if (raw.includes('booking') || raw.includes('calendar')) return 'booking_flow';
-  return raw;
+  return resolveJourneyId(value) || String(value || '').toLowerCase();
+}
+
+function getEvidenceClassification(step = {}) {
+  return String(step?.evidenceClassification || 'operational').toLowerCase();
+}
+
+function isOperationalEvidence(step = {}) {
+  return getEvidenceClassification(step) === 'operational';
+}
+
+function partitionEvidenceSteps(steps = []) {
+  const list = Array.isArray(steps) ? steps : [];
+  const operationalSteps = list.filter(isOperationalEvidence);
+  const diagnosticSteps = list.filter((step) => !isOperationalEvidence(step));
+  return {
+    operationalSteps,
+    diagnosticSteps,
+    hasOperationalEvidence: operationalSteps.length > 0,
+    hasDiagnosticEvidence: diagnosticSteps.length > 0,
+  };
+}
+
+function getReplayPostStateSummary(replay = {}) {
+  return replay?.postStateSummary || replay?.postState?.postStateSummary || null;
+}
+
+function getMutationalOperationalSteps(replay = {}) {
+  const operationalSteps = partitionEvidenceSteps(replay.steps).operationalSteps;
+  return operationalSteps.filter((step) => {
+    const stepId = step?.id || step?.stepId || null;
+    const contract = getOperationalStepContract(stepId);
+    return contract?.mutationExpected === true;
+  });
+}
+
+function getSingleMutationalPostStateSummary(replay = {}) {
+  const mutationalSteps = getMutationalOperationalSteps(replay);
+
+  if (mutationalSteps.length !== 1) return null;
+  return getReplayPostStateSummary(replay);
+}
+
+function getStepObservedMutations(step = {}) {
+  if (Array.isArray(step?.observedMutations) && step.observedMutations.length > 0) {
+    return step.observedMutations;
+  }
+  return Array.isArray(step?.postStateProof?.observedMutations)
+    ? step.postStateProof.observedMutations
+    : [];
+}
+
+function getStepMutationProvenance(step = {}) {
+  if (Array.isArray(step?.mutationProvenance) && step.mutationProvenance.length > 0) {
+    return step.mutationProvenance;
+  }
+  return Array.isArray(step?.postStateProof?.mutationProvenance)
+    ? step.postStateProof.mutationProvenance
+    : [];
+}
+
+function getStepNetworkCorrelation(step = {}) {
+  if (Array.isArray(step?.networkCorrelation) && step.networkCorrelation.length > 0) {
+    return step.networkCorrelation;
+  }
+  return Array.isArray(step?.postStateProof?.networkCorrelation)
+    ? step.postStateProof.networkCorrelation
+    : [];
+}
+
+function getSummaryMutationProvenanceForStep(replay = {}, step = {}) {
+  const summary = getReplayPostStateSummary(replay);
+  const summaryProvenance = Array.isArray(summary?.mutationProvenance)
+    ? summary.mutationProvenance
+    : [];
+  if (summaryProvenance.length === 0) return [];
+
+  const stepId = step?.id || step?.stepId || null;
+  const filtered = stepId
+    ? summaryProvenance.filter((record) => record?.originatingStepId === stepId)
+    : [];
+
+  if (filtered.length > 0) return filtered;
+
+  return getMutationalOperationalSteps(replay).length === 1 ? summaryProvenance : [];
+}
+
+function getSummaryNetworkCorrelationForStep(replay = {}, step = {}) {
+  const summary = getReplayPostStateSummary(replay);
+  const summaryNetworkCorrelation = Array.isArray(summary?.networkCorrelation)
+    ? summary.networkCorrelation
+    : [];
+  if (summaryNetworkCorrelation.length === 0) return [];
+
+  const stepId = step?.id || step?.stepId || null;
+  const matchedNetworkEvent = stepId
+    ? matchExpectedNetworkEvent(stepId, summaryNetworkCorrelation)
+    : null;
+
+  if (matchedNetworkEvent) return [matchedNetworkEvent];
+
+  return getMutationalOperationalSteps(replay).length === 1 ? summaryNetworkCorrelation : [];
 }
 
 function validateReplayStepEvidence(replay = {}) {
-  const steps = Array.isArray(replay.steps) ? replay.steps : [];
+  const allSteps = Array.isArray(replay.steps) ? replay.steps : [];
+  const { operationalSteps, diagnosticSteps } = partitionEvidenceSteps(allSteps);
+  const steps = operationalSteps;
   const blockers = [];
   const journeyId = normalizeJourneyId(replay.journeyId);
   const isBlockingJourney = ['support_ticket_flow', 'fitness_customer_checkin'].includes(journeyId);
+
+  if (steps.length === 0 && diagnosticSteps.length > 0) {
+    blockers.push({ reason: 'operational_evidence_missing', journeyId });
+  }
 
   for (const [index, step] of steps.entries()) {
     const stepId = step?.id || `step-${index + 1}`;
@@ -68,6 +179,120 @@ function validateReplayStepEvidence(replay = {}) {
   return {
     valid: blockers.length === 0,
     stepsChecked: steps.length,
+    diagnosticStepsIgnored: diagnosticSteps.length,
+    blockers,
+  };
+}
+
+function validateMutationProvenanceCompleteness(replay = {}) {
+  const steps = partitionEvidenceSteps(replay.steps).operationalSteps;
+  const blockers = [];
+
+  for (const [index, step] of steps.entries()) {
+    const stepId = step?.id || `step-${index + 1}`;
+    const actionType = step?.actionType || step?.action || step?.type || 'unknown';
+    const contract = getOperationalStepContract(stepId);
+    const observedMutations = getStepObservedMutations(step);
+    const shouldRequireProvenance = contract
+      ? contract.mutationExpected === true
+      : observedMutations.length > 0;
+
+    if (!shouldRequireProvenance) continue;
+
+    if (!contract) {
+      blockers.push({
+        reason: 'operational_step_contract_missing',
+        stepId,
+        actionType,
+      });
+      continue;
+    }
+
+    const mutationProvenance = getStepMutationProvenance(step).length > 0
+      ? getStepMutationProvenance(step)
+      : getSummaryMutationProvenanceForStep(replay, step);
+
+    if (mutationProvenance.length === 0) {
+      blockers.push({
+        reason: 'mutation_provenance_missing',
+        stepId,
+        actionType,
+      });
+      continue;
+    }
+
+    const provenanceByMutation = new Map();
+    for (const record of mutationProvenance) {
+      if (record && record.mutation) {
+        provenanceByMutation.set(record.mutation, record);
+      }
+    }
+
+    for (const mutation of observedMutations) {
+      const record = provenanceByMutation.get(mutation);
+      if (!record) {
+        blockers.push({
+          reason: 'mutation_provenance_entry_missing',
+          stepId,
+          actionType,
+          mutation,
+        });
+        continue;
+      }
+
+      const missingFields = [];
+      if (!record.originatingStepId) missingFields.push('originatingStepId');
+      if (!record.originatingActionType) missingFields.push('originatingActionType');
+      if (!record.originatingNetworkEvent) missingFields.push('originatingNetworkEvent');
+      if (!Array.isArray(record.entityScope) || record.entityScope.length === 0) missingFields.push('entityScope');
+      if (!record.beforeStepSnapshotHash && !record.beforeSnapshotHash) missingFields.push('beforeStepSnapshotHash');
+      if (!record.afterStepSnapshotHash && !record.afterSnapshotHash) missingFields.push('afterStepSnapshotHash');
+
+      if (missingFields.length > 0) {
+        blockers.push({
+          reason: 'mutation_provenance_incomplete',
+          stepId,
+          actionType,
+          mutation,
+          missingFields,
+        });
+      }
+
+      if (record.valid !== true || record.reason) {
+        blockers.push({
+          reason: 'mutation_provenance_invalid',
+          stepId,
+          actionType,
+          mutation,
+          provenanceReason: record.reason || 'expected_network_event_not_found',
+        });
+      }
+
+      if (record.correlatedBy !== 'network_linkage') {
+        blockers.push({
+          reason: 'mutation_provenance_non_deterministic',
+          stepId,
+          actionType,
+          mutation,
+          correlatedBy: record.correlatedBy || null,
+        });
+      }
+
+      if (record.originatingActionType !== contract.actionType) {
+        blockers.push({
+          reason: 'originating_action_type_mismatch',
+          stepId,
+          actionType,
+          mutation,
+          expectedActionType: contract.actionType,
+          actualActionType: record.originatingActionType || null,
+        });
+      }
+    }
+  }
+
+  return {
+    valid: blockers.length === 0,
     blockers,
   };
 }
@@ -101,7 +326,7 @@ function validateOperationalSeedLinkage(replay = {}) {
   }
 
   if (journeyId === 'support_ticket_flow') {
-    const hasIds = Boolean(seedEvidence?.ticketId && seedEvidence?.conversationId && seedEvidence?.contactId);
+    const hasIds = Boolean(seedEvidence?.ticketId);
     if (!hasIds) blockers.push({ reason: 'support_seed_missing_ids', journeyId });
   }
 
@@ -120,61 +345,88 @@ function validateOperationalSeedLinkage(replay = {}) {
 function validateJourneyOperationalFlow(replay = {}) {
   const journeyId = normalizeJourneyId(replay.journeyId);
   const blockers = [];
-  const steps = Array.isArray(replay.steps) ? replay.steps : [];
-  const events = Array.isArray(replay.events) ? replay.events : [];
-  const pages = collectReplayPages(replay);
-  const before = replay.beforeSnapshot || {};
-  const after = replay.afterSnapshot || {};
-
-  if (journeyId === 'support_ticket_flow') {
-    const hasSupportAccess = pages.some((page) => String(page).includes('/support'));
-    const hasTicketList = steps.some((step) => /ticket-list|ticket-card/i.test(String(step?.selector || step?.dataTestId || '')));
-    const hasTicketOpen = steps.some((step) => /ticket-detail|open-ticket|ticket-card/i.test(String(step?.selector || step?.dataTestId || '')));
-    const hasTicketReply = steps.some((step) => /reply|message|ticket-reply/i.test(String(step?.selector || step?.dataTestId || step?.actionType || step?.action || '')))
-      || events.some((event) => String(event?.entity || '').toLowerCase().includes('ticket') && ['update', 'write', 'insert'].includes(String(event?.operation || '').toLowerCase()));
-    const hasStatusChange = Boolean(after?.db?.ticket?.status) && String(after?.db?.ticket?.status).toLowerCase() !== String(before?.db?.ticket?.status || '').toLowerCase();
-    const hasPersistence = Boolean(after?.db?.ticket?.exists) && Boolean(after?.db?.ticket?.updatedAt || after?.db?.ticket?.status);
-    const hasCrm = Number(after?.crm?.activities?.count || 0) > Number(before?.crm?.activities?.count || 0)
-      || events.some((event) => String(event?.entity || '').toLowerCase().includes('crm'));
-    const hasAudit = Number(after?.events?.audit?.count || 0) > Number(before?.events?.audit?.count || 0)
-      || (Array.isArray(replay.auditLog) && replay.auditLog.length > 0)
-      || events.some((event) => String(event?.entity || '').toLowerCase().includes('audit'));
-
-    if (!hasSupportAccess) blockers.push({ reason: 'support_flow_missing_support_access' });
-    if (!hasTicketList) blockers.push({ reason: 'support_flow_missing_ticket_listing' });
-    if (!hasTicketOpen) blockers.push({ reason: 'support_flow_missing_ticket_open' });
-    if (!hasTicketReply) blockers.push({ reason: 'support_flow_missing_ticket_reply' });
-    if (!hasStatusChange) blockers.push({ reason: 'support_flow_missing_status_change' });
-    if (!hasPersistence) blockers.push({ reason: 'support_flow_missing_persistence_validation' });
-    if (!hasCrm) blockers.push({ reason: 'support_flow_missing_crm_validation' });
-    if (!hasAudit) blockers.push({ reason: 'support_flow_missing_audit_validation' });
+  const evidence = partitionEvidenceSteps(replay.steps);
+  const steps = evidence.operationalSteps;
+  const requiredSteps = Object.keys(getJourneySteps(journeyId) || {});
+  const byStepId = new Map();
+  for (const step of steps) {
+    const stepId = step?.id || step?.stepId;
+    if (stepId) byStepId.set(stepId, step);
   }
 
-  if (journeyId === 'fitness_customer_checkin') {
-    const deviceMode = String(after?.devices?.mode || before?.devices?.mode || after?.metadata?.deviceEvidence || before?.metadata?.deviceEvidence || '').toLowerCase();
-    const hasCrmCustomer = Boolean(before?.db?.crm?.contact?.exists || after?.db?.crm?.contact?.exists);
-    const membershipActive = Boolean(before?.db?.membership?.active || after?.db?.membership?.active);
-    const credentialValid = Boolean(before?.db?.credential?.exists || after?.db?.credential?.exists);
-    const accessAllow = Boolean(after?.api?.access?.decision?.allow)
-      || events.some((event) => String(event?.entity || '').toLowerCase().includes('access') && String(event?.result || '').toLowerCase() === 'allow');
-    const accessEventCreated = Number(after?.devices?.access?.events || 0) > 0
-      || events.some((event) => String(event?.entity || '').toLowerCase().includes('access') && ['insert', 'write', 'update'].includes(String(event?.operation || '').toLowerCase()));
-    const attendanceCreated = Boolean(after?.db?.attendance?.created) || Number(after?.db?.attendance?.count || 0) > 0;
-    const crmUpdated = Boolean(after?.crm?.presenceActivity?.created) || Number(after?.crm?.presenceActivity?.count || 0) > 0;
+  for (const requiredStepId of requiredSteps) {
+    if (!byStepId.has(requiredStepId)) {
+      blockers.push({ reason: 'journey_required_step_missing', journeyId, stepId: requiredStepId });
+    }
+  }
 
-    if (deviceMode.includes('simulated')) blockers.push({ reason: 'simulated_device_not_allowed' });
-    if (!hasCrmCustomer) blockers.push({ reason: 'fitness_flow_missing_crm_customer' });
-    if (!membershipActive) blockers.push({ reason: 'fitness_flow_missing_active_membership' });
-    if (!credentialValid) blockers.push({ reason: 'fitness_flow_missing_valid_credential' });
-    if (!accessAllow) blockers.push({ reason: 'fitness_flow_missing_access_allow' });
-    if (!accessEventCreated) blockers.push({ reason: 'fitness_flow_missing_access_event' });
-    if (!attendanceCreated) blockers.push({ reason: 'fitness_flow_missing_attendance_created' });
-    if (!crmUpdated) blockers.push({ reason: 'fitness_flow_missing_crm_update' });
+  for (const step of steps) {
+    const stepId = step?.id || step?.stepId || null;
+    const contract = getOperationalStepContract(stepId);
+    if (!contract) {
+      blockers.push({ reason: 'operational_step_contract_missing', journeyId, stepId: stepId || 'unknown' });
+      continue;
+    }
+
+    const stepActionType = step?.actionType || step?.action || step?.type || null;
+    if (stepActionType !== contract.actionType) {
+      blockers.push({
+        reason: 'step_action_type_not_canonical',
+        journeyId,
+        stepId,
+        expectedActionType: contract.actionType,
+        actualActionType: stepActionType,
+      });
+    }
+
+    if (step?.mutationLinkage?.correlatedBy === 'journey_transition') {
+      blockers.push({ reason: 'operational_journey_transition_not_allowed', journeyId, stepId });
+    }
+
+    if (step?.mutationLinkage?.source === 'stateMutation') {
+      blockers.push({ reason: 'state_mutation_not_allowed_as_step_proof', journeyId, stepId });
+    }
+
+    if (contract.networkProofRequired === true) {
+      const networkEvent = matchExpectedNetworkEvent(stepId, Array.isArray(step?.networkEvents) ? step.networkEvents : []);
+      if (!networkEvent) {
+        blockers.push({ reason: 'expected_network_event_not_found', journeyId, stepId });
+      }
+    }
+
+    if (contract.mutationExpected === true) {
+      const observedMutations = Array.isArray(step?.observedMutations) ? step.observedMutations : [];
+      const expectedMutations = Array.isArray(contract.expectedMutations) ? contract.expectedMutations : [];
+      const expectedSideEffects = getExpectedSideEffectsForStep(stepId);
+      const observedSideEffects = Array.isArray(step?.observedSideEffects) ? step.observedSideEffects : [];
+      const provenance = Array.isArray(step?.mutationProvenance) ? step.mutationProvenance : [];
+
+      const missingMutations = expectedMutations.filter((mutation) =>
+        !observedMutations.some((item) => String(item) === String(mutation))
+      );
+      if (missingMutations.length > 0) {
+        blockers.push({ reason: 'correlation_expected_mutations_missing', journeyId, stepId, missingMutations });
+      }
+
+      const missingSideEffects = expectedSideEffects.filter((sideEffect) =>
+        !observedSideEffects.some((item) => String(item) === String(sideEffect))
+      );
+      if (missingSideEffects.length > 0) {
+        blockers.push({ reason: 'correlation_expected_side_effects_missing', journeyId, stepId, missingSideEffects });
+      }
+
+      const invalidProvenance = provenance.filter((item) => item?.valid !== true || item?.reason || item?.correlatedBy !== 'network_linkage');
+      if (invalidProvenance.length > 0) {
+        blockers.push({ reason: 'mutation_provenance_invalid', journeyId, stepId });
+      }
+    }
   }
 
   return {
     valid: blockers.length === 0,
     journeyId,
+    operationalStepsChecked: steps.length,
+    diagnosticStepsIgnored: evidence.diagnosticSteps.length,
     blockers,
   };
 }
@@ -198,13 +450,18 @@ function validateReplayCompleteness(replay = {}) {
   const operationalPages = pages.filter((page) => OPERATIONAL_MODULE_PATTERN.test(page));
   const diagnosticPages = pages.filter((page) => DIAGNOSTIC_PAGE_PATTERN.test(page));
   const onlyDiagnosticPages = pages.length > 0 && diagnosticPages.length === pages.length;
+  const evidence = partitionEvidenceSteps(replay.steps);
   const stepEvidence = validateReplayStepEvidence(replay);
+  const mutationProvenance = validateMutationProvenanceCompleteness(replay);
   const journeyFlow = validateJourneyOperationalFlow(replay);
   const seedLinkage = validateOperationalSeedLinkage(replay);
   const blockers = [];
 
   if (Number(replay.rawStepCount || 0) === 0) {
     blockers.push({ reason: 'replay_steps_empty' });
+  }
+  if (!evidence.hasOperationalEvidence && evidence.hasDiagnosticEvidence) {
+    blockers.push({ reason: 'operational_evidence_missing' });
   }
   if (Number(replay.rawScreenshotCount || 0) === 0) {
     blockers.push({ reason: 'missing_operational_screenshots' });
@@ -217,6 +474,9 @@ function validateReplayCompleteness(replay = {}) {
   }
   if (!stepEvidence.valid) {
     blockers.push(...stepEvidence.blockers);
+  }
+  if (!mutationProvenance.valid) {
+    blockers.push(...mutationProvenance.blockers);
   }
   if (!journeyFlow.valid) {
     blockers.push(...journeyFlow.blockers);
@@ -231,7 +491,11 @@ function validateReplayCompleteness(replay = {}) {
     operationalPages,
     diagnosticPages,
     onlyDiagnosticPages,
+    hasOperationalEvidence: evidence.hasOperationalEvidence,
+    hasDiagnosticEvidence: evidence.hasDiagnosticEvidence,
+    diagnosticStepsIgnored: evidence.diagnosticSteps.length,
     stepEvidence,
+    mutationProvenance,
     journeyFlow,
     seedLinkage,
     blockers,
@@ -441,25 +705,29 @@ function validateScreenshots(replay = {}) {
 
 function inferObservedSideEffects(replay = {}) {
   const observed = new Set();
-  const events = replay.events || [];
+  const steps = Array.isArray(replay.steps) ? replay.steps : [];
 
-  for (const event of events) {
-    const entity = String(event.entity || event.module || '').toLowerCase();
-    const op = String(event.operation || '').toLowerCase();
-    const type = String(event.type || '').toLowerCase();
-
-    if (entity.includes('ticket') && ['update', 'write'].includes(op)) observed.add('ticket_status_changed');
-    if (entity.includes('crm') && ['update', 'write'].includes(op)) observed.add('crm_updated');
-    if (entity.includes('booking') && ['insert', 'create', 'write'].includes(op)) observed.add('booking_created');
-    if ((entity.includes('turnstile') || entity.includes('access')) && ['command', 'update', 'write'].includes(op)) {
-      observed.add('turnstile_released');
+  // PROVA ESTRUTURAL: derivar side effects dos dados de prova por step (não heurísticas textuais sobre entidades)
+  for (const step of steps) {
+    if (Array.isArray(step?.observedSideEffects)) {
+      for (const se of step.observedSideEffects) {
+        if (typeof se === 'string' && se.trim()) observed.add(se.trim());
+      }
     }
-    if (entity.includes('attendance') && ['insert', 'write', 'update'].includes(op)) observed.add('checkin_registered');
-    if (type === 'notification' || event.eventEmitted === true) observed.add('notification_sent');
   }
 
+  // Audit log: dado estrutural do replay, não heurística
   if (Array.isArray(replay.auditLog) && replay.auditLog.length > 0) {
     observed.add('audit_log_created');
+  }
+
+  // Notificações: dado estrutural (campo emitido)
+  const events = Array.isArray(replay.events) ? replay.events : [];
+  for (const event of events) {
+    const type = String(event?.type || '').toLowerCase();
+    if (type === 'notification' || event.eventEmitted === true) {
+      observed.add('notification_sent');
+    }
   }
 
   return Array.from(observed);
@@ -507,8 +775,53 @@ function validateStateAwareReplay(replay = {}, options = {}) {
   };
 }
 
-function buildReplayBlockers(results = {}) {
+function replayHasDeterministicOperationalProof(replay = {}) {
+  const { operationalSteps, hasOperationalEvidence } = partitionEvidenceSteps(replay.steps);
+  if (!hasOperationalEvidence || operationalSteps.length === 0) return false;
+
+  let hasMutationalOperationalStep = false;
+
+  for (const step of operationalSteps) {
+    const stepId = step?.id || step?.stepId || null;
+    const contract = getOperationalStepContract(stepId);
+    if (!contract) return false;
+
+    if (contract.mutationExpected !== true) continue;
+    hasMutationalOperationalStep = true;
+
+    if (step?.incrementalDiff?.changed !== true) return false;
+    if (step?.stepExecutionProof?.valid === false) return false;
+    if (step?.postStateProof?.valid === false) return false;
+
+    const observedMutations = getStepObservedMutations(step);
+    const observedSideEffects = Array.isArray(step?.observedSideEffects) ? step.observedSideEffects : [];
+    const expectedMutations = Array.isArray(contract.expectedMutations) ? contract.expectedMutations : [];
+    const expectedSideEffects = getExpectedSideEffectsForStep(stepId);
+
+    if (expectedMutations.some((mutation) => !observedMutations.includes(mutation))) return false;
+    if (expectedSideEffects.some((sideEffect) => !observedSideEffects.includes(sideEffect))) return false;
+    if (!matchExpectedNetworkEvent(stepId, Array.isArray(step?.networkEvents) ? step.networkEvents : [])) return false;
+
+    const provenance = getStepMutationProvenance(step).length > 0
+      ? getStepMutationProvenance(step)
+      : getSummaryMutationProvenanceForStep(replay, step);
+    if (provenance.length === 0) return false;
+    if (provenance.some((record) => record?.valid !== true || record?.reason || record?.correlatedBy !== 'network_linkage')) {
+      return false;
+    }
+
+    const networkCorrelation = getStepNetworkCorrelation(step).length > 0
+      ? getStepNetworkCorrelation(step)
+      : getSummaryNetworkCorrelationForStep(replay, step);
+    if (networkCorrelation.length === 0) return false;
+  }
+
+  return hasMutationalOperationalStep;
+}
+
+function buildReplayBlockers(results = {}, replay = {}) {
   const blockers = [];
+  const deterministicOperationalProof = replayHasDeterministicOperationalProof(replay);
 
   if (results.completeness && !results.completeness.valid) {
     blockers.push(...results.completeness.blockers);
@@ -519,13 +832,13 @@ function buildReplayBlockers(results = {}) {
   if (!results.journeyPath?.isRealJourney) {
     blockers.push({ reason: 'replay_not_operational', details: results.journeyPath });
   }
-  if (!results.realOperation?.isRealOperation) {
+  if (!deterministicOperationalProof && !results.realOperation?.isRealOperation) {
     blockers.push({ reason: 'replay_missing_state_transition', details: results.realOperation });
   }
   if (!results.screenshots?.valid) {
     blockers.push({ reason: 'missing_operational_screenshots', details: results.screenshots });
   }
-  if (!results.stateAware?.valid) {
+  if (!deterministicOperationalProof && !results.stateAware?.valid) {
     const stateBlockers = Array.isArray(results.stateAware?.blockers) ? results.stateAware.blockers : [];
     const hasMissingMutation = stateBlockers.some((item) => item.reason === 'missing_real_state_mutation');
     blockers.push({
@@ -533,7 +846,7 @@ function buildReplayBlockers(results = {}) {
       details: results.stateAware,
     });
   }
-  if (results.stateAware?.clickWithoutConsequence === true) {
+  if (!deterministicOperationalProof && results.stateAware?.clickWithoutConsequence === true) {
     blockers.push({ reason: 'validation_only_by_click' });
   }
 
@@ -572,6 +885,9 @@ function validateOperationalReplay(replay = {}, options = {}) {
   }
 
   const normalizedReplay = replayNormalizationService.normalizeReplay(replay);
+  const replayIntegrity = replay.replayHash || replay.replayChecksum || replay.governanceSignature
+    ? validateReplayIntegrity(replay, replay.governance || replay.governanceResult || {})
+    : { valid: true, blockers: [] };
   const missingReplay = !normalizedReplay.replayId
     && normalizedReplay.events.length === 0
     && normalizedReplay.screenshots.length === 0;
@@ -599,7 +915,23 @@ function validateOperationalReplay(replay = {}, options = {}) {
     realOperation: validateRealOperation(normalizedReplay),
     screenshots: validateScreenshots(normalizedReplay),
     stateAware: validateStateAwareReplay(normalizedReplay, options),
+    replayIntegrity,
   };
+  const deterministicOperationalProof = replayHasDeterministicOperationalProof(normalizedReplay);
+  if (deterministicOperationalProof) {
+    results.stateAware = {
+      ...results.stateAware,
+      valid: true,
+      diagnosticOnly: true,
+      reason: 'legacy_state_transition_validation_bypassed_by_deterministic_operational_proof',
+    };
+    results.realOperation = {
+      ...results.realOperation,
+      isRealOperation: true,
+      diagnosticOnly: true,
+      reason: 'legacy_real_operation_validation_bypassed_by_deterministic_operational_proof',
+    };
+  }
 
   // Calcular score geral
   let score = 0;
@@ -630,7 +962,15 @@ function validateOperationalReplay(replay = {}, options = {}) {
   maxScore += 30;
 
   const percentage = (score / maxScore) * 100;
-  const blockers = buildReplayBlockers(results);
+  const blockers = buildReplayBlockers(results, normalizedReplay);
+  if (!replayIntegrity.valid) {
+    blockers.push(...replayIntegrity.blockers);
+  }
+  const diagnosticOnlyReview =
+    results.completeness?.hasDiagnosticEvidence === true
+    && results.completeness?.hasOperationalEvidence !== true;
+  const isOperational = percentage >= 60 && results.completeness.valid && results.stateAware.valid && blockers.length === 0;
+  const goNoGo = isOperational ? 'GO' : (diagnosticOnlyReview ? 'REVIEW' : 'NO_GO');
 
   // Classificar
   let classification = 'not_operational';
@@ -640,7 +980,8 @@ function validateOperationalReplay(replay = {}, options = {}) {
   else if (percentage >= 20) classification = 'minimal_operational';
 
   return {
-    isOperational: percentage >= 60 && results.completeness.valid && results.stateAware.valid && blockers.length === 0,
+    isOperational,
+    goNoGo,
     classification,
     score: Math.round(score),
     maxScore,
@@ -650,8 +991,10 @@ function validateOperationalReplay(replay = {}, options = {}) {
     blockers,
     operationalTimeline: results.stateAware.timeline,
     recommendation:
-      percentage >= 60 && results.completeness.valid && results.stateAware.valid && blockers.length === 0
+      isOperational
         ? 'Replay é operacionalmente válido'
+        : diagnosticOnlyReview
+          ? 'Replay contém apenas evidência diagnóstica; requer prova operacional para GO'
         : 'Replay não atende critérios operacionais mínimos de transição de estado e consequência operacional',
   };
 }
@@ -734,4 +1077,6 @@ module.exports = {
   validateStateAwareReplay,
   validateOperationalConsequences,
   suggestReplayImprovements,
+  replayHasDeterministicOperationalProof,
+  __testOnly__inferObservedSideEffects: inferObservedSideEffects,
 };

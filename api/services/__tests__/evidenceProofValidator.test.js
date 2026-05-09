@@ -48,21 +48,24 @@ describe('computeRealSnapshotDiff', () => {
     expect(result.mutationCount).toBe(0);
   });
 
-  test('messages_count incrementado → mutation detectada', () => {
+  test('messages_count incrementado → apenas diff estrutural, sem mutation inferida', () => {
     const before = { messages_count: 3, status: 'open' };
     const after = { messages_count: 4, status: 'open' };
     const result = computeRealSnapshotDiff(before, after);
     expect(result.changed).toBe(true);
-    expect(result.mutationCount).toBeGreaterThan(0);
-    expect(result.mutations.some((m) => m.includes('messages_count'))).toBe(true);
+    expect(result.mutationCount).toBe(0);
+    expect(result.mutations).toEqual([]);
+    expect(result.details).toEqual([{ field: 'messages_count', before: 3, after: 4 }]);
   });
 
-  test('status changed → mutation detectada', () => {
+  test('status changed → apenas diff estrutural, sem mutation inferida', () => {
     const before = { messages_count: 4, status: 'open' };
     const after = { messages_count: 4, status: 'resolved' };
     const result = computeRealSnapshotDiff(before, after);
     expect(result.changed).toBe(true);
-    expect(result.mutations.some((m) => m.includes('status'))).toBe(true);
+    expect(result.mutationCount).toBe(0);
+    expect(result.mutations).toEqual([]);
+    expect(result.details).toEqual([{ field: 'status', before: 'open', after: 'resolved' }]);
   });
 
   test('before null → changed:false, sem crash', () => {
@@ -86,7 +89,7 @@ describe('validateNetworkProof', () => {
   test('step_reply_ticket: evento POST correto → valid:true', () => {
     const events = [
       makeNetworkResponse('GET', '/api/other', 200),
-      makeNetworkResponse('POST', '/tickets/abc123/reply', 201),
+      makeNetworkResponse('POST', '/api/tickets/abc123/reply', 201),
     ];
     const result = validateNetworkProof(events, 'step_reply_ticket', 'type_and_send');
     expect(result.valid).toBe(true);
@@ -111,7 +114,7 @@ describe('validateNetworkProof', () => {
 
   test('step_change_status: PATCH correto → valid:true', () => {
     const events = [
-      makeNetworkResponse('PATCH', '/tickets/xyz/status', 200),
+      makeNetworkResponse('PATCH', '/api/tickets/xyz/status', 200),
     ];
     const result = validateNetworkProof(events, 'step_change_status', 'change_status');
     expect(result.valid).toBe(true);
@@ -128,8 +131,9 @@ describe('validateNetworkProof', () => {
 
   test('actionType sem contrato → noContract:true, valid:true (pass-through)', () => {
     const result = validateNetworkProof([], 'step_navegacao_inicial', 'navigate');
-    expect(result.valid).toBe(true);
-    expect(result.noContract).toBe(true);
+    expect(result.valid).toBe(false);
+    expect(result.noContract).toBe(false);
+    expect(result.blockers.some((b) => b.reason === 'operational_step_contract_missing')).toBe(true);
   });
 });
 
@@ -194,23 +198,23 @@ describe('validateSideEffectProof', () => {
   });
 
   test('message_created observado → incluso em expected', () => {
-    const observed = ['message_created', 'audit_log_created', 'crm_updated'];
+    const observed = ['audit_log_created', 'crm_updated', 'notification_sent'];
     const result = validateSideEffectProof(observed, 'step_reply_ticket', 'type_and_send');
     expect(result.valid).toBe(true);
     expect(result.missing.length).toBe(0);
   });
 
   test('step sem contrato → noContract:true, valid:true', () => {
-    const result = validateSideEffectProof([], 'step_navegacao_inicial', 'navigate');
+    const result = validateSideEffectProof([], 'step_access_support_module', 'navigate');
     expect(result.valid).toBe(true);
     expect(result.noContract).toBe(true);
   });
 
   test('change_status: ticket_status_changed ausente → blocker', () => {
-    const observed = ['audit_log_created'];
+    const observed = [];
     const result = validateSideEffectProof(observed, 'step_change_status', 'change_status');
     expect(result.valid).toBe(false);
-    expect(result.missing).toContain('ticket_status_changed');
+    expect(result.missing).toContain('audit_log_created');
   });
 });
 
@@ -332,15 +336,15 @@ describe('validateEvidenceProof', () => {
 
   describe('checkin_submit', () => {
     test('AccessDecision ausente dos side effects → NO_GO', () => {
-      const step = makeStep('step_identify_customer', 'checkin_submit', {
-        networkEvents: [makeNetworkResponse('POST', '/api/fitness/checkin/identify', 200)],
-        mutationLinkage: { observedMutations: ['access_decision_created'] },
-        sideEffectLinkage: { observedSideEffects: [] }, // access_policy_evaluated ausente
+      const step = makeStep('step_submit_checkin', 'checkin_submit', {
+        networkEvents: [makeNetworkResponse('POST', '/api/fitness/checkin', 200)],
+        mutationLinkage: { observedMutations: ['attendance_created'] },
+        sideEffectLinkage: { observedSideEffects: [] },
       });
       const result = validateEvidenceProof({
         step,
-        beforeSnapshot: { subject: null },
-        afterSnapshot: { subject: { id: '123' } },
+        beforeSnapshot: { attendance_count: 0 },
+        afterSnapshot: { attendance_count: 1 },
         networkEvents: step.networkEvents,
         journeyContext: { isBlockingJourney: true, executionMode: 'operational_go' },
       });
@@ -348,20 +352,21 @@ describe('validateEvidenceProof', () => {
       expect(result.valid).toBe(false);
     });
 
-    test('attendance missing → NO_GO (step_assert_attendance)', () => {
-      const step = makeStep('step_assert_attendance', 'assert_attendance', {
-        networkEvents: [],
-        sideEffectLinkage: { observedSideEffects: ['crm_presence_updated'] }, // attendance_created ausente
+    test('attendance missing → NO_GO (step_submit_checkin)', () => {
+      const step = makeStep('step_submit_checkin', 'checkin_submit', {
+        networkEvents: [makeNetworkResponse('POST', '/api/fitness/checkin', 200)],
+        mutationLinkage: { observedMutations: [] },
+        sideEffectLinkage: { observedSideEffects: ['crm_journey_updated'] },
       });
       const result = validateEvidenceProof({
         step,
         beforeSnapshot: { attendance_count: 0 },
         afterSnapshot: { attendance_count: 0 }, // sem mudança → NO_GO também por mutation
-        networkEvents: [],
+        networkEvents: step.networkEvents,
         journeyContext: { isBlockingJourney: true, executionMode: 'operational_go' },
       });
-      expect(result.sideEffectProof.valid).toBe(false);
-      expect(result.sideEffectProof.missing).toContain('attendance_created');
+      expect(result.mutationProof.valid).toBe(false);
+      expect(result.blockers.some((b) => String(b.reason || '').includes('mutation_proof_expected_not_observed'))).toBe(true);
     });
   });
 
@@ -422,8 +427,8 @@ describe('validateEvidenceProof', () => {
   // ── navigate (sem contrato) ───────────────────────────────────────────────
 
   describe('navigate (sem contrato de proof)', () => {
-    test('step navigate sem network events → valid:true (sem contrato)', () => {
-      const step = makeStep('step_access_support', 'navigate', { networkEvents: [] });
+    test('step navigate sem network events → fail-closed quando step não está no registry', () => {
+      const step = makeStep('step_access_support_module', 'navigate', { networkEvents: [] });
       const result = validateEvidenceProof({
         step,
         beforeSnapshot: null,

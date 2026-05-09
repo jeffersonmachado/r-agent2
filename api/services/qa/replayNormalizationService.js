@@ -117,6 +117,15 @@ function normalizeReplay(replay = {}) {
 
   const normalized = {
     replayId: replay.replayId || replay.id || null,
+    replayHash: replay.replayHash || null,
+    replayChecksum: replay.replayChecksum || null,
+    governanceSignature: replay.governanceSignature || null,
+    integrity: replay.integrity || null,
+    governance: replay.governance || replay.governanceResult || null,
+    generatedAt: replay.generatedAt || null,
+    tenantId: replay.tenantId || null,
+    environment: replay.environment || null,
+    smokeExecutionId: replay.smokeExecutionId || null,
     source: replay.source || 'rpa',
     waveId: replay.waveId || null,
     journeyId: replay.journeyId || null,
@@ -145,6 +154,8 @@ function normalizeReplay(replay = {}) {
     systemResponses: extractSystemResponses(replay, events),
     seedEvidence: replay.seedEvidence || replay.metadata?.seedEvidence || null,
     operationalSeedStatus: replay.operationalSeedStatus || replay.metadata?.operationalSeedStatus || null,
+    postState: replay.postState || null,
+    postStateSummary: replay.postStateSummary || replay.postState?.postStateSummary || null,
   };
 
   return normalized;

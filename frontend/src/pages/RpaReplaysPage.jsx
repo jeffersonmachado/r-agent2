@@ -447,7 +447,8 @@ export function RpaReplaysPage() {
     const requiredSideEffects = replayData?.stateMutation?.requiredSideEffects || replayData?.stateSnapshotContract?.contract?.requiredSideEffects || [];
     return steps.slice(0, 120).map((step, index) => {
       const stepId = step?.id || `step-${index + 1}`;
-      const actionType = step?.actionType || step?.action || step?.type || 'n/a';
+      const semanticContract = step?.semanticContract || step?.evidence?.semanticContract || null;
+      const actionType = semanticContract?.actionType || step?.actionType || step?.action || step?.type || 'n/a';
       const url = step?.url || step?.page || step?.route || step?.path || step?.input?.url || step?.evidence?.url || 'n/a';
       const timestamp = step?.timestamp || step?.startedAt || step?.at || 'n/a';
       const screenshotBefore = step?.screenshotBefore || step?.evidence?.screenshotBefore || null;
@@ -462,6 +463,21 @@ export function RpaReplaysPage() {
       const evidenceId = step?.evidenceId || step?.evidence?.evidenceId || null;
       const mutationLinkage = step?.mutationLinkage || step?.evidence?.mutationLinkage || null;
       const sideEffectLinkage = step?.sideEffectLinkage || step?.evidence?.sideEffectLinkage || null;
+      const evidenceClassification = step?.evidenceClassification || step?.evidence?.evidenceClassification || 'operational';
+      const mutationProvenance = Array.isArray(step?.mutationProvenance)
+        ? step.mutationProvenance
+        : Array.isArray(step?.evidence?.mutationProvenance)
+          ? step.evidence.mutationProvenance
+          : [];
+      const incrementalDiff = step?.incrementalDiff || step?.evidence?.incrementalDiff || null;
+      const governanceReasoning = step?.proofBlockers || step?.blockers || step?.postStateProof?.blockers || [];
+      const networkCorrelation = Array.isArray(step?.networkCorrelation)
+        ? step.networkCorrelation
+        : Array.isArray(step?.postStateProof?.networkCorrelation)
+          ? step.postStateProof.networkCorrelation
+          : Array.isArray(step?.evidence?.networkCorrelation)
+            ? step.evidence.networkCorrelation
+            : [];
       const proofResult = step?.proofResult || step?.evidence?.proofResult || null;
       // Mutation associada ao step (por id ou índice)
       const linkedMutation = Array.isArray(mutations)
@@ -496,6 +512,7 @@ export function RpaReplaysPage() {
       return {
         id: stepId,
         actionType,
+        semanticContract,
         url,
         timestamp,
         screenshot: screenshotAfter,
@@ -508,6 +525,11 @@ export function RpaReplaysPage() {
         evidenceId,
         mutationLinkage,
         sideEffectLinkage,
+        evidenceClassification,
+        mutationProvenance,
+        incrementalDiff,
+        governanceReasoning,
+        networkCorrelation,
         proofResult,
         linkedMutation,
         sourceEvidence,
@@ -1720,6 +1742,16 @@ export function RpaReplaysPage() {
                       </p>
                     </div>
                   )}
+                  {(replayData.replayHash || replayData.replayChecksum || replayData.governanceSignature) && (
+                    <div className="md:col-span-2">
+                      <span className="text-text-tertiary block mb-1">Replay integrity:</span>
+                      <div className="space-y-1 text-xs font-mono break-all">
+                        <div>hash: {replayData.replayHash || 'missing'}</div>
+                        <div>checksum: {replayData.replayChecksum || 'missing'}</div>
+                        <div>governanceSignature: {replayData.governanceSignature || 'missing'}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Informações adicionais em uma linha separada se houver timings */}
@@ -1948,6 +1980,13 @@ export function RpaReplaysPage() {
                                 )}
                               </div>
                               <div className="text-text-tertiary break-all mb-1">URL: {entry.url}</div>
+                              {entry.semanticContract && (
+                                <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
+                                  <div className="font-semibold text-text-secondary">Semantic Contract</div>
+                                  <div className="text-text-tertiary">canonical actionType: {entry.semanticContract.actionType}</div>
+                                  <div className="text-text-tertiary">mutationExpected: {String(entry.semanticContract.mutationExpected === true)}</div>
+                                </div>
+                              )}
                               <div className="text-text-tertiary mb-2">Timestamp: {entry.timestamp}</div>
                               <div className="text-text-tertiary mb-1 break-all">Selector: {entry.selectorUsed || 'n/a'}</div>
                               <div className="text-text-tertiary mb-2 break-all">Evidence ID: {entry.evidenceId || 'missing'}</div>
@@ -1985,6 +2024,7 @@ export function RpaReplaysPage() {
                               {entry.mutationLinkage && !entry.linkedMutation && (
                                 <div className="rounded border border-border-default bg-bg-primary px-2 py-1 mb-2">
                                   <div className="font-semibold text-text-secondary">Mutation Linkage</div>
+                                  <div className="text-text-tertiary">source: {entry.mutationLinkage.source || entry.mutationLinkage.correlatedBy || 'step_incremental'}</div>
                                   <div className="text-text-tertiary break-all">{JSON.stringify(entry.mutationLinkage)}</div>
                                 </div>
                               )}
@@ -2076,6 +2116,34 @@ export function RpaReplaysPage() {
                                               : 'before === after (sem mudança)'}
                                           </div>
                                         )}
+                                        {(entry.incrementalDiff || postState.diff) && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Incremental diff:</div>
+                                            <div className="text-xs text-text-secondary">
+                                              changed: {String(entry.incrementalDiff?.changed ?? postState.diff?.changed ?? false)}
+                                              {' '}| details: {entry.incrementalDiff?.diff?.details?.length ?? postState.diff?.details?.length ?? 0}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div className="mb-1">
+                                          <div className="text-xs text-text-tertiary font-semibold">Evidence classification:</div>
+                                          <div className={`text-xs ${entry.evidenceClassification === 'operational' ? 'text-status-success' : 'text-status-warning'}`}>
+                                            {entry.evidenceClassification || 'operational'}
+                                          </div>
+                                          <div className="text-xs text-text-tertiary">
+                                            {entry.evidenceClassification === 'operational' ? 'operational proof' : 'diagnostic evidence'}
+                                          </div>
+                                        </div>
+                                        {(entry.networkCorrelation || postState.networkCorrelation || []).length > 0 && (
+                                          <div className="mb-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Deterministic network correlation:</div>
+                                            {(entry.networkCorrelation || postState.networkCorrelation || []).slice(0, 4).map((event, i) => (
+                                              <div key={i} className="text-xs text-status-success break-all">
+                                                ✓ {event.method || 'n/a'} {event.url || 'n/a'} [{event.status || 'n/a'}]
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
                                         {/* Observed mutations */}
                                         {(postState.observedMutations || []).length > 0 && (
                                           <div className="mb-1">
@@ -2123,6 +2191,26 @@ export function RpaReplaysPage() {
                                           <div>
                                             {postState.blockers.slice(0, 3).map((b, i) => (
                                               <div key={i} className="text-xs text-status-error break-all">✗ {b.reason}</div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {(entry.governanceReasoning || []).length > 0 && (
+                                          <div className="mt-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Governance reasoning:</div>
+                                            {(entry.governanceReasoning || []).slice(0, 4).map((item, i) => (
+                                              <div key={i} className="text-xs text-status-error break-all">
+                                                {item.reason || JSON.stringify(item)}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {(postState.mutationProvenance || entry.mutationProvenance || []).length > 0 && (
+                                          <div className="mt-1">
+                                            <div className="text-xs text-text-tertiary font-semibold">Deterministic provenance:</div>
+                                            {(postState.mutationProvenance || entry.mutationProvenance || []).slice(0, 4).map((record, i) => (
+                                              <div key={i} className={`text-xs break-all ${record.valid ? 'text-status-success' : 'text-status-error'}`}>
+                                                {record.valid ? '✓' : '✗'} {record.mutation} | {record.correlatedBy || 'n/a'} | {record.originatingNetworkEvent?.method || 'n/a'} {record.originatingNetworkEvent?.url || ''}
+                                              </div>
                                             ))}
                                           </div>
                                         )}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-07T13:25:47.700Z",
+  "generatedAt": "2026-05-09T03:20:52.116Z",
   "capabilities": [
     {
       "id": "access_decision",
@@ -63,12 +63,17 @@
         "operationsdashboardsummary",
         "journeyinferenceservice",
         "backendcapabilityscanner",
-        "e2ecapabilityscanner"
+        "e2ecapabilityscanner",
+        "browseroperationalrunner",
+        "test",
+        "causalhardeninggovernance",
+        "evidenceproofvalidator"
       ],
       "confidence": 1,
       "sources": [
         "backend",
-        "frontend"
+        "frontend",
+        "e2e"
       ],
       "evidence": [
         "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
@@ -76,14 +81,15 @@
         "api/events/eventModelV1.js",
         "api/modules/access-control/accessDecisionService.js",
         "api/modules/vertical/handleFitnessAttendanceRoutes.js",
-        "api/services/operations/operationsDashboardSummary.js",
-        "api/services/qa/journeyInferenceService.js",
-        "api/services/qa/scanners/backendCapabilityScanner.js",
-        "api/services/qa/scanners/e2eCapabilityScanner.js",
-        "api/services/qa/scanners/frontendCapabilityScanner.js",
+        "api/services/__tests__/browserOperationalRunner.test.js",
+        "api/services/__tests__/causalHardeningGovernance.test.js",
+        "api/services/__tests__/evidenceProofValidator.test.js",
+        "api/services/__tests__/operationalSemanticConsistency.test.js",
+        "api/services/__tests__/operationalStateEngine.test.js",
         "frontend/src/api/verticalPilot.js",
         "frontend/src/pages/FitnessStudentsPage.jsx",
-        "frontend/src/pages/OperationsDashboardPage.jsx"
+        "frontend/src/pages/OperationsDashboardPage.jsx",
+        "frontend-e2e/fitness-customer-checkin.spec.ts"
       ]
     },
     {
@@ -106,7 +112,10 @@
         "beautylifecycleroutes",
         "failurediagnosisservice",
         "patchproposalservice",
-        "billingalertsservice"
+        "billingalertsservice",
+        "qawavesoperationalservice",
+        "runtimeintegrations",
+        "test"
       ],
       "confidence": 1,
       "sources": [
@@ -120,14 +129,14 @@
         "api/modules/billing/handleBillingRoutes.js",
         "api/modules/vertical/handleFitnessMembershipRoutes.js",
         "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
+        "api/services/__tests__/qaWavesOperationalService.runtimeIntegrations.test.js",
         "api/services/autocorrection/FailureDiagnosisService.js",
-        "api/services/autocorrection/PatchProposalService.js",
-        "api/services/billingAlertsService.js"
+        "api/services/autocorrection/PatchProposalService.js"
       ]
     },
     {
       "id": "crm_update",
-      "domain": "support",
+      "domain": "fitness",
       "module": "api",
       "type": "operational",
       "required": true,
@@ -140,23 +149,34 @@
         "handleschedulingsupportroutes",
         "service",
         "backendcapabilityscanner",
-        "replaycapabilityscanner"
+        "replaycapabilityscanner",
+        "test",
+        "autonomousgapclosureengine",
+        "loop",
+        "fitness",
+        "matricula",
+        "leads",
+        "qa",
+        "wave"
       ],
       "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "replay"
       ],
       "evidence": [
         "api/db/models/index.js",
         "api/modules/crm/routes.js",
         "api/modules/domain-operations/routes.js",
         "api/modules/marketing/controller.js",
+        "api/modules/qa-waves/routes.test.js",
         "api/modules/scheduling-support/controller.js",
         "api/modules/scheduling-support/handleSchedulingSupportRoutes.js",
         "api/modules/scheduling-support/routes.js",
         "api/modules/scheduling-support/service.js",
-        "api/services/qa/scanners/backendCapabilityScanner.js",
-        "api/services/qa/scanners/replayCapabilityScanner.js"
+        "api/services/__tests__/autonomousGapClosureEngine.loop.test.js",
+        "fitness-matricula-leads.json",
+        "qa_wave_replay_1778169956565_yec9a9.json"
       ]
     },
     {
@@ -393,7 +413,8 @@
       "sources": [
         "backend",
         "e2e",
-        "frontend"
+        "frontend",
+        "replay"
       ],
       "evidence": [
         "api/app/registerRoutes.js",
@@ -469,7 +490,7 @@
     {
       "id": "turnstile_release",
       "domain": "fitness",
-      "module": "api",
+      "module": "qa-waves",
       "type": "operational",
       "required": true,
       "tags": [
@@ -482,7 +503,13 @@
         "frontendcapabilityscanner",
         "replaycapabilityscanner",
         "systemdiscoveryengine",
-        "accesscontrolpage"
+        "accesscontrolpage",
+        "routes",
+        "test",
+        "operationalstateengine",
+        "transitioninferenceservice",
+        "autonomousgapclosureengine",
+        "executionchainvalidator"
       ],
       "confidence": 1,
       "sources": [
@@ -490,13 +517,16 @@
         "frontend"
       ],
       "evidence": [
+        "api/modules/qa-waves/routes.test.js",
+        "api/services/__tests__/operationalStateEngine.test.js",
+        "api/services/__tests__/transitionInferenceService.test.js",
+        "api/services/qa/autonomousGapClosureEngine.js",
+        "api/services/qa/executionChainValidator.js",
         "api/services/qa/journeyInferenceService.js",
         "api/services/qa/scanners/backendCapabilityScanner.js",
         "api/services/qa/scanners/deviceCapabilityScanner.js",
         "api/services/qa/scanners/e2eCapabilityScanner.js",
         "api/services/qa/scanners/frontendCapabilityScanner.js",
-        "api/services/qa/scanners/replayCapabilityScanner.js",
-        "api/services/qa/systemDiscoveryEngine.js",
         "frontend/src/pages/AccessControlPage.jsx"
       ]
     }
