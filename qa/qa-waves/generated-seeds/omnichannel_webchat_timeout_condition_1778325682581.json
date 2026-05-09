@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_webchat_timeout_condition_1778325682581",
+  "capabilityId": "omnichannel_webchat",
+  "journeyId": "omnichannel_webchat",
+  "seedType": "timeout_condition",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.620Z"
+}

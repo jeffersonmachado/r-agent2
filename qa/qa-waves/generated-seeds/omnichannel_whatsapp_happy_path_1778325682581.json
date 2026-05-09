@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_whatsapp_happy_path_1778325682581",
+  "capabilityId": "omnichannel_whatsapp",
+  "journeyId": "omnichannel_whatsapp",
+  "seedType": "happy_path",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.621Z"
+}

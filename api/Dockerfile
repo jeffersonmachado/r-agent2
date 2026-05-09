@@ -27,6 +27,7 @@ RUN npm ci --omit=dev && \
 COPY engine/ ./engine/
 COPY core/ ./core/
 COPY api/ ./api/
+COPY tools/system/ ./tools/system/
 COPY rpa/ ./rpa/
 COPY infra/ ./infra/
 COPY contracts/ ./contracts/
@@ -55,6 +56,7 @@ COPY --from=builder /app/.cache ./.cache
 COPY --from=builder /app/engine ./engine
 COPY --from=builder /app/core ./core
 COPY --from=builder /app/api ./api
+COPY --from=builder /app/tools/system ./tools/system
 COPY --from=builder /app/rpa ./rpa
 COPY --from=builder /app/infra ./infra
 COPY --from=builder /app/contracts ./contracts

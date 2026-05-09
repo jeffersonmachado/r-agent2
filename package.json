@@ -73,6 +73,7 @@
     "qa:waves:generate-seeds": "node scripts/qa-waves-generate-seeds.js",
     "qa:waves:execute": "node scripts/qa-waves-execute.js",
     "qa:waves:governance": "node scripts/qa-waves-governance.js",
+    "qa:waves:enterprise-governance": "node tools/system/qa-waves-enterprise-governance-bridge.js",
     "qa:waves:scheduled-smoke": "node scripts/smoke/qa-waves-scheduled-operational-smoke.js",
     "qa:clean-artifacts": "bash ./scripts/clean-qa-waves-artifacts.sh",
     "system:bootstrap": "node tools/system/bootstrap.js",

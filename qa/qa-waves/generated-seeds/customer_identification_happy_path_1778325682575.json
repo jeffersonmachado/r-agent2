@@ -1,0 +1,8 @@
+{
+  "scenarioId": "customer_identification_happy_path_1778325682575",
+  "capabilityId": "customer_identification",
+  "journeyId": "customer_identification",
+  "seedType": "happy_path",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.606Z"
+}

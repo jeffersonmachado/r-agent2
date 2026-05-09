@@ -1,0 +1,8 @@
+{
+  "scenarioId": "membership_validation_special_chars_1778325682577",
+  "capabilityId": "membership_validation",
+  "journeyId": "membership_validation",
+  "seedType": "special_chars",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.610Z"
+}

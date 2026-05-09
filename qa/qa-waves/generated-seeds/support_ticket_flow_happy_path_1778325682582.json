@@ -1,0 +1,13 @@
+{
+  "scenarioId": "support_ticket_flow_happy_path_1778325682582",
+  "capabilityId": "support_ticket_flow",
+  "journeyId": "support_ticket_flow",
+  "seedType": "happy_path",
+  "seed": {
+    "ticketId": "TICKET-001",
+    "agentId": "AGENT-001",
+    "reply": "Tudo bem, deixa comigo!",
+    "attachments": []
+  },
+  "generatedAt": "2026-05-09T11:21:22.624Z"
+}

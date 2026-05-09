@@ -1,0 +1,12 @@
+{
+  "scenarioId": "turnstile_release_special_chars_1778325682585",
+  "capabilityId": "turnstile_release",
+  "journeyId": "turnstile_release",
+  "seedType": "special_chars",
+  "seed": {
+    "accessDecision": "ALLOW",
+    "deviceId": "DEV-001",
+    "contactId": "CONT-001"
+  },
+  "generatedAt": "2026-05-09T11:21:22.631Z"
+}

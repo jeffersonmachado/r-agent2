@@ -1,6 +1,24 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const {
+  buildQaWavesEnterpriseGovernance,
+} = require('../../../tools/system/lib/qa-waves-enterprise-governance-bridge');
+
+const ROOT_DIR = path.join(__dirname, '..', '..', '..');
+const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || path.join(ROOT_DIR, 'qa', 'runtime-governance-report.json');
+const GO_NO_GO_REPORT_PATH = process.env.GO_NO_GO_REPORT_PATH || path.join(ROOT_DIR, 'qa', 'go-no-go-report.json');
+
+function readJsonIfExists(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
 
 function createQaWavesRoutes({ buildDeps }) {
   const router = express.Router();
@@ -588,6 +606,32 @@ function createQaWavesRoutes({ buildDeps }) {
     } catch (error) {
       deps.logger.error('Erro ao obter gaps operacionais QA Waves:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter gaps operacionais' });
+    }
+  });
+
+  router.get('/api/qa-waves/enterprise-governance', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const enterpriseGovernance = buildQaWavesEnterpriseGovernance({ root: ROOT_DIR });
+      const runtimeGovernance = readJsonIfExists(RUNTIME_GOVERNANCE_REPORT_PATH);
+      const globalGoNoGo = readJsonIfExists(GO_NO_GO_REPORT_PATH);
+      deps.sendJson(res, 200, {
+        ...enterpriseGovernance,
+        globalGoNoGo: globalGoNoGo?.decision || globalGoNoGo?.status || enterpriseGovernance.governanceStatus,
+        runtimeGovernance: runtimeGovernance ? {
+          gateStatus: runtimeGovernance.gateStatus || runtimeGovernance.status || 'unknown',
+          classification: runtimeGovernance.classification || 'unknown',
+          path: process.env.RUNTIME_GOVERNANCE_REPORT_PATH || 'qa/runtime-governance-report.json',
+        } : null,
+      });
+    } catch (error) {
+      deps.logger.error('Erro ao obter governance enterprise QA Waves:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter governance enterprise QA Waves' });
     }
   });
 

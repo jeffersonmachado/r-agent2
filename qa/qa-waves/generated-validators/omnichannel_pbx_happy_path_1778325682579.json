@@ -1,0 +1,45 @@
+{
+  "scenarioId": "omnichannel_pbx_happy_path_1778325682579",
+  "capabilityId": "omnichannel_pbx",
+  "validators": [
+    {
+      "name": "omnichannel_pbx_executed",
+      "type": "assertion",
+      "source": "generic",
+      "inferred": true
+    },
+    {
+      "name": "omnichannel_pbx_success",
+      "type": "assertion",
+      "source": "generic",
+      "inferred": true
+    }
+  ],
+  "governanceRules": [
+    {
+      "rule": "require_real_execution",
+      "enabled": true
+    },
+    {
+      "rule": "require_real_replay",
+      "enabled": true
+    },
+    {
+      "rule": "forbid_fake_selectors",
+      "enabled": true
+    },
+    {
+      "rule": "require_operational_consequence",
+      "enabled": true
+    }
+  ],
+  "replayRequirements": {
+    "requireHumanUser": true,
+    "requireRealModule": true,
+    "requireScreenshots": true,
+    "requireStateChange": true,
+    "requireOperationalConsequence": true,
+    "requireJourneyPath": true
+  },
+  "generatedAt": "2026-05-09T11:21:22.615Z"
+}

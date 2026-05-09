@@ -1,0 +1,54 @@
+{
+  "scenarioId": "omnichannel_email_special_chars_1778325682578",
+  "capabilityId": "omnichannel_email",
+  "validators": [
+    {
+      "name": "notification_sent",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "notification",
+      "inferred": true
+    },
+    {
+      "name": "email_delivered",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "notification",
+      "inferred": true
+    },
+    {
+      "name": "event_triggered",
+      "type": "assertion",
+      "source": "pattern_match",
+      "pattern": "notification",
+      "inferred": true
+    }
+  ],
+  "governanceRules": [
+    {
+      "rule": "require_real_execution",
+      "enabled": true
+    },
+    {
+      "rule": "require_real_replay",
+      "enabled": true
+    },
+    {
+      "rule": "forbid_fake_selectors",
+      "enabled": true
+    },
+    {
+      "rule": "require_operational_consequence",
+      "enabled": true
+    }
+  ],
+  "replayRequirements": {
+    "requireHumanUser": true,
+    "requireRealModule": true,
+    "requireScreenshots": true,
+    "requireStateChange": true,
+    "requireOperationalConsequence": true,
+    "requireJourneyPath": true
+  },
+  "generatedAt": "2026-05-09T11:21:22.614Z"
+}

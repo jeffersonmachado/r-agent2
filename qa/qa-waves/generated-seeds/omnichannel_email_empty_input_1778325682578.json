@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_email_empty_input_1778325682578",
+  "capabilityId": "omnichannel_email",
+  "journeyId": "omnichannel_email",
+  "seedType": "empty_input",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.612Z"
+}

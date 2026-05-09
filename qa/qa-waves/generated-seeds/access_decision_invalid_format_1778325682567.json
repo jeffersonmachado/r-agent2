@@ -1,0 +1,12 @@
+{
+  "scenarioId": "access_decision_invalid_format_1778325682567",
+  "capabilityId": "access_decision",
+  "journeyId": "access_decision",
+  "seedType": "invalid_format",
+  "seed": {
+    "accessDecision": "MAYBE",
+    "deviceId": "invalid",
+    "contactId": "invalid"
+  },
+  "generatedAt": "2026-05-09T11:21:22.594Z"
+}

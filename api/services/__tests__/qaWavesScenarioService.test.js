@@ -105,6 +105,40 @@ describe('qaWavesScenarioService', () => {
     expect(generated.seeds.every((seed) => seed.scenarioId === 'fitness_trial_class')).toBe(true);
   });
 
+  test('listLatestScenarios deve ignorar registros invalidos do store', () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+    });
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
+    fs.writeFileSync(STORE_PATH, `${JSON.stringify({
+      version: 1,
+      scenarios: [
+        { id: 'broken-without-wave-id' },
+        inferred.scenario,
+      ],
+      history: {},
+      updatedAt: new Date().toISOString(),
+    }, null, 2)}\n`, 'utf8');
+
+    const listed = qaWavesScenarioService.listLatestScenarios();
+
+    expect(listed.items).toHaveLength(1);
+    expect(listed.items[0]).toMatchObject({ id: inferred.scenario.id, waveId: inferred.scenario.waveId });
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[qaWavesScenarioService] Ignorando cenarios invalidos no store durante deduplicacao',
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'broken-without-wave-id' }),
+      ])
+    );
+
+    warnSpy.mockRestore();
+  });
+
   test('runScenarioExecution deve usar QA Mesh real (queueMeshRun) e gerar replay unificado', async () => {
     const inferred = qaWavesScenarioService.inferScenario({
       vertical: 'fitness',

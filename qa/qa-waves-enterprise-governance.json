@@ -1,0 +1,104 @@
+{
+  "generatedAt": "2026-05-09T11:55:03.614Z",
+  "status": "GO",
+  "governanceStatus": "GO",
+  "threshold": 95,
+  "replayIntegrity": {
+    "valid": true,
+    "rate": 100,
+    "artifacts": [
+      {
+        "journeyId": "support_ticket_flow",
+        "replayHash": "0080e03654296269a66ecff79b6260ce7aa081a2b91a6c877bcaf5f9101281db",
+        "replayChecksum": "sha256:0080e03654296269a66ecff79b6260ce7aa081a2b91a6c877bcaf5f9101281db",
+        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "tenantId": "tenant-1778323487350-0y5yrhw",
+        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1778323767347"
+      },
+      {
+        "journeyId": "fitness_customer_checkin",
+        "replayHash": "00f2d9cedf7c357b4ce7941dd8e9a79da7c2b2cdca33551d686dd345d438dd56",
+        "replayChecksum": "sha256:00f2d9cedf7c357b4ce7941dd8e9a79da7c2b2cdca33551d686dd345d438dd56",
+        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "tenantId": "tenant-1778323487350-0y5yrhw",
+        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1778323820111"
+      }
+    ],
+    "blockers": []
+  },
+  "smokeHealth": {
+    "status": "GO",
+    "productionReadiness": "GO",
+    "healthy": true,
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+  },
+  "operationalConfidence": 100,
+  "confidenceGrade": "A+",
+  "riskLevel": "LOW",
+  "failedProofs": [],
+  "activeBlockers": [],
+  "replayArtifacts": [
+    {
+      "journeyId": "support_ticket_flow",
+      "replayHash": "0080e03654296269a66ecff79b6260ce7aa081a2b91a6c877bcaf5f9101281db",
+      "replayChecksum": "sha256:0080e03654296269a66ecff79b6260ce7aa081a2b91a6c877bcaf5f9101281db",
+      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "tenantId": "tenant-1778323487350-0y5yrhw",
+      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1778323767347"
+    },
+    {
+      "journeyId": "fitness_customer_checkin",
+      "replayHash": "00f2d9cedf7c357b4ce7941dd8e9a79da7c2b2cdca33551d686dd345d438dd56",
+      "replayChecksum": "sha256:00f2d9cedf7c357b4ce7941dd8e9a79da7c2b2cdca33551d686dd345d438dd56",
+      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "tenantId": "tenant-1778323487350-0y5yrhw",
+      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1778323820111"
+    }
+  ],
+  "governanceSignature": {
+    "valid": true,
+    "signatures": [
+      {
+        "journeyId": "support_ticket_flow",
+        "valid": true,
+        "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+      },
+      {
+        "journeyId": "fitness_customer_checkin",
+        "valid": true,
+        "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+      }
+    ]
+  },
+  "lastSmokeExecution": {
+    "generatedAt": "2026-05-09T10:50:20.513Z",
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+    "tenantId": "tenant-1778323487350-0y5yrhw"
+  },
+  "continuousValidationStatus": {
+    "status": "GO",
+    "healthy": true,
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
+    "mode": "hourly_lightweight",
+    "generatedAt": "2026-05-09T11:54:51.404Z"
+  },
+  "releaseReadiness": {
+    "go": true,
+    "reasons": []
+  },
+  "deploymentSafety": {
+    "deployAllowed": true,
+    "threshold": 95,
+    "operationalConfidence": 100,
+    "blockers": []
+  },
+  "enterpriseGovernanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+  "reportHash": "18e4e095b81336d06ba58fbe5bd7045c397c1407947c3eacfc0daa14bb7c1595",
+  "auditTrail": {
+    "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
+    "latestEntryHash": "16270a16f76d88c56b1891456fc3cbf072e5981e11493d992bbb9279f1e54eb0",
+    "immutable": true
+  }
+}

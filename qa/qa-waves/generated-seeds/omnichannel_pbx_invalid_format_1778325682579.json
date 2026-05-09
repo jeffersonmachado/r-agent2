@@ -1,0 +1,8 @@
+{
+  "scenarioId": "omnichannel_pbx_invalid_format_1778325682579",
+  "capabilityId": "omnichannel_pbx",
+  "journeyId": "omnichannel_pbx",
+  "seedType": "invalid_format",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.616Z"
+}

@@ -1,0 +1,8 @@
+{
+  "scenarioId": "customer_identification_timeout_condition_1778325682576",
+  "capabilityId": "customer_identification",
+  "journeyId": "customer_identification",
+  "seedType": "timeout_condition",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.608Z"
+}

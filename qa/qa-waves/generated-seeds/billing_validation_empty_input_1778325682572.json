@@ -1,0 +1,12 @@
+{
+  "scenarioId": "billing_validation_empty_input_1778325682572",
+  "capabilityId": "billing_validation",
+  "journeyId": "billing_validation",
+  "seedType": "empty_input",
+  "seed": {
+    "subscriptionId": "",
+    "amount": 0,
+    "currency": ""
+  },
+  "generatedAt": "2026-05-09T11:21:22.600Z"
+}

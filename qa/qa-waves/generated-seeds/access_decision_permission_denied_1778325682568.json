@@ -1,0 +1,11 @@
+{
+  "scenarioId": "access_decision_permission_denied_1778325682568",
+  "capabilityId": "access_decision",
+  "journeyId": "access_decision",
+  "seedType": "permission_denied",
+  "seed": {
+    "accessDecision": "DENY",
+    "reason": "ACCESS_DENIED"
+  },
+  "generatedAt": "2026-05-09T11:21:22.595Z"
+}

@@ -1,0 +1,12 @@
+{
+  "scenarioId": "billing_validation_permission_denied_1778325682573",
+  "capabilityId": "billing_validation",
+  "journeyId": "billing_validation",
+  "seedType": "permission_denied",
+  "seed": {
+    "subscriptionId": "SUB-001",
+    "amount": 99.99,
+    "currency": "BRL"
+  },
+  "generatedAt": "2026-05-09T11:21:22.602Z"
+}

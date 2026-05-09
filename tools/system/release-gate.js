@@ -16,11 +16,18 @@ const fs = require('fs');
 const { evaluatePillars } = require('./lib/pillar-readiness');
 const { findLatestReleaseArtifact } = require('./lib/release-artifact');
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const {
+  buildQaWavesEnterpriseGovernance,
+  validateQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernance,
+} = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
 const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
 const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
+const QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
+const QA_WAVES_GOVERNANCE_AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
 
 const COLORS = {
   reset: '\x1b[0m',
@@ -91,6 +98,7 @@ function main() {
     validate: null,
     smokeEvidence: null,
     runtimeGovernance: null,
+    qaWavesGovernance: null,
     error: null,
     finishedAt: null,
     durationMs: 0,
@@ -135,6 +143,25 @@ function main() {
     }
     if (runtimeGovernance.gateStatus === 'go_degraded' && String(process.env.RELEASE_GATE_ALLOW_DEGRADED || '1') !== '1') {
       throw new Error(`runtime_mode_degraded_not_allowed:${runtimeGovernance.classification}`);
+    }
+
+    const qaWavesReport = writeQaWavesEnterpriseGovernance(
+      buildQaWavesEnterpriseGovernance({ root: ROOT }),
+      resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
+      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+    );
+    const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
+    report.qaWavesGovernance = {
+      path: QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+      status: qaWavesReport.governanceStatus,
+      operationalConfidence: qaWavesReport.operationalConfidence,
+      confidenceGrade: qaWavesReport.confidenceGrade,
+      riskLevel: qaWavesReport.riskLevel,
+      valid: qaWavesValidation.valid,
+      reasons: qaWavesValidation.reasons,
+    };
+    if (!qaWavesValidation.valid) {
+      throw new Error(`qa_waves_release_governance_not_ready:${qaWavesValidation.reasons.join(',')}`);
     }
 
     report.status = 'pass';

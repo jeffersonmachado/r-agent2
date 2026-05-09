@@ -2,8 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const qaMeshService = require('./qaMeshService');
-const { executePreparedWaveScenarios } = require('./qaWavesExecutionService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const { adaptAiScenario } = require('../modules/qa-waves/aiScenarioAdapter');
 const { validateScenarioCompatibility } = require('../modules/qa-waves/waveScenarioSchema');
@@ -281,8 +279,19 @@ function normalizeScenarioRecord(input = {}) {
 
 function dedupeStoreScenarios(store) {
   const deduped = new Map();
+  const invalidScenarios = [];
   for (const item of Array.isArray(store?.scenarios) ? store.scenarios : []) {
-    const normalized = normalizeScenarioRecord(item);
+    let normalized;
+    try {
+      normalized = normalizeScenarioRecord(item);
+    } catch (error) {
+      invalidScenarios.push({
+        id: String(item?.id || '').trim() || null,
+        message: error.message,
+      });
+      continue;
+    }
+
     const existing = deduped.get(normalized.id);
     if (!existing) {
       deduped.set(normalized.id, normalized);
@@ -293,6 +302,11 @@ function dedupeStoreScenarios(store) {
     const candidateVersion = Number.parseInt(String(normalized.version || 'v0').replace(/^v/i, ''), 10) || 0;
     if (candidateVersion >= existingVersion) deduped.set(normalized.id, normalized);
   }
+
+  if (invalidScenarios.length > 0) {
+    console.warn('[qaWavesScenarioService] Ignorando cenarios invalidos no store durante deduplicacao', invalidScenarios);
+  }
+
   store.scenarios = Array.from(deduped.values());
   return store;
 }
@@ -875,6 +889,7 @@ function runScenarioExecution(payload = {}) {
     throw error;
   }
 
+  const { executePreparedWaveScenarios } = require('./qaWavesExecutionService');
   return executePreparedWaveScenarios({
     expanded,
     platformScenarioIds,

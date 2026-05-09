@@ -1,0 +1,8 @@
+{
+  "scenarioId": "attendance_record_empty_input_1778325682569",
+  "capabilityId": "attendance_record",
+  "journeyId": "attendance_record",
+  "seedType": "empty_input",
+  "seed": {},
+  "generatedAt": "2026-05-09T11:21:22.597Z"
+}

@@ -8,9 +8,16 @@ const os = require('os');
 const { execSync } = require('child_process');
 const { findLatestReleaseArtifact, extractArtifact, resolveExtractedRoot } = require('./lib/release-artifact');
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const {
+  buildQaWavesEnterpriseGovernance,
+  validateQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernance,
+} = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
 const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
+const QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
+const QA_WAVES_GOVERNANCE_AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
 const PORT_SPECS = [
   {
     service: 'api',
@@ -183,6 +190,16 @@ function findLatestApprovedArtifact() {
 }
 
 async function main() {
+  const qaWavesReport = writeQaWavesEnterpriseGovernance(
+    buildQaWavesEnterpriseGovernance({ root: ROOT }),
+    resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
+    resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+  );
+  const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
+  if (!qaWavesValidation.valid) {
+    throw new Error(`qa_waves_deployment_governance_blocked:${qaWavesValidation.reasons.join(',')}`);
+  }
+
   const artifact = findLatestApprovedArtifact();
   const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r-agent2-deploy-'));
   extractArtifact(artifact.zipPath, extractDir);
@@ -195,6 +212,14 @@ async function main() {
       sha256: artifact.manifest.sha256 || null,
     },
     artifactRoot,
+    qaWavesGovernance: {
+      path: QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+      status: qaWavesReport.governanceStatus,
+      operationalConfidence: qaWavesReport.operationalConfidence,
+      confidenceGrade: qaWavesReport.confidenceGrade,
+      riskLevel: qaWavesReport.riskLevel,
+      deploymentSafety: qaWavesReport.deploymentSafety,
+    },
     portResolution: [],
   };
 

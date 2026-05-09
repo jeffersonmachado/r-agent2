@@ -118,6 +118,9 @@ scripts/*.md
 scripts/*.txt
 scripts/*.json
 tools/
+!tools/
+!tools/system/
+!tools/system/**
 
 # Testes
 tests/

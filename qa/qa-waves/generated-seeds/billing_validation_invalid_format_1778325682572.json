@@ -1,0 +1,12 @@
+{
+  "scenarioId": "billing_validation_invalid_format_1778325682572",
+  "capabilityId": "billing_validation",
+  "journeyId": "billing_validation",
+  "seedType": "invalid_format",
+  "seed": {
+    "subscriptionId": "invalid",
+    "amount": -100,
+    "currency": "INVALID"
+  },
+  "generatedAt": "2026-05-09T11:21:22.601Z"
+}

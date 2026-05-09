@@ -6,6 +6,11 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { evaluatePillars } = require('./lib/pillar-readiness');
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const {
+  buildQaWavesEnterpriseGovernance,
+  validateQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernance,
+} = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
@@ -15,6 +20,8 @@ const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.js
 const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
 const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
 const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
+const QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
+const QA_WAVES_GOVERNANCE_AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
 const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '0') !== '0';
 const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '0') !== '0';
 const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
@@ -78,6 +85,7 @@ function main() {
       smoke: null,
       runtimeGovernance: null,
       deploy: null,
+      qaWavesGovernance: null,
     },
     reasons: [],
   };
@@ -101,6 +109,12 @@ function main() {
     const smokeSummary = readJson(SMOKE_EVIDENCE_SUMMARY_PATH);
     const runtimeGovernance = readJson(RUNTIME_GOVERNANCE_REPORT_PATH);
     const deployReport = readJson(DEPLOY_REPORT_PATH);
+    const qaWavesReport = writeQaWavesEnterpriseGovernance(
+      buildQaWavesEnterpriseGovernance({ root: ROOT }),
+      resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
+      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+    );
+    const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
 
     report.checks.validate = {
       path: SYSTEM_VALIDATE_REPORT_PATH,
@@ -133,6 +147,16 @@ function main() {
       portResolution: Array.isArray(deployReport?.portResolution) ? deployReport.portResolution : [],
       optional: true,
     };
+    report.checks.qaWavesGovernance = {
+      path: QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+      loaded: true,
+      status: qaWavesReport.governanceStatus,
+      operationalConfidence: qaWavesReport.operationalConfidence,
+      confidenceGrade: qaWavesReport.confidenceGrade,
+      riskLevel: qaWavesReport.riskLevel,
+      valid: qaWavesValidation.valid,
+      reasons: qaWavesValidation.reasons,
+    };
 
     if (!validateReport || !['pass', 'degraded'].includes(validateReport.status)) report.reasons.push('system_validate_not_releasable');
     if (!gate || gate.status !== 'pass') report.reasons.push('release_gate_not_pass');
@@ -142,6 +166,10 @@ function main() {
       report.reasons.push('runtime_governance_missing');
     } else if (runtimeGovernance.gateStatus === 'no_go') {
       report.reasons.push(`runtime_mode_blocked:${runtimeGovernance.classification || 'unknown'}`);
+    }
+
+    if (!qaWavesValidation.valid) {
+      report.reasons.push(...qaWavesValidation.reasons);
     }
 
     if (!smokeSummary || !smokeSummary.smokes) {
