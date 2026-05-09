@@ -352,6 +352,7 @@ export const navigationMenu = [
           { id: 'dev-dashboard-alias', label: 'Dashboard Dev', path: '/dev-dashboard', roles: ['super_admin'], hiddenInSidebar: true },
           { id: 'dev-qa-waves', label: 'QA Waves', path: '/dev/qa-waves', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           { id: 'dev-qa-waves-operational-health', label: 'QA Waves Health', path: '/dev/qa-waves/operational-health', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
+          { id: 'dev-qa-waves-enterprise-governance', label: 'QA Waves Enterprise', path: '/dev/qa-waves/enterprise-governance', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           { id: 'dev-qa-gaps', label: 'QA Gaps', path: '/dev/qa-gaps', permission: { resource: 'reports', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           {
             id: 'dev-work-management',

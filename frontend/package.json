@@ -4,14 +4,14 @@
   "private": true,
   "description": "Editor visual de fluxo de chatbot baseado em React + Rete.js",
   "scripts": {
-    "start": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite --config vite.config.mjs",
+    "start": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite --configLoader runner --config vite.config.mjs",
     "install:base": "npm ci --no-audit --no-fund",
-    "build": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite build --config vite.config.mjs",
+    "build": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite build --configLoader runner --config vite.config.mjs",
     "test": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs",
     "test:unit": "VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs",
     "test:e2e": "npm --prefix ../frontend-e2e run test:e2e",
     "smoke": "npm --prefix .. run frontend:smoke",
-    "preview": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite preview --config vite.config.mjs"
+    "preview": "VITE_CACHE_DIR=/tmp/r-agent2-vite vite preview --configLoader runner --config vite.config.mjs"
   },
   "dependencies": {
     "bpmn-js": "^18.13.1",

@@ -247,6 +247,24 @@ export const TABS = [
  */
 export const DEV_FEATURES = [
   {
+    id: 'qa-waves',
+    title: 'QA Waves',
+    description: 'Monitore ondas, jornadas e replays QA integrados',
+    icon: '🌊',
+    path: '/dev/qa-waves',
+    color: 'bg-cyan-600',
+    category: 'QA',
+  },
+  {
+    id: 'qa-gaps',
+    title: 'QA Gaps Operacionais',
+    description: 'Analise cobertura, bloqueadores e potencial de fechamento automatico',
+    icon: '🧭',
+    path: '/dev/qa-gaps',
+    color: 'bg-sky-700',
+    category: 'QA',
+  },
+  {
     id: 'rpa-test',
     title: 'Execução de Testes RPA',
     description: 'Execute testes RPA automatizados (apenas desenvolvimento)',
@@ -263,15 +281,6 @@ export const DEV_FEATURES = [
     path: '/dev/rpa-replays',
     color: 'bg-pink-600',
     category: 'RPA',
-  },
-  {
-    id: 'qa-waves',
-    title: 'QA Waves',
-    description: 'Monitore ondas, jornadas e replays QA integrados',
-    icon: '🌊',
-    path: '/dev/qa-waves',
-    color: 'bg-cyan-600',
-    category: 'QA',
   },
 ];
 
