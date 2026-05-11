@@ -12,7 +12,15 @@ COPY frontend/package.json frontend/package-lock.json* ./frontend/
 
 # Instala todas as dependências (incluindo devDependencies para build)
 WORKDIR /app/frontend
-RUN npm ci && \
+RUN npm config set fetch-retries 5 && \
+    npm config set fetch-retry-factor 2 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    for attempt in 1 2 3; do \
+        npm ci && break; \
+        if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+        echo "npm ci failed on attempt $attempt, retrying..." >&2; \
+    done && \
     npm cache clean --force
 
 # Copia código fonte do frontend
