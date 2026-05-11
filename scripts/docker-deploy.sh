@@ -401,6 +401,7 @@ SYNC_PATHS=(
     "qa"
     "qa-mesh"
     "scripts"
+    "tools"
     "tests"
     "redis"
     "lib"
