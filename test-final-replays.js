@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 const { chromium } = require('playwright');
+const { loginWithTenantSelection } = require('./tests/helpers/playwrightAuth');
+
+const BASE_URL = 'http://127.0.0.1:5173/dev/rpa-replays';
+const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
+const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
+const TENANT_ID = process.env.TEST_TENANT_ID || 'system';
 
 (async () => {
   let browser;
@@ -16,23 +22,15 @@ const { chromium } = require('playwright');
     console.log('\n📊 FINAL REPLAYS VERIFICATION\n');
     console.log('='.repeat(70));
 
-    // Login
-    await page.goto('http://127.0.0.1:5173/login', { waitUntil: 'networkidle' });
-    const inputs = await page.$$('input');
-    await inputs[0].fill('systemadmin');
-    await inputs[1].fill('Admin123!');
-    const buttons = await page.$$('button');
-    for (const button of buttons) {
-      const text = await button.textContent();
-      if (text.toLowerCase().includes('entrar')) {
-        await button.click();
-        break;
-      }
-    }
-    await page.waitForTimeout(2000);
+    await loginWithTenantSelection(page, {
+      targetUrl: BASE_URL,
+      username: USERNAME,
+      password: PASSWORD,
+      tenantId: TENANT_ID,
+    });
 
     // Load replays page
-    await page.goto('http://127.0.0.1:5173/rpa-replays', { waitUntil: 'networkidle' });
+    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
     await page.waitForTimeout(2500);
 
     // Get detailed replay data

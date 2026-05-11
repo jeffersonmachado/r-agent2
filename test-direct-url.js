@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 const { chromium } = require('playwright');
+const { loginWithTenantSelection } = require('./tests/helpers/playwrightAuth');
+
+const BASE_URL = 'http://127.0.0.1:5173/dev/rpa-replays';
+const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
+const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
+const TENANT_ID = process.env.TEST_TENANT_ID || 'system';
 
 (async () => {
   let browser;
@@ -17,22 +23,13 @@ const { chromium } = require('playwright');
     console.log('='.repeat(70));
 
     // STEP 1: Login
-    console.log('\n1️⃣ Logging in...');
-    await page.goto('http://127.0.0.1:5173/login', { waitUntil: 'networkidle' });
-    
-    const inputs = await page.$$('input');
-    await inputs[0].fill('systemadmin');
-    await inputs[1].fill('Admin123!');
-    
-    const buttons = await page.$$('button');
-    for (const button of buttons) {
-      const text = await button.textContent();
-      if (text.toLowerCase().includes('entrar')) {
-        await button.click();
-        break;
-      }
-    }
-    
+    console.log(`\n1️⃣ Logging in and selecting tenant (${TENANT_ID})...`);
+    await loginWithTenantSelection(page, {
+      targetUrl: BASE_URL,
+      username: USERNAME,
+      password: PASSWORD,
+      tenantId: TENANT_ID,
+    });
     await page.waitForTimeout(2500);
 
     // Verify token is saved
@@ -40,10 +37,10 @@ const { chromium } = require('playwright');
     console.log(`   Token saved: ${token ? '✅' : '❌'}`);
 
     // STEP 2: Navigate directly to RPA Replays via URL
-    console.log('\n2️⃣ Navigating directly to /rpa-replays...');
+    console.log('\n2️⃣ Navigating directly to /dev/rpa-replays...');
     
     try {
-      await page.goto('http://127.0.0.1:5173/rpa-replays', { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
     } catch (e) {
       console.log(`   ⚠️  Navigation timeout, continuing anyway: ${e.message}`);
     }

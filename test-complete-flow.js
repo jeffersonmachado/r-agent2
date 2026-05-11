@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 const { chromium } = require('playwright');
+const { loginWithTenantSelection } = require('./tests/helpers/playwrightAuth');
+
+const BASE_URL = 'http://127.0.0.1:5173/dev/rpa-replays';
+const USERNAME = process.env.TEST_USERNAME || 'systemadmin';
+const PASSWORD = process.env.TEST_PASSWORD || 'Admin123!';
+const TENANT_ID = process.env.TEST_TENANT_ID || 'system';
 
 (async () => {
   let browser;
@@ -16,69 +22,21 @@ const { chromium } = require('playwright');
     console.log('\n✅ COMPLETE LOGIN + TENANT SELECTION + REPLAYS\n');
     console.log('='.repeat(70));
 
-    // STEP 1: Login
-    console.log('\n1️⃣ Logging in...');
-    await page.goto('http://127.0.0.1:5173/login', { waitUntil: 'networkidle' });
-    const inputs = await page.$$('input');
-    await inputs[0].fill('systemadmin');
-    await inputs[1].fill('Admin123!');
-    const buttons = await page.$$('button');
-    for (const button of buttons) {
-      const text = await button.textContent();
-      if (text.toLowerCase().includes('entrar')) {
-        await button.click();
-        break;
-      }
-    }
-    await page.waitForTimeout(2000);
-    console.log('   ✅ Login complete, modal appeared');
-
-    // STEP 2: Select tenant from modal
-    console.log('\n2️⃣ Selecting System tenant from modal...');
-    
-    // Click on the System tenant option
-    const tenantOptions = await page.$$('[role="button"]');
-    let foundSystemTenant = false;
-    
-    for (const option of tenantOptions) {
-      const text = await option.textContent();
-      if (text.includes('System')) {
-        await option.click();
-        console.log('   ✅ System tenant clicked');
-        foundSystemTenant = true;
-        break;
-      }
-    }
-
-    if (!foundSystemTenant) {
-      console.log('   ⚠️  System tenant not found, trying alternative selectors');
-      // Try card selection
-      const cards = await page.$$('[class*="card"], [class*="tenant"]');
-      if (cards.length > 0) {
-        await cards[0].click();
-        console.log('   ✅ First card clicked');
-      }
-    }
-
-    await page.waitForTimeout(1000);
-
-    // Click Acessar button
-    console.log('\n3️⃣ Clicking "Acessar" button...');
-    const allButtons = await page.$$('button');
-    for (const btn of allButtons) {
-      const text = await btn.textContent();
-      if (text.toLowerCase().includes('acessar') || text.toLowerCase().includes('access')) {
-        await btn.click();
-        console.log('   ✅ Acessar button clicked');
-        break;
-      }
-    }
+    // STEP 1: Login + tenant
+    console.log(`\n1️⃣ Logging in and selecting tenant (${TENANT_ID})...`);
+    await loginWithTenantSelection(page, {
+      targetUrl: BASE_URL,
+      username: USERNAME,
+      password: PASSWORD,
+      tenantId: TENANT_ID,
+    });
+    console.log('   ✅ Login/tenant complete');
 
     // Wait for navigation/redirect
     await page.waitForTimeout(3000);
 
-    // STEP 3: Check if we're on replays page
-    console.log('\n4️⃣ Checking page state after tenant selection...');
+    // STEP 2: Check if we're on replays page
+    console.log('\n2️⃣ Checking page state after tenant selection...');
     
     const pageState = await page.evaluate(() => {
       return {
@@ -96,8 +54,8 @@ const { chromium } = require('playwright');
     console.log(`   Has table: ${pageState.hasTable ? '✅' : '❌'}`);
     console.log(`   Has replay data: ${pageState.hasData ? '✅' : '❌'}`);
 
-    // STEP 4: Get replay data
-    console.log('\n5️⃣ Checking for replays...');
+    // STEP 3: Get replay data
+    console.log('\n3️⃣ Checking for replays...');
     
     const replayData = await page.evaluate(() => {
       const rows = document.querySelectorAll('table tbody tr');
