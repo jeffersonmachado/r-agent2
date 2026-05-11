@@ -117,6 +117,9 @@ qa/mesh/intelligence/stabilitySnapshot.json
 
 # Gap report operacional efêmero
 qa/qa-waves/operational-gaps-report.json
+qa/qa-waves/generated-seeds/
+qa/qa-waves/generated-ui-steps/
+qa/qa-waves/generated-validators/
 
 # Metadados locais de ferramenta
 .codex

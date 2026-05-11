@@ -25,6 +25,21 @@ while IFS= read -r file; do
   rm -f "$file"
 done < <(git ls-files --others --exclude-standard -- 'qa/qa-waves/operational-gaps-report.json')
 
+while IFS= read -r file; do
+  [[ -n "$file" ]] || continue
+  rm -f "$file"
+done < <(git ls-files --others --exclude-standard -- 'qa/qa-waves/generated-seeds/**')
+
+while IFS= read -r file; do
+  [[ -n "$file" ]] || continue
+  rm -f "$file"
+done < <(git ls-files --others --exclude-standard -- 'qa/qa-waves/generated-ui-steps/**')
+
+while IFS= read -r file; do
+  [[ -n "$file" ]] || continue
+  rm -f "$file"
+done < <(git ls-files --others --exclude-standard -- 'qa/qa-waves/generated-validators/**')
+
 # Restaura arquivos versionados que sofrem mutacao em execucao local.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git restore \
