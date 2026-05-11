@@ -6,28 +6,28 @@
 
 @theme {
   /* Cores customizadas - Backgrounds */
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #111111;
-  --color-bg-tertiary: #1a1a1a;
-  --color-bg-elevated: #1f1f1f;
-  --color-bg-hover: #252525;
+  --color-bg-primary: #0a0b14;
+  --color-bg-secondary: #10111d;
+  --color-bg-tertiary: #151827;
+  --color-bg-elevated: #121420;
+  --color-bg-hover: #1b2033;
   
   /* Borders */
-  --color-border-default: #2a2a2a;
-  --color-border-hover: #3a3a3a;
-  --color-border-focus: #4a4a4a;
+  --color-border-default: rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: #818cf8;
   
   /* Text */
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a0a0a0;
-  --color-text-tertiary: #707070;
-  --color-text-disabled: #404040;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-disabled: #475569;
   
   /* Accent */
-  --color-accent-primary: #5e6ad2;
-  --color-accent-hover: #6b77e0;
-  --color-accent-pressed: #525cc4;
-  --color-accent-light: rgba(94, 106, 210, 0.1);
+  --color-accent-primary: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-pressed: #4f46e5;
+  --color-accent-light: rgba(99, 102, 241, 0.12);
   
   /* Status */
   --color-status-success: #10b981;
@@ -46,20 +46,38 @@
   --color-node-end: #6b7280;
 
   /* RAP shell */
-  --rap-shell-background: linear-gradient(180deg, #0a0a0a 0%, #111111 100%);
-  --rap-shell-glow-start: rgba(94, 106, 210, 0.16);
-  --rap-shell-glow-end: rgba(59, 130, 246, 0.12);
-  --rap-panel-background: rgba(31, 31, 31, 0.82);
-  --rap-panel-background-soft: rgba(26, 26, 26, 0.74);
-  --rap-panel-background-strong: rgba(37, 37, 37, 0.92);
-  --rap-panel-border: rgba(74, 74, 74, 0.34);
-  --rap-panel-border-strong: rgba(94, 106, 210, 0.34);
-  --rap-text-primary: rgba(255, 255, 255, 0.92);
-  --rap-text-secondary: rgba(255, 255, 255, 0.68);
-  --rap-text-tertiary: rgba(255, 255, 255, 0.52);
-  --rap-active-background: linear-gradient(135deg, rgba(94, 106, 210, 0.24), rgba(59, 130, 246, 0.16));
-  --rap-hero-background: linear-gradient(135deg, rgba(94, 106, 210, 0.18), rgba(59, 130, 246, 0.1));
-  --rap-overlay-backdrop: rgba(10, 10, 10, 0.62);
+  --rap-shell-background: linear-gradient(180deg, #0a0b14 0%, #0f1220 100%);
+  --rap-shell-glow-start: rgba(99, 102, 241, 0.14);
+  --rap-shell-glow-end: rgba(244, 63, 94, 0.08);
+  --rap-panel-background: rgba(255, 255, 255, 0.03);
+  --rap-panel-background-soft: rgba(255, 255, 255, 0.02);
+  --rap-panel-background-strong: rgba(18, 20, 32, 0.92);
+  --rap-panel-border: rgba(255, 255, 255, 0.06);
+  --rap-panel-border-strong: rgba(99, 102, 241, 0.24);
+  --rap-text-primary: rgba(248, 250, 252, 0.96);
+  --rap-text-secondary: rgba(148, 163, 184, 0.88);
+  --rap-text-tertiary: rgba(100, 116, 139, 0.9);
+  --rap-active-background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.09));
+  --rap-hero-background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.06), transparent);
+  --rap-overlay-backdrop: rgba(10, 11, 20, 0.72);
+  --qa-glow-accent: rgba(99, 102, 241, 0.14);
+  --qa-glow-danger: rgba(244, 63, 94, 0.08);
+  --qa-accent-shadow: rgba(99, 102, 241, 0.30);
+  --qa-avatar-background: linear-gradient(135deg, var(--color-accent-primary), var(--color-node-start));
+  --qa-on-accent: #ffffff;
+  --qa-warning-muted: rgba(245, 158, 11, 0.18);
+
+  /* Workspace */
+  --workspace-page-background: var(--rap-shell-background);
+  --workspace-page-glow-start: var(--rap-shell-glow-start);
+  --workspace-page-glow-end: var(--rap-shell-glow-end);
+  --workspace-accent-primary: var(--color-accent-primary);
+  --workspace-accent-light: var(--color-accent-light);
+  --workspace-accent-contrast: var(--qa-on-accent);
+  --workspace-panel-shadow: var(--qa-accent-shadow);
+  --workspace-entity-hover-background: var(--rap-active-background);
+  --workspace-icon-border: var(--rap-panel-border-strong);
+  --workspace-skeleton-background: linear-gradient(90deg, var(--rap-panel-background-soft), var(--rap-panel-background-strong), var(--rap-panel-background-soft));
   
   /* Fontes */
   --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

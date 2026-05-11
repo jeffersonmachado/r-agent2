@@ -159,6 +159,8 @@ const viteConfig = defineConfig(({ mode }) => {
   const apiProxyTarget =
     process.env.VITE_PROXY_TARGET ||
     `http://localhost:${config.api?.port || 3001}`;
+  const usePolling = process.env.VITE_USE_POLLING !== 'false';
+  const pollingInterval = Number(process.env.VITE_POLLING_INTERVAL || 1000);
 
   return {
   base: pwaBasePath,
@@ -245,6 +247,21 @@ const viteConfig = defineConfig(({ mode }) => {
     port: Number(process.env.FRONTEND_PORT || config.frontend?.port || 5173),
     fs: {
       allow: ['..'],
+    },
+    watch: {
+      usePolling,
+      interval: pollingInterval,
+      ignored: [
+        '**/.git/**',
+        '**/.agents/**',
+        '**/.codex/**',
+        '**/coverage/**',
+        '**/dist/**',
+        '**/node_modules/**',
+        '**/qa-results/**',
+        '**/test-results/**',
+        '**/playwright-report/**',
+      ],
     },
     // Configuração explícita do HMR (Hot Module Replacement)
     hmr: {

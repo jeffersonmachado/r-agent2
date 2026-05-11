@@ -7,28 +7,28 @@ const themes = {
     name: 'dark',
     colors: {
       bg: {
-        primary: '#0a0a0a',
-        secondary: '#111111',
-        tertiary: '#1a1a1a',
-        elevated: '#1f1f1f',
-        hover: '#252525',
+        primary: '#0a0b14',
+        secondary: '#10111d',
+        tertiary: '#151827',
+        elevated: '#121420',
+        hover: '#1b2033',
       },
       border: {
-        default: '#2a2a2a',
-        hover: '#3a3a3a',
-        focus: '#4a4a4a',
+        default: 'rgba(255, 255, 255, 0.06)',
+        hover: 'rgba(255, 255, 255, 0.12)',
+        focus: '#818cf8',
       },
       text: {
-        primary: '#ffffff',
-        secondary: '#a0a0a0',
-        tertiary: '#707070',
-        disabled: '#404040',
+        primary: '#f8fafc',
+        secondary: '#94a3b8',
+        tertiary: '#64748b',
+        disabled: '#475569',
       },
       accent: {
-        primary: '#5e6ad2',
-        hover: '#6b77e0',
-        pressed: '#525cc4',
-        light: 'rgba(94, 106, 210, 0.1)',
+        primary: '#6366f1',
+        hover: '#818cf8',
+        pressed: '#4f46e5',
+        light: 'rgba(99, 102, 241, 0.12)',
       },
       status: {
         success: '#10b981',
@@ -48,27 +48,40 @@ const themes = {
       },
     },
     rap: {
-      shellBackground: 'linear-gradient(180deg, #0a0a0a 0%, #111111 100%)',
-      shellGlowStart: 'rgba(94, 106, 210, 0.16)',
-      shellGlowEnd: 'rgba(59, 130, 246, 0.12)',
-      panelBackground: 'rgba(31, 31, 31, 0.82)',
-      panelBackgroundSoft: 'rgba(26, 26, 26, 0.74)',
-      panelBackgroundStrong: 'rgba(37, 37, 37, 0.92)',
-      panelBorder: 'rgba(74, 74, 74, 0.34)',
-      panelBorderStrong: 'rgba(94, 106, 210, 0.34)',
-      textPrimary: 'rgba(255, 255, 255, 0.92)',
-      textSecondary: 'rgba(255, 255, 255, 0.68)',
-      textTertiary: 'rgba(255, 255, 255, 0.52)',
-      activeBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.24), rgba(59, 130, 246, 0.16))',
-      heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.18), rgba(59, 130, 246, 0.1))',
-      overlayBackdrop: 'rgba(10, 10, 10, 0.62)',
+      shellBackground: 'linear-gradient(180deg, #0a0b14 0%, #0f1220 100%)',
+      shellGlowStart: 'rgba(99, 102, 241, 0.14)',
+      shellGlowEnd: 'rgba(244, 63, 94, 0.08)',
+      panelBackground: 'rgba(255, 255, 255, 0.03)',
+      panelBackgroundSoft: 'rgba(255, 255, 255, 0.02)',
+      panelBackgroundStrong: 'rgba(18, 20, 32, 0.92)',
+      panelBorder: 'rgba(255, 255, 255, 0.06)',
+      panelBorderStrong: 'rgba(99, 102, 241, 0.24)',
+      textPrimary: 'rgba(248, 250, 252, 0.96)',
+      textSecondary: 'rgba(148, 163, 184, 0.88)',
+      textTertiary: 'rgba(100, 116, 139, 0.9)',
+      activeBackground: 'linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.09))',
+      heroBackground: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.06), transparent)',
+      overlayBackdrop: 'rgba(10, 11, 20, 0.72)',
+    },
+    qa: {
+      glowAccent: 'rgba(99, 102, 241, 0.14)',
+      glowDanger: 'rgba(244, 63, 94, 0.08)',
+      accentShadow: 'rgba(99, 102, 241, 0.30)',
+      avatarBackground: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+      onAccent: '#ffffff',
+      warningMuted: 'rgba(245, 158, 11, 0.18)',
     },
     workspace: {
-      pageBackground: 'linear-gradient(135deg, #101312 0%, #171512 48%, #0d1615 100%)',
-      pageGlowStart: 'rgba(229, 181, 88, 0.20)',
-      pageGlowEnd: 'rgba(57, 171, 148, 0.16)',
-      accentPrimary: '#e5b558',
-      accentLight: 'rgba(229, 181, 88, 0.18)',
+      pageBackground: 'var(--rap-shell-background)',
+      pageGlowStart: 'var(--rap-shell-glow-start)',
+      pageGlowEnd: 'var(--rap-shell-glow-end)',
+      accentPrimary: 'var(--color-accent-primary)',
+      accentLight: 'var(--color-accent-light)',
+      accentContrast: 'var(--qa-on-accent)',
+      panelShadow: 'var(--qa-accent-shadow)',
+      entityHoverBackground: 'var(--rap-active-background)',
+      iconBorder: 'var(--rap-panel-border-strong)',
+      skeletonBackground: 'linear-gradient(90deg, var(--rap-panel-background-soft), var(--rap-panel-background-strong), var(--rap-panel-background-soft))',
       healthyBg: 'rgba(57, 171, 148, 0.14)',
       healthyColor: '#9be2d4',
       healthyDot: '#39ab94',
@@ -78,35 +91,35 @@ const themes = {
       criticalBg: 'rgba(225, 92, 92, 0.14)',
       criticalColor: '#ffb1b1',
       criticalDot: '#e15c5c',
-      inputBg: 'rgba(255, 251, 238, 0.08)',
+      inputBg: 'var(--rap-panel-background-soft)',
     },
   },
   light: {
     name: 'light',
     colors: {
       bg: {
-        primary: '#F6F7F9',      // Fundo neutro conforme diretrizes
-        secondary: '#FFFFFF',     // Cards e painéis
-        tertiary: '#F0F2F5',      // Hover e estados
-        elevated: '#FFFFFF',      // Elementos elevados
-        hover: '#E8EAED',         // Hover states
+        primary: '#f8fafc',
+        secondary: '#ffffff',
+        tertiary: '#f1f5f9',
+        elevated: '#ffffff',
+        hover: '#eef2ff',
       },
       border: {
-        default: '#E1E4E8',       // Bordas padrão
-        hover: '#D1D5DB',         // Bordas hover
-        focus: '#5e6ad2',         // Bordas focus
+        default: 'rgba(15, 23, 42, 0.08)',
+        hover: 'rgba(99, 102, 241, 0.2)',
+        focus: '#6366f1',
       },
       text: {
-        primary: '#1F2937',       // Texto principal - alto contraste
-        secondary: '#4B5563',     // Texto secundário
-        tertiary: '#6B7280',      // Texto terciário
-        disabled: '#9CA3AF',      // Texto desabilitado
+        primary: '#0f172a',
+        secondary: '#475569',
+        tertiary: '#64748b',
+        disabled: '#94a3b8',
       },
       accent: {
-        primary: '#5e6ad2',       // Azul suave
-        hover: '#6b77e0',
-        pressed: '#525cc4',
-        light: 'rgba(94, 106, 210, 0.1)',
+        primary: '#4f46e5',
+        hover: '#6366f1',
+        pressed: '#4338ca',
+        light: 'rgba(79, 70, 229, 0.1)',
       },
       status: {
         success: '#10b981',
@@ -127,27 +140,40 @@ const themes = {
       },
     },
     rap: {
-      shellBackground: 'linear-gradient(180deg, #f6f7f9 0%, #eef2f7 100%)',
-      shellGlowStart: 'rgba(94, 106, 210, 0.08)',
-      shellGlowEnd: 'rgba(59, 130, 246, 0.06)',
-      panelBackground: 'rgba(255, 255, 255, 0.92)',
-      panelBackgroundSoft: 'rgba(255, 255, 255, 0.82)',
+      shellBackground: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)',
+      shellGlowStart: 'rgba(99, 102, 241, 0.1)',
+      shellGlowEnd: 'rgba(244, 63, 94, 0.05)',
+      panelBackground: 'rgba(255, 255, 255, 0.9)',
+      panelBackgroundSoft: 'rgba(255, 255, 255, 0.76)',
       panelBackgroundStrong: 'rgba(255, 255, 255, 0.98)',
-      panelBorder: 'rgba(209, 213, 219, 0.82)',
-      panelBorderStrong: 'rgba(94, 106, 210, 0.26)',
-      textPrimary: 'rgba(31, 41, 55, 0.94)',
-      textSecondary: 'rgba(75, 85, 99, 0.82)',
-      textTertiary: 'rgba(107, 114, 128, 0.76)',
-      activeBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.14), rgba(59, 130, 246, 0.08))',
-      heroBackground: 'linear-gradient(135deg, rgba(94, 106, 210, 0.12), rgba(59, 130, 246, 0.07))',
+      panelBorder: 'rgba(15, 23, 42, 0.08)',
+      panelBorderStrong: 'rgba(99, 102, 241, 0.24)',
+      textPrimary: 'rgba(15, 23, 42, 0.96)',
+      textSecondary: 'rgba(71, 85, 105, 0.88)',
+      textTertiary: 'rgba(100, 116, 139, 0.82)',
+      activeBackground: 'linear-gradient(135deg, rgba(99, 102, 241, 0.13), rgba(139, 92, 246, 0.06))',
+      heroBackground: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.04), transparent)',
       overlayBackdrop: 'rgba(15, 23, 42, 0.18)',
     },
+    qa: {
+      glowAccent: 'rgba(99, 102, 241, 0.10)',
+      glowDanger: 'rgba(244, 63, 94, 0.06)',
+      accentShadow: 'rgba(79, 70, 229, 0.22)',
+      avatarBackground: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+      onAccent: '#ffffff',
+      warningMuted: 'rgba(245, 158, 11, 0.16)',
+    },
     workspace: {
-      pageBackground: 'linear-gradient(135deg, #f6f7f9 0%, #eff3f9 48%, #f0f4f9 100%)',
-      pageGlowStart: 'rgba(94, 106, 210, 0.08)',
-      pageGlowEnd: 'rgba(59, 130, 246, 0.06)',
-      accentPrimary: '#5e6ad2',
-      accentLight: 'rgba(94, 106, 210, 0.12)',
+      pageBackground: 'var(--rap-shell-background)',
+      pageGlowStart: 'var(--rap-shell-glow-start)',
+      pageGlowEnd: 'var(--rap-shell-glow-end)',
+      accentPrimary: 'var(--color-accent-primary)',
+      accentLight: 'var(--color-accent-light)',
+      accentContrast: 'var(--qa-on-accent)',
+      panelShadow: 'var(--qa-accent-shadow)',
+      entityHoverBackground: 'var(--rap-active-background)',
+      iconBorder: 'var(--rap-panel-border-strong)',
+      skeletonBackground: 'linear-gradient(90deg, var(--rap-panel-background-soft), var(--rap-panel-background-strong), var(--rap-panel-background-soft))',
       healthyBg: 'rgba(16, 185, 129, 0.12)',
       healthyColor: '#047857',
       healthyDot: '#10b981',
@@ -157,7 +183,7 @@ const themes = {
       criticalBg: 'rgba(239, 68, 68, 0.12)',
       criticalColor: '#dc2626',
       criticalDot: '#ef4444',
-      inputBg: 'rgba(31, 41, 55, 0.05)',
+      inputBg: 'var(--rap-panel-background-soft)',
     },
   },
 };
@@ -231,12 +257,24 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--rap-hero-background', theme.rap.heroBackground);
     root.style.setProperty('--rap-overlay-backdrop', theme.rap.overlayBackdrop);
 
+    root.style.setProperty('--qa-glow-accent', theme.qa.glowAccent);
+    root.style.setProperty('--qa-glow-danger', theme.qa.glowDanger);
+    root.style.setProperty('--qa-accent-shadow', theme.qa.accentShadow);
+    root.style.setProperty('--qa-avatar-background', theme.qa.avatarBackground);
+    root.style.setProperty('--qa-on-accent', theme.qa.onAccent);
+    root.style.setProperty('--qa-warning-muted', theme.qa.warningMuted);
+
     // Workspace-specific variables
     root.style.setProperty('--workspace-page-background', theme.workspace.pageBackground);
     root.style.setProperty('--workspace-page-glow-start', theme.workspace.pageGlowStart);
     root.style.setProperty('--workspace-page-glow-end', theme.workspace.pageGlowEnd);
     root.style.setProperty('--workspace-accent-primary', theme.workspace.accentPrimary);
     root.style.setProperty('--workspace-accent-light', theme.workspace.accentLight);
+    root.style.setProperty('--workspace-accent-contrast', theme.workspace.accentContrast);
+    root.style.setProperty('--workspace-panel-shadow', theme.workspace.panelShadow);
+    root.style.setProperty('--workspace-entity-hover-background', theme.workspace.entityHoverBackground);
+    root.style.setProperty('--workspace-icon-border', theme.workspace.iconBorder);
+    root.style.setProperty('--workspace-skeleton-background', theme.workspace.skeletonBackground);
     root.style.setProperty('--workspace-healthy-bg', theme.workspace.healthyBg);
     root.style.setProperty('--workspace-healthy-color', theme.workspace.healthyColor);
     root.style.setProperty('--workspace-healthy-dot', theme.workspace.healthyDot);

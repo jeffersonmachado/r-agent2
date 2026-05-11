@@ -15,11 +15,13 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { loginWithTenantSelection } = require('./helpers/playwrightAuth');
 
 const BASE_URL = 'http://localhost:5173/dev/qa-waves';
 const API_BASE = 'http://localhost:3001';
 const USERNAME = 'systemadmin';
 const PASSWORD = 'Admin123!';
+const TENANT_ID = process.env.TEST_TENANT_ID || 'system';
 
 // Configurações de timing
 const LOGIN_TIMEOUT = 30000;
@@ -83,59 +85,17 @@ async function runSmokeTest() {
     
     // ====== STEP 1: Navegar e Login ======
     console.log('\n[STEP 1] Login\n');
-    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: LOGIN_TIMEOUT });
+    await loginWithTenantSelection(page, {
+      targetUrl: BASE_URL,
+      username: USERNAME,
+      password: PASSWORD,
+      tenantId: TENANT_ID,
+    });
     console.log(`✓ Página carregada: ${BASE_URL}`);
-    
-    // Aguardar campo de username
-    await page.waitForSelector('input[type="text"], input[name="username"], [data-testid="username"]', { timeout: 10000 }).catch(() => null);
-    
-    // Tentar preencher login
-    const usernameSelectors = ['input[name="username"]', 'input[type="text"]', '[data-testid="username"]'];
-    let usernameFound = false;
-    for (const sel of usernameSelectors) {
-      try {
-        const input = await page.$(sel);
-        if (input) {
-          await page.fill(sel, USERNAME);
-          usernameFound = true;
-          console.log(`✓ Username preenchido: ${USERNAME}`);
-          break;
-        }
-      } catch (e) {
-        // continua
-      }
-    }
-    
-    if (!usernameFound) {
-      throw new Error('Não consegui encontrar campo de username');
-    }
-    
-    // Preencher password
-    await page.fill('input[type="password"]', PASSWORD);
-    console.log(`✓ Password preenchido`);
-    
-    // Clicar em Login
-    const loginBtnSelectors = ['button:has-text("Login")', 'button:has-text("Sign In")', 'button[type="submit"]'];
-    let loginClicked = false;
-    for (const sel of loginBtnSelectors) {
-      try {
-        await page.click(sel);
-        loginClicked = true;
-        console.log('✓ Botão Login clicado');
-        break;
-      } catch (e) {
-        // continua
-      }
-    }
-    
-    if (!loginClicked) {
-      throw new Error('Não consegui clicar no botão Login');
-    }
-    
-    // Aguardar redirecionamento e carregamento do dashboard
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: LOGIN_TIMEOUT }).catch(() => null);
-    await page.waitForTimeout(2000); // Extra wait para UI renderizar
-    console.log(`✓ Login completado, aguardando dashboard`);
+    console.log(`✓ Username preenchido: ${USERNAME}`);
+    console.log('✓ Password preenchido');
+    console.log(`✓ Login/tenant normalizados para o tenant: ${TENANT_ID}`);
+    console.log('✓ Login completado, aguardando dashboard');
     
     // ====== STEP 2: Carregar Cenários ======
     console.log('\n[STEP 2] Carregar Cenários\n');

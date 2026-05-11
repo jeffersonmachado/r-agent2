@@ -85,27 +85,28 @@ export function WorkspaceLayout({
           ) : (
             <div className="workspace-grid">
               <div className="workspace-center-column">
-              {showQaPanel ? (
-                <WorkspaceQaRpaPanel autocorrections={autocorrections} loading={loadingAutoCorrections} timeline={timeline} />
-              ) : showTimeline ? (
-                <WorkspaceTimeline timeline={timeline} loading={loadingTimeline} onLoadMore={onLoadMoreTimeline} />
-              ) : (
-                <WorkspaceInsights insights={insights} loading={loadingInsights} />
-              )}
+                {showQaPanel ? (
+                  <WorkspaceQaRpaPanel autocorrections={autocorrections} loading={loadingAutoCorrections} timeline={timeline} />
+                ) : showTimeline ? (
+                  <WorkspaceTimeline timeline={timeline} loading={loadingTimeline} onLoadMore={onLoadMoreTimeline} />
+                ) : (
+                  <WorkspaceInsights insights={insights} loading={loadingInsights} />
+                )}
               </div>
-              <WorkspaceRightRail
-                summary={selectedSummary}
-                insights={insights}
-                actions={actions}
-                autocorrections={autocorrections}
-                loadingInsights={loadingInsights}
-                loadingActions={loadingActions}
-                loadingAutoCorrections={loadingAutoCorrections}
-              />
+
               <div className="workspace-detail-stack">
                 {showInsights ? <WorkspaceInsights insights={insights} loading={loadingInsights} /> : null}
                 {showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}
                 {!showInsights && !showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}
+                <WorkspaceRightRail
+                  summary={selectedSummary}
+                  insights={insights}
+                  actions={actions}
+                  autocorrections={autocorrections}
+                  loadingInsights={loadingInsights}
+                  loadingActions={loadingActions}
+                  loadingAutoCorrections={loadingAutoCorrections}
+                />
               </div>
             </div>
           )}

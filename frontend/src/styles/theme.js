@@ -7,31 +7,31 @@ export const theme = {
   colors: {
     // Backgrounds
     bg: {
-      primary: '#0a0a0a',
-      secondary: '#111111',
-      tertiary: '#1a1a1a',
-      elevated: '#1f1f1f',
-      hover: '#252525',
+      primary: '#0a0b14',
+      secondary: '#10111d',
+      tertiary: '#151827',
+      elevated: '#121420',
+      hover: '#1b2033',
     },
     // Borders
     border: {
-      default: '#2a2a2a',
-      hover: '#3a3a3a',
-      focus: '#4a4a4a',
+      default: 'rgba(255, 255, 255, 0.06)',
+      hover: 'rgba(255, 255, 255, 0.12)',
+      focus: '#818cf8',
     },
     // Text
     text: {
-      primary: '#ffffff',
-      secondary: '#a0a0a0',
-      tertiary: '#707070',
-      disabled: '#404040',
+      primary: '#f8fafc',
+      secondary: '#94a3b8',
+      tertiary: '#64748b',
+      disabled: '#475569',
     },
     // Accent (azul suave estilo Linear)
     accent: {
-      primary: '#5e6ad2',
-      hover: '#6b77e0',
-      pressed: '#525cc4',
-      light: 'rgba(94, 106, 210, 0.1)',
+      primary: '#6366f1',
+      hover: '#818cf8',
+      pressed: '#4f46e5',
+      light: 'rgba(99, 102, 241, 0.12)',
     },
     // Status
     status: {
@@ -121,5 +121,4 @@ export const globalStyles = {
     MozOsxFontSmoothing: 'grayscale',
   },
 };
-
 
