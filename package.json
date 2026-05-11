@@ -39,6 +39,7 @@
     "test:tenant-intelligence:smoke": "node ./scripts/smoke/tenant-intelligence-smoke-playwright-authmock.js",
     "test:market-intelligence:smoke": "node ./scripts/smoke/market-intelligence-smoke-api.js",
     "test:scheduling-support:smoke": "node ./scripts/smoke/scheduling-support-smoke-api.js",
+    "test:analytics:smoke": "node ./scripts/smoke/analytics-roi-smoke-api.js",
     "test:bpmn:smoke": "node ./scripts/test-bpmn-editor-smoke.js",
     "test:stack:up": "bash ./scripts/test-stack-up.sh",
     "test:stack:down": "bash ./scripts/test-stack-down.sh",

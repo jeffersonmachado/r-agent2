@@ -38,7 +38,7 @@ npm run deploy:remote:ssh:api:quickbuild
 ```
 
 **O que faz:**
-- Sincroniza: `api/`, `config/`, `contracts/`, `lib/`, `package*.json`
+- Sincroniza o contexto mínimo exigido pelo `api/Dockerfile`: `engine/`, `core/`, `api/`, `rpa/`, `infra/`, `config/`, `contracts/`, `pipeline/`, `qa/`, `qa-mesh/`, `lib/`, `scripts/`, `tools/`, `tests/`, `package*.json`
 - Rebuild **apenas** da imagem da API
 - Container API é atualizado com a nova imagem
 - Outros serviços (frontend, rag-service, redis) não são tocados

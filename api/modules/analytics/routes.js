@@ -50,10 +50,12 @@ function createAnalyticsRoutes({ buildDeps }) {
     try {
       const urlObj = new URL(req.originalUrl || req.url || '/', 'http://localhost');
       const windowDays = urlObj.searchParams.get('windowDays');
+      const locationId = urlObj.searchParams.get('locationId');
       const { getRoiSummary } = require('../../services/roiService');
       const out = await getRoiSummary({
         tenantId: req.tenantId,
         windowDays: windowDays != null ? Number(windowDays) : null,
+        locationId: locationId || null,
       });
       if (!out.ok) {
         deps.sendJson(res, 400, { ok: false, error: out.error || 'roi_unavailable' });
@@ -73,10 +75,12 @@ function createAnalyticsRoutes({ buildDeps }) {
     try {
       const urlObj = new URL(req.originalUrl || req.url || '/', 'http://localhost');
       const windowDays = urlObj.searchParams.get('windowDays');
+      const locationId = urlObj.searchParams.get('locationId');
       const { getFunnelMetrics } = require('../../services/roiService');
       const out = await getFunnelMetrics({
         tenantId: req.tenantId,
         windowDays: windowDays != null ? Number(windowDays) : null,
+        locationId: locationId || null,
       });
       if (!out.ok) {
         deps.sendJson(res, 400, { ok: false, error: out.error || 'funnel_unavailable' });

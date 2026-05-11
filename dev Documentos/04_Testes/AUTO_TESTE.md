@@ -1,98 +1,69 @@
 # Auto Teste do Sistema
 
-## Comando Único
+## Fluxo Recomendado
+
+Nao existe mais um script unico `npm run autotest` no package raiz. O equivalente atual e executar a sequencia abaixo:
 
 ```bash
-npm run autotest
-```
-
-## O Que Ele Faz
-
-O comando `autotest` executa uma sequência completa de validação:
-
-1. **Testes** - Executa todos os testes do projeto (`npm run test:all`)
-2. **QA Sistêmico** - Executa QA com aplicação de governança (`qa/runQa.js`)
-3. **Veredito Final** - Gera veredito GO/BLOCK (`qa/finalizeQa.js`)
-
-## Quando Usar
-
-- **Antes de fazer commit** - Garantir que tudo está funcionando
-- **Antes de fazer merge** - Validar que PR está pronto
-- **No CI/CD** - Pipeline executa automaticamente
-- **Antes de deploy** - Última verificação antes de produção
-
-## Onde Ver o Resultado
-
-### Arquivos Gerados
-
-- `qa/latest.json` - Resultado completo de QA com governança aplicada
-- `qa/final-verdict.json` - Veredito final (GO ou BLOCK)
-
-### Verificação Rápida
-
-```bash
+npm run test
+npm run qa
+npm run qa:final-report
 npm run check:green
 ```
 
-Este comando verifica se o sistema está "verde" (pronto) baseado no último veredito.
+## O Que Cada Etapa Faz
+
+1. **`npm run test`** - Executa a bateria principal exposta pelo projeto (`test:unit`, `test:flow` e `test:rpa`)
+2. **`npm run qa`** - Executa o runner de QA sistêmico atual
+3. **`npm run qa:final-report`** - Consolida o relatório final de QA
+4. **`npm run check:green`** - Lê o veredito final e retorna `0` para GO ou `1` para BLOCK
+
+## Quando Usar
+
+- **Antes de fazer commit** - Garantir que o baseline principal está funcional
+- **Antes de fazer merge** - Validar o estado final de QA
+- **No CI/CD** - Usar a sequência acima ou encapsular esses passos no pipeline
+- **Antes de deploy** - Rodar a validação final e conferir o veredito
+
+## Onde Ver o Resultado
+
+- `qa/final-verdict.json` - Veredito consumido por `npm run check:green`
+- Artefatos adicionais em `qa/` e `qa-mesh/`, conforme o fluxo executado
 
 ## Regra de Ouro
 
-**Se `autotest` falhar (exit code 1), NÃO AVANÇAR.**
+**Se qualquer etapa da sequência falhar (exit code 1), nao avançar.**
 
-- ❌ Não fazer commit
-- ❌ Não fazer merge
-- ❌ Não fazer deploy
-
-Corrija os problemas antes de continuar.
-
-## Exit Codes
-
-- `0` = GO (sistema pronto, pode avançar)
-- `1` = BLOCK (sistema não está pronto, não avançar)
+- Nao fazer commit
+- Nao fazer merge
+- Nao fazer deploy
 
 ## Integração com CI
 
-O CI deve executar:
+O CI deve executar a sequência real de scripts existentes:
 
 ```bash
-npm run autotest
+npm run test
+npm run qa
+npm run qa:final-report
+npm run check:green
 ```
-
-E confiar no exit code para bloquear ou liberar o pipeline.
-
-## Detalhes Técnicos
-
-### Governança Aplicada
-
-O autotest aplica automaticamente:
-
-- **policyEvaluator** - Avalia políticas de QA (WARN vira FAIL em escopos críticos)
-- **timeEvaluator** - Verifica SLA de execução (CI não pode exceder 300s)
-
-### Veredito Final
-
-O veredito é determinado por:
-
-- **BLOCK** se houver falhas bloqueantes
-- **BLOCK** se status for FAIL
-- **GO** se status for PASS ou WARN (sem bloqueantes)
 
 ## Troubleshooting
 
-### "latest.json não encontrado"
+### "final-verdict.json não encontrado"
 
-Execute `npm run autotest` primeiro para gerar o resultado.
+Execute `npm run qa` e `npm run qa:final-report` antes de `npm run check:green`.
 
 ### "Testes falharam"
 
-Corrija os testes que falharam antes de continuar.
+Corrija a etapa que falhou antes de seguir para QA.
 
 ### "QA falhou"
 
-Verifique `qa/latest.json` para ver quais checks falharam.
+Inspecione os artefatos gerados em `qa/` e o veredito final em `qa/final-verdict.json`.
 
 ### "SLA excedido"
 
-O tempo de execução excedeu o limite. Otimize os testes ou ajuste o SLA em `governance/qa-policy.json`.
+Otimize a bateria executada ou ajuste o SLA em `governance/qa-policy.json`.
 

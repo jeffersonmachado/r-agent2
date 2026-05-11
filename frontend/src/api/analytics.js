@@ -58,6 +58,7 @@ export async function getAllMetrics(options = {}) {
 export async function getRoiMetrics(options = {}) {
   const params = new URLSearchParams();
   if (options.windowDays) params.append('windowDays', options.windowDays);
+  if (options.locationId) params.append('locationId', options.locationId);
   const query = params.toString();
   return fetchJson(`/analytics/roi${query ? `?${query}` : ''}`);
 }
@@ -65,6 +66,7 @@ export async function getRoiMetrics(options = {}) {
 export async function getFunnelMetrics(options = {}) {
   const params = new URLSearchParams();
   if (options.windowDays) params.append('windowDays', options.windowDays);
+  if (options.locationId) params.append('locationId', options.locationId);
   const query = params.toString();
   return fetchJson(`/analytics/funnel${query ? `?${query}` : ''}`);
 }

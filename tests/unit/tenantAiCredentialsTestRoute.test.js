@@ -1,3 +1,4 @@
+const express = require('express');
 const http = require('http');
 
 jest.setTimeout(30000);
@@ -68,22 +69,6 @@ describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
     const getAIConfigImpl = overrides.getAIConfig || jest.fn(async () => ({ primary: 'openai' }));
     const getDecryptedAPIKeyImpl = overrides.getDecryptedAPIKey || jest.fn(async () => '');
 
-    // Evita boot real de DB/seed/migrations no import do server.
-    jest.doMock('../../api/db/sequelize', () => ({
-      connect: jest.fn(async () => ({})),
-      getSequelize: jest.fn(() => ({})),
-      close: jest.fn(async () => {}),
-      Sequelize: require('sequelize').Sequelize,
-    }));
-    jest.doMock('../../api/db/migrate', () => ({ runMigrations: jest.fn(async () => {}) }));
-    jest.doMock('../../api/db/seed', () => ({ runSeed: jest.fn(async () => {}) }));
-    jest.doMock('../../api/db/models', () => ({ defineRelationships: jest.fn() }));
-
-    jest.doMock('../../api/services/websocketService', () => ({
-      initializeWebSocket: jest.fn(),
-      emitEvent: jest.fn(),
-    }));
-
     jest.doMock('../../api/middleware/auth', () => ({
       requireAuth: requireAuthImpl,
       requirePermission: jest.fn(() => true),
@@ -108,9 +93,76 @@ describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
 
     global.fetch = overrides.fetch || jest.fn(async () => makeFetchResponseOk({ data: [] }));
 
-    const { createServer } = require('../../api/server');
+    const { createTenantRepository } = require('../../api/modules/tenant/repository');
+    const { createTenantService } = require('../../api/modules/tenant/service');
+    const { createTenantController } = require('../../api/modules/tenant/controller');
+    const { createTenantRoutes } = require('../../api/modules/tenant/routes');
+    const { requirePermission } = require('../../api/middleware/auth');
+    const { isSuperAdmin } = require('../../api/services/superAdminService');
+    const { emitEvent } = require('../../api/services/websocketService');
+    const tenantAIService = require('../../api/services/tenantAIService');
+    const tenantValidator = require('../../api/modules/tenant/validator');
+
+    const repository = createTenantRepository({
+      getTenant: jest.fn(async () => null),
+      listTenants: jest.fn(async () => []),
+      createTenant: jest.fn(async () => ({ success: true, tenant: {} })),
+      updateTenant: jest.fn(async () => ({ success: true, tenant: {} })),
+      deleteTenant: jest.fn(async () => ({ success: true })),
+      getTenantUsage: jest.fn(async () => ({})),
+      getPlanLimits: jest.fn(() => ({})),
+      getTenantContext: jest.fn(() => null),
+      updateTenantContext: jest.fn(async () => ({ success: true })),
+      suspendTenant: jest.fn(async () => ({ success: true, tenant: {} })),
+      reactivateTenant: jest.fn(async () => ({ success: true, tenant: {} })),
+      changePlan: jest.fn(async () => ({ success: true, tenant: {} })),
+      tenantAIService,
+    });
+
+    const service = createTenantService({
+      repository,
+      validator: tenantValidator,
+      isSuperAdmin,
+      logger: require('../../api/utils/logger'),
+      logAction: jest.fn(),
+      generateAiResponse: jest.fn(),
+      registerGeneration: jest.fn(),
+      tenantAIService,
+    });
+
+    const controller = createTenantController({
+      requireAuth: requireAuthImpl,
+      requirePermission,
+      service,
+      emitEvent,
+    });
+
+    const app = express();
+    app.use(express.json({ limit: '10mb' }));
+    app.use((req, res, next) => {
+      if (req.path === '/tenants/current/ai-credentials/test') {
+        const authResult = requireAuthImpl(req);
+        if (authResult?.valid && !authResult.agent?.tenantId) {
+          res.status(403).json({
+            error: 'tenant_validation_failed',
+            message: 'Agente não possui tenantId',
+          });
+          return;
+        }
+      }
+      next();
+    });
+    app.use('/tenants', createTenantRoutes({ controller }));
+    app.use((err, req, res, next) => {
+      if (err instanceof SyntaxError || err?.type === 'entity.parse.failed') {
+        res.status(400).json({ error: 'bad_request', message: 'JSON inválido no corpo da requisição' });
+        return;
+      }
+      next(err);
+    });
+
     return {
-      server: createServer(),
+      server: http.createServer(app),
       mocks: {
         requireAuth: requireAuthImpl,
         getAIConfig: getAIConfigImpl,

@@ -76,6 +76,37 @@ function safeObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
 }
 
+function normalizeLocationId(value) {
+  const normalized = safeStr(value);
+  return normalized || null;
+}
+
+function extractLocationIdFromObject(value) {
+  const source = safeObject(value);
+  if (!source) return null;
+
+  const direct = normalizeLocationId(source.locationId || source.location_id);
+  if (direct) return direct;
+
+  const nestedKeys = ['context', 'props', 'attributes', 'settings', 'metadata'];
+  for (const key of nestedKeys) {
+    const nested = safeObject(source[key]);
+    if (!nested) continue;
+    const nestedLocationId = normalizeLocationId(nested.locationId || nested.location_id);
+    if (nestedLocationId) return nestedLocationId;
+  }
+
+  return null;
+}
+
+function resolveMarketingLocationId({ attributesPatch = null, currentLocationId = null, currentAttributes = null, form = null } = {}) {
+  return extractLocationIdFromObject(attributesPatch)
+    || normalizeLocationId(currentLocationId)
+    || extractLocationIdFromObject(currentAttributes)
+    || extractLocationIdFromObject(form && form.settings)
+    || null;
+}
+
 function parseUrlAttribution(rawUrl) {
   const url = safeStr(rawUrl);
   if (!url) return null;
@@ -192,7 +223,7 @@ async function getFormBySlug({ tenantId, slug }) {
   return row ? (row.toJSON ? row.toJSON() : row) : null;
 }
 
-async function upsertLead({ tenantId, email = null, phone = null, externalId = null, name = null, attributesPatch = null, stage = null, lastSeenAt = null } = {}) {
+async function upsertLead({ tenantId, email = null, phone = null, externalId = null, name = null, attributesPatch = null, stage = null, lastSeenAt = null, locationId = null } = {}) {
   if (!dbAvailable()) return { ok: false, error: 'db_unavailable' };
   const Model = MarketingLead();
   const t = safeStr(tenantId || '');
@@ -211,11 +242,13 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
   const now = new Date();
   const attrs0 = (attributesPatch && typeof attributesPatch === 'object') ? attributesPatch : null;
   const attribution = extractAttribution(attrs0);
+  const resolvedLocationId = resolveMarketingLocationId({ attributesPatch: attrs0, currentLocationId: locationId });
   const patch = {
     ...(e ? { email: e } : {}),
     ...(p ? { phone: p } : {}),
     ...(x ? { external_id: x } : {}),
     ...(nm ? { name: nm } : {}),
+    location_id: resolvedLocationId,
     ...(stage ? { stage: safeToString(stage) } : {}),
     ...(lastSeenAt ? { last_seen_at: lastSeenAt instanceof Date ? lastSeenAt : new Date(safeToString(lastSeenAt)) } : { last_seen_at: now }),
   };
@@ -224,7 +257,13 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
     const json = row.toJSON ? row.toJSON() : row;
     const attrs = (json.attributes && typeof json.attributes === 'object') ? { ...json.attributes } : {};
     if (attrs0) Object.assign(attrs, attrs0);
-    await row.update({ ...patch, attributes: applyAttribution(attrs, attribution) });
+    const nextAttributes = applyAttribution(attrs, attribution);
+    const nextLocationId = resolveMarketingLocationId({
+      attributesPatch: attrs0,
+      currentLocationId: json.location_id || json.locationId || locationId,
+      currentAttributes: attrs,
+    });
+    await row.update({ ...patch, location_id: nextLocationId, attributes: nextAttributes });
     return { ok: true, lead: row.toJSON ? row.toJSON() : row, created: false };
   }
 
@@ -232,6 +271,7 @@ async function upsertLead({ tenantId, email = null, phone = null, externalId = n
   const row2 = await Model.create({
     id: newId('mlead'),
     tenant_key: t,
+    location_id: resolvedLocationId,
     email: e,
     phone: p,
     external_id: x,
@@ -338,6 +378,7 @@ async function submitForm({ tenantId, slug, submissionId = null, data = {}, ipAd
   if (!form) return { ok: false, error: 'form_not_found' };
 
   const payload = data && typeof data === 'object' ? data : {};
+  const resolvedLocationId = resolveMarketingLocationId({ attributesPatch: payload, form });
   const leadRes = await upsertLead({
     tenantId: t,
     email: payload.email || payload.Email || null,
@@ -346,6 +387,7 @@ async function submitForm({ tenantId, slug, submissionId = null, data = {}, ipAd
     name: payload.name || payload.nome || null,
     attributesPatch: payload,
     stage: 'lead',
+    locationId: resolvedLocationId,
   });
   const lead = leadRes.ok ? leadRes.lead : null;
 
@@ -356,6 +398,7 @@ async function submitForm({ tenantId, slug, submissionId = null, data = {}, ipAd
     const row = await SubModel.create({
       id: newId('msub'),
       tenant_key: t,
+      location_id: resolvedLocationId || safeStr(lead && (lead.location_id || lead.locationId)) || null,
       form_id: form.id,
       lead_id: lead ? lead.id : null,
       external_submission_id: externalSubmissionId || null,
@@ -446,6 +489,11 @@ async function updateLead({ tenantId, leadId, stage = null, name = null, attribu
 
   const payload = {
     attributes,
+    location_id: resolveMarketingLocationId({
+      attributesPatch,
+      currentLocationId: current.location_id || current.locationId || null,
+      currentAttributes: current.attributes,
+    }),
     updated_at: new Date(),
   };
   if (stage) payload.stage = safeToString(stage);

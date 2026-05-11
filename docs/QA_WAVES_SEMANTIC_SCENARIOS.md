@@ -168,6 +168,18 @@ Fluxo principal da pagina integrada:
 8. Executar cenario real ou wave inteira real
 9. Abrir replay real em `/rpa-replays?replayId=<id>`
 
+Leitura operacional atual da tela:
+
+- `GET /api/test-executions/qa-waves/journeys`
+- `GET /api/test-executions/qa-waves/journey-status`
+- `GET /api/test-executions/qa-waves/step-status`
+- `GET /api/test-executions/qa-waves/scenarios`
+
+Contrato de smoke atual:
+
+- `tests/smoke-test-qa-waves-unified.js` deve observar apenas leituras em `/api/test-executions/qa-waves/*` e replays/execuções em `/api/test-executions/*`
+- qualquer chamada remanescente em `/api/qa-waves/*` durante o smoke é tratada como falha
+
 ## Governanca
 
 O pre-check da execucao considera:

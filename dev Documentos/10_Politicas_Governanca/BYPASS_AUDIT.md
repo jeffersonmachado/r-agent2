@@ -251,7 +251,7 @@ Esta auditoria mapeia:
 **Descrição:** Scripts de automação e utilitários podem ser executados isoladamente, potencialmente ignorando validações.
 
 **Scripts Afetados:**
-- `npm run autotest` - Autotest isolado
+- `npm run test && npm run qa && npm run qa:final-report && npm run check:green` - Fluxo manual equivalente ao autoteste antigo
 - `npm run check:green` - Check green isolado
 - `node scripts/validate-contracts.js` - Validação de contratos isolada
 - `node scripts/validate-ia-rollout-internal.js` - Validação de rollout isolada

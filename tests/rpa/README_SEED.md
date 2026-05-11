@@ -122,7 +122,7 @@ Contém:
 ## 🔗 Integração
 
 Este sistema pode ser integrado com:
-- Sistema de seeds existente (`scripts/seed.js`)
+- Fluxo atual DB-only do projeto (migrations + setup do ambiente)
 - Testes automatizados
 - CI/CD pipelines
 - Ambientes de desenvolvimento

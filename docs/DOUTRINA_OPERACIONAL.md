@@ -159,9 +159,9 @@ export RUNTIME_ROOT=~/.local/share/ragent2-runtime
 npm run dev
 
 # 3. Smoke tests isolados (com RUNTIME_ROOT, fallback workspace se indefinido)
-npm run test:physical-queue              # L-01
-npm run test:ura-publish                 # L-02
-npm run test:bpmn-editor                 # L-06
+npm run test:physical:smoke              # L-01
+npm run test:ura:publish-rollback:smoke  # L-02
+npm run test:bpmn:smoke                  # L-06
 # ... etc
 
 # 4. Validação local full
@@ -285,7 +285,7 @@ Never hardcode paths. Always use the cascade pattern via `tools/system/lib/runti
 ### 6.1 código & build
 
 - [ ] `npm ci` completa sem erro
-- [ ] `npm run lint` passa (ou `npm run lint:fix` aplicado)
+- [ ] `npm run frontend:test:unit` passa
 - [ ] `npm run test:all` passa com cobertura adequada
 - [ ] `npm run build` completa sem warning crítico
 - [ ] Frontend `npm run build` completa
@@ -325,7 +325,7 @@ Never hardcode paths. Always use the cascade pattern via `tools/system/lib/runti
 - [ ] `npm run zip:release:clean` gera `dist/r-agent2-*.zip`
 - [ ] ZIP contém apenas código+config, sem estado mutável
 - [ ] SHA-256 manifest presente e válido
-- [ ] Auditoria (`npm run audit`) sem vulnerabilidades críticas
+- [ ] Auditoria (`npm audit`) sem vulnerabilidades críticas
 
 ---
 

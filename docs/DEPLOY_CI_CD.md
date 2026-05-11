@@ -74,18 +74,19 @@ jobs:
           DB_USER: ragent2_ci
           DB_PASSWORD: ci_password
           DB_NAME: ragent2_ci
-        run: npm run db:migrate:ci
+         run: npm run db:migrate
 
-      - name: Lint & Format Check
+      - name: Core Test Gates
         run: |
-          npm run lint
-          npm run format:check
+           npm run test:unit
+           npm run test:flow
+           npm run test:data
 
-      - name: Unit Tests
-        run: npm run test:coverage
+      - name: CI Test Suite
+        run: npm run test:ci
 
-      - name: Integration Tests
-        run: npm run test:integration
+      - name: Extended Regression
+        run: npm run test:system
 
       - name: System Validate (Smoke Tests)
         env:
@@ -301,34 +302,30 @@ pipeline {
       }
     }
 
-    stage('Lint & Format') {
+    stage('Core Test Gates') {
       steps {
         sh '''
-          npm run lint
-          npm run format:check
+           npm run test:unit
+           npm run test:flow
+           npm run test:data
         '''
       }
     }
 
-    stage('Unit Tests') {
+     stage('CI Test Suite') {
       steps {
-        sh 'npm run test:coverage'
+         sh 'npm run test:ci'
       }
       post {
         always {
-          junit 'coverage/junit.xml'
-          publishHTML target: [
-            reportDir: 'coverage',
-            reportFiles: 'index.html',
-            reportName: 'Coverage Report'
-          ]
+           archiveArtifacts artifacts: 'qa-mesh/**/*.json,qa/**/*.json', allowEmptyArchive: true
         }
       }
     }
 
-    stage('Integration Tests') {
+    stage('Extended Regression') {
       steps {
-        sh 'npm run test:integration'
+        sh 'npm run test:system'
       }
     }
 
@@ -336,7 +333,7 @@ pipeline {
       steps {
         sh '''
           export RUNTIME_ROOT=${RUNTIME_ROOT}
-          npm run db:migrate:ci
+           npm run db:migrate
           npm run system:validate
         '''
       }
@@ -421,9 +418,13 @@ pipeline {
         ok "Deploy"
       }
       steps {
+          services:
+            - postgres:14
+            - redis:7-alpine
         script {
-          sh '''
-            ssh deploy@production "cd /opt/ragent2 && \
+           - npm run test:unit
+           - npm run test:flow
+           - npm run test:data
               docker-compose -f docker-compose.prod.yml pull && \
               docker-compose -f docker-compose.prod.yml up -d && \
               docker-compose -f docker-compose.prod.yml exec ragent2-api npm run system:go-no-go"
@@ -437,7 +438,7 @@ pipeline {
     always {
       cleanWs()
     }
-    failure {
+           - npm run test:ci
       mail(
         subject: "Build Failed: ${env.BUILD_NUMBER}",
         body: "Build ${env.BUILD_NUMBER} failed. Check ${env.BUILD_URL}",
@@ -448,7 +449,7 @@ pipeline {
       script {
         if (env.BRANCH_NAME == 'main') {
           slackSend(
-            color: 'good',
+           - npm run db:migrate
             message: "✅ Build ${env.BUILD_NUMBER} succeeded and deployed to production"
           )
         }
@@ -493,15 +494,16 @@ install:
     paths:
       - node_modules/
 
-lint:
+core_test_gates:
   stage: test
   needs: ["install"]
   script:
-    - npm run lint
-    - npm run format:check
+    - npm run test:unit
+    - npm run test:flow
+    - npm run test:data
   allow_failure: false
 
-unit_tests:
+ci_test_suite:
   stage: test
   needs: ["install"]
   services:
@@ -512,22 +514,16 @@ unit_tests:
     POSTGRES_USER: ragent2_ci
     POSTGRES_PASSWORD: ci_password
   script:
-    - npm run test:coverage
-  coverage: '/Coverage: \d+\.\d+%/'
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura-coverage.xml
+    - npm run test:ci
 
-integration_tests:
+extended_regression:
   stage: test
   needs: ["install"]
   services:
     - postgres:14
     - redis:7-alpine
   script:
-    - npm run test:integration
+    - npm run test:system
   allow_failure: true
 
 system_validate:
@@ -539,7 +535,7 @@ system_validate:
   script:
     - mkdir -p ${RUNTIME_ROOT}
     - export RUNTIME_ROOT=${RUNTIME_ROOT}
-    - npm run db:migrate:ci
+    - npm run db:migrate
     - npm run system:validate
   artifacts:
     paths:
@@ -736,7 +732,7 @@ artifacts:
 
 ```bash
 # Fail if coverage drops below threshold
-COVERAGE=$(npm run test:coverage:report | grep "Statements" | awk '{print $3}')
+COVERAGE=$(npm exec -- jest tests/unit --coverage --coverageReporters=text-summary | grep "Statements" | awk '{print $3}')
 THRESHOLD=80
 
 if [ ${COVERAGE%.*} -lt $THRESHOLD ]; then
@@ -773,8 +769,9 @@ curl -X POST https://your-webhook.com/deploy \
 
 | Step | GitHub Actions | Jenkins | GitLab |
 |------|---|---|---|
-| Lint | `npm run lint` | `npm run lint` | `npm run lint` |
-| Test | `npm run test` | `npm run test` | `npm run test` |
+| Core gates | `npm run test:unit && npm run test:flow && npm run test:data` | `npm run test:unit && npm run test:flow && npm run test:data` | `npm run test:unit && npm run test:flow && npm run test:data` |
+| CI suite | `npm run test:ci` | `npm run test:ci` | `npm run test:ci` |
+| Extended regression | `npm run test:system` | `npm run test:system` | `npm run test:system` |
 | Validate | `npm run system:validate` | `npm run system:validate` | `npm run system:validate` |
 | Build | `docker build` | `docker build` | `docker build` |
 | Deploy | SSH exec | SSH exec + input | SSH exec (manual) |

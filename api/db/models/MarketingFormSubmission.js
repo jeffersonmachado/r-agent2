@@ -21,6 +21,7 @@ function getMarketingFormSubmissionModel() {
     MarketingFormSubmission = sequelize.define('MarketingFormSubmission', {
       id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
       tenant_key: { type: DataTypes.STRING, allowNull: false },
+      location_id: { type: DataTypes.STRING, allowNull: true },
       form_id: { type: DataTypes.STRING, allowNull: false },
       lead_id: { type: DataTypes.STRING, allowNull: true },
       external_submission_id: { type: DataTypes.STRING, allowNull: true },
@@ -33,6 +34,7 @@ function getMarketingFormSubmissionModel() {
       underscored: true,
       indexes: [
         { fields: ['tenant_key', 'form_id'], name: 'marketing_form_submissions_tenant_form_idx' },
+        { fields: ['tenant_key', 'location_id'], name: 'marketing_form_submissions_tenant_location_id_idx' },
         { fields: ['tenant_key', 'external_submission_id'], name: 'marketing_form_submissions_tenant_external_submission_uq', unique: true },
       ],
     });

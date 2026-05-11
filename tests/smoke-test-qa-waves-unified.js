@@ -99,58 +99,29 @@ async function runSmokeTest() {
     
     // ====== STEP 2: Carregar Cenários ======
     console.log('\n[STEP 2] Carregar Cenários\n');
-    
-    // Verificar se há botão de carregar cenários ou se já estão carregados
-    await page.waitForTimeout(1000);
-    
-    // Procurar por elemento que liste cenários (tabela, lista, ou dropdown)
-    const scenarioElements = await page.$$('[data-testid*="scenario"], .scenario-item, .journey-item, tr');
+    const runButton = page.locator('[data-testid="qa-waves-run-button"]').first();
+    await runButton.waitFor({ state: 'visible', timeout: LOAD_SCENARIOS_TIMEOUT });
+
+    const scenarioElements = await page.$$('[data-testid*="scenario"], .qa-subjourney-scenario, .journey-item, tr');
     console.log(`✓ Encontrados ${scenarioElements.length} elementos potenciais de cenário`);
-    
-    // Se houver um botão de "Executar", clicar nele
-    const executeBtn = await page.$('button:has-text("Executar"), button:has-text("Execute"), button:has-text("▶"), [data-testid="execute-btn"]');
-    
-    if (!executeBtn) {
-      console.log('⚠️  Nenhum botão "Executar" encontrado. Tentando clicar em linha de cenário...');
-      
-      // Tentar clicar na primeira linha ou item
-      const firstScenario = await page.$('.scenario-item, .journey-item, tr td:first-child, [data-testid*="scenario"]:first-child');
-      if (firstScenario) {
-        await firstScenario.click();
-        await page.waitForTimeout(1000);
-        console.log('✓ Primeiro cenário clicado');
-      }
-    }
+    console.log('✓ Botão principal de execução do QA Waves encontrado');
     
     // ====== STEP 3: Executar Cenário ======
     console.log('\n[STEP 3] Executar Cenário\n');
-    
-    // Procurar por botão de execução
-    const executeButtons = await page.$$('button:has-text("Executar"), button:has-text("Execute"), button:has-text("▶")');
-    if (executeButtons.length === 0) {
-      console.log('⚠️  Nenhum botão de execução encontrado. Tentando via console...');
-      
-      // Alternativa: fazer POST direto via console/API
-      console.log('  → Simulando POST /api/test-executions via página');
-      await page.evaluate(() => {
-        // Injetar call direto se necessário
-        window.testExecutionDebug = true;
-      });
-    } else {
-      // Clicar no botão de execução
-      await executeButtons[0].click();
-      console.log('✓ Botão "Executar" clicado');
-    }
+
+    await runButton.click();
+    console.log('✓ Botão "Executar cenário" clicado');
     
     await page.waitForTimeout(2000); // Aguardar POST ser enviado
     
     // ====== STEP 4: Acompanhar Polling ======
     console.log('\n[STEP 4] Acompanhar Polling de Status\n');
-    
-    // Procurar por indicador de status (progressbar, status text, spinner)
     const startTime = Date.now();
-    let executionId = null;
     let statusFound = false;
+    let executionFinished = false;
+    const statusLabel = page.locator('.execution-progress-status-label').first();
+    const replayOpenButton = page.locator('[data-testid="qa-waves-replay-open-button"]').first();
+    const replayModal = page.locator('text=Informações do Replay').first();
     
     // Extrair executionId da URL ou do estado da página
     const currentUrl = page.url();
@@ -160,23 +131,44 @@ async function runSmokeTest() {
     
     // Aguardar até 2 min por sucesso
     while (Date.now() - startTime < POLLING_TIMEOUT) {
-      // Procurar por status text
-      const statusElements = await page.$$('[data-testid="status"], .status, .execution-status, h2, h3');
-      
-      for (const elem of statusElements) {
-        const text = await elem.textContent();
-        if (text && (text.includes('Processing') || text.includes('Running') || text.includes('Success') || text.includes('Sucesso') || text.includes('Processando'))) {
-          console.log(`  📊 Status: ${text.trim()}`);
-          statusFound = true;
-          
-          if (text.includes('Success') || text.includes('Sucesso') || text.includes('Completed')) {
-            console.log('✓ Execução completada com sucesso!');
-            break;
+      let statusText = '';
+      if (await statusLabel.count()) {
+        try {
+          if (await statusLabel.isVisible()) {
+            statusText = (await statusLabel.textContent()) || '';
           }
+        } catch (_) {
+          statusText = '';
         }
       }
-      
-      if (statusFound && (await page.textContent('body')).includes('Success') || (await page.textContent('body')).includes('Sucesso')) {
+
+      if (statusText) {
+        console.log(`  📊 Status: ${statusText.trim()}`);
+        statusFound = true;
+      }
+
+      if (statusText.includes('Falhou')) {
+        throw new Error(`Execução QA Waves terminou em falha: ${statusText.trim()}`);
+      }
+
+      if (statusText.includes('Concluído')) {
+        console.log('✓ Execução completada com sucesso!');
+        executionFinished = true;
+        break;
+      }
+
+      const replayReady = await replayOpenButton.isVisible().catch(() => false)
+        && await replayOpenButton.isEnabled().catch(() => false);
+      if (replayReady) {
+        console.log('✓ Replay ficou disponível após polling');
+        executionFinished = true;
+        break;
+      }
+
+      const replayAlreadyOpen = await replayModal.isVisible().catch(() => false);
+      if (replayAlreadyOpen) {
+        console.log('✓ Replay já foi aberto automaticamente pela UI');
+        executionFinished = true;
         break;
       }
       
@@ -186,20 +178,28 @@ async function runSmokeTest() {
     if (!statusFound) {
       console.log('⚠️  Status não foi encontrado durante polling');
     }
+    if (!executionFinished) {
+      console.log('⚠️  Execução não sinalizou conclusão explícita, mas o smoke seguirá para checar replay');
+    }
     
     // ====== STEP 5: Abrir Replay ======
     console.log('\n[STEP 5] Abrir Replay\n');
-    
-    const replayBtns = await page.$$('button:has-text("Replay"), button:has-text("Visualizar"), button:has-text("View"), button:has-text("Ver")');
-    if (replayBtns.length > 0) {
-      await replayBtns[0].click();
-      console.log('✓ Botão Replay clicado');
-      
-      await page.waitForTimeout(3000); // Aguardar carregamento de replay
-      const replayUrl = page.url();
-      console.log(`✓ Replay URL: ${replayUrl}`);
+
+    const replayAlreadyOpen = await replayModal.isVisible().catch(() => false);
+    if (replayAlreadyOpen) {
+      console.log('✓ Replay já estava aberto automaticamente');
     } else {
-      console.log('⚠️  Nenhum botão de Replay encontrado');
+      const canOpenReplay = await replayOpenButton.isVisible().catch(() => false)
+        && await replayOpenButton.isEnabled().catch(() => false);
+
+      if (canOpenReplay) {
+        await replayOpenButton.click();
+        console.log('✓ Botão principal "Abrir replay" clicado');
+        await replayModal.waitFor({ state: 'visible', timeout: 15000 });
+        console.log('✓ Modal de replay carregado');
+      } else {
+        console.log('⚠️  Nenhum replay disponível para abrir no estado atual');
+      }
     }
     
     // ====== STEP 6: Verificar URLs Rastreadas ======
@@ -232,6 +232,12 @@ async function runSmokeTest() {
       });
     } else {
       console.log(`\n✅ Nenhum campo 'compatibility' encontrado em respostas`);
+    }
+
+    if (urlLog.qa_waves_legacy_calls.length > 0 || urlLog.rpa_legacy_calls.length > 0) {
+      throw new Error(
+        `Foram detectadas chamadas legadas: qa-waves=${urlLog.qa_waves_legacy_calls.length}, rpa=${urlLog.rpa_legacy_calls.length}`
+      );
     }
     
     // ====== RESULTADO FINAL ======

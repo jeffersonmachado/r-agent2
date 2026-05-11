@@ -21,6 +21,7 @@ function getMarketingLeadModel() {
     MarketingLead = sequelize.define('MarketingLead', {
       id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
       tenant_key: { type: DataTypes.STRING, allowNull: false },
+      location_id: { type: DataTypes.STRING, allowNull: true },
       email: { type: DataTypes.STRING, allowNull: true },
       phone: { type: DataTypes.STRING, allowNull: true },
       external_id: { type: DataTypes.STRING, allowNull: true },
@@ -37,6 +38,7 @@ function getMarketingLeadModel() {
         { fields: ['tenant_key', 'email'], name: 'marketing_leads_tenant_email_idx' },
         { fields: ['tenant_key', 'phone'], name: 'marketing_leads_tenant_phone_idx' },
         { fields: ['tenant_key', 'external_id'], name: 'marketing_leads_tenant_external_id_idx' },
+        { fields: ['tenant_key', 'location_id'], name: 'marketing_leads_tenant_location_id_idx' },
         { fields: ['tenant_key', 'stage'], name: 'marketing_leads_tenant_stage_idx' },
       ],
     });

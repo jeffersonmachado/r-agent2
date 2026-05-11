@@ -623,7 +623,7 @@ export function useSupportTicketContext(selectedTicket) { ... }
 Verificar se hook extraction causou aumento de re-renders:
 ```bash
 npm run test:unit -- --coverage  # OK check coverage
-npm run perf:profile              # Measure component render times
+# Use React DevTools Profiler ou o profiler do browser para medir render times.
 ```
 
 ### 8.3 Further extraction (optional)

@@ -157,8 +157,8 @@ export function AnalyticsPage() {
       
       const [data, roi, funnel, orders, physical, tokenStats, voice] = await Promise.all([
         getAllMetrics(options),
-        getRoiMetrics({ windowDays: selectedWindowDays }),
-        getFunnelMetrics({ windowDays: selectedWindowDays }),
+        getRoiMetrics({ windowDays: selectedWindowDays, locationId: selectedLocationId || undefined }),
+        getFunnelMetrics({ windowDays: selectedWindowDays, locationId: selectedLocationId || undefined }),
         getOrderMetrics(locationOptions),
         getPhysicalMetrics(locationOptions),
         getPublicTokenStats(),

@@ -26,12 +26,13 @@ npm run test:flow
 - [ ] Validação estrutural de fluxos passa
 - [ ] **BLOQUEIO**: Se falhar, dados e scripts não executam
 
-#### 2.3 Seed de Dados
+#### 2.3 Provisionamento de Dados
 ```bash
-npm run seed:test
+npm run db:migrate
 ```
-- [ ] Seeds são populados com sucesso
-- [ ] Dados salvos em `/api/data/test/`
+- [ ] Schema do banco atualizado com sucesso
+- [ ] Dados de teste provisionados via fluxo DB-only do ambiente
+- [ ] `npm run seed:test` nao e mais um gate funcional; e apenas marcador legado
 - [ ] **BLOQUEIO**: Se falhar, gate de dados falhará
 
 #### 2.4 Gate de Dados (Validação de Dados)
@@ -110,7 +111,7 @@ flow_validation:
 seed_data:
   stage: seed
   script:
-    - npm run seed:test
+    - npm run db:migrate
   # Falha aqui = gate de dados falhará
 
 data_gate:
@@ -141,8 +142,8 @@ npm run test:data
 
 ### Verificar se Gate Está Funcionando
 ```bash
-# 1. Popular dados
-npm run seed:test
+# 1. Preparar schema
+npm run db:migrate
 
 # 2. Executar gate
 npm run test:data

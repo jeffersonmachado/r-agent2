@@ -221,7 +221,7 @@ npm run runtime:clean
 npm run system:release-gate
 
 # Evidence retention (mantém últimos 10 releases)
-npm run release:evidence:prune --keep=10
+npm run system:release-evidence-prune --keep=10
 ```
 
 ---
@@ -250,8 +250,8 @@ npm run system:go-no-go              # Decision maker
 npm run check:green                  # Quick verdict check
 
 # Utilities (respeitam RUNTIME_ROOT)
-npm run test:physical-queue-smoke    # L-01
-npm run test:bpmn-editor-smoke       # L-06
+npm run test:physical:smoke          # L-01
+npm run test:bpmn:smoke              # L-06
 npm run system:release-summary       # Document approval
 
 # Cleanup

@@ -36,8 +36,8 @@ Testes unitários dos componentes React usando Vitest:
 # Executar todos os testes de frontend
 node tests/frontend/login-flow.test.js
 
-# Ou via npm (se adicionado ao package.json)
-npm run test:frontend
+# Ou via script do pacote raiz
+npm run frontend:test:e2e
 ```
 
 ### Testes de Componentes React

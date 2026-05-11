@@ -39,7 +39,7 @@ Quando você executa `npm test`, o sistema executa as seguintes etapas em ordem:
 3. **Validação de Dados do Sistema** (`/tests/data`)
    - Verifica existência de dados obrigatórios
    - Valida integridade referencial
-   - Requer seeds populados (`npm run seed:test`)
+  - Requer ambiente provisionado em modo DB-only (migrations e/ou setup via API)
    - Se falhar: pipeline interrompido, scripts bloqueados
 
 4. **Scripts de Conversa** (`/tests/scripts`)
@@ -62,21 +62,19 @@ npm run test:data     # Apenas validação de dados
 npm run test:scripts   # Apenas scripts de conversa
 ```
 
-### Popular Dados de Teste
+### Provisionar Dados de Teste
 ```bash
-npm run seed:test
+npm run db:migrate
 ```
 
-Este comando:
-- Limpa dados de teste existentes
-- Carrega seeds de `/tests/seeds/`
-- Valida estrutura de cada seed
-- Popula dados em `/api/data/test/`
-- Valida integridade após população
+Fluxo atual:
+- Atualiza schema do banco para o estado esperado pelos testes
+- Dados de teste devem ser criados via PostgreSQL/migrations ou endpoints do ambiente de teste
+- `npm run seed:test` foi mantido apenas como marcador legado e nao popula mais dados
 
 ## Seeds de Dados
 
-Seeds legados em JSON foram removidos. O projeto opera em DB-only; testes devem criar dados via PostgreSQL/migrations ou via endpoints de API em ambiente de teste.
+Arquivos JSON de referencia ainda existem em `/tests/seeds/`, mas o fluxo oficial do projeto opera em DB-only. Esses arquivos nao sao aplicados automaticamente por `npm run seed:test`; testes devem criar dados via PostgreSQL/migrations ou via endpoints de API em ambiente de teste.
 
 ## Scripts de Conversa
 
@@ -155,7 +153,7 @@ Crie arquivo JSON em `/tests/scripts/`:
 ## Troubleshooting
 
 ### "Dados de teste não encontrados"
-Execute: `npm run seed:test`
+Execute: `npm run db:migrate` e reprovisione os dados do ambiente de teste via fluxo DB-only.
 
 ### "Fluxo não encontrado"
 Verifique se o fluxo existe em seeds e foi populado

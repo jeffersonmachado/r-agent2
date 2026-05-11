@@ -115,7 +115,7 @@ psql -U postgres -c "ALTER ROLE ragent2 SET timezone TO 'UTC';"
 psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE ragent2_dev TO ragent2;"
 
 # Run migrations
-npm run db:migrate:dev
+npm run db:migrate
 ```
 
 **Opção 2: PostgreSQL via Docker**
@@ -130,7 +130,7 @@ docker run -d \
   postgres:14
 
 # Run migrations
-npm run db:migrate:dev
+npm run db:migrate
 ```
 
 ### 2.5. Start Services
@@ -146,7 +146,7 @@ npm run dev:frontend
 docker run -d -p 6379:6379 redis:7
 
 # Terminal 4: RAG Service (se separado)
-npm run dev:rag
+npm run rag:dev
 ```
 
 ---
@@ -173,16 +173,16 @@ npm run dev:frontend
 curl http://localhost:3000/health
 
 # Verificar database
-npm run db:check
+npm run db:migrate:status
 
 # Verificar Redis
 redis-cli PING
 
 # Verificar RAG service
-npm run rag:health
+npm run rag:status
 
-# Rodar smoke test específico (ex: L-01 Physical Queue)
-npm run test:l01-physical-queue
+# Rodar smoke test específico (ex: Physical Queue)
+npm run test:physical:smoke
 
 # Validação completa (DEMORADO - 10-15 min)
 export RUNTIME_ROOT=~/.local/share/ragent2-runtime
@@ -193,27 +193,26 @@ npm run system:validate
 
 **Rodar testes unitários**
 ```bash
-npm run test
-npm run test:watch                    # Watch mode
-npm run test:coverage                 # Com coverage report
+npm run test:unit
+npm run test:flow
+npm run test:data
 ```
 
-**Rodar testes integração**
+**Rodar validações adicionais**
 ```bash
-npm run test:integration
-npm run test:integration:watch
+npm run test:ci
+npm run test:system
 ```
 
-**Lint e format**
+**Frontend**
 ```bash
-npm run lint
-npm run lint:fix
-npm run format
+npm run frontend:test:unit
+npm run frontend:build
 ```
 
 **Build frontend**
 ```bash
-npm run build:frontend
+npm run frontend:build
 ```
 
 ---
@@ -265,9 +264,6 @@ workspace/rag-service/data/vector_store/index       # Dados imutáveis
 # Start com Node debugger
 node --inspect api/server.js
 
-# Ou via npm script
-npm run debug
-
 # Abrir chrome://inspect
 # Click "inspect" na lista de apps
 ```
@@ -288,7 +284,7 @@ npm run debug
 # Log RAG operations
 export LOG_LEVEL=debug
 export RAG_DEBUG=1
-npm run dev:rag
+npm run rag:dev
 
 # Verificar embed quality
 curl http://localhost:3000/api/rag/debug/embeddings
@@ -297,17 +293,13 @@ curl http://localhost:3000/api/rag/debug/embeddings
 ### 5.4. Logs
 
 ```bash
-# Em tempo real (todas as services)
-npm run logs
+# API e frontend: acompanhe os terminais ativos de `npm run dev` e `npm run dev:frontend`
 
-# Apenas API
-npm run logs:api
-
-# Apenas Frontend
-npm run logs:frontend
+# Stack Docker
+docker compose logs -f
 
 # Apenas RAG
-npm run logs:rag
+npm run rag:logs
 ```
 
 ---
@@ -317,27 +309,26 @@ npm run logs:rag
 ### 6.1. Migrations
 
 ```bash
-# Create new migration
-npm run db:migrate:create -- --name your_migration_name
-
 # Run pending migrations
-npm run db:migrate:dev
+npm run db:migrate
 
-# Rollback last migration
-npm run db:migrate:rollback
+# Check migration status
+npm run db:migrate:status
+
+# Observacao: o package raiz atual nao expoe comandos para criar ou rollback de migration.
+# Se esse fluxo voltar a existir, documente o script correspondente aqui.
 
 # Reset database (DEV ONLY!)
-npm run db:reset:dev
+# O package raiz nao expoe um atalho de reset. Recrie o banco/container e rode:
+npm run db:migrate
 ```
 
 ### 6.2. Seed Data
 
 ```bash
-# Populate with test data
-npm run db:seed:dev
-
-# Clear and reseed
-npm run db:reset:dev && npm run db:seed:dev
+# O package raiz atual nao expoe scripts `db:seed:dev` ou `db:reset:dev`.
+# Para preparar dados de desenvolvimento, atualize o schema e use fixtures/endpoints do ambiente:
+npm run db:migrate
 ```
 
 ### 6.3. Direct Database Access
@@ -425,12 +416,12 @@ npm run system:validate       # Validar (sem escrever em workspace)
 
 ```bash
 # Rodar apenas 1 smoke test ao invés de todos
-npm run test:l01-physical-queue
-npm run test:l02-ura-publish-rollback
+npm run test:physical:smoke
+npm run test:ura:publish-rollback:smoke
 # etc...
 
 # Ou com timeout editado
-SMOKE_TEST_TIMEOUT=60000 npm run test:l01-physical-queue
+SMOKE_TEST_TIMEOUT=60000 npm run test:physical:smoke
 ```
 
 ---
@@ -462,11 +453,9 @@ npm ci
 ### 8.3. Limpar Database Development
 
 ```bash
-# CUIDADO: Isso reseta TUDO
-npm run db:reset:dev
-
-# Reseed depois
-npm run db:seed:dev
+# CUIDADO: o package raiz nao expoe reset automatizado de DB para dev.
+# Recrie o banco/container manualmente e depois reaplique migrations:
+npm run db:migrate
 ```
 
 ---
@@ -488,11 +477,11 @@ editor src/...
 
 # 4. Testes locais
 npm run test
-npm run test:integration
+npm run test:ci
 
 # 5. Validação pré-commit
-npm run lint
-npm run format
+npm run frontend:test:unit
+npm run frontend:build
 
 # 6. Commit
 git add .
@@ -564,9 +553,9 @@ ragent2-validate() {
   npm run system:validate
 }
 
-# Reset DB completo
-ragent2-db-reset() {
-  npm run db:reset:dev && npm run db:seed:dev && echo "✅ DB reset complete"
+# Preparar DB local
+ragent2-db-prepare() {
+  npm run db:migrate && echo "DB schema ready"
 }
 
 # Usage:

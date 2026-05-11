@@ -139,6 +139,26 @@ export function AnalyticsRoiAndFunnelSection({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div className="p-4 rounded-lg border border-border-default bg-bg-secondary">
             <div className="text-sm font-medium text-text-primary mb-3">Funil (visual)</div>
+            {funnelMetrics?.locationScope?.requested && (
+              <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                Escopo estrito por unidade ativo: o funil considera apenas registros com <strong>`location_id`</strong> persistido no marketing. Sem fallback para JSON legado em tempo de consulta.
+                <div className="mt-2 space-y-1 text-amber-100/90">
+                  <div>
+                    Cobertura de leads na janela: <strong>{formatRate(funnelMetrics?.locationScope?.coverage?.leads?.rate)}</strong>
+                    {' '}
+                    ({funnelMetrics?.locationScope?.coverage?.leads?.withLocation || 0}/{funnelMetrics?.locationScope?.coverage?.leads?.total || 0} com `location_id`).
+                  </div>
+                  <div>
+                    Cobertura de envios de formulário: <strong>{formatRate(funnelMetrics?.locationScope?.coverage?.submissions?.rate)}</strong>
+                    {' '}
+                    ({funnelMetrics?.locationScope?.coverage?.submissions?.withLocation || 0}/{funnelMetrics?.locationScope?.coverage?.submissions?.total || 0} com `location_id`).
+                  </div>
+                  <div>
+                    Registros fora do recorte por falta de localização persistida: {funnelMetrics?.locationScope?.coverage?.leads?.withoutLocation || 0} leads e {funnelMetrics?.locationScope?.coverage?.submissions?.withoutLocation || 0} envios.
+                  </div>
+                </div>
+              </div>
+            )}
             {(funnelMetrics?.stages || []).map((s) => (
               <div key={s.stage} className="mb-3">
                 <div className="flex justify-between text-xs text-text-secondary mb-1">

@@ -128,14 +128,14 @@ echo ""
 
 # Verifica docker
 section "Verificando Docker"
-DOCKER_VERSION=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker --version 2>/dev/null || echo 'NOT_FOUND'" 2>&1 | head -1)
+DOCKER_VERSION=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker --version 2>/dev/null || echo 'NOT_FOUND'" 2>/dev/null | head -1)
 if echo "$DOCKER_VERSION" | grep -q "NOT_FOUND"; then
     error "Docker não encontrado no servidor"
     exit 1
 fi
 info "✅ Docker: $(echo "$DOCKER_VERSION" | head -c 50)"
 
-COMPOSE_CMD=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker-compose --version 2>/dev/null >/dev/null && echo 'docker-compose' || echo 'docker compose'" 2>&1)
+COMPOSE_CMD=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker-compose --version 2>/dev/null >/dev/null && echo 'docker-compose' || echo 'docker compose'" 2>/dev/null | tail -1)
 if [ -z "$COMPOSE_CMD" ]; then
     error "docker-compose não disponível"
     exit 1
@@ -160,21 +160,43 @@ EXCLUDE_LIST=(
     "--exclude=.idea"
 )
 
-# Apenas o necessário para rebuild da API (com trailing /)
+# Contexto mínimo necessário para rebuild da API conforme api/Dockerfile
 SYNC_PATHS=(
-    "${ROOT_DIR}/api/"
-    "${ROOT_DIR}/config/"
-    "${ROOT_DIR}/contracts/"
-    "${ROOT_DIR}/lib/"
+    "${ROOT_DIR}/docker-compose.prod.yml"
+    "${ROOT_DIR}/engine"
+    "${ROOT_DIR}/core"
+    "${ROOT_DIR}/api"
+    "${ROOT_DIR}/rpa"
+    "${ROOT_DIR}/infra"
+    "${ROOT_DIR}/config"
+    "${ROOT_DIR}/contracts"
+    "${ROOT_DIR}/pipeline"
+    "${ROOT_DIR}/qa"
+    "${ROOT_DIR}/qa-mesh"
+    "${ROOT_DIR}/lib"
+    "${ROOT_DIR}/scripts"
+    "${ROOT_DIR}/tools"
+    "${ROOT_DIR}/tests"
     "${ROOT_DIR}/package.json"
     "${ROOT_DIR}/package-lock.json"
 )
 
 echo "  Paths sincronizados:"
+echo "    - docker-compose.prod.yml"
+echo "    - engine/"
+echo "    - core/"
 echo "    - api/"
+echo "    - rpa/"
+echo "    - infra/"
 echo "    - config/"
 echo "    - contracts/"
+echo "    - pipeline/"
+echo "    - qa/"
+echo "    - qa-mesh/"
 echo "    - lib/"
+echo "    - scripts/"
+echo "    - tools/"
+echo "    - tests/"
 echo "    - package*.json"
 echo ""
 

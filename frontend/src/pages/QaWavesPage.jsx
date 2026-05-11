@@ -366,7 +366,7 @@ export function QaWavesPage() {
   }, [journeysTree, selectedDomain, scenarioItems]);
 
   async function loadJourneyStatus() {
-    const response = await fetchJson('/api/qa-waves/journey-status', { suppressErrorLog: true });
+    const response = await fetchJson('/api/test-executions/qa-waves/journey-status', { suppressErrorLog: true });
     setJourneyStatus(Array.isArray(response.items) ? response.items : []);
   }
 
@@ -377,7 +377,7 @@ export function QaWavesPage() {
     if (filters.status) params.set('status', filters.status);
     if (filters.source) params.set('source', filters.source);
     const suffix = params.toString();
-    const response = await fetchJson(`/api/qa-waves/scenarios${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
+    const response = await fetchJson(`/api/test-executions/qa-waves/scenarios${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
     const items = Array.isArray(response.items) ? response.items : [];
     setScenarioItems(items);
 
@@ -392,7 +392,7 @@ export function QaWavesPage() {
     const params = new URLSearchParams();
     if (selectedJourneyId) params.set('journeyId', selectedJourneyId);
     const suffix = params.toString();
-    const response = await fetchJson(`/api/qa-waves/step-status${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
+    const response = await fetchJson(`/api/test-executions/qa-waves/step-status${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
     setStepStatus(Array.isArray(response.items) ? response.items : []);
   }
 
@@ -404,10 +404,8 @@ export function QaWavesPage() {
   async function loadAll() {
     try {
       const [journeysData, journeyStatusData] = await Promise.all([
-        fetchJson('/api/qa-waves/journeys'),
-        fetchJson('/api/qa-waves/journey-status'),
-        loadScenarios(),
-        loadExecutions(),
+        fetchJson('/api/test-executions/qa-waves/journeys'),
+        fetchJson('/api/test-executions/qa-waves/journey-status'),
       ]);
 
       const domains = Array.isArray(journeysData.domains) ? journeysData.domains : [];
@@ -436,6 +434,11 @@ export function QaWavesPage() {
       loadStepStatus();
     }
   }, [selectedJourneyId]);
+
+  useEffect(() => {
+    if (!showExecutionsModal) return;
+    loadExecutions().catch((err) => notifyRequestError(err, 'Falha ao carregar execuções QA Waves'));
+  }, [showExecutionsModal, notifyRequestError]);
 
   useEffect(() => {
     setInferenceJourneyId(selectedJourneyId || 'auto');
@@ -469,8 +472,7 @@ export function QaWavesPage() {
       }),
     });
 
-    notifySuccess(successMessage);
-    await Promise.all([loadJourneyStatus(), loadStepStatus()]);
+    await loadScenarios();
   }
 
   function updateScenarioEditor(mutator) {
@@ -717,7 +719,6 @@ export function QaWavesPage() {
       setRunReplayId(resolvedReplayId);
       setCurrentExecutionId(response.executionId || '');
       notifySuccess(`Execução real enfileirada. executionId=${response.executionId} replayId=${resolvedReplayId || 'n/a'}`);
-      await Promise.all([loadJourneyStatus(), loadStepStatus()]);
     } catch (err) {
       if (err?.status === 409 || err?.code === 'EXECUTION_ALREADY_RUNNING') {
         notifyError('Já existe uma execução em andamento. Aguarde a conclusão antes de iniciar uma nova onda.');

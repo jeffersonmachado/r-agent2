@@ -217,7 +217,7 @@ Eliminar ambigüidade e inferência automática, permitindo edição manual de j
 
 ### Médio Prazo
 - [ ] Criar `qa/qa-waves/history/` para audit trail de mudanças
-- [ ] Adicionar script `npm run qa:waves:validate-model`
+- [ ] Adicionar script dedicado para validar o modelo (`npm run qa:waves:validate-model` ainda nao existe no package atual)
 - [ ] Atualizar scripts em `scripts/qa-waves-*.js`
 - [ ] Criar dashboard de jornadas/cenários
 

@@ -64,7 +64,7 @@ async function getVoiceCostForWindow({ sequelize, tenantId, days }) {
   return { totalBillSeconds, totalMinutes, estimatedCost, costPerMinute };
 }
 
-async function getRoiSummary({ tenantId, windowDays = null } = {}) {
+async function getRoiSummary({ tenantId, windowDays = null, locationId = null } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, error: 'db_unavailable' };
   if (!tenantId) return { ok: false, error: 'tenant_required' };
@@ -74,7 +74,9 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
   const operationalCostPerOrder = floatEnv('ROI_OPERATIONAL_COST_PER_ORDER', 0);
   const operationalCostPerLead = floatEnv('ROI_OPERATIONAL_COST_PER_LEAD', 0);
 
-  const replacements = { tenantKey: safeToString(tenantId), days };
+  const normalizedLocationId = safeToString(locationId || '').trim();
+  const orderLocationSql = normalizedLocationId ? ' AND location_id = :locationId' : '';
+  const replacements = { tenantKey: safeToString(tenantId), days, ...(normalizedLocationId ? { locationId: normalizedLocationId } : {}) };
 
   const [orderRows] = await sequelize.query(
     `SELECT
@@ -83,6 +85,7 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
        COALESCE(AVG(total_amount), 0)::float AS avg_order_value
      FROM orders
      WHERE tenant_key = :tenantKey
+       ${orderLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval`,
     { replacements },
   );
@@ -104,6 +107,7 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
        COALESCE(SUM(total_amount), 0)::float AS total_revenue
      FROM orders
      WHERE tenant_key = :tenantKey
+       ${orderLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval
      GROUP BY source
      ORDER BY total_orders DESC`,
@@ -151,6 +155,7 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
   return {
     ok: true,
     windowDays: days,
+    locationId: normalizedLocationId || null,
     marketingCost,
     totalChannelCost,
     orders: {
@@ -181,18 +186,23 @@ async function getRoiSummary({ tenantId, windowDays = null } = {}) {
   };
 }
 
-async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
+async function getFunnelMetrics({ tenantId, windowDays = null, locationId = null } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, error: 'db_unavailable' };
   if (!tenantId) return { ok: false, error: 'tenant_required' };
 
   const days = Number.isFinite(Number(windowDays)) ? Math.max(1, Math.floor(Number(windowDays))) : intEnv('ROI_WINDOW_DAYS', 30);
-  const replacements = { tenantKey: safeToString(tenantId), days };
+  const normalizedLocationId = safeToString(locationId || '').trim();
+  const leadLocationSql = normalizedLocationId ? ' AND location_id = :locationId' : '';
+  const submissionLocationSql = normalizedLocationId ? ' AND mfs.location_id = :locationId' : '';
+  const orderLocationSql = normalizedLocationId ? ' AND location_id = :locationId' : '';
+  const replacements = { tenantKey: safeToString(tenantId), days, ...(normalizedLocationId ? { locationId: normalizedLocationId } : {}) };
 
   const [leadStageRows] = await sequelize.query(
     `SELECT stage, COUNT(*)::int AS total
      FROM marketing_leads
      WHERE tenant_key = :tenantKey
+       ${leadLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval
      GROUP BY stage`,
     { replacements },
@@ -204,6 +214,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
        COUNT(*)::int AS total
      FROM marketing_leads
      WHERE tenant_key = :tenantKey
+       ${leadLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval
      GROUP BY channel
      ORDER BY total DESC`,
@@ -214,8 +225,31 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
     `SELECT
        COUNT(*)::int AS total_submissions,
        COUNT(DISTINCT lead_id)::int AS unique_leads
-     FROM marketing_form_submissions
+     FROM marketing_form_submissions mfs
+     WHERE mfs.tenant_key = :tenantKey
+       ${submissionLocationSql}
+       AND created_at >= NOW() - (:days || ' days')::interval`,
+    { replacements },
+  );
+
+  const [leadCoverageRows] = await sequelize.query(
+    `SELECT
+       COUNT(*)::int AS total_leads,
+       COUNT(*) FILTER (WHERE location_id IS NOT NULL AND BTRIM(location_id) <> '')::int AS leads_with_location,
+       COUNT(*) FILTER (WHERE location_id IS NULL OR BTRIM(location_id) = '')::int AS leads_without_location
+     FROM marketing_leads
      WHERE tenant_key = :tenantKey
+       AND created_at >= NOW() - (:days || ' days')::interval`,
+    { replacements },
+  );
+
+  const [submissionCoverageRows] = await sequelize.query(
+    `SELECT
+       COUNT(*)::int AS total_submissions,
+       COUNT(*) FILTER (WHERE mfs.location_id IS NOT NULL AND BTRIM(mfs.location_id) <> '')::int AS submissions_with_location,
+       COUNT(*) FILTER (WHERE mfs.location_id IS NULL OR BTRIM(mfs.location_id) = '')::int AS submissions_without_location
+     FROM marketing_form_submissions mfs
+     WHERE mfs.tenant_key = :tenantKey
        AND created_at >= NOW() - (:days || ' days')::interval`,
     { replacements },
   );
@@ -226,6 +260,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
        COALESCE(SUM(total_amount), 0)::float AS total_revenue
      FROM orders
      WHERE tenant_key = :tenantKey
+       ${orderLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval`,
     { replacements },
   );
@@ -237,6 +272,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
        COALESCE(SUM(total_amount), 0)::float AS total_revenue
      FROM orders
      WHERE tenant_key = :tenantKey
+       ${orderLocationSql}
        AND created_at >= NOW() - (:days || ' days')::interval
      GROUP BY source
      ORDER BY total_orders DESC`,
@@ -261,11 +297,15 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   }
 
   const totalLeads = stages.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+  const visitorCount = stageCounts.visitor || 0;
   const leadCount = stageCounts.lead || 0;
   const customerCount = stageCounts.customer || 0;
+  const visitorToLeadRate = visitorCount > 0 ? Number((leadCount / visitorCount).toFixed(4)) : null;
   const leadToCustomerRate = leadCount > 0 ? Number((customerCount / leadCount).toFixed(4)) : null;
 
   const submissionRow = Array.isArray(submissionRows) && submissionRows[0] ? submissionRows[0] : {};
+  const leadCoverageRow = Array.isArray(leadCoverageRows) && leadCoverageRows[0] ? leadCoverageRows[0] : {};
+  const submissionCoverageRow = Array.isArray(submissionCoverageRows) && submissionCoverageRows[0] ? submissionCoverageRows[0] : {};
   const orderRow = Array.isArray(orderRows) && orderRows[0] ? orderRows[0] : {};
 
   const channelCosts = jsonEnv('ROI_CHANNEL_COSTS', {});
@@ -325,6 +365,30 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
   return {
     ok: true,
     windowDays: days,
+    locationId: normalizedLocationId || null,
+    locationScope: {
+      requested: !!normalizedLocationId,
+      mode: normalizedLocationId ? 'strict_column' : 'global',
+      field: normalizedLocationId ? 'location_id' : null,
+      coverage: {
+        leads: {
+          total: Number(leadCoverageRow.total_leads || 0),
+          withLocation: Number(leadCoverageRow.leads_with_location || 0),
+          withoutLocation: Number(leadCoverageRow.leads_without_location || 0),
+          rate: Number(leadCoverageRow.total_leads || 0) > 0
+            ? Number((Number(leadCoverageRow.leads_with_location || 0) / Number(leadCoverageRow.total_leads || 0)).toFixed(4))
+            : null,
+        },
+        submissions: {
+          total: Number(submissionCoverageRow.total_submissions || 0),
+          withLocation: Number(submissionCoverageRow.submissions_with_location || 0),
+          withoutLocation: Number(submissionCoverageRow.submissions_without_location || 0),
+          rate: Number(submissionCoverageRow.total_submissions || 0) > 0
+            ? Number((Number(submissionCoverageRow.submissions_with_location || 0) / Number(submissionCoverageRow.total_submissions || 0)).toFixed(4))
+            : null,
+        },
+      },
+    },
     totals: {
       leads: totalLeads,
       formSubmissions: Number(submissionRow.total_submissions || 0),
@@ -334,6 +398,7 @@ async function getFunnelMetrics({ tenantId, windowDays = null } = {}) {
     },
     stages,
     conversionRates: {
+      visitorToLead: visitorToLeadRate,
       leadToCustomer: leadToCustomerRate,
     },
     channels,

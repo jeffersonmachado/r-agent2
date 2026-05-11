@@ -298,15 +298,14 @@ docker-compose -f docker-compose.prod.yml ps
 ```bash
 # Execute migration in running container
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run db:migrate:prod
+  npm run db:migrate
 
-# Seed initial data (optional)
-docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run db:seed:prod
+# Optional: run app-specific seed scripts only if your deployment requires them.
+# The root package no longer exposes `db:seed:prod`.
 
-# Verify
+# Verify migration status
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run db:check
+  npm run db:migrate:status
 ```
 
 ### 4.3. Health Checks
@@ -499,19 +498,19 @@ echo $?
 ```bash
 # L-01 Physical Queue
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run test:l01-physical-queue
+  npm run test:physical:smoke
 
 # L-02 URA Publish
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run test:l02-ura-publish-rollback
+  npm run test:ura:publish-rollback:smoke
 
 # L-07 RPA Replays
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run test:l07-rpa-replays-scale
+  npm run test:rpa:replays:scale:smoke
 
 # All (slower)
 docker-compose -f docker-compose.prod.yml exec ragent2-api \
-  npm run test:all-smoke
+  npm run system:validate
 ```
 
 ---

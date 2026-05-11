@@ -108,8 +108,8 @@ Sistema de testes determinístico em camadas implementado conforme planejado.
 
 ### Primeira Execução
 ```bash
-# 1. Popular dados de teste
-npm run seed:test
+# 1. Preparar ambiente DB-only
+npm run db:migrate
 
 # 2. Executar pipeline completo
 npm test

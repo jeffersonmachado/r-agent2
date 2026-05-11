@@ -13,6 +13,96 @@ function getRouteHandler(router, method, routePath) {
 }
 
 describe('test-executions replay routes', () => {
+  test('GET /api/test-executions/qa-waves/journeys retorna jornadas pelo endpoint unificado', async () => {
+    const deps = {
+      requireAuth: jest.fn(() => ({ valid: true })),
+      sendJson: jest.fn(),
+      logger: { error: jest.fn() },
+      listQaWaveJourneys: jest.fn(() => ({ domains: [{ id: 'fitness', journeys: [] }] })),
+    };
+
+    const router = createTestExecutionsRoutes({ buildDeps: () => deps });
+    const handler = getRouteHandler(router, 'get', '/api/test-executions/qa-waves/journeys');
+
+    await handler({ query: {} }, {});
+
+    expect(deps.listQaWaveJourneys).toHaveBeenCalledTimes(1);
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      expect.anything(),
+      200,
+      { domains: [{ id: 'fitness', journeys: [] }] }
+    );
+  });
+
+  test('GET /api/test-executions/qa-waves/journey-status retorna status agregado pelo endpoint unificado', async () => {
+    const deps = {
+      requireAuth: jest.fn(() => ({ valid: true })),
+      sendJson: jest.fn(),
+      logger: { error: jest.fn() },
+      listQaWaveJourneyStatus: jest.fn(() => ({ items: [{ journeyId: 'leads', status: 'OK' }] })),
+    };
+
+    const router = createTestExecutionsRoutes({ buildDeps: () => deps });
+    const handler = getRouteHandler(router, 'get', '/api/test-executions/qa-waves/journey-status');
+
+    await handler({ query: {} }, {});
+
+    expect(deps.listQaWaveJourneyStatus).toHaveBeenCalledTimes(1);
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      expect.anything(),
+      200,
+      { items: [{ journeyId: 'leads', status: 'OK' }] }
+    );
+  });
+
+  test('GET /api/test-executions/qa-waves/scenarios repassa filtros e retorna cenários pelo endpoint unificado', async () => {
+    const deps = {
+      requireAuth: jest.fn(() => ({ valid: true })),
+      sendJson: jest.fn(),
+      logger: { error: jest.fn() },
+      listQaWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1' }] })),
+    };
+
+    const router = createTestExecutionsRoutes({ buildDeps: () => deps });
+    const handler = getRouteHandler(router, 'get', '/api/test-executions/qa-waves/scenarios');
+
+    const req = { query: { waveId: 'wave-01', journey: 'leads', status: 'active', source: 'manual' } };
+    const res = {};
+
+    await handler(req, res);
+
+    expect(deps.listQaWaveScenarios).toHaveBeenCalledWith({ waveId: 'wave-01', journey: 'leads', status: 'active', source: 'manual' });
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      res,
+      200,
+      { items: [{ id: 'scenario-1' }] }
+    );
+  });
+
+  test('GET /api/test-executions/qa-waves/step-status repassa filtros e retorna status de passos pelo endpoint unificado', async () => {
+    const deps = {
+      requireAuth: jest.fn(() => ({ valid: true })),
+      sendJson: jest.fn(),
+      logger: { error: jest.fn() },
+      listQaWaveStepStatus: jest.fn(() => ({ items: [{ journeyId: 'leads', totalScenarios: 3 }] })),
+    };
+
+    const router = createTestExecutionsRoutes({ buildDeps: () => deps });
+    const handler = getRouteHandler(router, 'get', '/api/test-executions/qa-waves/step-status');
+
+    const req = { query: { journeyId: 'leads' } };
+    const res = {};
+
+    await handler(req, res);
+
+    expect(deps.listQaWaveStepStatus).toHaveBeenCalledWith({ journeyId: 'leads' });
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      res,
+      200,
+      { items: [{ journeyId: 'leads', totalScenarios: 3 }] }
+    );
+  });
+
   test('GET /api/test-executions/replays repassa filtros para listReplayFiles e responde com pagination', async () => {
     const deps = {
       requireAuth: jest.fn(() => ({ valid: true })),

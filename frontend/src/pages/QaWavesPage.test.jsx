@@ -66,7 +66,7 @@ const baseScenario = {
 };
 
 function mockFetchJson(url, init) {
-  if (url === '/api/qa-waves/journeys') {
+  if (url === '/api/test-executions/qa-waves/journeys') {
     return Promise.resolve({
       domains: [
         {
@@ -98,17 +98,17 @@ function mockFetchJson(url, init) {
     });
   }
 
-  if (url === '/api/qa-waves/journey-status') {
+  if (url === '/api/test-executions/qa-waves/journey-status') {
     return Promise.resolve({
       items: [{ journeyId: 'cliente_novo', status: 'WARNING' }],
     });
   }
 
-  if (url.startsWith('/api/qa-waves/step-status')) {
+  if (url.startsWith('/api/test-executions/qa-waves/step-status')) {
     return Promise.resolve({ items: [] });
   }
 
-  if (url === '/api/qa-waves/scenarios') {
+  if (url === '/api/test-executions/qa-waves/scenarios') {
     return Promise.resolve({ items: [baseScenario] });
   }
 
@@ -176,8 +176,9 @@ describe('pages/QaWavesPage', () => {
 
     render(<QaWavesPage />);
 
-    await screen.findByRole('heading', { name: 'Edição guiada do cenário' });
-    expect(screen.queryByRole('textbox', { name: /descrição/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('qa-waves-run-button')).toBeEnabled();
+    });
 
     await user.click(screen.getByRole('button', { name: /validar/i }));
     await waitFor(() => {
@@ -202,6 +203,9 @@ describe('pages/QaWavesPage', () => {
     expect(calledUrls).toContain('/api/qa-waves/validate-scenario');
     expect(calledUrls).toContain('/api/qa-waves/save-scenario');
     expect(calledUrls).toContain('/api/test-executions');
+    expect(calledUrls).toContain('/api/test-executions/qa-waves/journeys');
+    expect(calledUrls).toContain('/api/test-executions/qa-waves/journey-status');
+    expect(calledUrls).toContain('/api/test-executions/qa-waves/scenarios');
     expect(calledUrls).not.toContain('/api/qa-waves/run');
     expect(calledUrls.some((url) => String(url).startsWith('/dev/qa-waves/'))).toBe(false);
   });
@@ -210,7 +214,7 @@ describe('pages/QaWavesPage', () => {
     const user = userEvent.setup();
 
     fetchJson.mockImplementation((url, init) => {
-      if (url === '/api/qa-waves/journeys') {
+      if (url === '/api/test-executions/qa-waves/journeys') {
         return Promise.resolve({
           domains: [
             {
@@ -242,15 +246,15 @@ describe('pages/QaWavesPage', () => {
         });
       }
 
-      if (url === '/api/qa-waves/journey-status') {
+      if (url === '/api/test-executions/qa-waves/journey-status') {
         return Promise.resolve({ items: [{ journeyId: 'cliente_novo', status: 'GO' }] });
       }
 
-      if (String(url).startsWith('/api/qa-waves/step-status')) {
+      if (String(url).startsWith('/api/test-executions/qa-waves/step-status')) {
         return Promise.resolve({ items: [] });
       }
 
-      if (url === '/api/qa-waves/scenarios') {
+      if (url === '/api/test-executions/qa-waves/scenarios') {
         return Promise.resolve({ items: [baseScenario] });
       }
 
@@ -298,7 +302,9 @@ describe('pages/QaWavesPage', () => {
 
     render(<QaWavesPage />);
 
-    await screen.findByRole('heading', { name: 'Edição guiada do cenário' });
+    await waitFor(() => {
+      expect(screen.getByTestId('qa-waves-run-button')).toBeEnabled();
+    });
 
     await user.click(screen.getByRole('button', { name: /executar cenário/i }));
     await waitFor(() => {

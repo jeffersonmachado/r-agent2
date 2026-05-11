@@ -49,7 +49,8 @@ Ao selecionar uma jornada, exibe:
 
 ### Como as jornadas são construídas
 
-O endpoint `GET /api/qa-waves/journeys` executa `buildJourneyRegistry()` em `journeyRegistry.js`, que:
+Na implementacao atual, a UI `/dev/qa-waves` consome `GET /api/test-executions/qa-waves/journeys`.
+Esse endpoint unificado delega para o mesmo backend de jornadas do QA Waves, que executa `buildJourneyRegistry()` em `journeyRegistry.js`, onde:
 
 1. Parte de 5 domínios fixos no `JOURNEY_BLUEPRINTS` (fitness, beauty, pbx, core, unmapped)
 2. Para cada um dos **50 cenários do `meshRegistry.json`**, infere via keyword matching:

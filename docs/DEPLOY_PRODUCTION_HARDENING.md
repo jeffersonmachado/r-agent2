@@ -195,7 +195,7 @@ POST /api/admin/users/:id/rotate-api-key
   Response: { apiKey: "new_key_here" }
 
 -- Enforce rotation every 90 days
-npm run admin:rotate-api-keys
+Agende um job externo chamando o endpoint de rotacao ou um script operacional interno do ambiente.
 ```
 
 #### CORS & CSRF

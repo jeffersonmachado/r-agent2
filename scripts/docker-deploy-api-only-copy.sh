@@ -130,7 +130,7 @@ echo ""
 
 # Verifica Docker disponível
 section "Verificando Docker no Servidor"
-DOCKER_CMD=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "command -v docker >/dev/null 2>&1 && echo docker")
+DOCKER_CMD=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "command -v docker >/dev/null 2>&1 && echo docker" 2>/dev/null | tail -1)
 if [ -z "$DOCKER_CMD" ]; then
     error "Docker não encontrado no servidor"
     exit 1
@@ -140,11 +140,11 @@ echo ""
 
 # Resolve diretório remoto de trabalho (prioriza mount real do container API)
 section "Resolvendo Diretório Remoto"
-REMOTE_DIR_FROM_CONTAINER=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker inspect --format '{{range .Mounts}}{{println .Source}}{{end}}' r-agent2-api-prod 2>/dev/null | awk '/\\/api$/ { sub(/\\/api$/, \"\", \$0); print; exit }'")
+REMOTE_DIR_FROM_CONTAINER=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker inspect --format '{{range .Mounts}}{{println .Source}}{{end}}' r-agent2-api-prod 2>/dev/null | awk '/\\/api$/ { sub(/\\/api$/, \"\", \$0); print; exit }'" 2>/dev/null | tail -1)
 if [ -n "$REMOTE_DIR_FROM_CONTAINER" ]; then
     RESOLVED_REMOTE_DIR="$REMOTE_DIR_FROM_CONTAINER"
 else
-    RESOLVED_REMOTE_DIR=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "for d in '${REMOTE_DIR}' /opt/r-agent2 /opt/results/ria/r-agent2 /root/r-agent2 /opt/aprende-ai; do if [ -d \"\$d\" ] && [ -d \"\$d/api\" ]; then echo \"\$d\"; break; fi; done")
+    RESOLVED_REMOTE_DIR=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "for d in '${REMOTE_DIR}' /opt/r-agent2 /opt/results/ria/r-agent2 /root/r-agent2 /opt/aprende-ai; do if [ -d \"\$d\" ] && [ -d \"\$d/api\" ]; then echo \"\$d\"; break; fi; done" 2>/dev/null | tail -1)
 fi
 if [ -z "$RESOLVED_REMOTE_DIR" ]; then
     error "Não foi possível localizar diretório remoto da aplicação"
@@ -177,9 +177,11 @@ EXCLUDE_LIST=(
     "--exclude=.dockerignore"
 )
 
-# Apenas api (código puro)
+# Apenas código-fonte relevante da API e helpers consumidos por ela
 SYNC_PATHS=(
-    "${ROOT_DIR}/api/"
+    "${ROOT_DIR}/docker-compose.prod.yml"
+    "${ROOT_DIR}/api"
+    "${ROOT_DIR}/tools"
 )
 
 info "Executando rsync (pode levar alguns segundos)..."
@@ -205,7 +207,7 @@ echo ""
 section "Reiniciando Container"
 info "Reiniciando API (recarregando código)..."
 
-COMPOSE_FILE=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "for f in docker-compose.prod.yml docker-compose.prod.yaml docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do if [ -f '${REMOTE_DIR}/'\"\$f\" ]; then echo \"\$f\"; break; fi; done")
+COMPOSE_FILE=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "for f in docker-compose.prod.yml docker-compose.prod.yaml docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do if [ -f '${REMOTE_DIR}/'\"\$f\" ]; then echo \"\$f\"; break; fi; done" 2>/dev/null | tail -1)
 
 RESTART_EXIT=0
 if [ -n "$COMPOSE_FILE" ]; then

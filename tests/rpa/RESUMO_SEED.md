@@ -145,8 +145,8 @@ console.log('Fluxos criados:', results.flows.filter(f => f.success).length);
 ## 🔄 Integração com Seeds Existentes
 
 Este sistema complementa:
-- `scripts/seed.js` - Seed via API/arquivos
-- `tests/seeds/` - Seeds de teste
+- Fluxo DB-only atual do projeto
+- `tests/seeds/` - Arquivos de referencia para cenarios de teste
 
 **Vantagens do RPA:**
 - ✅ Testa interface real

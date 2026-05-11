@@ -103,7 +103,7 @@ Se houver mais de um blocker, a UI mostra os motivos concatenados no mesmo card 
 
 - O spec `frontend-e2e/support-agent-flow.spec.ts` revelou gaps reais de UX/dados operacionais, nao apenas falhas de teste: overlay interceptando clique, ticket sem composer, ticket `in_progress` ausente e operacao `/support` manual sem replay operacional emitido.
 - `npm run qa:waves:governance` exige `--waveId`; o script npm atual nao fornece default.
-- `npm run package` nao existe no `package.json`; a validacao de pacote foi feita via `./scripts/generate-zip.sh`.
+- Nao existe script `npm run package` no `package.json`; a validacao de pacote foi feita via `./scripts/generate-zip.sh`.
 - A coleta UI via Playwright depende de receber `page` no contexto; nas execucoes de backend sem browser acoplado, a evidencia UI fica marcada como indisponivel.
 
 ## Riscos
@@ -122,7 +122,7 @@ Se houver mais de um blocker, a UI mostra os motivos concatenados no mesmo card 
 - `npm run clean:test-artifacts`: passou.
 - `npm run qa:waves:analyze`: produziu relatorio, mas ficou com handles abertos e foi encerrado apos saida util.
 - `npm run qa:waves:governance`: falhou por falta de `--waveId`.
-- `npm run package`: falhou porque nao existe script.
+- Tentativa de empacotamento via `npm run package`: falhou porque nao existe script; o fluxo valido foi `./scripts/generate-zip.sh`.
 - `./scripts/generate-zip.sh --output-dir /tmp --name qa-waves-operational-review.zip`: passou e bloqueou conteudo proibido.
 - `npx playwright test qa-waves-replay.spec.ts` em `frontend-e2e`: passou.
 - `npx playwright test support-agent-flow.spec.ts` em `frontend-e2e`: falhou com gaps operacionais reais listados acima.

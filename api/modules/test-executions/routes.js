@@ -36,6 +36,54 @@ function createTestExecutionsRoutes({ buildDeps }) {
     }
   });
 
+  router.get('/api/test-executions/qa-waves/journeys', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      deps.sendJson(res, 200, deps.listQaWaveJourneys());
+    } catch (error) {
+      deps.logger.error('Erro ao listar jornadas QA Waves pelo endpoint unificado:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar jornadas QA Waves' });
+    }
+  });
+
+  router.get('/api/test-executions/qa-waves/journey-status', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      deps.sendJson(res, 200, deps.listQaWaveJourneyStatus());
+    } catch (error) {
+      deps.logger.error('Erro ao listar status de jornadas QA Waves pelo endpoint unificado:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de jornadas QA Waves' });
+    }
+  });
+
+  router.get('/api/test-executions/qa-waves/scenarios', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      deps.sendJson(res, 200, deps.listQaWaveScenarios(req.query || {}));
+    } catch (error) {
+      deps.logger.error('Erro ao listar cenários QA Waves pelo endpoint unificado:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar cenários QA Waves' });
+    }
+  });
+
+  router.get('/api/test-executions/qa-waves/step-status', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    try {
+      deps.sendJson(res, 200, deps.listQaWaveStepStatus(req.query || {}));
+    } catch (error) {
+      deps.logger.error('Erro ao listar status de passos QA Waves pelo endpoint unificado:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de passos QA Waves' });
+    }
+  });
+
   router.post('/api/test-executions/recordings/start', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;

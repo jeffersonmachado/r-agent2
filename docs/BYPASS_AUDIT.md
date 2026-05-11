@@ -139,11 +139,11 @@ Esta auditoria mapeia:
 **Descrição:** Scripts de seed e setup podem ser executados isoladamente, sem validação prévia.
 
 **Scripts Afetados:**
-- `npm run seed` - Seed geral
-- `npm run seed:test` - Seed de teste
-- `npm run seed:reset` - Reset de seed
+- `npm run seed` - Marcador legado; nao popula mais dados
+- `npm run seed:test` - Marcador legado; nao popula mais dados
+- `npm run seed:reset` - Marcador legado; nao popula mais dados
 - `node scripts/setup-test-flow.js` - Setup de fluxo de teste
-- `node scripts/seed.js` - Script de seed direto
+- `node scripts/seed.js` - Removido do repositório
 
 **Impacto Potencial:**
 - Dados podem ser populados sem validação de estrutura
@@ -251,7 +251,7 @@ Esta auditoria mapeia:
 **Descrição:** Scripts de automação e utilitários podem ser executados isoladamente, potencialmente ignorando validações.
 
 **Scripts Afetados:**
-- `npm run autotest` - Autotest isolado
+- `npm run test && npm run qa && npm run qa:final-report && npm run check:green` - Fluxo manual equivalente ao autoteste antigo
 - `npm run check:green` - Check green isolado
 - `node scripts/validate-contracts.js` - Validação de contratos isolada
 - `node scripts/validate-ia-rollout-internal.js` - Validação de rollout isolada

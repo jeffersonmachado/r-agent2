@@ -171,6 +171,36 @@ async function waitForTenantModalToClose(page, timeout = 4000) {
   return false;
 }
 
+async function waitForTenantOption(page, { tenantId = 'system', tenantName = '', timeout = 10000 } = {}) {
+  const normalizedTenantId = String(tenantId || '').trim().toLowerCase();
+  const normalizedTenantName = String(tenantName || '').trim().toLowerCase();
+
+  return page.waitForFunction(({ id, name }) => {
+    const headings = Array.from(document.querySelectorAll('h1, h2, h3'));
+    const heading = headings.find((node) => {
+      const text = String(node.textContent || '').trim().toLowerCase();
+      return text.includes('selecione o tenant');
+    });
+    if (!heading) return false;
+
+    const header = heading.closest('div');
+    const modalRoot = header && header.parentElement ? header.parentElement : heading.parentElement;
+    if (!modalRoot) return false;
+
+    const loadingText = String(modalRoot.textContent || '').toLowerCase();
+    if (loadingText.includes('carregando tenants')) {
+      return false;
+    }
+
+    return Array.from(modalRoot.querySelectorAll('button')).some((button) => {
+      const text = String(button.innerText || button.textContent || '').trim().toLowerCase();
+      if (!text) return false;
+      if (text.includes('acessar') || text.includes('access') || text.includes('cancelar')) return false;
+      return text.includes(id) || (name && text.includes(name));
+    });
+  }, { id: normalizedTenantId, name: normalizedTenantName }, { timeout }).then(() => true).catch(() => false);
+}
+
 async function clickVisibleButtonByText(page, { includes = [], excludes = [] } = {}) {
   const buttons = await page.$$('button');
 
@@ -222,19 +252,19 @@ async function selectTenant(page, { tenantId = 'system', tenantName = '' } = {})
   const modalOpen = await waitForTenantModal(page);
   if (!modalOpen) return { handled: false, selectedTenant: null };
 
-  await page.waitForTimeout(1000);
+  await waitForTenantOption(page, { tenantId, tenantName, timeout: 12000 });
 
   const initialModalState = await getTenantModalState(page);
   if (initialModalState.filterFound) {
     await fillTenantFilter(page, tenantId);
-    await page.waitForTimeout(700);
+    await waitForTenantOption(page, { tenantId, tenantName, timeout: 4000 });
   }
 
   let clickedTenant = await clickTenantOption(page, tenantId, tenantName);
 
   if (!clickedTenant && initialModalState.filterFound) {
     await fillTenantFilter(page, '');
-    await page.waitForTimeout(400);
+    await waitForTenantOption(page, { tenantId, tenantName, timeout: 4000 });
     clickedTenant = await clickTenantOption(page, tenantId, tenantName);
   }
 

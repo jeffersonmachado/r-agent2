@@ -325,8 +325,12 @@ Em desenvolvimento, é comum limpar e recriar dados:
 # Limpar vector store
 rm -rf rag-service/data/vector_store/*
 
+# Garantir schema atualizado
+npm run db:migrate
+
 # Recriar documentos de teste
-node scripts/seed.js --tenant=<tenant-id>
+# Use o fluxo DB-only/endpoints internos do tenant.
+# `scripts/seed.js` foi removido do repositório.
 ```
 
 ### **3. Usar Modo Debug**
@@ -348,8 +352,12 @@ node api/server.js
 Use o seed para criar dados de teste:
 
 ```bash
+# Atualizar schema
+npm run db:migrate
+
 # Criar dados de exemplo
-node scripts/seed.js --tenant=<tenant-id>
+# Use fixtures/endpoints do ambiente de teste.
+# `scripts/seed.js` foi removido do repositório.
 
 # Isso cria:
 # - Documentos RAG de exemplo
@@ -445,6 +453,7 @@ curl http://localhost:8000/rag/health
 curl http://localhost:3000/api/rag/documents?tenantId=<tenant-id>
 
 # Limpar e recriar dados
-node scripts/seed.js --tenant=<tenant-id>
+npm run db:migrate
+# Recrie os dados via fluxo DB-only/endpoints internos do tenant.
 ```
 

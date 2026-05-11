@@ -105,10 +105,11 @@ Running 8 tests using 3 workers
 - [x] Timeline polling: 18×5s = 90s total ✅
 
 ### QA Waves Workflow
-- [x] Scenario fetch: GET `/api/qa-waves/scenarios` ✅
+- [x] Unified reads: GET `/api/test-executions/qa-waves/journeys`, `/journey-status`, `/step-status` e `/scenarios` ✅
 - [x] Execution POST: `/api/test-executions` returns `executionId` + `replayId` ✅
 - [x] Replay persistence: Items appear in `/dev/rpa-replays?source=qa-waves` ✅
 - [x] Replay search: `search=${replayId}` filters correctly ✅
+- [x] Unified smoke gate: `node tests/smoke-test-qa-waves-unified.js` falha se detectar qualquer chamada em `/api/qa-waves/*` ou `/rpa/*` fora da API unificada ✅
 
 ---
 

@@ -49,10 +49,13 @@ Critério de aceitação:
 
 - **Mudança mínima**:
   - adicionar dependências e configuração base
-  - criar scripts: `lint`, `format`, `format:check`
+  - criar scripts novos no package raiz: `lint`, `format`, `format:check`
   - rodar no CI como job separado
 - **Adoção gradual**:
   - começar com regras leves + `--max-warnings=0` só quando a base estiver limpa
+- **Estado atual**:
+  - o `package.json` raiz ainda nao expoe `lint`, `format` ou `format:check`
+  - os gates existentes hoje sao baseados em testes e validacoes como `npm run test`, `npm run test:system`, `npm run frontend:test`, `npm run qa` e `npm run system:validate`
 
 ### 5) Python: ruff (lint/format) e (opcional) mypy
 
@@ -71,6 +74,6 @@ Critério de aceitação:
 
 ### 7) Pre-commit hooks (Husky / pre-commit)
 
-- Começar com `format:check` + lint básico + validação JSON.
+- Começar criando `format:check` e `lint` no package raiz; ate la, limitar os hooks a validacoes que ja existem de fato, como JSON/schema e checks leves de shell.
 - Manter hooks rápidos (segundos), deixar suites pesadas só no CI.
 
