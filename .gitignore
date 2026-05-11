@@ -141,6 +141,8 @@ build/
 Thumbs.db
 
 # Temporários locais na raiz (scripts promovidos devem ir para scripts/smoke/)
+tmp/*
+!tmp/.gitkeep
 tmp_*
 
 # Artefatos de runtime de scripts (gerados em execução, não versionar)
