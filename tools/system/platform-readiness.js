@@ -1292,9 +1292,12 @@ function buildReport() {
   const allGaps = gapBacklog.concat(proofBlockingGaps);
   const blockingGaps = allGaps.filter((item) => item.severity === 'critical' || item.severity === 'high');
   const nonBlockingGaps = allGaps.filter((item) => item.severity !== 'critical' && item.severity !== 'high');
+  // J. Decisão granular: o proof engine agora emite STAGE_GO ou NO_GO:STAGE_GO
+  const proofDecision = proofReport.finalDecision || 'NO_GO:UNKNOWN';
+  const isProofGo = proofDecision && !proofDecision.startsWith('NO_GO') && proofDecision !== 'PENDING';
   const finalDecision = blockingGaps.length > 0
-    ? 'NO_GO'
-    : (proofReport.finalDecision === 'GO' ? 'GO' : proofReport.finalDecision);
+    ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
+    : proofDecision;
   const platformMaturity = classifyPlatformMaturity({
     qaWavesGovernance,
     prodLikeSummary,
@@ -1394,7 +1397,7 @@ function buildReport() {
     ],
     noGoReasons: blockingGaps.map((gap) => `${gap.title} [${gap.id}]`),
     productionReadiness: {
-      status: blockingGaps.length > 0 ? 'NO_GO' : (proofReport.finalDecision === 'GO' ? 'GO' : finalDecision),
+      status: blockingGaps.length > 0 ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}` : proofDecision,
       classification: platformMaturity === 'foundation' || platformMaturity === 'operational' ? 'partial' : platformMaturity,
       productionLikeFlows: productionValidation.filter((item) => item.status === 'production-like').map((item) => item.label),
     },
@@ -1502,7 +1505,9 @@ function main() {
     proofDecision: report.proofReport.finalDecision,
     output: 'governance/final-readiness-report.json',
   }, null, 2));
-  if (report.finalDecision !== 'GO') process.exitCode = 1;
+  // GO granular: qualquer decisão sem prefixo NO_GO e não PENDING é um GO de algum nível
+  const isGo = report.finalDecision && !report.finalDecision.startsWith('NO_GO') && report.finalDecision !== 'PENDING';
+  if (!isGo) process.exitCode = 1;
 }
 
 if (require.main === module) {

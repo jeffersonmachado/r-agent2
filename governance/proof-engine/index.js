@@ -5,68 +5,74 @@ const path = require('path');
 const crypto = require('crypto');
 const { resolveEvidenceCandidates, resolveWorkspacePath, getRuntimeRoot } = require('../../tools/system/lib/runtime-paths');
 const { validatePackage } = require('../package-validator');
+const { runCrossReportValidation, classifyPbxMaturity, THRESHOLDS } = require('../cross-report-validator');
 
 const ROOT = path.join(__dirname, '..', '..');
+
+// ─── Modelo de maturidade operacional estrito ────────────────────────────────
+// Cada nível requer prova operacional objetiva. Não há saltos.
 const STAGE_ORDER = [
-  'foundation',
-  'operational',
-  'validated',
-  'prod-like',
-  'enterprise-partial',
-  'enterprise-ready',
-  'autonomous-ready',
+  'foundation',        // artefatos básicos presentes
+  'operational',       // replay coverage > 0
+  'validated',         // PBX ou handoff parcialmente validados
+  'prod-like',         // prod-like coverage 100%
+  'enterprise-partial',// omnichannel, PBX ou handoff não totalmente validados
+  'enterprise-ready',  // digital twin + governance validados, zero blockers
+  'autonomous-ready',  // TODOS os gates críticos passaram sem exceção
 ];
 
+// ─── Decisões granulares — nunca rótulos vagos de GO/NO_GO ───────────────────
+const STAGE_DECISIONS = {
+  'foundation':         'FOUNDATION_GO',
+  'operational':        'OPERATIONAL_GO',
+  'validated':          'VALIDATED_GO',
+  'prod-like':          'PRODLIKE_GO',
+  'enterprise-partial': 'ENTERPRISE_PARTIAL_GO',
+  'enterprise-ready':   'ENTERPRISE_READY_GO',
+  'autonomous-ready':   'AUTONOMOUS_READY_GO',
+};
+
+// ─── Artefatos obrigatórios ───────────────────────────────────────────────────
 const REQUIRED_ARTIFACT_SPECS = [
-  { id: 'smoke_summary', path: 'qa/smoke-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'smoke_l01', path: 'qa/l01-physical-queue-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'smoke_l02', path: 'qa/l02-ura-publish-rollback-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'smoke_l03', path: 'qa/l03-pbx-voice-tts-asr-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'smoke_l04', path: 'qa/l04-pbx-call-events-runtime-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'smoke_l05', path: 'qa/l05-chatpro-omnichannel-evidence.json', domain: 'foundation', packageRequired: true },
-  { id: 'prod_like_smoke', path: 'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json', domain: 'operational', packageRequired: true },
-  { id: 'human_handoff', path: 'qa/enterprise/human-handoff-full-validation.json', domain: 'human_handoff', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'human_handoff_screenshots', path: 'qa/enterprise/human-handoff-screenshots.json', domain: 'human_handoff', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'pbx_prod_like', path: 'qa/enterprise/pbx-voice-flow-prod-like.json', domain: 'pbx', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'pbx_asr_transcript', path: 'qa/enterprise/pbx-asr-transcript.json', domain: 'pbx', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'pbx_tts_prompts', path: 'qa/enterprise/pbx-tts-prompts.json', domain: 'pbx', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'pbx_recordings_metadata', path: 'qa/enterprise/pbx-recordings-metadata.json', domain: 'pbx', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'omnichannel_replay', path: 'qa/enterprise/omnichannel-unified-replay.json', domain: 'omnichannel', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'omnichannel_crm_mutations', path: 'qa/enterprise/omnichannel-crm-mutations.json', domain: 'omnichannel', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'digital_twin_snapshots', path: 'qa/enterprise/digital-twin-snapshots.json', domain: 'digital_twin', packageRequired: true, mirrorToWorkspace: true },
-  { id: 'qa_waves_governance', path: 'qa/qa-waves-enterprise-governance.json', domain: 'governance', packageRequired: true },
-  { id: 'governance_signature', path: 'governance/proof-signature.json', domain: 'governance', packageRequired: true },
-  { id: 'cleanup_proof', path: 'governance/cleanup-proof.json', domain: 'governance', packageRequired: true },
-  { id: 'final_readiness', path: 'governance/final-readiness-report.json', domain: 'governance', packageRequired: true },
+  { id: 'smoke_summary',           path: 'qa/smoke-evidence.json',                                           domain: 'foundation',    packageRequired: true },
+  { id: 'smoke_l01',               path: 'qa/l01-physical-queue-evidence.json',                               domain: 'foundation',    packageRequired: true },
+  { id: 'smoke_l02',               path: 'qa/l02-ura-publish-rollback-evidence.json',                         domain: 'foundation',    packageRequired: true },
+  { id: 'smoke_l03',               path: 'qa/l03-pbx-voice-tts-asr-evidence.json',                            domain: 'foundation',    packageRequired: true },
+  { id: 'smoke_l04',               path: 'qa/l04-pbx-call-events-runtime-evidence.json',                      domain: 'foundation',    packageRequired: true },
+  { id: 'smoke_l05',               path: 'qa/l05-chatpro-omnichannel-evidence.json',                          domain: 'foundation',    packageRequired: true },
+  { id: 'prod_like_smoke',         path: 'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json',      domain: 'operational',   packageRequired: true },
+  { id: 'human_handoff',           path: 'qa/enterprise/human-handoff-full-validation.json',                  domain: 'human_handoff', packageRequired: true, mirrorToWorkspace: true },
+  { id: 'human_handoff_screenshots', path: 'qa/enterprise/human-handoff-screenshots.json',                   domain: 'human_handoff', packageRequired: true, mirrorToWorkspace: true },
+  { id: 'pbx_prod_like',           path: 'qa/enterprise/pbx-voice-flow-prod-like.json',                      domain: 'pbx',           packageRequired: true, mirrorToWorkspace: true },
+  { id: 'pbx_asr_transcript',      path: 'qa/enterprise/pbx-asr-transcript.json',                            domain: 'pbx',           packageRequired: true, mirrorToWorkspace: true },
+  { id: 'pbx_tts_prompts',         path: 'qa/enterprise/pbx-tts-prompts.json',                               domain: 'pbx',           packageRequired: true, mirrorToWorkspace: true },
+  { id: 'pbx_recordings_metadata', path: 'qa/enterprise/pbx-recordings-metadata.json',                       domain: 'pbx',           packageRequired: true, mirrorToWorkspace: true },
+  { id: 'omnichannel_replay',      path: 'qa/enterprise/omnichannel-unified-replay.json',                     domain: 'omnichannel',   packageRequired: true, mirrorToWorkspace: true },
+  { id: 'omnichannel_crm_mutations', path: 'qa/enterprise/omnichannel-crm-mutations.json',                   domain: 'omnichannel',   packageRequired: true, mirrorToWorkspace: true },
+  { id: 'digital_twin_snapshots',  path: 'qa/enterprise/digital-twin-snapshots.json',                         domain: 'digital_twin',  packageRequired: true, mirrorToWorkspace: true },
+  { id: 'qa_waves_governance',     path: 'qa/qa-waves-enterprise-governance.json',                            domain: 'governance',    packageRequired: true },
+  { id: 'governance_signature',    path: 'governance/proof-signature.json',                                   domain: 'governance',    packageRequired: true },
+  { id: 'cleanup_proof',           path: 'governance/cleanup-proof.json',                                     domain: 'governance',    packageRequired: true },
+  { id: 'final_readiness',         path: 'governance/final-readiness-report.json',                            domain: 'governance',    packageRequired: true },
 ];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getRuntimeRootSafe() {
-  try {
-    return getRuntimeRoot(ROOT, process.env);
-  } catch (_) {
-    return null;
-  }
+  try { return getRuntimeRoot(ROOT, process.env); } catch (_) { return null; }
 }
 
 function sha256File(filePath) {
-  const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex');
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
 function readJsonMaybe(filePath) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (_) {
-    return null;
-  }
+  try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch (_) { return null; }
 }
 
 function synchronizeArtifact(sourcePath, targetPath) {
   if (!sourcePath || !targetPath || sourcePath === targetPath || fs.existsSync(targetPath)) {
     return targetPath || sourcePath;
   }
-
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.copyFileSync(sourcePath, targetPath);
   return targetPath;
@@ -78,10 +84,7 @@ function resolveArtifact(spec) {
   let sourcePath = null;
 
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      sourcePath = candidate;
-      break;
-    }
+    if (fs.existsSync(candidate)) { sourcePath = candidate; break; }
   }
 
   let resolvedPath = sourcePath;
@@ -90,15 +93,12 @@ function resolveArtifact(spec) {
   }
 
   const stats = resolvedPath && fs.existsSync(resolvedPath) ? fs.statSync(resolvedPath) : null;
-  const json = resolvedPath && resolvedPath.endsWith('.json') ? readJsonMaybe(resolvedPath) : null;
+  const json  = resolvedPath && resolvedPath.endsWith('.json') ? readJsonMaybe(resolvedPath) : null;
 
   return {
-    id: spec.id,
-    domain: spec.domain,
-    path: spec.path,
+    id: spec.id, domain: spec.domain, path: spec.path,
     packageRequired: spec.packageRequired === true,
-    sourcePath,
-    resolvedPath,
+    sourcePath, resolvedPath,
     exists: Boolean(stats),
     size: stats ? stats.size : 0,
     timestamp: stats ? stats.mtime.toISOString() : null,
@@ -108,20 +108,12 @@ function resolveArtifact(spec) {
 }
 
 function walkFiles(startDir, collector = []) {
-  if (!startDir || !fs.existsSync(startDir)) {
-    return collector;
-  }
-
-  const entries = fs.readdirSync(startDir, { withFileTypes: true });
-  for (const entry of entries) {
+  if (!startDir || !fs.existsSync(startDir)) return collector;
+  for (const entry of fs.readdirSync(startDir, { withFileTypes: true })) {
     const absPath = path.join(startDir, entry.name);
-    if (entry.isDirectory()) {
-      walkFiles(absPath, collector);
-    } else {
-      collector.push(absPath);
-    }
+    if (entry.isDirectory()) walkFiles(absPath, collector);
+    else collector.push(absPath);
   }
-
   return collector;
 }
 
@@ -129,26 +121,17 @@ function findPhysicalMatches(patterns) {
   const runtimeRoot = getRuntimeRootSafe();
   const roots = [ROOT, runtimeRoot].filter(Boolean);
   const matches = [];
-
   for (const searchRoot of roots) {
     for (const filePath of walkFiles(path.join(searchRoot, 'qa'))) {
       const relPath = path.relative(searchRoot, filePath).replace(/\\/g, '/');
-      if (patterns.some((pattern) => pattern.test(relPath))) {
-        matches.push({ filePath, relPath });
-      }
+      if (patterns.some((p) => p.test(relPath))) matches.push({ filePath, relPath });
     }
   }
-
   return matches;
 }
 
 function findArtifactById(requiredArtifacts, id) {
-  return requiredArtifacts.find((artifact) => artifact.id === id) || {
-    id,
-    path: null,
-    exists: false,
-    json: null,
-  };
+  return requiredArtifacts.find((a) => a.id === id) || { id, path: null, exists: false, json: null };
 }
 
 function hasArrayPayload(artifact, key) {
@@ -156,46 +139,96 @@ function hasArrayPayload(artifact, key) {
 }
 
 function collectInvalidReferences(referencePaths = []) {
-  return Array.from(new Set(referencePaths.filter(Boolean))).map((referencePath) => {
-    const candidates = resolveEvidenceCandidates(ROOT, referencePath, null, process.env);
-    const existing = candidates.find((candidate) => fs.existsSync(candidate)) || null;
-    return {
-      path: referencePath,
-      exists: Boolean(existing),
-      resolvedPath: existing,
-    };
+  return Array.from(new Set(referencePaths.filter(Boolean))).map((refPath) => {
+    const candidates = resolveEvidenceCandidates(ROOT, refPath, null, process.env);
+    const existing = candidates.find((c) => fs.existsSync(c)) || null;
+    return { path: refPath, exists: Boolean(existing), resolvedPath: existing };
   }).filter((item) => !item.exists);
 }
 
-function evaluateHumanHandoff(artifact, screenshotArtifact) {
-  const data = artifact.json || {};
-  const signals = data.signals || {};
-  const missing = [];
-  const screenshots = Array.isArray(screenshotArtifact?.json?.files) ? screenshotArtifact.json.files : [];
+// ─── Carrega inteligência do QA Mesh ─────────────────────────────────────────
+function loadQaMeshIntelligence() {
+  const candidates = [
+    path.join(ROOT, 'qa-mesh', 'intelligence', 'latest.json'),
+    path.join(ROOT, 'qa', 'mesh-intelligence-latest.json'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return readJsonMaybe(p) || null;
+  }
+  return null;
+}
 
+// ─── E. Classificação de maturidade PBX ──────────────────────────────────────
+// Níveis: simulated → synthetic-assisted → hybrid-real → prod-like → enterprise-real
+// Teto máximo se synthetic_insert OU selftest falhar: hybrid-real
+function evaluatePbxMaturityLevel(pbxData) {
+  const maturity = classifyPbxMaturity(pbxData);
+  const fullyRealLevels = ['prod-like', 'enterprise-real'];
+  return {
+    maturityLevel: maturity,
+    isFullyReal: fullyRealLevels.includes(maturity),
+    maxAllowedBySelftest: ['simulated', 'synthetic-assisted', 'hybrid-real'].includes(maturity)
+      ? 'hybrid-real'
+      : maturity,
+  };
+}
+
+// ─── F. Normalização de handoff humano ───────────────────────────────────────
+function evaluateHumanHandoff(artifact, screenshotArtifact) {
+  const data     = artifact.json || {};
+  const signals  = data.signals   || {};
+  const evidence = data.evidence  || {};
+  const ticket   = data.ticket    || {};
+  const replay   = Array.isArray(data.replay) ? data.replay : [];
+  const screenshots = Array.isArray(screenshotArtifact?.json?.files)
+    ? screenshotArtifact.json.files : [];
+  const missing  = [];
+
+  // presença do artefato
   if (!artifact.exists) missing.push('human_handoff_artifact');
-  if (!Array.isArray(data.replay) || data.replay.length === 0) missing.push('replay');
-  if (!(Number(data.evidence?.timelineCount || 0) > 0)) missing.push('timeline');
+
+  // replay e timeline
+  if (replay.length === 0) missing.push('replay');
+  if (!(Number(evidence.timelineCount || 0) > 0)) missing.push('timeline');
+
+  // sinais de ownership e transições
   if (signals.ticketOwnershipObserved !== true) missing.push('ownership_transitions');
   if (signals.routingTransferObserved !== true || signals.stateTransitionsObserved !== true) missing.push('ticket_transitions');
   if (signals.slaObserved !== true) missing.push('sla_transitions');
   if (signals.backendMutationObserved !== true) missing.push('backend_mutations');
+
+  // screenshots
   if (!screenshotArtifact.exists) missing.push('screenshots');
-  if (screenshotArtifact.exists && screenshots.length === 0) missing.push('screenshots_manifest');
+  else if (screenshots.length === 0) missing.push('screenshots_manifest');
+
+  // F. Normalização enterprise obrigatória
+  const normalizationGaps = [];
+  if (ticket.assignedTo == null) normalizationGaps.push('null_assignment');
+
+  const nullTimestamps = replay.filter((r) => r.timestamp == null).length;
+  if (nullTimestamps > 0) normalizationGaps.push(`null_timestamps(${nullTimestamps})`);
+
+  if (Number(evidence.eventCount || 0) < 1) normalizationGaps.push('zero_event_count');
+
+  if (normalizationGaps.length > 0) {
+    missing.push(...normalizationGaps.map((g) => `normalization:${g}`));
+  }
 
   return {
     status: missing.length === 0 ? 'VALIDATED' : 'NOT_VALIDATED',
     artifact: artifact.path,
     screenshotArtifact: screenshotArtifact.path,
     missing,
+    normalizationGaps,
     screenshots,
   };
 }
 
+// ─── Avaliação PBX com maturidade ────────────────────────────────────────────
 function evaluatePbx(artifact, asrArtifact, ttsArtifact, recordingsArtifact) {
-  const data = artifact.json || {};
-  const l03 = data.sources?.l03 || {};
-  const l04 = data.sources?.l04 || {};
+  const data    = artifact.json || {};
+  const l03     = data.sources?.l03 || {};
+  const l04     = data.sources?.l04 || {};
   const missing = [];
 
   if (!artifact.exists) missing.push('pbx_prod_like_artifact');
@@ -207,6 +240,9 @@ function evaluatePbx(artifact, asrArtifact, ttsArtifact, recordingsArtifact) {
   if (!ttsArtifact.exists || !hasArrayPayload(ttsArtifact, 'prompts')) missing.push('tts_prompts');
   if (!recordingsArtifact.exists || !hasArrayPayload(recordingsArtifact, 'recordings')) missing.push('recordings_metadata');
 
+  // E. Classificação de maturidade real
+  const pbxMaturity = evaluatePbxMaturityLevel(artifact.json);
+
   return {
     status: missing.length === 0 ? 'VALIDATED' : 'NOT_VALIDATED',
     artifact: artifact.path,
@@ -214,20 +250,22 @@ function evaluatePbx(artifact, asrArtifact, ttsArtifact, recordingsArtifact) {
     ttsArtifact: ttsArtifact.path,
     recordingsArtifact: recordingsArtifact.path,
     missing,
+    maturityLevel: pbxMaturity.maturityLevel,
+    isFullyReal: pbxMaturity.isFullyReal,
   };
 }
 
 function evaluateOmnichannel(artifact, crmArtifact) {
-  const data = artifact.json || {};
-  const replay = Array.isArray(data.replay) ? data.replay : [];
-  const distinctSources = Array.from(new Set(replay.map((item) => item.source).filter(Boolean)));
-  const hasWhatsAppEvents = replay.some((item) => item.kind === 'channel_message' || /whatsapp/i.test(String(item.text || '')));
-  const hasTicketEvents = replay.some((item) => item.kind === 'ticket_message');
-  const hasPbxEvents = replay.some((item) => item.source === 'pbx');
-  const hasChatEvents = replay.some((item) => item.source === 'omnichannel' || /assign=|transfer=|note=/i.test(String(item.text || '')));
-  const hasCrmMutations = crmArtifact.exists
+  const data             = artifact.json || {};
+  const replay           = Array.isArray(data.replay) ? data.replay : [];
+  const distinctSources  = Array.from(new Set(replay.map((i) => i.source).filter(Boolean)));
+  const hasWhatsAppEvents = replay.some((i) => i.kind === 'channel_message' || /whatsapp/i.test(String(i.text || '')));
+  const hasTicketEvents   = replay.some((i) => i.kind === 'ticket_message');
+  const hasPbxEvents      = replay.some((i) => i.source === 'pbx');
+  const hasChatEvents     = replay.some((i) => i.source === 'omnichannel' || /assign=|transfer=|note=/i.test(String(i.text || '')));
+  const hasCrmMutations   = crmArtifact.exists
     && hasArrayPayload(crmArtifact, 'mutations')
-    && (replay.some((item) => /crm/i.test(String(item.text || ''))) || Number(crmArtifact.json?.mutations?.length || 0) > 0);
+    && (replay.some((i) => /crm/i.test(String(i.text || ''))) || Number(crmArtifact.json?.mutations?.length || 0) > 0);
   const missing = [];
 
   if (!artifact.exists) missing.push('unified_replay_artifact');
@@ -249,21 +287,21 @@ function evaluateOmnichannel(artifact, crmArtifact) {
 }
 
 function evaluateDigitalTwin(context, snapshotsArtifact) {
-  const replayPresent = context.omnichannel.status !== 'NOT_VALIDATED' || context.humanHandoff.status === 'VALIDATED' || context.pbx.status === 'VALIDATED';
-  const timelinePresent = context.humanHandoff.missing.indexOf('timeline') === -1 || context.pbx.missing.indexOf('ivr_timeline') === -1;
-  const assertionsPresent = context.humanHandoff.missing.indexOf('ticket_transitions') === -1 || context.omnichannel.missing.indexOf('ticket_events') === -1;
-  const mutationsPresent = context.humanHandoff.missing.indexOf('backend_mutations') === -1 || context.omnichannel.missing.indexOf('crm_mutations') === -1;
-  const evidencePresent = context.requiredArtifacts.filter((artifact) => artifact.domain === 'foundation').every((artifact) => artifact.exists);
-  const snapshots = Array.isArray(snapshotsArtifact?.json?.snapshots) ? snapshotsArtifact.json.snapshots : [];
-  const snapshotsPresent = snapshotsArtifact.exists && snapshots.length > 0;
+  const replayPresent     = context.omnichannel.status !== 'NOT_VALIDATED' || context.humanHandoff.status === 'VALIDATED' || context.pbx.status === 'VALIDATED';
+  const timelinePresent   = !context.humanHandoff.missing.includes('timeline') || !context.pbx.missing.includes('ivr_timeline');
+  const assertionsPresent = !context.humanHandoff.missing.includes('ticket_transitions') || !context.omnichannel.missing.includes('ticket_events');
+  const mutationsPresent  = !context.humanHandoff.missing.includes('backend_mutations') || !context.omnichannel.missing.includes('crm_mutations');
+  const evidencePresent   = context.requiredArtifacts.filter((a) => a.domain === 'foundation').every((a) => a.exists);
+  const snapshots         = Array.isArray(snapshotsArtifact?.json?.snapshots) ? snapshotsArtifact.json.snapshots : [];
+  const snapshotsPresent  = snapshotsArtifact.exists && snapshots.length > 0;
   const missing = [];
 
-  if (!replayPresent) missing.push('replay');
-  if (!timelinePresent) missing.push('timeline');
+  if (!replayPresent)     missing.push('replay');
+  if (!timelinePresent)   missing.push('timeline');
   if (!assertionsPresent) missing.push('assertions');
-  if (!mutationsPresent) missing.push('mutations');
-  if (!evidencePresent) missing.push('evidence');
-  if (!snapshotsPresent) missing.push('snapshots');
+  if (!mutationsPresent)  missing.push('mutations');
+  if (!evidencePresent)   missing.push('evidence');
+  if (!snapshotsPresent)  missing.push('snapshots');
 
   return {
     status: missing.length === 0 ? 'VALIDATED' : (missing.length === 6 ? 'NOT_VALIDATED' : 'PARTIAL'),
@@ -275,25 +313,21 @@ function evaluateDigitalTwin(context, snapshotsArtifact) {
 
 function evaluateGovernance(requiredArtifacts) {
   const signatureArtifact = findArtifactById(requiredArtifacts, 'governance_signature');
-  const cleanupArtifact = findArtifactById(requiredArtifacts, 'cleanup_proof');
+  const cleanupArtifact   = findArtifactById(requiredArtifacts, 'cleanup_proof');
   const missing = [];
 
   if (!signatureArtifact.exists) {
     missing.push('governance_signature');
   } else {
-    const signatureData = signatureArtifact.json || {};
-    if (!signatureData.signature || !hasArrayPayload(signatureArtifact, 'subjectHashes')) {
-      missing.push('governance_signature_payload');
-    }
+    const sd = signatureArtifact.json || {};
+    if (!sd.signature || !hasArrayPayload(signatureArtifact, 'subjectHashes')) missing.push('governance_signature_payload');
   }
 
   if (!cleanupArtifact.exists) {
     missing.push('cleanup_proof');
   } else {
-    const cleanupData = cleanupArtifact.json || {};
-    if (cleanupData.runtimeClean !== true || cleanupData.workspaceClean !== true) {
-      missing.push('cleanup_status');
-    }
+    const cd = cleanupArtifact.json || {};
+    if (cd.runtimeClean !== true || cd.workspaceClean !== true) missing.push('cleanup_status');
   }
 
   return {
@@ -304,25 +338,189 @@ function evaluateGovernance(requiredArtifacts) {
   };
 }
 
-function determineStage({ blockerCount, replayCoverage, prodLikeCoverage, omnichannel, pbx, humanHandoff, digitalTwin, governanceCoverage, foundationArtifacts }) {
-  const foundationOk = foundationArtifacts.every((artifact) => artifact.exists);
-  if (!foundationOk) return 'foundation';
+// ─── G. Intelligence Stability — falha ativa impede autonomous-ready ──────────
+function evaluateIntelligenceStability(intelligenceData) {
+  if (!intelligenceData) return { status: 'UNKNOWN', unstableDomains: [], recurringFailures: [], blocksAutonomous: false };
+
+  const stability = Array.isArray(intelligenceData.moduleStability) ? intelligenceData.moduleStability : [];
+  const recurring = Array.isArray(intelligenceData.recurringFailures) ? intelligenceData.recurringFailures : [];
+
+  const unstable = stability.filter((m) => Number(m.stabilityScore) < THRESHOLDS.intelligenceStabilityMin);
+  const blocksAutonomous = unstable.length > 0 || recurring.length > 0;
+
+  return {
+    status: blocksAutonomous ? 'UNSTABLE' : 'STABLE',
+    unstableDomains: unstable.map((m) => ({ domain: m.domain, stabilityScore: m.stabilityScore, passed: m.passed, total: m.total })),
+    recurringFailures: recurring.map((f) => ({ domain: f.domain, fingerprint: f.fingerprint, recurringCount: f.recurringCount })),
+    blocksAutonomous,
+  };
+}
+
+// ─── D. Hardening de classificação vertical ───────────────────────────────────
+function evaluateVerticalCoverage(verticalSummaries, requiredCount) {
+  if (!Array.isArray(verticalSummaries)) {
+    return { status: 'UNKNOWN', validated: 0, required: requiredCount, percent: 0, invalidClaims: [] };
+  }
+
+  const invalidClaims = [];
+  let validProdLikeCount = 0;
+
+  for (const v of verticalSummaries) {
+    const name           = v.vertical || v.id || 'unknown';
+    const classification = v.classification || '';
+    const isEnterprise   = ['production-like', 'enterprise-ready'].includes(classification);
+
+    const journeyCount     = Number(v.journeyCount || v.journeys?.length || 0);
+    const assertionCount   = Number(v.assertionCount || v.assertions?.length || 0);
+    const integrationCount = Number(v.integrationCount || v.integrations?.length || 0);
+
+    if (isEnterprise) {
+      const gaps = [];
+      if (journeyCount < THRESHOLDS.verticalJourneysMin) gaps.push(`journeys=${journeyCount}`);
+      if (assertionCount < THRESHOLDS.verticalAssertionsMin) gaps.push(`assertions=${assertionCount}`);
+      if (integrationCount < THRESHOLDS.verticalIntegrationsMin) gaps.push(`integrations=${integrationCount}`);
+
+      if (gaps.length > 0) {
+        invalidClaims.push({ vertical: name, classification, gaps });
+      } else {
+        validProdLikeCount += 1;
+      }
+    }
+  }
+
+  const percent = requiredCount === 0 ? 0 : Number(((validProdLikeCount / requiredCount) * 100).toFixed(2));
+
+  return {
+    status: invalidClaims.length === 0 && validProdLikeCount >= requiredCount ? 'VALIDATED' : 'PARTIAL',
+    validated: validProdLikeCount,
+    required: requiredCount,
+    percent,
+    invalidClaims,
+  };
+}
+
+// ─── H. Evidence quality score ────────────────────────────────────────────────
+function computeProofQualityScore(context) {
+  const { requiredArtifacts, humanHandoff, pbx, omnichannel, digitalTwin, governance, intelligence } = context;
+
+  let score = 0;
+  let maxScore = 0;
+
+  function add(points, condition, label) {
+    maxScore += points;
+    if (condition) score += points;
+    return { label, earned: condition ? points : 0, max: points };
+  }
+
+  const breakdown = [
+    // Artefatos foundation (0-20)
+    add(20, requiredArtifacts.filter((a) => a.domain === 'foundation').every((a) => a.exists), 'foundation_artifacts'),
+
+    // Replay richness (0-10)
+    add(10, (context.replayCoverage?.percent || 0) >= 100, 'replay_coverage_100pct'),
+
+    // Assertions e integrações em verticais (0-10)
+    add(10, (context.verticalCoverage?.invalidClaims?.length || 0) === 0, 'vertical_assertions_valid'),
+
+    // PBX maturity (0-15)
+    add(15, pbx.isFullyReal === true, 'pbx_fully_real'),
+    add(0, ['prod-like', 'hybrid-real'].includes(pbx.maturityLevel), 'pbx_partial_real'),
+
+    // Handoff normalization (0-15)
+    add(10, humanHandoff.status === 'VALIDATED', 'handoff_validated'),
+    add(5, (humanHandoff.normalizationGaps?.length || 0) === 0, 'handoff_fully_normalized'),
+
+    // Omnichannel (0-10)
+    add(10, omnichannel.status === 'VALIDATED', 'omnichannel_validated'),
+
+    // Digital twin (0-10)
+    add(10, digitalTwin.status === 'VALIDATED', 'digital_twin_validated'),
+
+    // Governance (0-10)
+    add(10, governance.status === 'VALIDATED', 'governance_validated'),
+
+    // Intelligence stability (0-10)
+    add(10, intelligence.status === 'STABLE', 'intelligence_stable'),
+
+    // Real vs synthetic ratio PBX (0-5)
+    add(5, pbx.maturityLevel === 'enterprise-real', 'pbx_enterprise_real'),
+
+    // Screenshots and cleanup (0-5)
+    add(3, (humanHandoff.screenshots?.length || 0) > 0, 'handoff_screenshots'),
+    add(2, !context.governanceCoverage?.missing?.includes('cleanup_status'), 'runtime_cleanup'),
+  ];
+
+  const finalScore = maxScore > 0 ? Number(((score / maxScore) * 100).toFixed(1)) : 0;
+
+  return {
+    score: finalScore,
+    raw: score,
+    max: maxScore,
+    grade: finalScore >= 90 ? 'A' : finalScore >= 75 ? 'B' : finalScore >= 60 ? 'C' : finalScore >= 40 ? 'D' : 'F',
+    breakdown,
+  };
+}
+
+// ─── I. Modelo de maturidade — determinação de estágio ───────────────────────
+function determineStage(params) {
+  const {
+    blockerCount, replayCoverage, prodLikeCoverage,
+    omnichannel, pbx, humanHandoff, digitalTwin,
+    governanceCoverage, foundationArtifacts,
+    intelligenceStability, crossReport,
+  } = params;
+
+  // foundation: sem artefatos básicos
+  if (!foundationArtifacts.every((a) => a.exists)) return 'foundation';
+
+  // operational: sem replay
   if (replayCoverage.percent === 0) return 'operational';
+
+  // validated: PBX e handoff ambos não validados
   if (pbx.status === 'NOT_VALIDATED' && humanHandoff.status === 'NOT_VALIDATED') return 'validated';
+
+  // prod-like: cobertura prod-like < 100%
   if (prodLikeCoverage.percent < 100) return 'prod-like';
-  if (omnichannel.status !== 'VALIDATED' || pbx.status !== 'VALIDATED' || humanHandoff.status !== 'VALIDATED') return 'enterprise-partial';
-  if (digitalTwin.status !== 'VALIDATED' || governanceCoverage.status !== 'VALIDATED' || blockerCount > 0) return 'enterprise-ready';
+
+  // enterprise-partial: falta validação completa de omnichannel / PBX / handoff
+  if (omnichannel.status !== 'VALIDATED' || pbx.status !== 'VALIDATED' || humanHandoff.status !== 'VALIDATED') {
+    return 'enterprise-partial';
+  }
+
+  // enterprise-ready: digital twin, governance, blockers
+  if (digitalTwin.status !== 'VALIDATED' || governanceCoverage.status !== 'VALIDATED' || blockerCount > 0) {
+    return 'enterprise-ready';
+  }
+
+  // C. Autonomous-ready hard gate — TODOS os critérios obrigatórios
+  const autonomousGate = {
+    pbxFullyReal:             pbx.isFullyReal === true,
+    omnichannelValidated:     omnichannel.status === 'VALIDATED',
+    handoffFullyNormalized:   (humanHandoff.normalizationGaps?.length || 0) === 0,
+    noSyntheticCriticalPaths: pbx.maturityLevel !== 'synthetic-assisted' && pbx.maturityLevel !== 'simulated',
+    intelligenceStable:       intelligenceStability.status === 'STABLE',
+    replayCoverageOk:         replayCoverage.percent >= THRESHOLDS.replayCoverageMin,
+    prodLikeCoverageOk:       prodLikeCoverage.percent >= THRESHOLDS.prodLikeCoverageMin,
+    noCrossReportBlockers:    (crossReport?.blockerCount || 0) === 0,
+    noBlockerGaps:            blockerCount === 0,
+  };
+
+  const autonomousBlocked = Object.values(autonomousGate).some((v) => !v);
+  if (autonomousBlocked) {
+    // Qualquer gate que falhe força enterprise-ready — não há salto para autonomous
+    return 'enterprise-ready';
+  }
+
   return 'autonomous-ready';
 }
 
-function buildBlockingGaps(report) {
+// ─── Blockers de governance ───────────────────────────────────────────────────
+function buildBlockingGaps(report, intelligenceResult, crossReport) {
   const gaps = [];
 
   if (report.missingArtifacts.length > 0) {
     gaps.push({
-      id: 'gap-proof-missing-artifacts',
-      severity: 'critical',
-      area: 'proof-governance',
+      id: 'gap-proof-missing-artifacts', severity: 'critical', area: 'proof-governance',
       title: 'Proof artifacts obrigatorios ausentes fisicamente',
       evidence: { count: report.missingArtifacts.length, sample: report.missingArtifacts.slice(0, 20) },
       suggestedFix: 'Materializar artifacts fisicos obrigatorios e reexecutar a validacao de provas.',
@@ -331,9 +529,7 @@ function buildBlockingGaps(report) {
 
   if (report.invalidReferences.length > 0) {
     gaps.push({
-      id: 'gap-proof-invalid-references',
-      severity: 'critical',
-      area: 'proof-governance',
+      id: 'gap-proof-invalid-references', severity: 'critical', area: 'proof-governance',
       title: 'Readiness referencia arquivos que nao existem fisicamente',
       evidence: { count: report.invalidReferences.length, sample: report.invalidReferences.slice(0, 20) },
       suggestedFix: 'Remover referencias sem artifact ou materializar os arquivos fisicos esperados.',
@@ -342,9 +538,7 @@ function buildBlockingGaps(report) {
 
   if (!report.packageValidation.ok) {
     gaps.push({
-      id: 'gap-proof-package-validation',
-      severity: 'critical',
-      area: 'package',
+      id: 'gap-proof-package-validation', severity: 'critical', area: 'package',
       title: 'ZIP de release nao contem todos os proofs obrigatorios',
       evidence: { missingEntries: report.packageValidation.missingEntries },
       suggestedFix: 'Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.',
@@ -353,42 +547,34 @@ function buildBlockingGaps(report) {
 
   if (report.humanHandoffCoverage.status !== 'VALIDATED') {
     gaps.push({
-      id: 'gap-proof-human-handoff',
-      severity: 'high',
-      area: 'human-handoff',
+      id: 'gap-proof-human-handoff', severity: 'high', area: 'human-handoff',
       title: 'Human handoff nao possui prova fisica enterprise completa',
       evidence: report.humanHandoffCoverage,
-      suggestedFix: 'Gerar replay, timeline, screenshots e mutacoes de backend auditaveis para o handoff humano.',
+      suggestedFix: 'Normalizar timestamps, assignedTo, eventCount, replay e mutacoes de backend.',
     });
   }
 
   if (report.PBXCoverage.status !== 'VALIDATED') {
     gaps.push({
-      id: 'gap-proof-pbx-prod-like',
-      severity: 'high',
-      area: 'pbx',
-      title: 'PBX prod-like nao possui prova fisica enterprise completa',
+      id: 'gap-proof-pbx-prod-like', severity: 'high', area: 'pbx',
+      title: `PBX prod-like — maturidade atual: ${report.PBXCoverage.maturityLevel}`,
       evidence: report.PBXCoverage,
-      suggestedFix: 'Persistir transcript ASR, prompts TTS, timeline IVR, queue transitions e metadata de gravacoes.',
+      suggestedFix: 'Remover synthetic_insert e corrigir selftestStatus para upgrade para prod-like/enterprise-real.',
     });
   }
 
   if (report.omnichannelCoverage.status !== 'VALIDATED') {
     gaps.push({
-      id: 'gap-proof-omnichannel-replay',
-      severity: 'high',
-      area: 'omnichannel',
+      id: 'gap-proof-omnichannel-replay', severity: 'high', area: 'omnichannel',
       title: 'Replay omnichannel unificado nao possui prova fisica completa',
       evidence: report.omnichannelCoverage,
-      suggestedFix: 'Persistir transicoes cross-channel, eventos WhatsApp/chat/PBX/ticket e mutacoes CRM no replay unificado.',
+      suggestedFix: 'Persistir transicoes cross-channel, eventos WhatsApp/chat/PBX/ticket e mutacoes CRM.',
     });
   }
 
   if (report.digitalTwinCoverage.status !== 'VALIDATED') {
     gaps.push({
-      id: 'gap-proof-digital-twin',
-      severity: 'high',
-      area: 'digital-twin',
+      id: 'gap-proof-digital-twin', severity: 'high', area: 'digital-twin',
       title: 'Operational Digital Twin nao possui prova fisica completa',
       evidence: report.digitalTwinCoverage,
       suggestedFix: 'Persistir snapshots, assertions, mutations e timeline fisica do twin operacional.',
@@ -397,139 +583,197 @@ function buildBlockingGaps(report) {
 
   if (report.governanceCoverage.status !== 'VALIDATED') {
     gaps.push({
-      id: 'gap-proof-governance-support',
-      severity: 'critical',
-      area: 'proof-governance',
+      id: 'gap-proof-governance-support', severity: 'critical', area: 'proof-governance',
       title: 'Governance signature ou cleanup proof nao possuem artifact fisico valido',
       evidence: report.governanceCoverage,
-      suggestedFix: 'Persistir assinatura de governance com hashes dos proofs e cleanup proof com limpeza validada de runtime e workspace.',
+      suggestedFix: 'Persistir assinatura de governance com hashes e cleanup proof com limpeza validada.',
     });
+  }
+
+  // G. Intelligence instability gaps
+  if (intelligenceResult.status === 'UNSTABLE') {
+    for (const d of intelligenceResult.unstableDomains) {
+      gaps.push({
+        id: `gap-intelligence-unstable-${d.domain}`, severity: 'critical', area: 'qa-mesh',
+        title: `Dominio '${d.domain}' instavel no QA Mesh (stability=${d.stabilityScore}, ${d.passed}/${d.total})`,
+        evidence: d,
+        suggestedFix: `Corrigir falhas recorrentes em ${d.domain} antes de qualquer claim enterprise ou autonomous.`,
+      });
+    }
+    for (const f of intelligenceResult.recurringFailures) {
+      gaps.push({
+        id: `gap-intelligence-recurring-${f.domain}`, severity: 'critical', area: 'qa-mesh',
+        title: `Falha recorrente em '${f.domain}': ${f.fingerprint}`,
+        evidence: f,
+        suggestedFix: 'Inspecionar o artefato e corrigir a causa raiz antes de reexecutar o wave.',
+      });
+    }
+  }
+
+  // Cross-report blockers
+  if (crossReport && crossReport.blockerCount > 0) {
+    for (const blocker of crossReport.blockers) {
+      gaps.push({
+        id: `gap-cross-report-${blocker.type}`, severity: 'critical', area: 'cross-report',
+        title: `Contradição cross-report: ${blocker.type}`,
+        evidence: blocker,
+        suggestedFix: blocker.message,
+      });
+    }
   }
 
   return gaps;
 }
 
+// ─── J. Decisão final granular ────────────────────────────────────────────────
+function determineFinalDecision(stage, blockingGaps) {
+  if (blockingGaps.length > 0) {
+    // Mesmo com blockers, identificamos o estágio máximo alcançado
+    return `NO_GO:${STAGE_DECISIONS[stage] || 'UNKNOWN'}`;
+  }
+  return STAGE_DECISIONS[stage] || 'NO_GO:UNKNOWN';
+}
+
+// ─── Função principal ─────────────────────────────────────────────────────────
 function buildFinalProofReport(context = {}) {
-  const requiredArtifacts = REQUIRED_ARTIFACT_SPECS.map(resolveArtifact);
-  const referencePaths = [
+  const requiredArtifacts   = REQUIRED_ARTIFACT_SPECS.map(resolveArtifact);
+  const referencePaths      = [
     ...(context.productionValidation || []).flatMap((item) => item.evidence || []),
     ...(context.enterpriseEvidencePaths || []),
     ...(context.additionalReferencePaths || []),
   ];
-  const invalidReferences = collectInvalidReferences(referencePaths);
-  const missingArtifacts = requiredArtifacts.filter((artifact) => !artifact.exists).map((artifact) => ({
-    id: artifact.id,
-    domain: artifact.domain,
-    path: artifact.path,
-  }));
+  const invalidReferences   = collectInvalidReferences(referencePaths);
+  const missingArtifacts    = requiredArtifacts.filter((a) => !a.exists).map((a) => ({ id: a.id, domain: a.domain, path: a.path }));
+  const foundationArtifacts = requiredArtifacts.filter((a) => a.domain === 'foundation');
 
-  const foundationArtifacts = requiredArtifacts.filter((artifact) => artifact.domain === 'foundation');
-  const humanHandoffArtifact = requiredArtifacts.find((artifact) => artifact.id === 'human_handoff');
+  // Artefatos por domínio
+  const humanHandoffArtifact           = findArtifactById(requiredArtifacts, 'human_handoff');
   const humanHandoffScreenshotsArtifact = findArtifactById(requiredArtifacts, 'human_handoff_screenshots');
-  const pbxArtifact = requiredArtifacts.find((artifact) => artifact.id === 'pbx_prod_like');
-  const pbxAsrTranscriptArtifact = findArtifactById(requiredArtifacts, 'pbx_asr_transcript');
-  const pbxTtsPromptsArtifact = findArtifactById(requiredArtifacts, 'pbx_tts_prompts');
-  const pbxRecordingsMetadataArtifact = findArtifactById(requiredArtifacts, 'pbx_recordings_metadata');
-  const omnichannelArtifact = requiredArtifacts.find((artifact) => artifact.id === 'omnichannel_replay');
+  const pbxArtifact                    = findArtifactById(requiredArtifacts, 'pbx_prod_like');
+  const pbxAsrTranscriptArtifact       = findArtifactById(requiredArtifacts, 'pbx_asr_transcript');
+  const pbxTtsPromptsArtifact          = findArtifactById(requiredArtifacts, 'pbx_tts_prompts');
+  const pbxRecordingsMetadataArtifact  = findArtifactById(requiredArtifacts, 'pbx_recordings_metadata');
+  const omnichannelArtifact            = findArtifactById(requiredArtifacts, 'omnichannel_replay');
   const omnichannelCrmMutationsArtifact = findArtifactById(requiredArtifacts, 'omnichannel_crm_mutations');
-  const digitalTwinSnapshotsArtifact = findArtifactById(requiredArtifacts, 'digital_twin_snapshots');
+  const digitalTwinSnapshotsArtifact   = findArtifactById(requiredArtifacts, 'digital_twin_snapshots');
 
+  // Avaliações
   const humanHandoffCoverage = evaluateHumanHandoff(humanHandoffArtifact, humanHandoffScreenshotsArtifact);
-  const PBXCoverage = evaluatePbx(pbxArtifact, pbxAsrTranscriptArtifact, pbxTtsPromptsArtifact, pbxRecordingsMetadataArtifact);
-  const omnichannelCoverage = evaluateOmnichannel(omnichannelArtifact, omnichannelCrmMutationsArtifact);
-  const digitalTwinCoverage = evaluateDigitalTwin({
-    requiredArtifacts,
-    humanHandoff: humanHandoffCoverage,
-    pbx: PBXCoverage,
-    omnichannel: omnichannelCoverage,
-  }, digitalTwinSnapshotsArtifact);
-  const governanceCoverage = evaluateGovernance(requiredArtifacts);
+  const PBXCoverage          = evaluatePbx(pbxArtifact, pbxAsrTranscriptArtifact, pbxTtsPromptsArtifact, pbxRecordingsMetadataArtifact);
+  const omnichannelCoverage  = evaluateOmnichannel(omnichannelArtifact, omnichannelCrmMutationsArtifact);
+  const digitalTwinCoverage  = evaluateDigitalTwin({ requiredArtifacts, humanHandoff: humanHandoffCoverage, pbx: PBXCoverage, omnichannel: omnichannelCoverage }, digitalTwinSnapshotsArtifact);
+  const governanceCoverage   = evaluateGovernance(requiredArtifacts);
 
+  // G. Intelligence stability
+  const intelligenceData    = loadQaMeshIntelligence();
+  const intelligenceResult  = evaluateIntelligenceStability(intelligenceData);
+
+  // B. Cross-report consistency
+  const crossReport = runCrossReportValidation({
+    intelligenceData,
+    handoffData:    humanHandoffArtifact.json,
+    pbxData:        pbxArtifact.json,
+    verticalSummaries: context.verticalSummaries || null,
+    packageValidationReport: null, // será calculado abaixo
+  });
+
+  // Cobertura de replay
   const replayCoverage = {
     required: 6,
     found: Number(context.prodLikeSummary?.supportedJourneyIds?.length || 0),
   };
   replayCoverage.percent = replayCoverage.required === 0 ? 0 : Number(((replayCoverage.found / replayCoverage.required) * 100).toFixed(2));
 
+  // D. Cobertura prod-like com hardening de vertical
+  const requiredVerticalCount = Number(context.requiredVerticalCount || 6);
+  const verticalCoverage = evaluateVerticalCoverage(context.verticalSummaries, requiredVerticalCount);
+
   const prodLikeCoverage = {
-    required: Number(context.requiredVerticalCount || 6),
-    found: Number((context.verticalSummaries || []).filter((vertical) => vertical.classification === 'production-like').length || 0),
+    required: requiredVerticalCount,
+    found: verticalCoverage.validated,
   };
   prodLikeCoverage.percent = prodLikeCoverage.required === 0 ? 0 : Number(((prodLikeCoverage.found / prodLikeCoverage.required) * 100).toFixed(2));
 
+  // Evidence manifest
   const evidenceManifest = {
     generatedAt: new Date().toISOString(),
     runtimeRoot: getRuntimeRootSafe(),
-    artifacts: requiredArtifacts.map((artifact) => ({
-      id: artifact.id,
-      domain: artifact.domain,
-      path: artifact.path,
-      sourcePath: artifact.sourcePath,
-      resolvedPath: artifact.resolvedPath,
-      exists: artifact.exists,
-      packageRequired: artifact.packageRequired,
-      hash: artifact.sha256,
-      checksum: artifact.sha256,
-      timestamp: artifact.timestamp,
-      proofStatus: artifact.exists ? 'present' : 'missing',
-      replayLinkage: artifact.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : artifact.domain === 'human_handoff' ? ['human_handoff_full_validation'] : artifact.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-      journeyLinkage: artifact.domain === 'human_handoff' ? ['human_handoff_full_validation'] : artifact.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : artifact.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-      governanceLinkage: artifact.domain === 'governance' ? ['proof_based_governance'] : ['final_decision'],
+    artifacts: requiredArtifacts.map((a) => ({
+      id: a.id, domain: a.domain, path: a.path,
+      sourcePath: a.sourcePath, resolvedPath: a.resolvedPath,
+      exists: a.exists, packageRequired: a.packageRequired,
+      hash: a.sha256, checksum: a.sha256, timestamp: a.timestamp,
+      proofStatus: a.exists ? 'present' : 'missing',
+      replayLinkage:     a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+      journeyLinkage:    a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+      governanceLinkage: a.domain === 'governance' ? ['proof_based_governance'] : ['final_decision'],
     })),
   };
 
+  // Package validation — A. Strict package binding
   let packageValidation;
   try {
     packageValidation = validatePackage({
       evidenceManifest,
-      requiredEntries: requiredArtifacts.filter((artifact) => artifact.packageRequired).map((artifact) => artifact.path),
+      requiredEntries: requiredArtifacts.filter((a) => a.packageRequired).map((a) => a.path),
     });
   } catch (error) {
     packageValidation = {
       generatedAt: new Date().toISOString(),
-      ok: false,
-      zipPath: null,
-      zipName: null,
-      requiredEntries: requiredArtifacts.filter((artifact) => artifact.packageRequired).map((artifact) => artifact.path),
+      ok: false, zipPath: null, zipName: null,
+      requiredEntries: requiredArtifacts.filter((a) => a.packageRequired).map((a) => a.path),
       missingEntries: [],
       error: error.message || String(error),
     };
   }
 
-  const proofCoverage = {
-    total: requiredArtifacts.length,
-    valid: requiredArtifacts.filter((artifact) => artifact.exists).length,
-  };
+  // Proof coverage
+  const proofCoverage = { total: requiredArtifacts.length, valid: requiredArtifacts.filter((a) => a.exists).length };
   proofCoverage.percent = proofCoverage.total === 0 ? 0 : Number(((proofCoverage.valid / proofCoverage.total) * 100).toFixed(2));
 
+  // Blocker count inicial (antes de buildBlockingGaps)
   const blockerCount = Number(context.blockingGapCount || 0);
+
+  // I. Estágio de maturidade
   const stage = determineStage({
-    blockerCount,
-    replayCoverage,
-    prodLikeCoverage,
+    blockerCount, replayCoverage, prodLikeCoverage,
     omnichannel: omnichannelCoverage,
     pbx: PBXCoverage,
     humanHandoff: humanHandoffCoverage,
     digitalTwin: digitalTwinCoverage,
     governanceCoverage,
     foundationArtifacts,
+    intelligenceStability: intelligenceResult,
+    crossReport,
   });
 
-  const gateChecks = {
-    blockersClear: blockerCount === 0,
-    proofsComplete: missingArtifacts.length === 0 && invalidReferences.length === 0,
-    replayCoverageOk: replayCoverage.percent >= 100,
-    prodLikeCoverageOk: prodLikeCoverage.percent >= 100,
-    omnichannelCoverageOk: omnichannelCoverage.status === 'VALIDATED',
-    PBXCoverageOk: PBXCoverage.status === 'VALIDATED',
-    humanHandoffCoverageOk: humanHandoffCoverage.status === 'VALIDATED',
-    digitalTwinCoverageOk: digitalTwinCoverage.status === 'VALIDATED',
-    governanceCoverageOk: governanceCoverage.status === 'VALIDATED',
-    packageValidationOk: packageValidation.ok,
-    evidenceManifestValid: evidenceManifest.artifacts.every((artifact) => artifact.exists === true),
-  };
+  // H. Quality score
+  const proofQualityScore = computeProofQualityScore({
+    requiredArtifacts, humanHandoff: humanHandoffCoverage, pbx: PBXCoverage,
+    omnichannel: omnichannelCoverage, digitalTwin: digitalTwinCoverage,
+    governance: governanceCoverage, intelligence: intelligenceResult,
+    replayCoverage, verticalCoverage, governanceCoverage,
+  });
 
-  const allGateChecksPass = Object.values(gateChecks).every(Boolean);
+  // Gate checks
+  const gateChecks = {
+    blockersClear:           blockerCount === 0,
+    proofsComplete:          missingArtifacts.length === 0 && invalidReferences.length === 0,
+    replayCoverageOk:        replayCoverage.percent >= 100,
+    prodLikeCoverageOk:      prodLikeCoverage.percent >= 100,
+    omnichannelCoverageOk:   omnichannelCoverage.status === 'VALIDATED',
+    PBXCoverageOk:           PBXCoverage.status === 'VALIDATED',
+    pbxFullyReal:            PBXCoverage.isFullyReal === true,
+    humanHandoffCoverageOk:  humanHandoffCoverage.status === 'VALIDATED',
+    handoffFullyNormalized:  (humanHandoffCoverage.normalizationGaps?.length || 0) === 0,
+    digitalTwinCoverageOk:   digitalTwinCoverage.status === 'VALIDATED',
+    governanceCoverageOk:    governanceCoverage.status === 'VALIDATED',
+    packageValidationOk:     packageValidation.ok,
+    evidenceManifestValid:   evidenceManifest.artifacts.every((a) => a.exists === true),
+    intelligenceStable:      intelligenceResult.status === 'STABLE',
+    crossReportConsistent:   (crossReport?.blockerCount || 0) === 0,
+    verticalCoverageValid:   verticalCoverage.invalidClaims.length === 0,
+  };
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -539,31 +783,53 @@ function buildFinalProofReport(context = {}) {
     blockerCount,
     replayCoverage,
     prodLikeCoverage,
+    verticalCoverage,
     omnichannelCoverage,
     PBXCoverage,
     humanHandoffCoverage,
     digitalTwinCoverage,
     governanceCoverage,
+    intelligenceStability: intelligenceResult,
+    crossReportConsistency: crossReport,
     packageValidation,
     evidenceManifest,
+    proofQualityScore,
     decisionMatrix: {
       stages: STAGE_ORDER,
+      stageDecisions: STAGE_DECISIONS,
       currentLevel: stage,
       blockersClear: gateChecks.blockersClear,
       gateChecks,
+      // C. Autonomous-ready gate explícito
+      autonomousReadyGate: {
+        pbxFullyReal:           gateChecks.pbxFullyReal,
+        omnichannelValidated:   gateChecks.omnichannelCoverageOk,
+        handoffFullyNormalized: gateChecks.handoffFullyNormalized,
+        noSyntheticCriticalPaths: PBXCoverage.maturityLevel !== 'synthetic-assisted' && PBXCoverage.maturityLevel !== 'simulated',
+        intelligenceStable:     gateChecks.intelligenceStable,
+        crossReportConsistent:  gateChecks.crossReportConsistent,
+        verticalCoverageValid:  gateChecks.verticalCoverageValid,
+        allPassed:              stage === 'autonomous-ready',
+      },
     },
-    finalDecision: 'PARTIAL_GO',
+    finalDecision: 'PENDING', // placeholder
   };
 
-  report.blockingGaps = buildBlockingGaps(report);
-  report.finalDecision = allGateChecksPass
-    ? 'GO'
-    : (report.blockingGaps.length > 0 ? 'NO_GO' : 'PARTIAL_GO');
+  report.blockingGaps = buildBlockingGaps(report, intelligenceResult, crossReport);
+
+  // J. Decisão final granular
+  report.finalDecision = determineFinalDecision(stage, report.blockingGaps);
+
   return report;
 }
 
 module.exports = {
   buildFinalProofReport,
   STAGE_ORDER,
+  STAGE_DECISIONS,
   REQUIRED_ARTIFACT_SPECS,
+  evaluateIntelligenceStability,
+  evaluateVerticalCoverage,
+  evaluatePbxMaturityLevel,
+  computeProofQualityScore,
 };

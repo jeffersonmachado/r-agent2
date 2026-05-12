@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-05-12T22:23:44.185Z",
+  "expectedZipName": "r-agent2-20260512-185809.zip",
+  "pbxMaturity": "synthetic-assisted",
+  "contradictions": [
+    {
+      "type": "intelligence_instability",
+      "domain": "beauty",
+      "stabilityScore": 0,
+      "passed": 0,
+      "total": 6,
+      "blocker": true,
+      "message": "Domínio 'beauty' com estabilidade 0 (0/6) — abaixo do mínimo de 0.5. autonomous-ready impossível."
+    },
+    {
+      "type": "intelligence_instability",
+      "domain": "fitness",
+      "stabilityScore": 0,
+      "passed": 0,
+      "total": 6,
+      "blocker": true,
+      "message": "Domínio 'fitness' com estabilidade 0 (0/6) — abaixo do mínimo de 0.5. autonomous-ready impossível."
+    },
+    {
+      "type": "recurring_intelligence_failure",
+      "domain": "beauty",
+      "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+      "recurringCount": 6,
+      "blocker": true,
+      "message": "Falha recorrente em 'beauty' (count=6): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
+    },
+    {
+      "type": "recurring_intelligence_failure",
+      "domain": "fitness",
+      "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+      "recurringCount": 6,
+      "blocker": true,
+      "message": "Falha recorrente em 'fitness' (count=6): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
+    },
+    {
+      "type": "handoff_null_assignment",
+      "blocker": true,
+      "message": "ticket.assignedTo é null — handoff sem ownership definido. Audit chain incompleto."
+    },
+    {
+      "type": "handoff_null_timestamps",
+      "nullCount": 4,
+      "blocker": true,
+      "message": "4 entrada(s) de replay com timestamp null — timeline de handoff não auditável."
+    },
+    {
+      "type": "handoff_zero_events",
+      "eventCount": 0,
+      "blocker": true,
+      "message": "eventCount=0 — handoff sem eventos registrados. Não atingiu normalização enterprise."
+    },
+    {
+      "type": "pbx_maturity_insufficient",
+      "detectedMaturity": "synthetic-assisted",
+      "required": "prod-like ou enterprise-real",
+      "blocker": true,
+      "message": "PBX classificado como 'synthetic-assisted'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
+    }
+  ],
+  "blockers": [
+    {
+      "type": "intelligence_instability",
+      "domain": "beauty",
+      "stabilityScore": 0,
+      "passed": 0,
+      "total": 6,
+      "blocker": true,
+      "message": "Domínio 'beauty' com estabilidade 0 (0/6) — abaixo do mínimo de 0.5. autonomous-ready impossível."
+    },
+    {
+      "type": "intelligence_instability",
+      "domain": "fitness",
+      "stabilityScore": 0,
+      "passed": 0,
+      "total": 6,
+      "blocker": true,
+      "message": "Domínio 'fitness' com estabilidade 0 (0/6) — abaixo do mínimo de 0.5. autonomous-ready impossível."
+    },
+    {
+      "type": "recurring_intelligence_failure",
+      "domain": "beauty",
+      "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+      "recurringCount": 6,
+      "blocker": true,
+      "message": "Falha recorrente em 'beauty' (count=6): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
+    },
+    {
+      "type": "recurring_intelligence_failure",
+      "domain": "fitness",
+      "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
+      "recurringCount": 6,
+      "blocker": true,
+      "message": "Falha recorrente em 'fitness' (count=6): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
+    },
+    {
+      "type": "handoff_null_assignment",
+      "blocker": true,
+      "message": "ticket.assignedTo é null — handoff sem ownership definido. Audit chain incompleto."
+    },
+    {
+      "type": "handoff_null_timestamps",
+      "nullCount": 4,
+      "blocker": true,
+      "message": "4 entrada(s) de replay com timestamp null — timeline de handoff não auditável."
+    },
+    {
+      "type": "handoff_zero_events",
+      "eventCount": 0,
+      "blocker": true,
+      "message": "eventCount=0 — handoff sem eventos registrados. Não atingiu normalização enterprise."
+    },
+    {
+      "type": "pbx_maturity_insufficient",
+      "detectedMaturity": "synthetic-assisted",
+      "required": "prod-like ou enterprise-real",
+      "blocker": true,
+      "message": "PBX classificado como 'synthetic-assisted'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
+    }
+  ],
+  "warnings": [],
+  "blockerCount": 8,
+  "warningCount": 0,
+  "maximumAllowedReadiness": "enterprise-partial",
+  "autonomousReadyBlocked": true,
+  "summary": "8 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
+}

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-12T19:20:59.462Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-090717.zip",
-  "zipName": "r-agent2-20260512-090717.zip",
+  "generatedAt": "2026-05-12T22:23:18.898Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-185809.zip",
+  "zipName": "r-agent2-20260512-185809.zip",
   "selectionMode": "audited",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-090717.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-185809.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "requiredEntries": [
@@ -31,7 +31,7 @@
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
   ],
-  "entryCount": 4596,
+  "entryCount": 4600,
   "missingEntries": [],
   "ok": true,
   "error": null
