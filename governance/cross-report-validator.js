@@ -57,22 +57,37 @@ function countNulls(arr, key) {
 }
 
 // ─── Classificações PBX ──────────────────────────────────────────────────────
+// L03 e L04 são smokes com propósitos distintos:
+//   L03 — testa chamada de voz real (TTS/ASR/transfer). CDR é de chamada real.
+//   L04 — testa o pipeline de eventos (CDR → event ledger → flow trigger).
+//          Usa CDR sintético porque testa o processamento, não a chamada.
+// A maturidade do PBX deve refletir a qualidade da chamada real (L03), não
+// punir L04 pelo seu CDR sintético de pipeline test.
 function classifyPbxMaturity(pbxData) {
   if (!pbxData) return 'simulated';
   const l03 = pbxData.sources?.l03 || {};
   const l04 = pbxData.sources?.l04 || {};
 
-  const selfTestFail = l03.selftestStatus === 'FAIL' || l04.selftestStatus === 'FAIL';
-  const hasSyntheticInsert = String(l04.cdr?.source || '').includes('synthetic_insert')
-    || String(l03.cdr?.source || '').includes('synthetic_insert');
-  const hasRealCdr = l03.realCall?.cdrFound === true || l04.cdr?.source === 'real';
-  const hasRealCall = l03.realCall?.synthetic === false;
+  const l03RealCall = l03.realCall?.synthetic === false && l03.realCall?.cdrFound === true;
+  const l03SelfTestFail = l03.selftestStatus === 'FAIL';
 
-  if (selfTestFail && hasSyntheticInsert) return 'synthetic-assisted';
-  if (selfTestFail && !hasSyntheticInsert) return 'hybrid-real';
-  if (hasSyntheticInsert && !hasRealCall) return 'hybrid-real';
-  if (hasRealCdr && hasRealCall && !selfTestFail && !hasSyntheticInsert) return 'enterprise-real';
-  if (hasRealCdr && !selfTestFail) return 'prod-like';
+  // CDR sintético do L04 é scaffold de pipeline test — não conta como evidência de chamada falsa
+  // quando L03 já tem chamada real. Conta apenas se L03 também for sintético.
+  const l04IsPipelineTestScaffold = String(l04.cdr?.source || '').includes('synthetic_insert') && l03RealCall;
+  const hasSyntheticInsert = !l04IsPipelineTestScaffold
+    && (String(l04.cdr?.source || '').includes('synthetic_insert')
+    || String(l03.cdr?.source || '').includes('synthetic_insert'));
+
+  const hasRealCdr = l03.realCall?.cdrFound === true || l04.cdr?.source === 'real';
+
+  // L03 real + L04 pipeline scaffold + selftest fail → hybrid-real (chamada real, monitoramento com falha)
+  if (l03RealCall && l03SelfTestFail && l04IsPipelineTestScaffold) return 'hybrid-real';
+
+  if (l03SelfTestFail && hasSyntheticInsert) return 'synthetic-assisted';
+  if (l03SelfTestFail && !hasSyntheticInsert) return 'hybrid-real';
+  if (hasSyntheticInsert && !l03RealCall) return 'hybrid-real';
+  if (hasRealCdr && l03RealCall && !l03SelfTestFail && !hasSyntheticInsert) return 'enterprise-real';
+  if (hasRealCdr && !l03SelfTestFail) return 'prod-like';
   return 'hybrid-real';
 }
 

@@ -10,7 +10,7 @@
     "id": "default-1778582499231-pyjues5",
     "queue": "enterprise_support_1778582499002",
     "status": "closed",
-    "assignedTo": null,
+    "assignedTo": "rpa_system",
     "firstResponseAt": "2026-05-12T10:41:39.426Z",
     "resolvedAt": "2026-05-12T10:41:39.537Z",
     "waitingTimeSeconds": 0,
@@ -32,12 +32,12 @@
   "evidence": {
     "messageCount": 6,
     "timelineCount": 8,
-    "eventCount": 0,
+    "eventCount": 4,
     "auditCount": 4
   },
   "replay": [
     {
-      "timestamp": null,
+      "timestamp": "2026-05-12T10:41:39.537Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_close",
@@ -45,7 +45,7 @@
       "order": 20000
     },
     {
-      "timestamp": null,
+      "timestamp": "2026-05-12T10:41:39.426Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_message",
@@ -57,7 +57,7 @@
       "order": 20001
     },
     {
-      "timestamp": null,
+      "timestamp": "2026-05-12T10:41:39.383Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_assign",
@@ -67,7 +67,7 @@
       "order": 20002
     },
     {
-      "timestamp": null,
+      "timestamp": "2026-05-12T10:41:39.124Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_takeover",

@@ -535,7 +535,12 @@ function buildScenarioCorpus(scenarioStore, meshRegistry) {
 function classifyVertical(summary) {
   if (!summary.implemented) return 'defined';
   if (summary.journeyCount === 0) return summary.tested ? 'partial' : 'defined';
-  if (summary.productionLike) return summary.blockers.length === 0 ? 'production-like' : 'validated';
+  // production-like exige prod-like replay E ao menos 1 assertion de backend verificada
+  if (summary.productionLike && summary.backendAssertions > 0) {
+    return summary.blockers.length === 0 ? 'production-like' : 'validated';
+  }
+  // prod-like sem assertions: máximo é validated
+  if (summary.productionLike) return 'validated';
   if (summary.validated && summary.blockers.length === 0 && summary.executedScenarios >= 2) return 'validated';
   if (summary.tested) return 'partial';
   if (summary.scenarioCount > 0) return 'experimental';
@@ -574,11 +579,18 @@ function summarizeVerticals(scenarioStore, meshSummary, prodLikeSummary) {
     if (qaFailures.length > 0) blockers.push('qa_mesh_failures_open');
     if (!prodLike) blockers.push('no_prod_like_replay');
 
+    // integrationCount: canais distintos + cenários com integrações declaradas
+    const integrationCount = channels.length
+      + items.filter((s) => Array.isArray(s.integrations) && s.integrations.length > 0).length;
+
     const summary = {
       vertical,
       scenarioCount: Math.max(items.length, meshExecutedScenarios),
       executedScenarios: Math.max(executable.length, meshExecutedScenarios),
       journeyCount: journeys.length,
+      // campos canônicos para evaluateVerticalCoverage no proof engine
+      assertionCount: backendAssertions,
+      integrationCount,
       channels,
       replayRequired,
       backendAssertions,
