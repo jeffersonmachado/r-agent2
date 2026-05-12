@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 
 const logger = require('../../../api/utils/logger');
-const { generateAiResponse } = require('../../../api/services/aiProviderService');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const REGISTRY_PATH = path.join(ROOT_DIR, 'config', 'qa-waves-registry.json');
@@ -99,6 +98,7 @@ function inferJourneyHeuristically(input = {}, registry = readRegistry()) {
   const vertical = String(input.vertical || '').toLowerCase().trim() || 'core';
   const explicitJourneyId = String(input.journeyId || input.journey || '').trim();
   const baseTemplate = getBaseTemplate(registry, input.baseTemplateId);
+  const logEnabled = input.log !== false;
 
   if (explicitJourneyId) {
     const explicit = getJourneyDefinition(registry, { vertical, journeyId: explicitJourneyId });
@@ -147,12 +147,14 @@ function inferJourneyHeuristically(input = {}, registry = readRegistry()) {
     };
   }
 
-  logger.info('[QA_JOURNEY_INFERRED] Jornada inferida por heuristica', {
-    vertical,
-    journeyId: winner.journeyId,
-    source: 'inferred',
-    stepCount: Array.isArray(winner.steps) ? winner.steps.length : 0,
-  });
+  if (logEnabled) {
+    logger.info('[QA_JOURNEY_INFERRED] Jornada inferida por heuristica', {
+      vertical,
+      journeyId: winner.journeyId,
+      source: 'inferred',
+      stepCount: Array.isArray(winner.steps) ? winner.steps.length : 0,
+    });
+  }
 
   return {
     journeyId: winner.journeyId,
@@ -164,6 +166,7 @@ function inferJourneyHeuristically(input = {}, registry = readRegistry()) {
 }
 
 async function inferJourneyWithAI(input = {}) {
+  const { generateAiResponse } = require('../../../api/services/aiProviderService');
   const registry = readRegistry();
   const tenantId = String(input.tenantId || 'system').trim() || 'system';
   const vertical = String(input.vertical || '').toLowerCase().trim() || 'core';

@@ -117,6 +117,8 @@ WORKSPACE_BLOCKING_PATHS=(
   'rpa/replay'
 )
 
+REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$'
+
 collect_workspace_contamination() {
   local found=()
   local rel
@@ -177,6 +179,11 @@ if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
 else
   step "Gerando artefato de release..."
 
+  step "Materializando proof reports antes do empacotamento..."
+  if ! node "$PROJECT_ROOT/tools/system/platform-readiness.js"; then
+    warn "platform-readiness retornou NO_GO; mantendo artifacts para validar o candidate ZIP"
+  fi
+
   step "Executando pipeline completo do frontend (build + preview + smoke)..."
   bash "$PROJECT_ROOT/scripts/frontend-release-pipeline.sh"
   ok "Pipeline do frontend aprovado"
@@ -210,7 +217,7 @@ if [[ "$SKIP_AUDIT" == false ]]; then
   AUDIT_FAILED=false
 
   for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
-    MATCHES="$(echo "$ZIP_CONTENTS" | grep -E "$pattern" || true)"
+    MATCHES="$(echo "$ZIP_CONTENTS" | grep -E "$pattern" | grep -Ev "$REQUIRED_PROOF_REGEX" || true)"
     if [[ -n "$MATCHES" ]]; then
       echo -e "${RED}  ✗ Padrão proibido encontrado: $pattern${NC}"
       echo "$MATCHES" | head -20 | sed 's/^/      /'
@@ -261,6 +268,13 @@ EOF
 
 ok "Manifesto: $MANIFEST_FILE"
 echo "  SHA-256: $ZIP_HASH"
+
+step "Validando candidate ZIP contra o manifest de provas..."
+if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --audited-only; then
+  rm -f "$LATEST_ZIP" "$MANIFEST_FILE"
+  fail "Candidate ZIP reprovado pela validacao fisica de proofs."
+fi
+ok "Candidate ZIP validado contra o manifest de prova"
 
 # ── 5. Limpar ZIPs antigos ────────────────────────────────────────────────────
 step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/..."

@@ -295,4 +295,4 @@ Ver: `contracts/tenant_context.contract.json`
 - [RAG por Tenant](./RAG_POR_TENANT.md) - Documentação sobre isolamento RAG
 - [Tenant Context RAG](./TENANT_CONTEXT_RAG.md) - Documentação sobre contexto cognitivo
 - [Configuração RAG](./CONFIGURACAO_RAG_CENTRALIZADA.md) - Configuração do serviço RAG
-- [Seed de Tenants](./SEED_TENANTS.md) - Como usar o seed de tenants
+- [Seed de Tenants](./SEED_TENANTS.md) - Estado atual do seed DB-only e caminhos relacionados

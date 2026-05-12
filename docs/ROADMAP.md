@@ -1,5 +1,7 @@
 # Roadmap (fonte única)
 
+> Status canonico, readiness real, cobertura por vertical e backlog governado agora vivem em `docs/governance/`. Este arquivo passa a ser historico-resumo e nao pode ser usado isoladamente para GO/NO_GO.
+
 - **Última atualização**: Fev/2026 (05/02) — revisão completa com base no estado atual do repo
 - **Onde ver o quê (fonte única)**:
   - **Roadmap (visão executiva + status + Now/Next/Later)**: `ROADMAP_3A5_ANOS.md`
@@ -9,7 +11,7 @@
 
 > Detalhe completo no bloco **“2) Status atual (Fev/2026)”** em `ROADMAP_3A5_ANOS.md`.
 
-- **SaaS enterprise completo** (multi-tenant, RBAC, planos/limites, auditoria, super-admin, onboarding, rate-limit por tenant): ver `IMPLEMENTACAO_SAAS_COMPLETA.md`
+- **SaaS enterprise completo** (multi-tenant, RBAC, planos/limites, auditoria, super-admin, onboarding, rate-limit por tenant): ver `history/IMPLEMENTACAO_SAAS_COMPLETA.md`
 - **Core de eventos**: event model + event ledger + dispatcher v1 (DB-first) + retenção mínima (prune): ver `ROADMAP_3A5_ANOS.md`
 - **Execution queue + scheduler v1** + ledger por nó (DB-first) com endpoints de ops: ver `ROADMAP_3A5_ANOS.md`
 - **Suites verticais v1 operacional**:

@@ -72,5 +72,29 @@ node api/db/seed.js || {
   exit 1
 }
 
+echo "[Entrypoint] Recarregando módulos PBX após migrations/seed..."
+node -e "
+  const enabled = String(process.env.PBX_AUTO_RELOAD_AFTER_MIGRATIONS || 'true').toLowerCase() !== 'false';
+  const hasAmi = !!process.env.AMI_HOST && !!process.env.AMI_PORT && !!process.env.AMI_USERNAME && !!process.env.AMI_SECRET;
+  if (!enabled || !hasAmi) {
+    console.log('[Entrypoint] Reload PBX desabilitado ou AMI não configurado');
+    process.exit(0);
+  }
+
+  const ami = require('./api/services/asterisk/amiClient');
+  (async () => {
+    try {
+      await ami.command('core reload');
+      await ami.command('pjsip reload');
+      await ami.command('module reload res_odbc.so res_config_odbc.so');
+      await ami.command('module reload cdr_adaptive_odbc.so');
+      console.log('[Entrypoint] Reload PBX concluído');
+    } catch (err) {
+      console.warn('[Entrypoint] Reload PBX best-effort falhou:', err && err.message ? err.message : err);
+    }
+    process.exit(0);
+  })();
+" || true
+
 echo "[Entrypoint] Iniciando servidor..."
 exec node api/server.js

@@ -76,18 +76,18 @@ pytest
 
 ## CI/CD: onde QA roda e quais artefatos saem
 
-- **CI principal**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- **CI principal**: arquivo histórico `.github/workflows/ci.yml`
   - Instala deps, instala Playwright, sobe o Vite e roda `npm run system:validate`.
   - Upload: `tests/rpa/reports/` como artifact.
 
-- **Pipeline completo**: [`.github/workflows/full-pipeline.yml`](.github/workflows/full-pipeline.yml)
+- **Pipeline completo**: arquivo histórico `.github/workflows/full-pipeline.yml`
   - Mesma estratégia do CI (validação oficial) + build do frontend.
   - Upload: artifacts RPA (reports/replay/screenshots) e build `frontend/dist`.
 
-- **RPA dedicado**: [`.github/workflows/rpa-ci.yml`](.github/workflows/rpa-ci.yml)
+- **RPA dedicado**: arquivo histórico `.github/workflows/rpa-ci.yml`
   - Executa seeds via `node tests/rpa/cli.js ci <seed>` e publica replay/screenshots.
 
-- **Code quality (sanity checks)**: [`.github/workflows/code-quality.yml`](.github/workflows/code-quality.yml)
+- **Code quality (sanity checks)**: arquivo histórico `.github/workflows/code-quality.yml`
   - `node --check` em `.js`, valida JSON e `npm audit`.
   - Observação: jobs estão com `continue-on-error: true` (não bloqueante).
 
@@ -119,6 +119,6 @@ cd rag-service && pip install -r requirements.txt && pytest
 
 ## Notas e artefatos de auditoria
 
-- Cobertura e lacunas mapeadas: [`ANALISE_COBERTURA_TESTES.md`](ANALISE_COBERTURA_TESTES.md)
+- Cobertura e lacunas mapeadas: [`docs/QA_GAPS.md`](QA_GAPS.md) e `governance/final-readiness-report.json`
 - Pós-teste e evidências organizadas: [`qa/POS_TESTE_COMPLETO.md`](qa/POS_TESTE_COMPLETO.md)
 

@@ -1,0 +1,106 @@
+{
+  "generatedAt": "2026-05-12T10:41:41.049Z",
+  "ok": true,
+  "warnings": [],
+  "evidencePaths": [
+    "/tmp/r-agent2-enterprise-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+    "/tmp/r-agent2-enterprise-runtime/qa/l04-pbx-call-events-runtime-evidence.json"
+  ],
+  "sources": {
+    "l03": {
+      "smoke": "L-03",
+      "generatedAt": "2026-05-12T10:41:18.055Z",
+      "ok": true,
+      "authMode": "admin",
+      "tenantId": "system",
+      "flowId": "flow-voice-tts-asr-smoke-1778582474810",
+      "callId": "call-voice-tts-asr-1778582474810",
+      "extension": "1110",
+      "selftestExtension": "9191",
+      "dialplanSignature": "438266029daebdace7194e8f",
+      "runtime": {
+        "startAction": "prompt_listen",
+        "asrAction": "listen_asr",
+        "dtmfAction": "gather_dtmf",
+        "dtmfObserved": true,
+        "transferAction": "transfer",
+        "transferObserved": true,
+        "hangupAction": "hangup"
+      },
+      "realCall": {
+        "attempted": true,
+        "click2callId": "cc_c2c-1778582475563-014f6bbc8db2",
+        "click2callStatus": "originated",
+        "synthetic": false,
+        "cdrFound": true,
+        "cdr": {
+          "uniqueid": "1778582475.49",
+          "disposition": "ANSWERED",
+          "src": "9191",
+          "dst": "9191",
+          "calldate": "2026-05-12T10:41:16.724Z"
+        }
+      },
+      "selftestStatus": "FAIL",
+      "voiceRuntimeStatus": "HEALTHY"
+    },
+    "l04": {
+      "smoke": "L-04",
+      "generatedAt": "2026-05-12T09:13:54.261Z",
+      "ok": true,
+      "authMode": "admin",
+      "tenantId": "system",
+      "cdr": {
+        "id": "cdr-l04-1778577232852",
+        "uniqueid": "l04-1778577232852",
+        "source": "synthetic_insert"
+      },
+      "trigger": {
+        "type": "CallEnded",
+        "source": "pbx.cdr"
+      },
+      "pipeline": {
+        "scan": {
+          "ok": true,
+          "scanned": 20,
+          "emitted": 60,
+          "cursor": {
+            "calldate": "2026-05-12T09:13:53.204Z",
+            "cdrId": "cdr-l04-1778577232852"
+          }
+        },
+        "eventIds": [
+          "evt-1778577234151-2f8c1e8e5d19",
+          "evt-1778577234156-58a32e1a92f7",
+          "evt-1778577234161-fbb32e28dc92"
+        ],
+        "queue": null
+      },
+      "flow": {
+        "flowId": "flow-pbx-call-events-runtime-smoke-1778577232852",
+        "executionId": "fx-1778577234185-1f6beb3038e9",
+        "status": "done",
+        "latencyMs": 3,
+        "nodesCount": 3
+      },
+      "dispatch": {
+        "metricsAvailable": false,
+        "doneRecent": 0,
+        "deadRecent": 0,
+        "flowTriggerFailuresRecent": 0
+      }
+    }
+  },
+  "signals": {
+    "originate": true,
+    "ivr": true,
+    "tts": true,
+    "asr": true,
+    "dtmf": true,
+    "transfer": true,
+    "hangupCauses": true,
+    "cdr": true,
+    "recordings": true,
+    "replayTimeline": true
+  }
+}

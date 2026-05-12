@@ -6,19 +6,19 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 | Workflow | Arquivo | Quando roda | O que valida/testa | Artefatos |
 |---|---|---|---|---|
-| CI principal | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Push/PR em `main`/`develop` | `npm run system:validate` (contratos + `test:unit` + `test:flow` + `test:stress` + `test:rpa`) | `tests/rpa/reports/` |
-| Pipeline completo | [`.github/workflows/full-pipeline.yml`](.github/workflows/full-pipeline.yml) | Push/PR em `main` + manual | Mesmo `system:validate` + build do frontend | `tests/rpa/{reports,replay,screenshots}` + `frontend/dist` |
-| Code quality | [`.github/workflows/code-quality.yml`](.github/workflows/code-quality.yml) | Push/PR + manual | `node --check` em `.js`, valida JSON, `npm audit` | Não publica artifacts |
-| RPA E2E (dedicado) | [`.github/workflows/rpa-ci.yml`](.github/workflows/rpa-ci.yml) | Mudanças em `tests/rpa/**` + manual | Seeds via `node tests/rpa/cli.js ci <seed>` | `tests/rpa/replay/*.json`, `tests/rpa/screenshots/*.png` |
-| RPA seed plataforma | [`.github/workflows/rpa-seed.yml`](.github/workflows/rpa-seed.yml) | Manual + schedule + push (paths) | `node tests/rpa/seedPlatformRPA.js` (seed) | `tests/rpa/reports/*.json`, `tests/rpa/screenshots/*.png`, `tests/rpa/replay/*.json` |
-| Deploy (com gate de QA) | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Push em `main`/tags + manual | `system:validate` + `frontend build` antes de build Docker | Não publica artifacts de testes |
-| Notificações | [`.github/workflows/notify.yml`](.github/workflows/notify.yml) | `workflow_run` (falha) | Notifica (Slack/email placeholders) | N/A |
+| CI principal | `.github/workflows/ci.yml` | Push/PR em `main`/`develop` | `npm run system:validate` (contratos + `test:unit` + `test:flow` + `test:stress` + `test:rpa`) | `tests/rpa/reports/` |
+| Pipeline completo | `.github/workflows/full-pipeline.yml` | Push/PR em `main` + manual | Mesmo `system:validate` + build do frontend | `tests/rpa/{reports,replay,screenshots}` + `frontend/dist` |
+| Code quality | `.github/workflows/code-quality.yml` | Push/PR + manual | `node --check` em `.js`, valida JSON, `npm audit` | Não publica artifacts |
+| RPA E2E (dedicado) | `.github/workflows/rpa-ci.yml` | Mudanças em `tests/rpa/**` + manual | Seeds via `node tests/rpa/cli.js ci <seed>` | `tests/rpa/replay/*.json`, `tests/rpa/screenshots/*.png` |
+| RPA seed plataforma | `.github/workflows/rpa-seed.yml` | Manual + schedule + push (paths) | `node tests/rpa/seedPlatformRPA.js` (seed) | `tests/rpa/reports/*.json`, `tests/rpa/screenshots/*.png`, `tests/rpa/replay/*.json` |
+| Deploy (com gate de QA) | `.github/workflows/deploy.yml` | Push em `main`/tags + manual | `system:validate` + `frontend build` antes de build Docker | Não publica artifacts de testes |
+| Notificações | `.github/workflows/notify.yml` | `workflow_run` (falha) | Notifica (Slack/email placeholders) | N/A |
 
 ## Detalhe por workflow
 
 ### CI principal — `ci.yml`
 
-- **Arquivo**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- **Arquivo**: `.github/workflows/ci.yml`
 - **Trigger**: push/PR em `main` e `develop`
 - **Job**: `test` (matrix Node `20.19.0` e `22.12.0`)
 - **Passos relevantes**:
@@ -32,7 +32,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### Pipeline completo — `full-pipeline.yml`
 
-- **Arquivo**: [`.github/workflows/full-pipeline.yml`](.github/workflows/full-pipeline.yml)
+- **Arquivo**: `.github/workflows/full-pipeline.yml`
 - **Trigger**: push/PR em `main` + `workflow_dispatch`
 - **Jobs**:
   - `validation`: mesma lógica do CI principal (Vite + `npm run system:validate`)
@@ -45,7 +45,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### Code quality — `code-quality.yml`
 
-- **Arquivo**: [`.github/workflows/code-quality.yml`](.github/workflows/code-quality.yml)
+- **Arquivo**: `.github/workflows/code-quality.yml`
 - **Trigger**: push/PR em `main`/`develop` + `workflow_dispatch`
 - **Jobs**:
   - `code-check` (placeholder de lint):
@@ -61,7 +61,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### RPA dedicado — `rpa-ci.yml`
 
-- **Arquivo**: [`.github/workflows/rpa-ci.yml`](.github/workflows/rpa-ci.yml)
+- **Arquivo**: `.github/workflows/rpa-ci.yml`
 - **Trigger**:
   - push/PR em `main`/`develop` **apenas** quando muda `tests/rpa/**`
   - manual (`workflow_dispatch`)
@@ -76,7 +76,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### Seed plataforma via RPA — `rpa-seed.yml`
 
-- **Arquivo**: [`.github/workflows/rpa-seed.yml`](.github/workflows/rpa-seed.yml)
+- **Arquivo**: `.github/workflows/rpa-seed.yml`
 - **Trigger**: manual + cron diário 02:00 + push em `main` (paths `tests/rpa/recordings/**`, `tests/rpa/seedPlatformRPA.js`)
 - **Job**: `seed-platform`
 - **Comandos**:
@@ -91,7 +91,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### Deploy — `deploy.yml`
 
-- **Arquivo**: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+- **Arquivo**: `.github/workflows/deploy.yml`
 - **Trigger**: push em `main`, tags `v*`, manual
 - **Gate de qualidade**:
   - Job `pre-deploy` executa **Vite + `npm run system:validate`** e depois `frontend build`
@@ -102,7 +102,7 @@ Este documento detalha **o que roda em cada workflow** e **quais artefatos** sã
 
 ### Notificações — `notify.yml`
 
-- **Arquivo**: [`.github/workflows/notify.yml`](.github/workflows/notify.yml)
+- **Arquivo**: `.github/workflows/notify.yml`
 - **Trigger**: `workflow_run` (quando conclui) para workflows: `"CI - Testes e Validação"`, `"RPA - Testes E2E (CI)"`, `"Deploy"`
 - **Comportamento**:
   - Só roda o job `notify` quando a conclusão **não** é `success`

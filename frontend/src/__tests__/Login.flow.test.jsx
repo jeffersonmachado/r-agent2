@@ -101,7 +101,7 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
     vi.unstubAllGlobals();
   });
 
-  it('deve limpar auth_token/auth_agent ao submeter e redirecionar direto para /support (usuário comum com tenantId)', async () => {
+  it('deve limpar auth_token/auth_agent ao submeter e redirecionar direto para /workspace (usuário comum com tenantId)', async () => {
     const user = userEvent.setup();
     const { Login } = await loadLoginWithMocks();
 
@@ -130,7 +130,7 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
     expect(localStorage.getItem('auth_last_tenant_id')).toBe(null);
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/support');
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace');
     });
 
     // No fluxo atual, usuário comum com tenantId não passa pelo modal de seleção

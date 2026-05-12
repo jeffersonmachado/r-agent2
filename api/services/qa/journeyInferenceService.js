@@ -37,6 +37,20 @@ const JOURNEY_TEMPLATES = [
     ],
     signals: ['whatsapp', 'webchat', 'pbx', 'email'],
   },
+  {
+    id: 'booking_flow',
+    requiredCapabilities: [
+      'support_ticket_flow',
+    ],
+    signals: ['booking_flow', 'resource-bookings', 'booking', 'schedule'],
+  },
+  {
+    id: 'payment_charge_flow',
+    requiredCapabilities: [
+      'billing_validation',
+    ],
+    signals: ['payment_charge_flow', 'billing', 'payment', 'membership', 'charge'],
+  },
 ];
 
 function nowIso() {

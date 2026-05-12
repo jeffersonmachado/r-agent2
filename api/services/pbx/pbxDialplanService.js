@@ -99,6 +99,45 @@ async function buildTenantDialplanRows({ tenantKey }) {
   const rows = [];
   const recordingEnabled = String(process.env.PBX_RECORDING_ENABLED || '').toLowerCase() === 'true';
   const mixmonitorDir = process.env.PBX_MIXMONITOR_DIR || '/var/spool/asterisk/monitor/pbx';
+  const selftestExtension = String(process.env.PBX_SELFTEST_EXTENSION || '9191').trim();
+
+  if (selftestExtension) {
+    rows.push({
+      context: tenantKey,
+      exten: selftestExtension,
+      priority: 1,
+      app: 'NoOp',
+      appdata: 'PBX selftest extension',
+    });
+    rows.push({
+      context: tenantKey,
+      exten: selftestExtension,
+      priority: 2,
+      app: 'Set',
+      appdata: `CDR(accountcode)=${tenantKey}`,
+    });
+    rows.push({
+      context: tenantKey,
+      exten: selftestExtension,
+      priority: 3,
+      app: 'Answer',
+      appdata: '',
+    });
+    rows.push({
+      context: tenantKey,
+      exten: selftestExtension,
+      priority: 4,
+      app: 'Wait',
+      appdata: '1',
+    });
+    rows.push({
+      context: tenantKey,
+      exten: selftestExtension,
+      priority: 5,
+      app: 'Hangup',
+      appdata: '',
+    });
+  }
 
   // 1) Discagem interna (ramais)
   // Dial(PJSIP/${tenantKey}__${EXTEN})

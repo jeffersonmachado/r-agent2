@@ -18,7 +18,9 @@ function run(command, label) {
 
 function main() {
   run('npm run system:validate', 'Validação oficial (backend + frontend + QA)');
+  run('npm run system:platform-readiness', 'Materializando proof reports e blockers antes do pacote');
   run('npm run zip:release:clean', 'Gerando artefato limpo e manifesto SHA-256');
+  run('npm run system:package-validator', 'Validando o ZIP candidato contra o manifest de prova');
   run('npm run system:release-gate', 'Aplicando release gate sobre artefato aprovado');
   run('npm run system:go-no-go', 'Emitindo decisão GO/GO_DEGRADED/NO_GO');
   run('npm run system:release-manifest', 'Gerando manifesto sistêmico de release');

@@ -1,4 +1,10 @@
 import { useMemo } from 'react';
+import {
+  buildSupportAuditSummary,
+  buildSupportEventSummary,
+  formatSupportAuditAction,
+  formatSupportEventType,
+} from '../components/support/supportHumanization';
 
 function normalizeMode(mode) {
   const value = String(mode || 'bot').toLowerCase();
@@ -74,20 +80,22 @@ export function useAttendanceRuntimeViewModel({
     const audit = Array.isArray(ticketContext?.ticketAuditLogs) ? ticketContext.ticketAuditLogs : [];
 
     events.slice(0, 10).forEach((item, index) => {
+      const summary = buildSupportEventSummary(item);
       runtimeTimeline.push({
         id: `event-${item?.id || index}`,
-        type: String(item?.type || 'evento').toLowerCase(),
+        type: formatSupportEventType(item?.type || 'evento'),
         timestamp: item?.createdAt || item?.timestamp || new Date().toISOString(),
-        description: String(item?.summary || item?.type || 'Evento operacional do ticket.'),
+        description: summary.summary || String(item?.summary || item?.type || 'Evento operacional do ticket.'),
       });
     });
 
     audit.slice(0, 8).forEach((item, index) => {
+      const summary = buildSupportAuditSummary(item);
       runtimeTimeline.push({
         id: `audit-${index}`,
-        type: String(item?.action || 'auditoria').toLowerCase(),
+        type: formatSupportAuditAction(item?.action || 'auditoria'),
         timestamp: item?.timestamp || item?.createdAt || new Date().toISOString(),
-        description: String(item?.summary || item?.action || 'Atualizacao de auditoria do ticket.'),
+        description: summary.summary || String(item?.summary || item?.action || 'Atualizacao de auditoria do ticket.'),
       });
     });
 

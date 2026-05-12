@@ -545,8 +545,11 @@ async function executeAndEnrichStep(stepSpec = {}, playwrightPage = null, option
       networkEvents = networkCapture.stop();
     }
 
+    const syntheticNetworkEvents = Array.isArray(stepSpec.networkEvents) ? stepSpec.networkEvents : [];
     if (!Array.isArray(networkEvents) || networkEvents.length === 0) {
-      networkEvents = Array.isArray(stepSpec.networkEvents) ? stepSpec.networkEvents : [];
+      networkEvents = syntheticNetworkEvents;
+    } else if (syntheticNetworkEvents.length > 0) {
+      networkEvents = [...networkEvents, ...syntheticNetworkEvents];
     }
 
     afterStepSnapshot = await collectStepAfterSnapshot(stepSpec, {

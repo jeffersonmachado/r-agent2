@@ -13,6 +13,34 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEFAULT_OUTPUT_DIR="$PROJECT_DIR/dist"
 DEFAULT_ZIP_NAME="${PROJECT_NAME}-${TIMESTAMP}.zip"
 
+REQUIRED_PROOF_ENTRIES=(
+  'qa/smoke-evidence.json'
+  'qa/l01-physical-queue-evidence.json'
+  'qa/l02-ura-publish-rollback-evidence.json'
+  'qa/l03-pbx-voice-tts-asr-evidence.json'
+  'qa/l04-pbx-call-events-runtime-evidence.json'
+  'qa/l05-chatpro-omnichannel-evidence.json'
+  'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json'
+  'qa/enterprise/human-handoff-full-validation.json'
+  'qa/enterprise/human-handoff-screenshots.json'
+  'qa/enterprise/pbx-voice-flow-prod-like.json'
+  'qa/enterprise/pbx-asr-transcript.json'
+  'qa/enterprise/pbx-tts-prompts.json'
+  'qa/enterprise/pbx-recordings-metadata.json'
+  'qa/enterprise/omnichannel-unified-replay.json'
+  'qa/enterprise/omnichannel-crm-mutations.json'
+  'qa/enterprise/digital-twin-snapshots.json'
+  'qa/qa-waves-enterprise-governance.json'
+  'governance/evidence-manifest.json'
+  'governance/final-proof-report.json'
+  'governance/package-validation-report.json'
+  'governance/final-readiness-report.json'
+  'governance/proof-signature.json'
+  'governance/cleanup-proof.json'
+)
+
+REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$'
+
 OUTPUT_DIR="$DEFAULT_OUTPUT_DIR"
 ZIP_NAME="$DEFAULT_ZIP_NAME"
 INCLUDE_NODE_MODULES=false
@@ -257,12 +285,22 @@ if [[ ${#CUSTOM_EXCLUDES[@]} -gt 0 ]]; then
   done
 fi
 
+copy_required_proof_entries() {
+  local rel_path
+  for rel_path in "${REQUIRED_PROOF_ENTRIES[@]}"; do
+    [[ -f "$PROJECT_DIR/$rel_path" ]] || continue
+    mkdir -p "$STAGE_DIR/$(dirname "$rel_path")"
+    cp "$PROJECT_DIR/$rel_path" "$STAGE_DIR/$rel_path"
+  done
+}
+
 RSYNC_ARGS=(-a)
 for pattern in "${RSYNC_EXCLUDES[@]}"; do
   RSYNC_ARGS+=(--exclude "$pattern")
 done
 
 rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
+copy_required_proof_entries
 
 (
   cd "$STAGE_ROOT"
@@ -326,7 +364,7 @@ FORBIDDEN_REGEX=(
 
 FOUND_FORBIDDEN=false
 for pattern in "${FORBIDDEN_REGEX[@]}"; do
-  matches="$(printf '%s\n' "$ZIP_CONTENTS" | grep -E "$pattern" || true)"
+  matches="$(printf '%s\n' "$ZIP_CONTENTS" | grep -E "$pattern" | grep -Ev "$REQUIRED_PROOF_REGEX" || true)"
   if [[ -n "$matches" ]]; then
     FOUND_FORBIDDEN=true
     echo -e "${RED}Erro: padrao proibido detectado no ZIP ($pattern):${NC}" >&2

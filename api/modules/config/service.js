@@ -202,6 +202,21 @@ function evaluateIntegrationReadiness(configData = {}) {
     }
   }
 
+  const emailEnabled = readPath(configData, 'notifications.email.enabled') === true;
+  if (emailEnabled) {
+    const emailRequired = [
+      'notifications.email.smtp.host',
+      'notifications.email.smtp.port',
+      'notifications.email.fromAddress',
+    ];
+    for (const path of emailRequired) {
+      const value = readPath(configData, path);
+      if (value === undefined || value === null || String(value).trim() === '') {
+        addMissing(path, 'Campo obrigatório quando notifications.email.enabled=true');
+      }
+    }
+  }
+
   return {
     ready: missing.length === 0,
     missing,

@@ -7,16 +7,23 @@ const E2E_DIR_CANDIDATES = [
   'frontend-e2e',
   'tests/e2e',
   'tests/flow',
+  'scripts',
 ];
 
 const CAPABILITY_HINTS = [
   { id: 'support_ticket_flow', tags: ['support', 'ticket'] },
   { id: 'support_ticket_reply', tags: ['reply', 'ticket-send-button'] },
-  { id: 'turnstile_release', tags: ['turnstile', 'catraca'] },
-  { id: 'customer_identification', tags: ['face', 'rfid', 'identification'] },
+  { id: 'turnstile_release', tags: ['/api/access-control/events', 'access_release_event_created'] },
+  { id: 'customer_identification', tags: ['/api/access-control/credentials', 'credentialvalue', 'subjectid'] },
+  { id: 'access_decision', tags: ['/api/access-control/decisions/resolve', 'access_policy_allow', 'decision'] },
   { id: 'attendance_record', tags: ['attendance', 'checkin'] },
-  { id: 'omnichannel_pbx', tags: ['pbx', 'voip'] },
-  { id: 'omnichannel_whatsapp', tags: ['whatsapp'] },
+  { id: 'membership_validation', tags: ['membershipid', 'membership_statuses', 'billingstatus'] },
+  { id: 'crm_update', tags: ['/timeline', 'crm_presence_timeline', 'historico recente de presenca'] },
+  { id: 'billing_validation', tags: ['payment_charge_flow', '/api/fitness/membership/', '/billing/webhook'] },
+  { id: 'omnichannel_pbx', tags: ['test-pbx', '/api/pbx/', 'pbx_'] },
+  { id: 'omnichannel_whatsapp', tags: ['channel: \'whatsapp\'', 'whatsapp provider check', '/webhooks/whatsapp'] },
+  { id: 'omnichannel_email', tags: ['channel: \'email\'', 'email provider check', 'notification adapter'] },
+  { id: 'omnichannel_webchat', tags: ['chatpro_omnichannel', 'inbox-smoke', 'l05-chatpro-omnichannel-evidence'] },
 ];
 
 function listE2eFiles(rootDir) {

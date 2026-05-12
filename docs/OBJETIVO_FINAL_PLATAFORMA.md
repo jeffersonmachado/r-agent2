@@ -81,7 +81,7 @@ Ao unificar os pilares acima, o produto entrega:
 
 O repositório já documenta entregas relevantes que sustentam a ambição enterprise, especialmente:
 
-- **SaaS multi-tenant, RBAC, planos/limites, auditoria, super-admin e onboarding** (ver `IMPLEMENTACAO_SAAS_COMPLETA.md`).
+- **SaaS multi-tenant, RBAC, planos/limites, auditoria, super-admin e onboarding** (ver `history/IMPLEMENTACAO_SAAS_COMPLETA.md`).
 - **Padrões de realtime + fallback e métricas** (ver `IMPLEMENTACAO_OTIMIZACOES_WEBSOCKET.md`).
 - **Pipeline de IA/RAG e contratos de resposta** (ver `README.md`), útil como ponto de partida para “contexto unificado”.
 

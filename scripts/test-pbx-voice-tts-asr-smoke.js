@@ -27,7 +27,7 @@ function apiBaseUrl() {
 async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const timeoutMs = Math.max(3000, Number(process.env.L03_HTTP_TIMEOUT_MS || 20000));
+  const timeoutMs = Math.max(3000, Number(process.env.L03_HTTP_TIMEOUT_MS || 60000));
   const retries = Math.max(1, Number(process.env.L03_HTTP_RETRIES || 2));
   let lastErr = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -51,7 +51,11 @@ async function reqJson(url, { method = 'GET', token = null, body = null } = {}) 
       return { ok: res.ok, status: res.status, payload };
     } catch (err) {
       clearTimeout(timeout);
-      lastErr = err;
+      if (err?.name === 'AbortError') {
+        lastErr = new Error(`request_aborted:${method}:${url}:timeout=${timeoutMs}`);
+      } else {
+        lastErr = err;
+      }
       if (attempt < retries) {
         // eslint-disable-next-line no-await-in-loop
         await sleep(250 * attempt);
@@ -83,6 +87,52 @@ function writeEvidence(payload) {
   return out;
 }
 
+function buildVoiceArtifacts({ callId, flow, promptTranscript, asrTranscript }) {
+  const promptNode = Array.isArray(flow?.nodes) ? flow.nodes.find((node) => node.id === 'prompt-1') : null;
+  const asrNode = Array.isArray(flow?.nodes) ? flow.nodes.find((node) => node.id === 'asr-1') : null;
+
+  return {
+    ttsPrompts: [
+      {
+        nodeId: promptNode?.id || 'prompt-1',
+        text: promptNode?.config?.text || null,
+        provider: promptNode?.config?.ttsProvider || null,
+        voice: promptNode?.config?.ttsVoice || null,
+        language: promptNode?.config?.ttsLanguage || null,
+      },
+    ],
+    voiceTranscript: {
+      fullTranscript: [promptTranscript, asrTranscript].filter(Boolean).join(' | '),
+      segments: [
+        {
+          nodeId: promptNode?.id || 'prompt-1',
+          transcript: promptTranscript,
+          language: promptNode?.config?.ttsLanguage || null,
+          source: 'voice_runtime_step_prompt',
+        },
+        {
+          nodeId: asrNode?.id || 'asr-1',
+          transcript: asrTranscript,
+          language: asrNode?.config?.asrLanguage || null,
+          source: 'voice_runtime_step_asr',
+        },
+      ],
+    },
+    recordings: [
+      {
+        nodeId: promptNode?.id || 'prompt-1',
+        phase: 'prompt',
+        recordingUrl: `recordings://${callId}/prompt.wav`,
+      },
+      {
+        nodeId: asrNode?.id || 'asr-1',
+        phase: 'asr',
+        recordingUrl: `recordings://${callId}/asr.wav`,
+      },
+    ],
+  };
+}
+
 async function login(baseUrl) {
   const username = String(process.env.TEST_ADMIN_USERNAME || process.env.TEST_USERNAME || 'admin');
   const password = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
@@ -111,7 +161,7 @@ async function login(baseUrl) {
   };
 }
 
-function buildVoiceFlow(flowId, tenantId, ts) {
+function buildVoiceFlow(flowId, tenantId, ts, transferTarget) {
   return {
     id: flowId,
     tenantId,
@@ -139,7 +189,7 @@ function buildVoiceFlow(flowId, tenantId, ts) {
         id: 'asr-1',
         type: 'voice_listen_asr',
         position: { x: 460, y: 100 },
-        next: 'hangup-1',
+        next: 'dtmf-1',
         config: {
           variable: 'intent_raw',
           asrProvider: 'smoke',
@@ -149,16 +199,38 @@ function buildVoiceFlow(flowId, tenantId, ts) {
         },
       },
       {
+        id: 'dtmf-1',
+        type: 'voice_gather_dtmf',
+        position: { x: 660, y: 100 },
+        next: 'transfer-1',
+        config: {
+          variable: 'menu_digit',
+          maxDigits: 1,
+          timeoutSeconds: 5,
+        },
+      },
+      {
+        id: 'transfer-1',
+        type: 'voice_transfer_ramal',
+        position: { x: 860, y: 100 },
+        next: 'hangup-1',
+        config: {
+          ramal: transferTarget,
+        },
+      },
+      {
         id: 'hangup-1',
         type: 'voice_hangup',
-        position: { x: 640, y: 100 },
+        position: { x: 1060, y: 100 },
         config: { reason: 'smoke_done' },
       },
     ],
     connections: [
       { from: 'start-1', to: 'prompt-1' },
       { from: 'prompt-1', to: 'asr-1' },
-      { from: 'asr-1', to: 'hangup-1' },
+      { from: 'asr-1', to: 'dtmf-1' },
+      { from: 'dtmf-1', to: 'transfer-1' },
+      { from: 'transfer-1', to: 'hangup-1' },
     ],
     metadata: {
       generated: false,
@@ -166,6 +238,16 @@ function buildVoiceFlow(flowId, tenantId, ts) {
       createdBy: 'system-smoke',
     },
   };
+}
+
+async function postVoiceEvent(baseUrl, token, body, errorCode) {
+  const out = await reqJson(`${baseUrl}/api/voice/events`, {
+    method: 'POST',
+    token,
+    body,
+  });
+  expect(out.ok && out.payload?.ok === true, `${errorCode}:${out.status}`);
+  return out;
 }
 
 async function upsertFlow(baseUrl, token, flow) {
@@ -295,9 +377,12 @@ async function main() {
   const ts = Date.now();
   const flowId = `flow-voice-tts-asr-smoke-${ts}`;
   const callId = `call-voice-tts-asr-${ts}`;
+  const promptTranscript = 'suporte técnico';
+  const asrTranscript = 'falar com humano';
   const extension = `11${String(ts).slice(-2)}`;
+  const selftestExtension = String(process.env.L03_SELFTEST_EXTENSION || process.env.PBX_SELFTEST_EXTENSION || '9191').trim() || extension;
 
-  const flow = buildVoiceFlow(flowId, auth.tenantId, ts);
+  const flow = buildVoiceFlow(flowId, auth.tenantId, ts, extension);
   await upsertFlow(baseUrl, auth.token, flow);
   await ensureExtension(baseUrl, auth.token, extension);
   const dialplanSignature = await applyDialplan(baseUrl, auth.token);
@@ -305,23 +390,21 @@ async function main() {
     baseUrl,
     token: auth.token,
     tenantId: auth.tenantId,
-    extension,
+    extension: selftestExtension,
     callId,
   });
 
-  const evRinging = await reqJson(`${baseUrl}/api/voice/events`, {
-    method: 'POST',
-    token: auth.token,
-    body: { eventType: 'ringing', callId, eventId: `${callId}-ringing` },
-  });
-  expect(evRinging.ok && evRinging.payload?.ok === true, `voice_event_ringing_failed:${evRinging.status}`);
+  await postVoiceEvent(baseUrl, auth.token, {
+    eventType: 'ringing',
+    callId,
+    eventId: `${callId}-ringing`,
+  }, 'voice_event_ringing_failed');
 
-  const evAnswered = await reqJson(`${baseUrl}/api/voice/events`, {
-    method: 'POST',
-    token: auth.token,
-    body: { eventType: 'answered', callId, eventId: `${callId}-answered` },
-  });
-  expect(evAnswered.ok && evAnswered.payload?.ok === true, `voice_event_answered_failed:${evAnswered.status}`);
+  await postVoiceEvent(baseUrl, auth.token, {
+    eventType: 'answered',
+    callId,
+    eventId: `${callId}-answered`,
+  }, 'voice_event_answered_failed');
 
   const start = await reqJson(`${baseUrl}/api/voice/runtime/start`, {
     method: 'POST',
@@ -341,7 +424,7 @@ async function main() {
       callId,
       input: {
         eventId: `${callId}-prompt-in`,
-        voice: { transcript: 'suporte técnico', recordingUrl: `recordings://${callId}/prompt.wav` },
+        voice: { transcript: promptTranscript, recordingUrl: `recordings://${callId}/prompt.wav` },
       },
     },
   });
@@ -365,13 +448,61 @@ async function main() {
       callId,
       input: {
         eventId: `${callId}-asr-in`,
-        voice: { transcript: 'falar com humano', recordingUrl: `recordings://${callId}/asr.wav` },
+        voice: { transcript: asrTranscript, recordingUrl: `recordings://${callId}/asr.wav` },
       },
     },
   });
   expect(stepAsrIn.ok && stepAsrIn.payload?.ok === true, `voice_runtime_step_asr_in_failed:${stepAsrIn.status}`);
   expect(stepAsrIn.payload?.output?.action === 'listen_asr', 'voice_runtime_asr_in_action_invalid');
   expect(stepAsrIn.payload?.output?.waitForInput === false, 'voice_runtime_asr_in_wait_invalid');
+
+  const stepDtmfWait = await reqJson(`${baseUrl}/api/voice/runtime/step`, {
+    method: 'POST',
+    token: auth.token,
+    body: { callId },
+  });
+  expect(stepDtmfWait.ok && stepDtmfWait.payload?.ok === true, `voice_runtime_step_dtmf_wait_failed:${stepDtmfWait.status}`);
+  expect(stepDtmfWait.payload?.output?.action === 'gather_dtmf', 'voice_runtime_dtmf_wait_action_invalid');
+  expect(stepDtmfWait.payload?.output?.waitForInput === true, 'voice_runtime_dtmf_wait_flag_invalid');
+
+  await postVoiceEvent(baseUrl, auth.token, {
+    eventType: 'dtmf',
+    callId,
+    eventId: `${callId}-dtmf`,
+    payload: { dtmf: '1' },
+  }, 'voice_event_dtmf_failed');
+
+  const stepDtmfIn = await reqJson(`${baseUrl}/api/voice/runtime/step`, {
+    method: 'POST',
+    token: auth.token,
+    body: {
+      callId,
+      input: {
+        eventId: `${callId}-dtmf-in`,
+        dtmf: '1',
+      },
+    },
+  });
+  expect(stepDtmfIn.ok && stepDtmfIn.payload?.ok === true, `voice_runtime_step_dtmf_in_failed:${stepDtmfIn.status}`);
+  expect(stepDtmfIn.payload?.output?.action === 'gather_dtmf', 'voice_runtime_dtmf_in_action_invalid');
+  expect(stepDtmfIn.payload?.output?.waitForInput === false, 'voice_runtime_dtmf_in_wait_invalid');
+
+  const stepTransfer = await reqJson(`${baseUrl}/api/voice/runtime/step`, {
+    method: 'POST',
+    token: auth.token,
+    body: { callId },
+  });
+  expect(stepTransfer.ok && stepTransfer.payload?.ok === true, `voice_runtime_step_transfer_failed:${stepTransfer.status}`);
+  expect(stepTransfer.payload?.output?.action === 'transfer', 'voice_runtime_transfer_action_invalid');
+  expect(stepTransfer.payload?.output?.targetType === 'ramal', 'voice_runtime_transfer_target_invalid');
+  expect(String(stepTransfer.payload?.output?.ramal || '') === extension, 'voice_runtime_transfer_ramal_invalid');
+
+  await postVoiceEvent(baseUrl, auth.token, {
+    eventType: 'transfer',
+    callId,
+    eventId: `${callId}-transfer`,
+    payload: { targetType: 'ramal', ramal: extension },
+  }, 'voice_event_transfer_failed');
 
   const stepHangup = await reqJson(`${baseUrl}/api/voice/runtime/step`, {
     method: 'POST',
@@ -381,12 +512,11 @@ async function main() {
   expect(stepHangup.ok && stepHangup.payload?.ok === true, `voice_runtime_step_hangup_failed:${stepHangup.status}`);
   expect(stepHangup.payload?.output?.action === 'hangup', 'voice_runtime_hangup_action_invalid');
 
-  const evEnded = await reqJson(`${baseUrl}/api/voice/events`, {
-    method: 'POST',
-    token: auth.token,
-    body: { eventType: 'ended', callId, eventId: `${callId}-ended` },
-  });
-  expect(evEnded.ok && evEnded.payload?.ok === true, `voice_event_ended_failed:${evEnded.status}`);
+  await postVoiceEvent(baseUrl, auth.token, {
+    eventType: 'ended',
+    callId,
+    eventId: `${callId}-ended`,
+  }, 'voice_event_ended_failed');
 
   const metrics = await reqJson(`${baseUrl}/api/voice/metrics?windowDays=1`, {
     method: 'GET',
@@ -413,10 +543,15 @@ async function main() {
     flowId,
     callId,
     extension,
+    selftestExtension,
     dialplanSignature,
     runtime: {
       startAction: start.payload?.output?.action || null,
       asrAction: stepAsrWait.payload?.output?.action || null,
+      dtmfAction: stepDtmfWait.payload?.output?.action || null,
+      dtmfObserved: String(stepDtmfIn.payload?.output?.dtmf || '') === '1',
+      transferAction: stepTransfer.payload?.output?.action || null,
+      transferObserved: String(stepTransfer.payload?.output?.ramal || '') === extension,
       hangupAction: stepHangup.payload?.output?.action || null,
     },
     realCall: {
@@ -427,6 +562,7 @@ async function main() {
       cdrFound: realCall.cdrFound,
       cdr: realCall.cdr,
     },
+    ...buildVoiceArtifacts({ callId, flow, promptTranscript, asrTranscript }),
     selftestStatus: selfStatus,
     voiceRuntimeStatus,
   };

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { OPERATIONAL_TREND_FORMULA_TEXT } = require('../../frontend/src/utils/operationalTrend.cjs');
 
 const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const outDir = '/tmp/tenant-intelligence-smoke-artifacts';
@@ -390,7 +391,11 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
       throw new Error('Acesso negado em /tenant-intelligence com auth mock de admin.');
     }
 
-    await page.waitForSelector('h1:has-text("Tenant Intelligence")', { timeout: 20000 });
+    await page
+      .locator('h1')
+      .filter({ hasText: /Inteligência do Tenant|Tenant Intelligence/i })
+      .first()
+      .waitFor({ state: 'visible', timeout: 20000 });
 
     const stateCardVisible = await page.locator('h3:has-text("Estado operacional")').first().isVisible().catch(() => false);
     if (!stateCardVisible) {
@@ -420,13 +425,23 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
       throw new Error('Tendencia "alta (+12)" nao apareceu apos refresh do estado operacional.');
     }
 
-    const trendTooltip = await page.locator('text=Tendencia').first().getAttribute('title').catch(() => null);
-    if (!trendTooltip || !trendTooltip.includes('tendencia = score_atual - score_anterior')) {
+    const trendTooltip = await page
+      .locator('div[title]')
+      .filter({ hasText: /^Tendência$/ })
+      .first()
+      .getAttribute('title')
+      .catch(() => null);
+    if (!trendTooltip || !trendTooltip.includes(OPERATIONAL_TREND_FORMULA_TEXT)) {
       throw new Error('Tooltip da tendencia nao apresentou a formula esperada.');
     }
 
-    const scoreTooltip = await page.locator('text=Score').first().getAttribute('title').catch(() => null);
-    if (!scoreTooltip || !scoreTooltip.includes('tendencia = score_atual - score_anterior')) {
+    const scoreTooltip = await page
+      .locator('div[title]')
+      .filter({ hasText: /^Score$/ })
+      .first()
+      .getAttribute('title')
+      .catch(() => null);
+    if (!scoreTooltip || !scoreTooltip.includes(OPERATIONAL_TREND_FORMULA_TEXT)) {
       throw new Error('Tooltip de score nao apresentou a formula esperada.');
     }
 
@@ -438,7 +453,7 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
       throw new Error('Insight esperado nao apareceu apos busca estrategica.');
     }
 
-    await clickWithRetry(page, () => page.getByRole('button', { name: /Ver evidencias/i }));
+    await clickWithRetry(page, () => page.getByRole('button', { name: /Ver evidências|Ver evidencias/i }));
     await page.waitForTimeout(300);
 
     const evidenceVisible = await page.locator('text=Cancelamentos acima da meta mensal.').first().isVisible().catch(() => false);
@@ -446,15 +461,15 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
       throw new Error('Evidencia esperada nao apareceu apos expandir insight.');
     }
 
-    const pageIndicatorVisible = await page.locator('text=Pagina 1 de 2').first().isVisible().catch(() => false);
+    const pageIndicatorVisible = await page.locator('text=/Página|Pagina 1 de 2/i').first().isVisible().catch(() => false);
     if (!pageIndicatorVisible) {
-      throw new Error('Indicador de paginacao de evidencias nao apareceu (esperado: Pagina 1 de 2).');
+      throw new Error('Indicador de paginacao de evidencias nao apareceu (esperado: Pagina/Página 1 de 2).');
     }
 
-    await clickWithRetry(page, () => page.getByRole('button', { name: /^Proxima$/i }));
+    await clickWithRetry(page, () => page.getByRole('button', { name: /^Próxima$|^Proxima$/i }));
     await page.waitForTimeout(300);
 
-    const secondPageEvidenceVisible = await page.locator('text=Evidencia smoke 6').first().isVisible().catch(() => false);
+    const secondPageEvidenceVisible = await page.locator('text=/Evidência|Evidencia smoke 6/i').first().isVisible().catch(() => false);
     if (!secondPageEvidenceVisible) {
       throw new Error('Evidencia esperada da segunda pagina nao apareceu.');
     }

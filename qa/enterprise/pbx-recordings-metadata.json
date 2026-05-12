@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-05-12T11:59:36.152Z",
+  "sourceArtifact": "qa/l03-pbx-voice-tts-asr-evidence.json",
+  "callId": "call-voice-tts-asr-1778586487709",
+  "flowId": "flow-voice-tts-asr-smoke-1778586487709",
+  "recordings": [
+    {
+      "nodeId": "prompt-1",
+      "phase": "prompt",
+      "recordingUrl": "recordings://call-voice-tts-asr-1778586487709/prompt.wav"
+    },
+    {
+      "nodeId": "asr-1",
+      "phase": "asr",
+      "recordingUrl": "recordings://call-voice-tts-asr-1778586487709/asr.wav"
+    }
+  ],
+  "hash": "b97922741896309d204fa243072abc732ff3654b285cc2b6f01e3e10b9ff2180"
+}

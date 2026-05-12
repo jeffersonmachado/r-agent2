@@ -24,6 +24,7 @@ import { ConfigLoggingTab } from './config/ConfigLoggingTab';
 import { ConfigRateLimitTab } from './config/ConfigRateLimitTab';
 import { ConfigFallbacksTab } from './config/ConfigFallbacksTab';
 import { ConfigGeneralTab } from './config/ConfigGeneralTab';
+import { ConfigEmailTab } from './config/ConfigEmailTab';
 
 /**
  * Página de gerenciamento de configuração do sistema.
@@ -70,7 +71,7 @@ export function ConfigPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
+      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'email', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
         return tabParam;
       }
     }
@@ -97,7 +98,7 @@ export function ConfigPage() {
     }
   }, [getTargetTenantId, targetTenantId]);
   
-  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'billing', 'whatsapp', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'
+  const [activeTab, setActiveTab] = useState(getInitialTab); // 'api', 'frontend', 'rag', 'billing', 'whatsapp', 'email', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'
   const [flows, setFlows] = useState([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   const [validatingRedis, setValidatingRedis] = useState(false);
@@ -235,6 +236,10 @@ export function ConfigPage() {
       missing: Array.isArray(integrations.missing) ? integrations.missing : [],
     };
   }, [config]);
+
+  const hasEmailIntegrationGap = useMemo(() => (
+    Boolean(integrationReadiness?.missing?.some((item) => String(item?.path || '').startsWith('notifications.email')))
+  ), [integrationReadiness]);
 
   // Carrega lista de fluxos quando necessário
   const loadFlowsList = useCallback(async () => {
@@ -871,6 +876,7 @@ export function ConfigPage() {
     { id: 'rag', label: 'RAG', icon: '🔍' },
     { id: 'billing', label: 'Billing', icon: '💳' },
     { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+    { id: 'email', label: 'Email SMTP', icon: '📧' },
     { id: 'flows', label: 'Fluxos', icon: '🔄' },
     { id: 'ai', label: 'IA', icon: '🤖' },
     { id: 'features', label: 'Features', icon: '✨' },
@@ -1006,6 +1012,13 @@ export function ConfigPage() {
             <p className="text-text-secondary text-sm mb-3">
               O servidor continua em execução, mas alguns providers obrigatórios não estão configurados.
             </p>
+            {hasEmailIntegrationGap && (
+              <div className="mb-3">
+                <Button type="button" variant="secondary" onClick={() => setActiveTab('email')}>
+                  Abrir configuração de Email SMTP
+                </Button>
+              </div>
+            )}
             <div className="text-sm text-text-primary space-y-1">
               {integrationReadiness.missing.slice(0, 8).map((item, index) => (
                 <div key={`${item?.path || 'unknown'}-${index}`}>
@@ -1070,6 +1083,10 @@ export function ConfigPage() {
             {/* Aba: WhatsApp */}
             {activeTab === 'whatsapp' && (
               <ConfigWhatsappTab editedConfig={editedConfig} renderField={renderField} />
+            )}
+
+            {activeTab === 'email' && (
+              <ConfigEmailTab editedConfig={editedConfig} renderField={renderField} updateValue={updateValue} />
             )}
 
             {/* Aba: Fluxos */}

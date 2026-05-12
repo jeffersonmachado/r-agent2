@@ -39,6 +39,39 @@ const STEP_EVIDENCE_CONTRACTS = {
     requireProof: true,
     proofTypes: ['network', 'mutation', 'sideEffect'],
   },
+  update_order_status: {
+    require: [
+      ...BASE_REQUIRED_FIELDS,
+      'selectorUsed',
+      'networkEvents',
+      'mutationLinkage',
+      'sideEffectLinkage',
+    ],
+    requireProof: true,
+    proofTypes: ['network', 'mutation', 'sideEffect'],
+  },
+  create_calendar_block: {
+    require: [
+      ...BASE_REQUIRED_FIELDS,
+      'selectorUsed',
+      'networkEvents',
+      'mutationLinkage',
+      'sideEffectLinkage',
+    ],
+    requireProof: true,
+    proofTypes: ['network', 'mutation', 'sideEffect'],
+  },
+  publish_node: {
+    require: [
+      ...BASE_REQUIRED_FIELDS,
+      'selectorUsed',
+      'networkEvents',
+      'mutationLinkage',
+      'sideEffectLinkage',
+    ],
+    requireProof: true,
+    proofTypes: ['network', 'mutation', 'sideEffect'],
+  },
   assert_ui_state: {
     require: [...BASE_REQUIRED_FIELDS, 'selectorUsed', 'screenshotAfter', 'domAfter'],
   },

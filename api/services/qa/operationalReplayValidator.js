@@ -25,7 +25,7 @@ const { validateReplayIntegrity } = require('./replayIntegrityService');
 /**
  * Valida se replay acessou módulo real (não apenas stubs)
  */
-const OPERATIONAL_MODULE_PATTERN = /\/(support|fitness|access-control|calendar|bookings)(\/|$)|\/api\/(support|crm|access-control|fitness|calendar|bookings)(\/|$)/i;
+const OPERATIONAL_MODULE_PATTERN = /\/(support|fitness|access-control|calendar|bookings|orders|node-marketplace)(\/|$)|\/api\/(support|crm|access-control|fitness|calendar|bookings|node-marketplace)(\/|$)/i;
 const DIAGNOSTIC_PAGE_PATTERN = /\/dev\/qa-waves(\/|$)|\/rpa-replays(\/|$)/i;
 
 function toSnakeCase(value = '') {

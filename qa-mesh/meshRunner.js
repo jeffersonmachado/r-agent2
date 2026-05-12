@@ -27,6 +27,8 @@ const METRICS_PATH = process.env.QA_MESH_METRICS_PATH || path.join(__dirname, 'm
 const INTELLIGENCE_DIR = process.env.QA_MESH_INTELLIGENCE_DIR || path.join(__dirname, 'intelligence');
 const QA_MESH_GO_NO_GO_PATH = process.env.QA_MESH_GO_NO_GO_PATH || path.join(__dirname, 'go-no-go-report.json');
 const QA_MESH_RELEASE_GATE_PATH = process.env.QA_MESH_RELEASE_GATE_PATH || path.join(__dirname, 'release-gate-report.json');
+const QA_MESH_CANONICAL_LOCK_PATH = process.env.QA_MESH_CANONICAL_LOCK_PATH || path.join(__dirname, 'canonical.lock.json');
+const QA_MESH_CANONICAL_PROMOTION_PATH = process.env.QA_MESH_CANONICAL_PROMOTION_PATH || path.join(__dirname, 'canonical-promotion.json');
 const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 
 function ensureDir(dirPath) {
@@ -145,7 +147,7 @@ function loadQaSmokeScenarios() {
       criticality: 'high',
       adapter: 'api',
       command: 'npm',
-      commandArgs: ['exec', '--', 'jest', 'tests/rpa/createTenantByAI.test.js', '--runInBand'],
+      commandArgs: ['exec', '--', 'jest', '--runTestsByPath', 'tests/rpa/createTenantByAI.test.js', '--runInBand', '--testPathIgnorePatterns', '[]'],
       assertions: ['tenant criado via fluxo oficial'],
       impactScopes: ['ci', 'telemetry'],
     }),
@@ -531,6 +533,14 @@ function selectScenarios(registry, options = {}) {
   return scenarios;
 }
 
+function isCanonicalRegistryExecution(options = {}, registry = [], scenarios = []) {
+  if (Array.isArray(options.registry)) return false;
+  if (Array.isArray(options.scenarioIds) && options.scenarioIds.length > 0) return false;
+  if (options.domain || options.type || options.criticality) return false;
+  if (options.impactOnly || options.detectChangedFiles) return false;
+  return registry.length > 0 && scenarios.length === registry.length;
+}
+
 function resolveAdapter(adapterName) {
   if (adapterName === 'api-rpa') return apiAdapter;
   if (adapterName === 'rpa') return rpaAdapter;
@@ -554,6 +564,80 @@ function normalizeErrorList(value) {
 function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return filePath;
+}
+
+function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+function tryReclaimStaleCanonicalLock() {
+  const currentLock = safeReadJson(QA_MESH_CANONICAL_LOCK_PATH, null);
+  if (!currentLock) return null;
+  if (isProcessAlive(currentLock.pid)) {
+    return currentLock;
+  }
+  try {
+    fs.unlinkSync(QA_MESH_CANONICAL_LOCK_PATH);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  return null;
+}
+
+function acquireCanonicalExecutionLock(lockPayload) {
+  try {
+    const handle = fs.openSync(QA_MESH_CANONICAL_LOCK_PATH, 'wx');
+    fs.writeFileSync(handle, `${JSON.stringify(lockPayload, null, 2)}\n`, 'utf8');
+    fs.closeSync(handle);
+    return;
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const reclaimedLock = tryReclaimStaleCanonicalLock();
+    if (!reclaimedLock) {
+      return acquireCanonicalExecutionLock(lockPayload);
+    }
+    const currentLock = safeReadJson(QA_MESH_CANONICAL_LOCK_PATH, reclaimedLock);
+    const owner = currentLock?.executionId || 'desconhecida';
+    const startedAt = currentLock?.startedAt || 'desconhecido';
+    throw new Error(`Outra execução canônica do QA Mesh já está em andamento (${owner}, iniciada em ${startedAt}).`);
+  }
+}
+
+function releaseCanonicalExecutionLock(lockPayload) {
+  const currentLock = safeReadJson(QA_MESH_CANONICAL_LOCK_PATH, null);
+  if (!currentLock || currentLock.executionId !== lockPayload.executionId) {
+    return;
+  }
+  try {
+    fs.unlinkSync(QA_MESH_CANONICAL_LOCK_PATH);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
+
+function buildCanonicalPromotionMetadata({
+  executionId,
+  startedAt,
+  executionOrigin,
+  executionKind,
+  summary,
+}) {
+  return {
+    executionId,
+    startedAt,
+    executionOrigin,
+    executionKind,
+    promotedAt: nowIso(),
+    registryTotal: summary.registryTotal,
+    goNoGo: summary.goNoGo,
+    criterion: 'serialized_canonical_execution',
+  };
 }
 
 function normalizePathFromSummary(value) {
@@ -1579,8 +1663,6 @@ async function runMesh(options = {}) {
   const requestedCanonicalOutputs = options.writeCanonicalOutputs !== false;
   const executionOrigin = determineExecutionOrigin(options);
   const executionKind = options.executionKind || null;
-  const writeCanonicalOutputs = requestedCanonicalOutputs && process.env.RUNNING_IN_PIPELINE === '1';
-  const isCanonicalExecution = writeCanonicalOutputs && executionOrigin === 'pipeline';
   checkpointManager.ensureStateFiles();
   const waveId = options.wave || process.env.QA_WAVE_ID || 'WAVE-MESH';
   const waveTitle = options.waveTitle || 'Execucao QA Mesh integrada';
@@ -1596,10 +1678,28 @@ async function runMesh(options = {}) {
     : (options.refreshRegistry === false ? loadRegistry() : refreshRegistry());
   const changedFiles = options.changedFiles || (options.detectChangedFiles ? getChangedFiles(options.baseRef) : []);
   const scenarios = selectScenarios(registry, options);
+  const isCanonicalExecution = requestedCanonicalOutputs
+    && process.env.RUNNING_IN_PIPELINE === '1'
+    && executionOrigin === 'pipeline'
+    && isCanonicalRegistryExecution(options, registry, scenarios);
+  const writeCanonicalOutputs = isCanonicalExecution;
   const registryTotal = scenarios.length;
   const executionId = options.executionId || `mesh-${new Date().toISOString().replace(/[:.]/g, '-')}`;
   const startedAt = nowIso();
   const evidenceDir = path.join(EVIDENCE_DIR, executionId);
+  const canonicalLockPayload = {
+    executionId,
+    startedAt,
+    executionOrigin,
+    executionKind,
+    pid: process.pid,
+  };
+
+  if (writeCanonicalOutputs) {
+    acquireCanonicalExecutionLock(canonicalLockPayload);
+  }
+
+  try {
 
   ensureDir(path.join(evidenceDir, 'scenarios'));
   ensureDir(path.join(evidenceDir, 'logs'));
@@ -1756,6 +1856,15 @@ async function runMesh(options = {}) {
     summary.reasons = [...new Set([...(summary.reasons || []), ...baselineComparison.reasons])];
   }
 
+  const canonicalPromotion = buildCanonicalPromotionMetadata({
+    executionId,
+    startedAt,
+    executionOrigin,
+    executionKind,
+    summary,
+  });
+  summary.canonicalPromotion = writeCanonicalOutputs ? canonicalPromotion : null;
+
   writeSummary(evidenceDir, summary);
   if (writeCanonicalOutputs) {
     writeJson(REPORT_PATH, summary);
@@ -1768,6 +1877,7 @@ async function runMesh(options = {}) {
       isCanonicalExecution,
       status: summary.goNoGo,
       reasons: summary.reasons,
+      canonicalPromotion,
       totals: summary,
       generatedAt: nowIso(),
     });
@@ -1781,6 +1891,7 @@ async function runMesh(options = {}) {
       thresholds: governance.thresholds,
       totals: summary,
       reasons: summary.reasons,
+      canonicalPromotion,
       generatedAt: nowIso(),
     });
   }
@@ -1821,6 +1932,16 @@ async function runMesh(options = {}) {
   }
   execution.historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
   writeJson(execution.historyPath, normalizeExecutionRecord(execution));
+  if (writeCanonicalOutputs) {
+    writeJson(QA_MESH_CANONICAL_PROMOTION_PATH, {
+      ...canonicalPromotion,
+      finishedAt: execution.finishedAt,
+      summaryPath: REPORT_PATH,
+      goNoGoPath: QA_MESH_GO_NO_GO_PATH,
+      metricsPath: METRICS_PATH,
+      historyPath: execution.historyPath,
+    });
+  }
 
   checkpointManager.registerProgress({
     wave: waveId,
@@ -1882,6 +2003,11 @@ async function runMesh(options = {}) {
 
   runGenerateSummary();
   return execution;
+  } finally {
+    if (writeCanonicalOutputs) {
+      releaseCanonicalExecutionLock(canonicalLockPayload);
+    }
+  }
 }
 
 async function run(scenarioId, options = {}) {

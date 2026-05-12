@@ -89,6 +89,26 @@ const SUPPORT_TICKET_FLOW = {
     networkEndpoints: [],
   },
 
+  step_takeover_ticket: {
+    stepId: 'step_takeover_ticket',
+    actionType: 'takeover_ticket',
+    journeyId: 'support_ticket_flow',
+    mutationExpected: true,
+    expectedMutations: ['ticket_status_changed'],
+    expectedSideEffects: ['audit_log_created'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['ticket.status', 'audit'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/tickets\/[^/]+\/takeover(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/tickets/:id/takeover' },
+    ],
+  },
+
   step_reply_ticket: {
     stepId: 'step_reply_ticket',
     actionType: 'type_and_send',
@@ -108,6 +128,36 @@ const SUPPORT_TICKET_FLOW = {
       { method: 'POST', path: '/tickets/:id/reply' },
       { method: 'POST', path: '/tickets/:id/message' },
     ],
+  },
+
+  step_whatsapp_read_status: {
+    stepId: 'step_whatsapp_read_status',
+    actionType: 'webhook_status',
+    journeyId: 'support_ticket_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['network_proof'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_assert_whatsapp_delivery: {
+    stepId: 'step_assert_whatsapp_delivery',
+    actionType: 'assert_delivery_state',
+    journeyId: 'support_ticket_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
   },
 
   step_change_status: {
@@ -265,6 +315,342 @@ const FITNESS_CUSTOMER_CHECKIN_FLOW = {
 };
 
 /**
+ * FOOD ORDER STATUS FLOW (food_order_status_flow)
+ *
+ * Jornada operacional minima de pedidos:
+ *   1. Operador acessa o modulo de pedidos
+ *   2. Atualiza status real do pedido (MUTACAO)
+ *   3. Valida persistencia do pedido no backend
+ */
+const FOOD_ORDER_STATUS_FLOW = {
+  step_access_orders_module: {
+    stepId: 'step_access_orders_module',
+    actionType: 'navigate',
+    journeyId: 'food_order_status_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_update_order_status: {
+    stepId: 'step_update_order_status',
+    actionType: 'update_order_status',
+    journeyId: 'food_order_status_flow',
+    mutationExpected: true,
+    expectedMutations: ['order_status_changed'],
+    expectedSideEffects: ['event_ledger_recorded'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['order', 'event_ledger'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'PUT', pathPattern: /\/orders\/[^/]+\/status(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'PUT', path: '/orders/:orderId/status' },
+    ],
+  },
+
+  step_assert_order_backend: {
+    stepId: 'step_assert_order_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'food_order_status_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
+ * MARKET NODE PUBLISH FLOW (market_node_publish_flow)
+ *
+ * Jornada operacional minima de mercado:
+ *   1. Operador acessa o mercado de nodes
+ *   2. Publica node real no marketplace tenant (MUTACAO)
+ *   3. Valida persistencia do node no catalogo backend
+ */
+const MARKET_NODE_PUBLISH_FLOW = {
+  step_access_node_marketplace: {
+    stepId: 'step_access_node_marketplace',
+    actionType: 'navigate',
+    journeyId: 'market_node_publish_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_publish_marketplace_node: {
+    stepId: 'step_publish_marketplace_node',
+    actionType: 'publish_node',
+    journeyId: 'market_node_publish_flow',
+    mutationExpected: true,
+    expectedMutations: ['node_published'],
+    expectedSideEffects: ['catalog_updated'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['node_marketplace'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/api\/node-marketplace\/publish(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/api/node-marketplace/publish' },
+    ],
+  },
+
+  step_assert_marketplace_backend: {
+    stepId: 'step_assert_marketplace_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'market_node_publish_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
+ * CLINIC CALENDAR BLOCK FLOW (clinic_calendar_block_flow)
+ *
+ * Jornada operacional minima de clinica:
+ *   1. Operador acessa agenda/calendario
+ *   2. Cria indisponibilidade real no calendario do recurso (MUTACAO)
+ *   3. Valida persistencia do bloco no backend
+ */
+const CLINIC_CALENDAR_BLOCK_FLOW = {
+  step_access_clinic_calendar: {
+    stepId: 'step_access_clinic_calendar',
+    actionType: 'navigate',
+    journeyId: 'clinic_calendar_block_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_create_calendar_block: {
+    stepId: 'step_create_calendar_block',
+    actionType: 'create_calendar_block',
+    journeyId: 'clinic_calendar_block_flow',
+    mutationExpected: true,
+    expectedMutations: ['calendar_block_created'],
+    expectedSideEffects: ['calendar_updated'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['calendar_block'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/api\/calendar\/resource\/[^/]+\/blocks(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/api/calendar/resource/:resourceId/blocks' },
+    ],
+  },
+
+  step_assert_clinic_calendar_backend: {
+    stepId: 'step_assert_clinic_calendar_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'clinic_calendar_block_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
+ * BOOKING FLOW (booking_flow)
+ *
+ * Jornada operacional minima de agendamento workspace:
+ *   1. Operador acessa o modulo de workspace
+ *   2. Cria booking real de recurso (MUTACAO)
+ *   3. Valida persistencia do booking no backend
+ */
+const BOOKING_FLOW = {
+  step_access_booking_workspace: {
+    stepId: 'step_access_booking_workspace',
+    actionType: 'navigate',
+    journeyId: 'booking_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_create_resource_booking: {
+    stepId: 'step_create_resource_booking',
+    actionType: 'create_booking',
+    journeyId: 'booking_flow',
+    mutationExpected: true,
+    expectedMutations: ['booking_created'],
+    expectedSideEffects: ['booking_created'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['booking'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/resource-bookings(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/resource-bookings' },
+    ],
+  },
+
+  step_assert_booking_backend: {
+    stepId: 'step_assert_booking_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'booking_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
+ * PAYMENT CHARGE FLOW (payment_charge_flow)
+ *
+ * Jornada operacional minima de pagamento:
+ *   1. Operador acessa o modulo operacional
+ *   2. Cria cobranca real de membership (MUTACAO)
+ *   3. Confirma pagamento via webhook (MUTACAO)
+ *   4. Valida persistencia no backend
+ */
+const PAYMENT_CHARGE_FLOW = {
+  step_access_payments_module: {
+    stepId: 'step_access_payments_module',
+    actionType: 'navigate',
+    journeyId: 'payment_charge_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_create_membership_charge: {
+    stepId: 'step_create_membership_charge',
+    actionType: 'create_payment',
+    journeyId: 'payment_charge_flow',
+    mutationExpected: true,
+    expectedMutations: ['payment_created'],
+    expectedSideEffects: ['notification_sent'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['billing', 'notifications'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/api\/fitness\/membership\/[^/]+\/charge(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/api/fitness/membership/:id/charge' },
+    ],
+  },
+
+  step_confirm_membership_payment: {
+    stepId: 'step_confirm_membership_payment',
+    actionType: 'confirm_payment',
+    journeyId: 'payment_charge_flow',
+    mutationExpected: true,
+    expectedMutations: ['payment_status_changed'],
+    expectedSideEffects: [],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['billing', 'notifications'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/billing\/webhook(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/billing/webhook' },
+    ],
+  },
+
+  step_assert_payment_backend: {
+    stepId: 'step_assert_payment_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'payment_charge_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
  * Registry consolidado: stepId → stepSpec
  */
 const OPERATIONAL_STEP_REGISTRY = new Map([
@@ -272,6 +658,16 @@ const OPERATIONAL_STEP_REGISTRY = new Map([
   ...Object.entries(SUPPORT_TICKET_FLOW).map(([, spec]) => [spec.stepId, spec]),
   // Fitness flow
   ...Object.entries(FITNESS_CUSTOMER_CHECKIN_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Food flow
+  ...Object.entries(FOOD_ORDER_STATUS_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Market flow
+  ...Object.entries(MARKET_NODE_PUBLISH_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Clinic flow
+  ...Object.entries(CLINIC_CALENDAR_BLOCK_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Booking flow
+  ...Object.entries(BOOKING_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Payment flow
+  ...Object.entries(PAYMENT_CHARGE_FLOW).map(([, spec]) => [spec.stepId, spec]),
 ]);
 
 /**
@@ -286,6 +682,26 @@ const ACTION_TYPE_REGISTRY = new Map([
   ...Object.entries(FITNESS_CUSTOMER_CHECKIN_FLOW).map(([, spec]) =>
     [`${spec.journeyId}:${spec.actionType}`, spec]
   ),
+  // Food flow
+  ...Object.entries(FOOD_ORDER_STATUS_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
+  // Market flow
+  ...Object.entries(MARKET_NODE_PUBLISH_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
+  // Clinic flow
+  ...Object.entries(CLINIC_CALENDAR_BLOCK_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
+  // Booking flow
+  ...Object.entries(BOOKING_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
+  // Payment flow
+  ...Object.entries(PAYMENT_CHARGE_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
 ]);
 
 /**
@@ -294,6 +710,11 @@ const ACTION_TYPE_REGISTRY = new Map([
 const JOURNEY_STEPS_REGISTRY = {
   support_ticket_flow: SUPPORT_TICKET_FLOW,
   fitness_customer_checkin: FITNESS_CUSTOMER_CHECKIN_FLOW,
+  food_order_status_flow: FOOD_ORDER_STATUS_FLOW,
+  market_node_publish_flow: MARKET_NODE_PUBLISH_FLOW,
+  clinic_calendar_block_flow: CLINIC_CALENDAR_BLOCK_FLOW,
+  booking_flow: BOOKING_FLOW,
+  payment_charge_flow: PAYMENT_CHARGE_FLOW,
 };
 
 const REGISTERED_JOURNEY_IDS = new Set(Object.keys(JOURNEY_STEPS_REGISTRY));
@@ -652,6 +1073,11 @@ module.exports = {
   // Flow definitions
   SUPPORT_TICKET_FLOW,
   FITNESS_CUSTOMER_CHECKIN_FLOW,
+  FOOD_ORDER_STATUS_FLOW,
+  MARKET_NODE_PUBLISH_FLOW,
+  CLINIC_CALENDAR_BLOCK_FLOW,
+  BOOKING_FLOW,
+  PAYMENT_CHARGE_FLOW,
 
   // Query API
   getStepSpec,

@@ -142,7 +142,7 @@ describe('qa-mesh/meshRunner', () => {
     expect(result.summary.goNoGo).toBe('NO_GO');
     expect(result.summary.pipelineBlocked).toBe(0);
     expect(result.executionOrigin).toBe('pipeline');
-    expect(result.isCanonicalExecution).toBe(true);
+    expect(result.isCanonicalExecution).toBe(false);
     expect(result.summary.reasons).toContain('INSUFFICIENT_COVERAGE');
     expect(result.summary.reasons).toContain('BLOCKING_SCENARIO_FAILED');
     expect(result.summary.failuresByType.functional_failure).toBe(1);
@@ -350,6 +350,275 @@ describe('qa-mesh/meshRunner', () => {
       expect(fs.existsSync(process.env.QA_MESH_GO_NO_GO_PATH)).toBe(false);
       expect(fs.existsSync(process.env.QA_MESH_RELEASE_GATE_PATH)).toBe(false);
       expect(fs.existsSync(path.join(process.env.QA_MESH_HISTORY_DIR, `${executionId}.json`))).toBe(true);
+    } finally {
+      Object.entries(envBackup).forEach(([key, value]) => {
+        if (typeof value === 'undefined') {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      });
+      jest.resetModules();
+    }
+  });
+
+  test('pipeline com registry parcial não sobrescreve saídas canônicas', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-partial-pipeline-'));
+    const envBackup = {
+      QA_MESH_REPORT_PATH: process.env.QA_MESH_REPORT_PATH,
+      QA_MESH_REPAIR_PLAN_PATH: process.env.QA_MESH_REPAIR_PLAN_PATH,
+      QA_MESH_METRICS_PATH: process.env.QA_MESH_METRICS_PATH,
+      QA_MESH_GO_NO_GO_PATH: process.env.QA_MESH_GO_NO_GO_PATH,
+      QA_MESH_RELEASE_GATE_PATH: process.env.QA_MESH_RELEASE_GATE_PATH,
+      QA_MESH_HISTORY_DIR: process.env.QA_MESH_HISTORY_DIR,
+      QA_MESH_EVIDENCE_DIR: process.env.QA_MESH_EVIDENCE_DIR,
+      QA_MESH_INTELLIGENCE_DIR: process.env.QA_MESH_INTELLIGENCE_DIR,
+      RUNNING_IN_PIPELINE: process.env.RUNNING_IN_PIPELINE,
+    };
+
+    process.env.RUNNING_IN_PIPELINE = '1';
+    process.env.QA_MESH_REPORT_PATH = path.join(tempRoot, 'meshReport.json');
+    process.env.QA_MESH_REPAIR_PLAN_PATH = path.join(tempRoot, 'repairPlan.json');
+    process.env.QA_MESH_METRICS_PATH = path.join(tempRoot, 'metrics.json');
+    process.env.QA_MESH_GO_NO_GO_PATH = path.join(tempRoot, 'go-no-go-report.json');
+    process.env.QA_MESH_RELEASE_GATE_PATH = path.join(tempRoot, 'release-gate-report.json');
+    process.env.QA_MESH_HISTORY_DIR = path.join(tempRoot, 'history');
+    process.env.QA_MESH_EVIDENCE_DIR = path.join(tempRoot, 'evidence');
+    process.env.QA_MESH_INTELLIGENCE_DIR = path.join(tempRoot, 'intelligence');
+
+    jest.resetModules();
+    jest.doMock('../adapters/apiAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'api pass' }],
+        metrics: { adapter: 'api' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/rpaAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'rpa pass' }],
+        metrics: { adapter: 'rpa' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/pbxAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'pbx pass' }],
+        metrics: { adapter: 'pbx' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+
+    const isolatedMeshRunner = require('../meshRunner');
+
+    try {
+      const executionId = `mesh-partial-pipeline-${Date.now()}`;
+      const result = await isolatedMeshRunner.runMesh({
+        executionId,
+        refreshRegistry: false,
+        registry: [{
+          id: 'workspace-core-status-separation',
+          domain: 'workspace',
+          type: 'workspace',
+          source: 'qa',
+          flow: 'workspace status separation',
+          criticality: 'blocking',
+          adapter: 'api',
+          assertions: ['status tecnico preservado'],
+        }],
+      });
+
+      expect(result.executionOrigin).toBe('pipeline');
+      expect(result.isCanonicalExecution).toBe(false);
+      expect(result.summary.isCanonicalExecution).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_REPORT_PATH)).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_REPAIR_PLAN_PATH)).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_METRICS_PATH)).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_GO_NO_GO_PATH)).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_RELEASE_GATE_PATH)).toBe(false);
+      expect(fs.existsSync(path.join(process.env.QA_MESH_HISTORY_DIR, `${executionId}.json`))).toBe(true);
+    } finally {
+      Object.entries(envBackup).forEach(([key, value]) => {
+        if (typeof value === 'undefined') {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      });
+      jest.resetModules();
+    }
+  });
+
+  test('execução canônica concorrente falha rápido com lock explícito', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-canonical-lock-'));
+    const envBackup = {
+      QA_MESH_REPORT_PATH: process.env.QA_MESH_REPORT_PATH,
+      QA_MESH_REPAIR_PLAN_PATH: process.env.QA_MESH_REPAIR_PLAN_PATH,
+      QA_MESH_METRICS_PATH: process.env.QA_MESH_METRICS_PATH,
+      QA_MESH_GO_NO_GO_PATH: process.env.QA_MESH_GO_NO_GO_PATH,
+      QA_MESH_RELEASE_GATE_PATH: process.env.QA_MESH_RELEASE_GATE_PATH,
+      QA_MESH_HISTORY_DIR: process.env.QA_MESH_HISTORY_DIR,
+      QA_MESH_EVIDENCE_DIR: process.env.QA_MESH_EVIDENCE_DIR,
+      QA_MESH_INTELLIGENCE_DIR: process.env.QA_MESH_INTELLIGENCE_DIR,
+      QA_MESH_CANONICAL_LOCK_PATH: process.env.QA_MESH_CANONICAL_LOCK_PATH,
+      QA_MESH_CANONICAL_PROMOTION_PATH: process.env.QA_MESH_CANONICAL_PROMOTION_PATH,
+      RUNNING_IN_PIPELINE: process.env.RUNNING_IN_PIPELINE,
+    };
+
+    process.env.RUNNING_IN_PIPELINE = '1';
+    process.env.QA_MESH_REPORT_PATH = path.join(tempRoot, 'meshReport.json');
+    process.env.QA_MESH_REPAIR_PLAN_PATH = path.join(tempRoot, 'repairPlan.json');
+    process.env.QA_MESH_METRICS_PATH = path.join(tempRoot, 'metrics.json');
+    process.env.QA_MESH_GO_NO_GO_PATH = path.join(tempRoot, 'go-no-go-report.json');
+    process.env.QA_MESH_RELEASE_GATE_PATH = path.join(tempRoot, 'release-gate-report.json');
+    process.env.QA_MESH_HISTORY_DIR = path.join(tempRoot, 'history');
+    process.env.QA_MESH_EVIDENCE_DIR = path.join(tempRoot, 'evidence');
+    process.env.QA_MESH_INTELLIGENCE_DIR = path.join(tempRoot, 'intelligence');
+    process.env.QA_MESH_CANONICAL_LOCK_PATH = path.join(tempRoot, 'canonical.lock.json');
+    process.env.QA_MESH_CANONICAL_PROMOTION_PATH = path.join(tempRoot, 'canonical-promotion.json');
+
+    jest.resetModules();
+    jest.doMock('../adapters/apiAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'api pass' }],
+        metrics: { adapter: 'api' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/rpaAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'rpa pass' }],
+        metrics: { adapter: 'rpa' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/pbxAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'pbx pass' }],
+        metrics: { adapter: 'pbx' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+
+    const isolatedMeshRunner = require('../meshRunner');
+
+    try {
+      fs.writeFileSync(process.env.QA_MESH_CANONICAL_LOCK_PATH, `${JSON.stringify({
+        executionId: 'mesh-canonical-in-flight',
+        startedAt: '2026-05-11T17:40:00.000Z',
+        pid: process.pid,
+      }, null, 2)}\n`, 'utf8');
+
+      await expect(isolatedMeshRunner.runMesh({
+        executionId: `mesh-canonical-${Date.now()}`,
+        refreshRegistry: false,
+      })).rejects.toThrow('Outra execução canônica do QA Mesh já está em andamento');
+
+      expect(fs.existsSync(process.env.QA_MESH_REPORT_PATH)).toBe(false);
+      expect(fs.existsSync(process.env.QA_MESH_CANONICAL_PROMOTION_PATH)).toBe(false);
+      const currentLock = JSON.parse(fs.readFileSync(process.env.QA_MESH_CANONICAL_LOCK_PATH, 'utf8'));
+      expect(currentLock.executionId).toBe('mesh-canonical-in-flight');
+    } finally {
+      Object.entries(envBackup).forEach(([key, value]) => {
+        if (typeof value === 'undefined') {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      });
+      jest.resetModules();
+    }
+  });
+
+  test('recupera lock canônico stale quando o processo dono não existe mais', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-canonical-stale-lock-'));
+    const envBackup = {
+      QA_MESH_REPORT_PATH: process.env.QA_MESH_REPORT_PATH,
+      QA_MESH_REPAIR_PLAN_PATH: process.env.QA_MESH_REPAIR_PLAN_PATH,
+      QA_MESH_METRICS_PATH: process.env.QA_MESH_METRICS_PATH,
+      QA_MESH_GO_NO_GO_PATH: process.env.QA_MESH_GO_NO_GO_PATH,
+      QA_MESH_RELEASE_GATE_PATH: process.env.QA_MESH_RELEASE_GATE_PATH,
+      QA_MESH_HISTORY_DIR: process.env.QA_MESH_HISTORY_DIR,
+      QA_MESH_EVIDENCE_DIR: process.env.QA_MESH_EVIDENCE_DIR,
+      QA_MESH_INTELLIGENCE_DIR: process.env.QA_MESH_INTELLIGENCE_DIR,
+      QA_MESH_CANONICAL_LOCK_PATH: process.env.QA_MESH_CANONICAL_LOCK_PATH,
+      QA_MESH_CANONICAL_PROMOTION_PATH: process.env.QA_MESH_CANONICAL_PROMOTION_PATH,
+      RUNNING_IN_PIPELINE: process.env.RUNNING_IN_PIPELINE,
+    };
+
+    process.env.RUNNING_IN_PIPELINE = '1';
+    process.env.QA_MESH_REPORT_PATH = path.join(tempRoot, 'meshReport.json');
+    process.env.QA_MESH_REPAIR_PLAN_PATH = path.join(tempRoot, 'repairPlan.json');
+    process.env.QA_MESH_METRICS_PATH = path.join(tempRoot, 'metrics.json');
+    process.env.QA_MESH_GO_NO_GO_PATH = path.join(tempRoot, 'go-no-go-report.json');
+    process.env.QA_MESH_RELEASE_GATE_PATH = path.join(tempRoot, 'release-gate-report.json');
+    process.env.QA_MESH_HISTORY_DIR = path.join(tempRoot, 'history');
+    process.env.QA_MESH_EVIDENCE_DIR = path.join(tempRoot, 'evidence');
+    process.env.QA_MESH_INTELLIGENCE_DIR = path.join(tempRoot, 'intelligence');
+    process.env.QA_MESH_CANONICAL_LOCK_PATH = path.join(tempRoot, 'canonical.lock.json');
+    process.env.QA_MESH_CANONICAL_PROMOTION_PATH = path.join(tempRoot, 'canonical-promotion.json');
+
+    jest.resetModules();
+    jest.doMock('../adapters/apiAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'api pass' }],
+        metrics: { adapter: 'api' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/rpaAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'rpa pass' }],
+        metrics: { adapter: 'rpa' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+    jest.doMock('../adapters/pbxAdapter', () => ({
+      executeScenario: jest.fn().mockResolvedValue({
+        success: true,
+        logs: [{ message: 'pbx pass' }],
+        metrics: { adapter: 'pbx' },
+        errors: [],
+        artifacts: [],
+      }),
+    }));
+
+    const isolatedMeshRunner = require('../meshRunner');
+
+    try {
+      fs.writeFileSync(process.env.QA_MESH_CANONICAL_LOCK_PATH, `${JSON.stringify({
+        executionId: 'mesh-canonical-stale',
+        startedAt: '2026-05-11T17:40:00.000Z',
+        pid: 999999,
+      }, null, 2)}\n`, 'utf8');
+
+      const result = await isolatedMeshRunner.runMesh({
+        executionId: `mesh-canonical-recovered-${Date.now()}`,
+        refreshRegistry: false,
+      });
+
+      expect(result.isCanonicalExecution).toBe(true);
+      expect(fs.existsSync(process.env.QA_MESH_CANONICAL_PROMOTION_PATH)).toBe(true);
+      expect(fs.existsSync(process.env.QA_MESH_CANONICAL_LOCK_PATH)).toBe(false);
+      const promotion = JSON.parse(fs.readFileSync(process.env.QA_MESH_CANONICAL_PROMOTION_PATH, 'utf8'));
+      expect(promotion.executionId).toBe(result.executionId);
+      expect(promotion.criterion).toBe('serialized_canonical_execution');
     } finally {
       Object.entries(envBackup).forEach(([key, value]) => {
         if (typeof value === 'undefined') {

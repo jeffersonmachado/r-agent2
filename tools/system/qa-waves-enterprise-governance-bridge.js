@@ -6,22 +6,28 @@ const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths'
 const {
   buildQaWavesEnterpriseGovernance,
   validateQaWavesEnterpriseGovernance,
-  writeQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernanceWithMirror,
 } = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
 const OUTPUT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
 const AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
+const WORKSPACE_OUTPUT_PATH = path.join(ROOT, 'qa', 'qa-waves-enterprise-governance.json');
+const WORKSPACE_AUDIT_PATH = path.join(ROOT, 'qa', 'qa-waves-governance-audit.jsonl');
 
 function main() {
   const report = buildQaWavesEnterpriseGovernance({
     root: ROOT,
     threshold: process.env.QA_WAVES_OPERATIONAL_CONFIDENCE_THRESHOLD,
   });
-  const persisted = writeQaWavesEnterpriseGovernance(
+  const persisted = writeQaWavesEnterpriseGovernanceWithMirror(
     report,
     resolveWorkspacePath(ROOT, OUTPUT_PATH),
-    resolveWorkspacePath(ROOT, AUDIT_PATH)
+    resolveWorkspacePath(ROOT, AUDIT_PATH),
+    {
+      workspaceMirrorPath: WORKSPACE_OUTPUT_PATH,
+      workspaceAuditPath: WORKSPACE_AUDIT_PATH,
+    }
   );
   const validation = validateQaWavesEnterpriseGovernance(persisted);
   // eslint-disable-next-line no-console
@@ -32,6 +38,8 @@ function main() {
     riskLevel: persisted.riskLevel,
     outputPath: OUTPUT_PATH,
     auditPath: AUDIT_PATH,
+    workspaceMirrorPath: WORKSPACE_OUTPUT_PATH,
+    workspaceAuditPath: WORKSPACE_AUDIT_PATH,
     reasons: validation.reasons,
   }, null, 2));
   if (!validation.valid) process.exitCode = 1;

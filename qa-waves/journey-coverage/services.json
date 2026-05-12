@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "vertical": "services",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "services",
+      "journey": "services_default_journey",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-serv-scr-01",
+          "scenario": "Services solutions screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

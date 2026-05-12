@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-05-12T11:59:36.150Z",
+  "sourceArtifact": "qa/l03-pbx-voice-tts-asr-evidence.json",
+  "callId": "call-voice-tts-asr-1778586487709",
+  "flowId": "flow-voice-tts-asr-smoke-1778586487709",
+  "transcript": "suporte técnico | falar com humano",
+  "segments": [
+    {
+      "nodeId": "prompt-1",
+      "transcript": "suporte técnico",
+      "language": "pt-BR",
+      "source": "voice_runtime_step_prompt"
+    },
+    {
+      "nodeId": "asr-1",
+      "transcript": "falar com humano",
+      "language": "pt-BR",
+      "source": "voice_runtime_step_asr"
+    }
+  ],
+  "hash": "f6ed5638d49a03161ee3bf0bc7d60365aba40a1e800bdda58fe1ea102d88d9d9"
+}

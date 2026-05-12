@@ -41,13 +41,30 @@ const {
 const CANONICAL_MUTATION_RULES = [
   { stepId: 'step_reply_ticket', path: 'db.messages.count', op: 'incremented', mutation: 'message_created' },
   { stepId: 'step_reply_ticket', path: 'events.messages.count', op: 'incremented', mutation: 'message_created' },
+  { stepId: 'step_takeover_ticket', path: 'db.ticket.status', op: 'changed', mutation: 'ticket_status_changed' },
+  { stepId: 'step_takeover_ticket', path: 'db.ticketStatus', op: 'changed', mutation: 'ticket_status_changed' },
   { stepId: 'step_change_status', path: 'db.ticket.status', op: 'changed', mutation: 'ticket_status_changed' },
   { stepId: 'step_change_status', path: 'db.ticketStatus', op: 'changed', mutation: 'ticket_status_changed' },
   { stepId: 'step_submit_checkin', path: 'db.attendance.count', op: 'incremented', mutation: 'attendance_created' },
   { stepId: 'step_submit_checkin', path: 'db.attendance.created', op: 'became_true', mutation: 'attendance_created' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.count', op: 'incremented', mutation: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.exists', op: 'became_true', mutation: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.id', op: 'appeared', mutation: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'api.booking.id', op: 'appeared', mutation: 'booking_created' },
+  { stepId: 'step_create_membership_charge', path: 'db.billing.count', op: 'incremented', mutation: 'payment_created' },
+  { stepId: 'step_create_membership_charge', path: 'db.billing.exists', op: 'became_true', mutation: 'payment_created' },
+  { stepId: 'step_create_membership_charge', path: 'db.billing.id', op: 'appeared', mutation: 'payment_created' },
+  { stepId: 'step_create_membership_charge', path: 'api.billing.transactionId', op: 'appeared', mutation: 'payment_created' },
+  { stepId: 'step_confirm_membership_payment', path: 'db.billing.status', op: 'changed', mutation: 'payment_status_changed' },
+  { stepId: 'step_update_order_status', path: 'db.order.status', op: 'changed', mutation: 'order_status_changed' },
+  { stepId: 'step_publish_marketplace_node', path: 'db.nodeMarketplace.published.exists', op: 'became_true', mutation: 'node_published' },
+  { stepId: 'step_publish_marketplace_node', path: 'db.nodeMarketplace.published.id', op: 'appeared', mutation: 'node_published' },
+  { stepId: 'step_create_calendar_block', path: 'db.calendar.block.exists', op: 'became_true', mutation: 'calendar_block_created' },
+  { stepId: 'step_create_calendar_block', path: 'db.calendar.block.id', op: 'appeared', mutation: 'calendar_block_created' },
 ];
 
 const CANONICAL_SIDE_EFFECT_RULES = [
+  { stepId: 'step_takeover_ticket', path: 'events.audit.count', op: 'incremented', sideEffect: 'audit_log_created' },
   { stepId: 'step_reply_ticket', path: 'events.audit.count', op: 'incremented', sideEffect: 'audit_log_created' },
   { stepId: 'step_reply_ticket', path: 'crm.activities.count', op: 'incremented', sideEffect: 'crm_updated' },
   { stepId: 'step_reply_ticket', path: 'events.notifications.count', op: 'incremented', sideEffect: 'notification_sent' },
@@ -59,6 +76,17 @@ const CANONICAL_SIDE_EFFECT_RULES = [
   { stepId: 'step_submit_checkin', path: 'events.access.count', op: 'incremented', sideEffect: 'access_event_created' },
   { stepId: 'step_submit_checkin', path: 'crm.presenceActivity.count', op: 'incremented', sideEffect: 'crm_journey_updated' },
   { stepId: 'step_submit_checkin', path: 'crm.presenceActivity.created', op: 'became_true', sideEffect: 'crm_journey_updated' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.count', op: 'incremented', sideEffect: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.exists', op: 'became_true', sideEffect: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'db.booking.id', op: 'appeared', sideEffect: 'booking_created' },
+  { stepId: 'step_create_resource_booking', path: 'api.booking.id', op: 'appeared', sideEffect: 'booking_created' },
+  { stepId: 'step_create_membership_charge', path: 'events.notifications.count', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_create_membership_charge', path: 'events.notifications.sent', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_update_order_status', path: 'events.order_status.count', op: 'incremented', sideEffect: 'event_ledger_recorded' },
+  { stepId: 'step_publish_marketplace_node', path: 'db.nodeMarketplace.catalog.count', op: 'incremented', sideEffect: 'catalog_updated' },
+  { stepId: 'step_publish_marketplace_node', path: 'api.nodeMarketplace.catalog.count', op: 'incremented', sideEffect: 'catalog_updated' },
+  { stepId: 'step_create_calendar_block', path: 'db.calendar.block.count', op: 'incremented', sideEffect: 'calendar_updated' },
+  { stepId: 'step_create_calendar_block', path: 'api.calendar.resource.blockCount', op: 'incremented', sideEffect: 'calendar_updated' },
 ];
 
 function getStepId(step = {}) {
@@ -71,6 +99,10 @@ function detailMatchesRule(detail = {}, rule = {}, stepId = null) {
   if (rule.op === 'changed') return detail.before !== detail.after;
   if (rule.op === 'incremented') return Number(detail.after) > Number(detail.before);
   if (rule.op === 'became_true') return detail.before !== true && detail.after === true;
+  if (rule.op === 'appeared') {
+    return (detail.before === null || detail.before === undefined || detail.before === '')
+      && !(detail.after === null || detail.after === undefined || detail.after === '');
+  }
   return false;
 }
 

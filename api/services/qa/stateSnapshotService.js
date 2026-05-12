@@ -148,8 +148,14 @@ function getRequiredSources(journeyId) {
   if (normalized === 'fitness_customer_checkin') {
     return ['db', 'api', 'crm', 'devices', 'attendance'];
   }
+  if (normalized === 'food_order_status_flow') {
+    return ['db', 'api', 'orders'];
+  }
   if (normalized === 'booking_flow') {
     return ['db', 'api', 'booking'];
+  }
+  if (normalized === 'payment_charge_flow') {
+    return ['db', 'api', 'billing', 'notifications'];
   }
   return ['db', 'api'];
 }
@@ -171,7 +177,9 @@ function normalizeSnapshotContext(options = {}) {
     credentialId: options.credentialId || context.credentialId || seedEvidence.credentialId || seedEvidence.credential_id || seedProvision.credentialId || seedProvision.credential_id || seedData.credentialId || seedData.credential_id || null,
     deviceId: options.deviceId || context.deviceId || seedEvidence.deviceId || seedEvidence.device_id || seedProvision.deviceId || seedProvision.device_id || seedData.deviceId || seedData.device_id || null,
     deviceMode: options.deviceMode || context.deviceMode || seedEvidence.deviceMode || seedEvidence.device_mode || seedProvision.deviceMode || seedProvision.device_mode || seedData.deviceMode || seedData.device_mode || null,
+    orderId: options.orderId || context.orderId || seedEvidence.orderId || seedEvidence.order_id || seedProvision.orderId || seedProvision.order_id || seedData.orderId || seedData.order_id || null,
     bookingId: options.bookingId || context.bookingId || seedData.bookingId || seedData.booking_id || null,
+    transactionId: options.transactionId || context.transactionId || seedEvidence.transactionId || seedEvidence.transaction_id || seedProvision.transactionId || seedProvision.transaction_id || seedData.transactionId || seedData.transaction_id || null,
     replayId: options.replayId || context.replayId || null,
     executionId: options.executionId || context.executionId || null,
     seedEvidence,
@@ -382,7 +390,10 @@ async function collectBookingSnapshot(ctx, models) {
   const booking = ctx.bookingId
     ? await findOneModel(models, 'ResourceBooking', buildWhere({ tenant_id: tenantId }, { id: ctx.bookingId }))
     : await findOneModel(models, 'ResourceBooking', { tenant_id: tenantId }, { order: [['updated_at', 'DESC']] });
-  const bookingRow = booking.item || {};
+  const bookingFallback = !booking.item && ctx.bookingId
+    ? await findOneModel(models, 'ResourceBooking', { id: ctx.bookingId })
+    : { ok: false, item: null, reason: null };
+  const bookingRow = booking.item || bookingFallback.item || {};
   const bookingCount = await countModel(models, 'ResourceBooking', { tenant_id: tenantId });
   return {
     state: bookingRow.id ? 'booking_created' : 'booking_requested',
@@ -396,8 +407,129 @@ async function collectBookingSnapshot(ctx, models) {
     },
     api: { booking: { id: bookingRow.id || ctx.bookingId || null } },
     metadata: {
-      sources: { db: booking.ok || bookingCount.ok, api: true, booking: booking.ok || bookingCount.ok },
-      sourceErrors: [booking.reason, bookingCount.reason].filter(Boolean),
+      sources: {
+        db: booking.ok || bookingFallback.ok || bookingCount.ok,
+        api: true,
+        booking: booking.ok || bookingFallback.ok || bookingCount.ok,
+      },
+      sourceErrors: [booking.reason, bookingFallback.reason, bookingCount.reason].filter(Boolean),
+    },
+  };
+}
+
+async function collectPaymentChargeSnapshot(ctx, models) {
+  const tenantWhere = { tenant_key: ctx.tenantId };
+  const transactionWhere = ctx.transactionId
+    ? buildWhere(tenantWhere, { id: ctx.transactionId })
+    : buildWhere(tenantWhere, { membership_id: ctx.membershipId, subject_id: ctx.subjectId });
+  const transaction = await findOneModel(
+    models,
+    'BillingTransaction',
+    Object.keys(transactionWhere).length > 1 ? transactionWhere : tenantWhere,
+    { order: [['updated_at', 'DESC']] },
+  );
+  const transactionRow = transaction.item || {};
+  const transactionId = transactionRow.id || ctx.transactionId || null;
+  const transactions = await countModelWithFallback(
+    models,
+    'BillingTransaction',
+    buildWhere(tenantWhere, { membership_id: ctx.membershipId }),
+    buildWhere(tenantWhere, { subject_id: ctx.subjectId }),
+  );
+  const notifications = await countModelWithFallback(
+    models,
+    'NotificationDelivery',
+    buildWhere(tenantWhere, { transaction_id: transactionId }),
+    buildWhere(tenantWhere, { customer_id: ctx.contactId }),
+  );
+
+  return {
+    state: transactionRow.status === 'confirmed'
+      ? 'payment_confirmed'
+      : (transactionRow.id ? 'payment_created' : null),
+    db: {
+      billing: {
+        exists: Boolean(transactionRow.id),
+        id: transactionId,
+        status: transactionRow.status || null,
+        count: transactions.count,
+        externalTransactionId: transactionRow.external_transaction_id || null,
+      },
+    },
+    api: {
+      billing: {
+        transactionId,
+        externalTransactionId: transactionRow.external_transaction_id || null,
+      },
+    },
+    events: {
+      notifications: {
+        count: notifications.count,
+        sent: notifications.count,
+        available: notifications.ok,
+      },
+    },
+    metadata: {
+      sources: {
+        db: transaction.ok || transactions.ok,
+        api: true,
+        billing: transaction.ok || transactions.ok,
+        notifications: notifications.ok,
+      },
+      sourceErrors: [transaction.reason, transactions.reason, notifications.reason].filter(Boolean),
+    },
+  };
+}
+
+async function collectFoodOrderSnapshot(ctx, models) {
+  const tenantWhere = { tenant_key: ctx.tenantId };
+  const order = ctx.orderId
+    ? await findOneModel(models, 'Order', buildWhere(tenantWhere, { id: ctx.orderId }))
+    : await findOneModel(models, 'Order', tenantWhere, { order: [['updated_at', 'DESC']] });
+  const orderFallback = !order.item && ctx.orderId
+    ? await findOneModel(models, 'Order', { id: ctx.orderId })
+    : { ok: false, item: null, reason: null };
+  const orderRow = order.item || orderFallback.item || {};
+  const orderId = orderRow.id || ctx.orderId || null;
+  const orders = await countModel(models, 'Order', tenantWhere);
+  const orderStatusEvents = orderId
+    ? await countModel(models, 'EventLedger', buildWhere(tenantWhere, {
+      type: 'OrderStatusChanged',
+      subject_type: 'order',
+      subject_id: orderId,
+    }))
+    : { count: 0, ok: false, reason: 'EventLedger.count_skipped:order_missing' };
+
+  return {
+    state: orderRow.status ? `order_${String(orderRow.status).toLowerCase()}` : null,
+    db: {
+      order: {
+        exists: Boolean(orderRow.id),
+        id: orderId,
+        status: orderRow.status || null,
+        count: orders.count,
+      },
+    },
+    api: {
+      orders: {
+        orderId,
+        status: orderRow.status || null,
+      },
+    },
+    events: {
+      order_status: {
+        count: orderStatusEvents.count,
+        available: orderStatusEvents.ok,
+      },
+    },
+    metadata: {
+      sources: {
+        db: order.ok || orderFallback.ok || orders.ok,
+        api: true,
+        orders: order.ok || orderFallback.ok || orders.ok,
+        eventLedger: orderStatusEvents.ok,
+      },
+      sourceErrors: [order.reason, orderFallback.reason, orders.reason, orderStatusEvents.reason].filter(Boolean),
     },
   };
 }
@@ -617,6 +749,203 @@ async function collectFitnessStepScopedSnapshot(ctx, models, stepId) {
   return normalizeSnapshot(snapshot);
 }
 
+async function collectBookingStepScopedSnapshot(ctx, models, stepId) {
+  const contract = getOperationalStepContract(stepId);
+  const entityScope = Array.isArray(contract?.entityScope) ? contract.entityScope : [];
+  const tenantId = ctx.tenantId;
+  const booking = ctx.bookingId
+    ? await findOneModel(models, 'ResourceBooking', buildWhere({ tenant_id: tenantId }, { id: ctx.bookingId }))
+    : await findOneModel(models, 'ResourceBooking', { tenant_id: tenantId }, { order: [['updated_at', 'DESC']] });
+  const bookingFallback = !booking.item && ctx.bookingId
+    ? await findOneModel(models, 'ResourceBooking', { id: ctx.bookingId })
+    : { ok: false, item: null, reason: null };
+  const bookingRow = booking.item || bookingFallback.item || {};
+  const bookingCount = await countModel(models, 'ResourceBooking', { tenant_id: tenantId });
+
+  const snapshot = {
+    state: bookingRow.id ? 'booking_created' : 'booking_requested',
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [],
+      entityScope,
+      filterApplied: false,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  if (entityScope.includes('booking')) {
+    snapshot.db.booking = {
+      exists: Boolean(bookingRow.id),
+      id: bookingRow.id || ctx.bookingId || null,
+      status: bookingRow.status || null,
+      count: bookingCount.count,
+    };
+    snapshot.api.booking = { id: bookingRow.id || ctx.bookingId || null };
+    snapshot.metadata.sources.booking = booking.ok || bookingFallback.ok || bookingCount.ok;
+  }
+
+  snapshot.metadata.sources.db = Boolean(booking.ok || bookingFallback.ok || bookingCount.ok);
+  snapshot.metadata.sourceErrors = [booking.reason, bookingFallback.reason, bookingCount.reason].filter(Boolean);
+  return normalizeSnapshot(snapshot);
+}
+
+async function collectPaymentChargeStepScopedSnapshot(ctx, models, stepId) {
+  const contract = getOperationalStepContract(stepId);
+  const entityScope = Array.isArray(contract?.entityScope) ? contract.entityScope : [];
+  const tenantWhere = { tenant_key: ctx.tenantId };
+  const transactionWhere = ctx.transactionId
+    ? buildWhere(tenantWhere, { id: ctx.transactionId })
+    : buildWhere(tenantWhere, { membership_id: ctx.membershipId, subject_id: ctx.subjectId });
+  const transaction = await findOneModel(
+    models,
+    'BillingTransaction',
+    Object.keys(transactionWhere).length > 1 ? transactionWhere : tenantWhere,
+    { order: [['updated_at', 'DESC']] },
+  );
+  const transactionFallback = !transaction.item && ctx.transactionId
+    ? await findOneModel(models, 'BillingTransaction', { id: ctx.transactionId })
+    : { ok: false, item: null, reason: null };
+  const transactionRow = transaction.item || transactionFallback.item || {};
+  const transactionId = transactionRow.id || ctx.transactionId || null;
+  const transactions = await countModelWithFallback(
+    models,
+    'BillingTransaction',
+    buildWhere(tenantWhere, { membership_id: ctx.membershipId }),
+    buildWhere(tenantWhere, { subject_id: ctx.subjectId }),
+  );
+  const notifications = transactionId
+    ? await countModelWithFallback(
+      models,
+      'NotificationDelivery',
+      { transaction_id: transactionId },
+      buildWhere(tenantWhere, { customer_id: ctx.contactId }),
+    )
+    : await countModelWithFallback(
+      models,
+      'NotificationDelivery',
+      buildWhere(tenantWhere, { transaction_id: transactionId }),
+      buildWhere(tenantWhere, { customer_id: ctx.contactId }),
+    );
+
+  const snapshot = {
+    state: transactionRow.status === 'confirmed'
+      ? 'payment_confirmed'
+      : (transactionRow.id ? 'payment_created' : null),
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [],
+      entityScope,
+      filterApplied: Boolean(transactions.fallbackApplied || notifications.fallbackApplied),
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  if (entityScope.includes('billing')) {
+    snapshot.db.billing = {
+      exists: Boolean(transactionRow.id),
+      id: transactionId,
+      status: transactionRow.status || null,
+      count: transactions.count,
+      externalTransactionId: transactionRow.external_transaction_id || null,
+    };
+    snapshot.api.billing = {
+      transactionId,
+      externalTransactionId: transactionRow.external_transaction_id || null,
+    };
+    snapshot.metadata.sources.billing = transaction.ok || transactionFallback.ok || transactions.ok;
+  }
+
+  if (entityScope.includes('notifications')) {
+    snapshot.events.notifications = {
+      count: notifications.count,
+      sent: notifications.count,
+      available: notifications.ok,
+    };
+    snapshot.metadata.sources.notifications = notifications.ok;
+  }
+
+  snapshot.metadata.sources.db = Boolean(transaction.ok || transactionFallback.ok || transactions.ok);
+  snapshot.metadata.sourceErrors = [transaction.reason, transactionFallback.reason, transactions.reason, notifications.reason].filter(Boolean);
+  return normalizeSnapshot(snapshot);
+}
+
+async function collectFoodOrderStepScopedSnapshot(ctx, models, stepId) {
+  const contract = getOperationalStepContract(stepId);
+  const entityScope = Array.isArray(contract?.entityScope) ? contract.entityScope : [];
+  const tenantWhere = { tenant_key: ctx.tenantId };
+  const order = ctx.orderId
+    ? await findOneModel(models, 'Order', buildWhere(tenantWhere, { id: ctx.orderId }))
+    : await findOneModel(models, 'Order', tenantWhere, { order: [['updated_at', 'DESC']] });
+  const orderFallback = !order.item && ctx.orderId
+    ? await findOneModel(models, 'Order', { id: ctx.orderId })
+    : { ok: false, item: null, reason: null };
+  const orderRow = order.item || orderFallback.item || {};
+  const orderId = orderRow.id || ctx.orderId || null;
+  const orders = await countModel(models, 'Order', tenantWhere);
+  const orderStatusEvents = orderId
+    ? await countModel(models, 'EventLedger', buildWhere(tenantWhere, {
+      type: 'OrderStatusChanged',
+      subject_type: 'order',
+      subject_id: orderId,
+    }))
+    : { count: 0, ok: false, reason: 'EventLedger.count_skipped:order_missing' };
+
+  const snapshot = {
+    state: orderRow.status ? `order_${String(orderRow.status).toLowerCase()}` : null,
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [],
+      entityScope,
+      filterApplied: false,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  if (entityScope.includes('order')) {
+    snapshot.db.order = {
+      exists: Boolean(orderRow.id),
+      id: orderId,
+      status: orderRow.status || null,
+      count: orders.count,
+    };
+    snapshot.api.orders = {
+      orderId,
+      status: orderRow.status || null,
+    };
+    snapshot.metadata.sources.orders = order.ok || orderFallback.ok || orders.ok;
+  }
+
+  if (entityScope.includes('event_ledger')) {
+    snapshot.events.order_status = {
+      count: orderStatusEvents.count,
+      available: orderStatusEvents.ok,
+    };
+    snapshot.metadata.sources.eventLedger = orderStatusEvents.ok;
+  }
+
+  snapshot.metadata.sources.db = Boolean(order.ok || orderFallback.ok || orders.ok);
+  snapshot.metadata.sourceErrors = [order.reason, orderFallback.reason, orders.reason, orderStatusEvents.reason].filter(Boolean);
+  return normalizeSnapshot(snapshot);
+}
+
 async function collectUiState(page = null) {
   if (!page || typeof page.locator !== 'function') {
     return { available: false, reason: 'playwright_page_unavailable' };
@@ -656,7 +985,7 @@ function collectReplayState(replay = {}) {
     stepCount: steps.length,
     eventCount: events.length,
     urls: Array.from(urls),
-    showsOperationalModule: Array.from(urls).some((url) => /\/support|\/fitness|\/access-control|\/calendar|\/bookings/.test(url)),
+    showsOperationalModule: Array.from(urls).some((url) => /\/support|\/fitness|\/access-control|\/calendar|\/bookings|\/orders/.test(url)),
   };
 }
 
@@ -669,8 +998,12 @@ async function collectOperationalSnapshot(options = {}) {
     collected = await collectSupportTicketSnapshot(ctx, models);
   } else if (ctx.journeyId === 'fitness_customer_checkin') {
     collected = await collectFitnessCheckinSnapshot(ctx, models);
+  } else if (ctx.journeyId === 'food_order_status_flow') {
+    collected = await collectFoodOrderSnapshot(ctx, models);
   } else if (ctx.journeyId === 'booking_flow') {
     collected = await collectBookingSnapshot(ctx, models);
+  } else if (ctx.journeyId === 'payment_charge_flow') {
+    collected = await collectPaymentChargeSnapshot(ctx, models);
   } else {
     collected = {
       state: null,
@@ -898,6 +1231,7 @@ function inferObservedSideEffectsFromSnapshots(before = {}, after = {}) {
     if (/audit/i.test(pathName)) names.add('audit_log_created');
     if (/notification/i.test(pathName)) names.add('notification_sent');
     if (/booking/i.test(pathName)) names.add('booking_created');
+    if (/order_status|eventledger|event_ledger/i.test(pathName)) names.add('event_ledger_recorded');
     if (/attendance/i.test(pathName)) {
       names.add('attendance_recorded');
       names.add('checkin_registered');
@@ -938,6 +1272,7 @@ function inferObservedSideEffectsFromDiff(sideEffects = []) {
       if (/audit/i.test(pathName)) names.add('audit_log_created');
       if (/notification/i.test(pathName)) names.add('notification_sent');
       if (/booking/i.test(pathName)) names.add('booking_created');
+      if (/order_status|eventledger|event_ledger/i.test(pathName)) names.add('event_ledger_recorded');
       if (/attendance/i.test(pathName)) {
         names.add('attendance_recorded');
         names.add('checkin_registered');
@@ -1205,6 +1540,18 @@ async function collectEntityScopedSnapshot(options = {}) {
 
   if (stepContract.journeyId === 'fitness_customer_checkin') {
     return collectFitnessStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  if (stepContract.journeyId === 'food_order_status_flow') {
+    return collectFoodOrderStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  if (stepContract.journeyId === 'booking_flow') {
+    return collectBookingStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  if (stepContract.journeyId === 'payment_charge_flow') {
+    return collectPaymentChargeStepScopedSnapshot(ctx, models, stepId);
   }
 
   return normalizeSnapshot({

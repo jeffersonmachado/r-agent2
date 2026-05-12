@@ -6,6 +6,7 @@ const path = require('path');
 const { execSync, spawn } = require('child_process');
 const { buildRuntimeGovernanceReport, writeRuntimeGovernanceReport, toBool } = require('./runtime-governance');
 const { evaluatePillars } = require('./lib/pillar-readiness');
+const { resolveEvidenceCandidates } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const RUNTIME_ROOT = process.env.RUNTIME_ROOT
@@ -293,15 +294,18 @@ function readJsonStrict(relPath, label) {
 }
 
 function loadEvidenceMaybe(relPath) {
-  const absPath = resolveWorkspacePath(relPath);
-  if (!fs.existsSync(absPath)) {
-    return null;
+  const candidates = resolveEvidenceCandidates(ROOT_DIR, relPath, null, process.env);
+  for (const absPath of candidates) {
+    if (!fs.existsSync(absPath)) {
+      continue;
+    }
+    try {
+      return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+    } catch (error) {
+      throw new Error(`smoke_evidence_invalid:${path.relative(ROOT_DIR, absPath)}:${error.message || error}`);
+    }
   }
-  try {
-    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
-  } catch (error) {
-    throw new Error(`smoke_evidence_invalid:${relPath}:${error.message || error}`);
-  }
+  return null;
 }
 
 function buildSmokeEvidenceSummary() {
@@ -417,6 +421,7 @@ async function main() {
       { label: 'frontend unit', command: 'npm run frontend:test:unit' },
       { label: 'frontend build', command: 'npm run frontend:build' },
       { label: 'frontend smoke', command: 'npm run frontend:smoke' },
+      { label: 'email smoke', command: 'npm run test:email:smoke' },
       { label: 'qa mesh', command: 'PIPELINE_BYPASS=1 npm run qa:mesh' },
     ];
 

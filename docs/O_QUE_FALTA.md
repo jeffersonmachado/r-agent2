@@ -1,5 +1,7 @@
 # O que falta (fonte única) — backlog operacional e critérios de “v1 vendável”
 
+> Status canonico, gaps atuais, cobertura real e readiness final agora vivem em `docs/governance/`. Este arquivo permanece como backlog historico-operacional e deve ser interpretado junto do consolidado governado.
+
 - **Última atualização**: Mar/2026 (11/03)
 
 Este documento é a **fonte de verdade única** do “o que falta” a partir do estado atual do repositório (Mar/2026).  
@@ -122,7 +124,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 - **Playbook operacional**: `docs/RPA_FLOW_PIPELINE_PLAYBOOK.md`.
 
 ### SaaS e governança (base enterprise já entregue)
-- **Multi-tenant + RBAC + planos/limites + auditoria + super-admin + onboarding + rate-limit por tenant**: ver `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+- **Multi-tenant + RBAC + planos/limites + auditoria + super-admin + onboarding + rate-limit por tenant**: ver `history/IMPLEMENTACAO_SAAS_COMPLETA.md`.
 
 ### Hardening de IA (contratos + safe-mode)
 - **AI Output Envelope (obrigatório)**:
@@ -133,7 +135,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 ### Integrações de plataforma (base)
 - **Webhooks customizados**: `api/services/webhookService.js`
 - **WebSockets (real-time por tenant)**: `api/services/websocketService.js`
-- **Validação de inputs**: `api/utils/inputValidator.js` (resumo em `IMPLEMENTACOES_MELHORIAS.md`)
+- **Validação de inputs**: `api/utils/inputValidator.js` (resumo em `history/IMPLEMENTACOES_MELHORIAS.md`)
  
 ### Analytics e marketplace (primeiro corte)
 - **Analytics/ROI v0**: `api/services/roiService.js` + `GET /analytics/roi` + UI em `frontend/src/pages/AnalyticsPage.jsx`.

@@ -1,0 +1,144 @@
+{
+  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "vertical": "beauty",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "beauty",
+      "journey": "beauty_booking",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-b2",
+          "scenario": "Beauty reagendamento",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-flow-appointment",
+          "scenario": "Beauty agendamento simples",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-flow-campaign",
+          "scenario": "Beauty criação de campanha",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-flow-payment",
+          "scenario": "Beauty pagamento isolado",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-01",
+          "scenario": "Beauty Campaigns screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-02",
+          "scenario": "Beauty Leads screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-03",
+          "scenario": "Beauty Customers screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-04",
+          "scenario": "Beauty Schedule screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-05",
+          "scenario": "Beauty Services screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-scr-06",
+          "scenario": "Beauty Payments screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "beauty",
+      "journey": "beauty_new_customer",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-b1",
+          "scenario": "Beauty campanha de unhas até pagamento",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-beauty-flow-lead",
+          "scenario": "Beauty lead para cliente",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

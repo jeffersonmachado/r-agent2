@@ -1,0 +1,1861 @@
+
+> chatbot-flow-editor@0.1.0 test:unit
+> VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs
+
+
+ RUN  v2.1.9 /opt/results/ria/r-agent2/frontend
+
+stdout | src/process-adapters/__tests__/featureFlagsEdgeCases.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+stdout | src/pages/GenerateSystemPage.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > nao quebra com flags invalidas em setTenantFlags/setUserFlags
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > nao quebra com flags invalidas em setTenantFlags/setUserFlags
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import ignora estruturas invalidas sem quebrar estado
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import ignora estruturas invalidas sem quebrar estado
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual retorna fase neutra quando configuracao nao possui fases
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual retorna fase neutra quando configuracao nao possui fases
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist/blacklist/byGroup toleram entradas invalidas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist/blacklist/byGroup toleram entradas invalidas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > singleton pode ser reinicializado de forma deterministica
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > singleton pode ser reinicializado de forma deterministica
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > ignora scope ids perigosos e nao aplica overrides com __proto__
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > ignora scope ids perigosos e nao aplica overrides com __proto__
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import sanitiza ids e chaves perigosas em overrides
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import sanitiza ids e chaves perigosas em overrides
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > isEnabled normaliza tenantId/userId com espacos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > isEnabled normaliza tenantId/userId com espacos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > rollout strategies normalizam ids e grupos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > rollout strategies normalizam ids e grupos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual sanitiza percentuais e aceita duracao com espacos/maiusculas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual sanitiza percentuais e aceita duracao com espacos/maiusculas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza nomes de flags e bloqueia chaves perigosas com espacos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza nomes de flags e bloqueia chaves perigosas com espacos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza valores textuais e numericos de flags para booleanos esperados
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza valores textuais e numericos de flags para booleanos esperados
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual aceita startDate em string/timestamp e duration numerica em ms
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual aceita startDate em string/timestamp e duration numerica em ms
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > byGroup normaliza enabled textual e numerico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > byGroup normaliza enabled textual e numerico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza strings numericas de flags e byGroup
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > normaliza strings numericas de flags e byGroup
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual aceita duration numerica em string e com espaco antes da unidade
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve renderizar seção de upload de arquivos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual aceita duration numerica em string e com espaco antes da unidade
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual nao trava em fase intermediaria sem duracao
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual nao trava em fase intermediaria sem duracao
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > interpreta placeholders textuais nullish como false
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve renderizar seção de upload de arquivos
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve ter combobox de categoria
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > interpreta placeholders textuais nullish como false
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > trata strings nao reconhecidas como false para evitar habilitacao acidental
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > trata strings nao reconhecidas como false para evitar habilitacao acidental
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > so aceita objetos de flag com campo enabled explicito
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve ter combobox de categoria
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar arquivo à fila de upload (sem processar automaticamente)
+[2026-05-12T02:12:16.322Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.txt"
+  ],
+  "fileSizes": [
+    18
+  ]
+}
+[2026-05-12T02:12:16.323Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-aecde482-ed44-4c3e-81c6-112f766e25bc"
+  ]
+}
+[2026-05-12T02:12:16.324Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar arquivo à fila de upload (sem processar automaticamente)
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > so aceita objetos de flag com campo enabled explicito
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > protege contra recursao infinita em enabled ciclico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > protege contra recursao infinita em enabled ciclico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > desabilita tipos nao suportados e getters de enabled com erro
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar arquivo à fila de upload (sem processar automaticamente)
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar imagem à fila de upload (sem OCR automático)
+[2026-05-12T02:12:16.550Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.png"
+  ],
+  "fileSizes": [
+    10
+  ]
+}
+[2026-05-12T02:12:16.550Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-1d42452a-b646-42ae-8eb1-178dd37ebf79"
+  ]
+}
+[2026-05-12T02:12:16.550Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar imagem à fila de upload (sem OCR automático)
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > desabilita tipos nao suportados e getters de enabled com erro
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > byGroup nao quebra quando o proprio objeto de grupo tem getter enabled com erro
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar imagem à fila de upload (sem OCR automático)
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar PDF à fila de upload (sem extração automática)
+[2026-05-12T02:12:16.711Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.pdf"
+  ],
+  "fileSizes": [
+    8
+  ]
+}
+[2026-05-12T02:12:16.711Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-deedec01-74ac-423f-86aa-f990b66b24de"
+  ]
+}
+[2026-05-12T02:12:16.711Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar PDF à fila de upload (sem extração automática)
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > byGroup nao quebra quando o proprio objeto de grupo tem getter enabled com erro
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > ignora propriedades com getter que lanca durante sanitizacao de mapas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > ignora propriedades com getter que lanca durante sanitizacao de mapas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import tolera getters de topo com erro e ainda aplica partes validas
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar PDF à fila de upload (sem extração automática)
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve inferir categoria automaticamente ao selecionar arquivo
+[2026-05-12T02:12:16.864Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "promocao.txt"
+  ],
+  "fileSizes": [
+    9
+  ]
+}
+[2026-05-12T02:12:16.864Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-baeea64b-0781-49dc-ad57-5b27b4cb1616"
+  ]
+}
+[2026-05-12T02:12:16.865Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve inferir categoria automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import tolera getters de topo com erro e ainda aplica partes validas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual e isEnabled toleram getters de contexto/opcoes com erro
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve inferir categoria automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar múltiplos arquivos à fila (sem processar automaticamente)
+[2026-05-12T02:12:17.024Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 2,
+  "fileNames": [
+    "test1.txt",
+    "test2.txt"
+  ],
+  "fileSizes": [
+    11,
+    11
+  ]
+}
+[2026-05-12T02:12:17.024Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 2,
+  "totalFilesCount": 2,
+  "fileIds": [
+    "file-311892c4-df1b-4e8e-af07-df5a276664ef",
+    "file-defcf000-0ab5-45d8-8ddb-454a8753ff15"
+  ]
+}
+[2026-05-12T02:12:17.024Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual e isEnabled toleram getters de contexto/opcoes com erro
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera coercoes hostis em percentage/duration e Date#getTime invalido
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar múltiplos arquivos à fila (sem processar automaticamente)
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera coercoes hostis em percentage/duration e Date#getTime invalido
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist toleram listas com getters que lancam erro
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > deve adicionar múltiplos arquivos à fila (sem processar automaticamente)
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve tentar upload automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.184Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.txt"
+  ],
+  "fileSizes": [
+    9
+  ]
+}
+[2026-05-12T02:12:17.184Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-2ac6b76a-6e54-439d-b779-3cfc314f06fd"
+  ]
+}
+[2026-05-12T02:12:17.184Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve tentar upload automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist toleram listas com getters que lancam erro
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist aplicam limite defensivo de tamanho da lista
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Upload de Arquivos > não deve tentar upload automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve inferir categoria automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.353Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "promocao.txt"
+  ],
+  "fileSizes": [
+    9
+  ]
+}
+[2026-05-12T02:12:17.354Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-7a12e196-25f2-415a-a23d-23753f2ba927"
+  ]
+}
+[2026-05-12T02:12:17.354Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve inferir categoria automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist aplicam limite defensivo de tamanho da lista
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > sanitizacao de mapas aplica limite defensivo de quantidade de chaves
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve inferir categoria automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve aplicar fallback automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.526Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "promocao.txt"
+  ],
+  "fileSizes": [
+    9
+  ]
+}
+[2026-05-12T02:12:17.526Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-461fde59-546a-4a0e-aab7-e9a637110bef"
+  ]
+}
+[2026-05-12T02:12:17.527Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > sanitizacao de mapas aplica limite defensivo de quantidade de chaves
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera proxies hostis que lancam em hasOwnProperty/getOwnPropertyDescriptor
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve aplicar fallback automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera proxies hostis que lancam em hasOwnProperty/getOwnPropertyDescriptor
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > getFeatureStatus e export toleram mapas hostis e preservam dados validos
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Inferência de Categoria > não deve aplicar fallback automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve extrair conteúdo automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.727Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.txt"
+  ],
+  "fileSizes": [
+    5
+  ]
+}
+[2026-05-12T02:12:17.728Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-0b11aae9-d7d3-4f3e-b39f-b0afd0a8c8f7"
+  ]
+}
+[2026-05-12T02:12:17.728Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > getFeatureStatus e export toleram mapas hostis e preservam dados validos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > isEnabled tolera mapas de override hostis e aplica fallback seguro
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve extrair conteúdo automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.793Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.pdf"
+  ],
+  "fileSizes": [
+    3
+  ]
+}
+[2026-05-12T02:12:17.793Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-7fe17d71-18fe-4387-b12a-37e65bfe7968"
+  ]
+}
+[2026-05-12T02:12:17.793Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve extrair conteúdo automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.817Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.png"
+  ],
+  "fileSizes": [
+    5
+  ]
+}
+[2026-05-12T02:12:17.817Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-e094228a-843f-4d4c-8c65-5e0283d8912d"
+  ]
+}
+[2026-05-12T02:12:17.817Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve extrair conteúdo automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > isEnabled tolera mapas de override hostis e aplica fallback seguro
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera proxy revogado em caminhos que usam isRecord
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera proxy revogado em caminhos que usam isRecord
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > setTenantFlags e setUserFlags toleram mapas internos hostis em escrita
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve extrair conteúdo automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve indexar no RAG automaticamente ao selecionar arquivo
+[2026-05-12T02:12:17.962Z] [INFO] [FileSelect] Arquivos selecionados {
+  "filesCount": 1,
+  "fileNames": [
+    "test.txt"
+  ],
+  "fileSizes": [
+    19
+  ]
+}
+[2026-05-12T02:12:17.962Z] [INFO] [FileSelect] Arquivos adicionados à lista de upload {
+  "newFilesCount": 1,
+  "totalFilesCount": 1,
+  "fileIds": [
+    "file-84d949a5-f1eb-419a-8dbb-8791f0abdf39"
+  ]
+}
+[2026-05-12T02:12:17.962Z] [DEBUG] [FileSelect] Arquivos adicionados, aguardando execução para processar
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve indexar no RAG automaticamente ao selecionar arquivo
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > setTenantFlags e setUserFlags toleram mapas internos hostis em escrita
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import/export ignoram escopos sem flags validas e preservam escopos validos
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Extração de Conteúdo > não deve indexar no RAG automaticamente ao selecionar arquivo
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > não deve continuar o pipeline se successCount === 0
+[2026-05-12T02:12:18.188Z] [DEBUG] [Pipeline] Atualizacao recebida de file-processing {
+  "statusUpdate": {
+    "filesInferred": {
+      "status": "completed",
+      "progress": 100,
+      "message": "Nenhum arquivo pendente para inferir/indexar",
+      "timestamp": "2026-05-12T02:12:18.188Z"
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.188Z"
+}
+[2026-05-12T02:12:18.190Z] [DEBUG] [Pipeline] Atualizacao recebida de webScrapingStarted {
+  "statusUpdate": {
+    "webScraping": {
+      "status": "in_progress",
+      "progress": 0,
+      "message": "Processando web scraping (dry-run) de 1 URL(s)...",
+      "urlsTotal": 1
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.190Z"
+}
+[2026-05-12T02:12:18.191Z] [DEBUG] [Pipeline] Atualizacao recebida de webScrapingCompleted {
+  "statusUpdate": {
+    "webScraping": {
+      "status": "error",
+      "progress": 0,
+      "message": "Nenhuma URL foi raspada com sucesso. Verifique os logs do scraping.",
+      "timestamp": "2026-05-12T02:12:18.191Z",
+      "urlsTotal": 1,
+      "successCount": 0,
+      "failedCount": 1,
+      "durationMs": 0
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.191Z"
+}
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import/export ignoram escopos sem flags validas e preservam escopos validos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > merge de flags por escopo aplica limite defensivo e ainda atualiza chave existente
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > não deve continuar o pipeline se successCount === 0
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > não deve continuar o pipeline se successCount === 0
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > merge de flags por escopo aplica limite defensivo e ainda atualiza chave existente
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > getFeatureStatus aplica limite defensivo de cardinalidade de chaves
+stdout | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > quando receber NO_INDEXED_CONTEXT no suggest-description deve abortar e NÃO chamar generate-by-ai
+[2026-05-12T02:12:18.435Z] [DEBUG] [Pipeline] Atualizacao recebida de file-processing {
+  "statusUpdate": {
+    "filesInferred": {
+      "status": "completed",
+      "progress": 100,
+      "message": "Nenhum arquivo pendente para inferir/indexar",
+      "timestamp": "2026-05-12T02:12:18.435Z"
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.435Z"
+}
+[2026-05-12T02:12:18.435Z] [DEBUG] [Pipeline] Atualizacao recebida de webScrapingStarted {
+  "statusUpdate": {
+    "webScraping": {
+      "status": "in_progress",
+      "progress": 0,
+      "message": "Processando web scraping (dry-run) de 1 URL(s)...",
+      "urlsTotal": 1
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.435Z"
+}
+[2026-05-12T02:12:18.436Z] [DEBUG] [Pipeline] Atualizacao recebida de webScrapingCompleted {
+  "statusUpdate": {
+    "webScraping": {
+      "status": "completed",
+      "progress": 100,
+      "message": "Web scraping (dry-run) concluído: 1/1 URL(s) processada(s)",
+      "timestamp": "2026-05-12T02:12:18.436Z",
+      "urlsTotal": 1,
+      "successCount": 1,
+      "failedCount": 0,
+      "durationMs": 0
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.436Z"
+}
+[2026-05-12T02:12:18.436Z] [DEBUG] [Pipeline] Atualizacao recebida de description-suggestion {
+  "statusUpdate": {
+    "descriptionSuggested": {
+      "status": "in_progress",
+      "progress": 0,
+      "message": "Sugerindo descrição do tenant com IA usando conteúdo indexado..."
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.436Z"
+}
+[2026-05-12T02:12:18.437Z] [INFO] [TenantMode] Contexto efêmero persistido (dry-run) {
+  "tenantId": "test-tenant",
+  "executionId": "exec-1778551938430-2df2b1e74f6ab",
+  "stored": null,
+  "used": null,
+  "key": null,
+  "stats": null
+}
+[2026-05-12T02:12:18.456Z] [DEBUG] [Pipeline] Atualizacao recebida de description-suggestion-error {
+  "statusUpdate": {
+    "descriptionSuggested": {
+      "status": "error",
+      "progress": 0,
+      "message": "Nenhum contexto indexado disponível",
+      "timestamp": "2026-05-12T02:12:18.456Z"
+    }
+  },
+  "timestamp": "2026-05-12T02:12:18.456Z"
+}
+
+stderr | src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > quando receber NO_INDEXED_CONTEXT no suggest-description deve abortar e NÃO chamar generate-by-ai
+[2026-05-12T02:12:18.436Z] [WARN] [TenantMode] Nenhum chunk efêmero para persistir (dry-run). Isso pode causar fallback no suggest-description. {
+  "tenantId": "test-tenant",
+  "executionId": "exec-1778551938430-2df2b1e74f6ab"
+}
+[2026-05-12T02:12:18.455Z] [ERROR] [TenantMode] Erro ao sugerir descrição {
+  "message": "Nenhum contexto indexado disponível",
+  "stack": "Error: Nenhum contexto indexado disponível\n    at /opt/results/ria/r-agent2/frontend/src/pages/GenerateSystemPage.test.jsx:612:23\n    at mockCall (file:///opt/results/ria/r-agent2/frontend/node_modules/@vitest/spy/dist/index.js:61:17)\n    at fetchJson (file:///opt/results/ria/r-agent2/frontend/node_modules/tinyspy/dist/index.js:45:80)\n    at Module.requestDescriptionSuggestion (/opt/results/ria/r-agent2/frontend/src/pages/generate-system/generateSystemExecutionCoreUtils.js:237:10)\n    at prepareTenantDryRunDescription (/opt/results/ria/r-agent2/frontend/src/pages/generate-system/generateSystemTenantExecutionUtils.js:224:38)\n    at Module.prepareTenantDescriptionAndEvidence (/opt/results/ria/r-agent2/frontend/src/pages/generate-system/generateSystemTenantModeSteps.js:80:39)\n    at Module.executeTenantModeOrchestration (/opt/results/ria/r-agent2/frontend/src/pages/generate-system/generateSystemTenantModeOrchestrator.js:165:29)\n    at handleExecute (/opt/results/ria/r-agent2/frontend/src/pages/GenerateSystemPage.jsx:607:7)",
+  "status": 422
+}
+
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > quando receber NO_INDEXED_CONTEXT no suggest-description deve abortar e NÃO chamar generate-by-ai
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > getFeatureStatus aplica limite defensivo de cardinalidade de chaves
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > setTenantFlags e setUserFlags ignoram payload vazio sem criar escopo vazio
+ ✓ src/pages/GenerateSystemPage.test.jsx > GenerateSystemPage > Gate de Web Scraping (tenant) > quando receber NO_INDEXED_CONTEXT no suggest-description deve abortar e NÃO chamar generate-by-ai
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > setTenantFlags e setUserFlags ignoram payload vazio sem criar escopo vazio
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera Date.now invalido/erro e permanece deterministico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera Date.now invalido/erro e permanece deterministico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > export tolera Date.toISOString com erro e usa fallback deterministico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > export tolera Date.toISOString com erro e usa fallback deterministico
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import nao apaga overrides existentes quando mapas de override sao hostis
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import nao apaga overrides existentes quando mapas de override sao hostis
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import nao sobrescreve config existente quando config importada fica vazia apos sanitizacao
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import nao sobrescreve config existente quando config importada fica vazia apos sanitizacao
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera startDate hostil e duracao nao parseavel sem quebrar fase
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual tolera startDate hostil e duracao nao parseavel sem quebrar fase
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera trim/toLowerCase hostis em normalizacao de strings
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > tolera trim/toLowerCase hostis em normalizacao de strings
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import e export toleram Object.keys com erro na checagem de flags vazias
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import e export toleram Object.keys com erro na checagem de flags vazias
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > whitelist e blacklist toleram erro no constructor do Set e degradam para lista vazia
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import aplica parte valida quando tenantOverrides e hostil mas userOverrides e valido
+stdout | src/bpmn/bpmnEdgeCases.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import aplica parte valida quando tenantOverrides e hostil mas userOverrides e valido
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import com payload misto ignora escopos invalidos e preserva flags validas
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > fluxo vazio > retorna XML valido com processo sem elementos
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > import com payload misto ignora escopos invalidos e preserva flags validas
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual com fases parcialmente invalidas usa a ultima fase normalizada valida
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > fluxo vazio > retorna XML valido com processo sem elementos
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > fluxo vazio > aceita flowDefinition null e retorna XML valido
+ ✓ src/process-adapters/__tests__/featureFlagsEdgeCases.test.js > featureFlags edge cases > gradual com fases parcialmente invalidas usa a ultima fase normalizada valida
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > fluxo vazio > aceita flowDefinition null e retorna XML valido
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no start sem config
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no start sem config
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no message com config vazio
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no message com config vazio
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no api sem config (modo simple: warning de extensao omitida)
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no api sem config (modo simple: warning de extensao omitida)
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no api com config (modo extensions: extensao incluida)
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > nos sem config / config parcial > exporta no api com config (modo extensions: extensao incluida)
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > caracteres especiais no nome/config > escapa < > & " nos atributos name do elemento
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > caracteres especiais no nome/config > escapa < > & " nos atributos name do elemento
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > caracteres especiais no nome/config > escapa conteudo de extensao com aspas
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > caracteres especiais no nome/config > escapa conteudo de extensao com aspas
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > no fallback (mapeamento ragent2: -> degradacao) > exporta fallback como scriptTask com warning de mapeamento nao padrao
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > no fallback (mapeamento ragent2: -> degradacao) > exporta fallback como scriptTask com warning de mapeamento nao padrao
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > loop / auto-referencia > deduplica sequenceFlows identicos sem lancar erro
+stdout | src/process-canonical/__tests__/roundTripConversion.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > loop / auto-referencia > deduplica sequenceFlows identicos sem lancar erro
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > subflow com calledElement > propaga calledElement a partir de config.flowId
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve converter fluxo simples sem perda de informação estrutural
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > subflow com calledElement > propaga calledElement a partir de config.flowId
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > subflow com calledElement > usa fallback de calledElement quando config.flowId ausente
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve converter fluxo simples sem perda de informação estrutural
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar IDs de nó e edge em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > subflow com calledElement > usa fallback de calledElement quando config.flowId ausente
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > conexao com alvo inexistente > emite warning bpmn_missing_target_node e nao quebra
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar IDs de nó e edge em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar tipos de nó em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > conexao com alvo inexistente > emite warning bpmn_missing_target_node e nao quebra
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > router com regras condicionais > exporta router com conditions nos sequenceFlows
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar tipos de nó em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar labels de nó em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > engineFlowToBpmnXml – edge cases > router com regras condicionais > exporta router com conditions nos sequenceFlows
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para XML totalmente malformado
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar labels de nó em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve manter conectividade de edges em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para XML totalmente malformado
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para XML sem elemento process
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve manter conectividade de edges em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve processar fluxos com gateways corretamente
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para XML sem elemento process
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para string vazia
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve processar fluxos com gateways corretamente
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar dados de configuração de nó em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > XML invalido > lanca erro para string vazia
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > processo vazio > retorna fluxo com zero nos e sem erros
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Rete ↔ Canônico ↔ Rete > deve preservar dados de configuração de nó em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve converter FlowDefinition para Canônico sem perda crítica
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve converter FlowDefinition para Canônico sem perda crítica
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve converter Canônico de volta para FlowDefinition
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > processo vazio > retorna fluxo com zero nos e sem erros
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > elemento nao suportado > registra no relatorio e nao inclui no fluxo
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve converter Canônico de volta para FlowDefinition
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve preservar estrutura básica em round-trip FlowDef
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > elemento nao suportado > registra no relatorio e nao inclui no fluxo
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > serviceTask sem extensao (ambiguidade) > importa como api por padrao e emite warning
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve preservar estrutura básica em round-trip FlowDef
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve preservar configuração de API em round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > serviceTask sem extensao (ambiguidade) > importa como api por padrao e emite warning
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > serviceTask sem extensao (ambiguidade) > importa bpmn:task generico como api degradado e preserva sequence flows
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve preservar configuração de API em round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve rastrear alertas de degradação
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > serviceTask sem extensao (ambiguidade) > importa bpmn:task generico como api degradado e preserva sequence flows
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > scriptTask sem extensao (ambiguidade) > importa como set_variable por padrao e emite warning
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > FlowDefinition ↔ Canônico ↔ FlowDefinition > deve rastrear alertas de degradação
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve ter fidelidade >= 95% em Rete round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > scriptTask sem extensao (ambiguidade) > importa como set_variable por padrao e emite warning
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > sequenceFlow com sourceRef/targetRef desconhecidos > ignora o flow e emite warning bpmn_sequence_flow_orphan
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve ter fidelidade >= 95% em Rete round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve documentar degradações em FlowDef round-trip
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > sequenceFlow com sourceRef/targetRef desconhecidos > ignora o flow e emite warning bpmn_sequence_flow_orphan
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway de degradacao (inclusiveGateway) > importa como router e preserva sequence flows sem orphan
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve documentar degradações em FlowDef round-trip
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve manter topologia de conectividade em Rete complex
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway de degradacao (inclusiveGateway) > importa como router e preserva sequence flows sem orphan
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway de degradacao (eventBasedGateway) > importa como router sem warning de gateway sem condicoes
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Validação de Fidelidade > deve manter topologia de conectividade em Rete complex
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com fluxo vazio
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway de degradacao (eventBasedGateway) > importa como router sem warning de gateway sem condicoes
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > sequenceFlow sem sourceRef ou targetRef > ignora e emite warning bpmn_sequence_flow_incomplete
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com fluxo vazio
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com nó sem edges
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > sequenceFlow sem sourceRef ou targetRef > ignora e emite warning bpmn_sequence_flow_incomplete
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > intermediateCatchEvent com timer > importa como delay com timeDuration
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com nó sem edges
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com edge sem data
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > intermediateCatchEvent com timer > importa como delay com timeDuration
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > callActivity (subflow) com calledElement > preserva flowId a partir de calledElement
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Casos Extremos > deve lidar com edge sem data
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Relatórios de Degradação > deve registrar transformações com perda de informação
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > callActivity (subflow) com calledElement > preserva flowId a partir de calledElement
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway condicional com sequenceFlows > cria rules e next adequados no router
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Relatórios de Degradação > deve registrar transformações com perda de informação
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Relatórios de Degradação > deve indicar quando round-trip tem fidelidade reduzida
+ ✓ src/bpmn/bpmnEdgeCases.test.js > bpmnXmlToEngineFlow – edge cases > gateway condicional com sequenceFlows > cria rules e next adequados no router
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Relatórios de Degradação > deve indicar quando round-trip tem fidelidade reduzida
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve não perder dados de identificação
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve não perder dados de identificação
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve manter ordem de execução em edges
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve manter ordem de execução em edges
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve gerar resultado previsível (idempotência)
+ ✓ src/process-canonical/__tests__/roundTripConversion.test.js > Round-Trip Conversion Tests > Integridade de Dados > deve gerar resultado previsível (idempotência)
+stdout | src/__tests__/SupportPage.waqr.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+stdout | src/FlowEditor.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/FlowEditor.test.jsx > FlowEditor > renderiza o editor corretamente
+ ✓ src/FlowEditor.test.jsx > FlowEditor > renderiza o editor corretamente
+ ✓ src/FlowEditor.test.jsx > FlowEditor > inicializa o editor Rete quando montado
+ ✓ src/FlowEditor.test.jsx > FlowEditor > inicializa o editor Rete quando montado
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > renders and subscribes to ticket.message.received
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > renders and subscribes to ticket.message.received
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onNodeSelected quando um nó é clicado via data-node-id
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > displays incoming WhatsApp QR message in timeline
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onNodeSelected quando um nó é clicado via data-node-id 427ms
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > displays incoming WhatsApp QR message in timeline
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > processa o comando /agendar sem quebrar o fluxo do ticket
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onNodeSelected quando um nó é clicado via evento customizado
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > processa o comando /agendar sem quebrar o fluxo do ticket
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onNodeSelected quando um nó é clicado via evento customizado 421ms
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém o fluxo estável ao tentar agendamento pelo ticket
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém o fluxo estável ao tentar agendamento pelo ticket
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > abre lista de respostas rápidas com comando /resposta-rapida
+ ✓ src/FlowEditor.test.jsx > FlowEditor > ignora cliques em sockets e conexões
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > abre lista de respostas rápidas com comando /resposta-rapida
+ ✓ src/FlowEditor.test.jsx > FlowEditor > ignora cliques em sockets e conexões 435ms
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash
+ ✓ src/FlowEditor.test.jsx > FlowEditor > deseleciona nó quando clica fora dele
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > abre lista de respostas rápidas ao clicar no comando /resposta-rapida no menu slash
+ ✓ src/FlowEditor.test.jsx > FlowEditor > deseleciona nó quando clica fora dele
+ ✓ src/FlowEditor.test.jsx > FlowEditor > carrega JSON inicial quando fornecido
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > navega no menu slash com seta para baixo e executa item selecionado no Enter
+ ✓ src/FlowEditor.test.jsx > FlowEditor > carrega JSON inicial quando fornecido
+ ✓ src/FlowEditor.test.jsx > FlowEditor > atualiza selectedNodeId quando prop muda
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > navega no menu slash com seta para baixo e executa item selecionado no Enter
+ ✓ src/FlowEditor.test.jsx > FlowEditor > atualiza selectedNodeId quando prop muda
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém estabilidade quando há dados de agendamento disponíveis
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém estabilidade quando há dados de agendamento disponíveis
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém o composer estável ao receber paste de imagem
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > mantém o composer estável ao receber paste de imagem
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > normaliza ticket legado (snake_case) e exibe nome + telefone formatado no card
+ ✓ src/FlowEditor.test.jsx > FlowEditor > expõe editorRef quando fornecido
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > normaliza ticket legado (snake_case) e exibe nome + telefone formatado no card
+ ✓ src/FlowEditor.test.jsx > FlowEditor > expõe editorRef quando fornecido 639ms
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia texto normalmente mesmo após paste de imagem sem suporte a anexo
+stderr | src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia texto normalmente mesmo após paste de imagem sem suporte a anexo
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+
+stderr | src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia texto normalmente mesmo após paste de imagem sem suporte a anexo
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia texto normalmente mesmo após paste de imagem sem suporte a anexo
+stderr | src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia mensagem normalmente quando nao ha acao explicita de reply
+Warning: An update to SupportPage inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SupportPage (/opt/results/ria/r-agent2/frontend/src/pages/SupportPage.impl.jsx:100:46)
+    at SupportPage
+
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia mensagem normalmente quando nao ha acao explicita de reply
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > envia mensagem normalmente quando nao ha acao explicita de reply
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > nao renderiza anexo fantasma quando mensagem for apenas texto
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onUpdateNodeConfig quando config de nó é atualizado
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > nao renderiza anexo fantasma quando mensagem for apenas texto
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > humaniza eventos tecnicos de handover e auditoria no painel direito
+ ✓ src/FlowEditor.test.jsx > FlowEditor > chama onUpdateNodeConfig quando config de nó é atualizado 617ms
+ ✓ src/FlowEditor.test.jsx > FlowEditor > aplica tema corretamente
+ ✓ src/__tests__/SupportPage.waqr.test.jsx > SupportPage WhatsApp QR message flow > humaniza eventos tecnicos de handover e auditoria no painel direito
+ ✓ src/FlowEditor.test.jsx > FlowEditor > aplica tema corretamente
+stdout | src/context/__tests__/WebSocketContext.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+stdout | src/bpmn/bpmnUnitContracts.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > retorna mapeamento para tipo conhecido
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > fornece contexto WebSocket para componentes filhos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > retorna mapeamento para tipo conhecido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > retorna null para tipo desconhecido
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > fornece contexto WebSocket para componentes filhos
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > conecta ao WebSocket quando Provider é montado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > retorna null para tipo desconhecido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > tolera null/undefined sem lancar excecao
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > conecta ao WebSocket quando Provider é montado
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > autentica com token quando conecta
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getNodeBpmnMapping > tolera null/undefined sem lancar excecao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > reconhece todos os tipos do mapa como mapeados
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > autentica com token quando conecta
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > atualiza authenticated quando recebe sucesso de autenticação
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > reconhece todos os tipos do mapa como mapeados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > retorna false para tipo nao mapeado
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > atualiza authenticated quando recebe sucesso de autenticação
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > retorna false para tipo nao mapeado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > retorna true para tipos com status suportado ou degradado
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > registra handlers de eventos de múltiplos componentes
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > isNodeTypeMapped / isNodeTypeSupported > retorna true para tipos com status suportado ou degradado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para api
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > registra handlers de eventos de múltiplos componentes
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > distribui eventos para todos os handlers registrados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para api
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para ai_task
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > distribui eventos para todos os handlers registrados
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > permite enviar mensagem via send
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para ai_task
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para ai
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > permite enviar mensagem via send
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > permite reconectar via reconnect
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para ai
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para handoff
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > permite reconectar via reconnect
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > lança erro se usado fora do Provider
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para handoff
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para schedule_router
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > lança erro se usado fora do Provider
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > requer extensao para schedule_router
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para start
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > não registra handler quando enabled é false
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para start
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para end
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > não registra handler quando enabled é false
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > limpa recursos ao desmontar Provider
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para end
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para router
+ ✓ src/context/__tests__/WebSocketContext.test.jsx > WebSocketContext > limpa recursos ao desmontar Provider
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para router
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para set_variable
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para set_variable
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para subflow
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > nao requer extensao para subflow
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > retorna false para tipo desconhecido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > requiresExtension > retorna false para tipo desconhecido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getAllMappedNodeTypes > retorna lista nao vazia de tipos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getAllMappedNodeTypes > retorna lista nao vazia de tipos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getAllMappedNodeTypes > inclui tipos essenciais do MVP
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getAllMappedNodeTypes > inclui tipos essenciais do MVP
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > retorna somente mapeamentos do status solicitado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > retorna somente mapeamentos do status solicitado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > inclui nodeType em cada entrada retornada
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > inclui nodeType em cada entrada retornada
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > retorna vazio para status nao existente
+stdout | src/__tests__/fallback.spec.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnNodeMapping > getMappingsByStatus > retorna vazio para status nao existente
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > exporta namespace correto
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar RETRY na primeira tentativa
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > exporta namespace correto
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para ai_task com campos de config
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar RETRY na primeira tentativa
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar OPTIONS na segunda tentativa
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para ai_task com campos de config
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para api com campos de config
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar OPTIONS na segunda tentativa
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar HUMAN na terceira tentativa ou mais
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para api com campos de config
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para handoff
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve retornar HUMAN na terceira tentativa ou mais
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve escalar para HUMAN quando maxAttempts é atingido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para handoff
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para schedule_router
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve escalar para HUMAN quando maxAttempts é atingido
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve detectar frustração e escalar para HUMAN
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para schedule_router
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para fallback
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve detectar frustração e escalar para HUMAN
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve detectar loop e escalar para HUMAN imediatamente
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna payload para fallback
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna null para tipo sem extensao
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve detectar loop e escalar para HUMAN imediatamente
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve processar diferentes tipos de fallback
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna null para tipo sem extensao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna null para tipo desconhecido
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > processFallback > deve processar diferentes tipos de fallback
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve criar contexto inicial com attempt 1
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > buildNodeExtensionPayload > retorna null para tipo desconhecido
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > shouldAttachExtension > retorna true para tipos com extensao
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve criar contexto inicial com attempt 1
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve incrementar attempt baseado em fallbacks anteriores
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > shouldAttachExtension > retorna true para tipos com extensao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > shouldAttachExtension > retorna false para tipos sem extensao
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve incrementar attempt baseado em fallbacks anteriores
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve manter apenas últimos 5 fallbacks no histórico
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnExtensions > shouldAttachExtension > retorna false para tipos sem extensao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > getSupportedBpmnElements > retorna lista nao vazia de elementos
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > FallbackController > createFallbackContext > deve manter apenas últimos 5 fallbacks no histórico
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve rejeitar fluxo sem FallbackNode
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > getSupportedBpmnElements > retorna lista nao vazia de elementos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > getSupportedBpmnElements > inclui elementos obrigatorios do MVP
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve rejeitar fluxo sem FallbackNode
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve aceitar fluxo com FallbackNode
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > getSupportedBpmnElements > inclui elementos obrigatorios do MVP
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > retorna true para elementos suportados
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve aceitar fluxo com FallbackNode
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar nós órfãos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > retorna true para elementos suportados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > retorna false para elementos fora do subconjunto
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar nós órfãos
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar caminhos sem término adequado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > retorna false para elementos fora do subconjunto
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > tolera null/undefined sem lancar excecao
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar caminhos sem término adequado
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar loops estruturais
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isSupportedBpmnElement > tolera null/undefined sem lancar excecao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isDegradationTarget > retorna true para alvos conhecidos de degradacao
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve detectar loops estruturais
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve validar estrutura básica do fluxo
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isDegradationTarget > retorna true para alvos conhecidos de degradacao
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isDegradationTarget > retorna false para elementos suportados
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve validar estrutura básica do fluxo
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve aceitar fluxo válido com FallbackNode e término adequado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnSupportedSubset > isDegradationTarget > retorna false para elementos suportados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > escapa caracteres especiais XML
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > flowValidator > validateFlow > deve aceitar fluxo válido com FallbackNode e término adequado
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > Integração > deve processar fallback e validar fluxo corretamente
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > escapa caracteres especiais XML
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > escapa aspas simples
+ ✓ src/__tests__/fallback.spec.js > Sistema de Fallback > Integração > deve processar fallback e validar fluxo corretamente
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > escapa aspas simples
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > retorna string vazia para null/undefined
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > escapeXml > retorna string vazia para null/undefined
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > mantém ids já válidos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > mantém ids já válidos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > prefixa com _ quando começa com dígito
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > prefixa com _ quando começa com dígito
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > substitui caracteres inválidos por underscore
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > substitui caracteres inválidos por underscore
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > retorna fallback para entrada vazia
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > sanitizeBpmnId > retorna fallback para entrada vazia
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > gera string de atributos escapados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > gera string de atributos escapados
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > omite atributos null/undefined
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > omite atributos null/undefined
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > retorna string vazia para objeto vazio
+stdout | src/process-adapters/__tests__/bpmnFlagsIntegration.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildXmlAttributes > retorna string vazia para objeto vazio
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > openTag sem atributos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > openTag sem atributos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > openTag com atributos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > openTag com atributos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > closeTag retorna tag de fechamento
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > closeTag retorna tag de fechamento
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > selfClosingTag gera tag auto-fechante
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > selfClosingTag gera tag auto-fechante
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > textTag gera tag com texto escapado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > openTag / closeTag / selfClosingTag / textTag > textTag gera tag com texto escapado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > indentLines > adiciona prefix a cada linha
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > indentLines > adiciona prefix a cada linha
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > indentLines > usa level 2 com spacer customizado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > indentLines > usa level 2 com spacer customizado
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildExtensionElementsLines > retorna array vazio para payload nulo
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve converter BPMN XML válido para canônico
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildExtensionElementsLines > retorna array vazio para payload nulo
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildExtensionElementsLines > gera linhas de extensionElements com tipo e dados
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve converter BPMN XML válido para canônico
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve mapear tipos de nó BPMN para tipos canônicos
+ ✓ src/bpmn/bpmnUnitContracts.test.js > bpmnXmlBuilder > buildExtensionElementsLines > gera linhas de extensionElements com tipo e dados
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve mapear tipos de nó BPMN para tipos canônicos
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve preservar nomes de elementos
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve preservar nomes de elementos
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve converter sequenceFlows para edges
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve converter sequenceFlows para edges
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve lançar erro para XML inválido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve lançar erro para XML inválido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve lançar erro se nenhum process element encontrado
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve lançar erro se nenhum process element encontrado
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve suportar gateways de decisão
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > bpmnToCanonical > deve suportar gateways de decisão
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve converter canônico para XML BPMN válido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve converter canônico para XML BPMN válido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve incluir BPMN DI para visualização
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve incluir BPMN DI para visualização
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve lançar erro para canônico inválido
+stdout | src/__tests__/SupportPage.integration.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > canonicalToBpmn > deve lançar erro para canônico inválido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > Element Support > deve indicar suporte para elementos padrão
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > Element Support > deve indicar suporte para elementos padrão
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > Element Support > deve indicar falta de suporte para elementos avançados
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should render without errors on mount
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > Element Support > deve indicar falta de suporte para elementos avançados
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve validar XML válido
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should render without errors on mount
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load queues and tickets on mount
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve validar XML válido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve detectar XML inválido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve detectar XML inválido
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve avisar sobre múltiplos processos
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load queues and tickets on mount
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > BPMN Adapter > BPMN XML Validation > deve avisar sobre múltiplos processos
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Base Configuration > deve retornar flag base quando nenhum override
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Base Configuration > deve retornar flag base quando nenhum override
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Base Configuration > deve retornar false para flag desconhecida
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should call getTicketMessages when ticket is selected
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Base Configuration > deve retornar false para flag desconhecida
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Tenant Overrides > deve permitir override por tenant
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should call getTicketMessages when ticket is selected 346ms
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all ticket action APIs: assign, takeover, return, pause, resume
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Tenant Overrides > deve permitir override por tenant
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Tenant Overrides > deve atualizar flags de tenant existente
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all ticket action APIs: assign, takeover, return, pause, resume
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load quick replies hook when selectedTicket changes
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Tenant Overrides > deve atualizar flags de tenant existente
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > User Overrides > deve permitir override por usuário
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load quick replies hook when selectedTicket changes
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load close reasons when close ticket hook is used
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > User Overrides > deve permitir override por usuário
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > User Overrides > deve ter prioridade mais alta que tenant override
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should load close reasons when close ticket hook is used
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > User Overrides > deve ter prioridade mais alta que tenant override
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Status de Recursos > deve retornar status de todas as features
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle sendTicketMessage API call
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Status de Recursos > deve retornar status de todas as features
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Status de Recursos > deve incluir overrides no status
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle sendTicketMessage API call
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle ticket close flow with closeTicket API
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Status de Recursos > deve incluir overrides no status
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Export/Import > deve exportar configuração
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle ticket close flow with closeTicket API
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all ticket action APIs: assign, takeover, return, pause, resume
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Export/Import > deve exportar configuração
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Export/Import > deve importar configuração
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all ticket action APIs: assign, takeover, return, pause, resume
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle new conversation creation
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Feature Flag Manager > Export/Import > deve importar configuração
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Gradual Rollout > deve retornar percentual correto da fase
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Gradual Rollout > deve retornar percentual correto da fase
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Whitelist Strategy > deve permitir apenas tenants na whitelist
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle new conversation creation
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle delivery failures modal
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Whitelist Strategy > deve permitir apenas tenants na whitelist
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Blacklist Strategy > deve bloquear apenas tenants na blacklist
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle delivery failures modal
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Blacklist Strategy > deve bloquear apenas tenants na blacklist
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Group Strategy > deve aplicar versão por grupo
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Rollout Strategies > Group Strategy > deve aplicar versão por grupo
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Global Feature Flag Manager > deve ter singleton global
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Global Feature Flag Manager > deve ter singleton global
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Global Feature Flag Manager > deve permitir inicialização customizada
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all hooks work together without errors
+ ✓ src/process-adapters/__tests__/bpmnFlagsIntegration.test.js > Global Feature Flag Manager > deve permitir inicialização customizada
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle all hooks work together without errors 420ms
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should render all modal components
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should render all modal components
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle extraction of entities from ticket
+ ✓ src/__tests__/SupportPage.integration.test.jsx > SupportPage Integration > should handle extraction of entities from ticket
+stdout | src/bpmn/bpmnXmlToViewModel.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > preserves collaboration, lanes, message flows, and DI layout
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > preserves collaboration, lanes, message flows, and DI layout
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > does not recalculate participant and lane bounds when DI metadata exists but their shapes are absent
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > does not recalculate participant and lane bounds when DI metadata exists but their shapes are absent
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > does not synthesize waypoints when DI exists but edge waypoints are absent
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > does not synthesize waypoints when DI exists but edge waypoints are absent
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > creates fallback waypoints only when no DI diagram data is present
+stdout | src/__tests__/ScheduleModal.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > creates fallback waypoints only when no DI diagram data is present
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > parses dataStoreReference with dedicated type and preserves DI bounds + label bounds
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > parses dataStoreReference with dedicated type and preserves DI bounds + label bounds
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > parses the real Pizza-Store fixture with all primary visual BPMN elements present
+ ✓ src/bpmn/bpmnXmlToViewModel.test.js > bpmnXmlToViewModel > parses the real Pizza-Store fixture with all primary visual BPMN elements present
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > mostra campos condicionais de team/owner ao ativar agenda da equipe
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > mostra campos condicionais de team/owner ao ativar agenda da equipe
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > valida context id obrigatório antes de enviar
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > valida context id obrigatório antes de enviar
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > consulta disponibilidade com payload do modo team_based
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > consulta disponibilidade com payload do modo team_based
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > envia payload compatível com metadata de preset
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > envia payload compatível com metadata de preset
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > valida teamId ou ownerId no preset humano_agendado
+stdout | src/utils/fileProcessor.test.js
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > createImagePreview > deve criar preview de imagem válida
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > valida teamId ou ownerId no preset humano_agendado
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > salva campos novos em metadata no preset inteligente_ia_decide
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > createImagePreview > deve criar preview de imagem válida
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > createImagePreview > deve rejeitar se houver erro ao ler arquivo
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > salva campos novos em metadata no preset inteligente_ia_decide
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > trava referências em modo lockReferences e mantém payload original mesmo com alteração local
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > createImagePreview > deve rejeitar se houver erro ao ler arquivo
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractTextContent > deve extrair conteúdo de arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractTextContent > deve extrair conteúdo de arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractTextContent > deve rejeitar se houver erro ao ler arquivo
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > trava referências em modo lockReferences e mantém payload original mesmo com alteração local
+stderr | src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > exige conversationId quando lockReferences está ativo
+[2026-05-12T02:12:40.768Z] [ERROR] Toast [error]: Agendamento de conversa exige ID da conversa. {
+  "type": "error",
+  "duration": 6000
+}
+
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > exige conversationId quando lockReferences está ativo
+stdout | src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve retornar placeholder quando pdfjs não está disponível
+Warning: Please use the `legacy` build in Node.js environments.
+
+stderr | src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve retornar placeholder quando pdfjs não está disponível
+[2026-05-12T02:12:40.901Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  "fileName": "test.pdf",
+  "error": "Setting up fake worker failed: \"Cannot find module '/node_modules/pdfjs-dist/build/pdf.worker.mjs' imported from /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.mjs\"."
+}
+
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > exige conversationId quando lockReferences está ativo
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractTextContent > deve rejeitar se houver erro ao ler arquivo
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve retornar placeholder quando pdfjs não está disponível
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > mostra botão Abrir agenda quando ownerId está selecionado
+stderr | src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve processar PDF quando pdfjs está disponível
+[2026-05-12T02:12:41.004Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  "fileName": "test.pdf",
+  "error": "Setting up fake worker failed: \"Cannot find module '/node_modules/pdfjs-dist/build/pdf.worker.mjs' imported from /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.mjs\"."
+}
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve retornar placeholder quando pdfjs não está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve processar PDF quando pdfjs está disponível
+ ✓ src/__tests__/ScheduleModal.test.jsx > ScheduleModal UI/UX > mostra botão Abrir agenda quando ownerId está selecionado
+(node:1233606) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+stderr | src/utils/fileProcessor.test.js > fileProcessor > extractImageContent > deve retornar placeholder quando Tesseract não está disponível
+[2026-05-12T02:12:41.126Z] [ERROR] Erro ao extrair conteúdo da imagem {
+  "fileName": "test.png",
+  "error": "The worker script or module filename must be an absolute path or a relative path starting with './' or '../'. Received \"http://localhost:3000/opt/results/ria/r-agent2/frontend/node_modules/tesseract.js/src/worker-script/node/index.js\""
+}
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractPdfContent > deve processar PDF quando pdfjs está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractImageContent > deve retornar placeholder quando Tesseract não está disponível
+stderr | src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve retornar arquivo original quando biblioteca não está disponível
+[2026-05-12T02:12:41.231Z] [WARN] browser-image-compression não disponível {
+  "cause": {}
+}
+[2026-05-12T02:12:41.232Z] [WARN] browser-image-compression não disponível, retornando arquivo original
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > extractImageContent > deve retornar placeholder quando Tesseract não está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve retornar arquivo original quando biblioteca não está disponível
+stderr | src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve comprimir imagem quando biblioteca está disponível
+[2026-05-12T02:12:41.334Z] [WARN] browser-image-compression não disponível {
+  "cause": {}
+}
+[2026-05-12T02:12:41.334Z] [WARN] browser-image-compression não disponível, retornando arquivo original
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve retornar arquivo original quando biblioteca não está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve comprimir imagem quando biblioteca está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > compressImage > deve comprimir imagem quando biblioteca está disponível
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar imagem com preview
+stderr | src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar PDF
+[2026-05-12T02:12:41.644Z] [ERROR] Erro ao extrair conteúdo do PDF {
+  "fileName": "test.pdf",
+  "error": "Setting up fake worker failed: \"Cannot find module '/node_modules/pdfjs-dist/build/pdf.worker.mjs' imported from /opt/results/ria/r-agent2/frontend/node_modules/pdfjs-dist/build/pdf.mjs\"."
+}
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar imagem com preview
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar PDF
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar PDF
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve chamar callback de progresso
+stdout | src/components/FlowTestChat.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+stderr | src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar imagem com OCR quando extractImageText é true
+[2026-05-12T02:12:41.852Z] [ERROR] Erro ao extrair conteúdo da imagem {
+  "fileName": "test.png",
+  "error": "The worker script or module filename must be an absolute path or a relative path starting with './' or '../'. Received \"http://localhost:3000/opt/results/ria/r-agent2/frontend/node_modules/tesseract.js/src/worker-script/node/index.js\""
+}
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve chamar callback de progresso
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar imagem com OCR quando extractImageText é true
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar imagem com OCR quando extractImageText é true
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar todos os tipos de arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve processar todos os tipos de arquivo de texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve tentar extrair conteúdo de tipos desconhecidos
+stdout | src/components/FlowTestChat.test.jsx
+[HTTP Client] 🚀 fetchJson chamado {
+  path: '/config',
+  timestamp: '2026-05-12T02:12:42.081Z',
+  stack: 'Error: \n' +
+    '    at Module.fetchJson (/opt/results/ria/r-agent2/frontend/src/api/client.js:169:14)\n' +
+    '    at /opt/results/ria/r-agent2/frontend/src/utils/featuresConfig.js:85:35\n' +
+    '    at loadFeaturesConfig (/opt/results/ria/r-agent2/frontend/src/utils/featuresConfig.js:124:5)\n' +
+    '    at Module.getFeaturesConfig (/opt/results/ria/r-agent2/frontend/src/utils/featuresConfig.js:147:10)'
+}
+[HTTP Client] 📍 URL construída: {
+  path: '/config',
+  url: 'https://www.results.com.br/r-agent2/config',
+  method: 'GET',
+  baseUrl: 'https://www.results.com.br/r-agent2',
+  windowLocation: 'http://localhost:3000/',
+  windowPort: '3000'
+}
+[2026-05-12T02:12:42.097Z] [DEBUG] HTTP Request {
+  "method": "GET",
+  "url": "https://www.results.com.br/r-agent2/config",
+  "path": "/config",
+  "baseUrl": "https://www.results.com.br/r-agent2",
+  "windowLocation": "http://localhost:3000/",
+  "windowPort": "3000"
+}
+[HTTP Client] 📤 Fazendo requisição fetch: {
+  url: 'https://www.results.com.br/r-agent2/config',
+  method: 'GET',
+  headers: [ 'Accept' ],
+  hasAuth: false
+}
+[HTTP Client] 📥 Resposta recebida: {
+  url: '',
+  status: 200,
+  statusText: '',
+  ok: true,
+  headers: { 'Content-Type': 'application/json' }
+}
+[2026-05-12T02:12:42.101Z] [DEBUG] HTTP Response {
+  "method": "GET",
+  "url": "https://www.results.com.br/r-agent2/config",
+  "path": "/config",
+  "status": 200
+}
+
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > processFile > deve tentar extrair conteúdo de tipos desconhecidos
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve validar arquivo válido
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve renderizar botão de anexo
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve renderizar botão de anexo
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve abrir seletor de arquivo ao clicar no botão de anexo
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve validar arquivo válido
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve rejeitar arquivo muito grande
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve rejeitar arquivo muito grande
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve rejeitar tipo de arquivo não permitido
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve abrir seletor de arquivo ao clicar no botão de anexo
+stderr | src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve validar arquivo ao selecionar
+[2026-05-12T02:12:42.422Z] [ERROR] Erro ao processar arquivo: {
+  "message": "Cannot destructure property 'content' of 'undefined' as it is undefined.",
+  "stack": "TypeError: Cannot destructure property 'content' of 'undefined' as it is undefined.\n    at /opt/results/ria/r-agent2/frontend/src/components/FlowTestChat.jsx:295:20"
+}
+
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve validar arquivo ao selecionar
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve rejeitar tipo de arquivo não permitido
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve aceitar todos os tipos quando allowedTypes está vazio
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve validar arquivo ao selecionar
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve processar arquivo após validação
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > validateFile > deve aceitar todos os tipos quando allowedTypes está vazio
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > formatFileSize > deve formatar bytes corretamente
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve processar arquivo após validação
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve mostrar preview de arquivo anexado
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > formatFileSize > deve formatar bytes corretamente
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > formatFileSize > deve formatar tamanhos decimais
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve mostrar preview de arquivo anexado
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > formatFileSize > deve formatar tamanhos decimais
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para imagens
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve limitar número de arquivos a 5
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para imagens
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para PDF
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Seleção de Arquivos > deve limitar número de arquivos a 5
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Envio de Mensagens com Arquivos > deve enviar mensagem com arquivos anexados
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para PDF
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para texto
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Envio de Mensagens com Arquivos > deve enviar mensagem com arquivos anexados
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Envio de Mensagens com Arquivos > deve enviar mensagem com texto e arquivos
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone correto para texto
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone padrão para tipos desconhecidos
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Envio de Mensagens com Arquivos > deve enviar mensagem com texto e arquivos
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Exibição de Arquivos nas Mensagens > deve exibir arquivo anexado na mensagem do usuário
+ ✓ src/utils/fileProcessor.test.js > fileProcessor > getFileIcon > deve retornar ícone padrão para tipos desconhecidos
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Exibição de Arquivos nas Mensagens > deve exibir arquivo anexado na mensagem do usuário
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Drag and Drop > deve aceitar arquivos arrastados
+ ✓ src/components/FlowTestChat.test.jsx > FlowTestChat - Upload de Arquivos > Drag and Drop > deve aceitar arquivos arrastados
+stdout | src/pages/FlowEditorPage.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+stdout | src/pages/AutomationsPage.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > renderiza detalhes operacionais da instância inspecionada
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > renderiza detalhes operacionais da instância inspecionada
+ ✓ src/pages/FlowEditorPage.test.jsx > pages/FlowEditorPage > renderiza o componente sem erros
+ ✓ src/pages/FlowEditorPage.test.jsx > pages/FlowEditorPage > renderiza o componente sem erros 930ms
+ ✓ src/pages/FlowEditorPage.test.jsx > pages/FlowEditorPage > mostra warnings na seção Validação
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > aplica filtros ao consultar histórico dedicado
+ ✓ src/pages/FlowEditorPage.test.jsx > pages/FlowEditorPage > mostra warnings na seção Validação
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > aplica filtros ao consultar histórico dedicado 497ms
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > carrega insights de processo com analytics, simulacao e inteligencia
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > carrega insights de processo com analytics, simulacao e inteligencia
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > avisa quando tenta carregar insights sem processId
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > avisa quando tenta carregar insights sem processId
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > limpa dados antigos e exibe erro quando insights falham
+ ✓ src/pages/AutomationsPage.test.jsx > pages/AutomationsPage > limpa dados antigos e exibe erro quando insights falham
+stdout | src/hooks/__tests__/useWebSocket.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > conecta ao WebSocket quando enabled é true
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > conecta ao WebSocket quando enabled é true
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > não conecta quando enabled é false
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > não conecta quando enabled é false
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > autentica com token quando conecta
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > autentica com token quando conecta
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > atualiza authenticated quando recebe sucesso de autenticação
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > atualiza authenticated quando recebe sucesso de autenticação
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > se inscreve em eventos após autenticação
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > se inscreve em eventos após autenticação
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > chama onEvent quando recebe evento
+stdout | src/pages/OperationsDashboardPage.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > chama onEvent quando recebe evento
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > envia ping periodicamente
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > envia ping periodicamente
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > reconecta automaticamente após desconexão
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > reconecta automaticamente após desconexão
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > permite enviar mensagem manualmente
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > permite enviar mensagem manualmente
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > não envia mensagem quando desconectado
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > não envia mensagem quando desconectado
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > permite reconectar manualmente
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > renderiza resumo executivo e estado vazio da agenda beauty
+ ✓ src/hooks/__tests__/useWebSocket.test.jsx > useWebSocket > permite reconectar manualmente
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > renderiza resumo executivo e estado vazio da agenda beauty
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > mostra erro via toast quando falha ao carregar resumo
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > mostra erro via toast quando falha ao carregar resumo
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > renderiza insights ao trocar de aba
+ ✓ src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > renderiza insights ao trocar de aba
+ × src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > busca cliente beauty e abre detalhe operacional
+   → Unable to find an element with the placeholder text of: Buscar cliente por nome, documento, subjectId ou codigo
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"support-page"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"support-header"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0mPainel Operacional Beauty + Fitness[0m
+        [36m</h1>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"support-controls"[39m
+        [36m>[39m
+          [36m<button>[39m
+            [0mAtualizar painel[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"bg-bg-elevated rounded-xl border border-border-default p-4 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"grid gap-3 md:grid-cols-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mTenant[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mplaceholder[39m=[32m"tenant opcional (super-admin)"[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mVertical[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"all"[39m
+              [36m>[39m
+                [0mall[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"beauty"[39m
+              [36m>[39m
+                [0mbeauty[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"fitness"[39m
+              [36m>[39m
+                [0mfitness[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mInicio[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-04-13"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mFim[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-05-12"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"w-full bg-accent-primary hover:bg-accent-hover text-white rounded px-3 py-2 text-sm disabled:opacity-50"[39m
+            [36m>[39m
+              [0mAtualizar[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"grid gap-4 md:grid-cols-3 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"font-semibold mb-3"[39m
+          [36m>[39m
+            [0mBeauty[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid gap-3 grid-cols-2"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mAgendamentos hoje[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m10[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mConcluidos[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m8[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mNo-show[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m1[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mReativacoes[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m2[0m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[3...
+ × src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > busca cliente beauty e abre detalhe operacional
+   → Unable to find an element with the placeholder text of: Buscar cliente por nome, documento, subjectId ou codigo
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"support-page"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"support-header"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0mPainel Operacional Beauty + Fitness[0m
+        [36m</h1>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"support-controls"[39m
+        [36m>[39m
+          [36m<button>[39m
+            [0mAtualizar painel[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"bg-bg-elevated rounded-xl border border-border-default p-4 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"grid gap-3 md:grid-cols-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mTenant[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mplaceholder[39m=[32m"tenant opcional (super-admin)"[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mVertical[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"all"[39m
+              [36m>[39m
+                [0mall[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"beauty"[39m
+              [36m>[39m
+                [0mbeauty[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"fitness"[39m
+              [36m>[39m
+                [0mfitness[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mInicio[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-04-13"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mFim[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-05-12"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"w-full bg-accent-primary hover:bg-accent-hover text-white rounded px-3 py-2 text-sm disabled:opacity-50"[39m
+            [36m>[39m
+              [0mAtualizar[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"grid gap-4 md:grid-cols-3 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"font-semibold mb-3"[39m
+          [36m>[39m
+            [0mBeauty[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid gap-3 grid-cols-2"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mAgendamentos hoje[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m10[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mConcluidos[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m8[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mNo-show[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m1[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mReativacoes[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m2[0m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[3...
+stdout | src/pages/QaWavesPage.test.jsx
+⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/OperationsDashboardPage.test.jsx > pages/OperationsDashboardPage > busca cliente beauty e abre detalhe operacional
+TestingLibraryElementError: Unable to find an element with the placeholder text of: Buscar cliente por nome, documento, subjectId ou codigo
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"support-page"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"support-header"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0mPainel Operacional Beauty + Fitness[0m
+        [36m</h1>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"support-controls"[39m
+        [36m>[39m
+          [36m<button>[39m
+            [0mAtualizar painel[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"bg-bg-elevated rounded-xl border border-border-default p-4 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"grid gap-3 md:grid-cols-5"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mTenant[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mplaceholder[39m=[32m"tenant opcional (super-admin)"[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mVertical[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"all"[39m
+              [36m>[39m
+                [0mall[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"beauty"[39m
+              [36m>[39m
+                [0mbeauty[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"fitness"[39m
+              [36m>[39m
+                [0mfitness[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mInicio[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-04-13"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"block text-xs text-text-secondary mb-1"[39m
+            [36m>[39m
+              [0mFim[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"w-full bg-bg-tertiary border border-border-default rounded px-3 py-2 text-sm"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-05-12"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-end"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"w-full bg-accent-primary hover:bg-accent-hover text-white rounded px-3 py-2 text-sm disabled:opacity-50"[39m
+            [36m>[39m
+              [0mAtualizar[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"grid gap-4 md:grid-cols-3 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[32m"font-semibold mb-3"[39m
+          [36m>[39m
+            [0mBeauty[0m
+          [36m</h3>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid gap-3 grid-cols-2"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mAgendamentos hoje[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m10[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mConcluidos[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m8[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mNo-show[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m1[0m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"rounded-xl border p-4 shadow-lg bg-bg-elevated border-border-default "[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-xs flex items-center gap-1.5 mb-1 text-text-tertiary"[39m
+              [36m>[39m
+                [0mReativacoes[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"text-2xl font-semibold text-text-primary"[39m
+              [36m>[39m
+                [0m2[0m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"bg-bg-elevated border border-border-default rounded-xl p-4"[39m
+        [36m>[39m
+          [36m<h3[39m
+            [33mclass[39m=[3...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/OperationsDashboardPage.test.jsx:262:33
+    260|     await userEvent.click(screen.getByText('Atendimento Beauty'));
+    261| 
+    262|     await userEvent.type(screen.getByPlaceholderText('Buscar cliente p…
+       |                                 ^
+    263|     await userEvent.click(screen.getByText('Buscar cliente'));
+    264| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 18 passed | 1 skipped (90)
+      Tests  1 failed | 345 passed (349)
+   Start at  23:12:12
+   Duration  36.31s (transform 3.50s, setup 5.33s, collect 5.39s, tests 45.59s, environment 8.98s, prepare 2.29s)
+
+JUNIT report written to /opt/results/ria/r-agent2/frontend/test-results/junit.xml

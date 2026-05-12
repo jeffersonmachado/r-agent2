@@ -357,11 +357,33 @@ function writeQaWavesEnterpriseGovernance(report, outputPath, auditPath) {
   return persisted;
 }
 
+function writeQaWavesEnterpriseGovernanceWithMirror(report, outputPath, auditPath, options = {}) {
+  const persisted = writeQaWavesEnterpriseGovernance(report, outputPath, auditPath);
+  const mirrorOutputPath = options.workspaceMirrorPath || null;
+  const mirrorAuditPath = options.workspaceAuditPath || auditPath;
+
+  if (!mirrorOutputPath || mirrorOutputPath === outputPath) {
+    return persisted;
+  }
+
+  const mirrored = writeQaWavesEnterpriseGovernance(persisted, mirrorOutputPath, mirrorAuditPath);
+  return {
+    ...mirrored,
+    canonicalPaths: {
+      outputPath,
+      auditPath,
+      workspaceMirrorPath: mirrorOutputPath,
+      workspaceAuditPath: mirrorAuditPath,
+    },
+  };
+}
+
 module.exports = {
   DEFAULT_THRESHOLD,
   buildQaWavesEnterpriseGovernance,
   validateQaWavesEnterpriseGovernance,
   writeQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernanceWithMirror,
   appendGovernanceAuditTrail,
   calculateOperationalConfidence,
 };

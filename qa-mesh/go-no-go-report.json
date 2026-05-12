@@ -1,22 +1,32 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-governance-status-1778281086084",
+  "executionId": "mesh-business-screen-fix-001",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
+  "canonicalPromotion": {
+    "executionId": "mesh-business-screen-fix-001",
+    "startedAt": "2026-05-11T21:54:40.637Z",
+    "executionOrigin": "pipeline",
+    "executionKind": null,
+    "promotedAt": "2026-05-11T22:17:12.435Z",
+    "registryTotal": 58,
+    "goNoGo": "GO",
+    "criterion": "serialized_canonical_execution"
+  },
   "totals": {
-    "executionId": "mesh-governance-status-1778281086084",
-    "timestamp": "2026-05-08T22:58:06.107Z",
+    "executionId": "mesh-business-screen-fix-001",
+    "timestamp": "2026-05-11T21:54:40.637Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 1,
-    "attempted": 1,
-    "executed": 1,
-    "total": 1,
-    "passed": 1,
+    "registryTotal": 58,
+    "attempted": 58,
+    "executed": 58,
+    "total": 58,
+    "passed": 58,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -26,15 +36,115 @@
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
-      "workspace-core-status-separation": {
-        "decision": "REVIEW",
-        "severity": "high",
-        "reason": "High severity checks require technical review"
+      "workspace-core": {
+        "decision": "GO",
+        "severity": "low",
+        "reason": "All critical checks passed"
       }
     },
     "executionCoverage": 1,
     "executionQuality": "valid",
     "domains": {
+      "beauty": {
+        "passed": 12,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 12
+      },
+      "clinica": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "fitness": {
+        "passed": 14,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 14
+      },
+      "food": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "mercado": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "servicos": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "omnichannel": {
+        "passed": 14,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 14
+      },
+      "bpmn": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
+      },
+      "core": {
+        "passed": 5,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 5
+      },
+      "pbx": {
+        "passed": 7,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 7
+      },
       "workspace": {
         "passed": 1,
         "fallbackPassed": 0,
@@ -50,6 +160,66 @@
     "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "beauty": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "clinica": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "fitness": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "food": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "mercado": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "servicos": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "bpmn": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "pbx": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "workspace": {
         "total": 0,
         "blocking": 0,
@@ -60,7 +230,17 @@
     "failuresByType": {},
     "topErrors": [],
     "blockingDomains": [],
-    "changedFiles": []
+    "changedFiles": [],
+    "canonicalPromotion": {
+      "executionId": "mesh-business-screen-fix-001",
+      "startedAt": "2026-05-11T21:54:40.637Z",
+      "executionOrigin": "pipeline",
+      "executionKind": null,
+      "promotedAt": "2026-05-11T22:17:12.435Z",
+      "registryTotal": 58,
+      "goNoGo": "GO",
+      "criterion": "serialized_canonical_execution"
+    }
   },
-  "generatedAt": "2026-05-08T22:58:06.249Z"
+  "generatedAt": "2026-05-11T22:17:12.435Z"
 }

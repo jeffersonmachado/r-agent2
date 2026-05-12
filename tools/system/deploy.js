@@ -11,13 +11,15 @@ const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths'
 const {
   buildQaWavesEnterpriseGovernance,
   validateQaWavesEnterpriseGovernance,
-  writeQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernanceWithMirror,
 } = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
 const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
 const QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
 const QA_WAVES_GOVERNANCE_AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
+const WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = path.join(ROOT, 'qa', 'qa-waves-enterprise-governance.json');
+const WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH = path.join(ROOT, 'qa', 'qa-waves-governance-audit.jsonl');
 const PORT_SPECS = [
   {
     service: 'api',
@@ -190,10 +192,14 @@ function findLatestApprovedArtifact() {
 }
 
 async function main() {
-  const qaWavesReport = writeQaWavesEnterpriseGovernance(
+  const qaWavesReport = writeQaWavesEnterpriseGovernanceWithMirror(
     buildQaWavesEnterpriseGovernance({ root: ROOT }),
     resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
-    resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+    resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH),
+    {
+      workspaceMirrorPath: WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+      workspaceAuditPath: WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH,
+    }
   );
   const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
   if (!qaWavesValidation.valid) {

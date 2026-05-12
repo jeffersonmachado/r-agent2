@@ -4,19 +4,82 @@
     "blockingFailures": 0,
     "infraErrors": 0
   },
-  "accepted": false,
+  "accepted": true,
   "bestKnown": {
-    "executionId": "mesh-20260410183504-hlzgin",
+    "executionId": "mesh-business-screen-fix-001",
     "passRate": 1,
     "blockingFailures": 0,
     "infraErrors": 0,
-    "total": 50,
-    "passed": 50,
+    "total": 58,
+    "passed": 58,
     "failed": 0,
     "flaky": 0,
-    "updatedAt": "2026-04-10T18:52:17.838Z"
+    "updatedAt": "2026-05-11T22:17:12.438Z"
   },
   "history": [
+    {
+      "executionId": "mesh-business-screen-fix-001",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-05-11T22:17:12.438Z"
+    },
+    {
+      "executionId": "mesh-canonical-fix-004",
+      "passRate": 0.896551724137931,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-05-11T21:45:44.176Z"
+    },
+    {
+      "executionId": "mesh-canonical-fix-003",
+      "passRate": 0.8620689655172413,
+      "blockingFailures": 2,
+      "infraErrors": 0,
+      "at": "2026-05-11T21:15:00.477Z"
+    },
+    {
+      "executionId": "mesh-canonical-lock-validation-2",
+      "passRate": 0.8275862068965517,
+      "blockingFailures": 2,
+      "infraErrors": 1,
+      "at": "2026-05-11T18:50:33.897Z"
+    },
+    {
+      "executionId": "mesh-canonical-recovered-1778524004305",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-05-11T18:26:45.464Z"
+    },
+    {
+      "executionId": "mesh-canonical-recovered-1778523991580",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-05-11T18:26:32.711Z"
+    },
+    {
+      "executionId": "mesh-canonical-fix-002",
+      "passRate": 0.7586206896551724,
+      "blockingFailures": 2,
+      "infraErrors": 2,
+      "at": "2026-05-11T17:50:19.704Z"
+    },
+    {
+      "executionId": "mesh-canonical-fix-001",
+      "passRate": 0.8103448275862069,
+      "blockingFailures": 2,
+      "infraErrors": 1,
+      "at": "2026-05-11T17:45:40.220Z"
+    },
+    {
+      "executionId": "mesh-2026-05-11T16-35-03-401Z",
+      "passRate": 0.8103448275862069,
+      "blockingFailures": 2,
+      "infraErrors": 1,
+      "at": "2026-05-11T17:35:55.009Z"
+    },
     {
       "executionId": "mesh-2026-05-04T05-00-00-083Z",
       "passRate": 0.45098039215686275,
@@ -93,69 +156,6 @@
       "blockingFailures": 0,
       "infraErrors": 0,
       "at": "2026-04-07T20:45:45.357Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T20-11-57-946Z",
-      "passRate": 0.96,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-04-07T20:28:21.314Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T19-50-05-274Z",
-      "passRate": 0.66,
-      "blockingFailures": 0,
-      "infraErrors": 1,
-      "at": "2026-04-07T20:06:21.170Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T18-24-14-251Z",
-      "passRate": 0.66,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-04-07T18:38:50.597Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T18-20-59-266Z",
-      "passRate": 0.02,
-      "blockingFailures": 7,
-      "infraErrors": 28,
-      "at": "2026-04-07T18:22:34.659Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T17-41-59-880Z",
-      "passRate": 0.66,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-04-07T17:57:25.379Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T17-41-09-470Z",
-      "passRate": 0.66,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-04-07T17:56:24.268Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T16-53-21-505Z",
-      "passRate": 0.62,
-      "blockingFailures": 1,
-      "infraErrors": 1,
-      "at": "2026-04-07T17:05:23.373Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T16-38-08-323Z",
-      "passRate": 0.08,
-      "blockingFailures": 6,
-      "infraErrors": 0,
-      "at": "2026-04-07T16:41:55.245Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T16-22-08-236Z",
-      "passRate": 0.1,
-      "blockingFailures": 6,
-      "infraErrors": 32,
-      "at": "2026-04-07T16:33:08.320Z"
     }
   ]
 }

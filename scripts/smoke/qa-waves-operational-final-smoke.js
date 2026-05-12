@@ -10,6 +10,7 @@ const {
   executeBlockingJourneyWithBrowser,
   launchBrowserPage,
 } = require('../../api/services/qa/browserOperationalRunner');
+const { loginWithTenantSelection } = require('../../tests/helpers/playwrightAuth');
 const {
   validateJourneyPostStateProofs,
   computeIncrementalStepDiff,
@@ -399,8 +400,9 @@ function getRoleCredentials(role = 'agent') {
 
 async function ensureAuthenticated(page, baseUrl, role = 'agent') {
   const { username, password } = getRoleCredentials(role);
+  const authTenantId = process.env.TEST_TENANT_ID || 'system';
+  const authTenantName = process.env.TEST_TENANT_NAME || 'System';
 
-  await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded' });
   const authState = await page.evaluate((expectedUsername) => {
     let agent = null;
     try {
@@ -423,11 +425,15 @@ async function ensureAuthenticated(page, baseUrl, role = 'agent') {
     localStorage.removeItem('auth_agent');
     localStorage.removeItem('auth_effective_tenant_id');
   }).catch(() => {});
-  await page.goto(`${baseUrl}/login`, { waitUntil: 'domcontentloaded' });
 
-  await page.locator('input[placeholder*="username" i]').fill(username);
-  await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', { name: /entrar/i }).click();
+  await loginWithTenantSelection(page, {
+    targetUrl: `${baseUrl}/support`,
+    username,
+    password,
+    tenantId: authTenantId,
+    tenantName: authTenantName,
+  });
+
   await page.waitForFunction(
     () => Boolean(localStorage.getItem('auth_token')),
     null,
@@ -505,42 +511,95 @@ async function ensureProdLikeTenant(page, baseUrl) {
 }
 
 async function browserApiFetch(page, requestPath, requestOptions = {}) {
-  return page.evaluate(
-    async ({ innerPath, innerOptions }) => {
-      const token = localStorage.getItem('auth_token');
-      let tenantId = localStorage.getItem('auth_effective_tenant_id');
-      if (!tenantId) {
-        try {
-          const agent = JSON.parse(localStorage.getItem('auth_agent') || '{}');
-          tenantId = agent?.tenantId || 'system';
-        } catch {
-          tenantId = 'system';
-        }
-      }
-
-      const response = await fetch(innerPath, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {}),
-          ...(innerOptions.headers || {}),
-        },
-        ...innerOptions,
-      });
-
-      const text = await response.text();
-      let body = null;
+  const session = await page.evaluate(() => {
+    const token = localStorage.getItem('auth_token');
+    let tenantId = localStorage.getItem('auth_effective_tenant_id');
+    if (!tenantId) {
       try {
-        body = text ? JSON.parse(text) : null;
+        const agent = JSON.parse(localStorage.getItem('auth_agent') || '{}');
+        tenantId = agent?.tenantId || 'system';
       } catch {
-        body = { raw: text };
+        tenantId = 'system';
       }
+    }
 
-      return { ok: response.ok, status: response.status, body };
+    return {
+      token,
+      tenantId,
+    };
+  });
+
+  const normalizedPath = String(requestPath || '');
+  const requestUrl = /^https?:\/\//i.test(normalizedPath)
+    ? normalizedPath
+    : `${String(DEFAULT_API_URL || '').replace(/\/+$/, '')}/${normalizedPath.replace(/^\/+/, '')}`;
+
+  const startedAt = Date.now();
+
+  const response = await fetch(requestUrl, {
+    ...requestOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+      ...(session?.tenantId ? { 'X-Tenant-Id': String(session.tenantId) } : {}),
+      ...(requestOptions.headers || {}),
     },
-    { innerPath: requestPath, innerOptions: requestOptions },
-  );
+  });
+
+  const text = await response.text();
+  let body = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = { raw: text };
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    body,
+    meta: {
+      type: 'synthetic_node_fetch',
+      url: requestUrl,
+      method: String(requestOptions.method || 'GET').toUpperCase(),
+      status: response.status,
+      startedAt: new Date(startedAt).toISOString(),
+      finishedAt: new Date().toISOString(),
+      duration: Math.max(0, Date.now() - startedAt),
+    },
+  };
+}
+
+function buildSyntheticNetworkEvents(meta = {}) {
+  if (!meta?.url || !meta?.method) return [];
+
+  const startedAt = meta.startedAt || new Date().toISOString();
+  const finishedAt = meta.finishedAt || startedAt;
+
+  return [
+    {
+      type: 'request',
+      url: meta.url,
+      method: meta.method,
+      status: null,
+      duration: 0,
+      failureReason: null,
+      timestamp: startedAt,
+      synthetic: true,
+      source: meta.type || 'synthetic_node_fetch',
+    },
+    {
+      type: 'response',
+      url: meta.url,
+      method: meta.method,
+      status: meta.status || null,
+      duration: Number(meta.duration || 0),
+      failureReason: null,
+      timestamp: finishedAt,
+      synthetic: true,
+      source: meta.type || 'synthetic_node_fetch',
+    },
+  ];
 }
 
 async function getBrowserContext(page) {
@@ -615,6 +674,24 @@ function resolveSupportSeedMetadata(ticket = {}, ticketMessages = []) {
       || firstMessage.contact_id
       || firstMessage.customerId
       || firstMessage.customer_id
+      || null,
+    externalMessageId: [...messages].reverse().find((message) => message && (
+      message.externalMessageId
+      || message.external_message_id
+    ))?.externalMessageId
+      || [...messages].reverse().find((message) => message && (
+        message.externalMessageId
+        || message.external_message_id
+      ))?.external_message_id
+      || null,
+    deliveryStatus: [...messages].reverse().find((message) => message && (
+      message.deliveryStatus
+      || message.delivery_status
+    ))?.deliveryStatus
+      || [...messages].reverse().find((message) => message && (
+        message.deliveryStatus
+        || message.delivery_status
+      ))?.delivery_status
       || null,
   };
 }
@@ -845,6 +922,8 @@ async function maybeCollectSupportApiFallbackSnapshot({
   if (refreshed.ticketId) seedEvidence.ticketId = refreshed.ticketId;
   if (refreshed.conversationId) seedEvidence.conversationId = refreshed.conversationId;
   if (refreshed.contactId) seedEvidence.contactId = refreshed.contactId;
+  if (refreshed.externalMessageId) seedEvidence.externalMessageId = refreshed.externalMessageId;
+  if (refreshed.deliveryStatus) seedEvidence.deliveryStatus = refreshed.deliveryStatus;
 
   return buildSupportApiFallbackSnapshot({
     baseSnapshot: snapshot,
@@ -890,6 +969,483 @@ async function maybeCollectFitnessApiFallbackSnapshot({
   });
 }
 
+function buildBookingApiFallbackSnapshot({ baseSnapshot, booking, stepId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const bookingRecord = booking || {};
+  const baseBooking = snapshot?.db?.booking || {};
+  const bookingId = bookingRecord.id || baseBooking.id || null;
+  const bookingStatus = bookingRecord.status || baseBooking.status || null;
+
+  return {
+    ...snapshot,
+    state: bookingStatus || snapshot?.state || null,
+    db: {
+      ...(snapshot?.db || {}),
+      booking: {
+        ...baseBooking,
+        exists: Boolean(bookingId),
+        id: bookingId,
+        status: bookingStatus,
+        count: bookingId ? Math.max(Number(baseBooking.count || 0), 1) : Number(baseBooking.count || 0),
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      booking: {
+        ...((snapshot?.api || {}).booking || {}),
+        id: bookingId,
+        status: bookingStatus,
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        booking: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+async function maybeCollectBookingApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'booking_flow') return snapshot;
+  if (!seedEvidence?.page || !seedEvidence?.bookingId) return snapshot;
+
+  const needsOperationalFallback = !snapshot?.db?.booking?.exists || !snapshot?.api?.booking?.id;
+  if (!needsOperationalFallback) return snapshot;
+
+  const query = seedEvidence.resourceId
+    ? `/resource-bookings?resourceId=${encodeURIComponent(String(seedEvidence.resourceId))}&limit=50`
+    : '/resource-bookings?limit=50';
+  const listed = await browserApiFetch(seedEvidence.page, query, { method: 'GET' }).catch(() => null);
+  const items = listed?.body?.items || listed?.body?.bookings || [];
+  const booking = Array.isArray(items)
+    ? items.find((item) => String(item?.id || '') === String(seedEvidence.bookingId))
+    : null;
+
+  if (!booking) return snapshot;
+
+  return buildBookingApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    booking,
+    stepId,
+  });
+}
+
+function buildPaymentApiFallbackSnapshot({ baseSnapshot, transaction, notifications, stepId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const transactionRecord = transaction || {};
+  const billingBase = snapshot?.db?.billing || {};
+  const apiBillingBase = snapshot?.api?.billing || {};
+  const notificationItems = Array.isArray(notifications) ? notifications : [];
+  const sentStatuses = new Set(['sent', 'delivered', 'read', 'stub', 'provider-dependent']);
+  const sentCount = notificationItems.filter((item) => sentStatuses.has(String(item?.status || '').toLowerCase())).length;
+  const transactionId = transactionRecord.id || billingBase.id || apiBillingBase.transactionId || null;
+  const externalTransactionId = transactionRecord.external_transaction_id
+    || transactionRecord.externalTransactionId
+    || billingBase.externalTransactionId
+    || apiBillingBase.externalTransactionId
+    || null;
+  const status = transactionRecord.status || billingBase.status || null;
+
+  return {
+    ...snapshot,
+    state: status === 'confirmed' ? 'payment_confirmed' : (snapshot?.state || null),
+    db: {
+      ...(snapshot?.db || {}),
+      billing: {
+        ...billingBase,
+        exists: Boolean(transactionId),
+        id: transactionId,
+        status,
+        count: transactionId ? Math.max(Number(billingBase.count || 0), 1) : Number(billingBase.count || 0),
+        externalTransactionId,
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      billing: {
+        ...apiBillingBase,
+        transactionId,
+        externalTransactionId,
+        status,
+      },
+    },
+    events: {
+      ...(snapshot?.events || {}),
+      notifications: {
+        ...((snapshot?.events || {}).notifications || {}),
+        count: notificationItems.length,
+        sent: sentCount,
+        available: true,
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        billing: true,
+        notifications: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+async function maybeCollectPaymentApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'payment_charge_flow') return snapshot;
+  if (!seedEvidence?.page) return snapshot;
+
+  if (!seedEvidence.transactionId) {
+    if (stepId !== 'step_create_membership_charge') return snapshot;
+    return {
+      ...clone(snapshot || {}),
+      events: {
+        ...((snapshot || {}).events || {}),
+        notifications: {
+          ...(((snapshot || {}).events || {}).notifications || {}),
+          count: 0,
+          sent: 0,
+          available: true,
+        },
+      },
+    };
+  }
+
+  const needsOperationalFallback = !snapshot?.db?.billing?.exists
+    || !snapshot?.api?.billing?.transactionId
+    || !snapshot?.db?.billing?.status
+    || Number(snapshot?.events?.notifications?.count || 0) === 0;
+  if (!needsOperationalFallback) return snapshot;
+
+  const [listed, notificationsResponse] = await Promise.all([
+    browserApiFetch(seedEvidence.page, '/billing/transactions?vertical=fitness&limit=50', { method: 'GET' }).catch(() => null),
+    browserApiFetch(seedEvidence.page, '/api/operations-dashboard/notifications?vertical=fitness&limit=200', { method: 'GET' }).catch(() => null),
+  ]);
+
+  const items = listed?.body?.items || [];
+  const transaction = Array.isArray(items)
+    ? items.find((item) => (
+      String(item?.id || '') === String(seedEvidence.transactionId)
+      || (
+        seedEvidence.externalTransactionId
+        && String(item?.external_transaction_id || item?.externalTransactionId || '') === String(seedEvidence.externalTransactionId)
+      )
+    ))
+    : null;
+
+  if (transaction?.external_transaction_id || transaction?.externalTransactionId) {
+    seedEvidence.externalTransactionId = transaction.external_transaction_id || transaction.externalTransactionId;
+  }
+
+  const notificationItems = (notificationsResponse?.body?.items || notificationsResponse?.body || [])
+    .filter((item) => String(item?.transactionId || '') === String(seedEvidence.transactionId));
+
+  return buildPaymentApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    transaction,
+    notifications: notificationItems,
+    stepId,
+  });
+}
+
+function buildFoodApiFallbackSnapshot({ baseSnapshot, order, eventLedgerItems, stepId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const orderRecord = order || {};
+  const dbOrderBase = snapshot?.db?.order || {};
+  const apiOrdersBase = snapshot?.api?.orders || {};
+  const orderId = orderRecord.id || dbOrderBase.id || apiOrdersBase.orderId || null;
+  const status = orderRecord.status || dbOrderBase.status || apiOrdersBase.status || null;
+  const events = Array.isArray(eventLedgerItems) ? eventLedgerItems : [];
+
+  return {
+    ...snapshot,
+    state: status === 'confirmed' ? 'order_confirmed' : (snapshot?.state || null),
+    db: {
+      ...(snapshot?.db || {}),
+      order: {
+        ...dbOrderBase,
+        exists: Boolean(orderId),
+        id: orderId,
+        status,
+        count: orderId ? Math.max(Number(dbOrderBase.count || 0), 1) : Number(dbOrderBase.count || 0),
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      orders: {
+        ...apiOrdersBase,
+        orderId,
+        status,
+      },
+    },
+    events: {
+      ...(snapshot?.events || {}),
+      order_status: {
+        ...((snapshot?.events || {}).order_status || {}),
+        count: events.length,
+        available: true,
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        orders: true,
+        eventLedger: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+async function maybeCollectFoodApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'food_order_status_flow') return snapshot;
+  if (!seedEvidence?.page || !seedEvidence?.orderId) return snapshot;
+
+  const needsOperationalFallback = !snapshot?.db?.order?.exists
+    || !snapshot?.api?.orders?.orderId
+    || !snapshot?.db?.order?.status
+    || !snapshot?.api?.orders?.status
+    || !snapshot?.events?.order_status?.available
+    || (
+      stepId === 'step_update_order_status'
+      && Number(snapshot?.events?.order_status?.count || 0) === 0
+    );
+  if (!needsOperationalFallback) return snapshot;
+
+  const encodedOrderId = encodeURIComponent(seedEvidence.orderId);
+  const [orderResponse, eventLedgerResponse] = await Promise.all([
+    browserApiFetch(seedEvidence.page, `/orders/${encodedOrderId}`, { method: 'GET' }).catch(() => null),
+    browserApiFetch(
+      seedEvidence.page,
+      `/api/event-ledger?subjectType=order&subjectId=${encodedOrderId}&type=OrderStatusChanged&limit=20`,
+      { method: 'GET' },
+    ).catch(() => null),
+  ]);
+
+  const order = orderResponse?.body?.order || orderResponse?.body || null;
+  const eventLedgerItems = eventLedgerResponse?.body?.items
+    || eventLedgerResponse?.body?.events
+    || eventLedgerResponse?.body
+    || [];
+
+  return buildFoodApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    order,
+    eventLedgerItems,
+    stepId,
+  });
+}
+
+function buildMarketApiFallbackSnapshot({ baseSnapshot, catalogItems, publishedItems, stepId, nodeId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const catalog = Array.isArray(catalogItems) ? catalogItems : [];
+  const published = Array.isArray(publishedItems) ? publishedItems : [];
+  const matchedPublished = published.find((item) => String(item?.id || '') === String(nodeId)) || null;
+  const matchedCatalog = catalog.find((item) => String(item?.id || '') === String(nodeId)) || null;
+  const node = matchedPublished || matchedCatalog || null;
+  const dbBase = snapshot?.db?.nodeMarketplace || {};
+  const apiBase = snapshot?.api?.nodeMarketplace || {};
+
+  return {
+    ...snapshot,
+    state: node ? 'node_published' : (snapshot?.state || null),
+    db: {
+      ...(snapshot?.db || {}),
+      nodeMarketplace: {
+        ...dbBase,
+        catalog: {
+          ...(dbBase.catalog || {}),
+          count: catalog.length,
+        },
+        published: {
+          ...(dbBase.published || {}),
+          exists: Boolean(node),
+          id: node?.id || null,
+          count: published.length,
+        },
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      nodeMarketplace: {
+        ...apiBase,
+        catalog: {
+          ...(apiBase.catalog || {}),
+          count: catalog.length,
+        },
+        published: {
+          ...(apiBase.published || {}),
+          id: node?.id || null,
+          label: node?.label || null,
+        },
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        nodeMarketplace: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+function buildClinicApiFallbackSnapshot({ baseSnapshot, calendarItems, stepId, blockId, resourceId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const items = Array.isArray(calendarItems) ? calendarItems : [];
+  const blocks = items.filter((item) => String(item?.type || '').toLowerCase() === 'block');
+  const matchedBlock = blocks.find((item) => String(item?.id || '') === String(blockId)) || null;
+  const calendarBase = snapshot?.db?.calendar || {};
+  const apiBase = snapshot?.api?.calendar || {};
+
+  return {
+    ...snapshot,
+    state: matchedBlock ? 'calendar_block_created' : (snapshot?.state || null),
+    db: {
+      ...(snapshot?.db || {}),
+      calendar: {
+        ...calendarBase,
+        block: {
+          ...(calendarBase.block || {}),
+          exists: Boolean(matchedBlock),
+          id: matchedBlock?.id || null,
+          count: blocks.length,
+          resourceId: resourceId || calendarBase.block?.resourceId || null,
+        },
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      calendar: {
+        ...apiBase,
+        resource: {
+          ...(apiBase.resource || {}),
+          id: resourceId || apiBase.resource?.id || null,
+          blockId: matchedBlock?.id || null,
+          blockCount: blocks.length,
+          totalCount: items.length,
+        },
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        calendar: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+async function maybeCollectMarketApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'market_node_publish_flow') return snapshot;
+  if (!seedEvidence?.page || !seedEvidence?.nodeId) return snapshot;
+
+  const needsOperationalFallback = !snapshot?.db?.nodeMarketplace?.published?.exists
+    || !snapshot?.api?.nodeMarketplace?.published?.id
+    || !snapshot?.db?.nodeMarketplace?.catalog
+    || !snapshot?.api?.nodeMarketplace?.catalog;
+  if (!needsOperationalFallback) return snapshot;
+
+  const [catalogResponse, publishedResponse] = await Promise.all([
+    browserApiFetch(seedEvidence.page, '/api/node-marketplace/catalog', { method: 'GET' }).catch(() => null),
+    browserApiFetch(seedEvidence.page, '/api/node-marketplace/published', { method: 'GET' }).catch(() => null),
+  ]);
+
+  const catalogItems = catalogResponse?.body?.items || catalogResponse?.body || [];
+  const publishedItems = publishedResponse?.body?.items || publishedResponse?.body || [];
+
+  return buildMarketApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    catalogItems,
+    publishedItems,
+    stepId,
+    nodeId: seedEvidence.nodeId,
+  });
+}
+
+async function maybeCollectClinicApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'clinic_calendar_block_flow') return snapshot;
+  if (!seedEvidence?.page || !seedEvidence?.resourceId) return snapshot;
+
+  const needsOperationalFallback = !snapshot?.db?.calendar?.block?.exists
+    || !snapshot?.api?.calendar?.resource?.blockId
+    || !snapshot?.db?.calendar?.block
+    || !snapshot?.api?.calendar?.resource;
+  if (!needsOperationalFallback && stepId !== 'step_create_calendar_block') return snapshot;
+
+  const query = new URLSearchParams();
+  if (seedEvidence.blockStartAt) query.set('startDate', seedEvidence.blockStartAt);
+  if (seedEvidence.blockEndAt) query.set('endDate', seedEvidence.blockEndAt);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+
+  const listed = await browserApiFetch(
+    seedEvidence.page,
+    `/api/calendar/resource/${encodeURIComponent(String(seedEvidence.resourceId))}${suffix}`,
+    { method: 'GET' },
+  ).catch(() => null);
+
+  const calendarItems = listed?.body?.items || listed?.body?.calendar || listed?.body || [];
+
+  return buildClinicApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    calendarItems,
+    stepId,
+    blockId: seedEvidence.blockId,
+    resourceId: seedEvidence.resourceId,
+  });
+}
+
 async function refreshSupportSeedMetadata(page, ticketId, seedEvidence = {}) {
   if (!page || !ticketId || !seedEvidence) return seedEvidence;
 
@@ -903,6 +1459,8 @@ async function refreshSupportSeedMetadata(page, ticketId, seedEvidence = {}) {
   if (refreshed.ticketId) seedEvidence.ticketId = refreshed.ticketId;
   if (refreshed.conversationId) seedEvidence.conversationId = refreshed.conversationId;
   if (refreshed.contactId) seedEvidence.contactId = refreshed.contactId;
+  if (refreshed.externalMessageId) seedEvidence.externalMessageId = refreshed.externalMessageId;
+  if (refreshed.deliveryStatus) seedEvidence.deliveryStatus = refreshed.deliveryStatus;
   return seedEvidence;
 }
 
@@ -945,17 +1503,7 @@ async function seedSupportFlowReal(page, baseUrl, tenantName) {
     ticketMessages?.body?.messages || ticketMessages?.body?.items || ticketMessages?.body || [],
   );
 
-  await browserApiFetch(page, `/tickets/${encodeURIComponent(ticket.id)}/takeover`, {
-    method: 'POST',
-    body: JSON.stringify({ reason: 'qa_waves_prod_like_smoke' }),
-  });
-
   const browserContext = await getBrowserContext(page);
-  const agentUsername = browserContext?.agent?.username || browserContext?.agent?.id || 'systemadmin';
-  await browserApiFetch(page, `/tickets/${encodeURIComponent(ticket.id)}/assign`, {
-    method: 'POST',
-    body: JSON.stringify({ assignedTo: agentUsername }),
-  });
 
   await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded' });
   await ensureTenantSelected(page, tenantName);
@@ -1010,6 +1558,32 @@ function buildProdLikeSupportFlowSteps({ baseUrl, ticketId, agentReply, seedEvid
         await page.getByTestId('ticket-detail').waitFor({ state: 'visible', timeout: 10000 });
       },
     },
+    (() => {
+      const step = {
+      id: 'step_takeover_ticket',
+      actionType: 'takeover_ticket',
+      journeyId: 'support_ticket_flow',
+      mutationExpected: true,
+      selectorUsed: 'support-takeover-fetch',
+      async execute(page) {
+        const takeover = await browserApiFetch(page, `/tickets/${encodeURIComponent(ticketId)}/takeover`, {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'qa_waves_prod_like_smoke' }),
+        });
+        if (!takeover.ok) {
+          throw new Error(`support_takeover_failed:${takeover.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(takeover.meta);
+        const browserContext = await getBrowserContext(page);
+        const agentUsername = browserContext?.agent?.username || browserContext?.agent?.id || 'systemadmin';
+        await browserApiFetch(page, `/tickets/${encodeURIComponent(ticketId)}/assign`, {
+          method: 'POST',
+          body: JSON.stringify({ assignedTo: agentUsername }),
+        }).catch(() => null);
+      },
+      };
+      return step;
+    })(),
     {
       id: 'step_reply_ticket',
       actionType: 'type_and_send',
@@ -1021,6 +1595,55 @@ function buildProdLikeSupportFlowSteps({ baseUrl, ticketId, agentReply, seedEvid
         await page.getByTestId('ticket-send-button').click();
         await page.getByTestId('message-sent').last().waitFor({ state: 'visible', timeout: 15000 });
         await refreshSupportSeedMetadata(page, ticketId, seedEvidence);
+      },
+    },
+    {
+      id: 'step_whatsapp_read_status',
+      actionType: 'webhook_status',
+      journeyId: 'support_ticket_flow',
+      selectorUsed: 'whatsapp-webhook-fetch',
+      async execute(page) {
+        for (let attempt = 0; attempt < 6 && !seedEvidence.externalMessageId; attempt += 1) {
+          await refreshSupportSeedMetadata(page, ticketId, seedEvidence);
+          if (!seedEvidence.externalMessageId) {
+            await page.waitForTimeout(1000);
+          }
+        }
+        if (!seedEvidence.externalMessageId) {
+          await browserApiFetch(page, `/tickets/${encodeURIComponent(ticketId)}/delivery-failures`, {
+            method: 'GET',
+          }).catch(() => null);
+          await refreshSupportSeedMetadata(page, ticketId, seedEvidence);
+          return;
+        }
+
+        const webhook = await browserApiFetch(page, '/webhooks/whatsapp', {
+          method: 'POST',
+          body: JSON.stringify({
+            object: 'whatsapp_business_account',
+            entry: [{ changes: [{ field: 'messages', value: { statuses: [{ id: seedEvidence.externalMessageId, status: 'read' }] } }] }],
+          }),
+        });
+        if (!webhook.ok) {
+          throw new Error(`support_whatsapp_webhook_failed:${webhook.status}`);
+        }
+      },
+    },
+    {
+      id: 'step_assert_whatsapp_delivery',
+      actionType: 'assert_delivery_state',
+      journeyId: 'support_ticket_flow',
+      selectorUsed: 'support-ticket-messages-fetch',
+      async execute(page) {
+        const acceptedStatuses = new Set(['read', 'delivered', 'sent', 'failed', 'stub', 'skipped', 'provider-dependent']);
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          await refreshSupportSeedMetadata(page, ticketId, seedEvidence);
+          if (acceptedStatuses.has(String(seedEvidence.deliveryStatus || '').toLowerCase())) {
+            return;
+          }
+          await page.waitForTimeout(1000);
+        }
+        throw Object.assign(new Error('support_delivery_status_not_terminal'), { blockingAssertion: true });
       },
     },
     {
@@ -1177,6 +1800,585 @@ async function seedFitnessFlowReal(page, baseUrl, tenantName) {
   };
 }
 
+async function seedBookingFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  const resourceResponse = await browserApiFetch(page, '/resources', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: `QA Waves Booking Resource ${suffix}`,
+      type: 'room',
+      metadata: { source: 'qa_waves_prod_like_smoke', suffix },
+    }),
+  });
+  if (!resourceResponse.ok) {
+    throw new Error(`Falha ao criar recurso real para smoke prod-like: ${resourceResponse.status}`);
+  }
+
+  const resource = resourceResponse.body?.resource || resourceResponse.body?.item || resourceResponse.body;
+  if (!resource?.id) {
+    throw new Error('Smoke prod-like não recebeu resourceId do fluxo booking.');
+  }
+
+  return {
+    tenantId: browserContext.tenantId,
+    resourceId: resource.id,
+    status: 'ready',
+  };
+}
+
+async function seedFoodFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/orders`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  const tokenResponse = await browserApiFetch(page, '/public-tokens', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: 'storefront',
+      meta: {
+        name: `QA Waves Food ${suffix}`,
+        description: 'Prod-like food seed token',
+      },
+      expiresInSec: 3600,
+    }),
+  });
+
+  if (!tokenResponse?.ok || !tokenResponse?.body?.token?.token) {
+    throw new Error(`food_public_token_create_failed:${tokenResponse?.status || 'unknown'}`);
+  }
+
+  const created = await browserApiFetch(page, `/storefront/orders?token=${encodeURIComponent(tokenResponse.body.token.token)}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      customerName: 'QA Waves Food Customer',
+      customerPhone: `+5511999${suffix.slice(-6)}`,
+      items: [{
+        name: 'QA Waves Combo',
+        qty: 1,
+        price: 49.9,
+        notes: 'food_order_status_flow',
+      }],
+      notes: 'QA Waves prod-like food seed',
+      deliveryType: 'pickup',
+      idempotencyKey: `qa-waves-food-${suffix}`,
+    }),
+  });
+
+  const order = created?.body?.order || created?.body?.item || created?.body;
+  if (!created?.ok || !order?.id) {
+    throw new Error(`food_order_seed_failed:${created?.status || 'unknown'}`);
+  }
+
+  if (!order?.id) {
+    throw new Error('Smoke prod-like não recebeu orderId do fluxo food.');
+  }
+
+  return {
+    tenantId: browserContext.tenantId,
+    orderId: order.id,
+    status: 'ready',
+  };
+}
+
+async function seedPaymentFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/operations-dashboard`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  const studentPayload = {
+    subjectId: `qa-pay-subject-${suffix}`,
+    customerId: `qa-pay-customer-${suffix}`,
+    membershipId: `qa-pay-membership-${suffix}`,
+    name: 'QA Waves Payment Student',
+    document: `PAY${suffix}`,
+    code: `PAY${suffix}`,
+    planName: 'Plano QA Payment',
+    billingStatus: 'active',
+    status: 'active',
+  };
+  const studentResponse = await browserApiFetch(page, '/api/fitness/student', {
+    method: 'POST',
+    body: JSON.stringify(studentPayload),
+  });
+  if (!studentResponse.ok) {
+    throw new Error(`Falha ao criar aluno real para smoke payment prod-like: ${studentResponse.status}`);
+  }
+
+  const subject = studentResponse.body?.subject || studentResponse.body?.student || studentResponse.body;
+  const membership = studentResponse.body?.membership || null;
+  if (!subject?.id || !membership?.id) {
+    throw new Error('Smoke prod-like não recebeu entidades do fluxo payment.');
+  }
+
+  return {
+    tenantId: browserContext.tenantId,
+    subjectId: subject.id,
+    contactId: subject.customerId || subject.customer_id || studentPayload.customerId,
+    membershipId: membership.id,
+    status: 'ready',
+  };
+}
+
+async function seedMarketFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/node-marketplace`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  return {
+    tenantId: browserContext.tenantId,
+    nodeId: `qa-market-node-${suffix}`,
+    nodeLabel: `QA Market Node ${suffix}`,
+    status: 'ready',
+  };
+}
+
+async function seedClinicFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/maintenance`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const resourceId = browserContext?.agent?.id || browserContext?.agent?.username || browserContext?.agent?.email || null;
+  if (!resourceId) {
+    throw new Error('clinic_calendar_resource_missing');
+  }
+
+  const startAt = new Date(Date.now() + 60 * 60 * 1000);
+  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+  return {
+    tenantId: browserContext.tenantId,
+    resourceId,
+    blockStartAt: startAt.toISOString(),
+    blockEndAt: endAt.toISOString(),
+    status: 'ready',
+  };
+}
+
+function buildProdLikeBookingFlowSteps({ baseUrl, resourceId, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_booking_workspace',
+      actionType: 'navigate',
+      journeyId: 'booking_flow',
+      url: `${baseUrl}/workspace`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+      id: 'step_create_resource_booking',
+      actionType: 'create_booking',
+      journeyId: 'booking_flow',
+      mutationExpected: true,
+      selectorUsed: 'resource-booking-fetch',
+      url: `${baseUrl}/workspace`,
+      async execute(page) {
+        const startAt = new Date(Date.now() + 60 * 60 * 1000);
+        const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+        const created = await browserApiFetch(page, '/resource-bookings', {
+          method: 'POST',
+          body: JSON.stringify({
+            resourceId,
+            startsAt: startAt.toISOString(),
+            endsAt: endAt.toISOString(),
+            status: 'booked',
+            metadata: {
+              source: 'qa_waves_prod_like_smoke',
+              kind: 'booking_flow',
+            },
+          }),
+        });
+        if (!created.ok) {
+          throw new Error(`booking_create_failed:${created.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(created.meta);
+        const booking = created.body?.booking || created.body?.item || created.body;
+        if (!booking?.id) {
+          throw new Error('booking_create_missing_id');
+        }
+        seedEvidence.bookingId = booking.id;
+      },
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_booking_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'booking_flow',
+      selectorUsed: 'resource-booking-list-fetch',
+      url: `${baseUrl}/workspace`,
+      async execute(page) {
+        if (!seedEvidence.bookingId) {
+          throw Object.assign(new Error('booking_id_missing_after_create'), { blockingAssertion: true });
+        }
+
+        const listed = await browserApiFetch(page, `/resource-bookings?resourceId=${encodeURIComponent(resourceId)}&limit=20`, {
+          method: 'GET',
+        });
+        const items = listed.body?.items || listed.body?.bookings || [];
+        const found = Array.isArray(items)
+          ? items.find((item) => String(item?.id || '') === String(seedEvidence.bookingId))
+          : null;
+        if (!listed.ok || !found) {
+          throw Object.assign(new Error('booking_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
+function buildProdLikePaymentFlowSteps({ baseUrl, membershipId, subjectId, contactId, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_payments_module',
+      actionType: 'navigate',
+      journeyId: 'payment_charge_flow',
+      url: `${baseUrl}/operations-dashboard`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/operations-dashboard`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+      id: 'step_create_membership_charge',
+      actionType: 'create_payment',
+      journeyId: 'payment_charge_flow',
+      mutationExpected: true,
+      selectorUsed: 'membership-charge-fetch',
+      url: `${baseUrl}/operations-dashboard`,
+      async execute(page) {
+        const created = await browserApiFetch(page, `/api/fitness/membership/${encodeURIComponent(membershipId)}/charge`, {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: 149.9,
+            dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            cycle: 'MONTHLY',
+            provider: 'sandbox',
+            subjectId,
+            customerId: contactId,
+            customerPhone: '+5511999994000',
+            idempotencyKey: `qa-waves-payment-${Date.now()}`,
+            metadata: {
+              source: 'qa_waves_prod_like_smoke',
+              kind: 'payment_charge_flow',
+            },
+          }),
+        });
+        if (!created.ok) {
+          throw new Error(`payment_charge_create_failed:${created.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(created.meta);
+        const transaction = created.body?.transaction || created.body?.item || created.body;
+        if (!transaction?.id) {
+          throw new Error('payment_charge_missing_transaction');
+        }
+        seedEvidence.transactionId = transaction.id;
+        seedEvidence.externalTransactionId = transaction.external_transaction_id || transaction.externalTransactionId || null;
+      },
+      };
+      return step;
+    })(),
+    (() => {
+      const step = {
+      id: 'step_confirm_membership_payment',
+      actionType: 'confirm_payment',
+      journeyId: 'payment_charge_flow',
+      mutationExpected: true,
+      selectorUsed: 'billing-webhook-fetch',
+      url: `${baseUrl}/operations-dashboard`,
+      async execute(page) {
+        if (!seedEvidence.externalTransactionId) {
+          throw new Error('payment_external_transaction_missing');
+        }
+        const confirmed = await browserApiFetch(page, '/billing/webhook', {
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'sandbox',
+            id: seedEvidence.externalTransactionId,
+            payment: {
+              id: seedEvidence.externalTransactionId,
+              status: 'CONFIRMED',
+            },
+            status: 'CONFIRMED',
+          }),
+        });
+        if (!confirmed.ok) {
+          throw new Error(`payment_confirm_failed:${confirmed.status}`);
+        }
+      },
+      };
+      step.execute = async function execute(page) {
+        if (!seedEvidence.externalTransactionId) {
+          throw new Error('payment_external_transaction_missing');
+        }
+        const confirmed = await browserApiFetch(page, '/billing/webhook', {
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'sandbox',
+            id: seedEvidence.externalTransactionId,
+            payment: {
+              id: seedEvidence.externalTransactionId,
+              status: 'CONFIRMED',
+            },
+            status: 'CONFIRMED',
+          }),
+        });
+        if (!confirmed.ok) {
+          throw new Error(`payment_confirm_failed:${confirmed.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(confirmed.meta);
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_payment_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'payment_charge_flow',
+      selectorUsed: 'billing-transactions-fetch',
+      url: `${baseUrl}/operations-dashboard`,
+      async execute(page) {
+        if (!seedEvidence.transactionId) {
+          throw Object.assign(new Error('payment_transaction_missing'), { blockingAssertion: true });
+        }
+        const listed = await browserApiFetch(page, '/billing/transactions?vertical=fitness&limit=20', { method: 'GET' });
+        const items = listed.body?.items || [];
+        const found = Array.isArray(items)
+          ? items.find((item) => String(item?.id || '') === String(seedEvidence.transactionId))
+          : null;
+        if (!listed.ok || !found || String(found.status || '').toLowerCase() !== 'confirmed') {
+          throw Object.assign(new Error('payment_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
+function buildProdLikeFoodFlowSteps({ baseUrl, orderId, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_orders_module',
+      actionType: 'navigate',
+      journeyId: 'food_order_status_flow',
+      url: `${baseUrl}/orders`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/orders`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+      id: 'step_update_order_status',
+      actionType: 'update_order_status',
+      journeyId: 'food_order_status_flow',
+      mutationExpected: true,
+      selectorUsed: 'order-status-fetch',
+      url: `${baseUrl}/orders`,
+      async execute(page) {
+        const updated = await browserApiFetch(page, `/orders/${encodeURIComponent(orderId)}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'confirmed' }),
+        });
+        if (!updated.ok) {
+          throw new Error(`food_order_status_update_failed:${updated.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(updated.meta);
+        const order = updated.body?.order || updated.body?.item || updated.body;
+        if (!order?.id) {
+          throw new Error('food_order_status_missing_order');
+        }
+        seedEvidence.orderId = order.id;
+      },
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_order_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'food_order_status_flow',
+      selectorUsed: 'order-detail-fetch',
+      url: `${baseUrl}/orders`,
+      async execute(page) {
+        if (!seedEvidence.orderId) {
+          throw Object.assign(new Error('food_order_missing_id_after_status_update'), { blockingAssertion: true });
+        }
+        const detail = await browserApiFetch(page, `/orders/${encodeURIComponent(seedEvidence.orderId)}`, { method: 'GET' });
+        const order = detail.body?.order || detail.body?.item || detail.body;
+        if (!detail.ok || !order || String(order.status || '').toLowerCase() !== 'confirmed') {
+          throw Object.assign(new Error('food_order_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
+function buildProdLikeMarketFlowSteps({ baseUrl, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_node_marketplace',
+      actionType: 'navigate',
+      journeyId: 'market_node_publish_flow',
+      url: `${baseUrl}/node-marketplace`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/node-marketplace`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+        id: 'step_publish_marketplace_node',
+        actionType: 'publish_node',
+        journeyId: 'market_node_publish_flow',
+        mutationExpected: true,
+        selectorUsed: 'node-marketplace-publish-fetch',
+        url: `${baseUrl}/node-marketplace`,
+        async execute(page) {
+          const published = await browserApiFetch(page, '/api/node-marketplace/publish', {
+            method: 'POST',
+            body: JSON.stringify({
+              node: {
+                id: seedEvidence.nodeId,
+                label: seedEvidence.nodeLabel,
+                category: 'tenant',
+                version: '1.0.0',
+                description: 'QA Waves market prod-like node',
+                visibility: 'tenant',
+              },
+            }),
+          });
+          if (!published.ok) {
+            throw new Error(`market_node_publish_failed:${published.status}`);
+          }
+          step.networkEvents = buildSyntheticNetworkEvents(published.meta);
+          const node = published.body?.node || published.body?.item || published.body;
+          if (!node?.id) {
+            throw new Error('market_node_publish_missing_id');
+          }
+          seedEvidence.nodeId = node.id;
+          seedEvidence.nodeLabel = node.label || seedEvidence.nodeLabel;
+        },
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_marketplace_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'market_node_publish_flow',
+      selectorUsed: 'node-marketplace-catalog-fetch',
+      url: `${baseUrl}/node-marketplace`,
+      async execute(page) {
+        if (!seedEvidence.nodeId) {
+          throw Object.assign(new Error('market_node_missing_id_after_publish'), { blockingAssertion: true });
+        }
+        const listed = await browserApiFetch(page, '/api/node-marketplace/catalog', { method: 'GET' });
+        const items = listed.body?.items || listed.body || [];
+        const found = Array.isArray(items)
+          ? items.find((item) => String(item?.id || '') === String(seedEvidence.nodeId))
+          : null;
+        if (!listed.ok || !found) {
+          throw Object.assign(new Error('market_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
+function buildProdLikeClinicFlowSteps({ baseUrl, resourceId, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_clinic_calendar',
+      actionType: 'navigate',
+      journeyId: 'clinic_calendar_block_flow',
+      url: `${baseUrl}/maintenance`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/maintenance`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+        id: 'step_create_calendar_block',
+        actionType: 'create_calendar_block',
+        journeyId: 'clinic_calendar_block_flow',
+        mutationExpected: true,
+        selectorUsed: 'calendar-block-fetch',
+        url: `${baseUrl}/maintenance`,
+        async execute(page) {
+          const created = await browserApiFetch(page, `/api/calendar/resource/${encodeURIComponent(String(resourceId))}/blocks`, {
+            method: 'POST',
+            body: JSON.stringify({
+              startAt: seedEvidence.blockStartAt,
+              endAt: seedEvidence.blockEndAt,
+              reason: 'QA Waves clinic prod-like block',
+            }),
+          });
+          if (!created.ok) {
+            throw new Error(`clinic_calendar_block_create_failed:${created.status}`);
+          }
+          step.networkEvents = buildSyntheticNetworkEvents(created.meta);
+          const block = created.body?.item || created.body?.block || created.body;
+          if (!block?.id) {
+            throw new Error('clinic_calendar_block_missing_id');
+          }
+          seedEvidence.blockId = block.id;
+        },
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_clinic_calendar_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'clinic_calendar_block_flow',
+      selectorUsed: 'calendar-resource-fetch',
+      url: `${baseUrl}/maintenance`,
+      async execute(page) {
+        if (!seedEvidence.blockId) {
+          throw Object.assign(new Error('clinic_calendar_block_missing_after_create'), { blockingAssertion: true });
+        }
+        const query = new URLSearchParams({
+          startDate: seedEvidence.blockStartAt,
+          endDate: seedEvidence.blockEndAt,
+        });
+        const listed = await browserApiFetch(
+          page,
+          `/api/calendar/resource/${encodeURIComponent(String(resourceId))}?${query.toString()}`,
+          { method: 'GET' },
+        );
+        const items = listed.body?.items || listed.body?.calendar || listed.body || [];
+        const found = Array.isArray(items)
+          ? items.find((item) => String(item?.id || '') === String(seedEvidence.blockId))
+          : null;
+        if (!listed.ok || !found) {
+          throw Object.assign(new Error('clinic_calendar_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
 function buildProdLikeFitnessFlowSteps({ baseUrl, credentialValue, subjectId, membershipId, deviceId }) {
   return [
     {
@@ -1325,7 +2527,7 @@ function buildProdLikeFitnessFlowSteps({ baseUrl, credentialValue, subjectId, me
 }
 
 async function collectSnapshotForStep(journeyId, seedEvidence, phase, stepId) {
-  const snapshot = await stateSnapshotService.collectEntityScopedSnapshot({
+  let snapshot = await stateSnapshotService.collectEntityScopedSnapshot({
     journeyId,
     stepId,
     phase,
@@ -1338,19 +2540,54 @@ async function collectSnapshotForStep(journeyId, seedEvidence, phase, stepId) {
     credentialId: seedEvidence.credentialId,
     deviceId: seedEvidence.deviceId,
     deviceMode: seedEvidence.deviceMode,
+    orderId: seedEvidence.orderId,
+    bookingId: seedEvidence.bookingId,
+    transactionId: seedEvidence.transactionId,
     seedEvidence,
+  });
+
+  snapshot = await maybeCollectFoodApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectMarketApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectClinicApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectBookingApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectPaymentApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectFitnessApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
   });
 
   return maybeCollectSupportApiFallbackSnapshot({
     journeyId,
     seedEvidence,
     stepId,
-    snapshot: await maybeCollectFitnessApiFallbackSnapshot({
-      journeyId,
-      seedEvidence,
-      stepId,
-      snapshot,
-    }),
+    snapshot,
   });
 }
 
@@ -1403,6 +2640,9 @@ async function runRealFlow({ journeyId, steps, seedEvidence }) {
     credentialId: seedEvidence.credentialId,
     deviceId: seedEvidence.deviceId,
     deviceMode: seedEvidence.deviceMode,
+    orderId: seedEvidence.orderId,
+    bookingId: seedEvidence.bookingId,
+    transactionId: seedEvidence.transactionId,
     seedEvidence,
   });
 
@@ -1438,6 +2678,9 @@ async function runRealFlow({ journeyId, steps, seedEvidence }) {
     credentialId: seedEvidence.credentialId,
     deviceId: seedEvidence.deviceId,
     deviceMode: seedEvidence.deviceMode,
+    orderId: seedEvidence.orderId,
+    bookingId: seedEvidence.bookingId,
+    transactionId: seedEvidence.transactionId,
     seedEvidence,
   });
 
@@ -1544,6 +2787,15 @@ async function cleanupProdLikeFlow(page, flow) {
     return { attempted: true, success: Boolean(closed?.ok) };
   }
 
+  if (flow.cleanup.type === 'calendar_block_delete' && flow.cleanup.resourceId && flow.cleanup.blockId) {
+    const deleted = await browserApiFetch(
+      page,
+      `/api/calendar/resource/${encodeURIComponent(String(flow.cleanup.resourceId))}/blocks/${encodeURIComponent(String(flow.cleanup.blockId))}`,
+      { method: 'DELETE' },
+    ).catch(() => null);
+    return { attempted: true, success: Boolean(deleted?.ok) };
+  }
+
   return { attempted: true, success: false, reason: 'cleanup_manifest_only' };
 }
 
@@ -1641,7 +2893,14 @@ async function runFlow({ journeyId, steps, state, baseUrl, seedEvidence }) {
     events: effectivePostState.steps.map((step) => ({
       type: 'api_call',
       page: step.url,
-      module: journeyId === 'support_ticket_flow' ? 'support' : 'fitness',
+      module: ({
+        support_ticket_flow: 'support',
+        fitness_customer_checkin: 'fitness',
+        booking_flow: 'workspace',
+        payment_charge_flow: 'operations-dashboard',
+        food_order_status_flow: 'orders',
+        market_node_publish_flow: 'node-marketplace',
+      })[journeyId] || 'operations',
       operation: step.mutationExpected ? 'write' : 'read',
       stateChange: step.mutationExpected === true,
       timestamp: step.timestamp || new Date().toISOString(),
@@ -1686,11 +2945,39 @@ async function runFinalOperationalSmoke(options = {}) {
       headless: options.headless,
       timeout: options.timeout,
     });
-    const page = launched?.page;
+    const launchedBrowsers = [launched?.browser].filter(Boolean);
+    let page = launched?.page;
     const cleanupResults = [];
 
+    const ensureActivePage = async () => {
+      const pageClosed = (() => {
+        try {
+          return !page || page.isClosed();
+        } catch {
+          return true;
+        }
+      })();
+
+      if (!pageClosed) {
+        return page;
+      }
+
+      const relaunched = await launchBrowserPage({
+        initialUrl: DEFAULT_FRONTEND_URL,
+        headless: options.headless,
+        timeout: options.timeout,
+      });
+      if (relaunched?.browser) {
+        launchedBrowsers.push(relaunched.browser);
+      }
+      page = relaunched?.page;
+      return page;
+    };
+
     try {
+      page = await ensureActivePage();
       const tenantInfo = await ensureProdLikeTenant(page, DEFAULT_FRONTEND_URL);
+      page = await ensureActivePage();
       const supportSeed = await seedSupportFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
       const supportSeedEvidence = {
         ...supportSeed,
@@ -1716,6 +3003,7 @@ async function runFinalOperationalSmoke(options = {}) {
           page,
           status: 'ready',
         },
+        
         steps: buildProdLikeFitnessFlowSteps({
           baseUrl: DEFAULT_FRONTEND_URL,
           credentialValue: fitnessSeed.credentialValue,
@@ -1725,10 +3013,100 @@ async function runFinalOperationalSmoke(options = {}) {
         }),
       });
 
+      page = await ensureActivePage();
+      const bookingSeed = await seedBookingFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const bookingSeedEvidence = {
+        ...bookingSeed,
+        page,
+        status: 'ready',
+      };
+      const booking = await runRealFlow({
+        journeyId: 'booking_flow',
+        seedEvidence: bookingSeedEvidence,
+        steps: buildProdLikeBookingFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          resourceId: bookingSeed.resourceId,
+          seedEvidence: bookingSeedEvidence,
+        }),
+      });
+
+      page = await ensureActivePage();
+      const paymentSeed = await seedPaymentFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const paymentSeedEvidence = {
+        ...paymentSeed,
+        page,
+        status: 'ready',
+      };
+      const payment = await runRealFlow({
+        journeyId: 'payment_charge_flow',
+        seedEvidence: paymentSeedEvidence,
+        steps: buildProdLikePaymentFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          membershipId: paymentSeed.membershipId,
+          subjectId: paymentSeed.subjectId,
+          contactId: paymentSeed.contactId,
+          seedEvidence: paymentSeedEvidence,
+        }),
+      });
+
+      page = await ensureActivePage();
+      const foodSeed = await seedFoodFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const foodSeedEvidence = {
+        ...foodSeed,
+        page,
+        status: 'ready',
+      };
+      const food = await runRealFlow({
+        journeyId: 'food_order_status_flow',
+        seedEvidence: foodSeedEvidence,
+        steps: buildProdLikeFoodFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          orderId: foodSeed.orderId,
+          seedEvidence: foodSeedEvidence,
+        }),
+      });
+
+      page = await ensureActivePage();
+      const marketSeed = await seedMarketFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const marketSeedEvidence = {
+        ...marketSeed,
+        page,
+        status: 'ready',
+      };
+      const market = await runRealFlow({
+        journeyId: 'market_node_publish_flow',
+        seedEvidence: marketSeedEvidence,
+        steps: buildProdLikeMarketFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          seedEvidence: marketSeedEvidence,
+        }),
+      });
+
+      page = await ensureActivePage();
+      const clinicSeed = await seedClinicFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const clinicSeedEvidence = {
+        ...clinicSeed,
+        page,
+        status: 'ready',
+      };
+      const clinic = await runRealFlow({
+        journeyId: 'clinic_calendar_block_flow',
+        seedEvidence: clinicSeedEvidence,
+        steps: buildProdLikeClinicFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          resourceId: clinicSeed.resourceId,
+          seedEvidence: clinicSeedEvidence,
+        }),
+      });
+      clinic.cleanup = clinicSeedEvidence.blockId
+        ? { type: 'calendar_block_delete', resourceId: clinicSeed.resourceId, blockId: clinicSeedEvidence.blockId }
+        : null;
+
       cleanupResults.push({ journeyId: 'support_ticket_flow', result: await cleanupProdLikeFlow(page, support) });
       cleanupResults.push({ journeyId: 'fitness_customer_checkin', result: await cleanupProdLikeFlow(page, fitness) });
+      cleanupResults.push({ journeyId: 'clinic_calendar_block_flow', result: await cleanupProdLikeFlow(page, clinic) });
 
-      const flows = [support, fitness];
+      const flows = [support, fitness, booking, payment, food, market, clinic];
       const environment = {
         mode,
         frontendUrl: DEFAULT_FRONTEND_URL,
@@ -1760,7 +3138,9 @@ async function runFinalOperationalSmoke(options = {}) {
       }
       return summary;
     } finally {
-      await launched?.browser?.close?.().catch(() => {});
+      for (const browser of launchedBrowsers) {
+        await browser?.close?.().catch(() => {});
+      }
     }
   }
 

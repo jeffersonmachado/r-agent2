@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "vertical": "food",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "food",
+      "journey": "food_order_flow",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-food-scr-01",
+          "scenario": "Food Orders screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

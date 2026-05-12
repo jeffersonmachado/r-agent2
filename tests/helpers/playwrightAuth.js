@@ -228,6 +228,37 @@ async function clickVisibleButtonByText(page, { includes = [], excludes = [] } =
   return false;
 }
 
+async function waitForLoginSurface(page, timeout = 15000) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    const usernameField = await firstVisible(page, [
+      'input[name="username"]',
+      'input[placeholder*="username" i]',
+      'input[autocomplete="username"]',
+      '[data-testid="username"]',
+      'input[type="text"]',
+    ], 1000);
+
+    if (usernameField) {
+      return true;
+    }
+
+    const headingVisible = await firstVisible(page, [
+      'text=/Login de Agente/i',
+      'text=/login/i',
+    ], 1000);
+
+    if (headingVisible) {
+      await page.waitForTimeout(250);
+    } else {
+      await page.waitForTimeout(500);
+    }
+  }
+
+  return false;
+}
+
 async function tenantModalVisible(page) {
   const modal = await firstVisible(page, [
     'text=/Selecione o Tenant/i',
@@ -295,6 +326,28 @@ async function selectTenant(page, { tenantId = 'system', tenantName = '' } = {})
   const accessClicked = await clickTenantAccess(page);
 
   if (!accessClicked) {
+    const modalStillVisible = await tenantModalVisible(page);
+    const effectiveTenantResolved = await page.evaluate((expectedTenantId) => {
+      const effectiveTenantId = localStorage.getItem('auth_effective_tenant_id');
+      if (effectiveTenantId && String(effectiveTenantId).trim()) {
+        return String(effectiveTenantId).trim().toLowerCase() === String(expectedTenantId || '').trim().toLowerCase();
+      }
+
+      try {
+        const agent = JSON.parse(localStorage.getItem('auth_agent') || '{}');
+        const agentTenantId = agent?.tenantId || null;
+        return agentTenantId
+          ? String(agentTenantId).trim().toLowerCase() === String(expectedTenantId || '').trim().toLowerCase()
+          : false;
+      } catch (_) {
+        return false;
+      }
+    }, tenantId).catch(() => false);
+
+    if (!modalStillVisible || effectiveTenantResolved) {
+      return { handled: true, selectedTenant: tenantId };
+    }
+
     const modalState = await getTenantModalState(page);
     throw new Error(`Modal de tenant detectado, mas botao "Acessar" nao encontrado: ${JSON.stringify(modalState)}`);
   }
@@ -322,13 +375,22 @@ async function loginWithTenantSelection(page, {
 
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
+  let loginSurfaceReady = await waitForLoginSurface(page);
+  if (!loginSurfaceReady) {
+    const loginUrl = new URL('/login', targetUrl).toString();
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    loginSurfaceReady = await waitForLoginSurface(page);
+  }
+
   const usernameOk = await fillFirst(page, [
     'input[name="username"]',
+    'input[placeholder*="username" i]',
+    'input[autocomplete="username"]',
     'input[type="text"]',
     '[data-testid="username"]',
   ], username);
 
-  if (!usernameOk) {
+  if (!loginSurfaceReady || !usernameOk) {
     throw new Error('Campo de username nao encontrado');
   }
 

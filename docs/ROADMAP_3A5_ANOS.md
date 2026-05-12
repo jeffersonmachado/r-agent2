@@ -101,11 +101,11 @@ flowchart LR
   - Admin completo (listar/revogar/rotacionar) + auditoria + rate-limit por token/kind.
 
 - **SaaS enterprise (multi-tenant) — base completa (backend + frontend)**:
-  - Multi-tenancy + isolamento: `api/middleware/tenantValidation.js` e docs `IMPLEMENTACAO_SAAS_COMPLETA.md`.
+  - Multi-tenancy + isolamento: `api/middleware/tenantValidation.js` e docs `history/IMPLEMENTACAO_SAAS_COMPLETA.md`.
   - RBAC (6 roles) + permissões granulares: `api/services/rbacService.js`.
   - Planos/limites: `api/services/planLimitsService.js`.
   - Auditoria/compliance: `api/services/auditService.js`.
-  - Super-admin + onboarding: `api/services/superAdminService.js` e `api/services/onboardingService.js` + páginas no frontend (ver `IMPLEMENTACAO_SAAS_COMPLETA.md`).
+  - Super-admin + onboarding: `api/services/superAdminService.js` e `api/services/onboardingService.js` + páginas no frontend (ver `history/IMPLEMENTACAO_SAAS_COMPLETA.md`).
   - Rate-limit por tenant: `api/middleware/tenantRateLimit.js`.
 
 - **AI Output Envelope (safe-mode + validação por contrato)**:
@@ -117,7 +117,7 @@ flowchart LR
   - Webhooks customizados: `api/services/webhookService.js`.
   - WebSocket server (real-time por tenant): `api/services/websocketService.js`.
   - Validação de inputs: `api/utils/inputValidator.js`.
-  - Resumo do pacote (documentação interna): `IMPLEMENTACOES_MELHORIAS.md`.
+  - Resumo do pacote (documentação interna): `history/IMPLEMENTACOES_MELHORIAS.md`.
 
 - **PBX v1 (Postgres + Asterisk Realtime) — configuração básica**:
   - Camada produto (fonte de verdade): migration `api/db/migrations/20260203011000-pbx-product-core.js` (extensions/trunks/routes/queues/members/call_rules/config_versions).

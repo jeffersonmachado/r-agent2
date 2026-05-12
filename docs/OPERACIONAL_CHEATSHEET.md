@@ -167,6 +167,12 @@ cat $RUNTIME_ROOT/qa-mesh/release-gate-report.json
 # Go/no-go evidence
 cat $RUNTIME_ROOT/qa-mesh/go-no-go-report.json
 
+# Canonical promotion metadata
+cat $RUNTIME_ROOT/qa-mesh/canonical-promotion.json
+
+# Canonical execution lock (deve existir apenas durante a execução full-registry)
+cat $RUNTIME_ROOT/qa-mesh/canonical.lock.json
+
 # Smoke test evidence
 cat $RUNTIME_ROOT/qa/l01-physical-queue-evidence.json
 cat $RUNTIME_ROOT/qa/l06-bpmn-editor-evidence.json
@@ -174,6 +180,13 @@ cat $RUNTIME_ROOT/qa/l06-bpmn-editor-evidence.json
 # Release summary
 cat $RUNTIME_ROOT/qa-mesh/release-summary.json
 ```
+
+### QA Mesh canônico
+
+- Execução canônica só promove `meshReport.json`, `go-no-go-report.json`, `metrics.json` e `canonical-promotion.json` quando roda em pipeline e cobre o registry completo.
+- O runner serializa a promoção canônica com `qa-mesh/canonical.lock.json`; se outra execução full-registry tentar promover ao mesmo tempo, ela falha rápido.
+- O lock inclui `pid` do processo dono e locks stale são recuperados automaticamente quando o processo não existe mais.
+- Se houver `canonical.lock.json` sem processo ativo correspondente, valide com `pgrep -f "meshRunner.js.*<executionId>"`; sem processo ativo, remover o arquivo é seguro antes de reexecutar.
 
 ---
 

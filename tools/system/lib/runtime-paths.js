@@ -29,8 +29,43 @@ function resolveWorkspacePath(rootDir, targetPath) {
   return path.isAbsolute(targetPath) ? targetPath : path.join(rootDir, targetPath);
 }
 
+function resolveEvidenceCandidates(rootDir, targetPath, explicitEnvVar, env = process.env) {
+  const candidates = [];
+  const runtimeRoot = env.RUNTIME_ROOT
+    ? (path.isAbsolute(env.RUNTIME_ROOT) ? env.RUNTIME_ROOT : path.join(rootDir, env.RUNTIME_ROOT))
+    : null;
+
+  if (!targetPath && !(explicitEnvVar && env[explicitEnvVar])) {
+    return candidates;
+  }
+
+  if (targetPath && path.isAbsolute(targetPath)) {
+    candidates.push(targetPath);
+
+    if (runtimeRoot && (targetPath === runtimeRoot || targetPath.startsWith(`${runtimeRoot}${path.sep}`))) {
+      const relativeFromRuntime = path.relative(runtimeRoot, targetPath);
+      candidates.push(path.join(rootDir, relativeFromRuntime));
+    }
+  } else {
+    try {
+      candidates.push(resolveWorkspacePath(rootDir, runtimeAwarePath(rootDir, targetPath, explicitEnvVar, env)));
+    } catch (_) {}
+
+    if (targetPath) {
+      candidates.push(path.join(rootDir, targetPath));
+    }
+  }
+
+  if (!targetPath && explicitEnvVar && env[explicitEnvVar]) {
+    candidates.push(resolveWorkspacePath(rootDir, env[explicitEnvVar]));
+  }
+
+  return Array.from(new Set(candidates.filter(Boolean)));
+}
+
 module.exports = {
   getRuntimeRoot,
   runtimeAwarePath,
   resolveWorkspacePath,
+  resolveEvidenceCandidates,
 };

@@ -7,7 +7,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'high',
     path: '/fitness/students',
     intent: 'fitness_students',
-    pageTitle: 'Fitness Students',
+    pageTitle: 'Alunos Fitness|Fitness Students',
     preconditions: ['Tenant autenticado', 'Aluno baseline seeded'],
     actions: [
       { kind: 'fill', target: 'search_input', value: 'Aluno QA' },
@@ -39,7 +39,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'high',
     path: '/fitness/attendance',
     intent: 'fitness_attendance',
-    pageTitle: 'Fitness Attendance',
+    pageTitle: 'Presença Fitness|Fitness Attendance',
     preconditions: ['Attendance route ativa'],
     actions: [
       { kind: 'click', target: 'refresh_button' },
@@ -70,7 +70,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'high',
     path: '/beauty/leads',
     intent: 'beauty_leads',
-    pageTitle: 'Beauty Leads',
+    pageTitle: 'Leads de Beleza|Beauty Leads',
     preconditions: ['Lead baseline seeded'],
     actions: [
       { kind: 'fill', target: 'first_input', valueTemplate: 'Lead Tela {timestamp}' },
@@ -87,7 +87,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'high',
     path: '/beauty/customers',
     intent: 'beauty_customers',
-    pageTitle: 'Beauty Customers',
+    pageTitle: 'Clientes de Beleza|Beauty Customers',
     preconditions: ['Cliente beauty seeded'],
     actions: [
       { kind: 'fill', target: 'search_input', value: 'Cliente QA' },
@@ -118,7 +118,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'medium',
     path: '/beauty/services',
     intent: 'beauty_services',
-    pageTitle: 'Beauty Services',
+    pageTitle: 'Serviços de Beleza|Beauty Services',
     preconditions: ['Serviços beauty publicados'],
     actions: [
       { kind: 'click', target: 'refresh_button' },
@@ -184,7 +184,7 @@ const SCREEN_SCENARIOS = [
     criticality: 'medium',
     path: '/node-marketplace',
     intent: 'node_marketplace',
-    pageTitle: 'Node Marketplace',
+    pageTitle: 'Mercado de Nós|Node Marketplace',
     preconditions: ['Marketplace carregável no tenant'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },

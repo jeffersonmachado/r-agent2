@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-05-12T10:41:40.110Z",
+  "ok": true,
+  "tenantId": "system",
+  "ticketId": "default-1778582499231-pyjues5",
+  "phoneNumber": "5511982499002",
+  "transferQueue": "enterprise_support_1778582499002",
+  "warnings": [],
+  "ticket": {
+    "id": "default-1778582499231-pyjues5",
+    "queue": "enterprise_support_1778582499002",
+    "status": "closed",
+    "assignedTo": null,
+    "firstResponseAt": "2026-05-12T10:41:39.426Z",
+    "resolvedAt": "2026-05-12T10:41:39.537Z",
+    "waitingTimeSeconds": 0,
+    "handlingTimeSeconds": 0,
+    "conversationId": "conv-1778582499110-47e824c53f95"
+  },
+  "signals": {
+    "ticketCreated": true,
+    "ticketOwnershipObserved": true,
+    "humanTakeoverObserved": true,
+    "routingTransferObserved": true,
+    "humanReplyObserved": true,
+    "customerReplyObserved": true,
+    "slaObserved": true,
+    "backendMutationObserved": true,
+    "chronologicalReplayObserved": true,
+    "stateTransitionsObserved": true
+  },
+  "evidence": {
+    "messageCount": 6,
+    "timelineCount": 8,
+    "eventCount": 0,
+    "auditCount": 4
+  },
+  "replay": [
+    {
+      "timestamp": null,
+      "kind": "audit_log",
+      "actor": "rpa_system",
+      "text": "ticket_close",
+      "payload": {},
+      "order": 20000
+    },
+    {
+      "timestamp": null,
+      "kind": "audit_log",
+      "actor": "rpa_system",
+      "text": "ticket_message",
+      "payload": {
+        "hasMedia": false,
+        "mediaType": null,
+        "messageLength": 53
+      },
+      "order": 20001
+    },
+    {
+      "timestamp": null,
+      "kind": "audit_log",
+      "actor": "rpa_system",
+      "text": "ticket_assign",
+      "payload": {
+        "assignedTo": "rpa_system"
+      },
+      "order": 20002
+    },
+    {
+      "timestamp": null,
+      "kind": "audit_log",
+      "actor": "rpa_system",
+      "text": "ticket_takeover",
+      "payload": {
+        "reason": "enterprise_real_handoff"
+      },
+      "order": 20003
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.000Z",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Cliente inicia conversa enterprise 1778582499002",
+      "status": null,
+      "source": "ticket",
+      "order": -10000
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.000Z",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Cliente confirmou retorno enterprise 1778582499002",
+      "status": null,
+      "source": "ticket",
+      "order": -9996
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.124Z",
+      "kind": "channel_message",
+      "actor": "customer",
+      "text": "Cliente inicia conversa enterprise 1778582499002",
+      "status": "received",
+      "source": "channel",
+      "order": 2
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.383Z",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Ticket atribuido para rpa_system.",
+      "status": null,
+      "source": "ticket",
+      "order": -9999
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.410Z",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Transferencia realizada. Fila: enterprise_support_1778582499002 · Sem atendente",
+      "status": null,
+      "source": "ticket",
+      "order": -9998
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.426Z",
+      "kind": "ticket_message",
+      "actor": "agent",
+      "text": "Humano assumiu o atendimento enterprise 1778582499002",
+      "status": "pending",
+      "source": "ticket",
+      "order": -9997
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.478Z",
+      "kind": "channel_message",
+      "actor": "customer",
+      "text": "Cliente confirmou retorno enterprise 1778582499002",
+      "status": "received",
+      "source": "channel",
+      "order": 6
+    },
+    {
+      "timestamp": "2026-05-12T10:41:39.537Z",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Ticket encerrado (Resolvido pelo enterprise proof smoke).",
+      "status": null,
+      "source": "ticket",
+      "order": -9995
+    }
+  ]
+}

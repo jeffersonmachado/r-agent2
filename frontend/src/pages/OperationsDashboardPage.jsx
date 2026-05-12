@@ -1092,7 +1092,7 @@ export function OperationsDashboardPage() {
             <div className="grid gap-3 md:grid-cols-5 mb-3">
               <input
                 className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm md:col-span-3"
-                placeholder="Buscar cliente por nome, documento, subjectId ou código"
+                placeholder="Buscar cliente por nome, documento, subjectId ou codigo"
                 value={beautySearchQuery}
                 onChange={(e) => setBeautySearchQuery(e.target.value)}
               />
@@ -1163,7 +1163,7 @@ export function OperationsDashboardPage() {
                         <div className="text-xs text-text-secondary mb-1">Indicadores</div>
                         <div className="flex flex-wrap gap-2">
                           <span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(riskLevel(beautyDetail.indicators?.noShowRiskScore) === 'alto' ? 'failed' : riskLevel(beautyDetail.indicators?.noShowRiskScore) === 'medio' ? 'pending' : 'success')}`}>
-                            risco de no-show: {riskLevel(beautyDetail.indicators?.noShowRiskScore)} ({Number(beautyDetail.indicators?.noShowRiskScore || 0).toFixed(2)})
+                            no-show risk: {riskLevel(beautyDetail.indicators?.noShowRiskScore)} ({Number(beautyDetail.indicators?.noShowRiskScore || 0).toFixed(2)})
                           </span>
                           <span className={`px-2 py-1 rounded text-xs ${statusBadgeClass(beautyDetail.indicators?.eligibleForReturn ? 'success' : 'pending')}`}>
                             retorno: {beautyDetail.indicators?.eligibleForReturn ? 'elegível' : 'não elegível'}
@@ -1285,7 +1285,7 @@ export function OperationsDashboardPage() {
             <div className="grid gap-3 md:grid-cols-6 mb-3">
               <input
                 className="bg-bg-tertiary border border-border-default rounded px-2 py-2 text-sm md:col-span-4"
-                placeholder="Buscar aluno por nome, documento, código ou subjectId"
+                placeholder="Buscar aluno por nome, documento, codigo ou subjectId"
                 value={fitnessQuery}
                 onChange={(e) => setFitnessQuery(e.target.value)}
               />

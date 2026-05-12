@@ -93,6 +93,45 @@ describe('QA Waves final operational readiness', () => {
     }));
   });
 
+  test('registry classifica step_update_order_status como mutacional com side effect canonico', () => {
+    const contract = getOperationalStepContract('step_update_order_status');
+
+    expect(contract).toEqual(expect.objectContaining({
+      actionType: 'update_order_status',
+      journeyId: 'food_order_status_flow',
+      mutationExpected: true,
+      expectedMutations: ['order_status_changed'],
+      expectedSideEffects: ['event_ledger_recorded'],
+      snapshotRequired: true,
+    }));
+  });
+
+  test('registry classifica step_publish_marketplace_node como mutacional com catalogo atualizado', () => {
+    const contract = getOperationalStepContract('step_publish_marketplace_node');
+
+    expect(contract).toEqual(expect.objectContaining({
+      actionType: 'publish_node',
+      journeyId: 'market_node_publish_flow',
+      mutationExpected: true,
+      expectedMutations: ['node_published'],
+      expectedSideEffects: ['catalog_updated'],
+      snapshotRequired: true,
+    }));
+  });
+
+  test('registry classifica step_create_calendar_block como mutacional com agenda atualizada', () => {
+    const contract = getOperationalStepContract('step_create_calendar_block');
+
+    expect(contract).toEqual(expect.objectContaining({
+      actionType: 'create_calendar_block',
+      journeyId: 'clinic_calendar_block_flow',
+      mutationExpected: true,
+      expectedMutations: ['calendar_block_created'],
+      expectedSideEffects: ['calendar_updated'],
+      snapshotRequired: true,
+    }));
+  });
+
   test('replay audit completeness rejects partial replay', () => {
     const audit = assertReplayAudit({
       steps: [{

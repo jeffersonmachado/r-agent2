@@ -1,0 +1,9 @@
+{
+  "status": "NO_GO",
+  "readinessScore": 37.43,
+  "qaCoverage": 93.1,
+  "replayCoverage": 33.33,
+  "verticalCoverage": 16.67,
+  "blockingGaps": 14,
+  "output": "governance/final-readiness-report.json"
+}

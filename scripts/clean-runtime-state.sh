@@ -45,7 +45,6 @@ RUNTIME_DIRS=(
   "frontend/.vite"
   "frontend/test-results"
   "qa/release-evidence"
-  "qa/smoke"
   "qa-mesh/meshEvidence"
   "qa-mesh/meshHistory"
   "qa-mesh/system-validate"

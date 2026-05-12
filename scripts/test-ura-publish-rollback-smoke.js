@@ -27,7 +27,7 @@ function apiBaseUrl() {
 async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const timeoutMs = Math.max(3000, Number(process.env.L02_HTTP_TIMEOUT_MS || 20000));
+  const timeoutMs = Math.max(3000, Number(process.env.L02_HTTP_TIMEOUT_MS || 60000));
   const retries = Math.max(1, Number(process.env.L02_HTTP_RETRIES || 3));
   let lastErr = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -51,7 +51,11 @@ async function reqJson(url, { method = 'GET', token = null, body = null } = {}) 
       return { ok: res.ok, status: res.status, payload };
     } catch (err) {
       clearTimeout(timeout);
-      lastErr = err;
+      if (err?.name === 'AbortError') {
+        lastErr = new Error(`request_aborted:${method}:${url}:timeout=${timeoutMs}`);
+      } else {
+        lastErr = err;
+      }
       if (attempt < retries) {
         // eslint-disable-next-line no-await-in-loop
         await sleep(250 * attempt);

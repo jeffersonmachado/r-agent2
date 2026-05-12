@@ -7,10 +7,31 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useInFlightGuard } from '../hooks/useInFlightGuard';
 import * as onboardingApi from '../api/onboarding';
+import { getConfig, getIntegrationConfigReadiness, updateConfig } from '../api/config';
 import { Button } from '../styles/Button';
 import { useToast } from '../components/Toast';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
+
+function readSearchParam(name) {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function updateNestedConfigValue(baseConfig, configPath, nextValue) {
+  const nextConfig = JSON.parse(JSON.stringify(baseConfig || {}));
+  const keys = String(configPath || '').split('.').filter(Boolean);
+  let current = nextConfig;
+  for (let index = 0; index < keys.length - 1; index += 1) {
+    const key = keys[index];
+    if (!current[key] || typeof current[key] !== 'object' || Array.isArray(current[key])) {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+  current[keys[keys.length - 1]] = nextValue;
+  return nextConfig;
+}
 
 export function OnboardingPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -21,6 +42,19 @@ export function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [segment, setSegment] = useState('');
   const [cannotStartOnboarding, setCannotStartOnboarding] = useState(false);
+  const [requiredStep, setRequiredStep] = useState(() => readSearchParam('required') || '');
+  const [integrationReadiness, setIntegrationReadiness] = useState(null);
+  const [smtpSaving, setSmtpSaving] = useState(false);
+  const [smtpConfig, setSmtpConfig] = useState({
+    enabled: false,
+    host: '',
+    port: '587',
+    secure: false,
+    username: '',
+    password: '',
+    fromAddress: '',
+    fromName: '',
+  });
 
   // Evita duplicação de chamadas em dev (React StrictMode) e/ou re-renders.
   const onboardingLoadGuard = useInFlightGuard();
@@ -40,9 +74,75 @@ export function OnboardingPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadOnboardingStatus();
+      if (requiredStep === 'integrations') {
+        loadIntegrationConfig();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, canStartOnboarding]);
+  }, [isAuthenticated, canStartOnboarding, requiredStep]);
+
+  useEffect(() => {
+    const onPopState = () => setRequiredStep(readSearchParam('required') || '');
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', onPopState);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', onPopState);
+      }
+    };
+  }, []);
+
+  const loadIntegrationConfig = async () => {
+    try {
+      const [config, readiness] = await Promise.all([
+        getConfig(),
+        getIntegrationConfigReadiness(),
+      ]);
+      setIntegrationReadiness(readiness);
+      setSmtpConfig({
+        enabled: config?.notifications?.email?.enabled === true,
+        host: String(config?.notifications?.email?.smtp?.host || ''),
+        port: String(config?.notifications?.email?.smtp?.port || '587'),
+        secure: config?.notifications?.email?.smtp?.secure === true,
+        username: String(config?.notifications?.email?.smtp?.username || ''),
+        password: String(config?.notifications?.email?.smtp?.password || ''),
+        fromAddress: String(config?.notifications?.email?.fromAddress || ''),
+        fromName: String(config?.notifications?.email?.fromName || ''),
+      });
+    } catch (err) {
+      logger.error('Erro ao carregar configuração SMTP no onboarding', err);
+      showToast('Erro ao carregar configuração SMTP', 'error');
+    }
+  };
+
+  const handleSmtpFieldChange = (field, value) => {
+    setSmtpConfig((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveSmtpConfig = async () => {
+    setSmtpSaving(true);
+    try {
+      let config = await getConfig();
+      config = updateNestedConfigValue(config, 'notifications.email.enabled', smtpConfig.enabled === true);
+      config = updateNestedConfigValue(config, 'notifications.email.smtp.host', smtpConfig.host.trim());
+      config = updateNestedConfigValue(config, 'notifications.email.smtp.port', Number(smtpConfig.port || 587));
+      config = updateNestedConfigValue(config, 'notifications.email.smtp.secure', smtpConfig.secure === true);
+      config = updateNestedConfigValue(config, 'notifications.email.smtp.username', smtpConfig.username.trim());
+      config = updateNestedConfigValue(config, 'notifications.email.smtp.password', smtpConfig.password);
+      config = updateNestedConfigValue(config, 'notifications.email.fromAddress', smtpConfig.fromAddress.trim());
+      config = updateNestedConfigValue(config, 'notifications.email.fromName', smtpConfig.fromName.trim());
+      await updateConfig(config);
+      const readiness = await getIntegrationConfigReadiness();
+      setIntegrationReadiness(readiness);
+      showToast('Configuração SMTP salva com sucesso!', 'success');
+    } catch (err) {
+      logger.error('Erro ao salvar configuração SMTP no onboarding', err);
+      showToast(err?.body?.message || 'Erro ao salvar configuração SMTP', 'error');
+    } finally {
+      setSmtpSaving(false);
+    }
+  };
 
   const loadOnboardingStatus = async () => {
     if (!onboardingLoadGuard.start()) return;
@@ -179,6 +279,83 @@ export function OnboardingPage() {
               Este tenant ainda não iniciou o onboarding. Somente <strong>owner</strong>, <strong>admin</strong> ou{' '}
               <strong>super_admin</strong> podem iniciar.
             </p>
+          </div>
+        </div>
+      )}
+
+      {requiredStep === 'integrations' && (
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary">Integrações obrigatórias</h2>
+              <p className="text-sm text-text-secondary mt-1">
+                Configure o SMTP do tenant aqui no onboarding e também pela tela de configurações quando precisar revisar o provider.
+              </p>
+            </div>
+            <Button variant="secondary" onClick={() => navigate('/config?tab=email')}>
+              Abrir tela de configurações
+            </Button>
+          </div>
+
+          {integrationReadiness && !integrationReadiness.ready && (
+            <div className="mb-4 p-4 bg-status-warning/10 border border-status-warning/30 rounded-lg text-sm text-text-primary space-y-1">
+              <div className="font-medium">Pendências detectadas</div>
+              {(integrationReadiness.missing || []).slice(0, 6).map((item, index) => (
+                <div key={`${item?.path || 'unknown'}-${index}`}>
+                  • {item?.path || 'campo_desconhecido'}{item?.reason ? ` — ${item.reason}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {integrationReadiness?.ready && (
+            <div className="mb-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-600">
+              SMTP e integrações obrigatórias estão configurados.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2 flex items-center gap-3">
+              <input id="smtp-enabled" type="checkbox" checked={smtpConfig.enabled} onChange={(e) => handleSmtpFieldChange('enabled', e.target.checked)} />
+              <label htmlFor="smtp-enabled" className="text-sm font-medium text-text-primary">Habilitar Email transacional</label>
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Host SMTP</label>
+              <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.host} onChange={(e) => handleSmtpFieldChange('host', e.target.value)} placeholder="smtp.exemplo.com" />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Porta SMTP</label>
+              <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.port} onChange={(e) => handleSmtpFieldChange('port', e.target.value)} placeholder="587" />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-3">
+              <input id="smtp-secure" type="checkbox" checked={smtpConfig.secure} onChange={(e) => handleSmtpFieldChange('secure', e.target.checked)} />
+              <label htmlFor="smtp-secure" className="text-sm font-medium text-text-primary">Usar conexão segura (SMTPS/TLS)</label>
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Usuário SMTP</label>
+              <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.username} onChange={(e) => handleSmtpFieldChange('username', e.target.value)} placeholder="usuario" />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Senha SMTP</label>
+              <input type="password" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.password} onChange={(e) => handleSmtpFieldChange('password', e.target.value)} placeholder="••••••••" />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Email remetente</label>
+              <input type="email" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.fromAddress} onChange={(e) => handleSmtpFieldChange('fromAddress', e.target.value)} placeholder="no-reply@exemplo.com" />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-text-primary">Nome do remetente</label>
+              <input className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary" value={smtpConfig.fromName} onChange={(e) => handleSmtpFieldChange('fromName', e.target.value)} placeholder="Operações" />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button variant="primary" onClick={handleSaveSmtpConfig} disabled={smtpSaving}>
+              {smtpSaving ? 'Salvando SMTP...' : 'Salvar SMTP'}
+            </Button>
+            <Button variant="secondary" onClick={loadIntegrationConfig}>
+              Revalidar integrações
+            </Button>
           </div>
         </div>
       )}

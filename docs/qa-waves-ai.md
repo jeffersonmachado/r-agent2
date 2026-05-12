@@ -63,8 +63,10 @@ Definido em: `api/modules/qa-waves/waveScenario.constants.js` → `EXECUTABLE_SC
 api/services/qaWavesIntelligenceService.js   ← núcleo da inteligência
 api/modules/qa-waves/routes.js               ← endpoints /intelligence/* e /governance
 api/composition/qa-waves/index.js            ← injeção de dependências
-qa/qa-waves/coverage-map.json                ← mapa de cobertura por vertical
 qa/qa-waves/ai-drafts.json                   ← rascunhos gerados por IA (auto-criado)
+qa/qa-waves/scenario-store.json              ← catálogo real de cenários e jornadas executáveis
+qa/qa-waves/operational-gaps-report.json     ← gaps operacionais descobertos na análise
+qa-waves/journey-coverage/*.json             ← matriz consolidada por vertical/jornada gerada pelo readiness engine
 qa/qa-waves/governance-report.json           ← relatórios GO/NO_GO (auto-criado)
 frontend/src/components/qa-waves/CoverageGapsTab.jsx   ← UI de cobertura
 scripts/qa-waves-analyze.js                 ← CLI de análise
@@ -144,27 +146,30 @@ POST /api/qa-waves/governance/evaluate
 
 ---
 
-## Coverage Map (`qa/qa-waves/coverage-map.json`)
+## Coverage Source
 
-Define os cenários **obrigatórios** por vertical, jornada e etapa.
-Verticais disponíveis: `fitness`, `beauty`, `pbx`, `core`.
+O mapa operacional vigente nao vem mais de `coverage-map.json`. A fonte real hoje e composta por:
+
+- `qa/qa-waves/scenario-store.json` para cenários executáveis
+- `qa/qa-waves/operational-gaps-report.json` para gaps descobertos
+- `qa-waves/journey-coverage/*.json` para a matriz consolidada por vertical/jornada
+
+Verticais exigidas pelo consolidado final: `beauty`, `fitness`, `food`, `services`, `clinic`, `market`.
 
 ```json
 {
-  "verticals": [{
-    "vertical": "fitness",
-    "journeys": [{
-      "id": "fitness_new_customer",
-      "stages": [{
-        "id": "agendamento",
-        "requiredScenarios": ["fitness_booking_experimental_class"]
-      }]
-    }]
-  }]
+  "scenarioId": "fitness-matricula-leads",
+  "vertical": "fitness",
+  "journey": "leads",
+  "status": "approved",
+  "validations": {
+    "requireBackendValidation": true,
+    "requireReplay": true
+  }
 }
 ```
 
-Para adicionar novas verticais ou jornadas: editar `qa/qa-waves/coverage-map.json` diretamente.
+Para adicionar novas verticais ou jornadas: editar `qa/qa-waves/scenario-store.json` e regenerar a matriz consolidada com `npm run system:platform-readiness`.
 
 ---
 

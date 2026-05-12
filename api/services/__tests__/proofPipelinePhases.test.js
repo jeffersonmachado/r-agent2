@@ -309,6 +309,46 @@ describe('Derivation engine', () => {
     expect(result).toContain('ticket_status_changed');
   });
 
+  test('16a. takeover altera status do ticket → inclui ticket_status_changed', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'db.ticket.status', before: 'open', after: 'in_progress' }],
+    };
+
+    const result = deriveObservedMutations(diff, { id: 'step_takeover_ticket' });
+    expect(result).toContain('ticket_status_changed');
+  });
+
+  test('16b. db.booking.count++ → inclui booking_created', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'db.booking.count', before: 2, after: 3 }],
+    };
+
+    const result = deriveObservedMutations(diff, { id: 'step_create_resource_booking' });
+    expect(result).toContain('booking_created');
+  });
+
+  test('16c. db.billing.count++ → inclui payment_created', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'db.billing.count', before: 0, after: 1 }],
+    };
+
+    const result = deriveObservedMutations(diff, { id: 'step_create_membership_charge' });
+    expect(result).toContain('payment_created');
+  });
+
+  test('16d. db.billing.status changed → inclui payment_status_changed', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'db.billing.status', before: 'pending', after: 'confirmed' }],
+    };
+
+    const result = deriveObservedMutations(diff, { id: 'step_confirm_membership_payment' });
+    expect(result).toContain('payment_status_changed');
+  });
+
   test('17. diff sem mudança → retorna []', () => {
     const diff = { changed: false, details: [] };
     const result = deriveObservedMutations(diff);
@@ -329,6 +369,16 @@ describe('Derivation engine', () => {
     expect(result).toContain('crm_updated');
   });
 
+  test('18a. takeover com audit incrementado → inclui audit_log_created', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'events.audit.count', before: 0, after: 1 }],
+    };
+
+    const result = deriveObservedSideEffects(diff, { id: 'step_takeover_ticket' });
+    expect(result).toContain('audit_log_created');
+  });
+
   test('19. crm.presenceActivity.count → inclui crm_journey_updated', () => {
     const diff = {
       changed: true,
@@ -337,6 +387,26 @@ describe('Derivation engine', () => {
 
     const result = deriveObservedSideEffects(diff, { id: 'step_submit_checkin' });
     expect(result).toContain('crm_journey_updated');
+  });
+
+  test('19b. db.booking.count++ → inclui booking_created como side effect', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'db.booking.count', before: 2, after: 3 }],
+    };
+
+    const result = deriveObservedSideEffects(diff, { id: 'step_create_resource_booking' });
+    expect(result).toContain('booking_created');
+  });
+
+  test('19c. events.notifications.count++ → inclui notification_sent para payment', () => {
+    const diff = {
+      changed: true,
+      details: [{ field: 'events.notifications.count', before: 3, after: 4 }],
+    };
+
+    const result = deriveObservedSideEffects(diff, { id: 'step_create_membership_charge' });
+    expect(result).toContain('notification_sent');
   });
 
   test('20. diff sem mudança → side effects []', () => {

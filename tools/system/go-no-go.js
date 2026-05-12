@@ -5,11 +5,12 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { evaluatePillars } = require('./lib/pillar-readiness');
-const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const { runtimeAwarePath, resolveWorkspacePath, resolveEvidenceCandidates } = require('./lib/runtime-paths');
+const { buildReport: buildPlatformReadinessReport, persistReport: persistPlatformReadinessReport } = require('./platform-readiness');
 const {
   buildQaWavesEnterpriseGovernance,
   validateQaWavesEnterpriseGovernance,
-  writeQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernanceWithMirror,
 } = require('./lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -20,20 +21,56 @@ const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.js
 const GO_NO_GO_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/go-no-go-report.json', 'GO_NO_GO_REPORT_PATH');
 const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
 const DEPLOY_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/deploy-report.json', 'SYSTEM_DEPLOY_REPORT_PATH');
+const PLATFORM_READINESS_REPORT_PATH = runtimeAwarePath(ROOT, 'governance/final-readiness-report.json', 'PLATFORM_READINESS_REPORT_PATH');
 const QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-enterprise-governance.json', 'QA_WAVES_ENTERPRISE_GOVERNANCE_PATH');
 const QA_WAVES_GOVERNANCE_AUDIT_PATH = runtimeAwarePath(ROOT, 'qa/qa-waves-governance-audit.jsonl', 'QA_WAVES_GOVERNANCE_AUDIT_PATH');
+const WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = path.join(ROOT, 'qa', 'qa-waves-enterprise-governance.json');
+const WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH = path.join(ROOT, 'qa', 'qa-waves-governance-audit.jsonl');
 const RUN_RELEASE_GATE = String(process.env.GO_NO_GO_RUN_RELEASE_GATE || '0') !== '0';
 const RUN_ROLLBACK_DRILL = String(process.env.GO_NO_GO_RUN_ROLLBACK_DRILL || '0') !== '0';
 const ROLLBACK_WITH_STACK = String(process.env.GO_NO_GO_ROLLBACK_WITH_STACK || '1') !== '0';
 
-function readJson(relPath) {
-  const abs = resolveWorkspacePath(ROOT, relPath);
-  if (!fs.existsSync(abs)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(abs, 'utf8'));
-  } catch (_) {
-    return null;
+function readJsonState(relPath) {
+  const candidates = resolveEvidenceCandidates(ROOT, relPath, null);
+  const preferredPath = candidates[0] || resolveWorkspacePath(ROOT, relPath);
+
+  for (const abs of candidates) {
+    if (!fs.existsSync(abs)) {
+      continue;
+    }
+    try {
+      return {
+        data: JSON.parse(fs.readFileSync(abs, 'utf8')),
+        sourcePath: abs,
+        preferredPath,
+      };
+    } catch (_) {
+      return {
+        data: null,
+        sourcePath: abs,
+        preferredPath,
+      };
+    }
   }
+
+  return {
+    data: null,
+    sourcePath: null,
+    preferredPath,
+  };
+}
+
+function mirrorLoadedArtifact(state) {
+  if (!state || !state.data || !state.sourcePath || !state.preferredPath) {
+    return;
+  }
+
+  if (state.sourcePath === state.preferredPath || fs.existsSync(state.preferredPath)) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(state.preferredPath), { recursive: true });
+  fs.copyFileSync(state.sourcePath, state.preferredPath);
 }
 
 function runStep(command, label) {
@@ -85,6 +122,7 @@ function main() {
       smoke: null,
       runtimeGovernance: null,
       deploy: null,
+      platformReadiness: null,
       qaWavesGovernance: null,
     },
     reasons: [],
@@ -103,16 +141,35 @@ function main() {
       report.steps.push({ label: 'rollback-drill', command: 'node tools/system/rollback-drill.js', status: 'skipped' });
     }
 
-    const validateReport = readJson(SYSTEM_VALIDATE_REPORT_PATH);
-    const gate = readJson(RELEASE_GATE_REPORT_PATH);
-    const drill = readJson(ROLLBACK_DRILL_REPORT_PATH);
-    const smokeSummary = readJson(SMOKE_EVIDENCE_SUMMARY_PATH);
-    const runtimeGovernance = readJson(RUNTIME_GOVERNANCE_REPORT_PATH);
-    const deployReport = readJson(DEPLOY_REPORT_PATH);
-    const qaWavesReport = writeQaWavesEnterpriseGovernance(
+    const validateState = readJsonState(SYSTEM_VALIDATE_REPORT_PATH);
+    const gateState = readJsonState(RELEASE_GATE_REPORT_PATH);
+    const drillState = readJsonState(ROLLBACK_DRILL_REPORT_PATH);
+    const smokeState = readJsonState(SMOKE_EVIDENCE_SUMMARY_PATH);
+    const runtimeGovernanceState = readJsonState(RUNTIME_GOVERNANCE_REPORT_PATH);
+    const deployState = readJsonState(DEPLOY_REPORT_PATH);
+    const validateReport = validateState.data;
+    const gate = gateState.data;
+    const drill = drillState.data;
+    const smokeSummary = smokeState.data;
+    const runtimeGovernance = runtimeGovernanceState.data;
+    const deployReport = deployState.data;
+
+    mirrorLoadedArtifact(validateState);
+    mirrorLoadedArtifact(gateState);
+    mirrorLoadedArtifact(drillState);
+    mirrorLoadedArtifact(smokeState);
+    mirrorLoadedArtifact(runtimeGovernanceState);
+    mirrorLoadedArtifact(deployState);
+    const platformReadinessReport = buildPlatformReadinessReport();
+    persistPlatformReadinessReport(platformReadinessReport);
+    const qaWavesReport = writeQaWavesEnterpriseGovernanceWithMirror(
       buildQaWavesEnterpriseGovernance({ root: ROOT }),
       resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
-      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH),
+      {
+        workspaceMirrorPath: WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+        workspaceAuditPath: WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH,
+      }
     );
     const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
 
@@ -147,6 +204,14 @@ function main() {
       portResolution: Array.isArray(deployReport?.portResolution) ? deployReport.portResolution : [],
       optional: true,
     };
+    report.checks.platformReadiness = {
+      path: PLATFORM_READINESS_REPORT_PATH,
+      loaded: true,
+      status: platformReadinessReport.finalDecision,
+      platformMaturity: platformReadinessReport.platformMaturity,
+      blockingGaps: platformReadinessReport.blockingGaps.length,
+      missingProofs: platformReadinessReport.enterpriseReadiness?.missingProofs || [],
+    };
     report.checks.qaWavesGovernance = {
       path: QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
       loaded: true,
@@ -161,6 +226,12 @@ function main() {
     if (!validateReport || !['pass', 'degraded'].includes(validateReport.status)) report.reasons.push('system_validate_not_releasable');
     if (!gate || gate.status !== 'pass') report.reasons.push('release_gate_not_pass');
     if (!drill || drill.status !== 'pass') report.reasons.push('rollback_drill_not_pass');
+    if (platformReadinessReport.finalDecision !== 'GO') {
+      report.reasons.push(`platform_readiness_${String(platformReadinessReport.platformMaturity || 'unknown').replace(/[^a-z0-9]+/gi, '_').toLowerCase()}`);
+      for (const gap of platformReadinessReport.blockingGaps.slice(0, 10)) {
+        report.reasons.push(`platform_gap:${gap.id}`);
+      }
+    }
 
     if (!runtimeGovernance) {
       report.reasons.push('runtime_governance_missing');

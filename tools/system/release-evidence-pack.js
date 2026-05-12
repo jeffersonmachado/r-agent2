@@ -29,6 +29,12 @@ const REQUIRED_FILES = [
   'qa/l03-pbx-voice-tts-asr-evidence.json',
   'qa/l04-pbx-call-events-runtime-evidence.json',
   'qa/l05-chatpro-omnichannel-evidence.json',
+  'qa/enterprise/human-handoff-full-validation.json',
+  'qa/enterprise/pbx-voice-flow-prod-like.json',
+  'qa/enterprise/omnichannel-unified-replay.json',
+  'governance/evidence-manifest.json',
+  'governance/final-proof-report.json',
+  'governance/package-validation-report.json',
 ];
 
 const OPTIONAL_FILES = [

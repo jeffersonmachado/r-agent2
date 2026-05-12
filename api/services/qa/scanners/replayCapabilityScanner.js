@@ -11,7 +11,19 @@ const CAPABILITY_HINTS = [
   { id: 'customer_identification', tags: ['face', 'rfid', 'identification'] },
   { id: 'attendance_record', tags: ['attendance', 'checkin', 'presenca'] },
   { id: 'crm_update', tags: ['crm', 'contact', 'lead'] },
+  { id: 'billing_validation', tags: ['billing', 'payment', 'charge', 'membership'] },
+  { id: 'omnichannel_pbx', tags: ['qa-pbx', 'pbx', 'voip', 'call-events', 'tts-asr'] },
+  { id: 'omnichannel_whatsapp', tags: ['whatsapp', 'delivery', 'message'] },
+  { id: 'omnichannel_email', tags: ['omnichannel_email', 'email provider check', 'smtp'] },
+  { id: 'omnichannel_webchat', tags: ['qa-chatpro-omnichannel-smoke', 'chatpro_omnichannel', 'inbox-smoke'] },
 ];
+
+const JOURNEY_CAPABILITY_MAP = {
+  support_ticket_flow: ['support_ticket_flow', 'support_ticket_reply', 'omnichannel_whatsapp', 'crm_update'],
+  fitness_customer_checkin: ['customer_identification', 'membership_validation', 'access_decision', 'turnstile_release', 'attendance_record', 'crm_update'],
+  payment_charge_flow: ['billing_validation'],
+  omnichannel_email: ['omnichannel_email'],
+};
 
 function readJsonSafe(filePath) {
   try {
@@ -43,6 +55,7 @@ function collectReplayFiles() {
       path.join(rootDir, 'replays'),
     ];
   }
+  dirs = dirs.concat(path.join(__dirname, '..', '..', '..', '..', 'qa', 'smoke', 'prod-like'));
   dirs = dirs.filter((dir) => fs.existsSync(dir));
   const files = [];
   for (const dir of dirs) {
@@ -67,12 +80,27 @@ function analyzeReplayOperationality(payload) {
   const timeline = Array.isArray(payload?.timeline) ? payload.timeline : [];
   const logs = Array.isArray(payload?.logs) ? payload.logs : [];
   const tracePath = payload?.browserSession?.tracePath || payload?.tracePath || null;
+  const evidenceLog = logs.find((entry) => /evidence=\S+/i.test(String(entry?.message || '')));
+  const evidencePathMatch = String(evidenceLog?.message || '').match(/evidence=(\S+)/i);
+  const evidencePath = evidencePathMatch?.[1] || payload?.evidencePath || null;
+  const hasEvidenceArtifact = Boolean(evidencePath && fs.existsSync(evidencePath));
+  const hasStructuredProof = Boolean(
+    payload?.proofChain
+    || payload?.stepExecutionProof
+    || steps.some((step) => step?.proofChain || step?.stepExecutionProof)
+    || hasEvidenceArtifact
+  );
 
-  const hasScreenshots = screenshots.length > 0 || steps.some((step) => step?.screenshot || step?.screenshotPath);
+  const hasScreenshots = screenshots.length > 0 || steps.some((step) => (
+    step?.screenshot
+    || step?.screenshotPath
+    || step?.screenshotBefore
+    || step?.screenshotAfter
+  )) || hasEvidenceArtifact;
   const hasUiSteps = steps.length > 0;
   const hasTimeline = timeline.length > 0;
   const hasLogs = logs.length > 0;
-  const hasTrace = !!tracePath;
+  const hasTrace = !!tracePath || hasStructuredProof;
 
   return {
     hasScreenshots,
@@ -80,8 +108,30 @@ function analyzeReplayOperationality(payload) {
     hasTimeline,
     hasLogs,
     hasTrace,
-    operationalEvidence: hasUiSteps && hasScreenshots,
+    operationalEvidence: (hasUiSteps && hasScreenshots) || hasEvidenceArtifact,
   };
+}
+
+function collectReplayCandidates(filePath, payload) {
+  if (Array.isArray(payload?.flows) && payload.flows.length > 0) {
+    return payload.flows
+      .map((flow) => {
+        const replay = flow?.replay;
+        if (!replay || typeof replay !== 'object') return null;
+        return {
+          filePath,
+          payload: {
+            ...replay,
+            journeyId: replay.journeyId || flow.journeyId || null,
+            waveId: replay.waveId || payload.waveId || null,
+            finishedAt: replay.finishedAt || replay.generatedAt || payload.generatedAt || null,
+          },
+        };
+      })
+      .filter(Boolean);
+  }
+
+  return [{ filePath, payload }];
 }
 
 function scan(options = {}) {
@@ -92,54 +142,61 @@ function scan(options = {}) {
   const freshnessMs = replayFreshnessDays > 0 ? replayFreshnessDays * 24 * 60 * 60 * 1000 : 0;
 
   for (const filePath of replayFiles) {
-    const payload = readJsonSafe(filePath);
-    if (!payload) continue;
+    const rootPayload = readJsonSafe(filePath);
+    if (!rootPayload) continue;
 
-    const textBlob = JSON.stringify({
-      scenarioId: payload.scenarioId,
-      recordingId: payload.recordingId,
-      logs: payload.logs,
-      steps: payload.steps,
-      semanticSteps: payload.semanticSteps,
-      journeyId: payload.journeyId,
-      waveId: payload.waveId,
-    }).toLowerCase();
+    for (const candidate of collectReplayCandidates(filePath, rootPayload)) {
+      const payload = candidate.payload;
+      const textBlob = JSON.stringify({
+        scenarioId: payload.scenarioId,
+        recordingId: payload.recordingId,
+        logs: payload.logs,
+        steps: payload.steps,
+        semanticSteps: payload.semanticSteps,
+        journeyId: payload.journeyId,
+        waveId: payload.waveId,
+      }).toLowerCase();
 
-    const evidence = analyzeReplayOperationality(payload);
-    const finishedAt = payload?.finishedAt || payload?.endTime || null;
-    const finishedMs = finishedAt ? new Date(finishedAt).getTime() : 0;
-    const hasFreshReplay = freshnessMs > 0 && finishedMs > 0
-      ? (Date.now() - finishedMs) <= freshnessMs
-      : true;
+      const evidence = analyzeReplayOperationality(payload);
+      const finishedAt = payload?.finishedAt || payload?.endTime || null;
+      const finishedMs = finishedAt ? new Date(finishedAt).getTime() : 0;
+      const hasFreshReplay = freshnessMs > 0 && finishedMs > 0
+        ? (Date.now() - finishedMs) <= freshnessMs
+        : true;
+      const matchedCapabilities = new Set(JOURNEY_CAPABILITY_MAP[payload?.journeyId] || []);
 
-    for (const hint of CAPABILITY_HINTS) {
-      const score = scoreText(textBlob, hint.tags);
-      if (score < 2) continue;
-
-      const rec = inferred.get(hint.id) || { score: 0, evidence: [] };
-      rec.score += score;
-      rec.evidence.push(path.basename(filePath));
-      inferred.set(hint.id, rec);
-
-      const coverage = replayStatusByCapability.get(hint.id) || {
-        replayed: false,
-        hasScreenshots: false,
-        hasTrace: false,
-        operationalEvidence: false,
-        replayCount: 0,
-        latestFinishedAt: null,
-        hasFreshReplay: false,
-      };
-      coverage.replayed = true;
-      coverage.hasScreenshots = coverage.hasScreenshots || evidence.hasScreenshots;
-      coverage.hasTrace = coverage.hasTrace || evidence.hasTrace;
-      coverage.operationalEvidence = coverage.operationalEvidence || evidence.operationalEvidence;
-      coverage.replayCount += 1;
-      if (!coverage.latestFinishedAt || (finishedMs > 0 && finishedMs > new Date(coverage.latestFinishedAt).getTime())) {
-        coverage.latestFinishedAt = finishedAt || coverage.latestFinishedAt;
+      for (const hint of CAPABILITY_HINTS) {
+        const score = scoreText(textBlob, hint.tags);
+        if (score >= 2) {
+          matchedCapabilities.add(hint.id);
+          const rec = inferred.get(hint.id) || { score: 0, evidence: [] };
+          rec.score += score;
+          rec.evidence.push(path.basename(filePath));
+          inferred.set(hint.id, rec);
+        }
       }
-      coverage.hasFreshReplay = coverage.hasFreshReplay || hasFreshReplay;
-      replayStatusByCapability.set(hint.id, coverage);
+
+      for (const capabilityId of matchedCapabilities) {
+        const coverage = replayStatusByCapability.get(capabilityId) || {
+          replayed: false,
+          hasScreenshots: false,
+          hasTrace: false,
+          operationalEvidence: false,
+          replayCount: 0,
+          latestFinishedAt: null,
+          hasFreshReplay: false,
+        };
+        coverage.replayed = true;
+        coverage.hasScreenshots = coverage.hasScreenshots || evidence.hasScreenshots;
+        coverage.hasTrace = coverage.hasTrace || evidence.hasTrace;
+        coverage.operationalEvidence = coverage.operationalEvidence || evidence.operationalEvidence;
+        coverage.replayCount += 1;
+        if (!coverage.latestFinishedAt || (finishedMs > 0 && finishedMs > new Date(coverage.latestFinishedAt).getTime())) {
+          coverage.latestFinishedAt = finishedAt || coverage.latestFinishedAt;
+        }
+        coverage.hasFreshReplay = coverage.hasFreshReplay || hasFreshReplay;
+        replayStatusByCapability.set(capabilityId, coverage);
+      }
     }
   }
 

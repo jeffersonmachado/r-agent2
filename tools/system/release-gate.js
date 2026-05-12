@@ -15,14 +15,15 @@ const path = require('path');
 const fs = require('fs');
 const { evaluatePillars } = require('./lib/pillar-readiness');
 const { findLatestReleaseArtifact } = require('./lib/release-artifact');
-const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const { runtimeAwarePath, resolveWorkspacePath, resolveEvidenceCandidates } = require('./lib/runtime-paths');
 const {
   buildQaWavesEnterpriseGovernance,
   validateQaWavesEnterpriseGovernance,
-  writeQaWavesEnterpriseGovernance,
+  writeQaWavesEnterpriseGovernanceWithMirror,
 } = require('./lib/qa-waves-enterprise-governance-bridge');
-
 const ROOT = path.join(__dirname, '..', '..');
+const WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH = path.join(ROOT, 'qa', 'qa-waves-enterprise-governance.json');
+const WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH = path.join(ROOT, 'qa', 'qa-waves-governance-audit.jsonl');
 const SYSTEM_VALIDATE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/system-validate-report.json', 'SYSTEM_VALIDATE_REPORT_PATH');
 const SMOKE_EVIDENCE_SUMMARY_PATH = runtimeAwarePath(ROOT, 'qa/smoke-evidence.json', 'SMOKE_EVIDENCE_SUMMARY_PATH');
 const RUNTIME_GOVERNANCE_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
@@ -42,15 +43,18 @@ function log(color, msg) {
 }
 
 function readJsonStrict(relPath, label) {
-  const absPath = resolveWorkspacePath(ROOT, relPath);
-  if (!fs.existsSync(absPath)) {
-    throw new Error(`${label}_missing:${relPath}`);
+  const candidates = resolveEvidenceCandidates(ROOT, relPath, null);
+  for (const absPath of candidates) {
+    if (!fs.existsSync(absPath)) {
+      continue;
+    }
+    try {
+      return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+    } catch (error) {
+      throw new Error(`${label}_invalid:${path.relative(ROOT, absPath)}:${error.message || error}`);
+    }
   }
-  try {
-    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
-  } catch (error) {
-    throw new Error(`${label}_invalid:${relPath}:${error.message || error}`);
-  }
+  throw new Error(`${label}_missing:${relPath}`);
 }
 
 function checkReleaseArtifact() {
@@ -75,7 +79,7 @@ function writeReport(report) {
 }
 
 function validateMandatorySteps(validateReport) {
-  const requiredLabels = ['backend unit', 'frontend unit', 'frontend build', 'frontend smoke', 'qa mesh'];
+  const requiredLabels = ['backend unit', 'frontend unit', 'frontend build', 'frontend smoke', 'email smoke', 'qa mesh'];
   const steps = Array.isArray(validateReport.steps) ? validateReport.steps : [];
   for (const label of requiredLabels) {
     const match = steps.find((step) => step && step.label === label);
@@ -145,10 +149,14 @@ function main() {
       throw new Error(`runtime_mode_degraded_not_allowed:${runtimeGovernance.classification}`);
     }
 
-    const qaWavesReport = writeQaWavesEnterpriseGovernance(
+    const qaWavesReport = writeQaWavesEnterpriseGovernanceWithMirror(
       buildQaWavesEnterpriseGovernance({ root: ROOT }),
       resolveWorkspacePath(ROOT, QA_WAVES_ENTERPRISE_GOVERNANCE_PATH),
-      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH)
+      resolveWorkspacePath(ROOT, QA_WAVES_GOVERNANCE_AUDIT_PATH),
+      {
+        workspaceMirrorPath: WORKSPACE_QA_WAVES_ENTERPRISE_GOVERNANCE_PATH,
+        workspaceAuditPath: WORKSPACE_QA_WAVES_GOVERNANCE_AUDIT_PATH,
+      }
     );
     const qaWavesValidation = validateQaWavesEnterpriseGovernance(qaWavesReport);
     report.qaWavesGovernance = {

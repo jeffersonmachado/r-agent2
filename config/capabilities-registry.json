@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-09T03:20:52.116Z",
+  "generatedAt": "2026-05-12T01:33:53.574Z",
   "capabilities": [
     {
       "id": "access_decision",
@@ -27,7 +27,8 @@
       ],
       "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "e2e"
       ],
       "evidence": [
         "api/aiRoutes.js",
@@ -39,7 +40,9 @@
         "api/db/models/AccessDecision.js",
         "api/db/models/AccessEvent.js",
         "api/db/models/VerticalAttendance.js",
-        "api/db/models/index.js"
+        "api/db/models/index.js",
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
     },
     {
@@ -73,7 +76,8 @@
       "sources": [
         "backend",
         "frontend",
-        "e2e"
+        "e2e",
+        "replay"
       ],
       "evidence": [
         "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
@@ -89,7 +93,10 @@
         "frontend/src/api/verticalPilot.js",
         "frontend/src/pages/FitnessStudentsPage.jsx",
         "frontend/src/pages/OperationsDashboardPage.jsx",
-        "frontend-e2e/fitness-customer-checkin.spec.ts"
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js",
+        "fitness_customer_checkin-replay.json",
+        "qa-waves-operational-prod-like-smoke.json"
       ]
     },
     {
@@ -115,11 +122,14 @@
         "billingalertsservice",
         "qawavesoperationalservice",
         "runtimeintegrations",
-        "test"
+        "test",
+        "proofpipelinephases"
       ],
       "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "replay",
+        "e2e"
       ],
       "evidence": [
         "api/db/migrations/20260326090000-create-billing-core.js",
@@ -129,9 +139,18 @@
         "api/modules/billing/handleBillingRoutes.js",
         "api/modules/vertical/handleFitnessMembershipRoutes.js",
         "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
+        "api/services/__tests__/proofPipelinePhases.test.js",
         "api/services/__tests__/qaWavesOperationalService.runtimeIntegrations.test.js",
         "api/services/autocorrection/FailureDiagnosisService.js",
-        "api/services/autocorrection/PatchProposalService.js"
+        "business-fit-flow-charge.json",
+        "fitness-matricula-renovacao.json",
+        "fitness-matricula-leads.json",
+        "booking_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
     },
     {
@@ -157,12 +176,15 @@
         "matricula",
         "leads",
         "qa",
-        "wave"
+        "wave",
+        "renovacao",
+        "booking"
       ],
       "confidence": 1,
       "sources": [
         "backend",
-        "replay"
+        "replay",
+        "e2e"
       ],
       "evidence": [
         "api/db/models/index.js",
@@ -175,13 +197,19 @@
         "api/modules/scheduling-support/routes.js",
         "api/modules/scheduling-support/service.js",
         "api/services/__tests__/autonomousGapClosureEngine.loop.test.js",
+        "fitness-matricula-renovacao.json",
         "fitness-matricula-leads.json",
-        "qa_wave_replay_1778169956565_yec9a9.json"
+        "booking_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "frontend-e2e/fitness-customer-checkin.spec.ts"
       ]
     },
     {
       "id": "customer_identification",
-      "domain": "core",
+      "domain": "fitness",
       "module": "access-control",
       "type": "operational",
       "required": true,
@@ -200,21 +228,33 @@
         "worker",
         "threads",
         "protocol",
-        "types"
+        "types",
+        "booking",
+        "flow",
+        "replay",
+        "qa",
+        "waves",
+        "operational",
+        "prod"
       ],
       "confidence": 1,
       "sources": [
         "backend",
-        "e2e"
+        "e2e",
+        "replay"
       ],
       "evidence": [
         "api/modules/access-control/constants.js",
         "api/services/qa/journeyInferenceService.js",
         "api/services/qa/scanners/backendCapabilityScanner.js",
         "api/services/qa/scanners/deviceCapabilityScanner.js",
-        "api/services/qa/scanners/e2eCapabilityScanner.js",
         "api/services/qa/scanners/frontendCapabilityScanner.js",
-        "api/services/qa/scanners/replayCapabilityScanner.js"
+        "api/services/qa/scanners/replayCapabilityScanner.js",
+        "booking_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
     },
     {
@@ -242,7 +282,8 @@
       ],
       "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "e2e"
       ],
       "evidence": [
         "api/db/migrations/20260314130000-create-access-control-core.js",
@@ -254,33 +295,53 @@
         "api/db/models/VerticalSessionBundle.js",
         "api/db/models/index.js",
         "api/modules/access-control/accessControlService.js",
-        "api/modules/access-control/visitor-access/visitorQrService.js"
+        "api/modules/access-control/visitor-access/visitorQrService.js",
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
     },
     {
       "id": "omnichannel_email",
       "domain": "core",
-      "module": "api",
+      "module": "config",
       "type": "operational",
       "required": true,
       "tags": [
         "omnichannel",
         "email",
         "backendcapabilityscanner",
-        "devicecapabilityscanner"
+        "devicecapabilityscanner",
+        "vertical",
+        "e2e",
+        "validate",
+        "service",
+        "notificationservice",
+        "config",
+        "replaycapabilityscanner",
+        "smoke",
+        "replay"
       ],
-      "confidence": 0.4,
+      "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "e2e",
+        "replay"
       ],
       "evidence": [
+        "api/modules/config/service.js",
+        "api/services/notificationService.js",
         "api/services/qa/scanners/backendCapabilityScanner.js",
-        "api/services/qa/scanners/deviceCapabilityScanner.js"
+        "api/services/qa/scanners/deviceCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js",
+        "api/utils/config.js",
+        "scripts/smoke/omnichannel-email-smoke.js",
+        "scripts/vertical-e2e-validate.js",
+        "omnichannel_email-replay.json"
       ]
     },
     {
       "id": "omnichannel_pbx",
-      "domain": "beauty",
+      "domain": "fitness",
       "module": "api",
       "type": "operational",
       "required": true,
@@ -303,7 +364,9 @@
       ],
       "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "replay",
+        "e2e"
       ],
       "evidence": [
         "api/db/migrations/20260203010000-pbx-realtime-core.js",
@@ -315,7 +378,17 @@
         "api/db/models/PbxCdr.js",
         "api/db/models/PbxExtension.js",
         "api/db/models/index.js",
-        "api/events/eventModelV1.js"
+        "api/events/eventModelV1.js",
+        "qa-pbx-call-events-runtime-smoke.json",
+        "qa-pbx-voice-tts-asr-smoke.json",
+        "booking_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "scripts/test-pbx-call-events-runtime-smoke.js",
+        "scripts/test-pbx-voice-tts-asr-smoke.js",
+        "scripts/test-ura-publish-rollback-smoke.js"
       ]
     },
     {
@@ -344,7 +417,9 @@
       "confidence": 1,
       "sources": [
         "backend",
-        "frontend"
+        "frontend",
+        "e2e",
+        "replay"
       ],
       "evidence": [
         "api/db/migrations/20260119000001-create-channel-accounts.js",
@@ -360,13 +435,15 @@
         "frontend/src/pages/ChannelAccountsPage.jsx",
         "frontend/src/pages/ChannelHealthPage.jsx",
         "frontend/src/pages/InboxPage.jsx",
-        "frontend/src/pages/SaasPublicPage.jsx"
+        "frontend/src/pages/SaasPublicPage.jsx",
+        "qa-chatpro-omnichannel-smoke.json",
+        "scripts/test-inbox-runtime-smoke.js"
       ]
     },
     {
       "id": "omnichannel_whatsapp",
-      "domain": "core",
-      "module": "api",
+      "domain": "fitness",
+      "module": "rpa-test-flow-cca122f2-20260129T000000000Z.json",
       "type": "operational",
       "required": true,
       "tags": [
@@ -374,16 +451,42 @@
         "whatsapp",
         "backendcapabilityscanner",
         "devicecapabilityscanner",
-        "whatsapptemplateservice"
+        "whatsapptemplateservice",
+        "rpa",
+        "test",
+        "flow",
+        "cca122f2",
+        "20260129t000000000z",
+        "connections",
+        "28d2aea0",
+        "fitness",
+        "matricula",
+        "renovacao",
+        "a41fb4e3",
+        "20260129t051056368z",
+        "a85c4a4d"
       ],
-      "confidence": 0.6,
+      "confidence": 1,
       "sources": [
-        "backend"
+        "backend",
+        "replay",
+        "e2e"
       ],
       "evidence": [
+        "rpa-test-flow-cca122f2-20260129T000000000Z.json",
+        "rpa-whatsapp-connections-rpa.json",
+        "rpa-test-flow-28d2aea0-20260129T000000000Z.json",
+        "fitness-matricula-renovacao.json",
+        "rpa-test-flow-a41fb4e3-20260129T051056368Z.json",
+        "rpa-test-flow-a85c4a4d-20260129T052758707Z.json",
+        "fitness-matricula-leads.json",
+        "booking_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "omnichannel_email-replay.json",
         "api/services/qa/scanners/backendCapabilityScanner.js",
         "api/services/qa/scanners/deviceCapabilityScanner.js",
-        "api/services/whatsappTemplateService.js"
+        "api/services/whatsappTemplateService.js",
+        "scripts/vertical-e2e-validate.js"
       ]
     },
     {
@@ -484,7 +587,8 @@
         "frontend/src/hooks/useSupportPageController.jsx",
         "frontend/src/modules/support-workspace/components/SupportConversationPane.jsx",
         "frontend/src/pages/QuickRepliesPage.jsx",
-        "frontend-e2e/support-agent-flow.spec.ts"
+        "frontend-e2e/support-agent-flow.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
     },
     {
@@ -509,12 +613,14 @@
         "operationalstateengine",
         "transitioninferenceservice",
         "autonomousgapclosureengine",
-        "executionchainvalidator"
+        "executionchainvalidator",
+        "fitness"
       ],
       "confidence": 1,
       "sources": [
         "backend",
-        "frontend"
+        "frontend",
+        "e2e"
       ],
       "evidence": [
         "api/modules/qa-waves/routes.test.js",
@@ -527,7 +633,8 @@
         "api/services/qa/scanners/deviceCapabilityScanner.js",
         "api/services/qa/scanners/e2eCapabilityScanner.js",
         "api/services/qa/scanners/frontendCapabilityScanner.js",
-        "frontend/src/pages/AccessControlPage.jsx"
+        "frontend/src/pages/AccessControlPage.jsx",
+        "frontend-e2e/fitness-customer-checkin.spec.ts"
       ]
     }
   ]

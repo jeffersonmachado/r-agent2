@@ -1,0 +1,15 @@
+{
+  "executionId": "mesh-business-screen-fix-001",
+  "startedAt": "2026-05-11T21:54:40.637Z",
+  "executionOrigin": "pipeline",
+  "executionKind": null,
+  "promotedAt": "2026-05-11T22:17:12.435Z",
+  "registryTotal": 58,
+  "goNoGo": "GO",
+  "criterion": "serialized_canonical_execution",
+  "finishedAt": "2026-05-11T22:17:12.435Z",
+  "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
+  "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
+  "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json",
+  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-business-screen-fix-001.json"
+}

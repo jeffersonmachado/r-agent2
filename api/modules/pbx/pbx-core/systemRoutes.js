@@ -83,7 +83,8 @@ async function handlePbxSystemRoutes(ctx) {
       const core = await ami.command('core reload');
       const pjsip = await ami.command('pjsip reload');
       const odbc = await ami.command('module reload res_odbc.so res_config_odbc.so');
-      sendJson(res, 200, { ok: true, tenantKey, core: !!core.ok, pjsip: !!pjsip.ok, odbc: !!odbc.ok });
+      const cdr = await ami.command('module reload cdr_adaptive_odbc.so');
+      sendJson(res, 200, { ok: true, tenantKey, core: !!core.ok, pjsip: !!pjsip.ok, odbc: !!odbc.ok, cdr: !!cdr.ok });
     } catch (err) {
       logger.error('[PBX] Erro em POST /api/pbx/reload', err);
       sendJson(res, 500, buildApiError({

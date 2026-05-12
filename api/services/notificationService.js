@@ -13,6 +13,8 @@ const DEFAULT_CHANNEL = 'whatsapp';
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DISPATCH_JOB_KIND = 'vertical_notification_dispatch';
 
+let cachedMailer = null;
+
 const DELIVERY_STATUS = {
   PENDING: 'pending',
   PROCESSING: 'processing',
@@ -124,11 +126,53 @@ async function resolveRecipientFromSubject({ tenantId, subjectId = null, custome
 }
 
 function readChannelEnabled(channel) {
-  const configured = config.getFromFile(`notifications.${channel}.enabled`, undefined);
+  const configured = config.get(`notifications.${channel}.enabled`, undefined);
   if (typeof configured === 'boolean') return configured;
   if (channel === 'internal') return true;
   if (channel === 'whatsapp') return true;
   return false;
+}
+
+function getEmailTransportConfig() {
+  const host = safeString(config.get('notifications.email.smtp.host', ''), '').trim();
+  const port = Number(config.get('notifications.email.smtp.port', 587));
+  const secure = config.get('notifications.email.smtp.secure', false) === true;
+  const username = safeString(config.get('notifications.email.smtp.username', ''), '').trim();
+  const password = safeString(config.get('notifications.email.smtp.password', ''), '').trim();
+  const fromAddress = safeString(config.get('notifications.email.fromAddress', ''), '').trim();
+  const fromName = safeString(config.get('notifications.email.fromName', ''), '').trim();
+
+  return {
+    host,
+    port: Number.isFinite(port) ? port : 587,
+    secure,
+    username,
+    password,
+    fromAddress,
+    fromName,
+  };
+}
+
+function buildEmailFrom(configValue) {
+  if (!configValue.fromAddress) return null;
+  if (!configValue.fromName) return configValue.fromAddress;
+  return `${configValue.fromName} <${configValue.fromAddress}>`;
+}
+
+function getEmailTransport() {
+  if (cachedMailer) return cachedMailer;
+  const nodemailer = require('nodemailer');
+  const smtp = getEmailTransportConfig();
+  cachedMailer = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: smtp.username ? {
+      user: smtp.username,
+      pass: smtp.password,
+    } : undefined,
+  });
+  return cachedMailer;
 }
 
 async function logDeliveryEvent(delivery, result = {}) {
@@ -394,6 +438,37 @@ async function performChannelSend(delivery) {
       providerStatus: 'sent',
       providerResult,
       providerMessageId: providerResult?.messages?.[0]?.id || providerResult?.message_id || null,
+    };
+  }
+
+  if (channel === 'email') {
+    const emailConfig = getEmailTransportConfig();
+    if (!emailConfig.host || !emailConfig.fromAddress) {
+      return {
+        status: DELIVERY_STATUS.FAILED,
+        dashboardStatus: 'failed',
+        error: 'email_config_missing',
+      };
+    }
+
+    const transport = getEmailTransport();
+    const providerResult = await transport.sendMail({
+      from: buildEmailFrom(emailConfig),
+      to: safeString(recipient),
+      subject: safeString(delivery.event_type || 'notification'),
+      text: safeString(delivery.message),
+      headers: {
+        'X-R-Agent2-Notification-Id': safeString(delivery.id),
+        'X-R-Agent2-Event-Type': safeString(delivery.event_type),
+      },
+    });
+
+    return {
+      status: DELIVERY_STATUS.SENT,
+      dashboardStatus: 'sent',
+      providerStatus: 'sent',
+      providerResult,
+      providerMessageId: providerResult?.messageId || null,
     };
   }
 

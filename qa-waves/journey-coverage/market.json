@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "vertical": "market",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "market",
+      "journey": "market_default_journey",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-market-scr-01",
+          "scenario": "Market node marketplace screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

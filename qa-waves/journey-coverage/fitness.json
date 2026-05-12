@@ -1,0 +1,304 @@
+{
+  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "vertical": "fitness",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "fitness",
+      "journey": "agendamento",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-agendamento",
+          "scenario": "Agendamento de Aula Experimental",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "cancelamento",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-cancelamento",
+          "scenario": "Cancelamento de Matrícula",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "checkin",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-checkin",
+          "scenario": "Check-in Diário na Academia",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "checkout",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-checkout",
+          "scenario": "Checkout e Pagamento de Matrícula",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "fitness_active_customer",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-f1",
+          "scenario": "Fitness novo aluno até pagamento e ativação",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-f2",
+          "scenario": "Fitness renovação/rematrícula",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-fit-flow-charge",
+          "scenario": "Fitness geração de cobrança e pagamento isolado",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "fitness_new_customer",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-fit-flow-checkin",
+          "scenario": "Fitness check-in e controle de acesso",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-fit-flow-student",
+          "scenario": "Fitness cadastro de aluno e salvamento",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-fit-scr-01",
+          "scenario": "Fitness Students screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-fit-scr-02",
+          "scenario": "Fitness Memberships screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-fit-scr-03",
+          "scenario": "Fitness Attendance screen smoke",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "leads",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-leads",
+          "scenario": "Captação de Lead via WhatsApp",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "aiIntentService",
+            "api",
+            "flowEngine",
+            "meshValidator",
+            "ragService",
+            "whatsapp"
+          ],
+          "steps": [
+            "Cliente envia mensagem WhatsApp",
+            "Sistema recebe inbound WhatsApp",
+            "IA classifica intenção do cliente",
+            "Sistema decide roteamento: bot ou humano",
+            "Bot gera e envia resposta ao cliente",
+            "Validar criação do lead no backend",
+            "Validar SLA de resposta ao lead"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": {
+                "delivered": true
+              }
+            },
+            {
+              "stepId": "step_002",
+              "expected": {
+                "eventType": "inbound_received",
+                "conversationCreated": true
+              }
+            },
+            {
+              "stepId": "step_003",
+              "expected": {
+                "intent": "fitness_lead",
+                "confidenceMin": 0.6
+              }
+            },
+            {
+              "stepId": "step_004",
+              "expected": {
+                "routingDecision": [
+                  "bot",
+                  "human"
+                ],
+                "nextNode": "bot_response"
+              }
+            },
+            {
+              "stepId": "step_005",
+              "expected": {
+                "semantic": "planos academia",
+                "responseDelivered": true
+              }
+            },
+            {
+              "stepId": "step_006",
+              "expected": {
+                "backendEntity": "lead",
+                "leadCreated": true,
+                "fields": [
+                  "name",
+                  "phone",
+                  "channel",
+                  "intent"
+                ]
+              }
+            },
+            {
+              "stepId": "step_007",
+              "expected": {
+                "withinSla": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "onboarding",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-onboarding",
+          "scenario": "Onboarding do Novo Aluno",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "renovacao",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-renovacao",
+          "scenario": "Renovação de Matrícula",
+          "status": "draft",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

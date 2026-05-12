@@ -32,6 +32,7 @@ COPY rpa/ ./rpa/
 COPY infra/ ./infra/
 COPY contracts/ ./contracts/
 COPY config/ ./config/
+COPY governance/ ./governance/
 COPY pipeline/ ./pipeline/
 COPY qa/ ./qa/
 COPY qa-mesh/ ./qa-mesh/
@@ -61,6 +62,7 @@ COPY --from=builder /app/rpa ./rpa
 COPY --from=builder /app/infra ./infra
 COPY --from=builder /app/contracts ./contracts
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/governance ./governance
 COPY --from=builder /app/pipeline ./pipeline
 COPY --from=builder /app/qa ./qa
 COPY --from=builder /app/qa-mesh ./qa-mesh
@@ -74,7 +76,7 @@ COPY tests/helpers/errorClassifier.js ./tests/helpers/errorClassifier.js
 # Remove dependências de desenvolvimento no runtime
 RUN npm prune --omit=dev && \
     npm cache clean --force && \
-    mkdir -p /app/api/data /app/.cache/puppeteer /var/lib/ragent2/whatsapp/auth /var/lib/ragent2/qa-mesh/system-validate /var/lib/ragent2/release-evidence /var/lib/ragent2/runtime/rpa/reports /var/lib/ragent2/runtime/rpa/replay /var/lib/ragent2/runtime/rpa/seeds /var/lib/ragent2/runtime/rpa/flows /var/lib/ragent2/runtime/pbx/recordings
+    mkdir -p /app/api/data /app/governance /app/.cache/puppeteer /var/lib/ragent2/whatsapp/auth /var/lib/ragent2/qa-mesh/system-validate /var/lib/ragent2/release-evidence /var/lib/ragent2/runtime/rpa/reports /var/lib/ragent2/runtime/rpa/replay /var/lib/ragent2/runtime/rpa/seeds /var/lib/ragent2/runtime/rpa/flows /var/lib/ragent2/runtime/pbx/recordings
 
 # Mantém entrypoint
 RUN chmod +x ./api/entrypoint.sh

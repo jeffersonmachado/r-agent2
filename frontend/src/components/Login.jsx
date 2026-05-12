@@ -147,10 +147,10 @@ export function Login() {
               requestAnimationFrame(() => {
                 setTimeout(() => {
                   try {
-                    navigate('/onboarding?source=login&required=integrations');
+                    navigate('/onboarding?source=login&required=integrations&tab=email');
                   } catch (_) {
                     const basePath = getBasePath() || '';
-                  window.location.href = `${basePath}/onboarding?source=login&required=integrations`;
+                  window.location.href = `${basePath}/onboarding?source=login&required=integrations&tab=email`;
                   }
                 }, 300);
               });

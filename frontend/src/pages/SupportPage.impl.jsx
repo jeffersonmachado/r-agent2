@@ -181,7 +181,10 @@ export function SupportPage() {
 
           <div className={`attendance-runtime-board${selectedTicket && !state.isMobile && !state.isConversationListVisibleDesktop ? ' attendance-runtime-board--conversation-collapsed' : ''}`}>
             <div className="attendance-runtime-col attendance-runtime-col--metrics">
-              {showFilters ? (
+              <div
+                style={showFilters ? undefined : { display: 'none' }}
+                aria-hidden={showFilters ? undefined : 'true'}
+              >
                 <SupportFiltersBar
                   uiSearch={state.uiSearch}
                   setUiSearch={actions.setUiSearch}
@@ -190,7 +193,7 @@ export function SupportPage() {
                   setUiQueue={actions.setUiQueue}
                   onClear={actions.clearTicketFilters}
                 />
-              ) : null}
+              </div>
               <AttendanceMetricsPanel metrics={runtimeViewModel.metrics} />
             </div>
 

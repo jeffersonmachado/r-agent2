@@ -12,6 +12,7 @@ jest.mock('../../api/utils/config', () => ({
     if (path === 'notifications.whatsapp.enabled') return true;
     return undefined;
   }),
+  get: jest.fn((path, defaultValue) => defaultValue),
 }));
 
 describe('notificationService', () => {
@@ -20,6 +21,7 @@ describe('notificationService', () => {
   let subjectModel;
   let enqueueJob;
   let sendTextMessage;
+  let sendMail;
   let appendEventV1;
   let service;
 
@@ -80,6 +82,7 @@ describe('notificationService', () => {
 
     enqueueJob = jest.fn(async () => ({ id: 'job-1' }));
     sendTextMessage = jest.fn(async () => ({ messages: [{ id: 'wa-msg-1' }] }));
+    sendMail = jest.fn(async () => ({ messageId: 'email-msg-1' }));
     appendEventV1 = jest.fn(async () => ({ id: 'evt-1' }));
 
     jest.doMock('../../api/db/sequelize', () => ({
@@ -97,6 +100,12 @@ describe('notificationService', () => {
 
     jest.doMock('../../api/services/whatsappService', () => ({
       sendTextMessage: (...args) => sendTextMessage(...args),
+    }));
+
+    jest.doMock('nodemailer', () => ({
+      createTransport: jest.fn(() => ({
+        sendMail: (...args) => sendMail(...args),
+      })),
     }));
 
     jest.doMock('../../api/services/eventLedgerService', () => ({
@@ -232,5 +241,98 @@ describe('notificationService', () => {
       kind: 'vertical_notification_dispatch',
       payload: expect.objectContaining({ notificationId: queued.item.id, force: true }),
     }));
+  });
+
+  test('dispatchNotification envia email com sucesso quando smtp esta configurado', async () => {
+    const cfg = require('../../api/utils/config');
+    cfg.get.mockImplementation((path, defaultValue) => {
+      if (path === 'notifications.email.enabled') return true;
+      if (path === 'notifications.email.smtp.host') return '127.0.0.1';
+      if (path === 'notifications.email.smtp.port') return 1025;
+      if (path === 'notifications.email.smtp.secure') return false;
+      if (path === 'notifications.email.fromAddress') return 'qa@example.test';
+      if (path === 'notifications.email.fromName') return 'QA Waves';
+      return defaultValue;
+    });
+
+    const queued = await service.queueNotification({
+      tenantId: 'tenant-1',
+      subjectId: 'subject-1',
+      eventType: 'welcome_sent',
+      channel: 'email',
+      metadata: { vertical: 'fitness' },
+    });
+
+    const result = await service.dispatchNotification({
+      tenantId: 'tenant-1',
+      notificationId: queued.item.id,
+      jobId: 'job-email-1',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({
+      from: 'QA Waves <qa@example.test>',
+      to: 'john@example.com',
+      subject: 'welcome_sent',
+    }));
+    expect(result.delivery).toEqual(expect.objectContaining({
+      status: 'sent',
+      provider_message_id: 'email-msg-1',
+      attempts: 1,
+    }));
+  });
+
+  test('dispatchNotification retorna stub quando email esta desabilitado', async () => {
+    const cfg = require('../../api/utils/config');
+    cfg.get.mockImplementation((path, defaultValue) => {
+      if (path === 'notifications.email.enabled') return false;
+      return defaultValue;
+    });
+
+    const queued = await service.queueNotification({
+      tenantId: 'tenant-1',
+      subjectId: 'subject-1',
+      eventType: 'welcome_sent',
+      channel: 'email',
+      metadata: { vertical: 'fitness' },
+    });
+
+    const result = await service.dispatchNotification({
+      tenantId: 'tenant-1',
+      notificationId: queued.item.id,
+      jobId: 'job-email-2',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.delivery).toEqual(expect.objectContaining({
+      status: 'stub',
+      attempts: 1,
+    }));
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  test('dispatchNotification respeita habilitacao de email por env/config.get', async () => {
+    const cfg = require('../../api/utils/config');
+    cfg.get.mockImplementation((path, defaultValue) => {
+      if (path === 'notifications.email.enabled') return true;
+      if (path === 'notifications.email.smtp.host') return '127.0.0.1';
+      if (path === 'notifications.email.smtp.port') return 1025;
+      if (path === 'notifications.email.fromAddress') return 'qa@example.test';
+      return defaultValue;
+    });
+
+    const result = await service.dispatchNotification({
+      tenantId: 'tenant-1',
+      jobId: 'job-email-env',
+      fallbackPayload: {
+        tenantId: 'tenant-1',
+        channel: 'email',
+        recipient: 'john@example.com',
+        eventType: 'welcome_sent',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(sendMail).toHaveBeenCalled();
   });
 });

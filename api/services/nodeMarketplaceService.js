@@ -22,6 +22,7 @@ function safeTrim(value, fallback = '') {
 const REGISTRY_PATH = path.resolve(__dirname, '../../governance/node-marketplace-registry.json');
 
 function ensureRegistryFile() {
+  fs.mkdirSync(path.dirname(REGISTRY_PATH), { recursive: true });
   if (!fs.existsSync(REGISTRY_PATH)) {
     fs.writeFileSync(REGISTRY_PATH, JSON.stringify({ items: [] }, null, 2));
   }

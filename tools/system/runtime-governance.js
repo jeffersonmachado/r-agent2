@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const { runtimeAwarePath, resolveWorkspacePath, resolveEvidenceCandidates } = require('./lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
 const DEFAULT_REPORT_PATH = runtimeAwarePath(ROOT, 'qa/runtime-governance-report.json', 'RUNTIME_GOVERNANCE_REPORT_PATH');
@@ -17,7 +17,11 @@ function toBool(value, fallback = false) {
 }
 
 function loadJsonState(relPath) {
-  if (!relPath) {
+  const candidates = Array.isArray(relPath)
+    ? relPath.flatMap((entry) => resolveEvidenceCandidates(ROOT, entry, null))
+    : resolveEvidenceCandidates(ROOT, relPath, null);
+
+  if (candidates.length === 0) {
     return {
       path: null,
       found: false,
@@ -25,30 +29,45 @@ function loadJsonState(relPath) {
       parseError: null,
     };
   }
-  const abs = resolveWorkspacePath(ROOT, relPath);
-  if (!fs.existsSync(abs)) {
+  for (const abs of candidates) {
+    if (!fs.existsSync(abs)) {
+      continue;
+    }
+    try {
+      return {
+        path: path.relative(ROOT, abs),
+        found: true,
+        data: JSON.parse(fs.readFileSync(abs, 'utf8')),
+        parseError: null,
+      };
+    } catch (error) {
+      return {
+        path: path.relative(ROOT, abs),
+        found: true,
+        data: null,
+        parseError: error.message || String(error),
+      };
+    }
+  }
+
+  return {
+    path: Array.isArray(relPath) ? relPath[0] : relPath,
+    found: false,
+    data: null,
+    parseError: null,
+  };
+}
+
+function resolvePreferredOutputPath(relPath, explicitEnvVar) {
+  const candidates = resolveEvidenceCandidates(ROOT, relPath, explicitEnvVar);
+  if (candidates.length > 0) {
     return {
-      path: relPath,
-      found: false,
-      data: null,
-      parseError: null,
+      relPath: path.isAbsolute(candidates[0]) ? candidates[0] : resolveWorkspacePath(ROOT, candidates[0]),
     };
   }
-  try {
-    return {
-      path: relPath,
-      found: true,
-      data: JSON.parse(fs.readFileSync(abs, 'utf8')),
-      parseError: null,
-    };
-  } catch (error) {
-    return {
-      path: relPath,
-      found: true,
-      data: null,
-      parseError: error.message || String(error),
-    };
-  }
+  return {
+    relPath: resolveWorkspacePath(ROOT, relPath),
+  };
 }
 
 function classifyRuntime(options = {}) {
@@ -151,7 +170,7 @@ function buildRuntimeGovernanceReport(options = {}) {
 }
 
 function writeRuntimeGovernanceReport(report, relPath = DEFAULT_REPORT_PATH) {
-  const abs = resolveWorkspacePath(ROOT, relPath);
+  const abs = path.isAbsolute(relPath) ? relPath : resolvePreferredOutputPath(relPath).relPath;
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   return relPath;

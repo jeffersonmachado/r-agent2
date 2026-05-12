@@ -5,7 +5,7 @@ module.exports = createModelFactory('PbxCdr', {
   id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
   tenantKey: { type: DataTypes.STRING, allowNull: false, field: 'tenant_key' },
   uniqueid: { type: DataTypes.STRING(80), allowNull: false },
-  calldate: { type: DataTypes.DATE, allowNull: false },
+  calldate: { type: DataTypes.DATE, allowNull: true },
   src: { type: DataTypes.STRING(80), allowNull: true },
   dst: { type: DataTypes.STRING(80), allowNull: true },
   disposition: { type: DataTypes.STRING(32), allowNull: true },
