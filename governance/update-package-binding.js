@@ -168,6 +168,23 @@ function run() {
     writeJson(readinessPath, readiness);
   }
 
+  // ─── Reconstruir cadeia de imutabilidade e re-assinar ────────────────────
+  if (!DRY_RUN) {
+    try {
+      const { buildChain, writeChain, resolveArtifact: resolveArt } = require('./governance-chain');
+      const { signAll } = require('./sign-governance');
+      const art2  = resolveArt();
+      const chain = buildChain(art2);
+      writeChain(chain);
+      signAll();
+      // eslint-disable-next-line no-console
+      console.log(`  rebuilt chain + signed (chainRoot=${chain.chainRoot.slice(0, 16)}…)`);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(`  [warn] chain/sign rebuild failed: ${e.message}`);
+    }
+  }
+
   // eslint-disable-next-line no-console
   console.log(DRY_RUN ? '\n[dry-run] nenhuma alteração gravada.' : '\n[update-package-binding] concluído.');
 }

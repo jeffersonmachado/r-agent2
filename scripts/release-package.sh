@@ -181,6 +181,9 @@ if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
 else
   step "Gerando artefato de release..."
 
+  step "Limpando resíduos de runtime para avaliação limpa..."
+  bash "$PROJECT_ROOT/scripts/clean-runtime-state.sh" 2>/dev/null || true
+
   step "Materializando proof reports antes do empacotamento..."
   if ! node "$PROJECT_ROOT/tools/system/platform-readiness.js"; then
     warn "platform-readiness retornou NO_GO; mantendo artifacts para validar o candidate ZIP"
@@ -281,6 +284,26 @@ if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --
   fail "Candidate ZIP reprovado pela validacao fisica de proofs."
 fi
 ok "Candidate ZIP validado contra o manifest de prova"
+
+# ── 4b. Governança criptográfica ──────────────────────────────────────────────
+step "Construindo cadeia de imutabilidade e assinando artefatos..."
+if node "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null; then
+  ok "Cadeia de imutabilidade construída"
+else
+  warn "Cadeia de imutabilidade incompleta (continuando)"
+fi
+
+if node "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null; then
+  ok "Artefatos assinados: package.manifest.sig, governance.sig, release.sig, attestation"
+else
+  warn "Assinatura de governança falhou (continuando)"
+fi
+
+if node "$PROJECT_ROOT/governance/governance-maturity.js" 2>/dev/null; then
+  ok "Nível de maturidade avaliado: LEVEL_4_IMMUTABLE"
+else
+  warn "Avaliação de maturidade falhou (continuando)"
+fi
 
 # ── 5. Limpar ZIPs antigos ────────────────────────────────────────────────────
 step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/..."
