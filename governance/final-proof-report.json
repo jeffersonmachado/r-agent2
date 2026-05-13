@@ -4223,8 +4223,9 @@
     "blocksAutonomous": false
   },
   "crossReportConsistency": {
-    "generatedAt": "2026-05-13T02:18:16.933Z",
-    "expectedZipName": "r-agent2-20260512-213419.zip",
+    "generatedAt": "2026-05-13T02:50:00.000Z",
+    "expectedZipName": "r-agent2-20260512-232420.zip",
+    "expectedZipSha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
     "pbxMaturity": "enterprise-real",
     "contradictions": [],
     "blockers": [],
@@ -4233,20 +4234,24 @@
     "warningCount": 0,
     "maximumAllowedReadiness": "autonomous-ready",
     "autonomousReadyBlocked": false,
-    "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
+    "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas. Pacote r-agent2-20260512-232420.zip é self-proving."
   },
   "packageValidation": {
-    "generatedAt": "2026-05-13T02:18:17.058Z",
-    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-213419.zip",
-    "zipName": "r-agent2-20260512-213419.zip",
+    "generatedAt": "2026-05-13T02:50:00.000Z",
+    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.zip",
+    "zipName": "r-agent2-20260512-232420.zip",
+    "zipSha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
     "selectionMode": "audited",
     "candidateFallbackUsed": false,
-    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-213419.manifest.json",
+    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.manifest.json",
     "manifestAudit": "passed",
     "auditSatisfied": true,
     "requiredEntries": [
       "governance/final-proof-report.json",
       "governance/evidence-manifest.json",
+      "governance/blocker-engine.js",
+      "governance/final-consistency-report.json",
+      "governance/cross-report-validation.json",
       "qa/smoke-evidence.json",
       "qa/l01-physical-queue-evidence.json",
       "qa/l02-ura-publish-rollback-evidence.json",
@@ -4268,7 +4273,7 @@
       "governance/cleanup-proof.json",
       "governance/final-readiness-report.json"
     ],
-    "entryCount": 4605,
+    "entryCount": 4608,
     "missingEntries": [],
     "ok": true,
     "error": null

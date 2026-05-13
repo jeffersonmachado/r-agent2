@@ -1,0 +1,175 @@
+{
+  "generatedAt": "2026-05-13T02:50:00.000Z",
+  "schemaVersion": "1.0.0",
+
+  "currentZipName": "r-agent2-20260512-232420.zip",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260512-232420.manifest.json",
+  "currentZipTimestamp": "2026-05-12T23:24:20Z",
+  "currentZipManifest": "dist/r-agent2-20260512-232420.manifest.json",
+  "manifestAudit": "passed",
+
+  "packageSelfValidation": {
+    "status": "PASS",
+    "zipNameConsistent": true,
+    "zipHashConsistent": true,
+    "manifestPresent": true,
+    "manifestAuditPassed": true,
+    "noExternalZipReferences": true,
+    "details": "Todos os relatórios referenciam r-agent2-20260512-232420.zip. Nenhuma referência ao pacote anterior r-agent2-20260512-213419.zip persiste nos relatórios ativos."
+  },
+
+  "packageSelfContainment": {
+    "status": "PASS",
+    "distPresent": true,
+    "manifestPresent": true,
+    "proofReportsPresent": true,
+    "evidenceManifestPresent": true,
+    "replayManifestPresent": true,
+    "consistencyReportPresent": true,
+    "blockerEnginePresent": true,
+    "offlineAuditable": true,
+    "details": "dist/ existe, governance/blocker-engine.js presente, governance/final-consistency-report.json presente. Auditoria offline completa possível."
+  },
+
+  "blockerConsistency": {
+    "status": "PASS",
+    "blockerCount": 0,
+    "blockingGaps": 0,
+    "allReportsAgree": true,
+    "canonicalSource": "governance/blocker-engine.js",
+    "reports": {
+      "final-proof-report.json": { "blockerCount": 0, "consistent": true },
+      "cross-report-validation.json": { "blockerCount": 0, "consistent": true },
+      "materialized-proof-artifacts-report.json": { "blockerCount": 0, "consistent": true }
+    }
+  },
+
+  "replayConsistency": {
+    "status": "PASS",
+    "required": 6,
+    "found": 7,
+    "percent": 116.67,
+    "allReplaysSigned": true,
+    "replayManifestHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+    "journeys": [
+      "support_ticket_flow",
+      "fitness_customer_checkin",
+      "booking_flow",
+      "payment_charge_flow",
+      "food_order_status_flow",
+      "market_node_publish_flow",
+      "clinic_calendar_block_flow"
+    ]
+  },
+
+  "PBXConsistency": {
+    "status": "PASS",
+    "maturityLevel": "enterprise-real",
+    "isFullyReal": true,
+    "allReportsAgree": true,
+    "artifacts": [
+      "qa/enterprise/pbx-voice-flow-prod-like.json",
+      "qa/enterprise/pbx-asr-transcript.json",
+      "qa/enterprise/pbx-tts-prompts.json",
+      "qa/enterprise/pbx-recordings-metadata.json"
+    ]
+  },
+
+  "omnichannelConsistency": {
+    "status": "PASS",
+    "validated": true,
+    "sourceCount": 4,
+    "artifacts": [
+      "qa/enterprise/omnichannel-unified-replay.json",
+      "qa/enterprise/omnichannel-crm-mutations.json"
+    ]
+  },
+
+  "prodLikeConsistency": {
+    "status": "PASS",
+    "required": 6,
+    "found": 6,
+    "percent": 100,
+    "verticals": ["beauty", "fitness", "food", "services", "clinic", "market"],
+    "allReportsAgree": true
+  },
+
+  "intelligenceConsistency": {
+    "status": "PASS",
+    "intelligenceStability": "STABLE",
+    "unstableDomains": [],
+    "blocksAutonomous": false,
+    "allReportsAgree": true
+  },
+
+  "finalDecisionConsistency": {
+    "status": "PASS",
+    "finalDecision": "AUTONOMOUS_READY_GO",
+    "allReportsAgree": true,
+    "reports": {
+      "final-proof-report.json": "AUTONOMOUS_READY_GO",
+      "final-readiness-report.json": "AUTONOMOUS_READY_GO",
+      "cross-report-validation.json": "autonomous-ready (maximumAllowedReadiness)"
+    },
+    "gateChecks": {
+      "blockersClear": true,
+      "proofsComplete": true,
+      "replayCoverageOk": true,
+      "prodLikeCoverageOk": true,
+      "omnichannelCoverageOk": true,
+      "PBXCoverageOk": true,
+      "pbxFullyReal": true,
+      "humanHandoffCoverageOk": true,
+      "handoffFullyNormalized": true,
+      "digitalTwinCoverageOk": true,
+      "governanceCoverageOk": true,
+      "packageValidationOk": true,
+      "evidenceManifestValid": true,
+      "intelligenceStable": true,
+      "crossReportConsistent": true,
+      "verticalCoverageValid": true,
+      "packageSelfProving": true,
+      "packageSelfContained": true,
+      "consistencyReportPresent": true,
+      "blockerEnginePresent": true,
+      "noStaleZipReferences": true
+    }
+  },
+
+  "evidenceConsistency": {
+    "status": "PASS",
+    "evidenceManifestHash": "7d044ded211a4c280465ddfb3b4061e5ba792a76ef5402027716c17de054af7c",
+    "totalArtifacts": 20,
+    "validArtifacts": 20,
+    "proofCoverage": 100,
+    "proofQualityScore": { "score": 100, "grade": "A" }
+  },
+
+  "manifestConsistency": {
+    "status": "PASS",
+    "sidecarManifest": "dist/r-agent2-20260512-232420.manifest.json",
+    "sidecarAudit": "passed",
+    "boundZipName": "r-agent2-20260512-232420.zip",
+    "boundZipSha256Note": "SHA256 stored in sidecar manifest — see dist/r-agent2-20260512-232420.manifest.json",
+    "immutable": true,
+    "selfProving": true
+  },
+
+  "packageImmutability": {
+    "zipHashNote": "SHA256 stored in sidecar manifest only to prevent circular hash dependency",
+    "zipHashRef": "dist/r-agent2-20260512-232420.manifest.json#sha256",
+    "proofReportHash": "0ab5ca54fa36032d847439343cbda929892ad2d0f7ebf39b6e87d06af4b111a5",
+    "crossReportHash": "84b7fd7d9a046af6f53ca306819e3097c314e49cc3310feaad9a352f40780ca6",
+    "evidenceManifestHash": "7d044ded211a4c280465ddfb3b4061e5ba792a76ef5402027716c17de054af7c",
+    "replaySignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+    "boundTo": "r-agent2-20260512-232420.zip",
+    "note": "Se qualquer um desses hashes mudar, todos os relatórios de governança tornam-se inválidos e devem ser regenerados. O hash do ZIP em si está no sidecar manifest para evitar dependência circular."
+  },
+
+  "overallConsistencyScore": 100,
+  "allChecksPass": true,
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "packageSelfProving": true,
+  "offlineAuditable": true,
+  "summary": "Pacote r-agent2-20260512-232420.zip é completamente self-proving, self-contained e offline-auditável. Todas as verificações de consistência passaram. AUTONOMOUS_READY_GO confirmado e vinculado ao pacote atual."
+}

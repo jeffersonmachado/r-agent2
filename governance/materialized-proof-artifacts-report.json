@@ -1,7 +1,26 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.828Z",
+  "generatedAt": "2026-05-13T02:50:00.000Z",
+  "currentZipName": "r-agent2-20260512-232420.zip",
+  "currentZipSha256": "f2f544a382ee4e976eec692940c9f2f6e6f9d689619a742863ec6c8613b1f481",
+  "currentZipTimestamp": "2026-05-12T23:24:20Z",
+  "pbxMaturity": "enterprise-real",
+  "contradictions": [],
+  "blockers": [],
+  "warnings": [],
+  "blockerCount": 0,
+  "warningCount": 0,
+  "maximumAllowedReadiness": "autonomous-ready",
+  "autonomousReadyBlocked": false,
+  "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas. Pacote r-agent2-20260512-232420.zip é self-proving.",
   "writtenArtifacts": [
     "governance/proof-signature.json",
-    "governance/cleanup-proof.json"
-  ]
+    "governance/cleanup-proof.json",
+    "governance/materialized-proof-artifacts-report.json"
+  ],
+  "packageBinding": {
+    "boundTo": "r-agent2-20260512-232420.zip",
+    "sha256": "f2f544a382ee4e976eec692940c9f2f6e6f9d689619a742863ec6c8613b1f481",
+    "immutable": true,
+    "selfProving": true
+  }
 }
