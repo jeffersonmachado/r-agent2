@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T14:41:49.946Z",
+  "generatedAt": "2026-05-13T14:46:45.374Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
@@ -914,9 +914,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260513-114123.zip",
-      "computed": "d3191b974f65de26dcedcdcc…",
-      "recorded": "d3191b974f65de26dcedcdcc…",
+      "zipName": "r-agent2-20260513-114614.zip",
+      "computed": "3129c196a35428742cd29988…",
+      "recorded": "3129c196a35428742cd29988…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },

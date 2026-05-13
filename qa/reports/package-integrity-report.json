@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-05-13T14:41:46.396Z",
+  "generatedAt": "2026-05-13T14:46:40.675Z",
   "engine": "package-integrity-engine/v1",
   "pass": true,
   "decision": "PACKAGE_INTEGRITY_GO",
-  "packageName": "r-agent2-20260513-114123.zip",
+  "packageName": "r-agent2-20260513-114614.zip",
   "packageHash": null,
   "generatedAt_pkg": null,
   "gitCommit": null,
-  "evidenceManifestHash": "1a862167f29cbbc15ab78f2d53ef16a70718f31ecad88d17978880df7abce73a",
+  "evidenceManifestHash": "832db14c6bb940518f8793421d06d333ba56ddeab7bacc06661888d78eb45b3e",
   "checks": [
     {
       "check": "zip_hash",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260513-114123.zip",
-      "computed": "d3191b974f65de26dcedcdcc3f100bacdf5f67920d0c4227e38b969d5345d759",
-      "recorded": "d3191b974f65de26dcedcdcc3f100bacdf5f67920d0c4227e38b969d5345d759",
+      "zipName": "r-agent2-20260513-114614.zip",
+      "computed": "3129c196a35428742cd299885e1fdda919a7340a686472a9d5c6fc524e11c489",
+      "recorded": "3129c196a35428742cd299885e1fdda919a7340a686472a9d5c6fc524e11c489",
       "hashSource": "governance/package-validation-report.json",
-      "sizeBytes": 10502129,
+      "sizeBytes": 10501890,
       "match": true,
       "reason": null
     },
@@ -25,7 +25,7 @@
       "check": "zip_name_alignment",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260513-114123.zip",
+      "zipName": "r-agent2-20260513-114614.zip",
       "mismatches": [],
       "reason": null
     },
@@ -33,8 +33,8 @@
       "check": "evidence_manifest_hash",
       "pass": true,
       "severity": "OK",
-      "computed": "1a862167f29cbbc15ab78f2d…",
-      "recorded": "1a862167f29cbbc15ab78f2d…",
+      "computed": "832db14c6bb940518f879342…",
+      "recorded": "832db14c6bb940518f879342…",
       "match": true,
       "reason": null
     },
@@ -45,8 +45,8 @@
       "validatorOk": true,
       "selfContained": true,
       "missingEntries": 0,
-      "reportedZip": "r-agent2-20260513-114123.zip",
-      "actualZip": "r-agent2-20260513-114123.zip",
+      "reportedZip": "r-agent2-20260513-114614.zip",
+      "actualZip": "r-agent2-20260513-114614.zip",
       "zipMatch": true,
       "reason": null
     }
@@ -54,5 +54,5 @@
   "failedChecks": 0,
   "criticalChecks": 0,
   "failureReasons": [],
-  "summary": "Pacote r-agent2-20260513-114123.zip íntegro. Todos os hashes correspondem."
+  "summary": "Pacote r-agent2-20260513-114614.zip íntegro. Todos os hashes correspondem."
 }
