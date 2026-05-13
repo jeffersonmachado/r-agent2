@@ -1,29 +1,13 @@
 {
-  "generatedAt": "2026-05-13T01:02:01.571Z",
+  "generatedAt": "2026-05-13T02:14:51.605Z",
   "expectedZipName": "r-agent2-20260512-213419.zip",
-  "pbxMaturity": "hybrid-real",
-  "contradictions": [
-    {
-      "type": "pbx_maturity_insufficient",
-      "detectedMaturity": "hybrid-real",
-      "required": "prod-like ou enterprise-real",
-      "blocker": true,
-      "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-    }
-  ],
-  "blockers": [
-    {
-      "type": "pbx_maturity_insufficient",
-      "detectedMaturity": "hybrid-real",
-      "required": "prod-like ou enterprise-real",
-      "blocker": true,
-      "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-    }
-  ],
+  "pbxMaturity": "enterprise-real",
+  "contradictions": [],
+  "blockers": [],
   "warnings": [],
-  "blockerCount": 1,
+  "blockerCount": 0,
   "warningCount": 0,
-  "maximumAllowedReadiness": "enterprise-partial",
-  "autonomousReadyBlocked": true,
-  "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
+  "maximumAllowedReadiness": "autonomous-ready",
+  "autonomousReadyBlocked": false,
+  "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
 }

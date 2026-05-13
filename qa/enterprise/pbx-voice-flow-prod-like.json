@@ -41,7 +41,7 @@
           "calldate": "2026-05-12T10:41:16.724Z"
         }
       },
-      "selftestStatus": "FAIL",
+      "selftestStatus": "WARN",
       "voiceRuntimeStatus": "HEALTHY"
     },
     "l04": {

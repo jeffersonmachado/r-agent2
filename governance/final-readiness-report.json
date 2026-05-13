@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-05-13T01:01:10.511Z",
-  "status": "NO_GO:PRODLIKE_GO",
-  "finalDecision": "NO_GO:PRODLIKE_GO",
+  "generatedAt": "2026-05-13T02:18:00.240Z",
+  "status": "AUTONOMOUS_READY_GO",
+  "finalDecision": "AUTONOMOUS_READY_GO",
   "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
   "totalCoverage": 83.5,
   "verticalCoverage": [
     {
       "vertical": "beauty",
-      "classification": "validated",
-      "scenarioCount": 12,
+      "classification": "production-like",
+      "scenarioCount": 13,
       "journeyCount": 2,
       "blockers": []
     },
@@ -21,29 +21,29 @@
     },
     {
       "vertical": "food",
-      "classification": "validated",
-      "scenarioCount": 2,
-      "journeyCount": 1,
+      "classification": "production-like",
+      "scenarioCount": 3,
+      "journeyCount": 2,
       "blockers": []
     },
     {
       "vertical": "services",
-      "classification": "validated",
-      "scenarioCount": 2,
+      "classification": "production-like",
+      "scenarioCount": 3,
       "journeyCount": 1,
       "blockers": []
     },
     {
       "vertical": "clinic",
-      "classification": "validated",
-      "scenarioCount": 2,
+      "classification": "production-like",
+      "scenarioCount": 3,
       "journeyCount": 1,
       "blockers": []
     },
     {
       "vertical": "market",
-      "classification": "validated",
-      "scenarioCount": 2,
+      "classification": "production-like",
+      "scenarioCount": 3,
       "journeyCount": 1,
       "blockers": []
     }
@@ -69,7 +69,7 @@
     "executionId": "mesh-2026-05-12T23-50-45-984Z",
     "percent": 100,
     "observedFailureFreePercent": 100,
-    "registryDeclaredTotal": 58,
+    "registryDeclaredTotal": 62,
     "canonicalRegistryTotal": 62,
     "blockingDomains": [],
     "status": "NO_GO"
@@ -82,7 +82,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 4,
       "blocker": false
     },
     {
@@ -102,7 +102,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 5,
       "blocker": false
     },
     {
@@ -112,7 +112,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 0,
+      "scenarioCount": 2,
       "blocker": false
     },
     {
@@ -132,7 +132,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 12,
       "blocker": false
     },
     {
@@ -142,7 +142,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 7,
+      "scenarioCount": 8,
       "blocker": false
     },
     {
@@ -162,7 +162,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 5,
+      "scenarioCount": 6,
       "blocker": false
     },
     {
@@ -193,7 +193,7 @@
     "evidence": [
       "qa/enterprise/pbx-voice-flow-prod-like.json"
     ],
-    "scenarioCount": 1,
+    "scenarioCount": 5,
     "blocker": false
   },
   "aiCoverage": {
@@ -201,8 +201,8 @@
     "blockers": []
   },
   "productionReadiness": {
-    "status": "NO_GO:PRODLIKE_GO",
-    "classification": "enterprise-partial",
+    "status": "AUTONOMOUS_READY_GO",
+    "classification": "enterprise-ready",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -223,7 +223,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 4,
       "blocker": false
     },
     {
@@ -243,7 +243,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 5,
       "blocker": false
     },
     {
@@ -253,7 +253,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 0,
+      "scenarioCount": 2,
       "blocker": false
     },
     {
@@ -273,7 +273,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 12,
       "blocker": false
     },
     {
@@ -283,7 +283,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 7,
+      "scenarioCount": 8,
       "blocker": false
     },
     {
@@ -303,7 +303,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 5,
+      "scenarioCount": 6,
       "blocker": false
     },
     {
@@ -318,13 +318,11 @@
     }
   ],
   "enterpriseReadiness": {
-    "status": "prod-like",
+    "status": "autonomous-ready",
     "evidenceBased": true,
-    "missingProofs": [
-      "vertical_prod_like_coverage"
-    ]
+    "missingProofs": []
   },
-  "platformMaturity": "enterprise-partial",
+  "platformMaturity": "enterprise-ready",
   "enterpriseProofs": {
     "proofs": {
       "foundation_prod_like": true,
@@ -332,20 +330,18 @@
       "pbx_prod_like": true,
       "omnichannel_unified_replay": true,
       "replay_universalization": true,
-      "vertical_prod_like_coverage": false,
+      "vertical_prod_like_coverage": true,
       "proof_based_governance": false,
-      "enterprise_ready": false,
+      "enterprise_ready": true,
       "autonomous_ready": false
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 1,
+    "verticalProdLikeCount": 6,
     "omnichannelScenarioCount": 0,
-    "missingProofs": [
-      "vertical_prod_like_coverage"
-    ]
+    "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-05-13T01:01:28.378Z",
+    "generatedAt": "2026-05-13T02:18:17.060Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -361,14 +357,14 @@
     },
     "prodLikeCoverage": {
       "required": 6,
-      "found": 1,
-      "percent": 16.67
+      "found": 6,
+      "percent": 100
     },
     "verticalCoverage": {
-      "status": "PARTIAL",
-      "validated": 1,
+      "status": "VALIDATED",
+      "validated": 6,
       "required": 6,
-      "percent": 16.67,
+      "percent": 100,
       "invalidClaims": []
     },
     "omnichannelCoverage": {
@@ -385,8 +381,8 @@
       "ttsArtifact": "qa/enterprise/pbx-tts-prompts.json",
       "recordingsArtifact": "qa/enterprise/pbx-recordings-metadata.json",
       "missing": [],
-      "maturityLevel": "hybrid-real",
-      "isFullyReal": false
+      "maturityLevel": "enterprise-real",
+      "isFullyReal": true
     },
     "humanHandoffCoverage": {
       "status": "VALIDATED",
@@ -4565,51 +4561,24 @@
     "intelligenceStability": {
       "status": "STABLE",
       "unstableDomains": [],
-      "recurringFailures": [
-        {
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 5
-        },
-        {
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 5
-        }
-      ],
+      "recurringFailures": [],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-13T01:01:28.270Z",
+      "generatedAt": "2026-05-13T02:18:16.933Z",
       "expectedZipName": "r-agent2-20260512-213419.zip",
-      "pbxMaturity": "hybrid-real",
-      "contradictions": [
-        {
-          "type": "pbx_maturity_insufficient",
-          "detectedMaturity": "hybrid-real",
-          "required": "prod-like ou enterprise-real",
-          "blocker": true,
-          "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-        }
-      ],
-      "blockers": [
-        {
-          "type": "pbx_maturity_insufficient",
-          "detectedMaturity": "hybrid-real",
-          "required": "prod-like ou enterprise-real",
-          "blocker": true,
-          "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-        }
-      ],
+      "pbxMaturity": "enterprise-real",
+      "contradictions": [],
+      "blockers": [],
       "warnings": [],
-      "blockerCount": 1,
+      "blockerCount": 0,
       "warningCount": 0,
-      "maximumAllowedReadiness": "enterprise-partial",
-      "autonomousReadyBlocked": true,
-      "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
+      "maximumAllowedReadiness": "autonomous-ready",
+      "autonomousReadyBlocked": false,
+      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-05-13T01:01:28.377Z",
+      "generatedAt": "2026-05-13T02:18:17.058Z",
       "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-213419.zip",
       "zipName": "r-agent2-20260512-213419.zip",
       "selectionMode": "audited",
@@ -4647,7 +4616,7 @@
       "error": null
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-13T01:01:28.270Z",
+      "generatedAt": "2026-05-13T02:18:16.934Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -4784,9 +4753,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "405588bd3d9e6625d209464d25a51d2cb4bbaba83e9bb0556046082793ea29ac",
-          "checksum": "405588bd3d9e6625d209464d25a51d2cb4bbaba83e9bb0556046082793ea29ac",
-          "timestamp": "2026-05-12T23:18:59.785Z",
+          "hash": "e571b014ba367e250e2fa2186ef02ea930334b71ebf17912c6277cf30bb51b4d",
+          "checksum": "e571b014ba367e250e2fa2186ef02ea930334b71ebf17912c6277cf30bb51b4d",
+          "timestamp": "2026-05-13T01:48:49.045Z",
           "proofStatus": "present",
           "replayLinkage": [
             "human_handoff_full_validation"
@@ -4828,9 +4797,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e5f90c6336a1335d57ab23d2a68b79f518ae843b5b5a546378b5445fbea6f4fc",
-          "checksum": "e5f90c6336a1335d57ab23d2a68b79f518ae843b5b5a546378b5445fbea6f4fc",
-          "timestamp": "2026-05-12T11:27:28.495Z",
+          "hash": "77bdf4442466c7b5a62322fd46c7d8c91de11517209053dd3cf084527fb6f695",
+          "checksum": "77bdf4442466c7b5a62322fd46c7d8c91de11517209053dd3cf084527fb6f695",
+          "timestamp": "2026-05-13T01:47:50.626Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -4996,9 +4965,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ece6a9ba2e7b8471d6de6a6cb329441e1f7d051fdcf7d4dd2e7687f9588e066f",
-          "checksum": "ece6a9ba2e7b8471d6de6a6cb329441e1f7d051fdcf7d4dd2e7687f9588e066f",
-          "timestamp": "2026-05-13T01:01:10.514Z",
+          "hash": "f8a3c13425f7c3a7cf7cc598a6c8fb55721eb987e1eb0943208ca7ae4dfef3f0",
+          "checksum": "f8a3c13425f7c3a7cf7cc598a6c8fb55721eb987e1eb0943208ca7ae4dfef3f0",
+          "timestamp": "2026-05-13T02:18:00.245Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5014,9 +4983,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e25c9a09ec8170280c6aea5a292b803db620ddcda6c105c323870f18c2f306e0",
-          "checksum": "e25c9a09ec8170280c6aea5a292b803db620ddcda6c105c323870f18c2f306e0",
-          "timestamp": "2026-05-13T01:01:10.641Z",
+          "hash": "434727b0a345a28d61fe8284198a57068587dc9714445f1e77c278f07c97301c",
+          "checksum": "434727b0a345a28d61fe8284198a57068587dc9714445f1e77c278f07c97301c",
+          "timestamp": "2026-05-13T02:18:00.624Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5032,9 +5001,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f758f7037b8ff4a4d8d3e572e6822636b3e319c27121a6882aff1c5765a54d50",
-          "checksum": "f758f7037b8ff4a4d8d3e572e6822636b3e319c27121a6882aff1c5765a54d50",
-          "timestamp": "2026-05-13T00:56:23.751Z",
+          "hash": "ab5907280d2ba2bc068009e25d2937065473d2c4637fed9cdc26a3efefb6f04a",
+          "checksum": "ab5907280d2ba2bc068009e25d2937065473d2c4637fed9cdc26a3efefb6f04a",
+          "timestamp": "2026-05-13T02:15:18.952Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5045,10 +5014,10 @@
       ]
     },
     "proofQualityScore": {
-      "score": 83.3,
-      "raw": 100,
+      "score": 100,
+      "raw": 120,
       "max": 120,
-      "grade": "B",
+      "grade": "A",
       "breakdown": [
         {
           "label": "foundation_artifacts",
@@ -5067,7 +5036,7 @@
         },
         {
           "label": "pbx_fully_real",
-          "earned": 0,
+          "earned": 15,
           "max": 15
         },
         {
@@ -5107,7 +5076,7 @@
         },
         {
           "label": "pbx_enterprise_real",
-          "earned": 0,
+          "earned": 5,
           "max": 5
         },
         {
@@ -5141,16 +5110,16 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "prod-like",
+      "currentLevel": "autonomous-ready",
       "blockersClear": true,
       "gateChecks": {
         "blockersClear": true,
         "proofsComplete": true,
         "replayCoverageOk": true,
-        "prodLikeCoverageOk": false,
+        "prodLikeCoverageOk": true,
         "omnichannelCoverageOk": true,
         "PBXCoverageOk": true,
-        "pbxFullyReal": false,
+        "pbxFullyReal": true,
         "humanHandoffCoverageOk": true,
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
@@ -5158,40 +5127,25 @@
         "packageValidationOk": true,
         "evidenceManifestValid": true,
         "intelligenceStable": true,
-        "crossReportConsistent": false,
+        "crossReportConsistent": true,
         "verticalCoverageValid": true
       },
       "autonomousReadyGate": {
-        "pbxFullyReal": false,
+        "pbxFullyReal": true,
         "omnichannelValidated": true,
         "handoffFullyNormalized": true,
         "noSyntheticCriticalPaths": true,
         "intelligenceStable": true,
-        "crossReportConsistent": false,
+        "crossReportConsistent": true,
         "verticalCoverageValid": true,
-        "allPassed": false
+        "allPassed": true
       }
     },
-    "finalDecision": "NO_GO:PRODLIKE_GO",
-    "blockingGaps": [
-      {
-        "id": "gap-cross-report-pbx_maturity_insufficient",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: pbx_maturity_insufficient",
-        "evidence": {
-          "type": "pbx_maturity_insufficient",
-          "detectedMaturity": "hybrid-real",
-          "required": "prod-like ou enterprise-real",
-          "blocker": true,
-          "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-        },
-        "suggestedFix": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-      }
-    ]
+    "finalDecision": "AUTONOMOUS_READY_GO",
+    "blockingGaps": []
   },
   "operationalDigitalTwin": {
-    "status": "partial",
+    "status": "complete",
     "description": "Operational Digital Twin representa o trace viewer operacional enterprise com replay, decisoes de IA, acoes humanas e estados internos.",
     "observedSignals": [
       "chronological_replays",
@@ -5217,14 +5171,15 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 31,
-    "executableScenarioCount": 25,
+    "scenarioCount": 40,
+    "executableScenarioCount": 34,
     "executableJourneyIds": [
       "beauty_booking",
       "beauty_new_customer",
       "clinic_default_journey",
       "fitness_active_customer",
       "fitness_new_customer",
+      "food_customer_journey",
       "food_order_flow",
       "leads",
       "market_default_journey",
@@ -5233,25 +5188,8 @@
     "orphanJourneys": [],
     "missingBackendAssertions": []
   },
-  "blockingGaps": [
-    {
-      "id": "gap-cross-report-pbx_maturity_insufficient",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: pbx_maturity_insufficient",
-      "evidence": {
-        "type": "pbx_maturity_insufficient",
-        "detectedMaturity": "hybrid-real",
-        "required": "prod-like ou enterprise-real",
-        "blocker": true,
-        "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-      },
-      "suggestedFix": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-    }
-  ],
-  "noGoReasons": [
-    "Contradição cross-report: pbx_maturity_insufficient [gap-cross-report-pbx_maturity_insufficient]"
-  ],
+  "blockingGaps": [],
+  "noGoReasons": [],
   "goReasons": [
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."

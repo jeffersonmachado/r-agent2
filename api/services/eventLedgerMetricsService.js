@@ -34,6 +34,7 @@ async function getEventLedgerMetrics({ windowMinutes = null, tenantId = null } =
          attempts,
          next_attempt_at,
          updated_at,
+         last_error,
          COALESCE(NULLIF(payload->'dispatchTargets'->>0, ''), 'combined') AS dispatch_target
        FROM execution_jobs
        WHERE kind = 'dispatch_event_trigger'

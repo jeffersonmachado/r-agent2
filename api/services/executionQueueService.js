@@ -395,7 +395,8 @@ async function getExecutionQueueMetricsByKind({ tenantId = null, kinds = null } 
   if (tenantId) replacements.tenantKey = safeToString(tenantId);
 
   const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => safeToString(k)) : null;
-  const kindsSql = kindsFilter ? 'AND kind = ANY(:kinds)' : '';
+  // IN (:kinds) é a forma correta para Sequelize com arrays; ANY(:kinds) gera sintaxe inválida.
+  const kindsSql = kindsFilter ? 'AND kind IN (:kinds)' : '';
   if (kindsFilter) replacements.kinds = kindsFilter;
 
   const [rows] = await sequelize.query(

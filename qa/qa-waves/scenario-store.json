@@ -2,6 +2,160 @@
   "version": 1,
   "scenarios": [
     {
+      "id": "beauty-campanha-lead-pagamento",
+      "waveId": "wave-beauty-core",
+      "vertical": "beauty",
+      "journey": "beauty_new_customer",
+      "name": "Beauty campanha de unhas até pagamento",
+      "description": "Fluxo completo: campanha criada, lead captado, cliente convertido, agendamento, pagamento confirmado",
+      "source": "catalog",
+      "status": "approved",
+      "version": "v1",
+      "channels": ["whatsapp"],
+      "risk": "high",
+      "priority": "high",
+      "preconditions": ["Campanha e sandbox billing habilitados"],
+      "steps": [
+        {
+          "id": "step_b1_001", "order": 1, "type": "trigger_channel_event",
+          "category": "SYSTEM_EVENT", "actor": "system",
+          "name": "Campanha criada e publicada",
+          "adapter": "api", "channel": "whatsapp",
+          "expected": { "backendEntity": "campaign", "campaignCreated": true },
+          "timeoutMs": 15000, "enabled": true
+        },
+        {
+          "id": "step_b1_002", "order": 2, "type": "validate_backend",
+          "category": "BACKEND_VALIDATION", "actor": "system",
+          "name": "Pagamento confirmado e status ativo",
+          "adapter": "api",
+          "expected": { "backendEntity": "payment", "paymentConfirmed": true },
+          "timeoutMs": 30000, "enabled": true
+        }
+      ],
+      "validations": { "requireBackendValidation": true, "requireReplay": true }
+    },
+    {
+      "id": "food-pedido-whatsapp",
+      "waveId": "wave-food-core",
+      "vertical": "food",
+      "journey": "food_order_flow",
+      "name": "Food pedido via WhatsApp até confirmação",
+      "description": "Fluxo: pedido recebido via webhook WhatsApp, status atualizado, notificação enviada",
+      "source": "catalog",
+      "status": "approved",
+      "version": "v1",
+      "channels": ["whatsapp"],
+      "risk": "high",
+      "priority": "high",
+      "preconditions": ["Módulo de pedidos ativo", "Tenant autenticado"],
+      "steps": [
+        {
+          "id": "step_food_001", "order": 1, "type": "trigger_channel_event",
+          "category": "SYSTEM_EVENT", "actor": "system",
+          "name": "Pedido recebido via WhatsApp webhook",
+          "adapter": "whatsapp", "channel": "whatsapp",
+          "expected": { "backendEntity": "order", "orderReceived": true },
+          "timeoutMs": 15000, "enabled": true
+        },
+        {
+          "id": "step_food_002", "order": 2, "type": "validate_backend",
+          "category": "BACKEND_VALIDATION", "actor": "system",
+          "name": "Status do pedido atualizado",
+          "adapter": "api",
+          "expected": { "backendEntity": "order", "statusUpdated": true },
+          "timeoutMs": 15000, "enabled": true
+        }
+      ],
+      "validations": { "requireBackendValidation": true, "requireReplay": true }
+    },
+    {
+      "id": "clinic-ticket-manutencao",
+      "waveId": "wave-clinic-core",
+      "vertical": "clinica",
+      "journey": "clinic_default_journey",
+      "name": "Clinic abertura e resolução de ticket de manutenção",
+      "description": "Ticket criado, atribuído ao atendente, resolvido e fechado com audit trail",
+      "source": "catalog",
+      "status": "approved",
+      "version": "v1",
+      "channels": ["ticket"],
+      "risk": "high",
+      "priority": "high",
+      "preconditions": ["Operação autenticada", "Módulo de manutenção ativo"],
+      "steps": [
+        {
+          "id": "step_clinic_001", "order": 1, "type": "trigger_channel_event",
+          "category": "SYSTEM_EVENT", "actor": "system",
+          "name": "Ticket de manutenção criado",
+          "adapter": "api", "channel": "ticket",
+          "expected": { "backendEntity": "ticket", "ticketCreated": true },
+          "timeoutMs": 15000, "enabled": true
+        },
+        {
+          "id": "step_clinic_002", "order": 2, "type": "validate_backend",
+          "category": "BACKEND_VALIDATION", "actor": "system",
+          "name": "Ticket resolvido com SLA",
+          "adapter": "api",
+          "expected": { "backendEntity": "ticket", "withinSla": true },
+          "timeoutMs": 30000, "enabled": true
+        }
+      ],
+      "validations": { "requireBackendValidation": true, "requireReplay": true }
+    },
+    {
+      "id": "services-ativacao-solucao",
+      "waveId": "wave-services-core",
+      "vertical": "servicos",
+      "journey": "services_default_journey",
+      "name": "Services ativação de pacote de soluções",
+      "description": "Pacote selecionado, ativação registrada no backend, status de cobertura atualizado",
+      "source": "catalog",
+      "status": "approved",
+      "version": "v1",
+      "channels": ["api"],
+      "risk": "medium",
+      "priority": "medium",
+      "preconditions": ["Catálogo de soluções publicado", "Tenant autenticado"],
+      "steps": [
+        {
+          "id": "step_serv_001", "order": 1, "type": "validate_backend",
+          "category": "BACKEND_VALIDATION", "actor": "system",
+          "name": "Ativação registrada no backend",
+          "adapter": "api",
+          "expected": { "backendEntity": "solution", "activationRegistered": true },
+          "timeoutMs": 15000, "enabled": true
+        }
+      ],
+      "validations": { "requireBackendValidation": true, "requireReplay": false }
+    },
+    {
+      "id": "market-publicacao-no",
+      "waveId": "wave-market-core",
+      "vertical": "mercado",
+      "journey": "market_default_journey",
+      "name": "Market publicação de nó no marketplace",
+      "description": "Nó submetido ao marketplace, publicação refletida, metadados validados",
+      "source": "catalog",
+      "status": "approved",
+      "version": "v1",
+      "channels": ["api"],
+      "risk": "medium",
+      "priority": "medium",
+      "preconditions": ["Marketplace carregável no tenant", "Nó disponível para publicação"],
+      "steps": [
+        {
+          "id": "step_mkt_001", "order": 1, "type": "validate_backend",
+          "category": "BACKEND_VALIDATION", "actor": "system",
+          "name": "Nó publicado no marketplace",
+          "adapter": "api",
+          "expected": { "backendEntity": "node", "nodePublished": true },
+          "timeoutMs": 15000, "enabled": true
+        }
+      ],
+      "validations": { "requireBackendValidation": true, "requireReplay": false }
+    },
+    {
       "id": "fitness-matricula-leads",
       "waveId": "wave-fitness-matricula",
       "vertical": "fitness",
