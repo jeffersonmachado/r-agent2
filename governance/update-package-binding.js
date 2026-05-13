@@ -11,12 +11,18 @@
  *   node governance/update-package-binding.js --dry-run
  */
 
-const fs   = require('fs');
-const path = require('path');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
 const { findLatestReleaseArtifact } = require('../tools/system/lib/release-artifact');
 
 const ROOT    = path.join(__dirname, '..');
 const DRY_RUN = process.argv.includes('--dry-run');
+
+function sha256File(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -102,6 +108,7 @@ function run() {
     const consistency = readJson(consistencyPath);
     consistency.generatedAt          = ts;
     consistency.currentZipName       = zipName;
+    consistency.currentZipSha256Note = `SHA256 stored in sidecar manifest to avoid circular hash dependency — see ${manifestRel}`;
     consistency.currentZipManifest   = manifestRel;
     consistency.currentZipTimestamp  = artifact.manifest?.generated_at || ts;
 
@@ -111,13 +118,22 @@ function run() {
     if (consistency.manifestConsistency) {
       consistency.manifestConsistency.sidecarManifest = manifestRel;
       consistency.manifestConsistency.boundZipName = zipName;
+      consistency.manifestConsistency.boundZipSha256Note = `SHA256 stored in sidecar manifest — see ${manifestRel}`;
     }
     if (consistency.packageImmutability) {
-      consistency.packageImmutability.boundTo = zipName;
+      consistency.packageImmutability.boundTo   = zipName;
       consistency.packageImmutability.zipHashRef = `${manifestRel}#sha256`;
+      // Atualizar hash do evidence manifest (regenerado a cada platform-readiness run)
+      const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
+      if (evHash) consistency.packageImmutability.evidenceManifestHash = evHash;
+    }
+    // Atualizar evidenceConsistency hash também
+    if (consistency.evidenceConsistency) {
+      const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
+      if (evHash) consistency.evidenceConsistency.evidenceManifestHash = evHash;
     }
     if (consistency.summary) {
-      consistency.summary = `Pacote ${zipName} é completamente self-proving, self-contained e offline-auditável. Todas as verificações de consistência passaram. AUTONOMOUS_READY_GO confirmado e vinculado ao pacote atual.`;
+      consistency.summary = `Pacote ${zipName} é self-proving. Governança vinculada ao ZIP atual.`;
     }
     writeJson(consistencyPath, consistency);
   }

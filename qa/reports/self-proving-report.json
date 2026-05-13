@@ -1,0 +1,116 @@
+{
+  "generatedAt": "2026-05-13T12:08:30.426Z",
+  "schemaVersion": "1.0.0",
+  "artifact": "r-agent2-20260513-090700.zip",
+  "overallSelfProofScore": 100,
+  "pass": true,
+  "passCount": 10,
+  "totalDimensions": 10,
+  "packageSelfContainment": {
+    "pass": true,
+    "missingCore": [],
+    "missingGovArtifacts": [],
+    "govArtifactsDir": "dist/governance-artifacts/",
+    "selfContained": true
+  },
+  "packageSelfValidation": {
+    "pass": true,
+    "zipName": "r-agent2-20260513-090700.zip",
+    "alignedFiles": [
+      "governance/cross-report-validation.json",
+      "governance/package-validation-report.json",
+      "governance/final-consistency-report.json"
+    ],
+    "staleRefs": []
+  },
+  "cryptographicValidation": {
+    "pass": true,
+    "chainValid": true,
+    "chainRoot": "978fb6ef531f88e4a62c9237a9a87583",
+    "signatures": [
+      {
+        "name": "governance.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "release.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "package.manifest.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "replay.sig",
+        "present": true,
+        "valid": true
+      }
+    ],
+    "allSigsValid": true
+  },
+  "replayIntegrity": {
+    "pass": true,
+    "replayCount": 4,
+    "allSigned": true,
+    "allSignaturesValid": true,
+    "replaySigPresent": true,
+    "replaySigValid": true,
+    "journeys": [
+      "support_ticket_flow",
+      "fitness_customer_checkin",
+      "booking_flow",
+      "payment_charge_flow"
+    ]
+  },
+  "governanceIntegrity": {
+    "pass": true,
+    "overallConsistencyScore": 100,
+    "blockerCount": 0,
+    "allChecksPass": true,
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]"
+  },
+  "attestationIntegrity": {
+    "pass": true,
+    "attestationValid": true,
+    "governanceLevel": "LEVEL_4_IMMUTABLE",
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+    "autonomousReady": true,
+    "selfContained": true
+  },
+  "offlineAuditability": {
+    "pass": true,
+    "verifierScriptPresent": true,
+    "chainEnginePresent": true,
+    "tamperDetectorPresent": true,
+    "signEnginePresent": true,
+    "maturityEvaluator": true
+  },
+  "tamperDetection": {
+    "pass": true,
+    "decision": "GO",
+    "failedChecks": 0,
+    "criticalChecks": 0
+  },
+  "reproducibility": {
+    "pass": true,
+    "packageLockPresent": true,
+    "frontendLockPresent": true,
+    "gitignorePresent": true,
+    "nodeVersionPinned": true,
+    "note": "Full determinism requires same git commit + same node version. ZIP timestamps vary.",
+    "gitCommitBound": true
+  },
+  "immutabilityStatus": {
+    "pass": true,
+    "chainIntact": true,
+    "sigsValid": true,
+    "sidecarHash": "65d2e623e82964f4d284a23ee9484a555028fb26a18d57a76daf13cc36a5a32c",
+    "zipName": "r-agent2-20260513-090700.zip",
+    "tamperDetectable": true,
+    "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
+  },
+  "summary": "Pacote r-agent2-20260513-090700.zip é completamente self-proving. Score: 100/100."
+}

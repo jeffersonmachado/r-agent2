@@ -1307,9 +1307,24 @@ function buildReport() {
   // J. Decisão granular: o proof engine agora emite STAGE_GO ou NO_GO:STAGE_GO
   const proofDecision = proofReport.finalDecision || 'NO_GO:UNKNOWN';
   const isProofGo = proofDecision && !proofDecision.startsWith('NO_GO') && proofDecision !== 'PENDING';
-  const finalDecision = blockingGaps.length > 0
-    ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
-    : proofDecision;
+
+  // ── HARD-BLOCK: qa-mesh go-no-go e release-gate são INEGOCIÁVEIS ─────────────
+  // AUTONOMOUS_READY_GO é PROIBIDO se o qa-mesh canonical run retornou NO_GO.
+  // Esta regra não pode ser sobrescrita por nenhum outro relatório.
+  const meshGoNoGoReport = loadJson('qa-mesh/go-no-go-report.json', {});
+  const releaseGateReport = loadJson('qa-mesh/release-gate-report.json', {});
+  const meshHardBlock = meshGoNoGoReport.status === 'NO_GO' || meshGoNoGoReport.gate === 'NO_GO';
+  const gateHardBlock = releaseGateReport.gate === 'NO_GO';
+  const meshBlockReasons = [
+    ...(meshHardBlock ? [`qa-mesh/go-no-go=${meshGoNoGoReport.status} (${(meshGoNoGoReport.reasons||[]).join(',')})`] : []),
+    ...(gateHardBlock ? [`qa-mesh/release-gate=${releaseGateReport.gate}`] : []),
+  ];
+
+  const finalDecision = (meshHardBlock || gateHardBlock)
+    ? `NO_GO:MESH_BLOCKED [${meshBlockReasons.join(' | ')}]`
+    : (blockingGaps.length > 0
+      ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
+      : proofDecision);
   const platformMaturity = classifyPlatformMaturity({
     qaWavesGovernance,
     prodLikeSummary,
@@ -1496,6 +1511,14 @@ function persistReport(report) {
     noGoReasons: report.noGoReasons,
     goReasons: report.goReasons,
   });
+  // Propagar o mesh hard-block para o proof report antes de persistir.
+  // O proof-engine computa sua decisão de forma independente; aqui garantimos
+  // que a decisão final (com mesh hard-block) seja refletida no proof report.
+  if (report.finalDecision && report.finalDecision.startsWith('NO_GO:MESH_BLOCKED')) {
+    report.proofReport.finalDecision = report.finalDecision;
+    report.proofReport.meshHardBlocked = true;
+    report.proofReport.meshBlockReason = report.finalDecision;
+  }
   writeJson('governance/evidence-manifest.json', report.proofReport.evidenceManifest);
   writeJson('governance/final-proof-report.json', report.proofReport);
   writeJson('governance/package-validation-report.json', report.proofReport.packageValidation);

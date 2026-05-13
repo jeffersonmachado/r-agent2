@@ -1,0 +1,102 @@
+{
+  "generatedAt": "2026-05-13T11:44:14.525Z",
+  "artifact": "r-agent2-20260513-084308.zip",
+  "pass": true,
+  "decision": "GO",
+  "totalChecks": 9,
+  "failedChecks": 0,
+  "criticalChecks": 0,
+  "checks": [
+    {
+      "check": "package_integrity",
+      "pass": true,
+      "severity": "CRITICAL",
+      "details": {
+        "zipName": "r-agent2-20260513-084308.zip",
+        "computedHash": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
+        "recordedHash": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
+        "match": true
+      }
+    },
+    {
+      "check": "manifest_sig",
+      "pass": true,
+      "severity": "HIGH",
+      "details": {
+        "valid": true,
+        "hashMatch": true,
+        "subject": "r-agent2-20260513-084308.manifest.json"
+      }
+    },
+    {
+      "check": "release_sig",
+      "pass": true,
+      "severity": "CRITICAL",
+      "details": {
+        "valid": true,
+        "subject": "r-agent2-20260513-084308.zip"
+      }
+    },
+    {
+      "check": "governance_sig",
+      "pass": true,
+      "severity": "CRITICAL",
+      "details": {
+        "valid": true,
+        "subject": "governance-chain"
+      }
+    },
+    {
+      "check": "immutability_chain",
+      "pass": true,
+      "severity": "CRITICAL",
+      "details": {
+        "chainLength": 10,
+        "chainRootValid": true,
+        "tampered": false,
+        "failures": [],
+        "storedChainRoot": "2859b4fdd5211e0205a20b53…"
+      }
+    },
+    {
+      "check": "replay_signatures",
+      "pass": true,
+      "severity": "HIGH",
+      "details": {
+        "totalReplays": 4,
+        "allValid": true,
+        "invalidReplays": []
+      }
+    },
+    {
+      "check": "proof_consistency",
+      "pass": true,
+      "severity": "CRITICAL",
+      "details": {
+        "overallConsistencyScore": 100,
+        "allChecksPass": true,
+        "finalDecision": "AUTONOMOUS_READY_GO"
+      }
+    },
+    {
+      "check": "stale_artifacts",
+      "pass": true,
+      "severity": "HIGH",
+      "details": {
+        "staleCount": 0,
+        "stale": []
+      }
+    },
+    {
+      "check": "attestation_integrity",
+      "pass": true,
+      "severity": "HIGH",
+      "details": {
+        "valid": true,
+        "finalDecision": "AUTONOMOUS_READY_GO",
+        "governanceLevel": "LEVEL_4_IMMUTABLE"
+      }
+    }
+  ],
+  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
+}

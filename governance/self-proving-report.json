@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-13T11:44:09.190Z",
+  "generatedAt": "2026-05-13T12:08:30.426Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260513-084308.zip",
+  "artifact": "r-agent2-20260513-090700.zip",
   "overallSelfProofScore": 100,
   "pass": true,
   "passCount": 10,
@@ -15,7 +15,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20260513-084308.zip",
+    "zipName": "r-agent2-20260513-090700.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -26,7 +26,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "2859b4fdd5211e0205a20b532343105a",
+    "chainRoot": "978fb6ef531f88e4a62c9237a9a87583",
     "signatures": [
       {
         "name": "governance.sig",
@@ -70,13 +70,13 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
     "governanceLevel": "LEVEL_4_IMMUTABLE",
-    "finalDecision": "AUTONOMOUS_READY_GO",
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
     "autonomousReady": true,
     "selfContained": true
   },
@@ -107,10 +107,10 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
-    "zipName": "r-agent2-20260513-084308.zip",
+    "sidecarHash": "65d2e623e82964f4d284a23ee9484a555028fb26a18d57a76daf13cc36a5a32c",
+    "zipName": "r-agent2-20260513-090700.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20260513-084308.zip é completamente self-proving. Score: 100/100."
+  "summary": "Pacote r-agent2-20260513-090700.zip é completamente self-proving. Score: 100/100."
 }

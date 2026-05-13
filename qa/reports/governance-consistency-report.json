@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2026-05-13T12:09:40.295Z",
+  "engine": "governance-consistency-engine/v1",
+  "pass": true,
+  "decision": "CONSISTENCY_GO",
+  "totalChecks": 6,
+  "contradictions": 0,
+  "criticalContradictions": 0,
+  "checks": [
+    {
+      "id": "mesh_vs_platform",
+      "contradiction": false,
+      "severity": "OK",
+      "meshStatus": "NO_GO",
+      "platformDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+      "meshReasons": [
+        "BASELINE_PASS_RATE_REGRESSION"
+      ],
+      "message": null
+    },
+    {
+      "id": "release_gate_vs_platform",
+      "contradiction": false,
+      "severity": "OK",
+      "gate": "NO_GO",
+      "platformDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+      "message": null
+    },
+    {
+      "id": "consistency_score_vs_decision",
+      "contradiction": false,
+      "severity": "OK",
+      "score": 100,
+      "decision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+      "message": null
+    },
+    {
+      "id": "pbx_maturity",
+      "contradiction": false,
+      "severity": "OK",
+      "note": "not enough data to compare"
+    },
+    {
+      "id": "blocker_count_alignment",
+      "contradiction": false,
+      "severity": "OK",
+      "crossReport": 0,
+      "proofReport": 0,
+      "message": null
+    },
+    {
+      "id": "package_name_alignment",
+      "contradiction": false,
+      "severity": "OK",
+      "latestZip": "r-agent2-20260513-090924.zip",
+      "mismatches": [],
+      "message": null
+    }
+  ],
+  "foundContradictions": [],
+  "summary": "Nenhuma contradição detectada entre 6 verificações de consistência."
+}

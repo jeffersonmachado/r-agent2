@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-05-13T12:09:41.568Z",
+  "engine": "replay-hardening-engine/v1",
+  "pass": true,
+  "decision": "REPLAY_HARDENING_GO",
+  "totalReplaysAnalyzed": 4,
+  "hardenedReplays": 4,
+  "violations": 0,
+  "falsePositives": 0,
+  "uiViolations": 0,
+  "results": [
+    {
+      "journeyId": "support_ticket_flow",
+      "source": "governance/proof-signature.json",
+      "status": "GO",
+      "failedStepCount": 0,
+      "stepCount": 0,
+      "screenshotCount": 0,
+      "isVisualCritical": true,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "981067963d134948a974266f8235c551d01a1b2c75891a6a160724102fd0f616",
+      "replayExecutionHash": "f65869473514a3261c892bb13c79f14e69b55fce5c302a8f3ea488fb18f5347f",
+      "replayEvidenceHash": "a5a1650a964ea220ee5ad17d2502c7111008a0d49cbca42e3f7830a114481532"
+    },
+    {
+      "journeyId": "fitness_customer_checkin",
+      "source": "governance/proof-signature.json",
+      "status": "GO",
+      "failedStepCount": 0,
+      "stepCount": 0,
+      "screenshotCount": 0,
+      "isVisualCritical": true,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "5af0bb119b7393bc208662ce4544fcf688a08cf41fa0d9a4a8b066b8f793f3eb",
+      "replayExecutionHash": "348cea743c07643ebcbf0f9c70ef8cfcd51d5476cbf2842d0cbe87b4b854085a",
+      "replayEvidenceHash": "5ba060045bb96f43511f6366420c45dc29fd93979290dddc61778612826c4f69"
+    },
+    {
+      "journeyId": "booking_flow",
+      "source": "governance/proof-signature.json",
+      "status": "GO",
+      "failedStepCount": 0,
+      "stepCount": 0,
+      "screenshotCount": 0,
+      "isVisualCritical": true,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "6d8fd08e2eb2e68cec5abe9c465d8c96ad4796f39a8ff8d5d4b0d5c4559259af",
+      "replayExecutionHash": "1d9215a52d643c066bbca31f9b2dbbf2e3eb1bdd67122eba011a055eaeba6da7",
+      "replayEvidenceHash": "bca0693eb60a24f89cd51619b2bc989e5c1a8894a3c822fae4a2f0872f079024"
+    },
+    {
+      "journeyId": "payment_charge_flow",
+      "source": "governance/proof-signature.json",
+      "status": "GO",
+      "failedStepCount": 0,
+      "stepCount": 0,
+      "screenshotCount": 0,
+      "isVisualCritical": true,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "3977bbc0a5e5a8b2ed0aa38573f76538110f5d142f9e53c8615a579820ee3541",
+      "replayExecutionHash": "17f0eac11e4942b6773c4679d896d219e4498c4b714976cae1d9e826c82a395c",
+      "replayEvidenceHash": "fa938eb503df02f946afa448613d0c752b15699886b3dd4b2a1c1ea450f4017d"
+    }
+  ],
+  "allViolations": [],
+  "summary": "Todos os 4 replays passaram no hardening."
+}

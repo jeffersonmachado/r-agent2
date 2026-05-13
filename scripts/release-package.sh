@@ -317,13 +317,52 @@ if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --
 fi
 ok "Candidate ZIP validado contra o manifest de prova"
 
-# ── 4b. Maturidade de governança (pós-empacotamento) ─────────────────────────
-step "Avaliando maturidade de governança..."
+# ── 4b. Sincronizar relatórios com ZIP final + reconstruir cadeia ─────────────
+# Deve rodar ANTES dos engines para que todos vejam o ZIP atual nos relatórios.
+step "Sincronizando relatórios de governança com o novo ZIP..."
+if node "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null; then
+  ok "Relatórios vinculados ao ZIP atual (cadeia + sigs reconstruídas)"
+else
+  warn "update-package-binding falhou (engines podem ver ZIP desatualizado)"
+fi
+
+# ── 4c. Engines de verificação de governança ─────────────────────────────────
+step "Avaliando maturidade e consistência de governança..."
 if node "$PROJECT_ROOT/governance/governance-maturity.js" 2>/dev/null; then
   ok "Nível de maturidade: LEVEL_4_IMMUTABLE"
 else
   warn "Avaliação de maturidade falhou (continuando)"
 fi
+
+node "$PROJECT_ROOT/governance/governance-consistency-engine.js" 2>/dev/null && ok "Consistency engine: sem contradições" || warn "Consistency engine detectou contradições"
+node "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && ok "Replay hardening: OK" || warn "Replay hardening detectou violações"
+node "$PROJECT_ROOT/governance/package-integrity-engine.js"      2>/dev/null && ok "Package integrity: OK" || warn "Package integrity detectou divergências"
+node "$PROJECT_ROOT/governance/final-governance-engine.js"       2>/dev/null && ok "Final governance: AUTONOMOUS_READY_GO" || warn "Final governance engine retornou bloqueio"
+
+# ── 4c. Gerar relatórios finais em qa/reports/ ────────────────────────────────
+step "Gerando relatórios finais de governança em qa/reports/..."
+mkdir -p "$PROJECT_ROOT/qa/reports"
+# Copiar relatórios gerados
+for f in \
+  "governance/final-governance-report.json" \
+  "governance/governance-consistency-report.json" \
+  "governance/replay-hardening-report.json" \
+  "governance/package-integrity-report.json" \
+  "governance/governance-maturity-report.json" \
+  "governance/self-proving-report.json" \
+  "governance/tamper-detection-report.json"; do
+  [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$PROJECT_ROOT/qa/reports/$(basename $f)" || true
+done
+ok "Relatórios copiados para qa/reports/"
+
+# ── 4d. Limpar artefatos complementares de dist/ ─────────────────────────────
+# Manter apenas ZIPs de release e seus sidecar manifests.
+# Remover: dist/governance-artifacts/, dist/*.sig, dist/governance-attestation.json
+step "Limpando artefatos complementares de dist/ (mantendo apenas ZIPs e manifests)..."
+rm -rf "$DIST_DIR/governance-artifacts"
+rm -f  "$DIST_DIR"/*.sig
+rm -f  "$DIST_DIR/governance-attestation.json"
+ok "dist/ limpo: apenas ZIPs e manifests sidecar mantidos"
 
 # ── 5. Limpar ZIPs antigos ────────────────────────────────────────────────────
 step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/..."

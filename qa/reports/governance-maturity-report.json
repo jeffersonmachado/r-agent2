@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-05-13T12:09:40.078Z",
+  "achievedLevel": "LEVEL_4_IMMUTABLE",
+  "achievedNumeric": 4,
+  "targetLevel": "LEVEL_4_IMMUTABLE",
+  "targetAchieved": true,
+  "levels": [
+    {
+      "key": "LEVEL_0",
+      "label": "LEVEL_0_DECLARATIVE",
+      "achieved": true,
+      "score": 100,
+      "passing": [
+        "readme",
+        "qa_policy",
+        "roles"
+      ],
+      "failing": [],
+      "totalChecks": 3
+    },
+    {
+      "key": "LEVEL_1",
+      "label": "LEVEL_1_PROOF_BASED",
+      "achieved": true,
+      "score": 100,
+      "passing": [
+        "proof_report",
+        "evidence_manifest",
+        "proof_coverage",
+        "prod_like",
+        "replay_sig"
+      ],
+      "failing": [],
+      "totalChecks": 5
+    },
+    {
+      "key": "LEVEL_2",
+      "label": "LEVEL_2_VERIFIABLE",
+      "achieved": true,
+      "score": 100,
+      "passing": [
+        "package_validator",
+        "cross_report",
+        "blocker_engine",
+        "consistency_report",
+        "zero_blockers",
+        "consistency_100",
+        "sidecar_manifest"
+      ],
+      "failing": [],
+      "totalChecks": 7
+    },
+    {
+      "key": "LEVEL_3",
+      "label": "LEVEL_3_CRYPTOGRAPHIC",
+      "achieved": true,
+      "score": 100,
+      "passing": [
+        "chain_js",
+        "chain_json",
+        "chain_valid",
+        "chain_complete",
+        "sign_engine",
+        "release_sig",
+        "gov_sig",
+        "replay_signed"
+      ],
+      "failing": [],
+      "totalChecks": 8
+    },
+    {
+      "key": "LEVEL_4",
+      "label": "LEVEL_4_IMMUTABLE",
+      "achieved": true,
+      "score": 100,
+      "passing": [
+        "attestation",
+        "attestation_sig",
+        "manifest_sig",
+        "verifier_script",
+        "tamper_detector",
+        "chain_root_bound",
+        "update_binding",
+        "autonomous_ready"
+      ],
+      "failing": [],
+      "totalChecks": 8
+    },
+    {
+      "key": "LEVEL_5",
+      "label": "LEVEL_5_SUPPLY_CHAIN_GOVERNED",
+      "achieved": false,
+      "score": 0,
+      "passing": [],
+      "failing": [
+        {
+          "id": "pkce_signing",
+          "label": "PKI externo / ed25519 key pair (não implementado)"
+        },
+        {
+          "id": "sbom",
+          "label": "SBOM (Software Bill of Materials) (não implementado)"
+        },
+        {
+          "id": "dep_provenance",
+          "label": "Proveniência de dependências (não implementado)"
+        },
+        {
+          "id": "cosign",
+          "label": "Cosign / Sigstore integrado (não implementado)"
+        }
+      ],
+      "totalChecks": 4
+    }
+  ],
+  "nextLevel": "LEVEL_5_SUPPLY_CHAIN_GOVERNED",
+  "nextLevelGaps": [
+    {
+      "id": "pkce_signing",
+      "label": "PKI externo / ed25519 key pair (não implementado)"
+    },
+    {
+      "id": "sbom",
+      "label": "SBOM (Software Bill of Materials) (não implementado)"
+    },
+    {
+      "id": "dep_provenance",
+      "label": "Proveniência de dependências (não implementado)"
+    },
+    {
+      "id": "cosign",
+      "label": "Cosign / Sigstore integrado (não implementado)"
+    }
+  ],
+  "summary": "RAP atingiu LEVEL_4_IMMUTABLE — governança criptograficamente verificável, imutável e auditável offline."
+}

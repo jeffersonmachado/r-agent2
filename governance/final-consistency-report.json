@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-13T11:44:04.646Z",
+  "generatedAt": "2026-05-13T12:09:39.307Z",
   "schemaVersion": "1.0.0",
-  "currentZipName": "r-agent2-20260513-084308.zip",
-  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260512-232420.manifest.json",
-  "currentZipTimestamp": "2026-05-13T11:43:21Z",
-  "currentZipManifest": "dist/r-agent2-20260513-084308.manifest.json",
+  "currentZipName": "r-agent2-20260513-090924.zip",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260513-090924.manifest.json",
+  "currentZipTimestamp": "2026-05-13T12:09:38Z",
+  "currentZipManifest": "dist/r-agent2-20260513-090924.manifest.json",
   "manifestAudit": "passed",
   "packageSelfValidation": {
     "status": "PASS",
@@ -13,7 +13,7 @@
     "manifestPresent": true,
     "manifestAuditPassed": true,
     "noExternalZipReferences": true,
-    "details": "Todos os relatórios referenciam r-agent2-20260513-084308.zip. Pacote é self-proving."
+    "details": "Todos os relatórios referenciam r-agent2-20260513-090924.zip. Pacote é self-proving."
   },
   "packageSelfContainment": {
     "status": "PASS",
@@ -143,7 +143,7 @@
   },
   "evidenceConsistency": {
     "status": "PASS",
-    "evidenceManifestHash": "7d044ded211a4c280465ddfb3b4061e5ba792a76ef5402027716c17de054af7c",
+    "evidenceManifestHash": "34ee6d239e2c0e908f3e00f2e004ef778e425c6e89f9da2ce4436a25950948b3",
     "totalArtifacts": 20,
     "validArtifacts": 20,
     "proofCoverage": 100,
@@ -154,21 +154,21 @@
   },
   "manifestConsistency": {
     "status": "PASS",
-    "sidecarManifest": "dist/r-agent2-20260513-084308.manifest.json",
+    "sidecarManifest": "dist/r-agent2-20260513-090924.manifest.json",
     "sidecarAudit": "passed",
-    "boundZipName": "r-agent2-20260513-084308.zip",
-    "boundZipSha256Note": "SHA256 stored in sidecar manifest — see dist/r-agent2-20260512-232420.manifest.json",
+    "boundZipName": "r-agent2-20260513-090924.zip",
+    "boundZipSha256Note": "SHA256 stored in sidecar manifest — see dist/r-agent2-20260513-090924.manifest.json",
     "immutable": true,
     "selfProving": true
   },
   "packageImmutability": {
     "zipHashNote": "SHA256 stored in sidecar manifest only to prevent circular hash dependency",
-    "zipHashRef": "dist/r-agent2-20260513-084308.manifest.json#sha256",
+    "zipHashRef": "dist/r-agent2-20260513-090924.manifest.json#sha256",
     "proofReportHash": "0ab5ca54fa36032d847439343cbda929892ad2d0f7ebf39b6e87d06af4b111a5",
     "crossReportHash": "84b7fd7d9a046af6f53ca306819e3097c314e49cc3310feaad9a352f40780ca6",
-    "evidenceManifestHash": "7d044ded211a4c280465ddfb3b4061e5ba792a76ef5402027716c17de054af7c",
+    "evidenceManifestHash": "34ee6d239e2c0e908f3e00f2e004ef778e425c6e89f9da2ce4436a25950948b3",
     "replaySignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-    "boundTo": "r-agent2-20260513-084308.zip",
+    "boundTo": "r-agent2-20260513-090924.zip",
     "note": "Se qualquer um desses hashes mudar, todos os relatórios de governança tornam-se inválidos e devem ser regenerados. O hash do ZIP em si está no sidecar manifest para evitar dependência circular."
   },
   "overallConsistencyScore": 100,
@@ -176,5 +176,5 @@
   "finalDecision": "AUTONOMOUS_READY_GO",
   "packageSelfProving": true,
   "offlineAuditable": true,
-  "summary": "Pacote r-agent2-20260513-084308.zip é completamente self-proving, self-contained e offline-auditável. Todas as verificações de consistência passaram. AUTONOMOUS_READY_GO confirmado e vinculado ao pacote atual."
+  "summary": "Pacote r-agent2-20260513-090924.zip é self-proving. Governança vinculada ao ZIP atual."
 }

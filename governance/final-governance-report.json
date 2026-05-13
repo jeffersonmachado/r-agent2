@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-05-13T12:09:48.258Z",
+  "engine": "final-governance-engine/v1",
+  "strictMode": true,
+  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
+  "autonomousReady": false,
+  "allChecksPass": false,
+  "criticalBlocked": true,
+  "checks": [
+    {
+      "id": "mesh_go_no_go",
+      "pass": false,
+      "severity": "CRITICAL",
+      "status": "NO_GO",
+      "reasons": [
+        "BASELINE_PASS_RATE_REGRESSION"
+      ],
+      "executionId": "mesh-2026-05-12T23-50-45-984Z",
+      "passRate": "58/62",
+      "reason": "qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION)"
+    },
+    {
+      "id": "release_gate",
+      "pass": false,
+      "severity": "CRITICAL",
+      "gate": "NO_GO",
+      "reason": "release-gate = NO_GO"
+    },
+    {
+      "id": "replay_false_positives",
+      "pass": true,
+      "severity": "OK",
+      "violations": [],
+      "reason": null
+    },
+    {
+      "id": "visual_journeys",
+      "pass": true,
+      "severity": "OK",
+      "violations": [],
+      "reason": null
+    },
+    {
+      "id": "package_integrity",
+      "pass": true,
+      "severity": "OK",
+      "zipName": "r-agent2-20260513-090924.zip",
+      "computed": "4dad2405bf3f820429474eb6…",
+      "recorded": "4dad2405bf3f820429474eb6…",
+      "reason": null
+    },
+    {
+      "id": "critical_blockers",
+      "pass": true,
+      "severity": "OK",
+      "criticalCount": 0,
+      "blockerCount": 0,
+      "reason": null
+    },
+    {
+      "id": "governance_signature",
+      "pass": true,
+      "severity": "OK",
+      "reason": null
+    }
+  ],
+  "criticalFailed": [
+    {
+      "id": "mesh_go_no_go",
+      "reason": "qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION)"
+    },
+    {
+      "id": "release_gate",
+      "reason": "release-gate = NO_GO"
+    }
+  ],
+  "highFailed": [],
+  "summary": "2 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]"
+}

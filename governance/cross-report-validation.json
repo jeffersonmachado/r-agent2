@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-13T11:44:04.646Z",
-  "expectedZipName": "r-agent2-20260513-084308.zip",
-  "expectedZipSha256": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
+  "generatedAt": "2026-05-13T12:09:39.307Z",
+  "expectedZipName": "r-agent2-20260513-090924.zip",
+  "expectedZipSha256": "4dad2405bf3f820429474eb6cff7d11128d6ecd238d7a6b97c8e074c5085154f",
   "pbxMaturity": "enterprise-real",
   "contradictions": [],
   "blockers": [],
