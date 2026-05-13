@@ -287,11 +287,33 @@ fi
 
 copy_required_proof_entries() {
   local rel_path
+  local src_path
+  local dest_path
   for rel_path in "${REQUIRED_PROOF_ENTRIES[@]}"; do
-    [[ -f "$PROJECT_DIR/$rel_path" ]] || continue
-    mkdir -p "$STAGE_DIR/$(dirname "$rel_path")"
-    cp "$PROJECT_DIR/$rel_path" "$STAGE_DIR/$rel_path"
+    src_path="$PROJECT_DIR/$rel_path"
+    dest_path="$STAGE_DIR/$rel_path"
+    [[ -f "$src_path" ]] || continue
+    mkdir -p "$(dirname "$dest_path")"
+    case "$rel_path" in
+      'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json')
+        node "$PROJECT_DIR/scripts/compact-proof-artifact.js" "$src_path" "$dest_path"
+        ;;
+      *)
+        cp "$src_path" "$dest_path"
+        ;;
+    esac
   done
+}
+
+# Copia dist/governance-artifacts/ para dentro do staging (auto-prova criptográfica).
+# Estes artefatos são gerados ANTES do empacotamento (pre-sign) e não dependem
+# do hash do ZIP — eliminando a dependência circular.
+copy_governance_artifacts() {
+  local src_dir="$PROJECT_DIR/dist/governance-artifacts"
+  local dest_dir="$STAGE_DIR/dist/governance-artifacts"
+  [[ -d "$src_dir" ]] || return 0
+  mkdir -p "$dest_dir"
+  cp -r "$src_dir/." "$dest_dir/"
 }
 
 RSYNC_ARGS=(-a)
@@ -301,6 +323,7 @@ done
 
 rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
 copy_required_proof_entries
+copy_governance_artifacts
 
 (
   cd "$STAGE_ROOT"

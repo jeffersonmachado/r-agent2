@@ -181,14 +181,45 @@ if [[ -n "$AUDIT_ONLY_ZIP" ]]; then
 else
   step "Gerando artefato de release..."
 
+  # ── 2a. Limpar resíduos de runtime ───────────────────────────────────────────
   step "Limpando resíduos de runtime para avaliação limpa..."
   bash "$PROJECT_ROOT/scripts/clean-runtime-state.sh" 2>/dev/null || true
 
+  # ── 2b. Materializar proof reports ───────────────────────────────────────────
   step "Materializando proof reports antes do empacotamento..."
   if ! node "$PROJECT_ROOT/tools/system/platform-readiness.js"; then
     warn "platform-readiness retornou NO_GO; mantendo artifacts para validar o candidate ZIP"
   fi
 
+  # ── 2c. PRE-SIGN: governance chain + sigs ANTES do empacotamento ─────────────
+  # Crítico: as assinaturas não dependem do hash do ZIP (sem dependência circular).
+  # Os artefatos vão para dist/governance-artifacts/ e serão incluídos no ZIP.
+  step "PRE-SIGN: construindo cadeia de governança e gerando artefatos self-proving..."
+  if node "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null; then
+    ok "Cadeia de imutabilidade construída"
+  else
+    warn "Cadeia de imutabilidade incompleta (continuando)"
+  fi
+
+  if node "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null; then
+    ok "Artefatos pré-assinados em dist/governance-artifacts/"
+  else
+    warn "Pre-signing falhou (continuando)"
+  fi
+
+  if node "$PROJECT_ROOT/governance/replay-integrity.js" 2>/dev/null; then
+    ok "Replay integrity report gerado"
+  else
+    warn "Replay integrity falhou (continuando)"
+  fi
+
+  if node "$PROJECT_ROOT/governance/self-proving-report.js" 2>/dev/null; then
+    ok "Self-proving report gerado"
+  else
+    warn "Self-proving report falhou (continuando)"
+  fi
+
+  # ── 2d. Frontend ─────────────────────────────────────────────────────────────
   if [[ "$SKIP_FRONTEND" == true ]]; then
     warn "Pipeline do frontend ignorado (--skip-frontend). Usando build existente em frontend/dist/."
   else
@@ -197,6 +228,7 @@ else
     ok "Pipeline do frontend aprovado"
   fi
 
+  # ── 2e. Empacotar (agora inclui dist/governance-artifacts/) ──────────────────
   ZIP_ARGS=()
   if [[ -n "$CUSTOM_NAME" ]]; then
     ZIP_ARGS+=("--name" "$CUSTOM_NAME")
@@ -210,7 +242,7 @@ else
   # Captura o caminho do ZIP gerado
   ZIP_OUTPUT="$("$GENERATE_ZIP" "${ZIP_ARGS[@]}" 2>&1 | tee /dev/stderr | grep "^Arquivo:" | sed 's/^Arquivo: //')"
   # Alternativa: pegar o ZIP mais recente em dist/
-  LATEST_ZIP="$(ls -t "$DIST_DIR"/*.zip 2>/dev/null | head -1)"
+  LATEST_ZIP="$(ls -t "$DIST_DIR"/r-agent2-*.zip 2>/dev/null | head -1)"
   if [[ -z "$LATEST_ZIP" ]]; then
     fail "Nenhum ZIP encontrado em $DIST_DIR após geração."
   fi
@@ -285,22 +317,10 @@ if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --
 fi
 ok "Candidate ZIP validado contra o manifest de prova"
 
-# ── 4b. Governança criptográfica ──────────────────────────────────────────────
-step "Construindo cadeia de imutabilidade e assinando artefatos..."
-if node "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null; then
-  ok "Cadeia de imutabilidade construída"
-else
-  warn "Cadeia de imutabilidade incompleta (continuando)"
-fi
-
-if node "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null; then
-  ok "Artefatos assinados: package.manifest.sig, governance.sig, release.sig, attestation"
-else
-  warn "Assinatura de governança falhou (continuando)"
-fi
-
+# ── 4b. Maturidade de governança (pós-empacotamento) ─────────────────────────
+step "Avaliando maturidade de governança..."
 if node "$PROJECT_ROOT/governance/governance-maturity.js" 2>/dev/null; then
-  ok "Nível de maturidade avaliado: LEVEL_4_IMMUTABLE"
+  ok "Nível de maturidade: LEVEL_4_IMMUTABLE"
 else
   warn "Avaliação de maturidade falhou (continuando)"
 fi

@@ -109,6 +109,8 @@
     "system:sign-governance:verify": "node governance/sign-governance.js --verify",
     "system:governance-maturity": "node governance/governance-maturity.js",
     "system:tamper-detect": "node governance/tamper-detector.js",
+    "system:self-proving": "node governance/self-proving-report.js",
+    "system:replay-integrity": "node governance/replay-integrity.js",
     "system:verify-enterprise": "bash scripts/verify-enterprise-governance.sh",
     "system:materialize-proof-artifacts": "node governance/materialize-proof-artifacts.js",
     "system:test-images:prewarm": "bash scripts/prewarm-test-images.sh build",

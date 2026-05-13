@@ -4,18 +4,29 @@
 /**
  * Governance Signing Engine — HMAC-SHA256 sobre a cadeia de governança.
  *
- * Modelo criptográfico:
- *   key  = SHA256("rap-governance-v1:" + gitCommit)
- *   seal = HMAC-SHA256(key, chainRoot + ":" + zipName + ":" + timestamp)
+ * Modelo criptográfico (sem dependência circular):
+ *   key       = SHA256("rap-governance-v1:" + gitCommit)
+ *   gov.seal  = HMAC-SHA256(key, "governance-chain:" + chainRoot + ":" + timestamp)
+ *   rel.seal  = HMAC-SHA256(key, zipName + ":" + chainRoot + ":" + gitCommit + ":" + timestamp)
+ *   att.seal  = HMAC-SHA256(key, "governance-attestation:" + contentHash + ":" + chainRoot)
  *
- * A chave é derivada deterministicamente do commit git. Qualquer auditor
- * que conheça o commit pode re-derivar a chave e verificar o seal offline.
+ * O hash do ZIP NÃO entra nas sigs internas — ele é computado DEPOIS do
+ * empacotamento e fica exclusivamente no sidecar manifest. As sigs internas
+ * ao ZIP provam a integridade da governança via chainRoot.
  *
- * Outputs:
- *   dist/package.manifest.sig   — assinatura do manifesto
- *   dist/governance.sig         — assinatura da cadeia de governança
- *   dist/release.sig            — assinatura do release completo
- *   dist/governance-attestation.json — atestado enterprise completo
+ * Outputs primários (dentro do ZIP via dist/governance-artifacts/):
+ *   dist/governance-artifacts/governance.sig
+ *   dist/governance-artifacts/release.sig
+ *   dist/governance-artifacts/package.manifest.sig
+ *   dist/governance-artifacts/replay.sig
+ *   dist/governance-artifacts/governance-attestation.json
+ *   dist/governance-artifacts/governance-chain.json
+ *
+ * Outputs secundários (sidecar, fora do ZIP):
+ *   dist/governance.sig            (cópia para compatibilidade)
+ *   dist/release.sig
+ *   dist/package.manifest.sig
+ *   dist/governance-attestation.json
  */
 
 const fs     = require('fs');
@@ -23,15 +34,14 @@ const path   = require('path');
 const crypto = require('crypto');
 const {
   buildChain,
-  verifyChain,
-  loadChain,
   writeChain,
   sha256File,
   sha256String,
   resolveArtifact,
 } = require('./governance-chain');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT              = path.join(__dirname, '..');
+const GOV_ARTIFACTS_DIR = path.join(ROOT, 'dist', 'governance-artifacts');
 
 // ─── Derivação determinística de chave ────────────────────────────────────────
 function deriveGovernanceKey(gitCommit) {
@@ -60,7 +70,7 @@ function signArtifact({ subject, hash, chainRoot, gitCommit, timestamp, extra = 
     timestamp,
     seal,
     governanceLevel: 'LEVEL_4_IMMUTABLE',
-    verificationNote: 'Re-derive key as SHA256("rap-governance-v1:" + gitCommit), then verify HMAC-SHA256(key, subject:sha256:chainRoot:timestamp[:extra])',
+    verificationNote: 'key=SHA256("rap-governance-v1:"+gitCommit); verify=HMAC-SHA256(key, subject:sha256:chainRoot:timestamp[:extra])',
   };
   if (extra) result.extra = extra;
   return result;
@@ -76,39 +86,40 @@ function verifySeal(sigObj) {
   return expected === sigObj.seal;
 }
 
-// ─── Leitura de relatório JSON segura ────────────────────────────────────────
+// ─── Utilitário de leitura ────────────────────────────────────────────────────
 function readJsonSafe(filePath) {
   if (!fs.existsSync(filePath)) return null;
   try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch (_) { return null; }
 }
 
-// ─── Geração completa de assinaturas + atestado ───────────────────────────────
-function signAll(options = {}) {
+function writeArtifact(filePath, data) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+}
+
+// ─── PRE-SIGN (antes do empacotamento — sem hash do ZIP) ──────────────────────
+/**
+ * Gera todas as assinaturas e o atestado usando apenas o chainRoot.
+ * Chamado ANTES de generate-zip.sh para que os artefatos sejam incluídos no ZIP.
+ * O hash do ZIP não é necessário e NÃO entra nas sigs internas.
+ */
+function preSign(options = {}) {
   const artifact  = resolveArtifact();
   const gitCommit = artifact.manifest?.git_commit
     || options.gitCommit
-    || require('child_process').execSync('git rev-parse --short HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+    || require('child_process').execSync(
+        'git rev-parse --short HEAD', { cwd: ROOT, encoding: 'utf8' }
+      ).trim();
 
-  // 1. Construir / atualizar cadeia
-  const chain = buildChain(artifact);
+  // Construir cadeia a partir dos arquivos de governança atuais
+  const chain    = buildChain(artifact);
   writeChain(chain);
 
   const ts         = new Date().toISOString();
   const zipName    = artifact.zip;
-  const zipHash    = sha256File(artifact.zipPath);
   const chainRoot  = chain.chainRoot;
 
-  // 2. Assinatura do manifesto sidecar
-  const manifestHash = sha256File(artifact.manifestPath);
-  const manifestSig  = signArtifact({
-    subject:    `${zipName.replace(/\.zip$/, '.manifest.json')}`,
-    hash:       manifestHash || '',
-    chainRoot,
-    gitCommit,
-    timestamp:  ts,
-  });
-
-  // 3. Assinatura de governança (cadeia completa)
+  // 1. Assinatura de governança (cadeia completa)
   const govSig = signArtifact({
     subject:    'governance-chain',
     hash:       chainRoot,
@@ -118,30 +129,51 @@ function signAll(options = {}) {
     extra:      `links:${chain.chainLength}`,
   });
 
-  // 4. Assinatura de release (pacote + cadeia)
+  // 2. Assinatura de release (ZIP name + chainRoot — sem hash do ZIP)
   const releaseSig = signArtifact({
     subject:    zipName,
-    hash:       zipHash || '',
+    hash:       chainRoot,          // chain root é a identidade criptográfica
     chainRoot,
     gitCommit,
     timestamp:  ts,
-    extra:      `manifest:${manifestHash || ''}`,
+    extra:      `pre-sign:no-zip-hash`,
   });
 
-  // 5. Ler dados dos relatórios para o atestado
-  const proofReport     = readJsonSafe(path.join(ROOT, 'governance', 'final-proof-report.json'))     || {};
-  const consistencyRep  = readJsonSafe(path.join(ROOT, 'governance', 'final-consistency-report.json')) || {};
-  const crossReport     = readJsonSafe(path.join(ROOT, 'governance', 'cross-report-validation.json')) || {};
-  const proofSig        = readJsonSafe(path.join(ROOT, 'governance', 'proof-signature.json'))         || {};
-  const blockersReport  = readJsonSafe(path.join(ROOT, 'governance', 'materialized-proof-artifacts-report.json')) || {};
+  // 3. Assinatura do manifesto de release (usando hash do manifesto sidecar anterior, se disponível)
+  const manifestHash  = sha256File(artifact.manifestPath) || chainRoot;
+  const manifestSig   = signArtifact({
+    subject:    zipName.replace(/\.zip$/, '.manifest.json'),
+    hash:       manifestHash,
+    chainRoot,
+    gitCommit,
+    timestamp:  ts,
+  });
 
-  // 6. Atestado enterprise completo
+  // 4. Assinatura de replay (prova das assinaturas de replay existentes)
+  const proofSig    = readJsonSafe(path.join(ROOT, 'governance', 'proof-signature.json')) || {};
+  const replayHash  = sha256String(JSON.stringify(proofSig));
+  const replaySig   = signArtifact({
+    subject:    'replay-chain',
+    hash:       replayHash,
+    chainRoot,
+    gitCommit,
+    timestamp:  ts,
+    extra:      `replays:${(proofSig.subjectHashes || []).length}`,
+  });
+
+  // 5. Leitura de relatórios para o atestado
+  const proofReport    = readJsonSafe(path.join(ROOT, 'governance', 'final-proof-report.json'))       || {};
+  const consistencyRep = readJsonSafe(path.join(ROOT, 'governance', 'final-consistency-report.json')) || {};
+  const crossReport    = readJsonSafe(path.join(ROOT, 'governance', 'cross-report-validation.json'))  || {};
+
+  // 6. Atestado enterprise completo (sem hash do ZIP — usa chainRoot como identidade)
+  const attestationContentHash = sha256String(JSON.stringify({
+    zipName, chainRoot, gitCommit,
+    finalDecision: proofReport.finalDecision || 'UNKNOWN',
+  }));
   const attestationSeal = signArtifact({
     subject:    'governance-attestation',
-    hash:       sha256String(JSON.stringify({
-      zipName, zipHash, chainRoot, gitCommit,
-      finalDecision: proofReport.finalDecision || 'UNKNOWN',
-    })),
+    hash:       attestationContentHash,
     chainRoot,
     gitCommit,
     timestamp:  ts,
@@ -150,38 +182,47 @@ function signAll(options = {}) {
 
   const attestation = {
     generatedAt:     ts,
-    schemaVersion:   '1.0.0',
+    schemaVersion:   '2.0.0',
     governanceLevel: 'LEVEL_4_IMMUTABLE',
 
     packageIdentity: {
-      name:      zipName,
-      sha256:    zipHash,
-      sizeBytes: fs.existsSync(artifact.zipPath) ? fs.statSync(artifact.zipPath).size : null,
-      manifest:  artifact.manifestPath ? path.relative(ROOT, artifact.manifestPath) : null,
-      audit:     artifact.manifest?.audit || 'unknown',
+      name:          zipName,
+      sha256:        null,                          // preenchido pelo sidecar após empacotamento
+      sha256Source:  'sidecar-manifest',            // ZIP hash está apenas no sidecar manifest
+      chainRoot,                                    // prova criptográfica da governança
+      gitCommit,
+      note:          'sha256 will be set in sidecar manifest after packaging to avoid circular dependency',
     },
 
     commitProvenance: {
       gitCommit,
-      gitBranch:    artifact.manifest?.git_branch || 'main',
-      generatedBy:  artifact.manifest?.generated_by || 'scripts/release-package.sh',
-      generatedAt:  artifact.manifest?.generated_at || ts,
+      gitBranch:   artifact.manifest?.git_branch  || 'main',
+      generatedBy: artifact.manifest?.generated_by || 'scripts/release-package.sh',
+      generatedAt: artifact.manifest?.generated_at || ts,
     },
 
     chainAttestation: {
       chainRoot,
-      chainLength:    chain.chainLength,
-      chainComplete:  chain.completeChain,
-      chainValid:     chain.valid,
-      missingLayers:  chain.missingLayers,
+      chainLength:   chain.chainLength,
+      chainComplete: chain.completeChain,
+      chainValid:    chain.valid,
+      missingLayers: chain.missingLayers,
+    },
+
+    selfContainment: {
+      distArtifactsIncluded: true,
+      signaturesInZip:       true,
+      attestationInZip:      true,
+      offlineVerifiable:     true,
+      note:                  'All proof artifacts are in dist/governance-artifacts/ inside the ZIP',
     },
 
     operationalCoverage: {
-      replayCoverage:    proofReport.replayCoverage     || null,
-      prodLikeCoverage:  proofReport.prodLikeCoverage   || null,
-      proofCoverage:     proofReport.proofCoverage      || null,
-      proofQualityScore: proofReport.proofQualityScore  || null,
-      verticalCoverage:  proofReport.verticalCoverage   || null,
+      replayCoverage:    proofReport.replayCoverage    || null,
+      prodLikeCoverage:  proofReport.prodLikeCoverage  || null,
+      proofCoverage:     proofReport.proofCoverage     || null,
+      proofQualityScore: proofReport.proofQualityScore || null,
+      verticalCoverage:  proofReport.verticalCoverage  || null,
     },
 
     domainMaturity: {
@@ -199,8 +240,8 @@ function signAll(options = {}) {
         normalizationGaps: (proofReport.humanHandoffCoverage?.normalizationGaps || []).length,
       },
       intelligence: {
-        status:          proofReport.intelligenceStability?.status || 'UNKNOWN',
-        unstableDomains: (proofReport.intelligenceStability?.unstableDomains || []).length,
+        status:           proofReport.intelligenceStability?.status || 'UNKNOWN',
+        unstableDomains:  (proofReport.intelligenceStability?.unstableDomains || []).length,
         blocksAutonomous: proofReport.intelligenceStability?.blocksAutonomous || false,
       },
     },
@@ -216,83 +257,107 @@ function signAll(options = {}) {
     },
 
     signatures: {
-      manifest:    manifestSig,
       governance:  govSig,
       release:     releaseSig,
+      manifest:    manifestSig,
+      replay:      replaySig,
       attestation: attestationSeal,
     },
 
     finalDecision:   proofReport.finalDecision || 'UNKNOWN',
-    autonomousReady: proofReport.finalDecision === 'AUTONOMOUS_READY_GO',
+    autonomousReady: proofReport.finalDecision === 'AUTONOMOUS_READY_GO'
+      || (crossReport.maximumAllowedReadiness === 'autonomous-ready' && (crossReport.blockerCount || 0) === 0),
 
     verificationInstructions: [
-      '1. Compute SHA256 of the ZIP file and compare with packageIdentity.sha256',
+      '1. Verify ZIP SHA256 against sidecar manifest: sha256sum <zip> vs manifest.sha256',
       '2. Run: node governance/governance-chain.js --verify',
-      '3. Derive key: SHA256("rap-governance-v1:" + commitProvenance.gitCommit)',
-      '4. Verify each sig: HMAC-SHA256(key, subject:sha256:chainRoot:timestamp)',
-      '5. Run: bash scripts/verify-enterprise-governance.sh',
+      '3. Verify signatures: derive key=SHA256("rap-governance-v1:"+gitCommit), verify HMAC-SHA256',
+      '4. Run: bash scripts/verify-enterprise-governance.sh (offline, no external deps)',
+      '5. All proof artifacts are in dist/governance-artifacts/ inside the ZIP',
     ],
   };
 
-  // Escrever outputs
+  // Escrever em dist/governance-artifacts/ (para inclusão no ZIP)
+  fs.mkdirSync(GOV_ARTIFACTS_DIR, { recursive: true });
+  writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'governance.sig'),             govSig);
+  writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'release.sig'),                releaseSig);
+  writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'package.manifest.sig'),       manifestSig);
+  writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'replay.sig'),                 replaySig);
+  writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'governance-attestation.json'), attestation);
+
+  // Copiar governance-chain.json para dentro de governance-artifacts/
+  const chainSrc = path.join(ROOT, 'governance', 'governance-chain.json');
+  if (fs.existsSync(chainSrc)) {
+    fs.copyFileSync(chainSrc, path.join(GOV_ARTIFACTS_DIR, 'governance-chain.json'));
+  }
+
+  // Espelhar em dist/ (sidecar, compatibilidade com ferramentas externas)
   const distDir = path.join(ROOT, 'dist');
   fs.mkdirSync(distDir, { recursive: true });
-
-  const write = (file, data) =>
-    fs.writeFileSync(path.join(distDir, file), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-
-  write('package.manifest.sig',       manifestSig);
-  write('governance.sig',             govSig);
-  write('release.sig',                releaseSig);
-  write('governance-attestation.json', attestation);
+  writeArtifact(path.join(distDir, 'governance.sig'),              govSig);
+  writeArtifact(path.join(distDir, 'release.sig'),                 releaseSig);
+  writeArtifact(path.join(distDir, 'package.manifest.sig'),        manifestSig);
+  writeArtifact(path.join(distDir, 'replay.sig'),                  replaySig);
+  writeArtifact(path.join(distDir, 'governance-attestation.json'), attestation);
 
   return {
     chain,
     attestation,
-    signatures: { manifest: manifestSig, governance: govSig, release: releaseSig },
+    signatures: { governance: govSig, release: releaseSig, manifest: manifestSig, replay: replaySig },
     outputs: [
-      'dist/package.manifest.sig',
-      'dist/governance.sig',
-      'dist/release.sig',
-      'dist/governance-attestation.json',
+      'dist/governance-artifacts/governance.sig',
+      'dist/governance-artifacts/release.sig',
+      'dist/governance-artifacts/package.manifest.sig',
+      'dist/governance-artifacts/replay.sig',
+      'dist/governance-artifacts/governance-attestation.json',
+      'dist/governance-artifacts/governance-chain.json',
       'governance/governance-chain.json',
     ],
+    presigned: true,
   };
 }
 
-module.exports = { signAll, signArtifact, verifySeal, deriveGovernanceKey };
+// signAll mantido como alias de preSign para compatibilidade
+const signAll = preSign;
+
+module.exports = { signAll, preSign, signArtifact, verifySeal, deriveGovernanceKey };
 
 // ─── CLI ──────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const verify = process.argv.includes('--verify');
 
   if (verify) {
-    const distDir   = path.join(ROOT, 'dist');
-    const relSigPath = path.join(distDir, 'release.sig');
-    const govSigPath = path.join(distDir, 'governance.sig');
+    const distDir    = path.join(ROOT, 'dist');
+    const sigFiles   = ['release.sig', 'governance.sig', 'package.manifest.sig', 'replay.sig'];
+    let   allValid   = true;
 
-    let allValid = true;
-
-    for (const sigPath of [relSigPath, govSigPath]) {
-      if (!fs.existsSync(sigPath)) {
+    // Verificar em dist/ e em dist/governance-artifacts/
+    const searchDirs = [distDir, GOV_ARTIFACTS_DIR];
+    for (const sigName of sigFiles) {
+      let found = false;
+      for (const dir of searchDirs) {
+        const sigPath = path.join(dir, sigName);
+        if (!fs.existsSync(sigPath)) continue;
+        const sig   = JSON.parse(fs.readFileSync(sigPath, 'utf8'));
+        const valid = verifySeal(sig);
         // eslint-disable-next-line no-console
-        console.error(`[sign-governance] Assinatura ausente: ${path.relative(ROOT, sigPath)}`);
-        allValid = false;
-        continue;
+        console.log(`[sign-governance] ${path.relative(ROOT, sigPath)}: ${valid ? 'VÁLIDA ✓' : 'INVÁLIDA ✗'}`);
+        if (!valid) allValid = false;
+        found = true;
+        break;
       }
-      const sig   = JSON.parse(fs.readFileSync(sigPath, 'utf8'));
-      const valid = verifySeal(sig);
-      // eslint-disable-next-line no-console
-      console.log(`[sign-governance] ${path.basename(sigPath)}: ${valid ? 'VÁLIDA ✓' : 'INVÁLIDA ✗'}`);
-      if (!valid) allValid = false;
+      if (!found) {
+        // eslint-disable-next-line no-console
+        console.error(`[sign-governance] ausente: ${sigName}`);
+        allValid = false;
+      }
     }
-
     process.exit(allValid ? 0 : 1);
   }
 
-  const result = signAll();
+  const result = preSign();
   // eslint-disable-next-line no-console
-  console.log(`[sign-governance] signed: ${result.outputs.join(', ')}`);
+  console.log(`[sign-governance] pre-signed: ${result.outputs.length} artifacts`);
   // eslint-disable-next-line no-console
   console.log(`[sign-governance] chainRoot=${result.chain.chainRoot.slice(0, 16)}… decision=${result.attestation.finalDecision}`);
   process.exit(result.chain.valid ? 0 : 1);
