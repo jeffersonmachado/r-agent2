@@ -114,6 +114,8 @@
     "system:final-governance": "node governance/final-governance-engine.js",
     "system:package-integrity": "node governance/package-integrity-engine.js",
     "system:replay-hardening": "node governance/replay-hardening-engine.js",
+    "system:replay-consistency": "node governance/replay-consistency-engine.js",
+    "system:contamination-cleaner": "node governance/report-contamination-cleaner.js",
     "system:consistency-engine": "node governance/governance-consistency-engine.js",
     "system:recalculate-readiness": "node tools/system/recalculate-readiness.js",
     "system:verify-enterprise": "bash scripts/verify-enterprise-governance.sh",

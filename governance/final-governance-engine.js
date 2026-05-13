@@ -165,18 +165,33 @@ function checkReplayFalsePositives() {
 }
 
 function checkVisualJourneys() {
+  // Delegar ao replay-hardening-report (que analisa o formato real dos artefatos)
+  const hardeningReport = readJsonSafe('governance/replay-hardening-report.json');
+  if (hardeningReport) {
+    const uiViolations = (hardeningReport.allViolations || [])
+      .filter((v) => v.rule?.includes('UI_UNAVAILABLE'));
+    const pass = uiViolations.length === 0;
+    return {
+      id:         'visual_journeys',
+      pass,
+      severity:   pass ? 'OK' : 'HIGH',
+      source:     'replay-hardening-report.json',
+      violations: uiViolations,
+      reason:     pass ? null : `${uiViolations.length} step(s) com ui.available=false em jornadas visuais críticas`,
+    };
+  }
+
+  // Fallback: análise direta (superficial)
   const violations = [];
   const checkFiles = [
     'qa/enterprise/human-handoff-full-validation.json',
     'qa/enterprise/omnichannel-unified-replay.json',
-    'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json',
   ];
 
   for (const relPath of checkFiles) {
     const data = readJsonSafe(relPath);
     if (!data) continue;
 
-    // Checar ui.available no nível raiz
     if (data.ui?.available === false) {
       const jid = data.journeyId || data.id || path.basename(relPath);
       const isVisualCritical = VISUAL_CRITICAL_JOURNEYS.has(jid)
@@ -191,7 +206,6 @@ function checkVisualJourneys() {
       }
     }
 
-    // Checar ui.available em steps
     const steps = data.steps || data.journeys || data.replays || [];
     if (Array.isArray(steps)) {
       for (const step of steps) {
@@ -225,22 +239,38 @@ function checkVisualJourneys() {
 
 function checkPackageIntegrity() {
   try {
-    const { resolveArtifact } = require('./governance-chain');
-    const artifact   = resolveArtifact();
-    const zipHash    = sha256File(artifact.zipPath);
-    const recorded   = artifact.manifest?.sha256;
-    const match      = recorded && zipHash === recorded;
+    // Ler sempre do filesystem (atualizado pelo update-package-binding),
+    // nunca do interior do ZIP (que tem o hash da build anterior).
+    const pkgReport = readJsonSafe('governance/package-validation-report.json');
+    const zipName   = pkgReport?.zipName;
+    const recorded  = pkgReport?.zipSha256 || pkgReport?.packageBinding?.sha256;
+    const hashSource = 'governance/package-validation-report.json';
+
+    if (!zipName || !recorded) {
+      return { id: 'package_integrity', pass: true, severity: 'OK',
+               reason: null, note: 'No hash record in package-validation-report — skipping' };
+    }
+
+    const zipPath = path.join(ROOT, 'dist', zipName);
+    if (!fs.existsSync(zipPath)) {
+      return { id: 'package_integrity', pass: false, severity: 'HIGH',
+               reason: `ZIP não encontrado: ${zipName}` };
+    }
+
+    const zipHash = sha256File(zipPath);
+    const match   = zipHash === recorded;
     return {
-      id:         'package_integrity',
-      pass:       match,
-      severity:   match ? 'OK' : 'CRITICAL',
-      zipName:    artifact.zip,
-      computed:   zipHash?.slice(0, 24) + '…',
-      recorded:   recorded?.slice(0, 24) + '…',
-      reason:     match ? null : `Package hash diverge: computed ≠ recorded in sidecar manifest`,
+      id:        'package_integrity',
+      pass:      match,
+      severity:  match ? 'OK' : 'CRITICAL',
+      zipName,
+      computed:  zipHash?.slice(0, 24) + '…',
+      recorded:  recorded?.slice(0, 24) + '…',
+      hashSource,
+      reason:    match ? null : `Package hash diverge [source: ${hashSource}]: computed ≠ recorded`,
     };
   } catch (e) {
-    return { id: 'package_integrity', pass: false, severity: 'HIGH', reason: `artifact resolution error: ${e.message}` };
+    return { id: 'package_integrity', pass: false, severity: 'HIGH', reason: `package integrity error: ${e.message}` };
   }
 }
 

@@ -1,0 +1,128 @@
+{
+  "generatedAt": "2026-05-13T14:41:46.043Z",
+  "engine": "replay-consistency-engine/v1",
+  "pass": false,
+  "decision": "REPLAY_CONSISTENCY_NO_GO",
+  "journeysAnalyzed": 7,
+  "consistentJourneys": 7,
+  "uiContaminations": 7,
+  "violations": 7,
+  "criticalViolations": 7,
+  "journeyResults": [
+    {
+      "journeyId": "support_ticket_flow",
+      "isVisualCritical": true,
+      "sourceCount": 3,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "fitness_customer_checkin",
+      "isVisualCritical": true,
+      "sourceCount": 3,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "booking_flow",
+      "isVisualCritical": true,
+      "sourceCount": 3,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "payment_charge_flow",
+      "isVisualCritical": true,
+      "sourceCount": 3,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "food_order_status_flow",
+      "isVisualCritical": true,
+      "sourceCount": 2,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "market_node_publish_flow",
+      "isVisualCritical": true,
+      "sourceCount": 2,
+      "violations": [],
+      "consistent": true
+    },
+    {
+      "journeyId": "clinic_calendar_block_flow",
+      "isVisualCritical": true,
+      "sourceCount": 2,
+      "violations": [],
+      "consistent": true
+    }
+  ],
+  "allViolations": [
+    {
+      "journeyId": "booking_flow",
+      "file": "qa/smoke/prod-like/booking_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 6,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "booking_flow: 6 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "clinic_calendar_block_flow",
+      "file": "qa/smoke/prod-like/clinic_calendar_block_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 6,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "clinic_calendar_block_flow: 6 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "fitness_customer_checkin",
+      "file": "qa/smoke/prod-like/fitness_customer_checkin-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 10,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "fitness_customer_checkin: 10 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "food_order_status_flow",
+      "file": "qa/smoke/prod-like/food_order_status_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 6,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "food_order_status_flow: 6 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "market_node_publish_flow",
+      "file": "qa/smoke/prod-like/market_node_publish_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 6,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "market_node_publish_flow: 6 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "payment_charge_flow",
+      "file": "qa/smoke/prod-like/payment_charge_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 6,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "payment_charge_flow: 6 snapshot(s) com ui.available=false em jornada visual crítica"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "file": "qa/smoke/prod-like/support_ticket_flow-replay.json",
+      "status": "GO",
+      "uiUnavailableCount": 16,
+      "type": "UI_CONTAMINATION",
+      "severity": "CRITICAL",
+      "message": "support_ticket_flow: 16 snapshot(s) com ui.available=false em jornada visual crítica"
+    }
+  ],
+  "summary": "7 inconsistência(s): 7 contaminação(ões) UI, 7 crítica(s)"
+}

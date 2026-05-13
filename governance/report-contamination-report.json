@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-05-13T14:41:46.722Z",
+  "engine": "report-contamination-cleaner/v1",
+  "pass": true,
+  "decision": "NO_CONTAMINATION",
+  "filesChecked": 4,
+  "contaminatedFiles": 0,
+  "issues": 0,
+  "contaminations": [],
+  "summary": "Nenhuma contaminação detectada em 4 relatórios."
+}

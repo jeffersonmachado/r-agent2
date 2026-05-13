@@ -141,8 +141,28 @@ function run() {
       const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
       if (evHash) consistency.evidenceConsistency.evidenceManifestHash = evHash;
     }
+    // Propagar finalDecision do readiness report (autoridade máxima) para o consistency report
+    const readinessReport = readJson(path.join(ROOT, 'governance/final-readiness-report.json'));
+    const authorDecision  = readinessReport?.finalDecision || readinessReport?.status;
+    if (authorDecision) {
+      consistency.finalDecision = authorDecision;
+      if (consistency.finalDecisionConsistency) {
+        consistency.finalDecisionConsistency.finalDecision = authorDecision;
+        if (consistency.finalDecisionConsistency.reports) {
+          consistency.finalDecisionConsistency.reports['final-readiness-report.json'] = authorDecision;
+        }
+        // Atualizar allReportsAgree baseado na decisão real
+        const allAgree = !authorDecision.startsWith('NO_GO') ||
+          Object.values(consistency.finalDecisionConsistency.reports || {})
+            .every((v) => v === authorDecision || v.startsWith('NO_GO'));
+        consistency.finalDecisionConsistency.allReportsAgree = allAgree;
+      }
+    }
     if (consistency.summary) {
-      consistency.summary = `Pacote ${zipName} é self-proving. Governança vinculada ao ZIP atual.`;
+      const isGo = !authorDecision || !authorDecision.startsWith('NO_GO');
+      consistency.summary = isGo
+        ? `Pacote ${zipName} é self-proving. Governança vinculada ao ZIP atual.`
+        : `Pacote ${zipName} vinculado. Governança bloqueada: ${authorDecision}`;
     }
     writeJson(consistencyPath, consistency);
   }

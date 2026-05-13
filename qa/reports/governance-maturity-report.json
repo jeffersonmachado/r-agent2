@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T13:55:28.317Z",
+  "generatedAt": "2026-05-13T14:41:40.987Z",
   "achievedLevel": "LEVEL_4_IMMUTABLE",
   "achievedNumeric": 4,
   "targetLevel": "LEVEL_4_IMMUTABLE",
@@ -36,36 +36,47 @@
     {
       "key": "LEVEL_2",
       "label": "LEVEL_2_VERIFIABLE",
-      "achieved": true,
-      "score": 100,
+      "achieved": false,
+      "score": 86,
       "passing": [
         "package_validator",
         "cross_report",
         "blocker_engine",
         "consistency_report",
         "zero_blockers",
-        "consistency_100",
-        "sidecar_manifest"
+        "consistency_100"
       ],
-      "failing": [],
+      "failing": [
+        {
+          "id": "sidecar_manifest",
+          "label": "Sidecar manifest com audit=passed presente"
+        }
+      ],
       "totalChecks": 7
     },
     {
       "key": "LEVEL_3",
       "label": "LEVEL_3_CRYPTOGRAPHIC",
-      "achieved": true,
-      "score": 100,
+      "achieved": false,
+      "score": 75,
       "passing": [
         "chain_js",
         "chain_json",
-        "chain_valid",
-        "chain_complete",
         "sign_engine",
         "release_sig",
         "gov_sig",
         "replay_signed"
       ],
-      "failing": [],
+      "failing": [
+        {
+          "id": "chain_valid",
+          "label": "Cadeia válida (chainRoot verificado)"
+        },
+        {
+          "id": "chain_complete",
+          "label": "Cadeia completa (sem camadas ausentes)"
+        }
+      ],
       "totalChecks": 8
     },
     {

@@ -213,7 +213,9 @@ else
     warn "Replay integrity falhou (continuando)"
   fi
 
-  if node "$PROJECT_ROOT/governance/self-proving-report.js" 2>/dev/null; then
+  # self-proving-report é gerado APÓS update-package-binding (ver passo 4b)
+  # para garantir que referencia o ZIP correto.
+  if false; then
     ok "Self-proving report gerado"
   else
     warn "Self-proving report falhou (continuando)"
@@ -317,6 +319,12 @@ if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --
 fi
 ok "Candidate ZIP validado contra o manifest de prova"
 
+# Remover manifest imediatamente após a criação e validação do ZIP.
+# O hash está registrado em governance/package-validation-report.json —
+# nenhum processo posterior precisa do sidecar manifest.
+rm -f "$MANIFEST_FILE"
+ok "Manifest sidecar removido (hash preservado nos relatórios de governança)"
+
 # ── 4b. Sincronizar relatórios com ZIP final + reconstruir cadeia ─────────────
 # Deve rodar ANTES dos engines para que todos vejam o ZIP atual nos relatórios.
 step "Sincronizando relatórios de governança com o novo ZIP..."
@@ -334,19 +342,24 @@ else
   warn "Avaliação de maturidade falhou (continuando)"
 fi
 
+node "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && ok "Replay hardening: OK (formato real flows[].replay)" || warn "Replay hardening detectou violações"
+node "$PROJECT_ROOT/governance/replay-consistency-engine.js"     2>/dev/null && ok "Replay consistency: OK" || warn "Replay consistency detectou inconsistências"
 node "$PROJECT_ROOT/governance/governance-consistency-engine.js" 2>/dev/null && ok "Consistency engine: sem contradições" || warn "Consistency engine detectou contradições"
-node "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && ok "Replay hardening: OK" || warn "Replay hardening detectou violações"
 node "$PROJECT_ROOT/governance/package-integrity-engine.js"      2>/dev/null && ok "Package integrity: OK" || warn "Package integrity detectou divergências"
+# self-proving-report gerado aqui (após update-package-binding) para referenciar ZIP correto
+node "$PROJECT_ROOT/governance/self-proving-report.js"           2>/dev/null && ok "Self-proving report: OK" || warn "Self-proving report detectou falhas"
+node "$PROJECT_ROOT/governance/report-contamination-cleaner.js"  2>/dev/null && ok "Report contamination: limpo" || warn "Relatórios contaminados detectados"
 node "$PROJECT_ROOT/governance/final-governance-engine.js"       2>/dev/null && ok "Final governance: AUTONOMOUS_READY_GO" || warn "Final governance engine retornou bloqueio"
 
 # ── 4c. Gerar relatórios finais em qa/reports/ ────────────────────────────────
 step "Gerando relatórios finais de governança em qa/reports/..."
 mkdir -p "$PROJECT_ROOT/qa/reports"
-# Copiar relatórios gerados
 for f in \
   "governance/final-governance-report.json" \
   "governance/governance-consistency-report.json" \
   "governance/replay-hardening-report.json" \
+  "governance/replay-consistency-report.json" \
+  "governance/report-contamination-report.json" \
   "governance/package-integrity-report.json" \
   "governance/governance-maturity-report.json" \
   "governance/self-proving-report.json" \

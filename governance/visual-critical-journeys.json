@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Jornadas visuais críticas onde ui.available=false é um bloqueador de governança.",
+  "rule": "Se qualquer step de uma jornada desta lista tiver ui.available=false no snapshot, o replay é FAILED e a governança é NO_GO.",
+  "criticalJourneys": [
+    "support",
+    "support_ticket_flow",
+    "crm",
+    "ticket",
+    "whatsapp",
+    "omnichannel",
+    "omnichannel_unified_replay",
+    "handoff",
+    "human_handoff",
+    "scheduling",
+    "booking_flow",
+    "payment",
+    "payment_charge_flow",
+    "checkin",
+    "fitness_customer_checkin",
+    "replay-ui",
+    "dashboard",
+    "workspace",
+    "food_order_status_flow",
+    "market_node_publish_flow",
+    "clinic_calendar_block_flow"
+  ],
+  "snapshotPaths": [
+    "beforeStepSnapshot.ui.available",
+    "afterStepSnapshot.ui.available",
+    "beforeSnapshot.ui.available",
+    "afterSnapshot.ui.available",
+    "ui.available"
+  ],
+  "blockingReasons": [
+    "playwright_page_unavailable",
+    "page_load_failed",
+    "navigation_failed",
+    "selector_not_found"
+  ],
+  "note": "ui.available=false em snapshots indica que o Playwright não conseguiu capturar evidência visual do step. Sem evidência visual, o replay NÃO pode ser considerado válido."
+}

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-13T13:55:28.117Z",
+  "generatedAt": "2026-05-13T14:41:40.348Z",
   "schemaVersion": "1.0.0",
-  "currentZipName": "r-agent2-20260513-105515.zip",
-  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260513-105515.manifest.json",
-  "currentZipTimestamp": "2026-05-13T13:55:27Z",
-  "currentZipManifest": "dist/r-agent2-20260513-105515.manifest.json",
+  "currentZipName": "r-agent2-20260513-114123.zip",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260513-114123.manifest.json",
+  "currentZipTimestamp": "2026-05-13T14:40:20.825Z",
+  "currentZipManifest": "dist/r-agent2-20260513-114123.manifest.json",
   "manifestAudit": "passed",
   "packageSelfValidation": {
     "status": "PASS",
@@ -13,7 +13,7 @@
     "manifestPresent": true,
     "manifestAuditPassed": true,
     "noExternalZipReferences": true,
-    "details": "Todos os relatórios referenciam r-agent2-20260513-105515.zip. Pacote é self-proving."
+    "details": "Todos os relatórios referenciam r-agent2-20260513-114123.zip. Pacote é self-proving."
   },
   "packageSelfContainment": {
     "status": "PASS",
@@ -110,11 +110,11 @@
   },
   "finalDecisionConsistency": {
     "status": "PASS",
-    "finalDecision": "AUTONOMOUS_READY_GO",
-    "allReportsAgree": true,
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+    "allReportsAgree": false,
     "reports": {
       "final-proof-report.json": "AUTONOMOUS_READY_GO",
-      "final-readiness-report.json": "AUTONOMOUS_READY_GO",
+      "final-readiness-report.json": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
       "cross-report-validation.json": "autonomous-ready (maximumAllowedReadiness)"
     },
     "gateChecks": {
@@ -143,7 +143,7 @@
   },
   "evidenceConsistency": {
     "status": "PASS",
-    "evidenceManifestHash": "a512b12fee5a74b08b84864b18cf732966950a7ccc796fa8bb74c92af42269b0",
+    "evidenceManifestHash": "1a862167f29cbbc15ab78f2d53ef16a70718f31ecad88d17978880df7abce73a",
     "totalArtifacts": 20,
     "validArtifacts": 20,
     "proofCoverage": 100,
@@ -154,27 +154,27 @@
   },
   "manifestConsistency": {
     "status": "PASS",
-    "sidecarManifest": "dist/r-agent2-20260513-105515.manifest.json",
+    "sidecarManifest": "dist/r-agent2-20260513-114123.manifest.json",
     "sidecarAudit": "passed",
-    "boundZipName": "r-agent2-20260513-105515.zip",
-    "boundZipSha256Note": "SHA256 stored in sidecar manifest — see dist/r-agent2-20260513-105515.manifest.json",
+    "boundZipName": "r-agent2-20260513-114123.zip",
+    "boundZipSha256Note": "SHA256 stored in sidecar manifest — see dist/r-agent2-20260513-114123.manifest.json",
     "immutable": true,
     "selfProving": true
   },
   "packageImmutability": {
     "zipHashNote": "SHA256 stored in sidecar manifest only to prevent circular hash dependency",
-    "zipHashRef": "dist/r-agent2-20260513-105515.manifest.json#sha256",
+    "zipHashRef": "dist/r-agent2-20260513-114123.manifest.json#sha256",
     "proofReportHash": "0ab5ca54fa36032d847439343cbda929892ad2d0f7ebf39b6e87d06af4b111a5",
     "crossReportHash": "84b7fd7d9a046af6f53ca306819e3097c314e49cc3310feaad9a352f40780ca6",
-    "evidenceManifestHash": "a512b12fee5a74b08b84864b18cf732966950a7ccc796fa8bb74c92af42269b0",
+    "evidenceManifestHash": "1a862167f29cbbc15ab78f2d53ef16a70718f31ecad88d17978880df7abce73a",
     "replaySignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-    "boundTo": "r-agent2-20260513-105515.zip",
+    "boundTo": "r-agent2-20260513-114123.zip",
     "note": "Se qualquer um desses hashes mudar, todos os relatórios de governança tornam-se inválidos e devem ser regenerados. O hash do ZIP em si está no sidecar manifest para evitar dependência circular."
   },
   "overallConsistencyScore": 100,
   "allChecksPass": true,
-  "finalDecision": "AUTONOMOUS_READY_GO",
+  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
   "packageSelfProving": true,
   "offlineAuditable": true,
-  "summary": "Pacote r-agent2-20260513-105515.zip é self-proving. Governança vinculada ao ZIP atual."
+  "summary": "Pacote r-agent2-20260513-114123.zip vinculado. Governança bloqueada: NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]"
 }
