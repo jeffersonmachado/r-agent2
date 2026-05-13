@@ -74,9 +74,13 @@ function run() {
   }
 
   const zipName      = artifact.zip;
-  const zipSha256    = artifact.manifest?.sha256 || 'see-sidecar-manifest';
+  // Computar hash diretamente do arquivo (não depende de sidecar manifest)
+  const zipPath      = path.join(ROOT, 'dist', zipName);
+  const zipSha256    = fs.existsSync(zipPath)
+    ? require('crypto').createHash('sha256').update(fs.readFileSync(zipPath)).digest('hex')
+    : (artifact.manifest?.sha256 || null);
   const manifestRel  = `dist/${zipName.replace(/\.zip$/, '.manifest.json')}`;
-  const sha256Ref    = zipSha256;
+  const sha256Ref    = zipSha256 || 'hash-not-available';
   const ts           = new Date().toISOString();
 
   // eslint-disable-next-line no-console
@@ -84,7 +88,7 @@ function run() {
   // eslint-disable-next-line no-console
   console.log(`  sha256: ${zipSha256}`);
   // eslint-disable-next-line no-console
-  console.log(`  manifest: ${manifestRel}\n`);
+  console.log(`  manifest: ${manifestRel} (may not exist after dist cleanup)\n`);
 
   // ─── Arquivos a atualizar ─────────────────────────────────────────────────
   const FILES_TO_PATCH = [
@@ -99,6 +103,11 @@ function run() {
     const original = readJson(abs);
     const patched  = patchZipRefs(original, zipName, sha256Ref, manifestRel);
     patched.generatedAt = ts;
+    // Garantir que package-validation-report tem o hash real (para verificação sem sidecar)
+    if (relPath === 'governance/package-validation-report.json' && zipSha256) {
+      patched.zipSha256 = zipSha256;
+      if (patched.packageBinding) patched.packageBinding.sha256 = zipSha256;
+    }
     writeJson(abs, patched);
   }
 

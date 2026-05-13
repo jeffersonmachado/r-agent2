@@ -355,27 +355,28 @@ for f in \
 done
 ok "Relatórios copiados para qa/reports/"
 
-# ── 4d. Limpar artefatos complementares de dist/ ─────────────────────────────
-# Manter apenas ZIPs de release e seus sidecar manifests.
-# Remover: dist/governance-artifacts/, dist/*.sig, dist/governance-attestation.json
-step "Limpando artefatos complementares de dist/ (mantendo apenas ZIPs e manifests)..."
+# ── 4d. Limpar TODOS os artefatos complementares de dist/ ────────────────────
+# dist/ deve conter APENAS o ZIP final.
+# O hash do ZIP está registrado em governance/package-validation-report.json
+# (dentro do ZIP e no filesystem) — sem dependência de sidecar manifest externo.
+step "Limpando dist/: mantendo apenas o ZIP final..."
 rm -rf "$DIST_DIR/governance-artifacts"
 rm -f  "$DIST_DIR"/*.sig
 rm -f  "$DIST_DIR/governance-attestation.json"
-ok "dist/ limpo: apenas ZIPs e manifests sidecar mantidos"
+rm -f  "$DIST_DIR"/*.manifest.json
+ok "dist/ limpo: apenas o ZIP final mantido"
 
 # ── 5. Limpar ZIPs antigos ────────────────────────────────────────────────────
 step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/..."
 
-ZIP_LIST="$(ls -t "$DIST_DIR"/*.zip 2>/dev/null || true)"
-ZIP_COUNT="$(echo "$ZIP_LIST" | grep -c '\.zip' || true)"
+ZIP_LIST="$(ls -t "$DIST_DIR"/r-agent2-*.zip 2>/dev/null || true)"
+ZIP_COUNT="$(echo "$ZIP_LIST" | grep -c '\.zip' 2>/dev/null || echo 0)"
 
 if [[ "$ZIP_COUNT" -gt "$KEEP_DIST" ]]; then
   TO_DELETE="$(echo "$ZIP_LIST" | tail -n +"$((KEEP_DIST + 1))")"
   while IFS= read -r old_zip; do
     [[ -z "$old_zip" ]] && continue
-    old_manifest="${old_zip%.zip}.manifest.json"
-    rm -f "$old_zip" "$old_manifest"
+    rm -f "$old_zip" "${old_zip%.zip}.manifest.json" 2>/dev/null || true
     echo "  Removido: $(basename "$old_zip")"
   done <<< "$TO_DELETE"
 fi

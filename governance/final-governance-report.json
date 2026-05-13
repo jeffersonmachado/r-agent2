@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T12:09:48.258Z",
+  "generatedAt": "2026-05-13T13:55:34.826Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
@@ -44,9 +44,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260513-090924.zip",
-      "computed": "4dad2405bf3f820429474eb6…",
-      "recorded": "4dad2405bf3f820429474eb6…",
+      "zipName": "r-agent2-20260513-105515.zip",
+      "computed": "cf1fd2bb1014b1a3b37a8b46…",
+      "recorded": "cf1fd2bb1014b1a3b37a8b46…",
       "reason": null
     },
     {

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-13T12:08:30.426Z",
+  "generatedAt": "2026-05-13T13:54:24.262Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260513-090700.zip",
+  "artifact": "r-agent2-20260513-090924.zip",
   "overallSelfProofScore": 100,
   "pass": true,
   "passCount": 10,
@@ -15,7 +15,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20260513-090700.zip",
+    "zipName": "r-agent2-20260513-090924.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -26,7 +26,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "978fb6ef531f88e4a62c9237a9a87583",
+    "chainRoot": "8ec6757073067bcef0f7670a8145d953",
     "signatures": [
       {
         "name": "governance.sig",
@@ -107,10 +107,10 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "65d2e623e82964f4d284a23ee9484a555028fb26a18d57a76daf13cc36a5a32c",
-    "zipName": "r-agent2-20260513-090700.zip",
+    "sidecarHash": "4dad2405bf3f820429474eb6cff7d11128d6ecd238d7a6b97c8e074c5085154f",
+    "zipName": "r-agent2-20260513-090924.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20260513-090700.zip é completamente self-proving. Score: 100/100."
+  "summary": "Pacote r-agent2-20260513-090924.zip é completamente self-proving. Score: 100/100."
 }

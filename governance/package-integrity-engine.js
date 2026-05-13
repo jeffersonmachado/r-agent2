@@ -53,19 +53,30 @@ function checkZipHash() {
 
   const computed  = sha256File(latest.zipPath);
   const manifest  = findSidecarManifest(latest.zipPath);
-  const recorded  = manifest?.sha256;
+
+  // Ler hash registrado: sidecar manifest (se existir) ou package-validation-report.json
+  let recorded = manifest?.sha256;
+  let hashSource = 'sidecar-manifest';
+  if (!recorded) {
+    // Fallback: ler do relatório interno no filesystem (gerado durante o release)
+    const pkgReport = readJsonSafe('governance/package-validation-report.json');
+    recorded = pkgReport?.zipSha256 || pkgReport?.packageBinding?.sha256;
+    hashSource = 'governance/package-validation-report.json';
+  }
+
   const match     = recorded && computed === recorded;
 
   return {
-    check:     'zip_hash',
-    pass:      match,
-    severity:  match ? 'OK' : 'CRITICAL',
-    zipName:   latest.zip,
+    check:      'zip_hash',
+    pass:       match,
+    severity:   match ? 'OK' : 'CRITICAL',
+    zipName:    latest.zip,
     computed,
-    recorded:  recorded || 'MISSING',
-    sizeBytes: fs.statSync(latest.zipPath).size,
+    recorded:   recorded || 'MISSING',
+    hashSource,
+    sizeBytes:  fs.statSync(latest.zipPath).size,
     match,
-    reason:    match ? null : `ZIP hash diverge: computed=${computed?.slice(0,16)}… recorded=${recorded?.slice(0,16)}…`,
+    reason:     match ? null : `ZIP hash diverge: computed=${computed?.slice(0,16)}… recorded=${recorded?.slice(0,16)}… [source: ${hashSource}]`,
   };
 }
 

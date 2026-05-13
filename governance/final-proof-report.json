@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T12:08:29.781Z",
+  "generatedAt": "2026-05-13T13:54:23.574Z",
   "proofCoverage": {
     "total": 20,
     "valid": 20,
@@ -4219,12 +4219,18 @@
   "intelligenceStability": {
     "status": "STABLE",
     "unstableDomains": [],
-    "recurringFailures": [],
+    "recurringFailures": [
+      {
+        "domain": "pbx",
+        "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
+        "recurringCount": 7
+      }
+    ],
     "blocksAutonomous": false
   },
   "crossReportConsistency": {
-    "generatedAt": "2026-05-13T12:09:39.307Z",
-    "expectedZipName": "r-agent2-20260513-090924.zip",
+    "generatedAt": "2026-05-13T13:55:28.117Z",
+    "expectedZipName": "r-agent2-20260513-105515.zip",
     "pbxMaturity": "enterprise-real",
     "contradictions": [],
     "blockers": [],
@@ -4234,16 +4240,16 @@
     "maximumAllowedReadiness": "autonomous-ready",
     "autonomousReadyBlocked": false,
     "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-    "expectedZipSha256Ref": "dist/r-agent2-20260513-090924.manifest.json#sha256"
+    "expectedZipSha256Ref": "dist/r-agent2-20260513-105515.manifest.json#sha256"
   },
   "packageValidation": {
-    "generatedAt": "2026-05-13T12:09:39.307Z",
-    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-090924.zip",
-    "zipName": "r-agent2-20260513-090924.zip",
-    "zipSha256": "65d2e623e82964f4d284a23ee9484a555028fb26a18d57a76daf13cc36a5a32c",
+    "generatedAt": "2026-05-13T13:55:28.117Z",
+    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-105515.zip",
+    "zipName": "r-agent2-20260513-105515.zip",
+    "zipSha256": "4dad2405bf3f820429474eb6cff7d11128d6ecd238d7a6b97c8e074c5085154f",
     "selectionMode": "audited",
     "candidateFallbackUsed": false,
-    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-090924.manifest.json",
+    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-105515.manifest.json",
     "manifestAudit": "passed",
     "auditSatisfied": true,
     "selfContainmentCheck": {
@@ -4281,16 +4287,16 @@
     "ok": true,
     "error": null,
     "packageBinding": {
-      "boundTo": "r-agent2-20260513-090700.zip",
-      "sha256": "65d2e623e82964f4d284a23ee9484a555028fb26a18d57a76daf13cc36a5a32c",
+      "boundTo": "r-agent2-20260513-090924.zip",
+      "sha256": "4dad2405bf3f820429474eb6cff7d11128d6ecd238d7a6b97c8e074c5085154f",
       "immutable": true,
       "selfProving": true,
       "offlineAuditable": true
     },
-    "zipSha256Ref": "dist/r-agent2-20260513-090924.manifest.json#sha256"
+    "zipSha256Ref": "dist/r-agent2-20260513-105515.manifest.json#sha256"
   },
   "evidenceManifest": {
-    "generatedAt": "2026-05-13T12:08:29.662Z",
+    "generatedAt": "2026-05-13T13:54:23.477Z",
     "runtimeRoot": null,
     "artifacts": [
       {
@@ -4639,9 +4645,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "53289ebb1fe1a8699fc99bd63d3da40ab6641a4272d3f372316ec949489aa0dd",
-        "checksum": "53289ebb1fe1a8699fc99bd63d3da40ab6641a4272d3f372316ec949489aa0dd",
-        "timestamp": "2026-05-13T12:08:06.662Z",
+        "hash": "8264a6bf6646c04cdf20759d0c4b1ce48622ff9830259a53e2555603b80a3fc2",
+        "checksum": "8264a6bf6646c04cdf20759d0c4b1ce48622ff9830259a53e2555603b80a3fc2",
+        "timestamp": "2026-05-13T13:54:03.336Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4657,9 +4663,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "7e6215d48fd9b210e28a4a4a731843fc9dae86315fa0f1db9a391b43aee29542",
-        "checksum": "7e6215d48fd9b210e28a4a4a731843fc9dae86315fa0f1db9a391b43aee29542",
-        "timestamp": "2026-05-13T12:08:06.909Z",
+        "hash": "603f6e0f2347abf462832aab3bd696c09a89a70474db6cf7832bb08689e2bb29",
+        "checksum": "603f6e0f2347abf462832aab3bd696c09a89a70474db6cf7832bb08689e2bb29",
+        "timestamp": "2026-05-13T13:54:03.499Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4675,9 +4681,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "1f58a2859cf3cce46d4c394c21263c49e71ab5c01e83a7511330da1c8a9171a8",
-        "checksum": "1f58a2859cf3cce46d4c394c21263c49e71ab5c01e83a7511330da1c8a9171a8",
-        "timestamp": "2026-05-13T12:07:14.260Z",
+        "hash": "eb9310698abc66dce9a517e94afb6d548f461e1b8cfe52ef61315758864303bd",
+        "checksum": "eb9310698abc66dce9a517e94afb6d548f461e1b8cfe52ef61315758864303bd",
+        "timestamp": "2026-05-13T12:09:39.492Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
