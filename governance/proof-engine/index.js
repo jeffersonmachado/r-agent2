@@ -346,7 +346,13 @@ function evaluateIntelligenceStability(intelligenceData) {
   const recurring = Array.isArray(intelligenceData.recurringFailures) ? intelligenceData.recurringFailures : [];
 
   const unstable = stability.filter((m) => Number(m.stabilityScore) < THRESHOLDS.intelligenceStabilityMin);
-  const blocksAutonomous = unstable.length > 0 || recurring.length > 0;
+  // Recurring failures só bloqueiam se o domínio está ATUALMENTE instável.
+  // Falhas históricas de antes de um fix não penalizam domínios já estabilizados.
+  const activeRecurring = recurring.filter((f) => {
+    const domainMod = stability.find((m) => m.domain === f.domain);
+    return !domainMod || Number(domainMod.stabilityScore) < THRESHOLDS.intelligenceStabilityMin;
+  });
+  const blocksAutonomous = unstable.length > 0 || activeRecurring.length > 0;
 
   return {
     status: blocksAutonomous ? 'UNSTABLE' : 'STABLE',

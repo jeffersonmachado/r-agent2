@@ -1,42 +1,8 @@
 {
-  "generatedAt": "2026-05-12T23:24:07.270Z",
-  "expectedZipName": "r-agent2-20260512-193233.zip",
+  "generatedAt": "2026-05-13T01:02:01.571Z",
+  "expectedZipName": "r-agent2-20260512-213419.zip",
   "pbxMaturity": "hybrid-real",
   "contradictions": [
-    {
-      "type": "intelligence_instability",
-      "domain": "beauty",
-      "stabilityScore": 0,
-      "passed": 0,
-      "total": 10,
-      "blocker": true,
-      "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "type": "intelligence_instability",
-      "domain": "fitness",
-      "stabilityScore": 0,
-      "passed": 0,
-      "total": 10,
-      "blocker": true,
-      "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "type": "recurring_intelligence_failure",
-      "domain": "beauty",
-      "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "recurringCount": 10,
-      "blocker": true,
-      "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
-    {
-      "type": "recurring_intelligence_failure",
-      "domain": "fitness",
-      "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "recurringCount": 10,
-      "blocker": true,
-      "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
     {
       "type": "pbx_maturity_insufficient",
       "detectedMaturity": "hybrid-real",
@@ -47,40 +13,6 @@
   ],
   "blockers": [
     {
-      "type": "intelligence_instability",
-      "domain": "beauty",
-      "stabilityScore": 0,
-      "passed": 0,
-      "total": 10,
-      "blocker": true,
-      "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "type": "intelligence_instability",
-      "domain": "fitness",
-      "stabilityScore": 0,
-      "passed": 0,
-      "total": 10,
-      "blocker": true,
-      "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "type": "recurring_intelligence_failure",
-      "domain": "beauty",
-      "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "recurringCount": 10,
-      "blocker": true,
-      "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
-    {
-      "type": "recurring_intelligence_failure",
-      "domain": "fitness",
-      "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "recurringCount": 10,
-      "blocker": true,
-      "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
-    {
       "type": "pbx_maturity_insufficient",
       "detectedMaturity": "hybrid-real",
       "required": "prod-like ou enterprise-real",
@@ -89,9 +21,9 @@
     }
   ],
   "warnings": [],
-  "blockerCount": 5,
+  "blockerCount": 1,
   "warningCount": 0,
   "maximumAllowedReadiness": "enterprise-partial",
   "autonomousReadyBlocked": true,
-  "summary": "5 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
+  "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
 }

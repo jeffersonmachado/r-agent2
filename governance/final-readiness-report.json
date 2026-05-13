@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-05-12T23:23:44.243Z",
+  "generatedAt": "2026-05-13T01:01:10.511Z",
   "status": "NO_GO:PRODLIKE_GO",
   "finalDecision": "NO_GO:PRODLIKE_GO",
-  "canonicalMeshExecutionId": "mesh-business-screen-fix-001",
+  "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
   "totalCoverage": 83.5,
   "verticalCoverage": [
     {
@@ -22,28 +22,28 @@
     {
       "vertical": "food",
       "classification": "validated",
-      "scenarioCount": 1,
+      "scenarioCount": 2,
       "journeyCount": 1,
       "blockers": []
     },
     {
       "vertical": "services",
       "classification": "validated",
-      "scenarioCount": 1,
+      "scenarioCount": 2,
       "journeyCount": 1,
       "blockers": []
     },
     {
       "vertical": "clinic",
       "classification": "validated",
-      "scenarioCount": 1,
+      "scenarioCount": 2,
       "journeyCount": 1,
       "blockers": []
     },
     {
       "vertical": "market",
       "classification": "validated",
-      "scenarioCount": 1,
+      "scenarioCount": 2,
       "journeyCount": 1,
       "blockers": []
     }
@@ -66,13 +66,13 @@
     ]
   },
   "qaCoverage": {
-    "executionId": "mesh-business-screen-fix-001",
+    "executionId": "mesh-2026-05-12T23-50-45-984Z",
     "percent": 100,
     "observedFailureFreePercent": 100,
     "registryDeclaredTotal": 58,
-    "canonicalRegistryTotal": 58,
+    "canonicalRegistryTotal": 62,
     "blockingDomains": [],
-    "status": "GO"
+    "status": "NO_GO"
   },
   "integrationsCoverage": [
     {
@@ -198,38 +198,7 @@
   },
   "aiCoverage": {
     "readiness": "production-like",
-    "blockers": [
-      {
-        "id": "gap-cross-report-recurring_intelligence_failure",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: recurring_intelligence_failure",
-        "evidence": {
-          "type": "recurring_intelligence_failure",
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        "suggestedFix": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      },
-      {
-        "id": "gap-cross-report-recurring_intelligence_failure",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: recurring_intelligence_failure",
-        "evidence": {
-          "type": "recurring_intelligence_failure",
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        "suggestedFix": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      }
-    ]
+    "blockers": []
   },
   "productionReadiness": {
     "status": "NO_GO:PRODLIKE_GO",
@@ -376,7 +345,7 @@
     ]
   },
   "proofReport": {
-    "generatedAt": "2026-05-12T23:24:00.644Z",
+    "generatedAt": "2026-05-13T01:01:28.378Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -4594,153 +4563,58 @@
       "missing": []
     },
     "intelligenceStability": {
-      "status": "UNSTABLE",
-      "unstableDomains": [
-        {
-          "domain": "beauty",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10
-        },
-        {
-          "domain": "fitness",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10
-        }
-      ],
+      "status": "STABLE",
+      "unstableDomains": [],
       "recurringFailures": [
         {
           "domain": "beauty",
           "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10
+          "recurringCount": 5
         },
         {
           "domain": "fitness",
           "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10
+          "recurringCount": 5
         }
       ],
-      "blocksAutonomous": true
+      "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-12T23:24:00.529Z",
-      "expectedZipName": "r-agent2-20260512-193233.zip",
+      "generatedAt": "2026-05-13T01:01:28.270Z",
+      "expectedZipName": "r-agent2-20260512-213419.zip",
       "pbxMaturity": "hybrid-real",
       "contradictions": [
-        {
-          "type": "intelligence_instability",
-          "domain": "beauty",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        {
-          "type": "intelligence_instability",
-          "domain": "fitness",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        {
-          "type": "recurring_intelligence_failure",
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        {
-          "type": "recurring_intelligence_failure",
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
         {
           "type": "pbx_maturity_insufficient",
           "detectedMaturity": "hybrid-real",
           "required": "prod-like ou enterprise-real",
           "blocker": true,
           "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-        },
-        {
-          "type": "package_mismatch",
-          "reportedZip": "r-agent2-20260512-185809.zip",
-          "expectedZip": "r-agent2-20260512-193233.zip",
-          "blocker": true,
-          "message": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
         }
       ],
       "blockers": [
         {
-          "type": "intelligence_instability",
-          "domain": "beauty",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        {
-          "type": "intelligence_instability",
-          "domain": "fitness",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        {
-          "type": "recurring_intelligence_failure",
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        {
-          "type": "recurring_intelligence_failure",
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        {
           "type": "pbx_maturity_insufficient",
           "detectedMaturity": "hybrid-real",
           "required": "prod-like ou enterprise-real",
           "blocker": true,
           "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-        },
-        {
-          "type": "package_mismatch",
-          "reportedZip": "r-agent2-20260512-185809.zip",
-          "expectedZip": "r-agent2-20260512-193233.zip",
-          "blocker": true,
-          "message": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
         }
       ],
       "warnings": [],
-      "blockerCount": 6,
+      "blockerCount": 1,
       "warningCount": 0,
-      "maximumAllowedReadiness": "operational",
+      "maximumAllowedReadiness": "enterprise-partial",
       "autonomousReadyBlocked": true,
-      "summary": "6 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational."
+      "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: enterprise-partial."
     },
     "packageValidation": {
-      "generatedAt": "2026-05-12T23:24:00.643Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-193233.zip",
-      "zipName": "r-agent2-20260512-193233.zip",
+      "generatedAt": "2026-05-13T01:01:28.377Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-213419.zip",
+      "zipName": "r-agent2-20260512-213419.zip",
       "selectionMode": "audited",
       "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-193233.manifest.json",
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-213419.manifest.json",
       "manifestAudit": "passed",
       "auditSatisfied": true,
       "requiredEntries": [
@@ -4767,13 +4641,13 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
-      "entryCount": 4602,
+      "entryCount": 4605,
       "missingEntries": [],
       "ok": true,
       "error": null
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-12T23:24:00.529Z",
+      "generatedAt": "2026-05-13T01:01:28.270Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -5122,9 +4996,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "89b21442b7dede0c4f94c44bc76d57267812fc88d07af62a37aadecdcab066d8",
-          "checksum": "89b21442b7dede0c4f94c44bc76d57267812fc88d07af62a37aadecdcab066d8",
-          "timestamp": "2026-05-12T23:23:44.247Z",
+          "hash": "ece6a9ba2e7b8471d6de6a6cb329441e1f7d051fdcf7d4dd2e7687f9588e066f",
+          "checksum": "ece6a9ba2e7b8471d6de6a6cb329441e1f7d051fdcf7d4dd2e7687f9588e066f",
+          "timestamp": "2026-05-13T01:01:10.514Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5140,9 +5014,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "4f019b96e6614ef1ea58245c5be073fbc4e09932bbe42eb6528fa5f0423f1f5a",
-          "checksum": "4f019b96e6614ef1ea58245c5be073fbc4e09932bbe42eb6528fa5f0423f1f5a",
-          "timestamp": "2026-05-12T23:23:44.514Z",
+          "hash": "e25c9a09ec8170280c6aea5a292b803db620ddcda6c105c323870f18c2f306e0",
+          "checksum": "e25c9a09ec8170280c6aea5a292b803db620ddcda6c105c323870f18c2f306e0",
+          "timestamp": "2026-05-13T01:01:10.641Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5158,9 +5032,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "690d8c0915e1794968006739b2ef929fc08e6f974b2f045dcc0176f25797a0cd",
-          "checksum": "690d8c0915e1794968006739b2ef929fc08e6f974b2f045dcc0176f25797a0cd",
-          "timestamp": "2026-05-12T23:21:14.354Z",
+          "hash": "f758f7037b8ff4a4d8d3e572e6822636b3e319c27121a6882aff1c5765a54d50",
+          "checksum": "f758f7037b8ff4a4d8d3e572e6822636b3e319c27121a6882aff1c5765a54d50",
+          "timestamp": "2026-05-13T00:56:23.751Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5171,8 +5045,8 @@
       ]
     },
     "proofQualityScore": {
-      "score": 75,
-      "raw": 90,
+      "score": 83.3,
+      "raw": 100,
       "max": 120,
       "grade": "B",
       "breakdown": [
@@ -5228,7 +5102,7 @@
         },
         {
           "label": "intelligence_stable",
-          "earned": 0,
+          "earned": 10,
           "max": 10
         },
         {
@@ -5283,7 +5157,7 @@
         "governanceCoverageOk": true,
         "packageValidationOk": true,
         "evidenceManifestValid": true,
-        "intelligenceStable": false,
+        "intelligenceStable": true,
         "crossReportConsistent": false,
         "verticalCoverageValid": true
       },
@@ -5292,7 +5166,7 @@
         "omnichannelValidated": true,
         "handoffFullyNormalized": true,
         "noSyntheticCriticalPaths": true,
-        "intelligenceStable": false,
+        "intelligenceStable": true,
         "crossReportConsistent": false,
         "verticalCoverageValid": true,
         "allPassed": false
@@ -5300,118 +5174,6 @@
     },
     "finalDecision": "NO_GO:PRODLIKE_GO",
     "blockingGaps": [
-      {
-        "id": "gap-intelligence-unstable-beauty",
-        "severity": "critical",
-        "area": "qa-mesh",
-        "title": "Dominio 'beauty' instavel no QA Mesh (stability=0, 0/10)",
-        "evidence": {
-          "domain": "beauty",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10
-        },
-        "suggestedFix": "Corrigir falhas recorrentes em beauty antes de qualquer claim enterprise ou autonomous."
-      },
-      {
-        "id": "gap-intelligence-unstable-fitness",
-        "severity": "critical",
-        "area": "qa-mesh",
-        "title": "Dominio 'fitness' instavel no QA Mesh (stability=0, 0/10)",
-        "evidence": {
-          "domain": "fitness",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10
-        },
-        "suggestedFix": "Corrigir falhas recorrentes em fitness antes de qualquer claim enterprise ou autonomous."
-      },
-      {
-        "id": "gap-intelligence-recurring-beauty",
-        "severity": "critical",
-        "area": "qa-mesh",
-        "title": "Falha recorrente em 'beauty': beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "evidence": {
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10
-        },
-        "suggestedFix": "Inspecionar o artefato e corrigir a causa raiz antes de reexecutar o wave."
-      },
-      {
-        "id": "gap-intelligence-recurring-fitness",
-        "severity": "critical",
-        "area": "qa-mesh",
-        "title": "Falha recorrente em 'fitness': fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "evidence": {
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10
-        },
-        "suggestedFix": "Inspecionar o artefato e corrigir a causa raiz antes de reexecutar o wave."
-      },
-      {
-        "id": "gap-cross-report-intelligence_instability",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: intelligence_instability",
-        "evidence": {
-          "type": "intelligence_instability",
-          "domain": "beauty",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        "suggestedFix": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-      },
-      {
-        "id": "gap-cross-report-intelligence_instability",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: intelligence_instability",
-        "evidence": {
-          "type": "intelligence_instability",
-          "domain": "fitness",
-          "stabilityScore": 0,
-          "passed": 0,
-          "total": 10,
-          "blocker": true,
-          "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-        },
-        "suggestedFix": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-      },
-      {
-        "id": "gap-cross-report-recurring_intelligence_failure",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: recurring_intelligence_failure",
-        "evidence": {
-          "type": "recurring_intelligence_failure",
-          "domain": "beauty",
-          "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        "suggestedFix": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      },
-      {
-        "id": "gap-cross-report-recurring_intelligence_failure",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: recurring_intelligence_failure",
-        "evidence": {
-          "type": "recurring_intelligence_failure",
-          "domain": "fitness",
-          "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-          "recurringCount": 10,
-          "blocker": true,
-          "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-        },
-        "suggestedFix": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      },
       {
         "id": "gap-cross-report-pbx_maturity_insufficient",
         "severity": "critical",
@@ -5425,20 +5187,6 @@
           "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
         },
         "suggestedFix": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-      },
-      {
-        "id": "gap-cross-report-package_mismatch",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: package_mismatch",
-        "evidence": {
-          "type": "package_mismatch",
-          "reportedZip": "r-agent2-20260512-185809.zip",
-          "expectedZip": "r-agent2-20260512-193233.zip",
-          "blocker": true,
-          "message": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
-        },
-        "suggestedFix": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
       }
     ]
   },
@@ -5487,118 +5235,6 @@
   },
   "blockingGaps": [
     {
-      "id": "gap-intelligence-unstable-beauty",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Dominio 'beauty' instavel no QA Mesh (stability=0, 0/10)",
-      "evidence": {
-        "domain": "beauty",
-        "stabilityScore": 0,
-        "passed": 0,
-        "total": 10
-      },
-      "suggestedFix": "Corrigir falhas recorrentes em beauty antes de qualquer claim enterprise ou autonomous."
-    },
-    {
-      "id": "gap-intelligence-unstable-fitness",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Dominio 'fitness' instavel no QA Mesh (stability=0, 0/10)",
-      "evidence": {
-        "domain": "fitness",
-        "stabilityScore": 0,
-        "passed": 0,
-        "total": 10
-      },
-      "suggestedFix": "Corrigir falhas recorrentes em fitness antes de qualquer claim enterprise ou autonomous."
-    },
-    {
-      "id": "gap-intelligence-recurring-beauty",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Falha recorrente em 'beauty': beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "evidence": {
-        "domain": "beauty",
-        "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "recurringCount": 10
-      },
-      "suggestedFix": "Inspecionar o artefato e corrigir a causa raiz antes de reexecutar o wave."
-    },
-    {
-      "id": "gap-intelligence-recurring-fitness",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Falha recorrente em 'fitness': fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-      "evidence": {
-        "domain": "fitness",
-        "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "recurringCount": 10
-      },
-      "suggestedFix": "Inspecionar o artefato e corrigir a causa raiz antes de reexecutar o wave."
-    },
-    {
-      "id": "gap-cross-report-intelligence_instability",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: intelligence_instability",
-      "evidence": {
-        "type": "intelligence_instability",
-        "domain": "beauty",
-        "stabilityScore": 0,
-        "passed": 0,
-        "total": 10,
-        "blocker": true,
-        "message": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-      },
-      "suggestedFix": "Domínio 'beauty' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "id": "gap-cross-report-intelligence_instability",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: intelligence_instability",
-      "evidence": {
-        "type": "intelligence_instability",
-        "domain": "fitness",
-        "stabilityScore": 0,
-        "passed": 0,
-        "total": 10,
-        "blocker": true,
-        "message": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-      },
-      "suggestedFix": "Domínio 'fitness' com estabilidade 0 (0/10) — abaixo do mínimo de 0.5. autonomous-ready impossível."
-    },
-    {
-      "id": "gap-cross-report-recurring_intelligence_failure",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: recurring_intelligence_failure",
-      "evidence": {
-        "type": "recurring_intelligence_failure",
-        "domain": "beauty",
-        "fingerprint": "beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "recurringCount": 10,
-        "blocker": true,
-        "message": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      },
-      "suggestedFix": "Falha recorrente em 'beauty' (count=10): beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
-    {
-      "id": "gap-cross-report-recurring_intelligence_failure",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: recurring_intelligence_failure",
-      "evidence": {
-        "type": "recurring_intelligence_failure",
-        "domain": "fitness",
-        "fingerprint": "fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88",
-        "recurringCount": 10,
-        "blocker": true,
-        "message": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-      },
-      "suggestedFix": "Falha recorrente em 'fitness' (count=10): fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88"
-    },
-    {
       "id": "gap-cross-report-pbx_maturity_insufficient",
       "severity": "critical",
       "area": "cross-report",
@@ -5611,33 +5247,10 @@
         "message": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
       },
       "suggestedFix": "PBX classificado como 'hybrid-real'. Para enterprise-ready PBX deve ser prod-like ou enterprise-real. Presença de synthetic_insert ou selftestStatus=FAIL impede upgrade."
-    },
-    {
-      "id": "gap-cross-report-package_mismatch",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: package_mismatch",
-      "evidence": {
-        "type": "package_mismatch",
-        "reportedZip": "r-agent2-20260512-185809.zip",
-        "expectedZip": "r-agent2-20260512-193233.zip",
-        "blocker": true,
-        "message": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
-      },
-      "suggestedFix": "Relatório de validação aponta para 'r-agent2-20260512-185809.zip' mas o pacote atual é 'r-agent2-20260512-193233.zip'. Governance vinculada a pacote errado — relatório inválido."
     }
   ],
   "noGoReasons": [
-    "Dominio 'beauty' instavel no QA Mesh (stability=0, 0/10) [gap-intelligence-unstable-beauty]",
-    "Dominio 'fitness' instavel no QA Mesh (stability=0, 0/10) [gap-intelligence-unstable-fitness]",
-    "Falha recorrente em 'beauty': beauty::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88 [gap-intelligence-recurring-beauty]",
-    "Falha recorrente em 'fitness': fitness::pipeline_required::/opt/results/ria/r-agent2/core/rpa/cli.js:88 [gap-intelligence-recurring-fitness]",
-    "Contradição cross-report: intelligence_instability [gap-cross-report-intelligence_instability]",
-    "Contradição cross-report: intelligence_instability [gap-cross-report-intelligence_instability]",
-    "Contradição cross-report: recurring_intelligence_failure [gap-cross-report-recurring_intelligence_failure]",
-    "Contradição cross-report: recurring_intelligence_failure [gap-cross-report-recurring_intelligence_failure]",
-    "Contradição cross-report: pbx_maturity_insufficient [gap-cross-report-pbx_maturity_insufficient]",
-    "Contradição cross-report: package_mismatch [gap-cross-report-package_mismatch]"
+    "Contradição cross-report: pbx_maturity_insufficient [gap-cross-report-pbx_maturity_insufficient]"
   ],
   "goReasons": [
     "Foundation prod-like QA Waves governance exists and is machine-readable.",

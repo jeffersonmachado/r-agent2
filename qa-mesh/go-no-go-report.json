@@ -1,34 +1,36 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-business-screen-fix-001",
+  "executionId": "mesh-2026-05-12T23-50-45-984Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "BASELINE_PASS_RATE_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-business-screen-fix-001",
-    "startedAt": "2026-05-11T21:54:40.637Z",
+    "executionId": "mesh-2026-05-12T23-50-45-984Z",
+    "startedAt": "2026-05-12T23:50:45.984Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-05-11T22:17:12.435Z",
-    "registryTotal": 58,
-    "goNoGo": "GO",
+    "promotedAt": "2026-05-13T00:14:45.156Z",
+    "registryTotal": 62,
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-business-screen-fix-001",
-    "timestamp": "2026-05-11T21:54:40.637Z",
+    "executionId": "mesh-2026-05-12T23-50-45-984Z",
+    "timestamp": "2026-05-12T23:50:45.984Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 58,
-    "attempted": 58,
-    "executed": 58,
-    "total": 58,
+    "registryTotal": 62,
+    "attempted": 62,
+    "executed": 62,
+    "total": 62,
     "passed": 58,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 4,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -58,12 +60,12 @@
       "clinica": {
         "passed": 1,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 1
+        "total": 2
       },
       "fitness": {
         "passed": 14,
@@ -78,32 +80,32 @@
       "food": {
         "passed": 1,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 1
+        "total": 2
       },
       "mercado": {
         "passed": 1,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 1
+        "total": 2
       },
       "servicos": {
         "passed": 1,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 1
+        "total": 2
       },
       "omnichannel": {
         "passed": 14,
@@ -156,41 +158,51 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "BASELINE_PASS_RATE_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "clinica": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.5
+      },
+      "food": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.5
+      },
+      "mercado": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.5
+      },
+      "servicos": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.5
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
         "byType": {},
         "successRate": 1
       },
-      "clinica": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "fitness": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "food": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "mercado": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "servicos": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -227,20 +239,39 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "functional_failure": 4
+    },
+    "topErrors": [
+      {
+        "message": "[2026-05-12T23:53:09.905Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
+        "count": 1
+      },
+      {
+        "message": "[2026-05-12T23:55:09.495Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
+        "count": 1
+      },
+      {
+        "message": "[2026-05-12T23:55:33.299Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
+        "count": 1
+      },
+      {
+        "message": "[2026-05-12T23:55:57.182Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-business-screen-fix-001",
-      "startedAt": "2026-05-11T21:54:40.637Z",
+      "executionId": "mesh-2026-05-12T23-50-45-984Z",
+      "startedAt": "2026-05-12T23:50:45.984Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-05-11T22:17:12.435Z",
-      "registryTotal": 58,
-      "goNoGo": "GO",
+      "promotedAt": "2026-05-13T00:14:45.156Z",
+      "registryTotal": 62,
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-05-11T22:17:12.435Z"
+  "generatedAt": "2026-05-13T00:14:45.157Z"
 }

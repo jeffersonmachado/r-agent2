@@ -118,6 +118,13 @@ function checkIntelligenceStability(intelligenceData) {
     ? intelligenceData.recurringFailures
     : [];
   for (const fail of recurring) {
+    // Recurring failures só bloqueiam se o domínio AINDA está instável.
+    // Histórico de falhas de antes de um fix não deve punir um domínio que já se estabilizou.
+    const domainStability = stability.find((m) => m.domain === fail.domain);
+    const currentlyUnstable = !domainStability
+      || Number(domainStability.stabilityScore) < THRESHOLDS.intelligenceStabilityMin;
+    if (!currentlyUnstable) continue;
+
     contradictions.push({
       type: 'recurring_intelligence_failure',
       domain: fail.domain,
