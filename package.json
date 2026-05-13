@@ -167,6 +167,7 @@
     "zip:api": "./scripts/generate-zip.sh -i 'api/**' -i 'package.json' -i 'package-lock.json' -n api-only.zip",
     "zip:frontend": "./scripts/generate-zip.sh -i 'frontend/**' -i 'package.json' -i 'package-lock.json' -n frontend-only.zip",
     "zip:release": "bash ./scripts/release-package.sh",
+    "zip:release:skip-frontend": "bash ./scripts/release-package.sh --skip-frontend",
     "zip:release:clean": "npm run runtime:clean && npm run zip:release",
     "release:test-package": "bash ./scripts/test-release-package.sh",
     "release:frontend": "npm run frontend:install && npm run frontend:build && npm run zip:release",

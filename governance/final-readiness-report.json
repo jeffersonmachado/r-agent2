@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T02:18:00.240Z",
+  "generatedAt": "2026-05-13T03:05:47.774Z",
   "status": "AUTONOMOUS_READY_GO",
   "finalDecision": "AUTONOMOUS_READY_GO",
   "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
@@ -341,7 +341,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-05-13T02:18:17.060Z",
+    "generatedAt": "2026-05-13T03:06:07.216Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -4561,13 +4561,18 @@
     "intelligenceStability": {
       "status": "STABLE",
       "unstableDomains": [],
-      "recurringFailures": [],
+      "recurringFailures": [
+        {
+          "domain": "pbx",
+          "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
+          "recurringCount": 3
+        }
+      ],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-13T02:50:00.000Z",
-      "expectedZipName": "r-agent2-20260512-232420.zip",
-      "expectedZipSha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
+      "generatedAt": "2026-05-13T03:06:24.198Z",
+      "expectedZipName": "r-agent2-20260513-000607.zip",
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
       "blockers": [],
@@ -4576,24 +4581,28 @@
       "warningCount": 0,
       "maximumAllowedReadiness": "autonomous-ready",
       "autonomousReadyBlocked": false,
-      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas. Pacote r-agent2-20260512-232420.zip é self-proving."
+      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
+      "expectedZipSha256Ref": "dist/r-agent2-20260513-000607.manifest.json#sha256"
     },
     "packageValidation": {
-      "generatedAt": "2026-05-13T02:50:00.000Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.zip",
-      "zipName": "r-agent2-20260512-232420.zip",
-      "zipSha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
+      "generatedAt": "2026-05-13T03:06:24.198Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-000607.zip",
+      "zipName": "r-agent2-20260513-000607.zip",
+      "zipSha256": "09f3f59b7e7665fb4c1fdb91f84e44bcfe414da29018042bf1b8f0bca8067392",
       "selectionMode": "audited",
       "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.manifest.json",
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-000607.manifest.json",
       "manifestAudit": "passed",
       "auditSatisfied": true,
+      "selfContainmentCheck": {
+        "passed": true,
+        "missing": []
+      },
       "requiredEntries": [
         "governance/final-proof-report.json",
         "governance/evidence-manifest.json",
         "governance/blocker-engine.js",
         "governance/final-consistency-report.json",
-        "governance/cross-report-validation.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -4615,13 +4624,21 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
-      "entryCount": 4608,
+      "entryCount": 4609,
       "missingEntries": [],
       "ok": true,
-      "error": null
+      "error": null,
+      "packageBinding": {
+        "boundTo": "r-agent2-20260512-232420.zip",
+        "sha256": "09f3f59b7e7665fb4c1fdb91f84e44bcfe414da29018042bf1b8f0bca8067392",
+        "immutable": true,
+        "selfProving": true,
+        "offlineAuditable": true
+      },
+      "zipSha256Ref": "dist/r-agent2-20260513-000607.manifest.json#sha256"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-13T02:18:16.934Z",
+      "generatedAt": "2026-05-13T03:06:06.710Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -4970,9 +4987,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f8a3c13425f7c3a7cf7cc598a6c8fb55721eb987e1eb0943208ca7ae4dfef3f0",
-          "checksum": "f8a3c13425f7c3a7cf7cc598a6c8fb55721eb987e1eb0943208ca7ae4dfef3f0",
-          "timestamp": "2026-05-13T02:18:00.245Z",
+          "hash": "4e747b6a9f6f914a69e56c4af7eb9147c4c6709f734b6e953e876e556c4606dd",
+          "checksum": "4e747b6a9f6f914a69e56c4af7eb9147c4c6709f734b6e953e876e556c4606dd",
+          "timestamp": "2026-05-13T03:05:47.776Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4988,9 +5005,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "434727b0a345a28d61fe8284198a57068587dc9714445f1e77c278f07c97301c",
-          "checksum": "434727b0a345a28d61fe8284198a57068587dc9714445f1e77c278f07c97301c",
-          "timestamp": "2026-05-13T02:18:00.624Z",
+          "hash": "380ca9c0fc9562f42c508c4cb3b5adec6701cf4eab62d40990f4dc91be15dea5",
+          "checksum": "380ca9c0fc9562f42c508c4cb3b5adec6701cf4eab62d40990f4dc91be15dea5",
+          "timestamp": "2026-05-13T03:05:48.135Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5006,9 +5023,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ab5907280d2ba2bc068009e25d2937065473d2c4637fed9cdc26a3efefb6f04a",
-          "checksum": "ab5907280d2ba2bc068009e25d2937065473d2c4637fed9cdc26a3efefb6f04a",
-          "timestamp": "2026-05-13T02:15:18.952Z",
+          "hash": "7211090fbc1b821317099f881ada8b9cca30171fe5eb06ec50b07c58d578a76b",
+          "checksum": "7211090fbc1b821317099f881ada8b9cca30171fe5eb06ec50b07c58d578a76b",
+          "timestamp": "2026-05-13T03:03:42.090Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],

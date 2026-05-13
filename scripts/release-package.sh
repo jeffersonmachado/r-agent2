@@ -33,6 +33,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 
 SKIP_AUDIT=false
+SKIP_FRONTEND=false
 KEEP_DIST=3
 CUSTOM_NAME=""
 AUDIT_ONLY_ZIP=""
@@ -45,10 +46,11 @@ fail()  { echo -e "${RED}  ✗ BLOQUEADO: $*${NC}" >&2; exit 1; }
 # ── parse args ────────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --skip-audit)  SKIP_AUDIT=true; shift ;;
-    --keep-dist)   KEEP_DIST="${2:?--keep-dist requer valor}"; shift 2 ;;
-    --name)        CUSTOM_NAME="${2:?--name requer valor}"; shift 2 ;;
-    --audit-only)  AUDIT_ONLY_ZIP="${2:?--audit-only requer caminho do zip}"; shift 2 ;;
+    --skip-audit)    SKIP_AUDIT=true; shift ;;
+    --skip-frontend) SKIP_FRONTEND=true; shift ;;
+    --keep-dist)     KEEP_DIST="${2:?--keep-dist requer valor}"; shift 2 ;;
+    --name)          CUSTOM_NAME="${2:?--name requer valor}"; shift 2 ;;
+    --audit-only)    AUDIT_ONLY_ZIP="${2:?--audit-only requer caminho do zip}"; shift 2 ;;
     -h|--help)
       sed -n '/^# Uso:/,/^# Critérios/p' "$0" | sed 's/^#//'
       exit 0 ;;
@@ -184,9 +186,13 @@ else
     warn "platform-readiness retornou NO_GO; mantendo artifacts para validar o candidate ZIP"
   fi
 
-  step "Executando pipeline completo do frontend (build + preview + smoke)..."
-  bash "$PROJECT_ROOT/scripts/frontend-release-pipeline.sh"
-  ok "Pipeline do frontend aprovado"
+  if [[ "$SKIP_FRONTEND" == true ]]; then
+    warn "Pipeline do frontend ignorado (--skip-frontend). Usando build existente em frontend/dist/."
+  else
+    step "Executando pipeline completo do frontend (build + preview + smoke)..."
+    bash "$PROJECT_ROOT/scripts/frontend-release-pipeline.sh"
+    ok "Pipeline do frontend aprovado"
+  fi
 
   ZIP_ARGS=()
   if [[ -n "$CUSTOM_NAME" ]]; then

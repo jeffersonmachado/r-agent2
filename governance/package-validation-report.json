@@ -1,22 +1,20 @@
 {
-  "generatedAt": "2026-05-13T02:50:00.000Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.zip",
-  "zipName": "r-agent2-20260512-232420.zip",
-  "zipSha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
-  "zipTimestamp": "2026-05-12T23:24:20Z",
+  "generatedAt": "2026-05-13T03:06:24.198Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-000607.zip",
+  "zipName": "r-agent2-20260513-000607.zip",
+  "zipSha256": "aa9fe1cbd0815be32920a4ebb175c7d840364b795e9ae1639a0b948a734c9245",
   "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-232420.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-000607.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
     "governance/final-proof-report.json",
     "governance/evidence-manifest.json",
-    "governance/final-readiness-report.json",
-    "governance/cross-report-validation.json",
-    "governance/materialized-proof-artifacts-report.json",
-    "governance/proof-signature.json",
-    "governance/cleanup-proof.json",
     "governance/blocker-engine.js",
     "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
@@ -35,28 +33,20 @@
     "qa/enterprise/omnichannel-unified-replay.json",
     "qa/enterprise/omnichannel-crm-mutations.json",
     "qa/enterprise/digital-twin-snapshots.json",
-    "qa/qa-waves-enterprise-governance.json"
+    "qa/qa-waves-enterprise-governance.json",
+    "governance/proof-signature.json",
+    "governance/cleanup-proof.json",
+    "governance/final-readiness-report.json"
   ],
-  "selfContainmentCheck": {
-    "distPresent": true,
-    "manifestPresent": true,
-    "proofReportsPresent": true,
-    "evidenceManifestPresent": true,
-    "replayManifestPresent": true,
-    "consistencyReportPresent": true,
-    "blockerEnginePresent": true,
-    "passed": true
-  },
-  "entryCount": 4605,
+  "entryCount": 4609,
   "missingEntries": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260512-232420.zip",
-    "sha256Ref": "dist/r-agent2-20260512-232420.manifest.json#sha256",
+    "boundTo": "r-agent2-20260513-000607.zip",
+    "sha256": "aa9fe1cbd0815be32920a4ebb175c7d840364b795e9ae1639a0b948a734c9245",
     "immutable": true,
     "selfProving": true,
-    "selfContained": true,
     "offlineAuditable": true
   }
 }
