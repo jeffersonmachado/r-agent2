@@ -1,3 +1,12 @@
+function getAgingColor(ticket) {
+  const ts = ticket?.createdAt || ticket?.updatedAt;
+  if (!ts || ticket?.status !== 'waiting') return null;
+  const ageMin = (Date.now() - new Date(ts).getTime()) / 60000;
+  if (ageMin > 60) return '#ef4444';
+  if (ageMin > 30) return '#f59e0b';
+  return '#22c55e';
+}
+
 export function SupportTicketList({
   loading,
   ticketsView,
@@ -58,7 +67,7 @@ export function SupportTicketList({
       {loading ? (
         <p>Carregando...</p>
       ) : ticketsView.length === 0 ? (
-        <p className="support-tickets-empty">Nenhum chamado disponivel</p>
+        <p className="support-tickets-empty">Nenhum chamado disponível</p>
       ) : (
         <div className="support-tickets-list" data-testid="ticket-list" role="list">
           {ticketsView.map((ticket) => (
@@ -82,14 +91,24 @@ export function SupportTicketList({
             >
               <div className="support-ticket-contact-row">
                 <span className="support-ticket-contact-name">{highlightText(getContactName(ticket), uiSearchDebounced)}</span>
-                <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
-                  {getPhoneNode(ticket)}
-                </span>
+                {!/^Contato[\s•]/i.test(getContactName(ticket)) ? (
+                  <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
+                    {getPhoneNode(ticket)}
+                  </span>
+                ) : null}
               </div>
               <div className="support-ticket-id-row">
-                <span className="support-ticket-id" title={ticket.id ? `ID completo: ${ticket.id}` : undefined}>
-                  #{getTicketDisplayId ? getTicketDisplayId(ticket) : ticket.id}
-                </span>
+                {(() => {
+                  const agingColor = getAgingColor(ticket);
+                  return agingColor ? (
+                    <span
+                      className="support-ticket-aging"
+                      style={{ color: agingColor }}
+                      title="Tempo aguardando"
+                      aria-label="Indicador de tempo de espera"
+                    >●</span>
+                  ) : null;
+                })()}
                 {shouldShowTicketModeBadge?.(ticket.mode) ? (
                   <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
                 ) : null}
@@ -111,16 +130,6 @@ export function SupportTicketList({
               <div className="support-ticket-meta-row">
                 {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
               </div>
-              {ticket.unreadCount > 0 ? (
-                <div
-                  className="support-ticket-unread-badge sr-only"
-                  role="status"
-                  aria-label={`${ticket.unreadCount} mensagens não lidas`}
-                  style={{ position: 'absolute', top: 10, right: 10, background: 'rgb(231, 76, 60)', color: 'white', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold' }}
-                >
-                  {formatBadgeCount(ticket.unreadCount)}
-                </div>
-              ) : null}
             </div>
           ))}
           <div aria-hidden="true" style={{ height: 1 }} />

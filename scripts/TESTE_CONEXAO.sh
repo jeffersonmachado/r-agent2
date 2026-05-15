@@ -1,7 +1,8 @@
 #!/bin/bash
 # Script rápido para testar conexão SSH
 
-export SSHPASS='resu100gabao'
+: "${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
+export SSHPASS="$SSH_PASSWORD"
 REMOTE_HOST="${1:-10.10.2.30}"
 REMOTE_USER="${2:-root}"
 

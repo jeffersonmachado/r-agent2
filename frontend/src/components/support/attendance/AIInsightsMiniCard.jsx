@@ -5,9 +5,9 @@ export function AIInsightsMiniCard({ ai, execution, onReplay, onTestFlow }) {
     <section className="attendance-mini-card">
       <h3>IA operacional</h3>
       <div className="attendance-mini-content">
-        <div><span>Intencao:</span> <strong>{ai?.intent || '-'}</strong></div>
-        <div><span>Confianca:</span> <strong>{ai?.confidence || '-'}</strong></div>
-        <div><span>Proxima melhor acao:</span> <strong>{ai?.nextBestAction || '-'}</strong></div>
+        <div><span>Intenção:</span> <strong>{ai?.intent || '-'}</strong></div>
+        <div><span>Confiança:</span> <strong>{ai?.confidence || '-'}</strong></div>
+        <div><span>Próxima melhor ação:</span> <strong>{ai?.nextBestAction || '-'}</strong></div>
         <div><span>Modo de execucao:</span> <strong>{execution?.mode || '-'}</strong></div>
       </div>
       <div className="attendance-mini-actions">

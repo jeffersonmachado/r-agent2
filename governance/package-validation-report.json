@@ -1,22 +1,9 @@
 {
-  "generatedAt": "2026-05-13T14:46:31.647Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-114614.zip",
-  "zipName": "r-agent2-20260513-114614.zip",
-  "zipSha256": "3129c196a35428742cd299885e1fdda919a7340a686472a9d5c6fc524e11c489",
-  "selectionMode": "explicit",
-  "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-114614.manifest.json",
-  "manifestAudit": "passed",
-  "auditSatisfied": true,
-  "selfContainmentCheck": {
-    "passed": true,
-    "missing": []
-  },
+  "generatedAt": "2026-05-15T15:09:12.370Z",
+  "ok": false,
+  "error": "self_containment_failed:missing=[cross-report-validation.json]",
+  "missingEntries": [],
   "requiredEntries": [
-    "governance/final-proof-report.json",
-    "governance/evidence-manifest.json",
-    "governance/blocker-engine.js",
-    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -37,16 +24,5 @@
     "governance/proof-signature.json",
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
-  ],
-  "entryCount": 4644,
-  "missingEntries": [],
-  "ok": true,
-  "error": null,
-  "packageBinding": {
-    "boundTo": "r-agent2-20260513-114614.zip",
-    "sha256": "3129c196a35428742cd299885e1fdda919a7340a686472a9d5c6fc524e11c489",
-    "immutable": true,
-    "selfProving": true,
-    "offlineAuditable": true
-  }
+  ]
 }

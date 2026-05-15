@@ -1,61 +1,54 @@
 {
-  "generatedAt": "2026-05-13T11:44:14.525Z",
-  "artifact": "r-agent2-20260513-084308.zip",
-  "pass": true,
-  "decision": "GO",
+  "generatedAt": "2026-05-14T20:11:00.738Z",
+  "artifact": "r-agent2-20260515-120735.zip",
+  "pass": false,
+  "decision": "NO_GO",
   "totalChecks": 9,
-  "failedChecks": 0,
-  "criticalChecks": 0,
+  "failedChecks": 7,
+  "criticalChecks": 4,
   "checks": [
     {
       "check": "package_integrity",
-      "pass": true,
+      "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260513-084308.zip",
-        "computedHash": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
-        "recordedHash": "77f533451cacf34104a59e2e31e060f0a2af84835fb0c5a37f1626b0d6e2f773",
-        "match": true
+        "zipName": "r-agent2-20260515-120735.zip",
+        "computedHash": "4740879b14d258c368e17244451d08926da2395bf9c9fa6e82a35c819cd8fe72",
+        "recordedHash": "58013d8c57c18d6777703be2369b3f86b7bb9431d0bd86d618c1b0c529466dfa",
+        "match": false
       }
     },
     {
       "check": "manifest_sig",
-      "pass": true,
+      "pass": false,
       "severity": "HIGH",
       "details": {
-        "valid": true,
-        "hashMatch": true,
-        "subject": "r-agent2-20260513-084308.manifest.json"
+        "valid": false,
+        "hashMatch": false
       }
     },
     {
       "check": "release_sig",
-      "pass": true,
+      "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "valid": true,
-        "subject": "r-agent2-20260513-084308.zip"
+        "valid": false
       }
     },
     {
       "check": "governance_sig",
-      "pass": true,
+      "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "valid": true,
-        "subject": "governance-chain"
+        "valid": false
       }
     },
     {
       "check": "immutability_chain",
-      "pass": true,
+      "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "chainLength": 10,
-        "chainRootValid": true,
-        "tampered": false,
-        "failures": [],
-        "storedChainRoot": "2859b4fdd5211e0205a20b53…"
+        "storedChainRoot": "7bb0c2344df033952a974cc7…"
       }
     },
     {
@@ -74,29 +67,40 @@
       "severity": "CRITICAL",
       "details": {
         "overallConsistencyScore": 100,
-        "allChecksPass": true,
-        "finalDecision": "AUTONOMOUS_READY_GO"
+        "allChecksPass": true
       }
     },
     {
       "check": "stale_artifacts",
-      "pass": true,
+      "pass": false,
       "severity": "HIGH",
       "details": {
-        "staleCount": 0,
-        "stale": []
+        "staleCount": 2,
+        "stale": [
+          {
+            "file": "governance/package-validation-report.json",
+            "field": "zipName",
+            "found": "r-agent2-20260515-120735.payload.zip",
+            "expected": "r-agent2-20260515-120735.zip"
+          },
+          {
+            "file": "governance/final-consistency-report.json",
+            "field": "currentZipName",
+            "found": "r-agent2-20260515-120735.payload.zip",
+            "expected": "r-agent2-20260515-120735.zip"
+          }
+        ]
       }
     },
     {
       "check": "attestation_integrity",
-      "pass": true,
+      "pass": false,
       "severity": "HIGH",
       "details": {
-        "valid": true,
-        "finalDecision": "AUTONOMOUS_READY_GO",
-        "governanceLevel": "LEVEL_4_IMMUTABLE"
+        "reason": "attestation_sig_missing"
       }
     }
   ],
-  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
+  "summary": "7 check(s) falharam (4 críticos). Adulteração ou configuração incompleta detectada.",
+  "reboundAt": "2026-05-15T15:09:07.207Z"
 }

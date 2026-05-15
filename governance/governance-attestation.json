@@ -1,0 +1,9 @@
+{
+  "architecture": "payload-centric",
+  "governedArtifact": "r-agent2-20260514-161016.payload.zip",
+  "governedHash": "7bb0c2344df033952a974cc7871ae92e90e3e5a9308380540aefc951c9fe64ab",
+  "finalDecision": "PENDING_VERIFICATION",
+  "autonomousReady": true,
+  "regeneratedAt": "2026-05-14T19:13:36.641Z",
+  "source": "clean-governance.js"
+}

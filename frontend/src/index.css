@@ -4090,13 +4090,13 @@ div:has(svg[data-testid="connection"]) {
   overflow: hidden;
   background: var(--color-bg-secondary);
   display: grid;
-  grid-template-columns: 190px minmax(320px, 340px) minmax(0, 1fr) 240px;
+  grid-template-columns: 190px minmax(320px, 340px) minmax(0, 1fr) 280px;
   min-height: 0;
   flex: 1;
 }
 
 .attendance-runtime-board--conversation-collapsed {
-  grid-template-columns: 190px minmax(0, 1fr) 240px;
+  grid-template-columns: 190px minmax(0, 1fr) 280px;
 }
 
 .attendance-runtime-board--conversation-collapsed .attendance-runtime-col--tickets {
@@ -4355,6 +4355,17 @@ div:has(svg[data-testid="connection"]) {
   color: var(--color-text-tertiary);
 }
 
+.attendance-quick-btn--soon {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.attendance-quick-btn--soon::after {
+  content: ' …';
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
 .attendance-side-cards {
   margin-top: 10px;
   display: flex;
@@ -4364,11 +4375,11 @@ div:has(svg[data-testid="connection"]) {
 
 @media (max-width: 1440px) {
   .attendance-runtime-board {
-    grid-template-columns: 180px minmax(300px, 320px) minmax(0, 1fr) 220px;
+    grid-template-columns: 180px minmax(300px, 320px) minmax(0, 1fr) 260px;
   }
 
   .attendance-runtime-board--conversation-collapsed {
-    grid-template-columns: 180px minmax(0, 1fr) 220px;
+    grid-template-columns: 180px minmax(0, 1fr) 260px;
   }
 }
 

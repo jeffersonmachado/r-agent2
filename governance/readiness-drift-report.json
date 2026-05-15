@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-05-13T15:38:53.513Z",
+  "engine": "readiness-drift-engine/v1",
+  "pass": false,
+  "decision": "READINESS_DRIFT_NO_GO",
+  "driftDetected": true,
+  "driftCount": 1,
+  "criticalDrifts": 0,
+  "highDrifts": 1,
+  "persisted": {
+    "decision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+    "classification": "MESH_BLOCKED",
+    "score": null,
+    "source": "governance/final-readiness-report.json"
+  },
+  "recalculated": {
+    "decision": "NO_GO:MESH_BLOCKED",
+    "classification": "NO_GO",
+    "score": 33,
+    "blockedCount": 4
+  },
+  "checks": [
+    {
+      "type": "CLASSIFICATION_DRIFT",
+      "severity": "OK",
+      "drift": false,
+      "persisted": "NO_GO",
+      "recalculated": "NO_GO",
+      "message": null
+    },
+    {
+      "type": "BLOCKER_SEMANTIC_DRIFT",
+      "severity": "OK",
+      "drift": false,
+      "persistedBlocker": "MESH_BLOCKED",
+      "recalcBlocker": "MESH_BLOCKED"
+    },
+    {
+      "type": "DECISION_DRIFT",
+      "severity": "OK",
+      "drift": false,
+      "persistedCategory": "MESH_BLOCKED",
+      "recalcCategory": "MESH_BLOCKED",
+      "persisted": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+      "recalculated": "NO_GO:MESH_BLOCKED",
+      "message": null
+    },
+    {
+      "type": "SCORE_DRIFT",
+      "severity": "OK",
+      "drift": false,
+      "note": "score não disponível"
+    },
+    {
+      "type": "COMPONENT_DRIFT",
+      "severity": "HIGH",
+      "drift": true,
+      "blocked": [
+        "mesh",
+        "replay"
+      ],
+      "unexplained": [
+        "replay"
+      ],
+      "message": "Componentes bloqueados não refletidos no persisted: replay"
+    }
+  ],
+  "driftDetails": [
+    {
+      "type": "COMPONENT_DRIFT",
+      "severity": "HIGH",
+      "message": "Componentes bloqueados não refletidos no persisted: replay"
+    }
+  ],
+  "summary": "DRIFT DETECTADO: 1 tipo(s) — persisted=NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO] recalc=NO_GO:MESH_BLOCKED"
+}

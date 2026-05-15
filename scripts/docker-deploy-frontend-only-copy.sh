@@ -39,7 +39,7 @@ section() {
 
 # Variáveis padrão
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
-SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
+SSH_PASSWORD="${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
 USE_SSH_DIRECT="${DEPLOY_USE_SSH_DIRECT:-false}"
 
 # Detecta diretório do projeto

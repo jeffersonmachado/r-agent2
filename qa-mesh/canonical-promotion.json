@@ -1,15 +1,15 @@
 {
-  "executionId": "mesh-business-screen-fix-001",
-  "startedAt": "2026-05-11T21:54:40.637Z",
+  "executionId": "mesh-2026-05-12T23-50-45-984Z",
+  "startedAt": "2026-05-12T23:50:45.984Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
-  "promotedAt": "2026-05-11T22:17:12.435Z",
-  "registryTotal": 58,
-  "goNoGo": "GO",
+  "promotedAt": "2026-05-13T00:14:45.156Z",
+  "registryTotal": 62,
+  "goNoGo": "NO_GO",
   "criterion": "serialized_canonical_execution",
-  "finishedAt": "2026-05-11T22:17:12.435Z",
+  "finishedAt": "2026-05-13T00:14:45.157Z",
   "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
   "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
   "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json",
-  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-business-screen-fix-001.json"
+  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-05-12T23-50-45-984Z.json"
 }

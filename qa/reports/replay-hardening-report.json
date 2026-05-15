@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-13T14:46:35.176Z",
+  "generatedAt": "2026-05-13T17:36:59.540Z",
   "engine": "replay-hardening-engine/v2",
   "pass": false,
   "decision": "REPLAY_HARDENING_NO_GO",
@@ -1656,5 +1656,6 @@
       "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
     }
   ],
-  "summary": "98 violação(ões): 98 UI indisponível, 0 replay falso positivo"
+  "summary": "98 violação(ões): 98 UI indisponível, 0 replay falso positivo",
+  "reboundAt": "2026-05-15T15:09:07.210Z"
 }

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-13T14:44:34.525Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "status": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
   "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
   "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
-  "totalCoverage": 83.5,
+  "totalCoverage": 83.1,
   "verticalCoverage": [
     {
       "vertical": "beauty",
@@ -67,11 +67,13 @@
   },
   "qaCoverage": {
     "executionId": "mesh-2026-05-12T23-50-45-984Z",
-    "percent": 100,
-    "observedFailureFreePercent": 100,
+    "percent": 98.39,
+    "observedFailureFreePercent": 98.39,
     "registryDeclaredTotal": 62,
     "canonicalRegistryTotal": 62,
-    "blockingDomains": [],
+    "blockingDomains": [
+      "pbx"
+    ],
     "status": "NO_GO"
   },
   "integrationsCoverage": [
@@ -198,11 +200,25 @@
   },
   "aiCoverage": {
     "readiness": "production-like",
-    "blockers": []
+    "blockers": [
+      {
+        "id": "gap-cross-report-package_validation_failed",
+        "severity": "critical",
+        "area": "cross-report",
+        "title": "Contradição cross-report: package_validation_failed",
+        "evidence": {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        },
+        "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+      }
+    ]
   },
   "productionReadiness": {
-    "status": "AUTONOMOUS_READY_GO",
-    "classification": "enterprise-ready",
+    "status": "NO_GO:ENTERPRISE_READY_GO",
+    "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -318,11 +334,11 @@
     }
   ],
   "enterpriseReadiness": {
-    "status": "autonomous-ready",
+    "status": "enterprise-ready",
     "evidenceBased": true,
     "missingProofs": []
   },
-  "platformMaturity": "enterprise-ready",
+  "platformMaturity": "enterprise-partial",
   "enterpriseProofs": {
     "proofs": {
       "foundation_prod_like": true,
@@ -341,7 +357,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-05-13T14:44:59.249Z",
+    "generatedAt": "2026-05-15T15:08:43.465Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -349,7 +365,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 0,
+    "blockerCount": 1,
     "replayCoverage": {
       "required": 6,
       "found": 7,
@@ -4553,10 +4569,12 @@
       ]
     },
     "governanceCoverage": {
-      "status": "VALIDATED",
+      "status": "NOT_VALIDATED",
       "signatureArtifact": "governance/proof-signature.json",
       "cleanupArtifact": "governance/cleanup-proof.json",
-      "missing": []
+      "missing": [
+        "cleanup_status"
+      ]
     },
     "intelligenceStability": {
       "status": "STABLE",
@@ -4565,44 +4583,45 @@
         {
           "domain": "pbx",
           "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
-          "recurringCount": 2
+          "recurringCount": 9
         }
       ],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-13T14:46:31.647Z",
-      "expectedZipName": "r-agent2-20260513-114614.zip",
+      "generatedAt": "2026-05-15T15:09:06.727Z",
+      "expectedZipName": "r-agent2-20260515-120735.zip",
       "pbxMaturity": "enterprise-real",
-      "contradictions": [],
-      "blockers": [],
+      "contradictions": [
+        {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        }
+      ],
+      "blockers": [
+        {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        }
+      ],
       "warnings": [],
-      "blockerCount": 0,
+      "blockerCount": 1,
       "warningCount": 0,
-      "maximumAllowedReadiness": "autonomous-ready",
-      "autonomousReadyBlocked": false,
-      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-      "expectedZipSha256Ref": "dist/r-agent2-20260513-114614.manifest.json#sha256"
+      "maximumAllowedReadiness": "operational",
+      "autonomousReadyBlocked": true,
+      "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational.",
+      "expectedZipSha256Ref": "dist/r-agent2-20260515-120735.manifest.json#sha256"
     },
     "packageValidation": {
-      "generatedAt": "2026-05-13T14:46:31.647Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-114614.zip",
-      "zipName": "r-agent2-20260513-114614.zip",
-      "zipSha256": "d3191b974f65de26dcedcdcc3f100bacdf5f67920d0c4227e38b969d5345d759",
-      "selectionMode": "audited",
-      "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260513-114614.manifest.json",
-      "manifestAudit": "passed",
-      "auditSatisfied": true,
-      "selfContainmentCheck": {
-        "passed": true,
-        "missing": []
-      },
+      "generatedAt": "2026-05-15T15:09:06.727Z",
+      "ok": false,
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260515-120735.zip",
+      "zipName": "r-agent2-20260515-120735.zip",
       "requiredEntries": [
-        "governance/final-proof-report.json",
-        "governance/evidence-manifest.json",
-        "governance/blocker-engine.js",
-        "governance/final-consistency-report.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -4624,21 +4643,13 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
-      "entryCount": 4644,
       "missingEntries": [],
-      "ok": true,
-      "error": null,
-      "packageBinding": {
-        "boundTo": "r-agent2-20260513-114123.zip",
-        "sha256": "d3191b974f65de26dcedcdcc3f100bacdf5f67920d0c4227e38b969d5345d759",
-        "immutable": true,
-        "selfProving": true,
-        "offlineAuditable": true
-      },
-      "zipSha256Ref": "dist/r-agent2-20260513-114614.manifest.json#sha256"
+      "error": "self_containment_failed:missing=[cross-report-validation.json]",
+      "zipSha256Ref": "dist/r-agent2-20260515-120735.manifest.json#sha256",
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260515-120735.manifest.json"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-13T14:44:58.983Z",
+      "generatedAt": "2026-05-15T15:08:43.464Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -4987,9 +4998,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "de51ea749803e8ea569a754000a6fe5c96c53810b37483107e25cebd77eab287",
-          "checksum": "de51ea749803e8ea569a754000a6fe5c96c53810b37483107e25cebd77eab287",
-          "timestamp": "2026-05-13T14:44:34.526Z",
+          "hash": "0809fb21d71c8938fd095babb8dfde5312ab7dc99e2856765110b5007b0e3af9",
+          "checksum": "0809fb21d71c8938fd095babb8dfde5312ab7dc99e2856765110b5007b0e3af9",
+          "timestamp": "2026-05-15T15:08:24.860Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5005,9 +5016,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "7c48a815df3913e0db35c80186b54fdce0ff5b9ccdf85cc021af48c6b684b305",
-          "checksum": "7c48a815df3913e0db35c80186b54fdce0ff5b9ccdf85cc021af48c6b684b305",
-          "timestamp": "2026-05-13T14:44:34.725Z",
+          "hash": "ffa7c1a7cc6ad7f1375855891d8c4101c8c83630de5f2fcd47d9b028229a0992",
+          "checksum": "ffa7c1a7cc6ad7f1375855891d8c4101c8c83630de5f2fcd47d9b028229a0992",
+          "timestamp": "2026-05-15T15:08:25.089Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5023,9 +5034,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f59a8bd94937d04c24009695461da3aa7dbe28160fb8593c79f69642475a56b8",
-          "checksum": "f59a8bd94937d04c24009695461da3aa7dbe28160fb8593c79f69642475a56b8",
-          "timestamp": "2026-05-13T14:41:40.523Z",
+          "hash": "d156dcba6d9b0ab2a0a59f71a7bc17552e231bf6af4a02f66dee64f2919efe90",
+          "checksum": "d156dcba6d9b0ab2a0a59f71a7bc17552e231bf6af4a02f66dee64f2919efe90",
+          "timestamp": "2026-05-15T15:06:23.630Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5036,8 +5047,8 @@
       ]
     },
     "proofQualityScore": {
-      "score": 100,
-      "raw": 120,
+      "score": 90,
+      "raw": 108,
       "max": 120,
       "grade": "A",
       "breakdown": [
@@ -5088,7 +5099,7 @@
         },
         {
           "label": "governance_validated",
-          "earned": 10,
+          "earned": 0,
           "max": 10
         },
         {
@@ -5108,7 +5119,7 @@
         },
         {
           "label": "runtime_cleanup",
-          "earned": 2,
+          "earned": 0,
           "max": 2
         }
       ]
@@ -5132,10 +5143,10 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "autonomous-ready",
-      "blockersClear": true,
+      "currentLevel": "enterprise-ready",
+      "blockersClear": false,
       "gateChecks": {
-        "blockersClear": true,
+        "blockersClear": false,
         "proofsComplete": true,
         "replayCoverageOk": true,
         "prodLikeCoverageOk": true,
@@ -5145,11 +5156,11 @@
         "humanHandoffCoverageOk": true,
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
-        "governanceCoverageOk": true,
-        "packageValidationOk": true,
+        "governanceCoverageOk": false,
+        "packageValidationOk": false,
         "evidenceManifestValid": true,
         "intelligenceStable": true,
-        "crossReportConsistent": true,
+        "crossReportConsistent": false,
         "verticalCoverageValid": true
       },
       "autonomousReadyGate": {
@@ -5158,13 +5169,52 @@
         "handoffFullyNormalized": true,
         "noSyntheticCriticalPaths": true,
         "intelligenceStable": true,
-        "crossReportConsistent": true,
+        "crossReportConsistent": false,
         "verticalCoverageValid": true,
-        "allPassed": true
+        "allPassed": false
       }
     },
-    "finalDecision": "AUTONOMOUS_READY_GO",
-    "blockingGaps": []
+    "finalDecision": "NO_GO:ENTERPRISE_READY_GO",
+    "blockingGaps": [
+      {
+        "id": "gap-proof-package-validation",
+        "severity": "critical",
+        "area": "package",
+        "title": "ZIP de release nao contem todos os proofs obrigatorios",
+        "evidence": {
+          "missingEntries": []
+        },
+        "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+      },
+      {
+        "id": "gap-proof-governance-support",
+        "severity": "critical",
+        "area": "proof-governance",
+        "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+        "evidence": {
+          "status": "NOT_VALIDATED",
+          "signatureArtifact": "governance/proof-signature.json",
+          "cleanupArtifact": "governance/cleanup-proof.json",
+          "missing": [
+            "cleanup_status"
+          ]
+        },
+        "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+      },
+      {
+        "id": "gap-cross-report-package_validation_failed",
+        "severity": "critical",
+        "area": "cross-report",
+        "title": "Contradição cross-report: package_validation_failed",
+        "evidence": {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        },
+        "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+      }
+    ]
   },
   "operationalDigitalTwin": {
     "status": "complete",
@@ -5210,10 +5260,74 @@
     "orphanJourneys": [],
     "missingBackendAssertions": []
   },
-  "blockingGaps": [],
-  "noGoReasons": [],
+  "blockingGaps": [
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio pbx",
+      "evidence": {
+        "scenarios": [
+          "qa-pbx-call-events-runtime-smoke"
+        ],
+        "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": []
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-governance-support",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+      "evidence": {
+        "status": "NOT_VALIDATED",
+        "signatureArtifact": "governance/proof-signature.json",
+        "cleanupArtifact": "governance/cleanup-proof.json",
+        "missing": [
+          "cleanup_status"
+        ]
+      },
+      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+    },
+    {
+      "id": "gap-cross-report-package_validation_failed",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
+      "evidence": {
+        "type": "package_validation_failed",
+        "missingEntries": [],
+        "blocker": true,
+        "message": "Pacote não passou na validação: 0 entradas ausentes."
+      },
+      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
+  "noGoReasons": [
+    "Falha aberta no dominio pbx [gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke]",
+    "ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]",
+    "Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]",
+    "Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]"
+  ],
   "goReasons": [
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
-  ]
+  ],
+  "reboundAt": "2026-05-15T15:09:07.036Z"
 }

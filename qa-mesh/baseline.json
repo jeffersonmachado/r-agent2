@@ -18,6 +18,13 @@
   },
   "history": [
     {
+      "executionId": "mesh-2026-05-12T23-50-45-984Z",
+      "passRate": 0.9354838709677419,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-05-13T00:14:45.161Z"
+    },
+    {
       "executionId": "mesh-business-screen-fix-001",
       "passRate": 1,
       "blockingFailures": 0,
@@ -149,13 +156,6 @@
       "blockingFailures": 0,
       "infraErrors": 0,
       "at": "2026-04-07T21:44:13.816Z"
-    },
-    {
-      "executionId": "mesh-2026-04-07T20-29-17-338Z",
-      "passRate": 0.96,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-04-07T20:45:45.357Z"
     }
   ]
 }

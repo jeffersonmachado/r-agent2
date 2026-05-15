@@ -35,7 +35,7 @@ services:
       PGDATABASE: ${POSTGRES_DB:-results_saas}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY obrigatória}
       # -------------------------------------------------------------------
       # Bootstrap de usuários (criados automaticamente pelo seed)
       # -------------------------------------------------------------------
@@ -44,13 +44,13 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@exemplo.com}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}
       # Recomenda-se definir explicitamente no .env do servidor remoto
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Erro: ADMIN_PASSWORD não definida}
       # SystemAdmin (super-admin global)
       SYSTEMADMIN_USERNAME: ${SYSTEMADMIN_USERNAME:-systemadmin}
       SYSTEMADMIN_EMAIL: ${SYSTEMADMIN_EMAIL:-systemadmin@exemplo.com}
       SYSTEMADMIN_NAME: ${SYSTEMADMIN_NAME:-System Admin}
       # Recomenda-se definir explicitamente no .env do servidor remoto
-      SYSTEMADMIN_PASSWORD: ${SYSTEMADMIN_PASSWORD:-Admin123!}
+      SYSTEMADMIN_PASSWORD: ${SYSTEMADMIN_PASSWORD:?Erro: SYSTEMADMIN_PASSWORD não definida}
       # OpenAI API Key (opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RUNTIME_ROOT: ${RUNTIME_ROOT:-/var/lib/ragent2}
@@ -67,7 +67,7 @@ services:
       AMI_HOST: ${AMI_HOST:-asterisk}
       AMI_PORT: ${AMI_PORT:-5038}
       AMI_USERNAME: ${AMI_USERNAME:-ragent2}
-      AMI_SECRET: ${AMI_SECRET:-ragent2}
+      AMI_SECRET: ${AMI_SECRET:?Erro: AMI_SECRET não definida}
       AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
       PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
       PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
@@ -246,8 +246,7 @@ services:
       -c min_wal_size=1GB
       -c max_wal_size=4GB
       -c max_connections=100
-      -c log_statement=all
-      -c log_duration=on
+      -c log_statement=ddl
       -c log_line_prefix='%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
       -c log_timezone=America/Sao_Paulo
       -c timezone=America/Sao_Paulo

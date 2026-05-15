@@ -3,7 +3,7 @@
 ## beauty
 - Classification: production-like
 - Journeys: 2
-- Scenarios: 12
+- Scenarios: 13
 - Blockers: none
 
 ## fitness
@@ -14,24 +14,24 @@
 
 ## food
 - Classification: production-like
-- Journeys: 1
-- Scenarios: 1
+- Journeys: 2
+- Scenarios: 3
 - Blockers: none
 
 ## services
 - Classification: production-like
 - Journeys: 1
-- Scenarios: 1
+- Scenarios: 3
 - Blockers: none
 
 ## clinic
 - Classification: production-like
 - Journeys: 1
-- Scenarios: 1
+- Scenarios: 3
 - Blockers: none
 
 ## market
 - Classification: production-like
 - Journeys: 1
-- Scenarios: 1
+- Scenarios: 3
 - Blockers: none

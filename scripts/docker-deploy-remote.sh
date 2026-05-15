@@ -31,7 +31,7 @@ section() {
 
 # Variáveis padrão (valores padrão definidos aqui)
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
-SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
+SSH_PASSWORD="${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
 
 REMOTE_HOST="${DEPLOY_HOST}"
 REMOTE_USER="${DEPLOY_USER:-root}"

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "vertical": "market",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,6 +10,43 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "market-publicacao-no",
+          "scenario": "Market publicação de nó no marketplace",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [
+            "Marketplace carregável no tenant",
+            "Nó disponível para publicação"
+          ],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "Nó publicado no marketplace"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_mkt_001",
+              "expected": {
+                "backendEntity": "node",
+                "nodePublished": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-market-flow-node",
+          "scenario": "Market publicação de nó no marketplace",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
         {
           "scenarioId": "business-market-scr-01",
           "scenario": "Market node marketplace screen smoke",

@@ -1,15 +1,69 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "vertical": "food",
   "maturity": "production-like",
   "replaySupported": true,
   "journeys": [
     {
       "vertical": "food",
+      "journey": "food_customer_journey",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-food-flow-order",
+          "scenario": "Food pedido via WhatsApp até confirmação",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "food",
       "journey": "food_order_flow",
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "food-pedido-whatsapp",
+          "scenario": "Food pedido via WhatsApp até confirmação",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [
+            "Módulo de pedidos ativo",
+            "Tenant autenticado"
+          ],
+          "integrations": [
+            "api",
+            "whatsapp"
+          ],
+          "steps": [
+            "Pedido recebido via WhatsApp webhook",
+            "Status do pedido atualizado"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_food_001",
+              "expected": {
+                "backendEntity": "order",
+                "orderReceived": true
+              }
+            },
+            {
+              "stepId": "step_food_002",
+              "expected": {
+                "backendEntity": "order",
+                "statusUpdated": true
+              }
+            }
+          ]
+        },
         {
           "scenarioId": "business-food-scr-01",
           "scenario": "Food Orders screen smoke",

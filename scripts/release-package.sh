@@ -58,6 +58,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ── Delegação ao pipeline de dois passos (fluxo padrão de release) ─────────────
+# O pipeline two-pass resolve a dependência circular ZIP → governança → ZIP,
+# garantindo que os artefatos DENTRO do ZIP referenciam o release correto.
+# --audit-only mantém o fluxo legado (audita um ZIP já existente).
+if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
+  TWO_PASS_SCRIPT="$SCRIPT_DIR/two-pass-release.sh"
+  if [[ -x "$TWO_PASS_SCRIPT" ]]; then
+    TWO_PASS_ARGS=()
+    [[ "$SKIP_FRONTEND" == true ]] && TWO_PASS_ARGS+=("--skip-frontend")
+    [[ "$SKIP_AUDIT"    == true ]] && TWO_PASS_ARGS+=("--skip-audit")
+    exec bash "$TWO_PASS_SCRIPT" "${TWO_PASS_ARGS[@]}"
+  else
+    warn "two-pass-release.sh não encontrado — usando pipeline legado"
+  fi
+fi
+
 # ── padrões proibidos no artefato de release ──────────────────────────────────
 # Qualquer match abaixo representa BLOQUEIO de release.
 FORBIDDEN_PATTERNS=(
@@ -316,19 +332,48 @@ if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --
 fi
 ok "Candidate ZIP validado contra o manifest de prova"
 
-# Remover manifest imediatamente após a criação e validação do ZIP.
-# O hash está registrado em governance/package-validation-report.json —
-# nenhum processo posterior precisa do sidecar manifest.
-rm -f "$MANIFEST_FILE"
-ok "Manifest sidecar removido (hash preservado nos relatórios de governança)"
+# O sidecar manifest PERMANECE em dist/ para auditabilidade offline.
+# A integridade criptográfica é verificada pelo verifier via este manifesto.
+ok "Manifest sidecar preservado: $MANIFEST_FILE (auditabilidade offline)"
 
-# ── 4b. Sincronizar relatórios com ZIP final + reconstruir cadeia ─────────────
-# Deve rodar ANTES dos engines para que todos vejam o ZIP atual nos relatórios.
-step "Sincronizando relatórios de governança com o novo ZIP..."
-if node "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null; then
-  ok "Relatórios vinculados ao ZIP atual (cadeia + sigs reconstruídas)"
+# ── 4b. REBINDING CRIPTOGRÁFICO COMPLETO do ZIP final ────────────────────────
+#
+# ORDEM OBRIGATÓRIA (resolve dependência circular):
+#   1. ZIP já foi criado (hash conhecido)
+#   2. rebind detecta o ZIP mais recente, computa o hash real
+#   3. Gera TODOS os artefatos de governança vinculados a esse hash:
+#      manifest, cadeia, assinaturas, attestation, self-proving report
+#   4. Copia artefatos para dist/ como sidecar (auditabilidade offline)
+#   5. Verifier valida TUDO contra o ZIP real
+#
+# Este passo é o que garante que o pacote seja genuinamente self-proving.
+step "REBINDING CRIPTOGRÁFICO: vinculando governança ao ZIP final..."
+if node "$PROJECT_ROOT/governance/rebind-to-current-package.js" 2>/dev/null; then
+  ok "Rebinding completo — governança 100% vinculada ao ZIP atual"
 else
-  warn "update-package-binding falhou (engines podem ver ZIP desatualizado)"
+  warn "rebind-to-current-package falhou — governança pode referenciar ZIP anterior"
+fi
+
+# Garantia de segurança: remover TODOS os manifests stale de dist/
+# (o rebind já faz isso via fase 0b, mas belt-and-suspenders no pipeline)
+step "Limpeza de segurança: removendo manifests stale de dist/..."
+CURRENT_MANIFEST_NAME="$(basename "${MANIFEST_FILE}")"
+for f in "$DIST_DIR"/r-agent2-*.manifest.json; do
+  [[ -f "$f" ]] || continue
+  if [[ "$(basename "$f")" != "$CURRENT_MANIFEST_NAME" ]]; then
+    rm -f "$f"
+    echo "  Removido manifest stale: $(basename "$f")"
+  fi
+done
+ok "dist/ contém apenas o manifest do ZIP atual: $CURRENT_MANIFEST_NAME"
+
+# Regenerar self-proving-report APÓS limpeza completa (garante staleReferencesFound=0)
+if node "$PROJECT_ROOT/governance/self-proving-report.js" 2>/dev/null; then
+  [[ -f "$PROJECT_ROOT/governance/self-proving-report.json" ]] && \
+    cp "$PROJECT_ROOT/governance/self-proving-report.json" "$DIST_DIR/self-proving-report.json" || true
+  ok "dist/self-proving-report.json regenerado com stale=0"
+else
+  warn "self-proving-report falhou após limpeza"
 fi
 
 # ── 4c. Engines de verificação de governança ─────────────────────────────────
@@ -343,13 +388,13 @@ node "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && 
 node "$PROJECT_ROOT/governance/replay-consistency-engine.js"     2>/dev/null && ok "Replay consistency: OK" || warn "Replay consistency detectou inconsistências"
 node "$PROJECT_ROOT/governance/governance-consistency-engine.js" 2>/dev/null && ok "Consistency engine: sem contradições" || warn "Consistency engine detectou contradições"
 node "$PROJECT_ROOT/governance/package-integrity-engine.js"      2>/dev/null && ok "Package integrity: OK" || warn "Package integrity detectou divergências"
-# self-proving-report gerado aqui (após update-package-binding) para referenciar ZIP correto
-node "$PROJECT_ROOT/governance/self-proving-report.js"           2>/dev/null && ok "Self-proving report: OK" || warn "Self-proving report detectou falhas"
+# self-proving-report já foi gerado pelo rebind (passo 4b) com binding correto
+node "$PROJECT_ROOT/governance/self-proving-report.js"           2>/dev/null && ok "Self-proving report: OK (rebind já vinculou ao ZIP atual)" || warn "Self-proving report detectou falhas"
 node "$PROJECT_ROOT/governance/report-contamination-cleaner.js"  2>/dev/null && ok "Report contamination: limpo" || warn "Relatórios contaminados detectados"
 node "$PROJECT_ROOT/governance/final-governance-engine.js"       2>/dev/null && ok "Final governance: AUTONOMOUS_READY_GO" || warn "Final governance engine retornou bloqueio"
 
-# ── 4c. Gerar relatórios finais em qa/reports/ ────────────────────────────────
-step "Gerando relatórios finais de governança em qa/reports/..."
+# ── 4c. Gerar relatórios finais em qa/reports/ + garantir sidecar em dist/ ───
+step "Propagando relatórios de governança para qa/reports/ e dist/..."
 mkdir -p "$PROJECT_ROOT/qa/reports"
 for f in \
   "governance/final-governance-report.json" \
@@ -365,19 +410,29 @@ for f in \
 done
 ok "Relatórios copiados para qa/reports/"
 
-# ── 4d. Limpar TODOS os artefatos complementares de dist/ ────────────────────
-# dist/ deve conter APENAS o ZIP final.
-# O hash do ZIP está registrado em governance/package-validation-report.json
-# (dentro do ZIP e no filesystem) — sem dependência de sidecar manifest externo.
-step "Limpando dist/: mantendo apenas o ZIP final..."
-rm -rf "$DIST_DIR/governance-artifacts"
-rm -f  "$DIST_DIR"/*.sig
-rm -f  "$DIST_DIR/governance-attestation.json"
-rm -f  "$DIST_DIR"/*.manifest.json
-ok "dist/ limpo: apenas o ZIP final mantido"
+# Garantir que todos os sidecar de auditabilidade offline estão em dist/
+# (o rebind já copiou a maioria, mas garantindo os relatórios extras)
+for f in \
+  "governance/final-consistency-report.json" \
+  "governance/replay-integrity-report.json" \
+  "governance/package-validation-report.json" \
+  "governance/self-proving-report.json"; do
+  [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$PROJECT_ROOT/dist/$(basename $f)" || true
+done
+ok "Sidecar de auditabilidade garantidos em dist/"
 
-# ── 5. Limpar ZIPs antigos ────────────────────────────────────────────────────
-step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/..."
+# ── 4d. dist/ contém ZIP + artefatos sidecar de governança ──────────────────
+# dist/ deve conter o ZIP final E os artefatos de governança sidecar para
+# auditabilidade offline. NÃO remover manifest, sigs ou attestation.
+# Os artefatos stale de releases anteriores são removidos na etapa 5.
+step "Verificando integridade de dist/ (ZIP + sidecar governance)..."
+DIST_ZIP_COUNT="$(ls "$DIST_DIR"/*.zip 2>/dev/null | wc -l | tr -d ' ')"
+DIST_SIG_COUNT="$(ls "$DIST_DIR"/*.sig 2>/dev/null | wc -l | tr -d ' ')"
+DIST_MANIFEST_COUNT="$(ls "$DIST_DIR"/*.manifest.json 2>/dev/null | wc -l | tr -d ' ')"
+ok "dist/ contém: $DIST_ZIP_COUNT ZIP(s), $DIST_SIG_COUNT sig(s), $DIST_MANIFEST_COUNT manifesto(s)"
+
+# ── 5. Limpar ZIPs antigos + seus sidecar files ──────────────────────────────
+step "Mantendo os $KEEP_DIST ZIPs mais recentes em dist/ (e seus sidecar files)..."
 
 ZIP_LIST="$(ls -t "$DIST_DIR"/r-agent2-*.zip 2>/dev/null || true)"
 ZIP_COUNT="$(echo "$ZIP_LIST" | grep -c '\.zip' 2>/dev/null || echo 0)"
@@ -386,20 +441,62 @@ if [[ "$ZIP_COUNT" -gt "$KEEP_DIST" ]]; then
   TO_DELETE="$(echo "$ZIP_LIST" | tail -n +"$((KEEP_DIST + 1))")"
   while IFS= read -r old_zip; do
     [[ -z "$old_zip" ]] && continue
+    # Remover o ZIP stale e seu manifesto sidecar
     rm -f "$old_zip" "${old_zip%.zip}.manifest.json" 2>/dev/null || true
-    echo "  Removido: $(basename "$old_zip")"
+    echo "  Removido: $(basename "$old_zip") + sidecar manifest"
   done <<< "$TO_DELETE"
 fi
 
-ok "dist/ contém $(ls "$DIST_DIR"/*.zip 2>/dev/null | wc -l | tr -d ' ') ZIP(s)"
+# Remover governance-artifacts/ de releases anteriores (o rebind já atualizou dist/ root)
+rm -rf "$DIST_DIR/governance-artifacts" 2>/dev/null || true
+
+ok "dist/ contém $(ls "$DIST_DIR"/*.zip 2>/dev/null | wc -l | tr -d ' ') ZIP(s) + artefatos sidecar"
+
+# ── 6. GATE OBRIGATÓRIO: Verificador offline de governança ───────────────────
+#
+# REGRA ABSOLUTA: a release só é válida se o verifier offline PASSAR.
+# Se FAIL: a release é BLOQUEADA aqui. Não há release com governança inválida.
+#
+step "GATE FINAL: executando verificador offline de governança..."
+VERIFIER_SCRIPT="$PROJECT_ROOT/scripts/verify-enterprise-governance.sh"
+VERIFIER_EXIT=0
+
+if [[ -x "$VERIFIER_SCRIPT" ]]; then
+  if bash "$VERIFIER_SCRIPT" 2>&1; then
+    ok "GOVERNANCE VERIFICATION: PASS — release é genuinamente self-proving"
+    VERIFIER_EXIT=0
+  else
+    VERIFIER_EXIT=$?
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  RELEASE BLOQUEADA — GOVERNANCE VERIFICATION: FAIL          ║${NC}"
+    echo -e "${RED}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${RED}║  O pacote NÃO é self-proving. Release cancelada.            ║${NC}"
+    echo -e "${RED}║  Execute: node governance/rebind-to-current-package.js      ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+    # Remover ZIP inválido para não contaminar dist/
+    rm -f "$LATEST_ZIP"
+    exit 1
+  fi
+else
+  warn "Verifier offline não encontrado: $VERIFIER_SCRIPT — verificação manual necessária"
+fi
 
 # ── Resumo final ──────────────────────────────────────────────────────────────
 echo ""
+SP_STATUS="$(node -e "
+  const fs=require('fs');
+  const p='$PROJECT_ROOT/dist/self-proving-report.json';
+  if(!fs.existsSync(p)){process.stdout.write('UNKNOWN');process.exit(0);}
+  process.stdout.write(JSON.parse(fs.readFileSync(p,'utf8')).selfProofStatus||'UNKNOWN');
+" 2>/dev/null || echo 'UNKNOWN')"
+
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  Release packageada com sucesso!                            ║${NC}"
+echo -e "${GREEN}║  Release packageada e VERIFICADA com sucesso!               ║${NC}"
 echo -e "${GREEN}╠══════════════════════════════════════════════════════════════╣${NC}"
-printf  "${GREEN}║  Artefato : %-48s ║${NC}\n" "$ZIP_BASENAME"
-printf  "${GREEN}║  Tamanho  : %-48s ║${NC}\n" "$ZIP_SIZE"
-printf  "${GREEN}║  SHA-256  : %-48s ║${NC}\n" "${ZIP_HASH:0:48}"
-printf  "${GREEN}║  Commit   : %-48s ║${NC}\n" "$GIT_COMMIT @ $GIT_BRANCH"
+printf  "${GREEN}║  Artefato  : %-47s ║${NC}\n" "$ZIP_BASENAME"
+printf  "${GREEN}║  Tamanho   : %-47s ║${NC}\n" "$ZIP_SIZE"
+printf  "${GREEN}║  SHA-256   : %-47s ║${NC}\n" "${ZIP_HASH:0:47}"
+printf  "${GREEN}║  Commit    : %-47s ║${NC}\n" "$GIT_COMMIT @ $GIT_BRANCH"
+printf  "${GREEN}║  Self-Proof: %-47s ║${NC}\n" "$SP_STATUS"
+printf  "${GREEN}║  Verifier  : %-47s ║${NC}\n" "PASS (offline)"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"

@@ -33,11 +33,18 @@ function readJsonSafe(relPath) {
 function findLatestZip() {
   const distDir = path.join(ROOT, 'dist');
   if (!fs.existsSync(distDir)) return null;
-  const zips = fs.readdirSync(distDir)
-    .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f))
-    .sort()
-    .reverse();
-  return zips.length > 0 ? { zip: zips[0], zipPath: path.join(distDir, zips[0]) } : null;
+  const releaseDir = path.join(distDir, 'release');
+  const searchDirs = [distDir, releaseDir].filter((dir) => fs.existsSync(dir));
+  for (const dir of searchDirs) {
+    const zips = fs.readdirSync(dir)
+      .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f))
+      .sort()
+      .reverse();
+    if (zips.length > 0) {
+      return { zip: zips[0], zipPath: path.join(dir, zips[0]) };
+    }
+  }
+  return null;
 }
 
 function findSidecarManifest(zipPath) {

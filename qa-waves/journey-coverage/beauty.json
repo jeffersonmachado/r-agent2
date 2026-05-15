@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "vertical": "beauty",
   "maturity": "production-like",
   "replaySupported": true,
@@ -118,6 +118,40 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "beauty-campanha-lead-pagamento",
+          "scenario": "Beauty campanha de unhas até pagamento",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [
+            "Campanha e sandbox billing habilitados"
+          ],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "Campanha criada e publicada",
+            "Pagamento confirmado e status ativo"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_b1_001",
+              "expected": {
+                "backendEntity": "campaign",
+                "campaignCreated": true
+              }
+            },
+            {
+              "stepId": "step_b1_002",
+              "expected": {
+                "backendEntity": "payment",
+                "paymentConfirmed": true
+              }
+            }
+          ]
+        },
         {
           "scenarioId": "business-b1",
           "scenario": "Beauty campanha de unhas até pagamento",

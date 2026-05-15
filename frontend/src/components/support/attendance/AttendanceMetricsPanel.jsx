@@ -19,7 +19,7 @@ function MetricCard({ title, data }) {
 export function AttendanceMetricsPanel({ metrics }) {
   return (
     <div className="attendance-metrics-panel">
-      <MetricCard title="Caixa entrada" data={metrics?.inbox} />
+      <MetricCard title="Caixa de entrada" data={metrics?.inbox} />
       <MetricCard title="Status" data={metrics?.status} />
       <MetricCard title="Categorias" data={metrics?.categories} />
     </div>

@@ -34,7 +34,7 @@ cd "$ROOT_DIR"
 REMOTE_HOST="${DEPLOY_HOST:-10.10.2.30}"
 REMOTE_USER="${DEPLOY_USER:-root}"
 REMOTE_DIR="${DEPLOY_DIR:-/opt/results/ria/r-agent2}"
-SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
+SSH_PASSWORD="${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ServerAliveInterval=30 -o ServerAliveCountMax=3"
 
 FRONTEND_ONLY=false

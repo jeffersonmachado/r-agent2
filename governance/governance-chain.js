@@ -128,7 +128,22 @@ function verifyChain(storedChain) {
   let cumHash  = GENESIS_HASH;
 
   for (const link of storedChain.links) {
-    const abs          = path.join(ROOT, link.path);
+    let abs = path.join(ROOT, link.path);
+
+    // Suportar nova estrutura normalizada: dist/release/ e dist/governance/ e dist/signatures/
+    // Se o arquivo não existe no caminho original, tentar caminhos alternativos
+    if (!fs.existsSync(abs)) {
+      const base = path.basename(link.path);
+      const alternatives = [
+        path.join(ROOT, 'dist', 'release', base),       // dist/release/<zip|manifest>
+        path.join(ROOT, 'dist', 'governance', base),    // dist/governance/<json>
+        path.join(ROOT, 'dist', 'signatures', base),    // dist/signatures/<sig>
+      ];
+      for (const alt of alternatives) {
+        if (fs.existsSync(alt)) { abs = alt; break; }
+      }
+    }
+
     const currentHash  = sha256File(abs);
     const exists       = currentHash !== null;
 

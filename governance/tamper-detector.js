@@ -27,6 +27,25 @@ const ROOT = path.join(__dirname, '..');
 
 const REPORT_PATH = path.join(ROOT, 'governance', 'tamper-detection-report.json');
 
+// ─── Resolução de caminhos: suporta nova estrutura e compat flat ──────────────
+function resolveSigPath(sigName) {
+  const candidates = [
+    path.join(ROOT, 'dist', 'signatures', sigName),    // nova estrutura
+    path.join(ROOT, 'dist', sigName),                  // compat flat
+    path.join(ROOT, 'dist', 'governance-artifacts', sigName), // legado
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[1];
+}
+
+function resolveGovPath(fileName) {
+  const candidates = [
+    path.join(ROOT, 'dist', 'governance', fileName),   // nova estrutura
+    path.join(ROOT, 'dist', fileName),                 // compat flat
+    path.join(ROOT, 'dist', 'governance-artifacts', fileName),
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || candidates[1];
+}
+
 // ─── Verificações individuais ─────────────────────────────────────────────────
 function checkPackageIntegrity(artifact) {
   const zipHash    = sha256File(artifact.zipPath);
@@ -48,7 +67,7 @@ function checkPackageIntegrity(artifact) {
 }
 
 function checkManifestSig(artifact) {
-  const sigPath = path.join(ROOT, 'dist', 'package.manifest.sig');
+  const sigPath = resolveSigPath('package.manifest.sig');
   if (!fs.existsSync(sigPath)) {
     return { check: 'manifest_sig', pass: false, severity: 'HIGH', details: { reason: 'sig_file_missing' } };
   }
@@ -69,7 +88,7 @@ function checkManifestSig(artifact) {
 }
 
 function checkReleaseSig() {
-  const sigPath = path.join(ROOT, 'dist', 'release.sig');
+  const sigPath = resolveSigPath('release.sig');
   if (!fs.existsSync(sigPath)) {
     return { check: 'release_sig', pass: false, severity: 'CRITICAL', details: { reason: 'sig_file_missing' } };
   }
@@ -83,7 +102,7 @@ function checkReleaseSig() {
 }
 
 function checkGovernanceSig() {
-  const sigPath = path.join(ROOT, 'dist', 'governance.sig');
+  const sigPath = resolveSigPath('governance.sig');
   if (!fs.existsSync(sigPath)) {
     return { check: 'governance_sig', pass: false, severity: 'CRITICAL', details: { reason: 'sig_file_missing' } };
   }
@@ -196,7 +215,7 @@ function checkStaleArtifacts(artifact) {
 }
 
 function checkAttestationIntegrity() {
-  const attPath = path.join(ROOT, 'dist', 'governance-attestation.json');
+  const attPath = resolveGovPath('governance-attestation.json');
   if (!fs.existsSync(attPath)) {
     return { check: 'attestation_integrity', pass: false, severity: 'HIGH', details: { reason: 'attestation_missing' } };
   }

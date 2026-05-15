@@ -366,7 +366,7 @@ export function QaWavesPage() {
   }, [journeysTree, selectedDomain, scenarioItems]);
 
   async function loadJourneyStatus() {
-    const response = await fetchJson('/api/test-executions/qa-waves/journey-status', { suppressErrorLog: true });
+    const response = await fetchJson('/api/qa-waves/journey-status', { suppressErrorLog: true });
     setJourneyStatus(Array.isArray(response.items) ? response.items : []);
   }
 
@@ -377,7 +377,7 @@ export function QaWavesPage() {
     if (filters.status) params.set('status', filters.status);
     if (filters.source) params.set('source', filters.source);
     const suffix = params.toString();
-    const response = await fetchJson(`/api/test-executions/qa-waves/scenarios${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
+    const response = await fetchJson(`/api/qa-waves/scenarios${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
     const items = Array.isArray(response.items) ? response.items : [];
     setScenarioItems(items);
 
@@ -392,7 +392,7 @@ export function QaWavesPage() {
     const params = new URLSearchParams();
     if (selectedJourneyId) params.set('journeyId', selectedJourneyId);
     const suffix = params.toString();
-    const response = await fetchJson(`/api/test-executions/qa-waves/step-status${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
+    const response = await fetchJson(`/api/qa-waves/step-status${suffix ? `?${suffix}` : ''}`, { suppressErrorLog: true });
     setStepStatus(Array.isArray(response.items) ? response.items : []);
   }
 
@@ -404,8 +404,10 @@ export function QaWavesPage() {
   async function loadAll() {
     try {
       const [journeysData, journeyStatusData] = await Promise.all([
-        fetchJson('/api/test-executions/qa-waves/journeys'),
-        fetchJson('/api/test-executions/qa-waves/journey-status'),
+        fetchJson('/api/qa-waves/journeys'),
+        fetchJson('/api/qa-waves/journey-status'),
+        loadScenarios(),
+        loadExecutions(),
       ]);
 
       const domains = Array.isArray(journeysData.domains) ? journeysData.domains : [];
@@ -434,11 +436,6 @@ export function QaWavesPage() {
       loadStepStatus();
     }
   }, [selectedJourneyId]);
-
-  useEffect(() => {
-    if (!showExecutionsModal) return;
-    loadExecutions().catch((err) => notifyRequestError(err, 'Falha ao carregar execuções QA Waves'));
-  }, [showExecutionsModal, notifyRequestError]);
 
   useEffect(() => {
     setInferenceJourneyId(selectedJourneyId || 'auto');
@@ -472,7 +469,8 @@ export function QaWavesPage() {
       }),
     });
 
-    await loadScenarios();
+    notifySuccess(successMessage);
+    await Promise.all([loadJourneyStatus(), loadStepStatus()]);
   }
 
   function updateScenarioEditor(mutator) {
@@ -719,6 +717,7 @@ export function QaWavesPage() {
       setRunReplayId(resolvedReplayId);
       setCurrentExecutionId(response.executionId || '');
       notifySuccess(`Execução real enfileirada. executionId=${response.executionId} replayId=${resolvedReplayId || 'n/a'}`);
+      await Promise.all([loadJourneyStatus(), loadStepStatus()]);
     } catch (err) {
       if (err?.status === 409 || err?.code === 'EXECUTION_ALREADY_RUNNING') {
         notifyError('Já existe uma execução em andamento. Aguarde a conclusão antes de iniciar uma nova onda.');
@@ -896,22 +895,14 @@ export function QaWavesPage() {
 
   return (
     <>
-      <div className="qa-waves-page" data-testid="qa-waves-page">
+      <div className="qa-waves-page">
       <header className="qa-waves-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
-            <h1 className="qa-waves-title" data-testid="qa-waves-title">QA Waves Integrado</h1>
+            <h1 className="qa-waves-title">QA Waves Integrado</h1>
             <p className="qa-waves-subtitle">
               Opera na mesma API e frontend do r-agent2, sem porta adicional.
             </p>
-            <div style={{ marginTop: 8 }}>
-              <a
-                href="/dev/qa-gaps"
-                style={{ fontSize: 13, color: 'var(--color-accent-primary)', textDecoration: 'none', fontWeight: 600 }}
-              >
-                Abrir dashboard operacional de gaps (/dev/qa-gaps)
-              </a>
-            </div>
           </div>
           <div
             className="flex items-center gap-2 rounded-md border border-border-default bg-bg-elevated px-3 py-1.5"
@@ -1038,7 +1029,6 @@ export function QaWavesPage() {
                 disabled={!selectedScenarioId || executionPolling.isPolling}
                 className="qa-btn-primary"
                 title={executionPolling.isPolling ? 'Execução em andamento. Aguarde a conclusão.' : ''}
-                data-testid="qa-waves-run-button"
               >
                 ▶ Executar cenário
               </button>
@@ -1054,7 +1044,6 @@ export function QaWavesPage() {
                 type="button"
                 onClick={() => openReplayPage(runReplayId)}
                 disabled={!runReplayId}
-                data-testid="qa-waves-replay-open-button"
               >
                 ↗ Abrir replay
               </button>
@@ -1268,7 +1257,6 @@ export function QaWavesPage() {
                   disabled={!selectedScenarioId || executionPolling.isPolling}
                   className="qa-btn-primary"
                   title={executionPolling.isPolling ? 'Execução em andamento. Aguarde a conclusão.' : ''}
-                  data-testid="qa-waves-run-button"
                 >
                   ▶ Executar cenário
                 </button>

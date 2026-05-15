@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-05-15T15:09:10.054Z",
+  "engine": "generate-self-proving-report/v1",
+  "zipName": "r-agent2-20260515-120735.zip",
+  "zipHash": "59a8b78bfb0a2ad8af146ae7aff516a291410c254aa3e5af86c856ce5bdb32e2",
+  "manifestHash": "10f1ba9c3f66d9f3a4af530f8c1fe4c72b33230da8371e59c26d6f6984ace3cc",
+  "replayHash": "84628ec5f6ac2f7d3860765af1dc7a28bb13e396c4b3ccada600d3e84c824ea2",
+  "governanceHash": "c740c903e36bc78a9b9a0fb5f908320e5bc70b974b368fcc4ddb23e80092b21c",
+  "readinessHash": "9ebbfadb771598e56ab87a72f36c0e3c3f248d755f39840b31bbb7a172cd2638",
+  "consistencyHash": "3b54c24da6a53632787eae2a3c51aaf622f97fedbc407bbd1a0f4982054bbcd6",
+  "contaminationHash": "e5225b100996b1d6ddd57069e1296177a5a7f71a314170832eef7eabfbc054d4",
+  "packageIntegrityHash": "3ae8fc61be0b2c4a17f30deaaed10583a662927434e876c2c0da884e30cf88bc",
+  "driftHash": "e29e058a75aeb07b8e73e4d302dfafd13e519edf2526ddb62fa3890bc24f6ef6",
+  "gateHash": "0cc1d7048258c160fe946434f92493586f637db6cc18c47823d999783efe898a",
+  "recalculatedReadinessHash": "47f374e52cf91ecc7b2ab80b4b05284104d83d00274c3b6330eae59e93ad2930",
+  "engineDecisions": {
+    "replayHardening": "REPLAY_HARDENING_NO_GO",
+    "replayConsistency": "REPLAY_CONSISTENCY_NO_GO",
+    "contamination": "GOVERNANCE_CONTAMINATION_NO_GO",
+    "packageIntegrity": "PACKAGE_INTEGRITY_NO_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]",
+    "readiness": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+    "readinessDrift": "READINESS_DRIFT_NO_GO",
+    "finalConsistencyGate": "FINAL_CONSISTENCY_NO_GO"
+  },
+  "packageIntegrityOk": false,
+  "allEnginesBlockedOrUnknown": false,
+  "autonomousReady": false,
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260515-120735.zip. Package: DIVERGENTE."
+}

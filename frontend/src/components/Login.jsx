@@ -308,7 +308,7 @@ export function Login() {
         console.log('[Login] Super-admin: abrindo modal de seleção de tenant');
         setIsSuperAdminLogin(true);
         setShowTenantModal(true);
-        showToast('Selecione o tenant para acessar.', 'success');
+        showToast('Login realizado. Selecione o tenant para continuar.', 'info');
         setLoading(false);
       } else if (result.agent?.tenantId) {
         // Admin normal com tenantId já integrado: faz login direto
@@ -324,7 +324,7 @@ export function Login() {
         console.log('[Login] Admin sem tenantId: abrindo modal de seleção');
         setIsSuperAdminLogin(false);
         setShowTenantModal(true);
-        showToast('Selecione o tenant para acessar.', 'success');
+        showToast('Login realizado. Selecione o tenant para continuar.', 'info');
         setLoading(false);
       }
     } catch (err) {

@@ -1,31 +1,33 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
-  "finalDecision": "GO",
-  "platformMaturity": "enterprise-ready",
-  "canonicalMeshExecutionId": "mesh-business-screen-fix-001",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
+  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
   "canonicalMeshArtifacts": {
-    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-business-screen-fix-001.json",
+    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-05-12T23-50-45-984Z.json",
     "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
     "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
     "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json"
   },
   "readiness": {
     "docsScore": 100,
-    "meshScore": 100,
+    "meshScore": 98.39,
     "qaWavesScore": 0,
     "replayScore": 100,
     "verticalScore": 100,
     "productionScore": 90,
-    "readinessScore": 83.5
+    "readinessScore": 83.1
   },
   "qaCoverage": {
-    "executionId": "mesh-business-screen-fix-001",
-    "percent": 100,
-    "observedFailureFreePercent": 100,
-    "registryDeclaredTotal": 58,
-    "canonicalRegistryTotal": 58,
-    "blockingDomains": [],
-    "status": "GO"
+    "executionId": "mesh-2026-05-12T23-50-45-984Z",
+    "percent": 98.39,
+    "observedFailureFreePercent": 98.39,
+    "registryDeclaredTotal": 62,
+    "canonicalRegistryTotal": 62,
+    "blockingDomains": [
+      "pbx"
+    ],
+    "status": "NO_GO"
   },
   "replayCoverage": {
     "percent": 116.67,
@@ -101,7 +103,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-05-12T19:20:38.423Z",
+    "generatedAt": "2026-05-15T15:08:24.859Z",
     "filesScanned": 248,
     "totalMarkdownLinks": 194,
     "brokenMarkdownLinks": [],
@@ -111,12 +113,16 @@
   "verticals": [
     {
       "vertical": "beauty",
-      "scenarioCount": 12,
-      "executedScenarios": 12,
+      "scenarioCount": 13,
+      "executedScenarios": 13,
       "journeyCount": 2,
-      "channels": [],
-      "replayRequired": 12,
-      "backendAssertions": 0,
+      "assertionCount": 1,
+      "integrationCount": 1,
+      "channels": [
+        "whatsapp"
+      ],
+      "replayRequired": 13,
+      "backendAssertions": 1,
       "implemented": true,
       "tested": true,
       "validated": true,
@@ -134,8 +140,10 @@
     {
       "vertical": "fitness",
       "scenarioCount": 15,
-      "executedScenarios": 14,
+      "executedScenarios": 9,
       "journeyCount": 9,
+      "assertionCount": 1,
+      "integrationCount": 1,
       "channels": [
         "whatsapp"
       ],
@@ -164,36 +172,45 @@
     },
     {
       "vertical": "food",
-      "scenarioCount": 1,
-      "executedScenarios": 1,
-      "journeyCount": 1,
-      "channels": [],
-      "replayRequired": 1,
-      "backendAssertions": 0,
+      "scenarioCount": 3,
+      "executedScenarios": 3,
+      "journeyCount": 2,
+      "assertionCount": 1,
+      "integrationCount": 1,
+      "channels": [
+        "whatsapp"
+      ],
+      "replayRequired": 3,
+      "backendAssertions": 1,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
-      "enterpriseReady": false,
+      "enterpriseReady": true,
       "sellable": true,
       "blockers": [],
       "qaFailures": [],
       "journeys": [
+        "food_customer_journey",
         "food_order_flow"
       ],
       "classification": "production-like"
     },
     {
       "vertical": "services",
-      "scenarioCount": 1,
-      "executedScenarios": 1,
+      "scenarioCount": 3,
+      "executedScenarios": 3,
       "journeyCount": 1,
-      "channels": [],
-      "replayRequired": 1,
-      "backendAssertions": 0,
+      "assertionCount": 1,
+      "integrationCount": 1,
+      "channels": [
+        "api"
+      ],
+      "replayRequired": 2,
+      "backendAssertions": 1,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
       "sellable": true,
@@ -206,15 +223,19 @@
     },
     {
       "vertical": "clinic",
-      "scenarioCount": 1,
-      "executedScenarios": 1,
+      "scenarioCount": 3,
+      "executedScenarios": 3,
       "journeyCount": 1,
-      "channels": [],
-      "replayRequired": 1,
-      "backendAssertions": 0,
+      "assertionCount": 1,
+      "integrationCount": 1,
+      "channels": [
+        "ticket"
+      ],
+      "replayRequired": 3,
+      "backendAssertions": 1,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
       "sellable": true,
@@ -227,15 +248,19 @@
     },
     {
       "vertical": "market",
-      "scenarioCount": 1,
-      "executedScenarios": 1,
+      "scenarioCount": 3,
+      "executedScenarios": 3,
       "journeyCount": 1,
-      "channels": [],
-      "replayRequired": 1,
-      "backendAssertions": 0,
+      "assertionCount": 1,
+      "integrationCount": 1,
+      "channels": [
+        "api"
+      ],
+      "replayRequired": 2,
+      "backendAssertions": 1,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
       "sellable": true,
@@ -255,7 +280,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 4,
       "blocker": false
     },
     {
@@ -275,7 +300,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 5,
       "blocker": false
     },
     {
@@ -285,7 +310,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 0,
+      "scenarioCount": 2,
       "blocker": false
     },
     {
@@ -305,7 +330,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 12,
       "blocker": false
     },
     {
@@ -315,7 +340,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 7,
+      "scenarioCount": 8,
       "blocker": false
     },
     {
@@ -335,7 +360,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 5,
+      "scenarioCount": 6,
       "blocker": false
     },
     {
@@ -349,7 +374,65 @@
       "blocker": false
     }
   ],
-  "blockingGaps": [],
+  "blockingGaps": [
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio pbx",
+      "evidence": {
+        "scenarios": [
+          "qa-pbx-call-events-runtime-smoke"
+        ],
+        "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": []
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-governance-support",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+      "evidence": {
+        "status": "NOT_VALIDATED",
+        "signatureArtifact": "governance/proof-signature.json",
+        "cleanupArtifact": "governance/cleanup-proof.json",
+        "missing": [
+          "cleanup_status"
+        ]
+      },
+      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+    },
+    {
+      "id": "gap-cross-report-package_validation_failed",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
+      "evidence": {
+        "type": "package_validation_failed",
+        "missingEntries": [],
+        "blocker": true,
+        "message": "Pacote não passou na validação: 0 entradas ausentes."
+      },
+      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
   "nonBlockingGaps": [],
   "enterpriseProofs": {
     "proofs": {
@@ -369,7 +452,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-05-12T19:20:59.462Z",
+    "generatedAt": "2026-05-15T15:08:43.465Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -377,7 +460,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 0,
+    "blockerCount": 1,
     "replayCoverage": {
       "required": 6,
       "found": 7,
@@ -387,6 +470,13 @@
       "required": 6,
       "found": 6,
       "percent": 100
+    },
+    "verticalCoverage": {
+      "status": "VALIDATED",
+      "validated": 6,
+      "required": 6,
+      "percent": 100,
+      "invalidClaims": []
     },
     "omnichannelCoverage": {
       "status": "VALIDATED",
@@ -401,13 +491,16 @@
       "asrArtifact": "qa/enterprise/pbx-asr-transcript.json",
       "ttsArtifact": "qa/enterprise/pbx-tts-prompts.json",
       "recordingsArtifact": "qa/enterprise/pbx-recordings-metadata.json",
-      "missing": []
+      "missing": [],
+      "maturityLevel": "enterprise-real",
+      "isFullyReal": true
     },
     "humanHandoffCoverage": {
       "status": "VALIDATED",
       "artifact": "qa/enterprise/human-handoff-full-validation.json",
       "screenshotArtifact": "qa/enterprise/human-handoff-screenshots.json",
       "missing": [],
+      "normalizationGaps": [],
       "screenshots": [
         {
           "journeyId": "support_ticket_flow",
@@ -4571,23 +4664,58 @@
       ]
     },
     "governanceCoverage": {
-      "status": "VALIDATED",
+      "status": "NOT_VALIDATED",
       "signatureArtifact": "governance/proof-signature.json",
       "cleanupArtifact": "governance/cleanup-proof.json",
-      "missing": []
+      "missing": [
+        "cleanup_status"
+      ]
+    },
+    "intelligenceStability": {
+      "status": "STABLE",
+      "unstableDomains": [],
+      "recurringFailures": [
+        {
+          "domain": "pbx",
+          "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
+          "recurringCount": 9
+        }
+      ],
+      "blocksAutonomous": false
+    },
+    "crossReportConsistency": {
+      "generatedAt": "2026-05-15T15:08:43.463Z",
+      "expectedZipName": null,
+      "pbxMaturity": "enterprise-real",
+      "contradictions": [
+        {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        }
+      ],
+      "blockers": [
+        {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        }
+      ],
+      "warnings": [],
+      "blockerCount": 1,
+      "warningCount": 0,
+      "maximumAllowedReadiness": "operational",
+      "autonomousReadyBlocked": true,
+      "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational."
     },
     "packageValidation": {
-      "generatedAt": "2026-05-12T19:20:59.462Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-090717.zip",
-      "zipName": "r-agent2-20260512-090717.zip",
-      "selectionMode": "audited",
-      "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260512-090717.manifest.json",
-      "manifestAudit": "passed",
-      "auditSatisfied": true,
+      "generatedAt": "2026-05-15T15:08:43.464Z",
+      "ok": false,
+      "zipPath": null,
+      "zipName": null,
       "requiredEntries": [
-        "governance/final-proof-report.json",
-        "governance/evidence-manifest.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -4609,14 +4737,12 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
-      "entryCount": 4596,
       "missingEntries": [],
-      "ok": true,
-      "error": null
+      "error": "self_containment_failed:missing=[cross-report-validation.json]"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-12T19:20:59.413Z",
-      "runtimeRoot": "/tmp/r-agent2-runtime",
+      "generatedAt": "2026-05-15T15:08:43.464Z",
+      "runtimeRoot": null,
       "artifacts": [
         {
           "id": "smoke_summary",
@@ -4752,9 +4878,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "1385b3ed301ede44d11110f33c3f92575e7af3d08db731adb24f93e66f127c3b",
-          "checksum": "1385b3ed301ede44d11110f33c3f92575e7af3d08db731adb24f93e66f127c3b",
-          "timestamp": "2026-05-12T11:27:28.495Z",
+          "hash": "e571b014ba367e250e2fa2186ef02ea930334b71ebf17912c6277cf30bb51b4d",
+          "checksum": "e571b014ba367e250e2fa2186ef02ea930334b71ebf17912c6277cf30bb51b4d",
+          "timestamp": "2026-05-13T01:48:49.045Z",
           "proofStatus": "present",
           "replayLinkage": [
             "human_handoff_full_validation"
@@ -4796,9 +4922,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e5f90c6336a1335d57ab23d2a68b79f518ae843b5b5a546378b5445fbea6f4fc",
-          "checksum": "e5f90c6336a1335d57ab23d2a68b79f518ae843b5b5a546378b5445fbea6f4fc",
-          "timestamp": "2026-05-12T11:27:28.495Z",
+          "hash": "77bdf4442466c7b5a62322fd46c7d8c91de11517209053dd3cf084527fb6f695",
+          "checksum": "77bdf4442466c7b5a62322fd46c7d8c91de11517209053dd3cf084527fb6f695",
+          "timestamp": "2026-05-13T01:47:50.626Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -4964,9 +5090,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "7305793ad2e2aa0b61584d733c14b4a1a9641e17fd081552f9daee37422e9166",
-          "checksum": "7305793ad2e2aa0b61584d733c14b4a1a9641e17fd081552f9daee37422e9166",
-          "timestamp": "2026-05-12T19:20:38.426Z",
+          "hash": "0809fb21d71c8938fd095babb8dfde5312ab7dc99e2856765110b5007b0e3af9",
+          "checksum": "0809fb21d71c8938fd095babb8dfde5312ab7dc99e2856765110b5007b0e3af9",
+          "timestamp": "2026-05-15T15:08:24.860Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4982,9 +5108,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ff6fe18ad8e7a839dae01bad6bc5971037578986e430896455e4da4032412cbf",
-          "checksum": "ff6fe18ad8e7a839dae01bad6bc5971037578986e430896455e4da4032412cbf",
-          "timestamp": "2026-05-12T19:20:38.827Z",
+          "hash": "ffa7c1a7cc6ad7f1375855891d8c4101c8c83630de5f2fcd47d9b028229a0992",
+          "checksum": "ffa7c1a7cc6ad7f1375855891d8c4101c8c83630de5f2fcd47d9b028229a0992",
+          "timestamp": "2026-05-15T15:08:25.089Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5000,15 +5126,93 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "1ea25416a1fac12fe249aa8f0fb66c83f4d14f92ad09d6bdd1b51a89bdd241e8",
-          "checksum": "1ea25416a1fac12fe249aa8f0fb66c83f4d14f92ad09d6bdd1b51a89bdd241e8",
-          "timestamp": "2026-05-12T19:18:39.579Z",
+          "hash": "d156dcba6d9b0ab2a0a59f71a7bc17552e231bf6af4a02f66dee64f2919efe90",
+          "checksum": "d156dcba6d9b0ab2a0a59f71a7bc17552e231bf6af4a02f66dee64f2919efe90",
+          "timestamp": "2026-05-15T15:06:23.630Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
           "governanceLinkage": [
             "proof_based_governance"
           ]
+        }
+      ]
+    },
+    "proofQualityScore": {
+      "score": 90,
+      "raw": 108,
+      "max": 120,
+      "grade": "A",
+      "breakdown": [
+        {
+          "label": "foundation_artifacts",
+          "earned": 20,
+          "max": 20
+        },
+        {
+          "label": "replay_coverage_100pct",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "vertical_assertions_valid",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "pbx_fully_real",
+          "earned": 15,
+          "max": 15
+        },
+        {
+          "label": "pbx_partial_real",
+          "earned": 0,
+          "max": 0
+        },
+        {
+          "label": "handoff_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "handoff_fully_normalized",
+          "earned": 5,
+          "max": 5
+        },
+        {
+          "label": "omnichannel_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "digital_twin_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "governance_validated",
+          "earned": 0,
+          "max": 10
+        },
+        {
+          "label": "intelligence_stable",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "pbx_enterprise_real",
+          "earned": 5,
+          "max": 5
+        },
+        {
+          "label": "handoff_screenshots",
+          "earned": 3,
+          "max": 3
+        },
+        {
+          "label": "runtime_cleanup",
+          "earned": 0,
+          "max": 2
         }
       ]
     },
@@ -5022,24 +5226,89 @@
         "enterprise-ready",
         "autonomous-ready"
       ],
-      "currentLevel": "autonomous-ready",
-      "blockersClear": true,
+      "stageDecisions": {
+        "foundation": "FOUNDATION_GO",
+        "operational": "OPERATIONAL_GO",
+        "validated": "VALIDATED_GO",
+        "prod-like": "PRODLIKE_GO",
+        "enterprise-partial": "ENTERPRISE_PARTIAL_GO",
+        "enterprise-ready": "ENTERPRISE_READY_GO",
+        "autonomous-ready": "AUTONOMOUS_READY_GO"
+      },
+      "currentLevel": "enterprise-ready",
+      "blockersClear": false,
       "gateChecks": {
-        "blockersClear": true,
+        "blockersClear": false,
         "proofsComplete": true,
         "replayCoverageOk": true,
         "prodLikeCoverageOk": true,
         "omnichannelCoverageOk": true,
         "PBXCoverageOk": true,
+        "pbxFullyReal": true,
         "humanHandoffCoverageOk": true,
+        "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
-        "governanceCoverageOk": true,
-        "packageValidationOk": true,
-        "evidenceManifestValid": true
+        "governanceCoverageOk": false,
+        "packageValidationOk": false,
+        "evidenceManifestValid": true,
+        "intelligenceStable": true,
+        "crossReportConsistent": false,
+        "verticalCoverageValid": true
+      },
+      "autonomousReadyGate": {
+        "pbxFullyReal": true,
+        "omnichannelValidated": true,
+        "handoffFullyNormalized": true,
+        "noSyntheticCriticalPaths": true,
+        "intelligenceStable": true,
+        "crossReportConsistent": false,
+        "verticalCoverageValid": true,
+        "allPassed": false
       }
     },
-    "finalDecision": "GO",
-    "blockingGaps": []
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+    "blockingGaps": [
+      {
+        "id": "gap-proof-package-validation",
+        "severity": "critical",
+        "area": "package",
+        "title": "ZIP de release nao contem todos os proofs obrigatorios",
+        "evidence": {
+          "missingEntries": []
+        },
+        "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+      },
+      {
+        "id": "gap-proof-governance-support",
+        "severity": "critical",
+        "area": "proof-governance",
+        "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+        "evidence": {
+          "status": "NOT_VALIDATED",
+          "signatureArtifact": "governance/proof-signature.json",
+          "cleanupArtifact": "governance/cleanup-proof.json",
+          "missing": [
+            "cleanup_status"
+          ]
+        },
+        "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+      },
+      {
+        "id": "gap-cross-report-package_validation_failed",
+        "severity": "critical",
+        "area": "cross-report",
+        "title": "Contradição cross-report: package_validation_failed",
+        "evidence": {
+          "type": "package_validation_failed",
+          "missingEntries": [],
+          "blocker": true,
+          "message": "Pacote não passou na validação: 0 entradas ausentes."
+        },
+        "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+      }
+    ],
+    "meshHardBlocked": true,
+    "meshBlockReason": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]"
   },
   "operationalDigitalTwin": {
     "status": "complete",
@@ -5068,14 +5337,15 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 31,
-    "executableScenarioCount": 25,
+    "scenarioCount": 40,
+    "executableScenarioCount": 34,
     "executableJourneyIds": [
       "beauty_booking",
       "beauty_new_customer",
       "clinic_default_journey",
       "fitness_active_customer",
       "fitness_new_customer",
+      "food_customer_journey",
       "food_order_flow",
       "leads",
       "market_default_journey",
@@ -5093,7 +5363,7 @@
     "Governance policies versioned under governance/."
   ],
   "nowItems": [
-    "Preserve the current zero-blocking mesh state and monitor regressions in the canonical run.",
+    "Close PBX failures reported by qa-mesh/intelligence/latest.json.",
     "Produce a full omnichannel replay proving WhatsApp -> AI -> handoff -> human -> backend mutation chronology.",
     "Eliminate broken document references and retire legacy docs as non-canonical."
   ],
@@ -5110,10 +5380,15 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "noGoReasons": [],
+  "noGoReasons": [
+    "Falha aberta no dominio pbx [gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke]",
+    "ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]",
+    "Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]",
+    "Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]"
+  ],
   "productionReadiness": {
-    "status": "GO",
-    "classification": "enterprise-ready",
+    "status": "NO_GO:ENTERPRISE_READY_GO",
+    "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -5127,14 +5402,72 @@
     ]
   },
   "enterpriseReadiness": {
-    "status": "autonomous-ready",
+    "status": "enterprise-ready",
     "evidenceBased": true,
     "missingProofs": []
   },
-  "automaticGapBacklog": [],
+  "automaticGapBacklog": [
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio pbx",
+      "evidence": {
+        "scenarios": [
+          "qa-pbx-call-events-runtime-smoke"
+        ],
+        "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": []
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-governance-support",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+      "evidence": {
+        "status": "NOT_VALIDATED",
+        "signatureArtifact": "governance/proof-signature.json",
+        "cleanupArtifact": "governance/cleanup-proof.json",
+        "missing": [
+          "cleanup_status"
+        ]
+      },
+      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+    },
+    {
+      "id": "gap-cross-report-package_validation_failed",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
+      "evidence": {
+        "type": "package_validation_failed",
+        "missingEntries": [],
+        "blocker": true,
+        "message": "Pacote não passou na validação: 0 entradas ausentes."
+      },
+      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5254,6 +5587,40 @@
           "qaSupport": true,
           "scenarios": [
             {
+              "scenarioId": "beauty-campanha-lead-pagamento",
+              "scenario": "Beauty campanha de unhas até pagamento",
+              "status": "approved",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [
+                "Campanha e sandbox billing habilitados"
+              ],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "Campanha criada e publicada",
+                "Pagamento confirmado e status ativo"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_b1_001",
+                  "expected": {
+                    "backendEntity": "campaign",
+                    "campaignCreated": true
+                  }
+                },
+                {
+                  "stepId": "step_b1_002",
+                  "expected": {
+                    "backendEntity": "payment",
+                    "paymentConfirmed": true
+                  }
+                }
+              ]
+            },
+            {
               "scenarioId": "business-b1",
               "scenario": "Beauty campanha de unhas até pagamento",
               "status": "approved",
@@ -5278,7 +5645,7 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "fitness",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5582,17 +5949,71 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
       "journeys": [
         {
           "vertical": "food",
+          "journey": "food_customer_journey",
+          "replaySupport": true,
+          "qaSupport": true,
+          "scenarios": [
+            {
+              "scenarioId": "business-food-flow-order",
+              "scenario": "Food pedido via WhatsApp até confirmação",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            }
+          ]
+        },
+        {
+          "vertical": "food",
           "journey": "food_order_flow",
           "replaySupport": true,
           "qaSupport": true,
           "scenarios": [
+            {
+              "scenarioId": "food-pedido-whatsapp",
+              "scenario": "Food pedido via WhatsApp até confirmação",
+              "status": "approved",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [
+                "Módulo de pedidos ativo",
+                "Tenant autenticado"
+              ],
+              "integrations": [
+                "api",
+                "whatsapp"
+              ],
+              "steps": [
+                "Pedido recebido via WhatsApp webhook",
+                "Status do pedido atualizado"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_food_001",
+                  "expected": {
+                    "backendEntity": "order",
+                    "orderReceived": true
+                  }
+                },
+                {
+                  "stepId": "step_food_002",
+                  "expected": {
+                    "backendEntity": "order",
+                    "statusUpdated": true
+                  }
+                }
+              ]
+            },
             {
               "scenarioId": "business-food-scr-01",
               "scenario": "Food Orders screen smoke",
@@ -5608,7 +6029,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5619,6 +6040,43 @@
           "replaySupport": true,
           "qaSupport": true,
           "scenarios": [
+            {
+              "scenarioId": "services-ativacao-solucao",
+              "scenario": "Services ativação de pacote de soluções",
+              "status": "approved",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [
+                "Catálogo de soluções publicado",
+                "Tenant autenticado"
+              ],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "Ativação registrada no backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_serv_001",
+                  "expected": {
+                    "backendEntity": "solution",
+                    "activationRegistered": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-serv-flow-solution",
+              "scenario": "Services ativação de pacote de soluções",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            },
             {
               "scenarioId": "business-serv-scr-01",
               "scenario": "Services solutions screen smoke",
@@ -5634,7 +6092,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5645,6 +6103,51 @@
           "replaySupport": true,
           "qaSupport": true,
           "scenarios": [
+            {
+              "scenarioId": "clinic-ticket-manutencao",
+              "scenario": "Clinic abertura e resolução de ticket de manutenção",
+              "status": "approved",
+              "channels": [
+                "ticket"
+              ],
+              "preconditions": [
+                "Operação autenticada",
+                "Módulo de manutenção ativo"
+              ],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "Ticket de manutenção criado",
+                "Ticket resolvido com SLA"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_clinic_001",
+                  "expected": {
+                    "backendEntity": "ticket",
+                    "ticketCreated": true
+                  }
+                },
+                {
+                  "stepId": "step_clinic_002",
+                  "expected": {
+                    "backendEntity": "ticket",
+                    "withinSla": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-clinic-flow-ticket",
+              "scenario": "Clinic abertura e resolução de ticket de manutenção",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            },
             {
               "scenarioId": "business-clinic-scr-01",
               "scenario": "Clinic maintenance screen smoke",
@@ -5660,7 +6163,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-05-12T19:20:38.423Z",
+      "generatedAt": "2026-05-15T15:08:24.859Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5671,6 +6174,43 @@
           "replaySupport": true,
           "qaSupport": true,
           "scenarios": [
+            {
+              "scenarioId": "market-publicacao-no",
+              "scenario": "Market publicação de nó no marketplace",
+              "status": "approved",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [
+                "Marketplace carregável no tenant",
+                "Nó disponível para publicação"
+              ],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "Nó publicado no marketplace"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_mkt_001",
+                  "expected": {
+                    "backendEntity": "node",
+                    "nodePublished": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-market-flow-node",
+              "scenario": "Market publicação de nó no marketplace",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            },
             {
               "scenarioId": "business-market-scr-01",
               "scenario": "Market node marketplace screen smoke",
@@ -5685,5 +6225,6 @@
         }
       ]
     }
-  }
+  },
+  "reboundAt": "2026-05-15T15:09:07.263Z"
 }

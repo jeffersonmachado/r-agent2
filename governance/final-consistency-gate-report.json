@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-05-13T15:38:53.901Z",
+  "engine": "final-consistency-gate/v1",
+  "pass": false,
+  "decision": "FINAL_CONSISTENCY_NO_GO",
+  "totalChecks": 6,
+  "failedChecks": 2,
+  "criticalFailures": 2,
+  "highFailures": 0,
+  "checks": [
+    {
+      "check": "replay_consistency",
+      "pass": true,
+      "severity": "OK",
+      "hardeningDecision": "REPLAY_HARDENING_NO_GO",
+      "consistencyDecision": "REPLAY_CONSISTENCY_NO_GO",
+      "reason": null
+    },
+    {
+      "check": "readiness_consistency",
+      "pass": false,
+      "severity": "CRITICAL",
+      "driftDecision": "READINESS_DRIFT_NO_GO",
+      "driftCount": 1,
+      "reason": "Readiness drift detectado: 1 tipo(s) — READINESS_DRIFT_NO_GO"
+    },
+    {
+      "check": "package_consistency",
+      "pass": true,
+      "severity": "OK"
+    },
+    {
+      "check": "governance_engine_consistency",
+      "pass": true,
+      "severity": "OK",
+      "govDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
+      "consistDecision": "CONSISTENCY_GO"
+    },
+    {
+      "check": "contamination_consistency",
+      "pass": false,
+      "severity": "CRITICAL",
+      "contaminatedFiles": 5,
+      "totalContaminations": 13,
+      "reason": "13 contaminação(ões) em 5 arquivo(s): GOVERNANCE_CONTAMINATION_NO_GO"
+    },
+    {
+      "check": "cross_engine_alignment",
+      "pass": true,
+      "severity": "OK",
+      "contradictions": [],
+      "allDecisions": [
+        {
+          "engine": "replay-hardening",
+          "decision": "REPLAY_HARDENING_NO_GO"
+        },
+        {
+          "engine": "replay-consistency",
+          "decision": "REPLAY_CONSISTENCY_NO_GO"
+        },
+        {
+          "engine": "final-governance",
+          "decision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]"
+        },
+        {
+          "engine": "governance-consistency",
+          "decision": "CONSISTENCY_GO"
+        },
+        {
+          "engine": "readiness-drift",
+          "decision": "READINESS_DRIFT_NO_GO"
+        },
+        {
+          "engine": "contamination",
+          "decision": "GOVERNANCE_CONTAMINATION_NO_GO"
+        }
+      ],
+      "reason": null
+    }
+  ],
+  "failures": [
+    {
+      "check": "readiness_consistency",
+      "severity": "CRITICAL",
+      "reason": "Readiness drift detectado: 1 tipo(s) — READINESS_DRIFT_NO_GO"
+    },
+    {
+      "check": "contamination_consistency",
+      "severity": "CRITICAL",
+      "reason": "13 contaminação(ões) em 5 arquivo(s): GOVERNANCE_CONTAMINATION_NO_GO"
+    }
+  ],
+  "summary": "2 inconsistência(s) entre engines: 2 crítica(s). BLOQUEADO."
+}

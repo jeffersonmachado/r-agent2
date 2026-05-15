@@ -187,11 +187,15 @@ function preSign(options = {}) {
 
     packageIdentity: {
       name:          zipName,
-      sha256:        null,                          // preenchido pelo sidecar após empacotamento
-      sha256Source:  'sidecar-manifest',            // ZIP hash está apenas no sidecar manifest
+      // Ler sha256 do sidecar manifest quando disponível (resolve circular dependency
+      // porque o sidecar manifest é criado APÓS o empacotamento, fora do ZIP)
+      sha256:        artifact.manifest?.sha256 || null,
+      sha256Source:  artifact.manifest?.sha256 ? 'sidecar-manifest' : 'pending-post-packaging',
       chainRoot,                                    // prova criptográfica da governança
       gitCommit,
-      note:          'sha256 will be set in sidecar manifest after packaging to avoid circular dependency',
+      note:          artifact.manifest?.sha256
+        ? 'sha256 read from sidecar manifest — circular dependency resolved'
+        : 'sha256 will be set in sidecar manifest after packaging to avoid circular dependency',
     },
 
     commitProvenance: {
@@ -264,6 +268,9 @@ function preSign(options = {}) {
       attestation: attestationSeal,
     },
 
+    // Campos de identidade canônica do pacote — propagados para auditabilidade
+    boundZipName:    zipName,
+    boundZipHash:    artifact.manifest?.sha256 || null,
     finalDecision:   proofReport.finalDecision || 'UNKNOWN',
     autonomousReady: proofReport.finalDecision === 'AUTONOMOUS_READY_GO'
       || (crossReport.maximumAllowedReadiness === 'autonomous-ready' && (crossReport.blockerCount || 0) === 0),

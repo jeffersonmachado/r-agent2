@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({'deps': list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)[:20], 'scripts': list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)}, indent=2\\)\\)\")",
+      "Bash(grep -E '\\\\.md$')",
+      "Bash(node --check /opt/results/ria/r-agent2/qa-mesh/meshRunner.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/api/services/qa/stateSnapshotService.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/qa/contracts/operationalStepRegistry.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/qa/evidence/postStateProofValidator.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/api/services/qa/scanners/replayCapabilityScanner.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/api/services/qa/scanners/e2eCapabilityScanner.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/api/services/qa/journeyInferenceService.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/api/services/qa/operationalStepExecutor.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/qa/qa-waves/services/journeyInferenceService.js)",
+      "Bash(node --check /opt/results/ria/r-agent2/scripts/smoke/qa-waves-operational-final-smoke.js)",
+      "Bash(mv /opt/results/ria/r-agent2/apache-config-snippet.conf /opt/results/ria/r-agent2/docs/history/)",
+      "Bash(mv /opt/results/ria/r-agent2/apache-r-agent2-final.conf /opt/results/ria/r-agent2/docs/history/)",
+      "Bash(git -C /opt/results/ria/r-agent2 log --oneline -1)",
+      "Bash(awk '{print $1}')",
+      "Bash(node governance/package-validator.js)",
+      "Bash(node governance/cross-report-validator.js)",
+      "Bash(node tools/system/platform-readiness.js)",
+      "Bash(node -e ' *)",
+      "Bash(git -C /opt/results/ria/r-agent2 diff --stat HEAD)",
+      "Bash(git -C /opt/results/ria/r-agent2 status --short)",
+      "Bash(git -C /opt/results/ria/r-agent2 add governance/cross-report-validator.js governance/cross-report-validation.json governance/proof-engine/index.js governance/final-proof-report.json governance/evidence-manifest.json governance/package-validation-report.json dist/r-agent2-20260512-185809.manifest.json tools/system/platform-readiness.js governance/final-readiness-report.json)",
+      "Bash(git -C /opt/results/ria/r-agent2 add governance/cross-report-validator.js governance/cross-report-validation.json governance/proof-engine/index.js governance/final-proof-report.json governance/evidence-manifest.json governance/package-validation-report.json tools/system/platform-readiness.js governance/final-readiness-report.json)",
+      "Bash(git -C /opt/results/ria/r-agent2 commit -m ' *)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; node -e \"const r=JSON.parse\\(require\\(\\\\\"fs\\\\\"\\).readFileSync\\(\\\\\"$1\\\\\",\\\\\"utf8\\\\\"\\)\\); console.log\\(JSON.stringify\\({vertical:r.vertical,classification:r.classification,journeyCount:r.journeyCount,assertionCount:r.assertionCount,integrationCount:r.integrationCount,journeys:r.journeys?.length,assertions:r.assertions,integrations:r.integrations},null,2\\)\\)\" _ {}')",
+      "Bash(node -e \"const r=JSON.parse\\(require\\('fs'\\).readFileSync\\('qa-mesh/system-validate/meshEvidence/mesh-2026-04-20T13-45-00-158Z/scenarios/business-b1.json','utf8'\\)\\); console.log\\(JSON.stringify\\({scenarioId:r.scenarioId,status:r.status,failureType:r.failureType,error:r.error?.substring?.\\(0,200\\)},null,2\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(git -C /opt/results/ria/r-agent2 add qa-mesh/meshRunner.js tests/rpa/business/catalog.js tools/system/platform-readiness.js scripts/smoke/qa-waves-enterprise-proof-smoke.js governance/cross-report-validator.js governance/cross-report-validation.json governance/proof-engine/index.js governance/final-proof-report.json governance/evidence-manifest.json governance/package-validation-report.json governance/cleanup-proof.json governance/final-readiness-report.json qa/enterprise/human-handoff-full-validation.json)",
+      "Bash(PIPELINE_BYPASS=1 npm run qa:mesh)",
+      "Bash(PIPELINE_BYPASS=1 RUNTIME_ROOT=/tmp/r-agent2-runtime npm run qa:mesh)",
+      "Bash(ls -lt /tmp/r-agent2-runtime/qa-mesh/ 2>/dev/null | head -10; ls /opt/results/ria/r-agent2/qa-mesh/meshEvidence/ 2>/dev/null | head -5)",
+      "Read(//tmp/r-agent2-runtime/**)"
+    ]
+  }
+}

@@ -1,9 +1,16 @@
 import React from 'react';
 
+function cleanTicketId(id) {
+  const raw = String(id || '').trim().replace(/^default-/i, '');
+  if (!raw) return '-';
+  if (raw.length <= 16) return raw;
+  return `${raw.slice(0, 8)}…${raw.slice(-5)}`;
+}
+
 export function TicketSummaryCard({ ticket, formatDate }) {
   return (
     <section className="attendance-top-card">
-      <h3>TICKET #{ticket?.id || '-'}</h3>
+      <h3>TICKET #{cleanTicketId(ticket?.id)}</h3>
       <div className="attendance-top-grid">
         <div><span>Data:</span><strong>{ticket?.date ? formatDate(ticket.date) : '-'}</strong></div>
         <div><span>Contato:</span><strong>{ticket?.contact || '-'}</strong></div>

@@ -31,7 +31,7 @@ section() {
 # Variáveis padrão
 # Valores padrão definidos aqui
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
-SSH_PASSWORD="${SSH_PASSWORD:-resu100gabao}"
+SSH_PASSWORD="${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
 
 # Detecta diretório do projeto automaticamente
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

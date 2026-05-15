@@ -23,13 +23,32 @@ function listArtifacts() {
     throw new Error(`dist_missing:${DIST_DIR}`);
   }
 
-  return fs.readdirSync(DIST_DIR)
-    .filter((name) => name.endsWith('.zip'))
-    .sort()
-    .reverse()
-    .map((zip) => {
-      const zipPath = path.join(DIST_DIR, zip);
-      const manifestPath = path.join(DIST_DIR, zip.replace(/\.zip$/, '.manifest.json'));
+  // ORDEM: dist/ flat PRIMEIRO (pipeline cria ZIPs aqui), dist/release/ como fallback.
+  // Nunca buscar dist/release/ primeiro — evita encontrar ZIP de release anterior.
+  const RELEASE_DIR = path.join(DIST_DIR, 'release');
+  const searchDirs  = [DIST_DIR, RELEASE_DIR].filter((d) => fs.existsSync(d));
+
+  const seen = new Set();
+  const results = [];
+
+  for (const dir of searchDirs) {
+    const zips = fs.readdirSync(dir)
+      .filter((name) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(name))
+      .sort()
+      .reverse();
+
+    for (const zip of zips) {
+      if (seen.has(zip)) continue;
+      seen.add(zip);
+
+      const zipPath = path.join(dir, zip);
+      const manifestName = zip.replace(/\.zip$/, '.manifest.json');
+      // Procurar manifest na mesma dir ou no flat dist/
+      let manifestPath = path.join(dir, manifestName);
+      if (!fs.existsSync(manifestPath)) {
+        manifestPath = path.join(DIST_DIR, manifestName);
+      }
+
       let manifest = null;
       let manifestError = null;
       try {
@@ -37,14 +56,11 @@ function listArtifacts() {
       } catch (error) {
         manifestError = error.message || String(error);
       }
-      return {
-        zip,
-        zipPath,
-        manifestPath,
-        manifest,
-        manifestError,
-      };
-    });
+      results.push({ zip, zipPath, manifestPath, manifest, manifestError });
+    }
+  }
+
+  return results;
 }
 
 function findLatestReleaseArtifact(options = {}) {

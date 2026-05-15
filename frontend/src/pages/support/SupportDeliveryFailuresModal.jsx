@@ -41,7 +41,7 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
         ) : (
           <>
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Outbound queue</div>
+          <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Fila de envio (outbound)</div>
           {deliveryFailures.outboundQueue.length === 0 ? (
             <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma falha registrada.</div>
           ) : (
@@ -97,7 +97,7 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
         </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Channel messages (failed)</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Mensagens do canal com falha</div>
             {deliveryFailures.channelMessages.length === 0 ? (
               <div style={{ fontSize: '12px', color: '#777' }}>Nenhuma mensagem do canal marcada como failed.</div>
             ) : (

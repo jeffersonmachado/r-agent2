@@ -2,16 +2,19 @@
 'use strict';
 
 /**
- * Report Contamination Cleaner — detecta e relata relatórios com GO legado.
+ * Report Contamination Cleaner v2 — varredura recursiva de GO legado.
  *
- * Um relatório está contaminado quando:
- *   - finalDecision = AUTONOMOUS_READY_GO mas estado real é NO_GO
- *   - overallSelfProofScore = 100 mas existem violações reais
- *   - referencia ZIP antigo
- *   - contradiz o final-governance-engine
+ * Um relatório está contaminado quando contém — em QUALQUER profundidade do JSON:
+ *   - AUTONOMOUS_READY_GO   → GO legado de ciclo anterior
+ *   - SELF_PROVING_GO       → GO legado de prova anterior
+ *   - ENTERPRISE_READY_GO   → GO legado de validação anterior
+ *   - stale GO              → decisão GO num relatório cujo motor diz NO_GO
+ *   - orphan GO             → GO que não tem engine que o suporte
+ *   - conflicting GO        → GO que contradiz a decisão final da governança
  *
- * Este engine NÃO sobrescreve relatórios — apenas reporta a contaminação.
- * A correção é feita pelos outros engines no pipeline de release.
+ * Atenção: este engine NÃO sobrescreve relatórios — apenas reporta contaminação.
+ *
+ * Resultado: GOVERNANCE_CONTAMINATION_NO_GO se qualquer contaminação for detectada.
  */
 
 const fs   = require('fs');
@@ -20,172 +23,193 @@ const path = require('path');
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'report-contamination-report.json');
 
+// Termos que indicam GO legado ou stale
+const LEGACY_GO_TERMS = [
+  'AUTONOMOUS_READY_GO',
+  'SELF_PROVING_GO',
+  'ENTERPRISE_READY_GO',
+];
+
+// Campos que são "decisões" (portadores de GO/NO_GO)
+const DECISION_FIELDS = new Set([
+  'finalDecision', 'decision', 'overallDecision', 'status', 'gate',
+  'readinessDecision', 'overallStatus', 'go', 'platformDecision',
+]);
+
 function readJsonSafe(relPath) {
   const abs = path.join(ROOT, relPath);
   if (!fs.existsSync(abs)) return null;
   try { return JSON.parse(fs.readFileSync(abs, 'utf8')); } catch (_) { return null; }
 }
 
-function findLatestZip() {
-  const distDir = path.join(ROOT, 'dist');
-  if (!fs.existsSync(distDir)) return null;
-  const zips = fs.readdirSync(distDir)
-    .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f))
-    .sort().reverse();
-  return zips[0] || null;
-}
+// ─── Varredura recursiva de objeto JSON ───────────────────────────────────────
+// Retorna lista de { path, value, term } para cada ocorrência de GO legado.
+function scanRecursively(obj, currentPath, found) {
+  if (!obj || typeof obj !== 'object') return;
 
-// ─── Verificadores ────────────────────────────────────────────────────────────
-function checkConsistencyReport() {
-  const report     = readJsonSafe('governance/final-consistency-report.json');
-  const govEngine  = readJsonSafe('governance/final-governance-report.json');
-  if (!report) return null;
-
-  const issues = [];
-  const dec    = report.finalDecision || report.overallDecision;
-
-  // GO no consistency report mas governance engine bloqueou
-  if (dec === 'AUTONOMOUS_READY_GO' && govEngine?.finalDecision?.startsWith('NO_GO')) {
-    issues.push({
-      type:       'LEGACY_GO_IN_CONSISTENCY',
-      field:      'finalDecision',
-      value:      dec,
-      engineSays: govEngine.finalDecision,
-      message:    `final-consistency-report diz ${dec} mas final-governance-engine diz ${govEngine.finalDecision}`,
-    });
+  if (Array.isArray(obj)) {
+    obj.forEach((v, i) => scanRecursively(v, `${currentPath}[${i}]`, found));
+    return;
   }
 
-  // overallConsistencyScore mede alinhamento entre relatórios (cross-report),
-  // NÃO qualidade de replay. Só é contaminação se o report afirma GO final
-  // enquanto a governance engine bloqueou.
-  // (Não verificar score vs replay — são dimensões independentes)
+  for (const [key, value] of Object.entries(obj)) {
+    const childPath = currentPath ? `${currentPath}.${key}` : key;
 
-  return {
-    file:        'governance/final-consistency-report.json',
-    contaminated: issues.length > 0,
-    issues,
-  };
-}
-
-function checkSelfProvingReport() {
-  const report = readJsonSafe('governance/self-proving-report.json');
-  if (!report) return null;
-  const latestZip = findLatestZip();
-  const issues    = [];
-
-  // Referência a ZIP antigo
-  if (latestZip && report.artifact && report.artifact !== latestZip) {
-    issues.push({
-      type:    'STALE_ZIP_REFERENCE',
-      field:   'artifact',
-      value:   report.artifact,
-      latest:  latestZip,
-      message: `self-proving-report referencia ZIP ${report.artifact} mas o mais recente é ${latestZip}`,
-    });
-  }
-
-  // overallSelfProofScore mede integridade estrutural do pacote (não prontidão operacional).
-  // Um score=100 é contaminação apenas quando a governance bloqueia por razão ESTRUTURAL
-  // (replay false-positive, package tampering) — NÃO por razão operacional (mesh regression).
-  const govReport2 = readJsonSafe('governance/final-governance-report.json');
-  if (report.overallSelfProofScore === 100 && govReport2?.finalDecision?.startsWith('NO_GO')) {
-    const blockReasons = govReport2.criticalFailed || [];
-    const hasStructuralBlock = blockReasons.some((b) =>
-      b.id === 'package_integrity' || b.id === 'governance_signature' || b.id === 'replay_false_positives'
-    );
-    if (hasStructuralBlock) {
-      issues.push({
-        type:    'FALSE_SELF_PROOF_SCORE',
-        field:   'overallSelfProofScore',
-        value:   100,
-        message: `overallSelfProofScore=100 mas existem blockers estruturais: ${blockReasons.map((b)=>b.id).join(', ')}`,
-      });
+    if (typeof value === 'string') {
+      for (const term of LEGACY_GO_TERMS) {
+        if (value.includes(term)) {
+          found.push({
+            path:  childPath,
+            value: value.slice(0, 120),
+            term,
+            isDecisionField: DECISION_FIELDS.has(key),
+          });
+          break;
+        }
+      }
+    } else if (value && typeof value === 'object') {
+      scanRecursively(value, childPath, found);
     }
-    // Mesh regression é blocker OPERACIONAL, não estrutural — não contamina o score
   }
-
-  return {
-    file:        'governance/self-proving-report.json',
-    contaminated: issues.length > 0,
-    issues,
-  };
 }
 
-function checkFinalProofReport() {
-  const report    = readJsonSafe('governance/final-proof-report.json');
-  const govEngine = readJsonSafe('governance/final-governance-report.json');
-  if (!report) return null;
-  const issues    = [];
+// ─── Leitura da decisão canônica atual do governance engine ──────────────────
+function getCurrentGovernanceDecision() {
+  const govReport = readJsonSafe('governance/final-governance-report.json');
+  if (govReport) return govReport.finalDecision || null;
 
-  const dec = report.finalDecision;
-  if (dec === 'AUTONOMOUS_READY_GO' && govEngine?.finalDecision?.startsWith('NO_GO')) {
-    issues.push({
-      type:       'LEGACY_GO',
-      field:      'finalDecision',
-      value:      dec,
-      engineSays: govEngine.finalDecision,
-      message:    `final-proof-report diz ${dec} mas governance-engine diz ${govEngine.finalDecision}`,
-    });
-  }
+  // Fallback: readiness report
+  const readiness = readJsonSafe('governance/final-readiness-report.json');
+  if (readiness) return readiness.finalDecision || readiness.status || null;
 
-  return {
-    file:        'governance/final-proof-report.json',
-    contaminated: issues.length > 0,
-    issues,
-  };
+  return null;
 }
 
-function checkReadinessReport() {
-  const report = readJsonSafe('governance/final-readiness-report.json');
-  if (!report) return null;
-  const dec    = report.finalDecision || report.status;
-  const issues = [];
+function isNoGo(decision) {
+  if (!decision) return false;
+  return String(decision).startsWith('NO_GO') || String(decision) === 'NO_GO';
+}
 
-  // Este relatório deveria já estar correto (NO_GO:MESH_BLOCKED) — verificar
-  if (dec === 'AUTONOMOUS_READY_GO') {
-    const meshGoNoGo = readJsonSafe('qa-mesh/go-no-go-report.json') || {};
-    if (meshGoNoGo.status === 'NO_GO') {
-      issues.push({
-        type:    'MESH_NO_GO_IGNORED',
-        field:   'finalDecision',
-        value:   dec,
-        message: `final-readiness-report diz ${dec} mas qa-mesh go-no-go é NO_GO`,
+// ─── Varredura de um arquivo específico ──────────────────────────────────────
+function scanFile(relPath, opts = {}) {
+  const data = readJsonSafe(relPath);
+  if (!data) return { file: relPath, scanned: false, contaminations: [] };
+
+  const found = [];
+  scanRecursively(data, '', found);
+
+  const contaminations = found.map((hit) => ({
+    ...hit,
+    file: relPath,
+    type: hit.isDecisionField ? 'LEGACY_GO_IN_DECISION_FIELD' : 'LEGACY_GO_IN_NESTED_FIELD',
+    severity: hit.isDecisionField ? 'CRITICAL' : 'HIGH',
+  }));
+
+  return { file: relPath, scanned: true, hitCount: found.length, contaminations };
+}
+
+// ─── Lista de arquivos a varrer ───────────────────────────────────────────────
+function getGovernanceFiles() {
+  const govDir = path.join(ROOT, 'governance');
+  if (!fs.existsSync(govDir)) return [];
+
+  return fs.readdirSync(govDir)
+    .filter((f) => f.endsWith('.json'))
+    // Excluir o próprio relatório deste engine (output)
+    .filter((f) => f !== 'report-contamination-report.json')
+    .map((f) => `governance/${f}`);
+}
+
+// ─── Verificação cruzada: GO num relatório vs decisão canônica ────────────────
+function checkCrossContamination(fileScanResults, currentDecision) {
+  const crossIssues = [];
+
+  if (!isNoGo(currentDecision)) return crossIssues;
+
+  for (const result of fileScanResults) {
+    if (!result.scanned || result.contaminations.length === 0) continue;
+
+    // Verificar se o próprio top-level do arquivo diz GO
+    const data = readJsonSafe(result.file);
+    if (!data) continue;
+
+    const topLevelDecision = data.finalDecision || data.decision || data.status || data.gate;
+    const topLevelIsGo = topLevelDecision && LEGACY_GO_TERMS.some((t) => String(topLevelDecision).includes(t));
+
+    if (topLevelIsGo) {
+      crossIssues.push({
+        file:            result.file,
+        type:            'STALE_TOP_LEVEL_GO',
+        severity:        'CRITICAL',
+        topLevelDecision,
+        currentDecision,
+        message:         `${result.file} afirma ${topLevelDecision} mas governança diz ${currentDecision}`,
       });
     }
   }
 
-  return {
-    file:        'governance/final-readiness-report.json',
-    contaminated: issues.length > 0,
-    issues,
-  };
+  return crossIssues;
+}
+
+// ─── dev/platform-readiness/latest.json ──────────────────────────────────────
+function checkPlatformReadiness() {
+  return scanFile('dev/platform-readiness/latest.json');
 }
 
 // ─── Motor principal ──────────────────────────────────────────────────────────
 function runContaminationCleaner() {
-  const checks = [
-    checkConsistencyReport(),
-    checkSelfProvingReport(),
-    checkFinalProofReport(),
-    checkReadinessReport(),
-  ].filter(Boolean);
+  const currentDecision = getCurrentGovernanceDecision();
+  const governanceFiles = getGovernanceFiles();
 
-  const contaminated = checks.filter((c) => c.contaminated);
-  const allIssues    = contaminated.flatMap((c) => c.issues.map((i) => ({ ...i, file: c.file })));
-  const pass         = contaminated.length === 0;
+  // Varredura de todos os arquivos de governança
+  const fileScanResults = [
+    ...governanceFiles.map((f) => scanFile(f)),
+    checkPlatformReadiness(),
+  ].filter((r) => r.scanned);
+
+  // Verificação cruzada
+  const crossIssues = checkCrossContamination(fileScanResults, currentDecision);
+
+  // Agregar todas as contaminações
+  const allContaminations = [
+    ...fileScanResults.flatMap((r) => r.contaminations),
+    ...crossIssues,
+  ];
+
+  const criticalContaminations = allContaminations.filter((c) => c.severity === 'CRITICAL');
+  const highContaminations     = allContaminations.filter((c) => c.severity === 'HIGH');
+
+  // Agrupar por arquivo para relatório
+  const byFile = {};
+  for (const c of allContaminations) {
+    if (!byFile[c.file]) byFile[c.file] = [];
+    byFile[c.file].push(c);
+  }
+
+  const contaminatedFiles = Object.keys(byFile);
+  const pass = allContaminations.length === 0;
 
   const report = {
-    generatedAt:         new Date().toISOString(),
-    engine:              'report-contamination-cleaner/v1',
+    generatedAt:          new Date().toISOString(),
+    engine:               'report-contamination-cleaner/v2',
     pass,
-    decision:            pass ? 'NO_CONTAMINATION' : 'CONTAMINATION_DETECTED',
-    filesChecked:        checks.length,
-    contaminatedFiles:   contaminated.length,
-    issues:              allIssues.length,
-    contaminations:      contaminated.map((c) => ({ file: c.file, issueCount: c.issues.length, issues: c.issues })),
+    decision:             pass ? 'NO_CONTAMINATION' : 'GOVERNANCE_CONTAMINATION_NO_GO',
+    currentGovernanceDecision: currentDecision || 'UNKNOWN',
+    filesScanned:         fileScanResults.length,
+    contaminatedFiles:    contaminatedFiles.length,
+    totalContaminations:  allContaminations.length,
+    criticalCount:        criticalContaminations.length,
+    highCount:            highContaminations.length,
+    legacyTermsSearched:  LEGACY_GO_TERMS,
+    contaminations:       contaminatedFiles.map((f) => ({
+      file:         f,
+      issueCount:   byFile[f].length,
+      issues:       byFile[f],
+    })),
+    crossIssues,
     summary: pass
-      ? `Nenhuma contaminação detectada em ${checks.length} relatórios.`
-      : `${contaminated.length} relatório(s) contaminado(s): ${contaminated.map((c) => c.file).join(', ')}`,
+      ? `Nenhuma contaminação detectada em ${fileScanResults.length} arquivos.`
+      : `${allContaminations.length} contaminação(ões) em ${contaminatedFiles.length} arquivo(s): ${criticalContaminations.length} crítica(s), ${highContaminations.length} alta(s)`,
   };
 
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
@@ -198,6 +222,6 @@ module.exports = { runContaminationCleaner };
 if (require.main === module) {
   const report = runContaminationCleaner();
   // eslint-disable-next-line no-console
-  console.log(`[contamination-cleaner] decision=${report.decision} contaminated=${report.contaminatedFiles} issues=${report.issues}`);
+  console.log(`[contamination-cleaner/v2] decision=${report.decision} contaminated=${report.contaminatedFiles} total=${report.totalContaminations} critical=${report.criticalCount}`);
   process.exit(report.pass ? 0 : 1);
 }

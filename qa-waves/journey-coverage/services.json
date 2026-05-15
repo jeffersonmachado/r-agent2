@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "vertical": "services",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,6 +10,43 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "services-ativacao-solucao",
+          "scenario": "Services ativação de pacote de soluções",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [
+            "Catálogo de soluções publicado",
+            "Tenant autenticado"
+          ],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "Ativação registrada no backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_serv_001",
+              "expected": {
+                "backendEntity": "solution",
+                "activationRegistered": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-serv-flow-solution",
+          "scenario": "Services ativação de pacote de soluções",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
         {
           "scenarioId": "business-serv-scr-01",
           "scenario": "Services solutions screen smoke",

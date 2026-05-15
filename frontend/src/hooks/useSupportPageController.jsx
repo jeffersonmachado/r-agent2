@@ -407,7 +407,10 @@ export function useSupportPageController({
     }
     if (wsConnected && !wsAuthenticated) {
       setWsUiStatus({ phase: 'auth' });
-      return () => {};
+      const authTimeoutId = setTimeout(() => {
+        setWsUiStatus({ phase: 'auth_error' });
+      }, 5000);
+      return () => clearTimeout(authTimeoutId);
     }
 
     setWsUiStatus({ phase: 'connecting' });
@@ -656,6 +659,14 @@ export function useSupportPageController({
         title: 'WebSocket conectado, autenticando...',
         color: 'rgb(59, 130, 246)',
         animated: true,
+      };
+    }
+    if (wsUiStatus.phase === 'auth_error') {
+      return {
+        label: 'Falha de auth',
+        title: 'WebSocket conectado, mas falha na autenticação',
+        color: 'rgb(239, 68, 68)',
+        animated: false,
       };
     }
     if (wsUiStatus.phase === 'connecting') {

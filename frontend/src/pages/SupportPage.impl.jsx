@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -59,7 +59,7 @@ function AiSummaryContent({ summary, loading }) {
   if (!parsed?.text) {
     return (
       <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-        {loading ? 'Preparando resumo automatico para este ticket...' : 'Sem resumo disponivel para este ticket.'}
+        {loading ? 'Preparando resumo automático para este ticket...' : 'Sem resumo disponível para este ticket.'}
       </div>
     );
   }
@@ -88,33 +88,7 @@ function AiSummaryContent({ summary, loading }) {
   );
 }
 
-export function SupportPage() {
-  const { agent, isAuthenticated, loading: authLoading } = useAuth();
-  const { navigate } = useRouter();
-  const { showToast, ToastContainer } = useToast();
-  const { confirm, ConfirmDialog } = useConfirmDialog();
-  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
-
-  if (authLoading) {
-    return (
-      <CrudPageBase title="💬 Atendimento" hideHeader>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <p>Carregando...</p>
-        </div>
-      </CrudPageBase>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
+function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMaskingEnabled, ToastContainer, ConfirmDialog }) {
   const controller = useSupportPageController({
     agent,
     isAuthenticated,
@@ -143,6 +117,18 @@ export function SupportPage() {
 
   const selectedTicket = state.selectedTicket;
   const [showFilters, setShowFilters] = useState(false);
+  const [ticketViewFilter, setTicketViewFilter] = useState('all');
+  const [showOtherAgents, setShowOtherAgents] = useState(false);
+  const [showClosedTickets, setShowClosedTickets] = useState(false);
+
+  const filteredTicketsView = useMemo(() => {
+    const view = state.ticketsView || [];
+    if (ticketViewFilter === 'unread') return view.filter((t) => Number(t.unreadCount || 0) > 0);
+    if (ticketViewFilter === 'waiting') return view.filter((t) => t.status === 'waiting');
+    if (ticketViewFilter === 'in_progress') return view.filter((t) => t.status === 'in_progress');
+    if (ticketViewFilter === 'unassigned') return view.filter((t) => !t.assignedTo);
+    return view;
+  }, [state.ticketsView, ticketViewFilter]);
 
   useEffect(() => {
     if (!showFilters) return undefined;
@@ -177,6 +163,22 @@ export function SupportPage() {
             onToggleConversationList={() => actions.setIsConversationListVisibleDesktop((prev) => !prev)}
             showFilters={showFilters}
             onToggleFilters={() => setShowFilters((prev) => !prev)}
+            onEnableNotifications={async () => {
+              if (!('Notification' in window)) {
+                showToast('Notificações não suportadas neste navegador', 'warning');
+                return;
+              }
+              if (Notification.permission === 'granted') {
+                showToast('Notificações já estão ativadas', 'info');
+                return;
+              }
+              const result = await Notification.requestPermission();
+              if (result === 'granted') {
+                showToast('Notificações ativadas com sucesso!', 'success');
+              } else {
+                showToast('Permissão de notificação negada', 'warning');
+              }
+            }}
           />
 
           <div className={`attendance-runtime-board${selectedTicket && !state.isMobile && !state.isConversationListVisibleDesktop ? ' attendance-runtime-board--conversation-collapsed' : ''}`}>
@@ -192,6 +194,8 @@ export function SupportPage() {
                   uiQueue={state.uiQueue}
                   setUiQueue={actions.setUiQueue}
                   onClear={actions.clearTicketFilters}
+                  ticketViewFilter={ticketViewFilter}
+                  setTicketViewFilter={setTicketViewFilter}
                 />
               </div>
               <AttendanceMetricsPanel metrics={runtimeViewModel.metrics} />
@@ -200,9 +204,13 @@ export function SupportPage() {
             <div className="attendance-runtime-col attendance-runtime-col--tickets">
               <TicketList
                 loading={state.loading}
-                ticketsView={state.ticketsView}
+                ticketsView={filteredTicketsView}
                 handleSelectTicket={actions.handleSelectTicket}
                 selectedTicket={selectedTicket}
+                showOtherAgents={showOtherAgents}
+                setShowOtherAgents={setShowOtherAgents}
+                showClosedTickets={showClosedTickets}
+                setShowClosedTickets={setShowClosedTickets}
                 uiSearchDebounced={state.uiSearchDebounced}
                 highlightText={actions.highlightText}
                 getContactName={actions.getContactName}
@@ -316,6 +324,11 @@ export function SupportPage() {
                     onComposerKeyDown={responseComposer.onComposerKeyDown}
                     handleSendMessage={actions.handleSendMessage}
                     handleClose={responseComposer.handleClose}
+                    handleAttachMedia={() => showToast('Área de anexos em preparação', 'info')}
+                    handleToggleAudioRecording={() => showToast('Gravação de áudio em preparação', 'info')}
+                    handleAttachRagDocument={() => showToast('Busca RAG em preparação', 'info')}
+                    isComposerBusy={false}
+                    isRecordingAudio={false}
                   />
 
                   <AttendanceTimeline
@@ -325,7 +338,15 @@ export function SupportPage() {
                 </>
               ) : (
                 <div className="support-details-empty">
-                  <p>Selecione um ticket para visualizar o workspace operacional.</p>
+                  <div className="support-details-empty-icon">💬</div>
+                  <p className="support-details-empty-title">Nenhum ticket selecionado</p>
+                  <p className="support-details-empty-hint">
+                    {filteredTicketsView.filter((t) => t.status === 'waiting').length > 0
+                      ? `${filteredTicketsView.filter((t) => t.status === 'waiting').length} ticket(s) aguardando atendimento`
+                      : filteredTicketsView.length > 0
+                        ? `${filteredTicketsView.length} ticket(s) em andamento`
+                        : 'Nenhum ticket ativo no momento'}
+                  </p>
                 </div>
               )}
             </div>
@@ -468,5 +489,45 @@ export function SupportPage() {
         onTicketCreated={newConversation.handleTicketCreated}
       />
     </CrudPageBase>
+  );
+}
+
+export function SupportPage() {
+  const { agent, isAuthenticated, loading: authLoading } = useAuth();
+  const { navigate } = useRouter();
+  const { showToast, ToastContainer } = useToast();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { enabled: phoneMaskingEnabled } = usePhoneMasking();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <CrudPageBase title="💬 Atendimento" hideHeader>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Carregando...</p>
+        </div>
+      </CrudPageBase>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <SupportPageInner
+      agent={agent}
+      isAuthenticated={isAuthenticated}
+      showToast={showToast}
+      confirm={confirm}
+      phoneMaskingEnabled={phoneMaskingEnabled}
+      ToastContainer={ToastContainer}
+      ConfirmDialog={ConfirmDialog}
+    />
   );
 }

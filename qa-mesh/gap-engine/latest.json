@@ -1,8 +1,66 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
-  "status": "GO",
-  "platformMaturity": "enterprise-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-05-15T15:08:24.859Z",
+  "status": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio pbx",
+      "evidence": {
+        "scenarios": [
+          "qa-pbx-call-events-runtime-smoke"
+        ],
+        "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": []
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-governance-support",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+      "evidence": {
+        "status": "NOT_VALIDATED",
+        "signatureArtifact": "governance/proof-signature.json",
+        "cleanupArtifact": "governance/cleanup-proof.json",
+        "missing": [
+          "cleanup_status"
+        ]
+      },
+      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+    },
+    {
+      "id": "gap-cross-report-package_validation_failed",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
+      "evidence": {
+        "type": "package_validation_failed",
+        "missingEntries": [],
+        "blocker": true,
+        "message": "Pacote não passou na validação: 0 entradas ausentes."
+      },
+      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
+  "blocking": 4,
   "nonBlocking": 0
 }

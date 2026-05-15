@@ -350,6 +350,15 @@ export function SupportConversationPane({
                         className="support-reply-action"
                         title="Responder esta mensagem"
                         aria-label="Responder esta mensagem"
+                        onClick={() => {
+                          if (typeof setMessageText !== 'function') return;
+                          const rawText = (
+                            typeof msg.body === 'string' ? msg.body : (msg.body?.text || '')
+                          ) || String(msg.content || msg.text || '');
+                          if (!rawText.trim()) return;
+                          const quote = `> ${rawText.slice(0, 150).replace(/\n/g, ' ')}\n`;
+                          setMessageText((prev) => `${quote}${prev || ''}`);
+                        }}
                       >
                         ↩
                       </button>
@@ -374,6 +383,16 @@ export function SupportConversationPane({
                   </div>
                 ))
               )}
+            </div>
+          ) : isWaitingTicket ? (
+            <div style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--color-border-default)', background: 'var(--color-bg-elevated)', fontSize: '13px', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>Aguardando atribuição</div>
+              {selectedTicket.phoneNumber ? <div>Contato: <strong>{selectedTicket.phoneNumber}</strong></div> : null}
+              {selectedTicket.queue ? <div>Fila: <strong>{selectedTicket.queue}</strong></div> : null}
+              {selectedTicket.createdAt ? <div>Aberto em: <strong>{formatDate(selectedTicket.createdAt)}</strong></div> : null}
+              <div style={{ marginTop: '8px', color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                Clique em <strong>Atribuir Chamado</strong> para assumir este atendimento.
+              </div>
             </div>
           ) : (
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '15px' }} />

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-13T14:46:32.220Z",
-  "achievedLevel": "LEVEL_4_IMMUTABLE",
-  "achievedNumeric": 4,
+  "generatedAt": "2026-05-14T20:11:00.849Z",
+  "achievedLevel": "LEVEL_1_PROOF_BASED",
+  "achievedNumeric": 1,
   "targetLevel": "LEVEL_4_IMMUTABLE",
-  "targetAchieved": true,
+  "targetAchieved": false,
   "levels": [
     {
       "key": "LEVEL_0",
@@ -37,16 +37,19 @@
       "key": "LEVEL_2",
       "label": "LEVEL_2_VERIFIABLE",
       "achieved": false,
-      "score": 86,
+      "score": 71,
       "passing": [
         "package_validator",
-        "cross_report",
         "blocker_engine",
         "consistency_report",
         "zero_blockers",
         "consistency_100"
       ],
       "failing": [
+        {
+          "id": "cross_report",
+          "label": "Cross-Report Validation presente"
+        },
         {
           "id": "sidecar_manifest",
           "label": "Sidecar manifest com audit=passed presente"
@@ -58,13 +61,11 @@
       "key": "LEVEL_3",
       "label": "LEVEL_3_CRYPTOGRAPHIC",
       "achieved": false,
-      "score": 75,
+      "score": 50,
       "passing": [
         "chain_js",
         "chain_json",
         "sign_engine",
-        "release_sig",
-        "gov_sig",
         "replay_signed"
       ],
       "failing": [
@@ -75,6 +76,14 @@
         {
           "id": "chain_complete",
           "label": "Cadeia completa (sem camadas ausentes)"
+        },
+        {
+          "id": "release_sig",
+          "label": "dist/release.sig presente"
+        },
+        {
+          "id": "gov_sig",
+          "label": "dist/governance.sig presente"
         }
       ],
       "totalChecks": 8
@@ -82,19 +91,35 @@
     {
       "key": "LEVEL_4",
       "label": "LEVEL_4_IMMUTABLE",
-      "achieved": true,
-      "score": 100,
+      "achieved": false,
+      "score": 38,
       "passing": [
-        "attestation",
-        "attestation_sig",
-        "manifest_sig",
         "verifier_script",
         "tamper_detector",
-        "chain_root_bound",
-        "update_binding",
-        "autonomous_ready"
+        "update_binding"
       ],
-      "failing": [],
+      "failing": [
+        {
+          "id": "attestation",
+          "label": "Governance Attestation presente"
+        },
+        {
+          "id": "attestation_sig",
+          "label": "Attestation assinada"
+        },
+        {
+          "id": "manifest_sig",
+          "label": "dist/package.manifest.sig presente"
+        },
+        {
+          "id": "chain_root_bound",
+          "label": "release.sig vinculado ao chainRoot"
+        },
+        {
+          "id": "autonomous_ready",
+          "label": "finalDecision = AUTONOMOUS_READY_GO (ou cross-report autonomous-ready)"
+        }
+      ],
       "totalChecks": 8
     },
     {
@@ -124,24 +149,17 @@
       "totalChecks": 4
     }
   ],
-  "nextLevel": "LEVEL_5_SUPPLY_CHAIN_GOVERNED",
+  "nextLevel": "LEVEL_2_VERIFIABLE",
   "nextLevelGaps": [
     {
-      "id": "pkce_signing",
-      "label": "PKI externo / ed25519 key pair (não implementado)"
+      "id": "cross_report",
+      "label": "Cross-Report Validation presente"
     },
     {
-      "id": "sbom",
-      "label": "SBOM (Software Bill of Materials) (não implementado)"
-    },
-    {
-      "id": "dep_provenance",
-      "label": "Proveniência de dependências (não implementado)"
-    },
-    {
-      "id": "cosign",
-      "label": "Cosign / Sigstore integrado (não implementado)"
+      "id": "sidecar_manifest",
+      "label": "Sidecar manifest com audit=passed presente"
     }
   ],
-  "summary": "RAP atingiu LEVEL_4_IMMUTABLE — governança criptograficamente verificável, imutável e auditável offline."
+  "summary": "RAP está em LEVEL_1_PROOF_BASED. Gaps para LEVEL_2_VERIFIABLE: Cross-Report Validation presente, Sidecar manifest com audit=passed presente.",
+  "reboundAt": "2026-05-15T15:09:07.208Z"
 }

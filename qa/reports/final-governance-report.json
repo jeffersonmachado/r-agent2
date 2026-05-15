@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-05-13T14:46:45.374Z",
+  "generatedAt": "2026-05-15T15:09:09.685Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
-  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
+  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]",
   "autonomousReady": false,
   "allChecksPass": false,
   "criticalBlocked": true,
@@ -914,19 +914,16 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260513-114614.zip",
-      "computed": "3129c196a35428742cd29988…",
-      "recorded": "3129c196a35428742cd29988…",
-      "hashSource": "governance/package-validation-report.json",
-      "reason": null
+      "reason": null,
+      "note": "No hash record in package-validation-report — skipping"
     },
     {
       "id": "critical_blockers",
-      "pass": true,
-      "severity": "OK",
+      "pass": false,
+      "severity": "CRITICAL",
       "criticalCount": 0,
-      "blockerCount": 0,
-      "reason": null
+      "blockerCount": 1,
+      "reason": "0 blocker(s) crítico(s) não resolvido(s)"
     },
     {
       "id": "governance_signature",
@@ -943,6 +940,10 @@
     {
       "id": "release_gate",
       "reason": "release-gate = NO_GO"
+    },
+    {
+      "id": "critical_blockers",
+      "reason": "0 blocker(s) crítico(s) não resolvido(s)"
     }
   ],
   "highFailed": [
@@ -951,5 +952,5 @@
       "reason": "98 step(s) com ui.available=false em jornadas visuais críticas"
     }
   ],
-  "summary": "2 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]"
+  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]"
 }

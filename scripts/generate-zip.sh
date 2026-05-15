@@ -305,17 +305,6 @@ copy_required_proof_entries() {
   done
 }
 
-# Copia dist/governance-artifacts/ para dentro do staging (auto-prova criptográfica).
-# Estes artefatos são gerados ANTES do empacotamento (pre-sign) e não dependem
-# do hash do ZIP — eliminando a dependência circular.
-copy_governance_artifacts() {
-  local src_dir="$PROJECT_DIR/dist/governance-artifacts"
-  local dest_dir="$STAGE_DIR/dist/governance-artifacts"
-  [[ -d "$src_dir" ]] || return 0
-  mkdir -p "$dest_dir"
-  cp -r "$src_dir/." "$dest_dir/"
-}
-
 RSYNC_ARGS=(-a)
 for pattern in "${RSYNC_EXCLUDES[@]}"; do
   RSYNC_ARGS+=(--exclude "$pattern")
@@ -323,7 +312,6 @@ done
 
 rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
 copy_required_proof_entries
-copy_governance_artifacts
 
 (
   cd "$STAGE_ROOT"

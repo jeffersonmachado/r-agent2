@@ -1,0 +1,254 @@
+name: Release Governance — ENVELOPE + PAYLOAD
+
+# =============================================================================
+# Valida a arquitetura minimal-envelope-governed antes de qualquer release.
+# Qualquer falha bloqueia: merge, build, release, tag, publish.
+#
+# Critérios obrigatórios (22):
+#  1.  payload existe
+#  2.  envelope existe
+#  3.  manifest existe
+#  4.  SHA256 do payload bate com manifest
+#  5.  governance externo aponta para payload correto
+#  6.  signatures externas apontam para payload correto
+#  7.  verifier offline executa corretamente
+#  8.  verify-result.status = PASS
+#  9.  self-proving-report.pass = true
+#  10. package-validation-report.ok = true
+#  11. package-integrity-report.pass = true
+#  12. envelopeValidated = true
+#  13. payloadValidated = true
+#  14. staleReferencesFound = 0
+#  15. sem placeholder
+#  16. sem transitional
+#  17. sem pending
+#  18. sem NO_GO
+#  19. sem governance stale
+#  20. sem signatures stale
+#  21. sem verifier stale
+#  22. sem referências antigas (banned timestamps)
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      strict_mode:
+        description: 'Ativar modo STRICT (warnings viram FAIL)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      skip_build:
+        description: 'Pular build (usar dist/ existente no cache)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+env:
+  NODE_VERSION_LTS: '20'
+  NODE_VERSION_CURRENT: '22'
+  RELEASE_GOVERNANCE_STRICT: ${{ github.event.inputs.strict_mode || 'true' }}
+
+jobs:
+  # ===========================================================================
+  # JOB 1: Build + Validação Core
+  # ===========================================================================
+  governance-core:
+    name: "Governance Core (Node ${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: ['20', '22']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate release artifacts
+        if: ${{ github.event.inputs.skip_build != 'true' }}
+        run: npm run zip:release
+        env:
+          CI: true
+
+      - name: Tornar scripts executáveis
+        run: chmod +x scripts/*.sh
+
+      - name: "[1/6] check-dist-clean"
+        run: bash scripts/check-dist-clean.sh
+
+      - name: "[2/6] verify-enterprise-governance (wrapper)"
+        run: bash scripts/verify-enterprise-governance.sh
+
+      - name: "[3/6] verify-enterprise-governance-v2 (rígido)"
+        run: bash scripts/verify-enterprise-governance-v2.sh
+
+      - name: "[4/6] audit-envelope-release-final (auditoria profunda)"
+        run: bash scripts/audit-envelope-release-final.sh
+
+      - name: "[5/6] release-governance-ci (pipeline central)"
+        run: bash scripts/release-governance-ci.sh --skip-build --no-offline --json-report
+        env:
+          RELEASE_GOVERNANCE_STRICT: ${{ env.RELEASE_GOVERNANCE_STRICT }}
+
+      - name: "[6/6] Verifier offline — extrair envelope e executar verifier"
+        run: |
+          ENVELOPE="$(ls -t dist/release/*.zip 2>/dev/null | grep -v '\.payload\.zip' | head -1)"
+          if [[ -z "$ENVELOPE" ]]; then
+            echo "ERRO: envelope não encontrado em dist/release/"
+            exit 1
+          fi
+
+          TMPDIR_OFFLINE="$(mktemp -d)"
+          echo "Extraindo: $ENVELOPE → $TMPDIR_OFFLINE"
+          unzip -q "$ENVELOPE" -d "$TMPDIR_OFFLINE"
+          ls -la "$TMPDIR_OFFLINE"
+
+          # Detectar path do verifier dentro do envelope extraído
+          VERIFIER=""
+          if [[ -f "$TMPDIR_OFFLINE/r-agent2/dist/verifier/verify-enterprise-governance.sh" ]]; then
+            VERIFIER="$TMPDIR_OFFLINE/r-agent2/dist/verifier/verify-enterprise-governance.sh"
+          elif [[ -f "$TMPDIR_OFFLINE/dist/verifier/verify-enterprise-governance.sh" ]]; then
+            VERIFIER="$TMPDIR_OFFLINE/dist/verifier/verify-enterprise-governance.sh"
+          else
+            echo "ERRO: verifier não encontrado no envelope extraído"
+            find "$TMPDIR_OFFLINE" -name "verify-enterprise-governance.sh" || true
+            rm -rf "$TMPDIR_OFFLINE"
+            exit 1
+          fi
+
+          chmod +x "$VERIFIER" 2>/dev/null || true
+          echo "Executando verifier offline: $VERIFIER"
+          bash "$VERIFIER"
+          EXIT_CODE=$?
+          rm -rf "$TMPDIR_OFFLINE"
+
+          if [[ "$EXIT_CODE" -ne 0 ]]; then
+            echo "REPROVADO: verifier offline falhou (exit $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+          echo "✓ Verifier offline: PASS"
+
+      - name: Upload artifacts de governança
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-artifacts-node${{ matrix.node-version }}
+          path: |
+            dist/release/*.zip
+            dist/release/*.payload.zip
+            dist/release/*.manifest.json
+            dist/governance/*.json
+            dist/signatures/*.sig
+            dist/verifier/*.json
+            dist/ci-logs/ci-governance-audit.log
+            dist/ci-logs/ci-governance-report.json
+            dist/ci-logs/ci-offline-test.log
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # JOB 2: Testes de Regressão
+  # ===========================================================================
+  governance-regression:
+    name: "Regression Tests"
+    runs-on: ubuntu-latest
+    needs: []  # Independente — detecta regressões no próprio CI
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tornar scripts executáveis
+        run: chmod +x scripts/*.sh
+
+      - name: Executar testes de regressão de governança
+        run: bash scripts/test-governance-regression.sh
+        env:
+          RELEASE_GOVERNANCE_STRICT: ${{ env.RELEASE_GOVERNANCE_STRICT }}
+
+      - name: Upload logs de regressão
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-test-logs
+          path: |
+            .ci-regression-tests/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ===========================================================================
+  # JOB 3: Gate de Proteção de Release
+  # Bloqueia tag/publish se qualquer validação falhou
+  # ===========================================================================
+  release-gate:
+    name: "Release Gate (bloqueio de tag/publish)"
+    runs-on: ubuntu-latest
+    needs:
+      - governance-core
+      - governance-regression
+    if: always()
+
+    steps:
+      - name: Verificar resultado dos jobs anteriores
+        run: |
+          CORE_RESULT="${{ needs.governance-core.result }}"
+          REGR_RESULT="${{ needs.governance-regression.result }}"
+
+          echo "governance-core: $CORE_RESULT"
+          echo "governance-regression: $REGR_RESULT"
+
+          if [[ "$CORE_RESULT" != "success" ]]; then
+            echo ""
+            echo "REPROVADO: governance-core falhou ($CORE_RESULT)"
+            echo "Tag, publish e release BLOQUEADOS."
+            exit 1
+          fi
+
+          if [[ "$REGR_RESULT" != "success" ]]; then
+            echo ""
+            echo "REPROVADO: governance-regression falhou ($REGR_RESULT)"
+            echo "Tag, publish e release BLOQUEADOS."
+            exit 1
+          fi
+
+          echo ""
+          echo "CI GOVERNANCE HARDENED"
+          echo "Todos os gates de governança passaram."
+          echo "Release autorizado."

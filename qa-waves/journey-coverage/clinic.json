@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-12T19:20:38.423Z",
+  "generatedAt": "2026-05-15T15:08:24.859Z",
   "vertical": "clinic",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,6 +10,51 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "clinic-ticket-manutencao",
+          "scenario": "Clinic abertura e resolução de ticket de manutenção",
+          "status": "approved",
+          "channels": [
+            "ticket"
+          ],
+          "preconditions": [
+            "Operação autenticada",
+            "Módulo de manutenção ativo"
+          ],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "Ticket de manutenção criado",
+            "Ticket resolvido com SLA"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_clinic_001",
+              "expected": {
+                "backendEntity": "ticket",
+                "ticketCreated": true
+              }
+            },
+            {
+              "stepId": "step_clinic_002",
+              "expected": {
+                "backendEntity": "ticket",
+                "withinSla": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-clinic-flow-ticket",
+          "scenario": "Clinic abertura e resolução de ticket de manutenção",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
         {
           "scenarioId": "business-clinic-scr-01",
           "scenario": "Clinic maintenance screen smoke",

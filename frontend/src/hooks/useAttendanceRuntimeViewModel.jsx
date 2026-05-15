@@ -4,13 +4,37 @@ import {
   buildSupportEventSummary,
   formatSupportAuditAction,
   formatSupportEventType,
+  formatSupportReason,
 } from '../components/support/supportHumanization';
+import { resolveContactName } from '../utils/contactName';
 
 function normalizeMode(mode) {
   const value = String(mode || 'bot').toLowerCase();
   if (value === 'human') return 'Humano';
-  if (value === 'paused') return 'Hibrido';
+  if (value === 'paused') return 'Híbrido';
   return 'Bot';
+}
+
+function formatQueueName(queue) {
+  const raw = String(queue || '').trim();
+  if (!raw || raw.toLowerCase() === 'default') return 'Padrão';
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function formatPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return phone || '-';
+  if (digits.length === 13 && digits.startsWith('55')) {
+    const ddd = digits.slice(2, 4);
+    const num = digits.slice(4);
+    const part1 = num.length === 9 ? num.slice(0, 5) : num.slice(0, 4);
+    const part2 = num.slice(-4);
+    return `+55 (${ddd}) ${part1}-${part2}`;
+  }
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  return phone;
 }
 
 function extractTicketReason(ticket) {
@@ -25,14 +49,25 @@ function extractTicketReason(ticket) {
 
 function parseAiSummary(summaryText) {
   const text = String(summaryText || '').trim();
-  if (!text) return { intent: 'agendamento', confidence: '0.72', nextBestAction: 'Confirmar horario preferencial do contato' };
+  if (!text) return { intent: '-', confidence: '-', nextBestAction: '-' };
 
-  const firstLine = text.split('\n').map((line) => line.trim()).find(Boolean);
-  return {
-    intent: firstLine ? firstLine.slice(0, 64) : 'agendamento',
-    confidence: '0.78',
-    nextBestAction: 'Confirmar dados e avancar para proposta de horario',
-  };
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+
+  const intentLine = lines.find((l) => /inten[çc][ãa]o/i.test(l));
+  let intent = '-';
+  if (intentLine) {
+    const afterColon = intentLine.split(':').slice(1).join(':').trim();
+    if (afterColon) intent = afterColon.slice(0, 80);
+  }
+
+  const nextLine = lines.find((l) => /pr[oó]xim|suger|recomend/i.test(l));
+  let nextBestAction = '-';
+  if (nextLine) {
+    const afterColon = nextLine.split(':').slice(1).join(':').trim();
+    if (afterColon) nextBestAction = afterColon.slice(0, 120);
+  }
+
+  return { intent, confidence: '-', nextBestAction };
 }
 
 export function useAttendanceRuntimeViewModel({
@@ -110,14 +145,14 @@ export function useAttendanceRuntimeViewModel({
       selectedTicket: selectedTicket ? {
         id: selectedTicket.id,
         date: selectedTicket.createdAt,
-        contact: selectedTicket.contactName || selectedTicket.phoneNumber || '-',
+        contact: resolveContactName(selectedTicket) || formatPhone(selectedTicket.phoneNumber) || '-',
         channel: selectedTicket.channelType || 'whatsapp',
-        queue: selectedTicket.queue || 'default',
+        queue: formatQueueName(selectedTicket.queue),
         status: selectedTicket.status || '-',
-        reason: selectedReason,
+        reason: formatSupportReason(selectedReason) || selectedReason || '-',
       } : null,
       customer: {
-        name: selectedTicket?.contactName || 'Nao identificado',
+        name: resolveContactName(selectedTicket) || 'Não identificado',
         socialName: selectedTicket?.context?.metadata?.socialName || '-',
         document: selectedTicket?.context?.metadata?.document || '-',
       },
@@ -128,12 +163,12 @@ export function useAttendanceRuntimeViewModel({
       },
       journey: {
         name: selectedTicket?.context?.metadata?.journeyName || 'Jornada de atendimento',
-        stage: selectedTicket?.context?.metadata?.journeyStage || 'Qualificacao',
+        stage: selectedTicket?.context?.metadata?.journeyStage || 'Qualificação',
         nextStage: selectedTicket?.context?.metadata?.nextJourneyStage || 'Fechamento',
       },
       execution: {
         mode: normalizeMode(selectedTicket?.mode),
-        flow: selectedTicket?.context?.metadata?.flowName || 'Fluxo padrao RAP',
+        flow: selectedTicket?.context?.metadata?.flowName || 'Fluxo padrão RAP',
         step: selectedTicket?.context?.metadata?.flowStep || 'Coleta de contexto',
       },
       tickets: tickets.map((ticket) => ({
@@ -141,7 +176,7 @@ export function useAttendanceRuntimeViewModel({
         hash: ticket.conversationId || ticket.id,
         status: ticket.status,
         time: ticket.updatedAt || ticket.createdAt,
-        owner: ticket.assignedTo || 'Sem responsavel',
+        owner: ticket.assignedTo || 'Sem responsável',
         queue: ticket.queue || 'default',
         badge: normalizeMode(ticket.mode),
       })),

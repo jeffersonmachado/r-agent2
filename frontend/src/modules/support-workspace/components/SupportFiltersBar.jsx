@@ -41,8 +41,8 @@ export function SupportFiltersBar({
         ) : null}
 
         {setTicketViewFilter ? (
-          <div className="overflow-x-auto">
-            <div className="flex min-w-max items-center gap-2">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
               {filterOptions.map((option) => {
                 const isActive = ticketViewFilter === option.id;
                 return (
