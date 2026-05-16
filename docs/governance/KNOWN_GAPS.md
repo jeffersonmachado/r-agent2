@@ -6,6 +6,12 @@
 - Title: Falha aberta no dominio pbx
 - Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
 
+## gap-mesh-fitness-flaky-business-f1
+- Severity: high
+- Area: qa-mesh
+- Title: Falha aberta no dominio fitness
+- Suggested fix: Transformar waits implícitos em sincronização semântica e revisar estado compartilhado.
+
 ## gap-proof-package-validation
 - Severity: critical
 - Area: package
@@ -17,9 +23,3 @@
 - Area: proof-governance
 - Title: Governance signature ou cleanup proof nao possuem artifact fisico valido
 - Suggested fix: Persistir assinatura de governance com hashes e cleanup proof com limpeza validada.
-
-## gap-cross-report-package_validation_failed
-- Severity: critical
-- Area: cross-report
-- Title: Contradição cross-report: package_validation_failed
-- Suggested fix: Pacote não passou na validação: 0 entradas ausentes.

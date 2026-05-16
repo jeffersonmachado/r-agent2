@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-05-14T20:11:00.738Z",
-  "artifact": "r-agent2-20260515-120735.zip",
+  "artifact": "r-agent2-20260516-005740.zip",
   "pass": false,
   "decision": "NO_GO",
   "totalChecks": 9,
@@ -12,7 +12,7 @@
       "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260515-120735.zip",
+        "zipName": "r-agent2-20260516-005740.zip",
         "computedHash": "4740879b14d258c368e17244451d08926da2395bf9c9fa6e82a35c819cd8fe72",
         "recordedHash": "58013d8c57c18d6777703be2369b3f86b7bb9431d0bd86d618c1b0c529466dfa",
         "match": false
@@ -80,14 +80,14 @@
           {
             "file": "governance/package-validation-report.json",
             "field": "zipName",
-            "found": "r-agent2-20260515-120735.payload.zip",
-            "expected": "r-agent2-20260515-120735.zip"
+            "found": "r-agent2-20260516-005740.payload.zip",
+            "expected": "r-agent2-20260516-005740.zip"
           },
           {
             "file": "governance/final-consistency-report.json",
             "field": "currentZipName",
-            "found": "r-agent2-20260515-120735.payload.zip",
-            "expected": "r-agent2-20260515-120735.zip"
+            "found": "r-agent2-20260516-005740.payload.zip",
+            "expected": "r-agent2-20260516-005740.zip"
           }
         ]
       }
@@ -102,5 +102,5 @@
     }
   ],
   "summary": "7 check(s) falharam (4 críticos). Adulteração ou configuração incompleta detectada.",
-  "reboundAt": "2026-05-15T15:09:07.207Z"
+  "reboundAt": "2026-05-16T04:00:28.823Z"
 }

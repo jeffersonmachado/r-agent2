@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 function MetricCard({ title, data }) {
   return (
@@ -6,7 +6,10 @@ function MetricCard({ title, data }) {
       <h3>{title}</h3>
       <div className="attendance-metric-list">
         {Object.entries(data || {}).map(([label, value]) => (
-          <div className="attendance-metric-row" key={`${title}-${label}`}>
+          <div
+            className={`attendance-metric-row${Number(value) === 0 ? ' attendance-metric-row--zero' : ''}`}
+            key={`${title}-${label}`}
+          >
             <span>{label}</span>
             <strong>{value}</strong>
           </div>
@@ -17,11 +20,28 @@ function MetricCard({ title, data }) {
 }
 
 export function AttendanceMetricsPanel({ metrics }) {
+  const [collapsed, setCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= 900
+  );
+
   return (
     <div className="attendance-metrics-panel">
-      <MetricCard title="Caixa de entrada" data={metrics?.inbox} />
-      <MetricCard title="Status" data={metrics?.status} />
-      <MetricCard title="Categorias" data={metrics?.categories} />
+      <button
+        type="button"
+        className="attendance-metrics-toggle"
+        onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? 'Expandir métricas' : 'Recolher métricas'}
+      >
+        Métricas {collapsed ? '+' : '−'}
+      </button>
+      {!collapsed ? (
+        <>
+          <MetricCard title="Caixa de entrada" data={metrics?.inbox} />
+          <MetricCard title="Status" data={metrics?.status} />
+          <MetricCard title="Categorias" data={metrics?.categories} />
+        </>
+      ) : null}
     </div>
   );
 }

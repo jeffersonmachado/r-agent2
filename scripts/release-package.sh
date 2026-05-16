@@ -31,6 +31,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
+source "$SCRIPT_DIR/release-payload-blocklist.sh"
 
 SKIP_AUDIT=false
 SKIP_FRONTEND=false
@@ -80,6 +81,11 @@ FORBIDDEN_PATTERNS=(
   '(^|/)node_modules/'
   '(^|/)\.env$'
   '(^|/)\.env\..+$'
+  '(^|/)rpa-token\.json$'
+  '(^|/)\.token\.env$'
+  '(^|/)\.claude($|/)'
+  '(^|/)\.codex($|/)'
+  '\.(bkp|bak|backup)$'
   '\.env\.production$'
   '(^|/)coverage/'
   '(^|/)frontend-e2e/playwright-report/'
@@ -271,6 +277,10 @@ if [[ "$SKIP_AUDIT" == false ]]; then
 
   ZIP_CONTENTS="$(unzip -Z1 "$LATEST_ZIP" 2>/dev/null)"
   AUDIT_FAILED=false
+
+  if ! release_payload_validate_zip "$LATEST_ZIP" "$(basename "$LATEST_ZIP")"; then
+    AUDIT_FAILED=true
+  fi
 
   for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
     MATCHES="$(echo "$ZIP_CONTENTS" | grep -E "$pattern" | grep -Ev "$REQUIRED_PROOF_REGEX" || true)"

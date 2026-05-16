@@ -29,9 +29,9 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Modo Super Admin')).toBeInTheDocument();
     const badgesContainer = screen.getByText('Modo Super Admin').nextElementSibling;
     expect(badgesContainer).not.toBeNull();
-    expect(within(badgesContainer).getByText('Beauty')).toBeInTheDocument();
+    expect(within(badgesContainer).getByText('Beleza')).toBeInTheDocument();
     expect(within(badgesContainer).getByText('Fitness')).toBeInTheDocument();
-    expect(within(badgesContainer).getByText('E-commerce')).toBeInTheDocument();
+    expect(within(badgesContainer).getByText('Comércio Eletrônico')).toBeInTheDocument();
   });
 
   it('esconde cards nao relevantes para a vertical efetiva', () => {

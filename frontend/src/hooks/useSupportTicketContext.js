@@ -121,6 +121,7 @@ export function useSupportTicketContext({
   const [ticketAuditLoading, setTicketAuditLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [summaryFetchAttempted, setSummaryFetchAttempted] = useState(false);
   const [knownTags, setKnownTags] = useState([]);
   const messagesContainerRef = useRef(null);
   const loadTicketMessagesRef = useRef();
@@ -207,13 +208,15 @@ export function useSupportTicketContext({
   }, []);
 
   useEffect(() => {
+    setSummaryFetchAttempted(false);
     if (!selectedTicket?.id) {
       setAiSummary(null);
       return;
     }
     getTicketAiSummary(selectedTicket.id)
       .then((resp) => setAiSummary(resp?.summary || null))
-      .catch(() => setAiSummary(null));
+      .catch(() => setAiSummary(null))
+      .finally(() => setSummaryFetchAttempted(true));
   }, [selectedTicket?.id]);
 
   const handleGenerateAiSummary = useCallback(async ({ silent = false } = {}) => {
@@ -231,6 +234,7 @@ export function useSupportTicketContext({
   }, [selectedTicket?.id, showToast]);
 
   useEffect(() => {
+    if (!summaryFetchAttempted) return;
     const ticketId = selectedTicket?.id;
     if (!ticketId) return;
     if (aiSummaryLoading) return;
@@ -242,7 +246,7 @@ export function useSupportTicketContext({
 
     autoSummaryRequestedRef.current.add(ticketId);
     handleGenerateAiSummary({ silent: true });
-  }, [selectedTicket?.id, aiSummary, aiSummaryLoading, handleGenerateAiSummary]);
+  }, [selectedTicket?.id, aiSummary, aiSummaryLoading, handleGenerateAiSummary, summaryFetchAttempted]);
 
   useEffect(() => {
     if (selectedTicket) {

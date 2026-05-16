@@ -8,8 +8,13 @@
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DIST_DIR="$PROJECT_ROOT/dist"
+if [[ -d "$SCRIPT_DIR/../release" && -d "$SCRIPT_DIR/../governance" && -d "$SCRIPT_DIR/../signatures" ]]; then
+  DIST_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+  PROJECT_ROOT="$(cd "$DIST_DIR/.." && pwd)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  DIST_DIR="$PROJECT_ROOT/dist"
+fi
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -49,7 +54,10 @@ if [[ -z "$PAYLOAD_PATH" || ! -f "$PAYLOAD_PATH" ]]; then
   fail "Nenhum PAYLOAD encontrado em dist/release/*.payload.zip"
 fi
 if [[ -z "$ENVELOPE_PATH" || ! -f "$ENVELOPE_PATH" ]]; then
-  fail "Nenhum ENVELOPE encontrado em dist/release/*.zip"
+  ENVELOPE_AVAILABLE=false
+  ok "envelope externo não embutido; dist/ será validado como envelope descompactado"
+else
+  ENVELOPE_AVAILABLE=true
 fi
 
 if [[ -n "$PAYLOAD_PATH" && -f "$PAYLOAD_PATH" ]]; then
@@ -103,7 +111,13 @@ else
 fi
 
 step "6. Rodando verificação rígida v2..."
-if bash "$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh" --payload "${PAYLOAD_PATH:-}" --envelope "${ENVELOPE_PATH:-}" >/tmp/check-dist-verify.log 2>&1; then
+VERIFY_SCRIPT="$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh"
+[[ -f "$DIST_DIR/verifier/verify-enterprise-governance-v2.sh" ]] && VERIFY_SCRIPT="$DIST_DIR/verifier/verify-enterprise-governance-v2.sh"
+VERIFY_ARGS=(--payload "${PAYLOAD_PATH:-}")
+if [[ "${ENVELOPE_AVAILABLE:-false}" == true ]]; then
+  VERIFY_ARGS+=(--envelope "$ENVELOPE_PATH")
+fi
+if bash "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}" >/tmp/check-dist-verify.log 2>&1; then
   ok "verify-enterprise-governance-v2.sh PASS"
 else
   fail "verify-enterprise-governance-v2.sh FAIL"

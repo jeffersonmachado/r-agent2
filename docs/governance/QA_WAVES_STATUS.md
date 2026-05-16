@@ -5,7 +5,7 @@
 - Canonical mesh decision: NO_GO
 - Operational confidence: 98.2
 - Replay integrity valid: true
-- Blocking domains in mesh: pbx
+- Blocking domains in mesh: fitness, pbx
 - Mesh history artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-05-12T23-50-45-984Z.json
 
 ## Core divergence

@@ -1,6 +1,6 @@
 # Production Readiness
 
-- Status: NO_GO:ENTERPRISE_READY_GO
+- Status: NO_GO:PRODLIKE_GO
 - Prod-like validated flows: WhatsApp, Chat, PBX, Ticket, Human handoff, Scheduling, Payment, Checkin, Notifications
 
 ## Validation matrix

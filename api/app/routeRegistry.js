@@ -18,6 +18,7 @@ function createRouteRegistry(routers) {
     { router: routers.qaRouter },
     { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
+    { router: routers.demoRouter },
     { router: routers.rpaTestsRouter },
     { router: routers.testExecutionsRouter },
     { router: routers.devManagementRouter },

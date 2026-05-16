@@ -26,6 +26,7 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
+.env.*
 *.env
 !.env.example
 
@@ -92,10 +93,26 @@ frontend/.vite/
 
 # Backups ad-hoc
 frontend_backup/
+backups/
+**/backups/
+backup/
+**/backup/
+**/*.bkp
+**/*.bak
+**/*.backup
 
 # Tokens e credenciais locais
 .token.env
 *.token.env
+**/rpa-token.json
+.tmp-*
+**/.tmp-*
+core/rpa/config/rpa-token.json
+tests/rpa/config/rpa-token.json
+rpa/config/rpa-token.json
+.claude/
+.codex
+.codex/
 
 # Scripts temporários promovíveis (qualquer tmp_* na raiz)
 tmp_*
@@ -105,6 +122,8 @@ tmp_*
 *.temp
 .cache/
 .temp/
+tmp/
+**/tmp/
 runtime/
 
 # Build artifacts
@@ -145,4 +164,3 @@ tsconfig.json
 jest.config.*
 vitest.config.*
 nodemon.json
-

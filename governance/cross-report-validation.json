@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-05-16T04:00:28.034Z",
+  "expectedZipName": "r-agent2-20260516-005740.zip",
+  "pbxMaturity": "enterprise-real",
+  "contradictions": [
+    {
+      "type": "package_validation_failed",
+      "missingEntries": [],
+      "blocker": true,
+      "message": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
+  "blockers": [
+    {
+      "type": "package_validation_failed",
+      "missingEntries": [],
+      "blocker": true,
+      "message": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
+  "warnings": [],
+  "blockerCount": 1,
+  "warningCount": 0,
+  "maximumAllowedReadiness": "operational",
+  "autonomousReadyBlocked": true,
+  "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational.",
+  "reboundAt": "2026-05-16T04:00:28.542Z"
+}

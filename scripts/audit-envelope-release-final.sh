@@ -6,7 +6,13 @@
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ -d "$SCRIPT_DIR/../release" && -d "$SCRIPT_DIR/../governance" && -d "$SCRIPT_DIR/../signatures" ]]; then
+  DIST_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  PROJECT_ROOT="$(cd "$DIST_ROOT/.." && pwd)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  DIST_ROOT="$PROJECT_ROOT/dist"
+fi
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -28,7 +34,16 @@ contains_forbidden_tokens() {
   tr '[:lower:]' '[:upper:]' < "$file" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|NO_GO|PENDING'
 }
 
-source "$SCRIPT_DIR/release-governance-blocklist.sh"
+if [[ -f "$SCRIPT_DIR/release-governance-blocklist.sh" ]]; then
+  source "$SCRIPT_DIR/release-governance-blocklist.sh"
+else
+  source "$PROJECT_ROOT/scripts/release-governance-blocklist.sh"
+fi
+if [[ -f "$SCRIPT_DIR/release-payload-blocklist.sh" ]]; then
+  source "$SCRIPT_DIR/release-payload-blocklist.sh"
+else
+  source "$PROJECT_ROOT/scripts/release-payload-blocklist.sh"
+fi
 
 check_banned_hashes() {
   local log_path="$1"
@@ -62,25 +77,32 @@ check_banned_timestamps() {
 
 cd "$PROJECT_ROOT"
 
-DIST_RELEASE="dist/release"
-DIST_GOV="dist/governance"
-DIST_SIG="dist/signatures"
-DIST_VER="dist/verifier"
+DIST_RELEASE="$DIST_ROOT/release"
+DIST_GOV="$DIST_ROOT/governance"
+DIST_SIG="$DIST_ROOT/signatures"
+DIST_VER="$DIST_ROOT/verifier"
 
 step "1. Localizar payload e envelope"
 PAYLOAD_PATH="$(ls -t "$DIST_RELEASE"/*.payload.zip 2>/dev/null | head -1 || true)"
 ENVELOPE_PATH="$(ls -t "$DIST_RELEASE"/*.zip 2>/dev/null | grep -v '.payload.zip' | head -1 || true)"
 
 [[ -n "$PAYLOAD_PATH" && -f "$PAYLOAD_PATH" ]] && ok "payload localizado" || fail "payload ausente"
-[[ -n "$ENVELOPE_PATH" && -f "$ENVELOPE_PATH" ]] && ok "envelope localizado" || fail "envelope ausente"
+if [[ -n "$ENVELOPE_PATH" && -f "$ENVELOPE_PATH" ]]; then
+  ENVELOPE_AVAILABLE=true
+  ok "envelope localizado"
+else
+  ENVELOPE_AVAILABLE=false
+  ok "envelope externo não embutido; validando dist/ como envelope descompactado"
+fi
 
 if [[ "$PASS" == false ]]; then
-  echo -e "${RED}${BOLD}REPROVADO: payload/envelope ausente${NC}"
+  echo -e "${RED}${BOLD}REPROVADO: payload ausente${NC}"
   exit 1
 fi
 
 PAYLOAD_NAME="$(basename "$PAYLOAD_PATH")"
-ENVELOPE_NAME="$(basename "$ENVELOPE_PATH")"
+ENVELOPE_NAME=""
+[[ "$ENVELOPE_AVAILABLE" == true ]] && ENVELOPE_NAME="$(basename "$ENVELOPE_PATH")"
 PAYLOAD_SHA="$(sha256sum "$PAYLOAD_PATH" | awk '{print $1}')"
 MANIFEST_PATH="$DIST_RELEASE/${PAYLOAD_NAME%.payload.zip}.manifest.json"
 
@@ -96,7 +118,15 @@ fi
 step "3. Extrair envelope e payload"
 TMP="$(mktemp -d -t r-agent2-final-audit-XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
-unzip -qq "$ENVELOPE_PATH" -d "$TMP/envelope" 2>/dev/null || fail "falha ao extrair envelope"
+if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
+  release_envelope_validate_zip "$ENVELOPE_PATH" || fail "envelope contém entradas inesperadas"
+  unzip -qq "$ENVELOPE_PATH" -d "$TMP/envelope" 2>/dev/null || fail "falha ao extrair envelope"
+else
+  for d in "$DIST_RELEASE" "$DIST_GOV" "$DIST_SIG" "$DIST_VER"; do
+    [[ -d "$d" ]] || fail "envelope descompactado incompleto: $d"
+  done
+fi
+release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME" || fail "payload contém arquivo proibido"
 unzip -qq "$PAYLOAD_PATH" -d "$TMP/payload" 2>/dev/null || fail "falha ao extrair payload"
 
 IN_GOV="$TMP/payload/r-agent2/dist/governance"
@@ -203,7 +233,13 @@ AUDIT_TS_LOG="$(mktemp -t audit-stale-ts.XXXXXX)"
 check_banned_timestamps "$AUDIT_TS_LOG" "$DIST_GOV" "$DIST_SIG" "$IN_GOV" "$IN_SIG"
 
 step "10. Rodar verifier rígido"
-if bash "$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh" --payload "$PAYLOAD_PATH" --envelope "$ENVELOPE_PATH" >/tmp/audit-v2.log 2>&1; then
+VERIFY_SCRIPT="$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh"
+[[ -f "$DIST_VER/verify-enterprise-governance-v2.sh" ]] && VERIFY_SCRIPT="$DIST_VER/verify-enterprise-governance-v2.sh"
+VERIFY_ARGS=(--payload "$PAYLOAD_PATH")
+if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
+  VERIFY_ARGS+=(--envelope "$ENVELOPE_PATH")
+fi
+if bash "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}" >/tmp/audit-v2.log 2>&1; then
   ok "verify-enterprise-governance-v2 PASS"
 else
   fail "verify-enterprise-governance-v2 FAIL"

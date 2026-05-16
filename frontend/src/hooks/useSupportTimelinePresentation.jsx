@@ -1,5 +1,12 @@
 import React, { useCallback } from 'react';
 
+function redactSensitiveText(text) {
+  return String(text || '')
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, 'CPF oculto')
+    .replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, 'CNPJ oculto')
+    .replace(/\+?55?\s?\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}\b/g, 'telefone oculto');
+}
+
 function safeStringify(obj, maxLen = 2000) {
   try {
     const s = JSON.stringify(obj, null, 2);
@@ -10,7 +17,8 @@ function safeStringify(obj, maxLen = 2000) {
   }
 }
 
-export function useSupportTimelinePresentation({ safeGetBodyText }) {
+export function useSupportTimelinePresentation({ safeGetBodyText, phoneMaskingEnabled = false }) {
+  const maskText = useCallback((t) => (phoneMaskingEnabled ? redactSensitiveText(t) : t), [phoneMaskingEnabled]);
   const getDeliveryStatusBadge = useCallback((deliveryStatusRaw) => {
     const s = deliveryStatusRaw ? String(deliveryStatusRaw).toLowerCase() : '';
     if (!s) return null;
@@ -24,13 +32,13 @@ export function useSupportTimelinePresentation({ safeGetBodyText }) {
 
   const renderTimelineMessageContent = useCallback((msg) => {
     if (!msg || msg.source !== 'channel' || !msg.channel) {
-      return <>{msg?.text}</>;
+      return <>{maskText(msg?.text)}</>;
     }
 
     const cm = msg.channel;
     const type = String(cm?.type || '').toLowerCase();
     const body = cm?.body || {};
-    const text = safeGetBodyText(body);
+    const text = maskText(safeGetBodyText(body));
 
     const commonMeta = (() => {
       if (Array.isArray(body.attachments) && body.attachments[0]?.payload?.url) {
@@ -82,7 +90,7 @@ export function useSupportTimelinePresentation({ safeGetBodyText }) {
 
     return (
       <div>
-        <div style={{ marginBottom: '6px' }}>{msg.text}</div>
+        <div style={{ marginBottom: '6px' }}>{maskText(msg.text)}</div>
         <details>
           <summary style={{ cursor: 'pointer', color: '#555' }}>Ver payload</summary>
           <pre style={{ marginTop: '8px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
@@ -91,7 +99,7 @@ export function useSupportTimelinePresentation({ safeGetBodyText }) {
         </details>
       </div>
     );
-  }, [safeGetBodyText]);
+  }, [safeGetBodyText, maskText]);
 
   return {
     getDeliveryStatusBadge,

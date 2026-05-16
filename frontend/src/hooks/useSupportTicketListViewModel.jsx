@@ -1,33 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
-import { resolveContactName } from '../utils/contactName';
+import { resolveContactName, resolveTicketPhone as extractPhone } from '../utils/contactName';
 
 const looksLikePhone = (value) => /^\+?\d[\d\s().-]{7,}$/.test(String(value || '').trim());
-
-const extractPhone = (ticket) => (
-  ticket?.phoneNumber
-  || ticket?.phone_number
-  || ticket?.phone
-  || ticket?.contactPhone
-  || ticket?.contact_phone
-  || ticket?.contact?.phone
-  || ticket?.contact?.waId
-  || ticket?.contact?.wa_id
-  || ticket?.contact?.whatsapp
-  || ticket?.contact?.whatsappNumber
-  || ticket?.context?.metadata?.phoneNumber
-  || ticket?.context?.metadata?.phone_number
-  || ticket?.context?.metadata?.phone
-  || ticket?.context?.metadata?.waId
-  || ticket?.context?.metadata?.wa_id
-  || ticket?.context?.variables?.phoneNumber
-  || ticket?.context?.variables?.phone_number
-  || ticket?.context?.variables?.phone
-  || ticket?.context?.variables?.waId
-  || ticket?.context?.variables?.wa_id
-  || ticket?.from
-  || ticket?.remoteJid
-  || null
-);
 
 const buildAnonymousContactName = (ticket, phoneMaskingEnabled) => {
   const phone = String(extractPhone(ticket) || '').replace(/\D/g, '');

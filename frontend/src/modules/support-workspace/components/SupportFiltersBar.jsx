@@ -21,7 +21,7 @@ export function SupportFiltersBar({
   ];
 
   return (
-    <div className="support-filters-panel bg-bg-elevated rounded-xl border border-border-default p-6 mb-6 shadow-lg">
+    <div className="support-filters-panel bg-bg-elevated rounded-xl border border-border-default p-4 mb-4 shadow-lg" style={{ borderBottom: '2px solid var(--color-accent-primary)', marginBottom: '8px' }}>
       <h3 className="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
         <span>🔍</span>
         <span>Filtros</span>

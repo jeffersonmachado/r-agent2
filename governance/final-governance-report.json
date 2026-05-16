@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-15T15:09:09.685Z",
+  "generatedAt": "2026-05-16T04:00:33.531Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]",
@@ -914,8 +914,11 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "reason": null,
-      "note": "No hash record in package-validation-report — skipping"
+      "zipName": "r-agent2-20260516-005740.zip",
+      "computed": "20f3f814f305452275a5b3c6…",
+      "recorded": "20f3f814f305452275a5b3c6…",
+      "hashSource": "governance/package-validation-report.json",
+      "reason": null
     },
     {
       "id": "critical_blockers",

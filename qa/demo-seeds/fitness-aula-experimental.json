@@ -1,0 +1,74 @@
+{
+  "seedId": "demo-fitness-aula-experimental",
+  "tenant": {
+    "id": "system",
+    "name": "Tenant Demo Fitness"
+  },
+  "persona": {
+    "name": "Ana Martins",
+    "segment": "novo_cliente",
+    "goal": "aula_experimental"
+  },
+  "headline": "RAP Demo - Fitness",
+  "summary": "Fluxo comercial de aula experimental com atendimento, CRM, automacao, QA e replay.",
+  "initialIntent": "Quero agendar uma aula experimental ainda hoje.",
+  "messages": [
+    {
+      "role": "customer",
+      "text": "Oi, quero conhecer a academia e fazer uma aula experimental hoje."
+    },
+    {
+      "role": "assistant",
+      "text": "Perfeito. Posso confirmar seu horario para as 18:30?"
+    }
+  ],
+  "journey": {
+    "id": "fitness_new_customer",
+    "name": "Cliente Novo Fitness",
+    "waveId": "fitness-cliente-novo",
+    "scenarioId": "business-f1"
+  },
+  "workspace": {
+    "entityId": null
+  },
+  "expectedOutcome": {
+    "intent": "aula_experimental",
+    "confidence": 0.91,
+    "nextBestAction": "confirmar horario e gerar lead qualificado",
+    "nextStage": "confirmacao",
+    "appointmentStatus": "aula_confirmada",
+    "automation": "reserva_automatica_turma",
+    "automationStep": "book_trial_slot",
+    "automationMode": "autonomous",
+    "sla": "92%",
+    "conversion": "37%",
+    "automationsExecuted": 3,
+    "roiEstimated": "R$ 18.400/m"
+  },
+  "expectedTicket": {
+    "queue": "comercial",
+    "status": "open"
+  },
+  "expectedLead": {
+    "stage": "qualified",
+    "scoreMin": 75
+  },
+  "expectedAppointment": {
+    "status": "confirmed",
+    "timeWindow": "18:00-19:00"
+  },
+  "qaAssertions": {
+    "seedId": "seed_001",
+    "goNoGo": "GO",
+    "coverageMin": 85,
+    "maxCriticalGaps": 0
+  },
+  "expectedReplay": {
+    "source": "qa_waves",
+    "mustContain": [
+      "send_message",
+      "validate_intent",
+      "create_booking"
+    ]
+  }
+}

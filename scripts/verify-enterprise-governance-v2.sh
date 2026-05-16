@@ -63,6 +63,11 @@ if [[ -f "$SCRIPT_DIR/release-governance-blocklist.sh" ]]; then
 else
   source "$PROJECT_ROOT/scripts/release-governance-blocklist.sh"
 fi
+if [[ -f "$SCRIPT_DIR/release-payload-blocklist.sh" ]]; then
+  source "$SCRIPT_DIR/release-payload-blocklist.sh"
+else
+  source "$PROJECT_ROOT/scripts/release-payload-blocklist.sh"
+fi
 
 check_banned_hashes() {
   local log_path="$1"
@@ -190,6 +195,7 @@ fi
 
 step "3. Validando conteúdo obrigatório do envelope (zip ou descompactado)"
 if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
+  release_envelope_validate_zip "$ENVELOPE_PATH" || fail "Envelope contém entradas inesperadas"
   ENVELOPE_LIST="$(unzip -l "$ENVELOPE_PATH" 2>/dev/null || true)"
   for item in \
     "r-agent2/dist/release/$PAYLOAD_NAME" \
@@ -263,6 +269,11 @@ if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
   unzip -qq "$ENVELOPE_PATH" -d "$TMP/envelope" 2>/dev/null || true
 fi
 unzip -qq "$PAYLOAD_PATH" -d "$TMP/payload" 2>/dev/null || true
+if release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME"; then
+  ok "Payload sem arquivos proibidos"
+else
+  fail "Payload contaminado por arquivo proibido"
+fi
 
 IN_GOV_DIR="$TMP/payload/r-agent2/dist/governance"
 IN_SIG_DIR="$TMP/payload/r-agent2/dist/signatures"

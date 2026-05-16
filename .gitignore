@@ -19,6 +19,7 @@ logs/
 .env
 .env.local
 .env.*.local
+.env.*
 frontend/.env.production
 
 # Backups locais de config (não versionar)
@@ -26,9 +27,14 @@ frontend/.env.production
 frontend_backup/
 
 # Token RPA (não deve ser commitado)
+core/rpa/config/rpa-token.json
 tests/rpa/config/rpa-token.json
 rpa/config/rpa-token.json
+**/rpa-token.json
 .token.env
+*.token.env
+.tmp-*
+**/.tmp-*
 
 # Artefatos gerados por testes RPA / Replay (não versionar)
 tests/rpa/replay/
@@ -123,6 +129,9 @@ qa/qa-waves/generated-validators/
 
 # Metadados locais de ferramenta
 .codex
+.codex/
+.claude/settings.local.json
+.claude/*.bkp
 
 # Build outputs
 dist/
@@ -144,6 +153,9 @@ Thumbs.db
 tmp/*
 !tmp/.gitkeep
 tmp_*
+**/*.bkp
+**/*.bak
+**/*.backup
 
 # Artefatos de runtime de scripts (gerados em execução, não versionar)
 scripts/test-report.json

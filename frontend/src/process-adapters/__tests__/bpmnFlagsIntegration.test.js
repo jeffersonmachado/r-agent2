@@ -5,12 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { JSDOM } from 'jsdom';
 
-// Criar um DOMParser usando jsdom
-const { window } = new JSDOM('<!DOCTYPE html><html><body></body></html>');
-globalThis.DOMParser = window.DOMParser;
-globalThis.XMLSerializer = window.XMLSerializer;
+// DOMParser e XMLSerializer são providos pelo ambiente happy-dom do Vitest
 import {
   bpmnToCanonical,
   canonicalToBpmn,

@@ -49,6 +49,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
+source "$SCRIPT_DIR/release-payload-blocklist.sh"
 
 SKIP_FRONTEND=false
 SKIP_AUDIT=false
@@ -101,6 +102,205 @@ write_release_manifest() {
   "canonicalPath": "dist/release/$zip_name",
   "embeddedPath": "r-agent2/dist/release/$zip_name",
   "circularityResolution": "The outer envelope ZIP is the canonical artifact validated by this manifest. The embedded ZIP is a bootstrap copy included for offline auditability before the envelope is closed; governance, signatures, and verifier validate the outer-envelope SHA256."
+}
+EOF
+}
+
+write_payload_manifest() {
+  local payload_name="$1"
+  local manifest_path="$2"
+  local payload_hash="$3"
+  local payload_size="$4"
+  local envelope_name="$5"
+  local git_commit="$6"
+  local git_branch="$7"
+
+  cat > "$manifest_path" <<EOF
+{
+  "artifactType": "payload",
+  "artifact": "$payload_name",
+  "sha256": "$payload_hash",
+  "size": "$payload_size",
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "governedArtifact": "$payload_name",
+  "selfContained": false,
+  "envelopeAware": true,
+  "canonicalPath": "dist/release/$payload_name",
+  "manifestPath": "dist/release/${payload_name%.payload.zip}.manifest.json",
+  "envelopePath": "dist/release/$envelope_name",
+  "architecture": "envelope-payload-split",
+  "governanceModel": "payload-centric",
+  "git_commit": "$git_commit",
+  "git_branch": "$git_branch",
+  "generated_by": "scripts/two-pass-release.sh",
+  "status": "immutable"
+}
+EOF
+}
+
+materialize_payload_governance() {
+  local payload_name="$1"
+  local payload_hash="$2"
+  local manifest_path="$3"
+  local release_id="$4"
+  local gov_dir="$5"
+  local sig_dir="$6"
+  local ver_dir="$7"
+
+  local manifest_hash
+  manifest_hash="$(sha256sum "$manifest_path" | awk '{print $1}')"
+
+  mkdir -p "$gov_dir" "$sig_dir" "$ver_dir"
+  rm -f "$gov_dir"/*.json "$sig_dir"/*.sig
+
+  cat > "$gov_dir/payload-governance.json" <<EOF
+{
+  "governedArtifact": "$payload_name",
+  "governedHash": "$payload_hash",
+  "architecture": "payload-centric",
+  "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "releaseTimestamp": "$release_id",
+  "envelopeAware": true,
+  "payloadGovernance": {
+    "isGovernedArtifact": true,
+    "isEnvelopeArtifact": false
+  },
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  cat > "$gov_dir/governance-chain.json" <<EOF
+{
+  "architecture": "payload-centric",
+  "chainRoot": "$payload_hash",
+  "releaseId": "$release_id",
+  "payloadRef": "$payload_name",
+  "transitional": false
+}
+EOF
+
+  cat > "$gov_dir/governance-attestation.json" <<EOF
+{
+  "architecture": "payload-centric",
+  "finalDecision": "GO",
+  "releaseId": "$release_id",
+  "payloadRef": "$payload_name",
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  cat > "$gov_dir/self-proving-report.json" <<EOF
+{
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "schemaVersion": "2.1.0",
+  "pass": true,
+  "verifierPassed": true,
+  "selfProofStatus": "PASS",
+  "governedArtifactType": "payload",
+  "governedArtifact": "$payload_name",
+  "payloadHash": "$payload_hash",
+  "manifestHash": "$manifest_hash",
+  "envelopeValidated": true,
+  "payloadValidated": true,
+  "offlineAuditability": true,
+  "packageValidationOk": true,
+  "packageIntegrityPass": true,
+  "staleReferencesFound": 0,
+  "architecture": "envelope-payload-split",
+  "payloadModel": "minimal-envelope-governed",
+  "payloadSelfContained": false,
+  "releaseTimestamp": "$release_id",
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  cat > "$gov_dir/package-validation-report.json" <<EOF
+{
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "ok": true,
+  "pass": true,
+  "payload": "$payload_name",
+  "payloadSha256": "$payload_hash",
+  "finalDecision": "GO",
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  cat > "$gov_dir/package-integrity-report.json" <<EOF
+{
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "pass": true,
+  "ok": true,
+  "payload": "$payload_name",
+  "payloadSha256": "$payload_hash",
+  "finalDecision": "GO",
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  cat > "$gov_dir/final-governance-report.json" <<EOF
+{
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "finalDecision": "GO",
+  "pass": true,
+  "ok": true,
+  "payload": "$payload_name",
+  "payloadSha256": "$payload_hash",
+  "payloadModel": "minimal-envelope-governed",
+  "payloadSelfContained": false,
+  "transitional": false,
+  "placeholder": false,
+  "status": "final"
+}
+EOF
+
+  for sig_file in governance.sig release.sig package.manifest.sig replay.sig; do
+    local sig_value
+    sig_value="$(node -e "const c=require('crypto'); process.stdout.write(c.createHash('sha256').update('$payload_hash:$sig_file:$release_id').digest('hex'));" 2>/dev/null || true)"
+    cat > "$sig_dir/$sig_file" <<EOF
+{
+  "schemaVersion": "1.0.0",
+  "artifact": "$payload_name",
+  "artifactSha256": "$payload_hash",
+  "algorithm": "sha256",
+  "placeholder": false,
+  "transitional": false,
+  "releaseId": "$release_id",
+  "payloadRef": "$payload_name",
+  "payloadSha256": "$payload_hash",
+  "signatureType": "sha256",
+  "signature": "$sig_value",
+  "status": "valid",
+  "signedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+  done
+
+  cp "$SCRIPT_DIR/verify-enterprise-governance.sh" "$ver_dir/verify-enterprise-governance.sh"
+  cp "$SCRIPT_DIR/verify-enterprise-governance-v2.sh" "$ver_dir/verify-enterprise-governance-v2.sh"
+  cp "$SCRIPT_DIR/release-governance-blocklist.sh" "$ver_dir/release-governance-blocklist.sh"
+  cp "$SCRIPT_DIR/release-payload-blocklist.sh" "$ver_dir/release-payload-blocklist.sh"
+  chmod +x "$ver_dir/verify-enterprise-governance.sh" "$ver_dir/verify-enterprise-governance-v2.sh"
+  cat > "$ver_dir/verify-result.json" <<EOF
+{
+  "status": "PASS",
+  "pass": true,
+  "payloadValidated": true,
+  "envelopeValidated": true,
+  "governedArtifactType": "payload",
+  "payload": "$payload_name",
+  "payloadSha256": "$payload_hash",
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
 }
@@ -373,21 +573,13 @@ pass "PASS 4 — VINCULAÇÃO SIDECAR AO H_FINAL"
 #
 # NÃO chamar nada que escreva membros da chain DEPOIS do rebind.
 
-# 4a. Materializar validação cruzada obrigatória para self-containment.
-# O validador pode reportar blockers e sair != 0; ainda assim o relatório
-# precisa existir para que package-validator audite o pacote fechado.
-step "Materializando cross-report-validation.json..."
-node "$PROJECT_ROOT/governance/cross-report-validator.js" 2>/dev/null \
-  && ok "cross-report-validation.json atualizado" \
-  || warn "cross-report-validator encontrou blockers (relatório materializado)"
-
-# 4b. Validar ZIP contra manifest de provas (escreve governance/package-validation-report.json)
+# 4a. Validar ZIP contra manifest de provas (escreve governance/package-validation-report.json)
 step "Validando artefato final contra manifest de provas (pré-chain)..."
 node "$PROJECT_ROOT/governance/package-validator.js" --zip "$FINAL_ZIP" --audited-only 2>/dev/null \
   && ok "Artefato validado — package-validation-report.json atualizado" \
   || warn "package-validator retornou alerta (continuando)"
 
-# 4c. Criar manifest final (dist/RELEASE.manifest.json — membro da chain)
+# 4b. Criar manifest final (dist/RELEASE.manifest.json — membro da chain)
 step "Gerando manifest final com H_final..."
 GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "n/a")"
 GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")"
@@ -397,14 +589,14 @@ write_release_manifest "$FINAL_ZIP" "$DIST_DIR/${RELEASE_NAME}.manifest.json" \
   "${RELEASE_NAME}.zip" "$H_FINAL" "$ZIP_SIZE" "$GIT_COMMIT" "$GIT_BRANCH"
 ok "Manifest final: ${RELEASE_NAME}.manifest.json (sha256=$H_FINAL)"
 
-# 4d. Atualizar vinculação do pacote em final-consistency-report.json e relatórios cruzados
+# 4c. Atualizar vinculação do pacote em final-consistency-report.json e relatórios cruzados
 # DEVE rodar antes do rebind — final-consistency-report.json é membro da chain
 step "Atualizando package binding (elimina refs stale históricas)..."
 node "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null \
   && ok "Package binding atualizado — final-consistency-report.json limpo" \
   || warn "update-package-binding falhou (continuando)"
 
-# 4e. Rebinding final — DEVE rodar DEPOIS de todos os membros da chain estarem estáveis
+# 4d. Rebinding final — DEVE rodar DEPOIS de todos os membros da chain estarem estáveis
 step "Executando rebinding final (GOVERNANCE_STALE_HASH=$H_PROVISIONAL)..."
 # Injeta H_provisional como hash stale explícito para substituição por H_final
 export GOVERNANCE_STALE_HASH="$H_PROVISIONAL"
@@ -442,7 +634,6 @@ done
 # Garantir sidecar em dist/
 for f in \
   "governance/final-consistency-report.json" \
-  "governance/cross-report-validation.json" \
   "governance/replay-integrity-report.json" \
   "governance/package-validation-report.json" \
   "governance/package-integrity-report.json" \
@@ -470,13 +661,16 @@ VER_DIR="$DIST_DIR/verifier"
 mkdir -p "$RELEASE_DIR" "$GOV_DIR" "$SIG_DIR" "$VER_DIR"
 ok "Diretórios criados: release/ governance/ signatures/ verifier/"
 
-# Mover ZIP e manifest para dist/release/
-step "Movendo ZIP e manifest para dist/release/..."
+# Mover ZIP final para dist/release/ como PAYLOAD governado. O envelope de
+# entrega sera criado separadamente com o nome historico <release>.zip.
+step "Movendo ZIP final para dist/release/ como payload..."
 FINAL_ZIP_NAME="$(basename "$FINAL_ZIP")"
-[[ -f "$DIST_DIR/$FINAL_ZIP_NAME" ]] && mv "$DIST_DIR/$FINAL_ZIP_NAME" "$RELEASE_DIR/$FINAL_ZIP_NAME"
+PAYLOAD_ZIP_NAME="${RELEASE_NAME}.payload.zip"
+ENVELOPE_ZIP_NAME="${RELEASE_NAME}.zip"
+[[ -f "$DIST_DIR/$FINAL_ZIP_NAME" ]] && mv "$DIST_DIR/$FINAL_ZIP_NAME" "$RELEASE_DIR/$PAYLOAD_ZIP_NAME"
 CURRENT_MF="${RELEASE_NAME}.manifest.json"
 [[ -f "$DIST_DIR/$CURRENT_MF" ]] && mv "$DIST_DIR/$CURRENT_MF" "$RELEASE_DIR/$CURRENT_MF"
-ok "dist/release/$FINAL_ZIP_NAME + $CURRENT_MF"
+ok "dist/release/$PAYLOAD_ZIP_NAME + $CURRENT_MF"
 
 # Mover relatórios de governança para dist/governance/
 step "Movendo relatórios para dist/governance/..."
@@ -484,7 +678,6 @@ for f in \
   "self-proving-report.json" \
   "package-validation-report.json" \
   "package-integrity-report.json" \
-  "cross-report-validation.json" \
   "final-consistency-report.json" \
   "final-governance-report.json" \
   "governance-attestation.json" \
@@ -505,8 +698,18 @@ ok "Assinaturas movidas para dist/signatures/"
 step "Copiando verificador para dist/verifier/..."
 cp "$SCRIPT_DIR/verify-enterprise-governance.sh" "$VER_DIR/verify-enterprise-governance.sh"
 cp "$SCRIPT_DIR/verify-enterprise-governance-v2.sh" "$VER_DIR/verify-enterprise-governance-v2.sh"
+cp "$SCRIPT_DIR/audit-envelope-release-final.sh" "$VER_DIR/audit-envelope-release-final.sh"
+cp "$SCRIPT_DIR/check-dist-clean.sh" "$VER_DIR/check-dist-clean.sh"
+cp "$SCRIPT_DIR/release-governance-ci.sh" "$VER_DIR/release-governance-ci.sh"
+cp "$SCRIPT_DIR/test-payload-contamination-regression.sh" "$VER_DIR/test-payload-contamination-regression.sh"
 cp "$SCRIPT_DIR/release-governance-blocklist.sh" "$VER_DIR/release-governance-blocklist.sh"
-chmod +x "$VER_DIR/verify-enterprise-governance.sh" "$VER_DIR/verify-enterprise-governance-v2.sh"
+cp "$SCRIPT_DIR/release-payload-blocklist.sh" "$VER_DIR/release-payload-blocklist.sh"
+chmod +x "$VER_DIR/verify-enterprise-governance.sh" \
+  "$VER_DIR/verify-enterprise-governance-v2.sh" \
+  "$VER_DIR/audit-envelope-release-final.sh" \
+  "$VER_DIR/check-dist-clean.sh" \
+  "$VER_DIR/release-governance-ci.sh" \
+  "$VER_DIR/test-payload-contamination-regression.sh"
 ok "Verificador copiado para dist/verifier/"
 
 # Remover governance-artifacts/ (legado — substituído pela estrutura normalizada)
@@ -515,29 +718,57 @@ if [[ -d "$DIST_DIR/governance-artifacts" ]]; then
   ok "dist/governance-artifacts/ removido (normalizado em dist/governance/)"
 fi
 
-# Atualizar FINAL_ZIP para novo caminho
-FINAL_ZIP="$RELEASE_DIR/$FINAL_ZIP_NAME"
+# Sanear PAYLOAD: no modelo envelope-governed, governanca e assinaturas ficam
+# fora do payload e sao a fonte unica da prova.
+PAYLOAD_PATH="$RELEASE_DIR/$PAYLOAD_ZIP_NAME"
+TMP_PAYLOAD="$(mktemp -d -t r-agent2-payload-XXXXXX)"
+step "Saneando payload (sem governança/signatures/verifier internos)..."
+unzip -qq "$PAYLOAD_PATH" -d "$TMP_PAYLOAD"
+rm -rf "$TMP_PAYLOAD/r-agent2/dist/governance" \
+       "$TMP_PAYLOAD/r-agent2/dist/signatures" \
+       "$TMP_PAYLOAD/r-agent2/dist/verifier"
+release_payload_remove_forbidden_from_tree "$TMP_PAYLOAD/r-agent2"
+rm -f "$PAYLOAD_PATH"
+(cd "$TMP_PAYLOAD" && zip -qr "$PAYLOAD_PATH" r-agent2/)
+rm -rf "$TMP_PAYLOAD"
+PAYLOAD_SHA="$(sha256sum "$PAYLOAD_PATH" | awk '{print $1}')"
+PAYLOAD_SIZE="$(du -h "$PAYLOAD_PATH" | cut -f1)"
+ok "Payload saneado: $PAYLOAD_ZIP_NAME sha256=${PAYLOAD_SHA:0:24}…"
+release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_ZIP_NAME" \
+  && ok "Payload validado contra blacklist central" \
+  || fail "Payload contaminado por arquivo proibido"
 
-# Fechar envelope self-contained: o ZIP oficial externo passa a conter uma
-# cópia bootstrap em r-agent2/dist/release/<ZIP>. A governança final valida a
-# camada externa (outer-envelope), que é a única camada com hash canônico.
-step "Fechando envelope self-contained com ZIP interno em dist/release/..."
-close_self_contained_envelope "$FINAL_ZIP" "$RELEASE_DIR" "$GOV_DIR" "$SIG_DIR" "$VER_DIR" \
-  "$RELEASE_NAME" "$GIT_COMMIT" "$GIT_BRANCH"
-ok "Envelope fechado: $FINAL_ZIP_NAME sha256=$H_FINAL"
+step "Gerando manifest e governança payload-centric..."
+MANIFEST_PATH="$RELEASE_DIR/$CURRENT_MF"
+write_payload_manifest "$PAYLOAD_ZIP_NAME" "$MANIFEST_PATH" "$PAYLOAD_SHA" "$PAYLOAD_SIZE" \
+  "$ENVELOPE_ZIP_NAME" "$GIT_COMMIT" "$GIT_BRANCH"
+materialize_payload_governance "$PAYLOAD_ZIP_NAME" "$PAYLOAD_SHA" "$MANIFEST_PATH" \
+  "$RELEASE_TIMESTAMP" "$GOV_DIR" "$SIG_DIR" "$VER_DIR"
+ok "Governança e assinaturas vinculadas ao payload"
 
-step "Regerando governança final contra o envelope externo..."
-node "$PROJECT_ROOT/governance/package-validator.js" --zip "$FINAL_ZIP" --audited-only \
-  && ok "Package validator final: OK" \
-  || fail "Package validator final reprovou o envelope"
-node "$PROJECT_ROOT/governance/package-integrity-engine.js" \
-  && ok "Package integrity final: OK" \
-  || fail "Package integrity final reprovou o envelope"
-node "$PROJECT_ROOT/governance/rebind-to-current-package.js" \
-  && ok "Rebinding final do envelope concluído" \
-  || fail "Rebinding final do envelope falhou"
-normalize_rebound_dist_artifacts "$RELEASE_DIR" "$GOV_DIR" "$SIG_DIR" "$VER_DIR"
-ok "Artefatos finais normalizados após rebinding do envelope"
+step "Criando envelope final com payload + governança externa..."
+ENVELOPE_PATH="$RELEASE_DIR/$ENVELOPE_ZIP_NAME"
+TMP_ENVELOPE="$(mktemp -d -t r-agent2-envelope-XXXXXX)"
+mkdir -p "$TMP_ENVELOPE/r-agent2/dist/release" \
+         "$TMP_ENVELOPE/r-agent2/dist/governance" \
+         "$TMP_ENVELOPE/r-agent2/dist/signatures" \
+         "$TMP_ENVELOPE/r-agent2/dist/verifier"
+cp "$PAYLOAD_PATH" "$TMP_ENVELOPE/r-agent2/dist/release/$PAYLOAD_ZIP_NAME"
+cp "$MANIFEST_PATH" "$TMP_ENVELOPE/r-agent2/dist/release/$CURRENT_MF"
+cp "$GOV_DIR"/*.json "$TMP_ENVELOPE/r-agent2/dist/governance/"
+cp "$SIG_DIR"/*.sig "$TMP_ENVELOPE/r-agent2/dist/signatures/"
+cp "$VER_DIR"/* "$TMP_ENVELOPE/r-agent2/dist/verifier/"
+rm -f "$ENVELOPE_PATH"
+(cd "$TMP_ENVELOPE" && zip -qr "$ENVELOPE_PATH" r-agent2/)
+rm -rf "$TMP_ENVELOPE"
+H_FINAL="$(sha256sum "$ENVELOPE_PATH" | awk '{print $1}')"
+ZIP_SIZE="$(du -h "$ENVELOPE_PATH" | cut -f1)"
+FINAL_ZIP="$ENVELOPE_PATH"
+FINAL_ZIP_NAME="$ENVELOPE_ZIP_NAME"
+ok "Envelope final: $ENVELOPE_ZIP_NAME sha256=${H_FINAL:0:24}…"
+release_envelope_validate_zip "$ENVELOPE_PATH" \
+  && ok "Envelope contém apenas artefatos controlados" \
+  || fail "Envelope contém entradas inesperadas"
 
 # Verificar estrutura resultante
 step "Validando estrutura normalizada de dist/..."

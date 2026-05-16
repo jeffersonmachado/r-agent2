@@ -113,12 +113,15 @@ jobs:
       - name: "[4/6] audit-envelope-release-final (auditoria profunda)"
         run: bash scripts/audit-envelope-release-final.sh
 
-      - name: "[5/6] release-governance-ci (pipeline central)"
+      - name: "[5/7] release-governance-ci (pipeline central)"
         run: bash scripts/release-governance-ci.sh --skip-build --no-offline --json-report
         env:
           RELEASE_GOVERNANCE_STRICT: ${{ env.RELEASE_GOVERNANCE_STRICT }}
 
-      - name: "[6/6] Verifier offline — extrair envelope e executar verifier"
+      - name: "[6/7] payload contamination regression"
+        run: bash scripts/test-payload-contamination-regression.sh
+
+      - name: "[7/7] Verifier offline — extrair envelope e executar verifier"
         run: |
           ENVELOPE="$(ls -t dist/release/*.zip 2>/dev/null | grep -v '\.payload\.zip' | head -1)"
           if [[ -z "$ENVELOPE" ]]; then
@@ -202,6 +205,9 @@ jobs:
         run: bash scripts/test-governance-regression.sh
         env:
           RELEASE_GOVERNANCE_STRICT: ${{ env.RELEASE_GOVERNANCE_STRICT }}
+
+      - name: Executar regressão de contaminação de payload
+        run: bash scripts/test-payload-contamination-regression.sh
 
       - name: Upload logs de regressão
         if: always()

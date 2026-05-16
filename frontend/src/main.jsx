@@ -107,6 +107,7 @@ import { KioskPage } from './pages/KioskPage';
 import { PanelPage } from './pages/PanelPage';
 import { StationPage } from './pages/StationPage';
 import { CrmDashboardPage } from './pages/crm/CrmDashboardPage';
+import DemoPage from './pages/DemoPage';
 import { Login } from './components/Login';
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
@@ -451,6 +452,7 @@ function AppWithAuth() {
   const isChatHumanoDashboard = isRoute('/chat-humano');
   // Suporta CRM com ou sem prefixo /r-agent2 em produção
   const isCrmDashboard = currentPath.startsWith('/crm') || currentPath.startsWith('/r-agent2/crm');
+  const isDemo = isRoute('/demo');
   const isFailedMessages = isRoute('/failed-messages');
   const isQueuePhysicalDashboard = isRoute('/fila-fisica');
   const isDevDashboard = isRoute('/dev') || isRoute('/dev-dashboard');
@@ -534,7 +536,7 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
@@ -553,7 +555,7 @@ function AppWithAuth() {
   }, [
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
             isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -654,6 +656,7 @@ function AppWithAuth() {
       '/crm/webhooks': '🪝 CRM • Webhooks',
       '/crm/rbac': '🔐 CRM • RBAC',
       '/crm/audit': '🔍 CRM • Auditoria',
+      '/demo': '🎬 Demo Comercial RAP',
       '/failed-messages': '🚨 Mensagens Falhadas',
       '/fila-fisica': '🎫 Dashboard Fila Física',
       '/marketing': '🧲 Marketing',
@@ -752,7 +755,7 @@ function AppWithAuth() {
   }
 
   // Todas as rotas requerem autenticação, exceto /login e rotas públicas de marketing/storefront
-  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/workspace', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/dev/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies'];
+  const protectedRoutes = ['/', '/dashboard-legacy', '/editor', '/bpmn-editor', '/support', '/workspace', '/inbox', '/maintenance', '/config', '/agents', '/tenants', '/audit', '/dev/system-status', '/channel-health', '/channel-accounts', '/plan-usage', '/pbx', '/chat-humano', '/fila-fisica', '/quick-replies', '/faq', '/marketing', '/access-control', '/operations-dashboard', '/fitness', '/beauty', '/vertical/dashboard', '/solutions', '/node-marketplace', '/sso-scim', '/backup', '/analytics', '/tenant-intelligence', '/supervisor', '/rbac', '/mfa', '/whatsapp-ivr', '/whatsapp-connections', '/developer-keys', '/automations', '/projects', '/tasks', '/agenda', '/sla-policies', '/demo'];
   const isProtectedRoute = protectedRoutes.some(route => currentPath === route || currentPath.startsWith(route));
   
   // Verifica se é rota pública (apenas /login)
@@ -789,7 +792,7 @@ function AppWithAuth() {
 
   // Guardas de acesso por módulo/ação (RBAC) para evitar bypass por URL direta.
   // Super Admin sempre pode acessar rotas existentes no frontend.
-  const hasRouteAccess = isSuperAdmin || canAccessPath(agent, currentPath);
+  const hasRouteAccess = isDemo || isSuperAdmin || canAccessPath(agent, currentPath);
   if (!hasRouteAccess) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -953,6 +956,8 @@ function AppWithAuth() {
     pageContent = <ChatHumanoDashboardPage />;
   } else if (isCrmDashboard) {
     pageContent = <CrmDashboardPage />;
+  } else if (isDemo) {
+    pageContent = <DemoPage />;
   } else if (isFailedMessages) {
     pageContent = <FailedMessagesPage />;
   } else if (isQueuePhysicalDashboard) {

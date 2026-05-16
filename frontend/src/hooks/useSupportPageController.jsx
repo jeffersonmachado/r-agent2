@@ -18,99 +18,8 @@ import { useSupportTicketListViewModel } from './useSupportTicketListViewModel';
 import { useSupportTimelinePresentation } from './useSupportTimelinePresentation';
 import websocketMetrics from '../utils/websocketMetrics';
 import logger from '../utils/logger';
-import { normalizeContactName } from '../utils/contactName';
+import { resolveContactName, resolveTicketPhone } from '../utils/contactName';
 
-function resolveTicketPhone(ticket) {
-  return (
-    ticket?.phoneNumber
-    || ticket?.phone_number
-    || ticket?.phone
-    || ticket?.contactPhone
-    || ticket?.contact_phone
-    || ticket?.contact?.phone
-    || ticket?.contact?.waId
-    || ticket?.contact?.wa_id
-    || ticket?.contact?.whatsapp
-    || ticket?.contact?.whatsappNumber
-    || ticket?.context?.metadata?.phoneNumber
-    || ticket?.context?.metadata?.phone_number
-    || ticket?.context?.metadata?.phone
-    || ticket?.context?.metadata?.waId
-    || ticket?.context?.metadata?.wa_id
-    || ticket?.context?.variables?.phoneNumber
-    || ticket?.context?.variables?.phone_number
-    || ticket?.context?.variables?.phone
-    || ticket?.context?.variables?.waId
-    || ticket?.context?.variables?.wa_id
-    || ticket?.from
-    || ticket?.remoteJid
-    || null
-  );
-}
-
-function resolveTicketName(ticket) {
-  const contactFromObject = typeof ticket?.contact === 'object'
-    ? (
-      ticket?.contact?.name
-      || ticket?.contact?.displayName
-      || ticket?.contact?.profileName
-      || ticket?.contact?.pushName
-      || ticket?.contact?.fullName
-      || ticket?.contact?.nome
-    )
-    : ticket?.contact;
-
-  const composedName = [
-    ticket?.firstName || ticket?.first_name,
-    ticket?.lastName || ticket?.last_name,
-  ].filter(Boolean).join(' ').trim();
-
-  return normalizeContactName(
-    ticket?.contactName
-    || ticket?.contact_name
-    || ticket?.displayName
-    || ticket?.display_name
-    || ticket?.profileName
-    || ticket?.profile_name
-    || ticket?.pushName
-    || ticket?.push_name
-    || ticket?.fullName
-    || ticket?.full_name
-    || ticket?.name
-    || ticket?.nome
-    || ticket?.customerName
-    || ticket?.customer_name
-    || contactFromObject
-    || composedName
-    || ticket?.context?.metadata?.contactName
-    || ticket?.context?.metadata?.contact_name
-    || ticket?.context?.metadata?.customerName
-    || ticket?.context?.metadata?.customer_name
-    || ticket?.context?.metadata?.name
-    || ticket?.context?.metadata?.displayName
-    || ticket?.context?.metadata?.display_name
-    || ticket?.context?.metadata?.profileName
-    || ticket?.context?.metadata?.profile_name
-    || ticket?.context?.metadata?.pushName
-    || ticket?.context?.metadata?.push_name
-    || ticket?.context?.metadata?.fullName
-    || ticket?.context?.metadata?.full_name
-    || ticket?.context?.metadata?.nome
-    || ticket?.context?.variables?.customerName
-    || ticket?.context?.variables?.customer_name
-    || ticket?.context?.variables?.name
-    || ticket?.context?.variables?.nome
-    || ticket?.context?.variables?.displayName
-    || ticket?.context?.variables?.display_name
-    || ticket?.context?.variables?.profileName
-    || ticket?.context?.variables?.profile_name
-    || ticket?.context?.variables?.pushName
-    || ticket?.context?.variables?.push_name
-    || ticket?.context?.variables?.fullName
-    || ticket?.context?.variables?.full_name
-    || null
-  );
-}
 
 export function useSupportPageController({
   agent,
@@ -208,7 +117,7 @@ export function useSupportPageController({
 
       const normalizedTickets = uniqueTickets.map((ticket) => {
         const resolvedPhone = resolveTicketPhone(ticket);
-        const resolvedName = resolveTicketName(ticket);
+        const resolvedName = resolveContactName(ticket);
 
         return {
           ...ticket,
@@ -282,7 +191,7 @@ export function useSupportPageController({
     };
 
     const resolvedPhone = resolveTicketPhone(incomingTicket) || resolveTicketPhone(previousTicket);
-    const resolvedName = resolveTicketName(incomingTicket) || resolveTicketName(previousTicket);
+    const resolvedName = resolveContactName(incomingTicket) || resolveContactName(previousTicket);
 
     return {
       ...merged,
@@ -393,6 +302,15 @@ export function useSupportPageController({
   useEffect(() => {
     selectedTicketIdRef.current = selectedTicket?.id || null;
   }, [selectedTicket?.id]);
+
+  useEffect(() => {
+    const needsPolling = wsUiStatus.phase === 'disconnected' || wsUiStatus.phase === 'auth_error';
+    if (!needsPolling) return undefined;
+    const interval = setInterval(() => {
+      if (loadTicketsRef.current) loadTicketsRef.current();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [wsUiStatus.phase]);
 
   useEffect(() => {
     websocketMetrics.setWebSocketStatus(wsConnected && wsAuthenticated);
@@ -521,6 +439,10 @@ export function useSupportPageController({
     if (!selectedTicket) return;
     const t = (tagInput || '').trim();
     if (!t) return;
+    if (t.length > 32) {
+      showToast('Tag muito longa (máximo 32 caracteres)', 'warning');
+      return;
+    }
     try {
       const updated = await addTagToTicket(selectedTicket.id, t);
       updateTicketLocal(updated);
@@ -642,6 +564,7 @@ export function useSupportPageController({
 
   const timelinePresentation = useSupportTimelinePresentation({
     safeGetBodyText,
+    phoneMaskingEnabled,
   });
 
   const wsStatus = React.useMemo(() => {
@@ -665,7 +588,7 @@ export function useSupportPageController({
       return {
         label: 'Falha de auth',
         title: 'WebSocket conectado, mas falha na autenticação',
-        color: 'rgb(239, 68, 68)',
+        color: 'rgb(245, 158, 11)',
         animated: false,
       };
     }
@@ -679,7 +602,7 @@ export function useSupportPageController({
     }
     return {
       label: 'Desconectado',
-      title: 'WebSocket desconectado',
+      title: 'WebSocket desconectado — atualizações em tempo real inativas',
       color: 'rgb(245, 158, 11)',
       animated: false,
     };

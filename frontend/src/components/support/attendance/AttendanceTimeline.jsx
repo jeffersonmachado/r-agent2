@@ -4,7 +4,7 @@ export function AttendanceTimeline({ timeline, formatDate }) {
   return (
     <section className="attendance-timeline-panel">
       <div className="attendance-timeline-header">
-        <h3>Historico</h3>
+        <h3>Histórico</h3>
       </div>
       <div className="attendance-timeline-list">
         {(timeline || []).map((item) => (

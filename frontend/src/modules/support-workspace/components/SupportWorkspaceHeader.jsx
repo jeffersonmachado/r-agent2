@@ -22,7 +22,7 @@ export function SupportWorkspaceHeader({
       <div className="support-controls">
         <button
           type="button"
-          className="btn-default px-4 py-2 text-sm auto-filter-toggle-btn"
+          className={`btn-default px-4 py-2 text-sm auto-filter-toggle-btn${showFilters ? ' auto-filter-toggle-btn--active' : ''}`}
           aria-label="Mostrar ou ocultar filtros"
           aria-pressed={showFilters ? 'true' : 'false'}
           title={showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
@@ -56,8 +56,7 @@ export function SupportWorkspaceHeader({
             setNewConversationQueue?.(queues.length > 0 ? queues[0] : '');
             setShowNewConversationModal?.(true);
           }}
-          className="support-new-conversation-control"
-          style={{ backgroundColor: '#25D366', color: 'white' }}
+          className="support-new-conversation-control support-new-conversation-control--whatsapp"
         >
           <span aria-hidden="true">➕</span>
           <span>Iniciar conversa</span>

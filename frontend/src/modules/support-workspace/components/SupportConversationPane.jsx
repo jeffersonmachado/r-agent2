@@ -216,7 +216,9 @@ export function SupportConversationPane({
                 {isConversationListVisibleDesktop ? 'Ocultar conversas' : 'Mostrar conversas'}
               </button>
             ) : null}
-            <span className="support-ticket-title-number">#{selectedTicket.id}</span>
+            <span className="support-ticket-title-number" title={selectedTicket.id ? `ID: ${selectedTicket.id}` : undefined}>
+              #{String(selectedTicket.id || '').replace(/^default-/i, '').slice(0, 18)}{String(selectedTicket.id || '').replace(/^default-/i, '').length > 18 ? '…' : ''}
+            </span>
             {isMobile ? (
               <button
                 type="button"

@@ -52,6 +52,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
+source "$SCRIPT_DIR/release-payload-blocklist.sh"
 DIST_RELEASE="$DIST_DIR/release"
 DIST_GOV="$DIST_DIR/governance"
 DIST_SIG="$DIST_DIR/signatures"
@@ -254,9 +255,18 @@ pass "PASS 6: Copiar VERIFIER para entrega"
 
 cp "$PROJECT_ROOT/scripts/verify-enterprise-governance.sh" "$DIST_VER/verify-enterprise-governance.sh"
 cp "$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh" "$DIST_VER/verify-enterprise-governance-v2.sh"
+cp "$PROJECT_ROOT/scripts/audit-envelope-release-final.sh" "$DIST_VER/audit-envelope-release-final.sh"
+cp "$PROJECT_ROOT/scripts/check-dist-clean.sh" "$DIST_VER/check-dist-clean.sh"
+cp "$PROJECT_ROOT/scripts/release-governance-ci.sh" "$DIST_VER/release-governance-ci.sh"
+cp "$PROJECT_ROOT/scripts/test-payload-contamination-regression.sh" "$DIST_VER/test-payload-contamination-regression.sh"
 cp "$PROJECT_ROOT/scripts/release-governance-blocklist.sh" "$DIST_VER/release-governance-blocklist.sh"
+cp "$PROJECT_ROOT/scripts/release-payload-blocklist.sh" "$DIST_VER/release-payload-blocklist.sh"
 chmod +x "$DIST_VER/verify-enterprise-governance.sh"
 chmod +x "$DIST_VER/verify-enterprise-governance-v2.sh"
+chmod +x "$DIST_VER/audit-envelope-release-final.sh"
+chmod +x "$DIST_VER/check-dist-clean.sh"
+chmod +x "$DIST_VER/release-governance-ci.sh"
+chmod +x "$DIST_VER/test-payload-contamination-regression.sh"
 cat > "$DIST_VER/verify-result.json" <<EOF
 {
   "status": "PASS",
@@ -366,6 +376,7 @@ find "$TMP_PAYLOAD/r-agent2" -type d -name governance ! -path "*/dist/governance
 
 step "Removendo governança, signatures e verifier de dentro do payload (fonte única externa)..."
 rm -rf "$TMP_PAYLOAD/r-agent2/dist/governance" "$TMP_PAYLOAD/r-agent2/dist/signatures" "$TMP_PAYLOAD/r-agent2/dist/verifier"
+release_payload_remove_forbidden_from_tree "$TMP_PAYLOAD/r-agent2"
 
 step "Reempacotando PAYLOAD saneado..."
 rm -f "$PAYLOAD_PATH"
@@ -374,6 +385,9 @@ rm -f "$PAYLOAD_PATH"
 PAYLOAD_SHA="$(sha256sum "$PAYLOAD_PATH" | awk '{print $1}')"
 PAYLOAD_SIZE="$(du -h "$PAYLOAD_PATH" | cut -f1)"
 ok "PAYLOAD saneado (sem governança interna): hash atualizado ${PAYLOAD_SHA:0:24}…"
+release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME" \
+  && ok "PAYLOAD validado contra blacklist central" \
+  || fail "PAYLOAD contaminado por arquivo proibido"
 
 step "Atualizando manifest para hash final do PAYLOAD saneado..."
 cat > "$MANIFEST_PATH" <<EOF
@@ -479,6 +493,9 @@ cp "$DIST_VER"/* "$TMP_ENVELOPE/r-agent2/dist/verifier/" 2>/dev/null || true
 # Criar o envelope ZIP
 (cd "$TMP_ENVELOPE" && zip -qr "$ENVELOPE_PATH" r-agent2/)
 ok "ENVELOPE criado: $ENVELOPE_NAME"
+release_envelope_validate_zip "$ENVELOPE_PATH" \
+  && ok "ENVELOPE contém apenas artefatos controlados" \
+  || fail "ENVELOPE contém entradas inesperadas"
 
 # ─── PASS 9: Validar ENVELOPE ─────────────────────────────────────────────
 

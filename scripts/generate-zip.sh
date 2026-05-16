@@ -9,6 +9,8 @@ NC='\033[0m'
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
+SCRIPT_DIR="$PROJECT_DIR/scripts"
+source "$SCRIPT_DIR/release-payload-blocklist.sh"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEFAULT_OUTPUT_DIR="$PROJECT_DIR/dist"
 DEFAULT_ZIP_NAME="${PROJECT_NAME}-${TIMESTAMP}.zip"
@@ -258,6 +260,10 @@ RSYNC_EXCLUDES=(
   'dist/*.zip'
 )
 
+while IFS= read -r pattern; do
+  [[ -n "$pattern" ]] && RSYNC_EXCLUDES+=("$pattern")
+done < <(release_payload_print_rsync_excludes)
+
 if [[ "$INCLUDE_NODE_MODULES" == false ]]; then
   RSYNC_EXCLUDES+=('node_modules/' '**/node_modules/')
 fi
@@ -312,6 +318,7 @@ done
 
 rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
 copy_required_proof_entries
+release_payload_remove_forbidden_from_tree "$STAGE_DIR"
 
 (
   cd "$STAGE_ROOT"
@@ -324,6 +331,12 @@ copy_required_proof_entries
 
 if [[ ! -f "$ZIP_FILE" ]]; then
   echo -e "${RED}Erro: falha ao gerar ZIP.${NC}" >&2
+  exit 1
+fi
+
+if ! release_payload_validate_zip "$ZIP_FILE" "$ZIP_NAME"; then
+  rm -f "$ZIP_FILE"
+  echo -e "${RED}Erro: ZIP removido por contaminacao de payload proibida.${NC}" >&2
   exit 1
 fi
 

@@ -1,10 +1,20 @@
-function getAgingColor(ticket) {
+function getAgingInfo(ticket) {
   const ts = ticket?.createdAt || ticket?.updatedAt;
   if (!ts || ticket?.status !== 'waiting') return null;
-  const ageMin = (Date.now() - new Date(ts).getTime()) / 60000;
-  if (ageMin > 60) return '#ef4444';
-  if (ageMin > 30) return '#f59e0b';
-  return '#22c55e';
+  const ageMin = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  let color;
+  let label;
+  if (ageMin > 60) {
+    color = '#ef4444';
+    label = ageMin >= 120 ? `aguardando há ${Math.floor(ageMin / 60)}h` : `aguardando há ${ageMin}min`;
+  } else if (ageMin > 30) {
+    color = '#f59e0b';
+    label = `aguardando há ${ageMin}min`;
+  } else {
+    color = '#22c55e';
+    label = ageMin < 1 ? 'recém criado' : `aguardando há ${ageMin}min`;
+  }
+  return { color, label };
 }
 
 export function SupportTicketList({
@@ -86,26 +96,35 @@ export function SupportTicketList({
               data-testid="ticket-card"
               data-ticket-id={ticket.id}
               data-ticket-status={ticket.status}
-              aria-label={`Chamado ${ticket.id}, ${formatTicketStatus(ticket.status)}, ${ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : ''}`}
+              aria-label={[
+                `Chamado ${getTicketDisplayId ? getTicketDisplayId(ticket) : ticket.id}`,
+                getContactName(ticket),
+                formatTicketStatus(ticket.status),
+                ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : '',
+              ].filter(Boolean).join(', ')}
               aria-selected={selectedTicket?.id === ticket.id}
             >
               <div className="support-ticket-contact-row">
                 <span className="support-ticket-contact-name">{highlightText(getContactName(ticket), uiSearchDebounced)}</span>
-                {!/^Contato[\s•]/i.test(getContactName(ticket)) ? (
-                  <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber || '-'}`}>
-                    {getPhoneNode(ticket)}
-                  </span>
-                ) : null}
+                {(() => {
+                  const cname = getContactName(ticket);
+                  const isMaskedFallback = /^Contato\s/.test(cname) && /•/.test(cname);
+                  return !isMaskedFallback && ticket.phoneNumber ? (
+                    <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber}`}>
+                      {getPhoneNode(ticket)}
+                    </span>
+                  ) : null;
+                })()}
               </div>
               <div className="support-ticket-id-row">
                 {(() => {
-                  const agingColor = getAgingColor(ticket);
-                  return agingColor ? (
+                  const aging = getAgingInfo(ticket);
+                  return aging ? (
                     <span
                       className="support-ticket-aging"
-                      style={{ color: agingColor }}
-                      title="Tempo aguardando"
-                      aria-label="Indicador de tempo de espera"
+                      style={{ color: aging.color }}
+                      title={aging.label}
+                      aria-label={aging.label}
                     >●</span>
                   ) : null;
                 })()}
@@ -115,7 +134,7 @@ export function SupportTicketList({
               </div>
               <div className="support-ticket-top-row">
                 <div className="support-ticket-status-group">
-                  <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${ticket.status}`}>
+                  <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${formatTicketStatus(ticket.status)}`}>
                     {formatTicketStatus(ticket.status)}
                   </span>
                   <span className="support-ticket-time">{formatTime(ticket.updatedAt || ticket.createdAt)}</span>

@@ -43,7 +43,7 @@ function extractTicketReason(ticket) {
     || ticket?.context?.closeReasonName
     || ticket?.reason
     || ticket?.context?.reason
-    || 'agendamento'
+    || null
   );
 }
 
@@ -100,12 +100,21 @@ export function useAttendanceRuntimeViewModel({
         Resolvido: tickets.filter((ticket) => String(ticket?.status || '').toLowerCase() === 'resolved').length,
         Fechado: tickets.filter((ticket) => String(ticket?.status || '').toLowerCase() === 'closed').length,
       },
-      categories: {
-        Agendamento: tickets.filter((ticket) => /agenda/i.test(extractTicketReason(ticket))).length,
-        Pilates: tickets.filter((ticket) => /pilates/i.test(extractTicketReason(ticket))).length,
-        'Bale': tickets.filter((ticket) => /bale/i.test(extractTicketReason(ticket))).length,
-        Treino: tickets.filter((ticket) => /treino/i.test(extractTicketReason(ticket))).length,
-      },
+      categories: (() => {
+        const reasonCounts = {};
+        tickets.forEach((ticket) => {
+          const reason = extractTicketReason(ticket);
+          if (!reason) return;
+          const rawKey = String(reason).slice(0, 32);
+          const label = formatSupportReason(rawKey) || rawKey;
+          reasonCounts[label] = (reasonCounts[label] || 0) + 1;
+        });
+        const sorted = Object.entries(reasonCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
+        if (sorted.length === 0) return { 'Sem categorias': 0 };
+        return Object.fromEntries(sorted);
+      })(),
     };
 
     const aiFromSummary = parseAiSummary(ticketContext?.aiSummary?.text || ticketContext?.aiSummary || '');
@@ -140,19 +149,22 @@ export function useAttendanceRuntimeViewModel({
       ? Math.max(tickets.findIndex((ticket) => ticket.id === selectedTicket.id), 0) + 1
       : 0;
 
+    const statusLabels = { waiting: 'Aguardando', in_progress: 'Em atendimento', closed: 'Fechado', paused: 'Pausado' };
+
     return {
       metrics,
       selectedTicket: selectedTicket ? {
         id: selectedTicket.id,
         date: selectedTicket.createdAt,
-        contact: resolveContactName(selectedTicket) || formatPhone(selectedTicket.phoneNumber) || '-',
+        contact: resolveContactName(selectedTicket) || 'Não identificado',
         channel: selectedTicket.channelType || 'whatsapp',
         queue: formatQueueName(selectedTicket.queue),
-        status: selectedTicket.status || '-',
+        status: statusLabels[selectedTicket.status] || selectedTicket.status || '-',
         reason: formatSupportReason(selectedReason) || selectedReason || '-',
       } : null,
       customer: {
         name: resolveContactName(selectedTicket) || 'Não identificado',
+        phone: selectedTicket?.phoneNumber ? formatPhone(selectedTicket.phoneNumber) : null,
         socialName: selectedTicket?.context?.metadata?.socialName || '-',
         document: selectedTicket?.context?.metadata?.document || '-',
       },

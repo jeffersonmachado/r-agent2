@@ -41,7 +41,7 @@ describe('ThemeProvider', () => {
     expect(themeName.textContent).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#0a0a0a');
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#0a0b14');
     expect(localStorage.getItem('chatbot-theme')).toBe('dark');
 
     fireEvent.click(toggle);
@@ -49,7 +49,7 @@ describe('ThemeProvider', () => {
     expect(themeName.textContent).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#F6F7F9');
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#f8fafc');
     expect(localStorage.getItem('chatbot-theme')).toBe('light');
   });
 });

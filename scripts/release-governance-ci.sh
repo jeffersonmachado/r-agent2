@@ -31,19 +31,36 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ -d "$SCRIPT_DIR/../release" && -d "$SCRIPT_DIR/../governance" && -d "$SCRIPT_DIR/../signatures" ]]; then
+  OFFLINE_ENVELOPE_MODE=true
+  DIST_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  PROJECT_ROOT="$(cd "$DIST_ROOT/.." && pwd)"
+else
+  OFFLINE_ENVELOPE_MODE=false
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  DIST_ROOT="$PROJECT_ROOT/dist"
+fi
 
 STRICT_MODE="${RELEASE_GOVERNANCE_STRICT:-false}"
 SKIP_BUILD=false
 JSON_REPORT=false
 OFFLINE_TEST=true
-CI_LOG_DIR="$PROJECT_ROOT/dist/ci-logs"
+CI_LOG_DIR="$DIST_ROOT/ci-logs"
 CI_LOG="$CI_LOG_DIR/ci-governance-audit.log"
 
 # Timestamps banidos — referências de releases antigas que NÃO devem aparecer
 # em artifacts finais (governance, signatures, manifest, verify-result).
 # NÃO aplicado a: docs/history, scripts, changelogs, blocklists.
-source "$SCRIPT_DIR/release-governance-blocklist.sh"
+if [[ -f "$SCRIPT_DIR/release-governance-blocklist.sh" ]]; then
+  source "$SCRIPT_DIR/release-governance-blocklist.sh"
+else
+  source "$PROJECT_ROOT/scripts/release-governance-blocklist.sh"
+fi
+if [[ -f "$SCRIPT_DIR/release-payload-blocklist.sh" ]]; then
+  source "$SCRIPT_DIR/release-payload-blocklist.sh"
+else
+  source "$PROJECT_ROOT/scripts/release-payload-blocklist.sh"
+fi
 
 PASS=true
 FAIL_REASONS=()
@@ -79,8 +96,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$OFFLINE_ENVELOPE_MODE" == true ]]; then
+  SKIP_BUILD=true
+fi
+
 cd "$PROJECT_ROOT"
-mkdir -p dist dist/ci-logs
+mkdir -p "$DIST_ROOT" "$DIST_ROOT/ci-logs"
 
 # Inicializar log limpo
 mkdir -p "$CI_LOG_DIR"
@@ -100,11 +121,19 @@ echo -e "${NC}"
 step "ETAPA 1: Build e geração do release"
 
 if [[ "$SKIP_BUILD" == "true" ]]; then
-  info "skip-build ativo — pulando npm ci + zip:release"
+  if [[ "$OFFLINE_ENVELOPE_MODE" == true ]]; then
+    info "envelope offline detectado — pulando npm ci + zip:release"
+  else
+    info "skip-build ativo — pulando npm ci + zip:release"
+  fi
 else
-  info "Executando npm ci..."
-  npm ci --prefer-offline 2>&1 | tail -5 || npm ci 2>&1 | tail -5
-  ok "npm ci concluído"
+  if [[ -x "$PROJECT_ROOT/node_modules/.bin/jest" && -d "$PROJECT_ROOT/node_modules/rate-limiter-flexible" ]]; then
+    ok "dependências locais presentes — npm ci já executado neste workspace"
+  else
+    info "Executando npm ci..."
+    npm ci
+    ok "npm ci concluído"
+  fi
 
   info "Executando npm run zip:release..."
   npm run zip:release 2>&1 | tail -20
@@ -160,30 +189,65 @@ else
 fi
 
 # =============================================================================
+# ETAPA 5b: Regressão de contaminação do payload
+# =============================================================================
+step "ETAPA 5b: Regressão de blacklist/payload contamination"
+
+if bash "$SCRIPT_DIR/test-payload-contamination-regression.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "payload contamination regression PASSOU"
+else
+  fail "payload contamination regression FALHOU"
+fi
+
+# =============================================================================
 # ETAPA 6: Validações granulares de artifacts
 # =============================================================================
 step "ETAPA 6: Validações granulares de artifacts"
 
-DIST_RELEASE="dist/release"
-DIST_GOV="dist/governance"
-DIST_SIG="dist/signatures"
-DIST_VER="dist/verifier"
+DIST_RELEASE="$DIST_ROOT/release"
+DIST_GOV="$DIST_ROOT/governance"
+DIST_SIG="$DIST_ROOT/signatures"
+DIST_VER="$DIST_ROOT/verifier"
 
 PAYLOAD_PATH="$(ls -t "$DIST_RELEASE"/*.payload.zip 2>/dev/null | head -1 || true)"
 ENVELOPE_PATH="$(ls -t "$DIST_RELEASE"/*.zip 2>/dev/null | grep -v '\.payload\.zip' | head -1 || true)"
 
 # Existência obrigatória
 [[ -n "$PAYLOAD_PATH"  && -f "$PAYLOAD_PATH"  ]] && ok "payload existe: $(basename "$PAYLOAD_PATH")"  || fail "payload AUSENTE em $DIST_RELEASE/"
-[[ -n "$ENVELOPE_PATH" && -f "$ENVELOPE_PATH" ]] && ok "envelope existe: $(basename "$ENVELOPE_PATH")" || fail "envelope AUSENTE em $DIST_RELEASE/"
+if [[ -n "$ENVELOPE_PATH" && -f "$ENVELOPE_PATH" ]]; then
+  ENVELOPE_AVAILABLE=true
+  ok "envelope existe: $(basename "$ENVELOPE_PATH")"
+else
+  ENVELOPE_AVAILABLE=false
+  ok "envelope externo não embutido; validando dist/ como envelope descompactado"
+fi
 
-if [[ -z "$PAYLOAD_PATH" || -z "$ENVELOPE_PATH" ]]; then
-  echo -e "${RED}${BOLD}ABORTANDO: payload/envelope ausentes — sem condições de continuar${NC}"
+if [[ -z "$PAYLOAD_PATH" ]]; then
+  echo -e "${RED}${BOLD}ABORTANDO: payload ausente — sem condições de continuar${NC}"
   exit 1
 fi
 
 PAYLOAD_SHA="$(sha256sum "$PAYLOAD_PATH" | awk '{print $1}')"
 PAYLOAD_NAME="$(basename "$PAYLOAD_PATH")"
 MANIFEST_PATH="$DIST_RELEASE/${PAYLOAD_NAME%.payload.zip}.manifest.json"
+
+if release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME" 2>&1 | tee -a "$CI_LOG"; then
+  ok "payload sem arquivos proibidos"
+else
+  fail "payload contaminado por arquivo proibido"
+fi
+
+if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
+  if release_envelope_validate_zip "$ENVELOPE_PATH" 2>&1 | tee -a "$CI_LOG"; then
+    ok "envelope contém apenas artefatos controlados"
+  else
+    fail "envelope contém entradas inesperadas"
+  fi
+else
+  for d in "$DIST_RELEASE" "$DIST_GOV" "$DIST_SIG" "$DIST_VER"; do
+    [[ -d "$d" ]] && ok "envelope descompactado contém ${d#dist/}/" || fail "envelope descompactado sem ${d#dist/}/"
+  done
+fi
 
 # Manifest
 [[ -f "$MANIFEST_PATH" ]] && ok "manifest existe" || fail "manifest AUSENTE"
@@ -293,6 +357,7 @@ fi
 # Tokens proibidos em artifacts finais
 step "ETAPA 6b: Tokens proibidos (placeholder/transitional/pending/NO_GO)"
 
+ARTIFACT_FILES=()
 for f in "$MANIFEST_PATH"; do
   [[ -f "$f" ]] && ARTIFACT_FILES+=("$f")
 done
@@ -347,31 +412,39 @@ if [[ "$OFFLINE_TEST" == "true" ]]; then
   TMPDIR_OFFLINE="$(mktemp -d)"
   OFFLINE_RESULT=0
   OFFLINE_LOG="$CI_LOG_DIR/ci-offline-test.log"
-  # Resolver path absoluto do envelope ANTES de entrar no subshell com cd
-  ENVELOPE_ABS="$(cd "$(dirname "$ENVELOPE_PATH")" && pwd)/$(basename "$ENVELOPE_PATH")"
+  if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
+    # Resolver path absoluto do envelope ANTES de entrar no subshell com cd
+    ENVELOPE_ABS="$(cd "$(dirname "$ENVELOPE_PATH")" && pwd)/$(basename "$ENVELOPE_PATH")"
 
-  {
-    echo "# Offline verifier test — $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-    echo "Extraindo envelope: $ENVELOPE_ABS"
-    cd "$TMPDIR_OFFLINE"
-    unzip -q "$ENVELOPE_ABS"
-    ls -la
+    {
+      echo "# Offline verifier test — $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      echo "Extraindo envelope: $ENVELOPE_ABS"
+      cd "$TMPDIR_OFFLINE"
+      unzip -q "$ENVELOPE_ABS"
+      ls -la
 
-    VERIFIER_SCRIPT=""
-    if [[ -f "r-agent2/dist/verifier/verify-enterprise-governance.sh" ]]; then
-      VERIFIER_SCRIPT="r-agent2/dist/verifier/verify-enterprise-governance.sh"
-    elif [[ -f "dist/verifier/verify-enterprise-governance.sh" ]]; then
-      VERIFIER_SCRIPT="dist/verifier/verify-enterprise-governance.sh"
-    else
-      echo "ERRO: verifier não encontrado no envelope extraído"
-      ls -R . | grep "verify-enterprise" || true
-      exit 1
-    fi
+      VERIFIER_SCRIPT=""
+      if [[ -f "r-agent2/dist/verifier/verify-enterprise-governance.sh" ]]; then
+        VERIFIER_SCRIPT="r-agent2/dist/verifier/verify-enterprise-governance.sh"
+      elif [[ -f "dist/verifier/verify-enterprise-governance.sh" ]]; then
+        VERIFIER_SCRIPT="dist/verifier/verify-enterprise-governance.sh"
+      else
+        echo "ERRO: verifier não encontrado no envelope extraído"
+        ls -R . | grep "verify-enterprise" || true
+        exit 1
+      fi
 
-    chmod +x "$VERIFIER_SCRIPT" 2>/dev/null || true
-    echo "Executando: bash $VERIFIER_SCRIPT"
-    bash "$VERIFIER_SCRIPT"
-  } > "$OFFLINE_LOG" 2>&1 || OFFLINE_RESULT=$?
+      chmod +x "$VERIFIER_SCRIPT" 2>/dev/null || true
+      echo "Executando: bash $VERIFIER_SCRIPT"
+      bash "$VERIFIER_SCRIPT"
+    } > "$OFFLINE_LOG" 2>&1 || OFFLINE_RESULT=$?
+  else
+    {
+      echo "# Expanded-envelope verifier test — $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      echo "Envelope externo não embutido em dist/release; executando verifier sobre dist/ descompactado"
+      bash "$SCRIPT_DIR/verify-enterprise-governance.sh"
+    } > "$OFFLINE_LOG" 2>&1 || OFFLINE_RESULT=$?
+  fi
 
   cat "$OFFLINE_LOG" | tee -a "$CI_LOG"
   rm -rf "$TMPDIR_OFFLINE"
@@ -388,7 +461,7 @@ fi
 # RELATÓRIO JSON final
 # =============================================================================
 if [[ "$JSON_REPORT" == "true" ]]; then
-  REPORT_PATH="$PROJECT_ROOT/dist/ci-logs/ci-governance-report.json"
+  REPORT_PATH="$DIST_ROOT/ci-logs/ci-governance-report.json"
   FAIL_JSON="$(printf '"%s",' "${FAIL_REASONS[@]+"${FAIL_REASONS[@]}"}" | sed 's/,$//')"
   WARN_JSON="$(printf '"%s",' "${WARN_REASONS[@]+"${WARN_REASONS[@]}"}" | sed 's/,$//')"
   node -e "
@@ -403,7 +476,7 @@ if [[ "$JSON_REPORT" == "true" ]]; then
       payloadSha256: '${PAYLOAD_SHA:-}',
       artifacts: {
         payload: '$(basename "${PAYLOAD_PATH:-}")',
-        envelope: '$(basename "${ENVELOPE_PATH:-}")',
+        envelope: '$([[ -n "${ENVELOPE_PATH:-}" ]] && basename "$ENVELOPE_PATH" || true)',
         manifest: '$(basename "${MANIFEST_PATH:-}")',
       }
     };

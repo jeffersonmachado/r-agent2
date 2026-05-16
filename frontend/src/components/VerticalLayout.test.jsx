@@ -23,9 +23,9 @@ describe('VerticalLayout', () => {
     );
 
     expect(screen.getByText('Todas as verticais')).toBeInTheDocument();
-    expect(screen.getByText('Beauty')).toBeInTheDocument();
+    expect(screen.getByText('Beleza')).toBeInTheDocument();
     expect(screen.getByText('Fitness')).toBeInTheDocument();
-    expect(screen.getByText('E-commerce')).toBeInTheDocument();
+    expect(screen.getByText('Comércio Eletrônico')).toBeInTheDocument();
     expect(screen.getByText('Agenda')).toBeInTheDocument();
     expect(screen.getByText('Alunos')).toBeInTheDocument();
     expect(screen.getByText(/Modulos especificos desta vertical ainda estao em preparacao/i)).toBeInTheDocument();

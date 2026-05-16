@@ -21,7 +21,7 @@ describe('SubNav', () => {
       />,
     );
 
-    expect(screen.getByText('Tenant: tenant-demo')).toBeInTheDocument();
+    expect(screen.getByText('Conta: tenant-demo')).toBeInTheDocument();
     expect(screen.getByText('Vertical: Fitness')).toBeInTheDocument();
   });
 });

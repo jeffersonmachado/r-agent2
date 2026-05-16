@@ -357,7 +357,7 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
                   <div className="bg-bg-elevated rounded-xl border border-border-default p-4 shadow-lg">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <div style={{ fontWeight: 700 }}>Resumo IA</div>
-                      {ticketContext.aiSummaryLoading ? (
+                      {ticketContext.aiSummaryLoading && !ticketContext.aiSummary ? (
                         <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
                           Gerando automaticamente...
                         </div>

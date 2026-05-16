@@ -1,0 +1,74 @@
+{
+  "seedId": "demo-beauty-agendamento-servico",
+  "tenant": {
+    "id": "system",
+    "name": "Tenant Demo Beauty"
+  },
+  "persona": {
+    "name": "Carla Souza",
+    "segment": "cliente_recorrente",
+    "goal": "agendamento_servico"
+  },
+  "headline": "RAP Demo - Beauty",
+  "summary": "Fluxo comercial de agendamento de servico com IA, atendimento, CRM, QA e replay.",
+  "initialIntent": "Quero agendar escova e manicure para sexta-feira.",
+  "messages": [
+    {
+      "role": "customer",
+      "text": "Oi, tenho interesse em escova e manicure para sexta."
+    },
+    {
+      "role": "assistant",
+      "text": "Perfeito. Posso reservar sexta as 15:00 para voce?"
+    }
+  ],
+  "journey": {
+    "id": "beauty_service_booking",
+    "name": "Beauty Service Booking",
+    "waveId": "beauty-cliente-novo",
+    "scenarioId": "qa-chatpro-omnichannel-smoke"
+  },
+  "workspace": {
+    "entityId": null
+  },
+  "expectedOutcome": {
+    "intent": "agendamento_servico",
+    "confidence": 0.89,
+    "nextBestAction": "confirmar pacote e registrar oportunidade",
+    "nextStage": "agendamento_confirmado",
+    "appointmentStatus": "servico_confirmado",
+    "automation": "reserva_agenda_salao",
+    "automationStep": "book_beauty_service",
+    "automationMode": "autonomous",
+    "sla": "90%",
+    "conversion": "34%",
+    "automationsExecuted": 2,
+    "roiEstimated": "R$ 15.700/m"
+  },
+  "expectedTicket": {
+    "queue": "beauty",
+    "status": "open"
+  },
+  "expectedLead": {
+    "stage": "proposal",
+    "scoreMin": 70
+  },
+  "expectedAppointment": {
+    "status": "confirmed",
+    "timeWindow": "15:00-16:00"
+  },
+  "qaAssertions": {
+    "seedId": "seed_001",
+    "goNoGo": "GO",
+    "coverageMin": 80,
+    "maxCriticalGaps": 1
+  },
+  "expectedReplay": {
+    "source": "qa_waves",
+    "mustContain": [
+      "send_message",
+      "validate_intent",
+      "create_booking"
+    ]
+  }
+}
