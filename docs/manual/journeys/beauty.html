@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Jornadas Detalhadas — Beleza</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#ec4899;--pink-dim:rgba(236,72,153,.15);--pink-border:rgba(236,72,153,.35);
+  --blue:#3b82f6;--teal:#14b8a6;--yellow:#f59e0b;--green:#10b981;--red:#ef4444;
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#222536;--border:#2d3148;
+  --text:#e2e8f0;--muted:#64748b;--subtle:#94a3b8;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+
+/* ── TOP BAR ── */
+.top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 36px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+.top-bar a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .15s}.top-bar a:hover{color:#fff}
+.top-bar .sep{color:var(--border)}
+.top-bar .crumb{color:var(--text);font-weight:600;font-size:13px}
+.v-badge{background:var(--pink-dim);border:1px solid var(--pink-border);color:var(--pink);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:700}
+
+/* ── HERO ── */
+.hero{padding:52px 36px 44px;background:linear-gradient(160deg,#1a0a14 0%,var(--bg) 70%);border-bottom:1px solid var(--border)}
+.hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--pink);margin-bottom:10px}
+.hero h1{font-size:36px;font-weight:800;color:#fff;margin-bottom:10px}
+.hero p{color:var(--subtle);font-size:15px;max-width:600px;margin-bottom:24px}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 14px;font-size:12px;color:var(--subtle)}
+.chip.pink{border-color:var(--pink-border);color:var(--pink)}
+.chip.green{border-color:rgba(16,185,129,.4);color:#34d399}
+
+/* ── LAYOUT ── */
+.page{max-width:1180px;margin:0 auto;padding:48px 36px 100px}
+
+/* ── JOURNEY BLOCK ── */
+.journey-block{margin-bottom:88px}
+.journey-label{display:inline-flex;align-items:center;gap:10px;background:var(--pink-dim);border:1px solid var(--pink-border);border-radius:8px;padding:6px 16px;margin-bottom:18px}
+.journey-label .jnum{font-size:12px;font-weight:800;color:var(--pink)}
+.journey-label .jtitle{font-size:14px;font-weight:700;color:#fff}
+.journey-desc{font-size:14px;color:var(--subtle);max-width:720px;margin-bottom:28px}
+
+/* ── TRIGGER BOX ── */
+.trigger-box{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--pink);border-radius:10px;padding:16px 20px;margin-bottom:32px}
+.trigger-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.trigger-box strong{color:var(--pink);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+.trigger-box p{font-size:13px;color:var(--subtle)}
+
+/* ── STEPPER ── */
+.stepper{display:flex;align-items:center;overflow-x:auto;gap:0;margin-bottom:36px;padding:2px 0 6px}
+.s-step{flex-shrink:0;display:flex;align-items:center}
+.s-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;min-width:130px}
+.s-box.active{border-color:var(--pink);background:var(--pink-dim)}
+.s-n{font-size:10px;font-weight:700;color:var(--pink);margin-bottom:3px;letter-spacing:.04em}
+.s-label{font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.s-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.s-arrow{padding:0 10px;color:var(--border);font-size:20px;flex-shrink:0}
+
+/* ── STEP SECTION ── */
+.step-section{margin-bottom:52px}
+.step-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.step-num-badge{width:32px;height:32px;border-radius:50%;background:var(--pink);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px var(--pink-dim)}
+.step-header h3{font-size:17px;font-weight:700;color:#fff}
+.step-header .step-route{font-family:monospace;font-size:11px;color:var(--pink);background:var(--pink-dim);border:1px solid var(--pink-border);border-radius:4px;padding:2px 8px;margin-left:4px}
+
+/* ── ANNOTATED SCREENSHOT ── */
+.annotated-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.screenshot-zone{position:relative;display:block;width:100%;line-height:0}
+.screenshot-zone img{width:100%;display:block;opacity:.95}
+
+/* Hotspot circle */
+.hs{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--pink);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:default;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(236,72,153,.4),0 4px 12px rgba(0,0,0,.5);z-index:10;transition:transform .2s}
+.hs:hover{transform:translate(-50%,-50%) scale(1.15)}
+.hs.blue{background:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.teal{background:var(--teal);box-shadow:0 0 0 3px rgba(20,184,166,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.yellow{background:var(--yellow);box-shadow:0 0 0 3px rgba(245,158,11,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.green{background:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.4),0 4px 12px rgba(0,0,0,.5)}
+
+/* Highlight overlay */
+.hl{position:absolute;border:2px dashed var(--pink);border-radius:6px;background:rgba(236,72,153,.08);pointer-events:none;transition:opacity .2s}
+
+/* Annotation cards grid */
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:16px;background:var(--surface2)}
+.ann-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px}
+.ann-num{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.ann-num.pink{background:var(--pink)}
+.ann-num.blue{background:var(--blue)}
+.ann-num.teal{background:var(--teal)}
+.ann-num.yellow{background:var(--yellow)}
+.ann-num.green{background:var(--green)}
+.ann-body strong{font-size:12px;font-weight:700;color:#fff;display:block;margin-bottom:4px}
+.ann-body p{font-size:11px;color:var(--subtle);line-height:1.5}
+
+/* ── CALLOUT BOXES ── */
+.callout{display:flex;gap:14px;border-radius:10px;padding:16px 18px;margin:18px 0;font-size:13px;position:relative}
+.callout.tip{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.25);border-left:3px solid var(--blue)}
+.callout.warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-left:3px solid var(--yellow)}
+.callout.danger{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-left:3px solid var(--red)}
+.callout.success{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-left:3px solid var(--green)}
+.callout-icon{font-size:20px;flex-shrink:0;line-height:1.4}
+.callout strong{display:block;margin-bottom:4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.callout.tip strong{color:var(--blue)}
+.callout.warn strong{color:var(--yellow)}
+.callout.danger strong{color:var(--red)}
+.callout.success strong{color:var(--green)}
+.callout p{color:var(--subtle);line-height:1.5}
+
+/* Speech bubble */
+.bubble-row{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;position:relative;flex:1;min-width:200px;font-size:13px;color:var(--subtle)}
+.bubble::before{content:'💬';position:absolute;top:-12px;left:16px;font-size:16px}
+.bubble strong{color:#fff;display:block;margin-bottom:4px;font-size:12px}
+
+/* ── TRANSITION CARD ── */
+.transition{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:28px 0}
+.tr-from,.tr-to{padding:16px 22px;flex:1}
+.tr-from{border-right:1px solid var(--border)}
+.tr-from .label,.tr-to .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.tr-from .val,.tr-to .val{font-size:14px;font-weight:600;color:#fff}
+.tr-arrow-box{padding:0 20px;background:var(--pink-dim);align-self:stretch;display:flex;align-items:center;color:var(--pink);font-size:22px;font-weight:700}
+.tr-icon{padding:0 22px;font-size:24px}
+
+/* ── ACTION CARDS ── */
+.action-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:16px 0}
+.action-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.action-card .ac-step{font-size:10px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.action-card .ac-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:4px}
+.action-card .ac-desc{font-size:11px;color:var(--muted);line-height:1.4}
+
+/* ── DIVIDER ── */
+.jdivider{border:none;border-top:1px dashed var(--border);margin:64px 0;position:relative}
+.jdivider::after{content:'◇';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 12px;color:var(--border);font-size:14px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div class="top-bar">
+  <a href="../verticals/index.html">← Hub de Verticais</a>
+  <span class="sep">|</span>
+  <span class="crumb">Beleza — Jornadas Detalhadas</span>
+  <span class="v-badge">Beauty</span>
+</div>
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+  <div class="hero-eyebrow">Manual de Jornadas — Vertical Beleza</div>
+  <h1>💄 Jornadas de Beleza</h1>
+  <p>Fluxos passo a passo com anotações visuais de cada tela. Para salões, spas, barbearias e clínicas de estética.</p>
+  <div class="hero-chips">
+    <span class="chip pink">4 jornadas</span>
+    <span class="chip green">QA: production-like</span>
+    <span class="chip">7 telas verticais</span>
+    <span class="chip">Replay ativo</span>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ════════════════════════════════════════════
+     JORNADA 1 — CAPTAÇÃO E CONVERSÃO DE LEADS
+     ════════════════════════════════════════════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 1</span>
+    <span class="jtitle">Captação e Conversão de Leads</span>
+  </div>
+  <p class="journey-desc">Da primeira interação via WhatsApp até o cliente agendado e convertido. Cobre campanha de disparo, qualificação de lead e criação do agendamento.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">⚡</span>
+    <div>
+      <strong>Gatilho</strong>
+      <p>Lead chega via campanha de WhatsApp, indicação ou formulário digital. O sistema cria automaticamente um registro na tela <em>Leads de Beleza</em> com status "Em análise". O atendente qualifica e converte.</p>
+    </div>
+  </div>
+
+  <!-- STEPPER -->
+  <div class="stepper">
+    <div class="s-step">
+      <div class="s-box active">
+        <div class="s-n">PASSO 1</div>
+        <div class="s-label">Disparo de Campanha</div>
+        <div class="s-sub">bulk-messaging</div>
+      </div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active">
+        <div class="s-n">PASSO 2</div>
+        <div class="s-label">Lead Capturado</div>
+        <div class="s-sub">beauty/leads</div>
+      </div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active">
+        <div class="s-n">PASSO 3</div>
+        <div class="s-label">Qualificação</div>
+        <div class="s-sub">atendimento</div>
+      </div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active">
+        <div class="s-n">PASSO 4</div>
+        <div class="s-label">Converter → Cliente</div>
+        <div class="s-sub">beauty/customers</div>
+      </div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active">
+        <div class="s-n">PASSO 5</div>
+        <div class="s-label">Agendamento</div>
+        <div class="s-sub">beauty/schedule</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 – Leads -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">2</div>
+      <h3>Leads de Beleza</h3>
+      <span class="step-route">/beauty/leads</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/beauty_leads.png" alt="Tela Leads de Beleza" />
+        <!-- Hotspot 1 – Nav vertical -->
+        <div class="hs" style="left:11%;top:47%">1</div>
+        <!-- Hotspot 2 – Título e subtítulo -->
+        <div class="hs blue" style="left:40%;top:44%">2</div>
+        <!-- Hotspot 3 – Linha da tabela / lead -->
+        <div class="hs teal" style="left:50%;top:71%">3</div>
+        <!-- Hotspot 4 – Campanha de origem -->
+        <div class="hs yellow" style="left:78%;top:71%">4</div>
+        <!-- Hotspot 5 – Criar lead -->
+        <div class="hs green" style="left:90%;top:65%">5</div>
+        <!-- Highlight na tab Leads -->
+        <div class="hl" style="left:4%;top:44%;width:20%;height:5%"></div>
+      </div>
+
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num pink">1</span>
+          <div class="ann-body">
+            <strong>Abas de Navegação</strong>
+            <p>Menu lateral da vertical Beauty com todas as telas: Agenda, Campanhas, <em>Leads</em> (ativa), Clientes, Bundles, Serviços e Pagamentos. Clique para navegar entre módulos sem perder o contexto da vertical.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Leads de Beleza</strong>
+            <p>Cabeçalho da tela com subtítulo "Captação, qualificação e conversão operacional de leads do vertical Beauty". Indica claramente o propósito da tela e o contexto do módulo.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Linha do Lead</strong>
+            <p>Cada linha representa um lead capturado: nome, email mascarado, telefone e status atual (ex.: "Análise"). Clique na linha para abrir o painel de detalhes e iniciar a qualificação.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Campanha de Origem</strong>
+            <p>Campo "QA Beauty Campaign" identifica qual campanha de disparo gerou o lead. Essencial para medir o ROI de cada ação de marketing e ajustar futuras campanhas.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Criar Lead Manualmente</strong>
+            <p>Botão "Criar lead" para registrar prospects que chegam por telefone, indicação ou presencialmente. O lead entra no mesmo funil de qualificação que os automatizados.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Dica de Produtividade</strong>
+        <p>Ordene os leads pela coluna "Criado em" para priorizar os mais recentes. Leads respondidos em menos de 5 minutos têm taxa de conversão até 21× maior. Configure uma automação de resposta imediata no módulo de Fluxos.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>
+        <strong>Atenção: LGPD</strong>
+        <p>Emails e telefones são exibidos mascarados por padrão (ex: <code>jo••@••ail.com</code>). Agentes com permissão <code>agents:unmask_pii</code> podem revelar os dados completos. Não compartilhe leads não anonimizados fora do sistema.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP transition: Leads → Customers -->
+  <div class="transition">
+    <div class="tr-from">
+      <div class="label">DE</div>
+      <div class="val">Lead qualificado com interesse confirmado</div>
+    </div>
+    <div class="tr-arrow-box">→</div>
+    <div class="tr-icon">🔄</div>
+    <div class="tr-to">
+      <div class="label">PARA</div>
+      <div class="val">Cliente registrado com histórico na base Beauty</div>
+    </div>
+  </div>
+
+  <!-- STEP 4 – Customers -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">4</div>
+      <h3>Clientes de Beleza</h3>
+      <span class="step-route">/beauty/customers</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/beauty_customers.png" alt="Clientes de Beleza" />
+        <div class="hs" style="left:11%;top:53%">1</div>
+        <div class="hs blue" style="left:40%;top:44%">2</div>
+        <div class="hs teal" style="left:33%;top:52%">3</div>
+        <div class="hs yellow" style="left:50%;top:70%">4</div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num pink">1</span>
+          <div class="ann-body">
+            <strong>Aba "Clientes" Ativa</strong>
+            <p>A aba Clientes no menu lateral Beauty fica destacada indicando o módulo ativo. Permite navegar instantaneamente para Leads, Agenda ou Pagamentos sem perder contexto.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Clientes de Beleza</strong>
+            <p>Subtítulo: "Consulta de clientes, jornada, bundles, churn, follow-up e retenção." — indica todas as dimensões de análise disponíveis para cada cliente da base.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Busca e Filtros</strong>
+            <p>Busque por nome, documento ou telefone. Filtre por status de jornada (ativo, em risco de churn, inativo). Combine filtros para segmentar campanhas de retenção.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Estado Vazio Orientado</strong>
+            <p>"Selecione um cliente para abrir a visão da jornada." — ao clicar em um cliente, o painel lateral abre com histórico completo: serviços realizados, bundles ativos e próximas ações sugeridas.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bubble-row">
+      <div class="bubble">
+        <strong>Jornada do Cliente</strong>
+        O painel de detalhes mostra cada etapa que o cliente percorreu: quando foi lead, quando converteu, quais serviços usou e a previsão de churn baseada em padrão de frequência.
+      </div>
+      <div class="bubble">
+        <strong>Indicador de Churn</strong>
+        Clientes com mais de 45 dias sem agendamento recebem um indicador visual de risco. Use a ação "Enviar campanha de reativação" para acionar o fluxo de retenção diretamente desta tela.
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions summary -->
+  <div class="action-list">
+    <div class="action-card">
+      <div class="ac-step">Após conversão</div>
+      <div class="ac-title">Criar agendamento imediato</div>
+      <div class="ac-desc">Vá para /beauty/schedule, clique em "Criar" e vincule ao cliente recém-convertido para fechar o ciclo de captação.</div>
+    </div>
+    <div class="action-card">
+      <div class="ac-step">Se lead hesitou</div>
+      <div class="ac-title">Enfileirar follow-up</div>
+      <div class="ac-desc">Use o campo "Próximo contato" para agendar um follow-up automático via WhatsApp em 24h com oferta especial.</div>
+    </div>
+    <div class="action-card">
+      <div class="ac-step">Lead frio</div>
+      <div class="ac-title">Mover para campanha</div>
+      <div class="ac-desc">Leads sem resposta em 72h são movidos automaticamente para a lista de campanhas de reaquecimento de /beauty/campaigns.</div>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <span class="callout-icon">✅</span>
+    <div>
+      <strong>Marco da Jornada 1 Concluído</strong>
+      <p>Lead capturado → qualificado → convertido em cliente → primeiro agendamento criado. Taxa de conversão média para Beauty: <strong>34%</strong> quando o follow-up ocorre em menos de 2 horas.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════════════════════════════════════════════
+     JORNADA 2 — GESTÃO DE AGENDA E ATENDIMENTO
+     ════════════════════════════════════════════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 2</span>
+    <span class="jtitle">Gestão de Agenda e Atendimento</span>
+  </div>
+  <p class="journey-desc">Do agendamento confirmado ao pagamento recebido. Cobre check-in, execução do serviço, registro de pagamento e follow-up pós-atendimento.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">📅</span>
+    <div>
+      <strong>Gatilho</strong>
+      <p>Cliente com agendamento confirmado chega para o atendimento. O profissional faz o check-in na agenda, executa o serviço e registra o pagamento. Sistema dispara follow-up automático após conclusão.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Check-in Agenda</div><div class="s-sub">beauty/schedule</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Serviço Executado</div><div class="s-sub">beauty/services</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Registro de Pagamento</div><div class="s-sub">beauty/payments</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Follow-up Automático</div><div class="s-sub">automations</div></div>
+    </div>
+  </div>
+
+  <!-- Schedule annotated -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">1</div>
+      <h3>Agenda Beauty — Check-in</h3>
+      <span class="step-route">/beauty/schedule</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/beauty_schedule.png" alt="Agenda Beauty" />
+        <div class="hs" style="left:11%;top:34%">1</div>
+        <div class="hs blue" style="left:40%;top:43%">2</div>
+        <div class="hs teal" style="left:35%;top:53%">3</div>
+        <div class="hs yellow" style="left:35%;top:57%">4</div>
+        <div class="hs green" style="left:47%;top:65%">5</div>
+        <div class="hs" style="left:80%;top:65%" style="background:#8b5cf6">6</div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num pink">1</span>
+          <div class="ann-body">
+            <strong>Aba "Agenda" Ativa</strong>
+            <p>Primeira aba do menu vertical Beauty. Ponto de controle diário da operação. Atualiza em tempo real via WebSocket quando novos agendamentos chegam ou status muda.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Beauty Schedule</strong>
+            <p>"Agenda operacional com resumo do dia" — visão de todos os agendamentos do dia ordenados por horário. Ideal para o profissional conferir sua agenda matinal e se preparar.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Filtro de Data</strong>
+            <p>Seletor de data no formato dd/MM/yyyy. Clique na seta para avançar ou recuar dias. Use para planejar a semana ou consultar atendimentos passados para relatório.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Botão Atualizar</strong>
+            <p>Força um refresh dos dados da agenda sem recarregar a página. Útil quando outro atendente acabou de criar um novo agendamento e você quer ver sem esperar o WebSocket.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Colunas de Status</strong>
+            <p><strong>Pendente</strong> → aguardando confirmação. <strong>Confirmado</strong> → cliente confirmou. <strong>Em andamento</strong> → check-in feito, serviço em curso. <strong>Concluído</strong> → finalizado. <strong>No show</strong> → não compareceu.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#8b5cf6">6</span>
+          <div class="ann-body">
+            <strong>Contador da Coluna</strong>
+            <p>Número de agendamentos em cada status no dia selecionado. Permite ao supervisor visualizar instantaneamente a carga de trabalho e identificar gargalos operacionais.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Fluxo de Check-in</strong>
+        <p>Para fazer o check-in: (1) localize o agendamento na coluna "Confirmado", (2) clique no card, (3) selecione "Iniciar atendimento" no painel lateral. O status muda para "Em andamento" e o timer começa. Ao concluir, o pagamento é solicitado automaticamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payments annotated -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">3</div>
+      <h3>Beauty Payments — Registro de Cobrança</h3>
+      <span class="step-route">/beauty/payments</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/beauty_payments.png" alt="Beauty Payments" />
+        <div class="hs" style="left:11%;top:72%">1</div>
+        <div class="hs blue" style="left:40%;top:44%">2</div>
+        <div class="hs teal" style="left:31%;top:52%">3</div>
+        <div class="hs yellow" style="left:36%;top:57%">4</div>
+        <div class="hs green" style="left:50%;top:68%">5</div>
+        <div class="hl" style="left:4%;top:69%;width:20%;height:5%"></div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num pink">1</span>
+          <div class="ann-body">
+            <strong>Aba "Pagamentos" Ativa</strong>
+            <p>Última aba do menu Beauty. Centraliza todas as cobranças — tanto de sessões avulsas quanto de parcelas de bundles. Manter atualizado é crítico para o fechamento de caixa diário.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Beauty Payments</strong>
+            <p>"Acompanhamento de cobranças, datas e confirmações (controle de agendamento)." — o sistema vincula cada pagamento ao agendamento de origem, criando rastreabilidade completa.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Descrição da Tela</strong>
+            <p>Explica que os pagamentos listados são vinculados a agendamentos. Ao clicar em um registro, você vê o serviço prestado, o profissional responsável e o histórico de tentativas de cobrança.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Botão Atualizar</strong>
+            <p>Sincroniza com o gateway de pagamento para verificar confirmações pendentes. Útil após um PIX ser enviado — o status muda de "Aguardando" para "Confirmado" em segundos.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Colunas da Tabela</strong>
+            <p><strong>CLIENTE</strong> — quem pagou. <strong>STATUS</strong> — Confirmado / Aguardando / Falhou. <strong>VALOR</strong> — valor cobrado. <strong>AGENDADO</strong> — data original do serviço. Ordene por status para priorizar pendências.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bubble-row">
+      <div class="bubble">
+        <strong>Método de Pagamento</strong>
+        Clique em um registro de pagamento para ver: método usado (PIX, cartão débito/crédito, dinheiro), número de parcelas e comprovante anexado. É possível reenviar o link de cobrança via WhatsApp diretamente desta tela.
+      </div>
+      <div class="bubble">
+        <strong>Conciliação Diária</strong>
+        No final do dia, use o filtro "Status: Pendente" para verificar cobranças não confirmadas. Pagamentos em cash devem ser marcados manualmente como confirmados pelo operador de caixa.
+      </div>
+      <div class="bubble">
+        <strong>Exportação</strong>
+        O ícone de exportação (CSV) na barra de ações permite baixar o extrato do período para integração com sistemas contábeis externos como ContaAzul ou Omie.
+      </div>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>
+        <strong>Jornada 2 Concluída</strong>
+        <p>Agendamento → check-in → serviço executado → pagamento registrado → follow-up automático disparado. O cliente recebe uma mensagem de agradecimento e um link para avaliar o atendimento via NPS no WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════════════════════════════════════════════
+     JORNADA 3 — CAMPANHAS DE RETENÇÃO
+     ════════════════════════════════════════════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 3</span>
+    <span class="jtitle">Campanhas de Retenção</span>
+  </div>
+  <p class="journey-desc">Reativação de clientes inativos com campanhas personalizadas via WhatsApp. Do segmento de inativos ao agendamento gerado pela campanha.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">📊</span>
+    <div>
+      <strong>Gatilho Automático</strong>
+      <p>Sistema identifica clientes sem agendamento há 30+ dias ou com score de churn acima de 70. Uma automação cria o segmento de reativação e enfileira para a próxima campanha de disparo programada.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Segmentar Inativos</div><div class="s-sub">beauty/customers</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Criar Campanha</div><div class="s-sub">beauty/campaigns</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Template WA</div><div class="s-sub">whatsapp-templates</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Disparo e Conversão</div><div class="s-sub">bulk-messaging</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 5</div><div class="s-label">Medir ROI</div><div class="s-sub">analytics</div></div>
+    </div>
+  </div>
+
+  <!-- Campaigns annotated -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">2</div>
+      <h3>Beauty Campaigns — Criação de Campanha</h3>
+      <span class="step-route">/beauty/campaigns</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/beauty_campaigns.png" alt="Beauty Campaigns" />
+        <div class="hs" style="left:11%;top:43%">1</div>
+        <div class="hs blue" style="left:40%;top:44%">2</div>
+        <div class="hs teal" style="left:33%;top:52%">3</div>
+        <div class="hs yellow" style="left:37%;top:62%">4</div>
+        <div class="hs green" style="left:61%;top:62%">5</div>
+        <div class="hs" style="left:82%;top:62%;background:#8b5cf6">6</div>
+        <div class="hs" style="left:36%;top:55%;background:#ef4444">7</div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num pink">1</span>
+          <div class="ann-body">
+            <strong>Aba "Campanhas"</strong>
+            <p>Segunda aba do menu vertical Beauty. Concentra todas as campanhas de marketing do segmento: promoções, sazonalidade e retenção. Diferente das campanhas gerais de /bulk-messaging.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Beauty Campaigns</strong>
+            <p>"Campanhas da vertical Beauty com criação rápida e publicação controlada." — as campanhas criadas aqui são específicas para a vertical e carregam contexto de serviço, profissional e sazonalidade Beauty.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Botão "Criar campanha"</strong>
+            <p>Abre o wizard de criação com 4 etapas: (1) nome e objetivo, (2) template WhatsApp, (3) público-alvo, (4) agendamento. Cada etapa valida os campos antes de avançar.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Promoção Única QA</strong>
+            <p>Tipo de campanha para promoções de uso único: cliente recebe oferta personalizada que expira em X horas. Ideal para reativar clientes que não responderam ao lembrete padrão.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Promoção de Vitras de Semana</strong>
+            <p>Campanha recorrente para preencher horários de baixa demanda (ex.: terça e quarta). Desconto automático em horários previamente configurados como "vitras" na agenda.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#8b5cf6">6</span>
+          <div class="ann-body">
+            <strong>Promoção com Prazo</strong>
+            <p>Campanha com validade definida: o cliente recebe um link de agendamento com desconto que expira em data específica (ex.: "Agende até domingo"). Cria urgência real.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#ef4444">7</span>
+          <div class="ann-body">
+            <strong>Botão "Atualizar"</strong>
+            <p>Recarrega o status das campanhas em execução. Use após disparar uma campanha para verificar as primeiras métricas de entrega, abertura e cliques nos primeiros 15 minutos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>
+        <strong>Aprovação da Meta é Obrigatória</strong>
+        <p>Templates de WhatsApp utilizados nas campanhas precisam ser aprovados pela Meta (24–48h). Crie e submeta o template em <strong>/whatsapp-templates</strong> antes de criar a campanha. Campanhas com templates não aprovados ficam em estado "Pendente" e não disparam.</p>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Melhor Horário de Disparo</strong>
+        <p>Para clientes do segmento Beauty, os horários de maior abertura são: <strong>terças e quartas entre 10h-11h</strong> e <strong>sextas entre 17h-18h</strong>. Configure o agendamento da campanha para esses slots para maximizar a taxa de conversão.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════════════════════════════════════════════
+     JORNADA 4 — BUNDLES DE SERVIÇOS
+     ════════════════════════════════════════════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 4</span>
+    <span class="jtitle">Bundles de Serviços</span>
+  </div>
+  <p class="journey-desc">Venda de pacotes de múltiplas sessões com controle de consumo e renovação automática.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">📦</span>
+    <div>
+      <strong>Gatilho</strong>
+      <p>Cliente demonstra interesse em pacote de serviços durante atendimento (ex.: "10 sessões de depilação a laser"). O profissional abre o módulo de Bundles, compõe o pacote e registra o pagamento na mesma sessão.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Consultar Serviços</div><div class="s-sub">beauty/services</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Criar Bundle</div><div class="s-sub">beauty/bundles</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Registrar Pagamento</div><div class="s-sub">beauty/payments</div></div>
+      <div class="s-arrow">→</div>
+    </div>
+    <div class="s-step">
+      <div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Agendar Sessões</div><div class="s-sub">beauty/schedule</div></div>
+    </div>
+  </div>
+
+  <div class="annotated-wrapper">
+    <div class="screenshot-zone">
+      <img src="../verticals/img/beauty_bundles.png" alt="Beauty Bundles" />
+      <div class="hs" style="left:11%;top:57%">1</div>
+      <div class="hs blue" style="left:40%;top:44%">2</div>
+      <div class="hs teal" style="left:33%;top:52%">3</div>
+      <div class="hs yellow" style="left:50%;top:65%">4</div>
+    </div>
+    <div class="ann-grid">
+      <div class="ann-card">
+        <span class="ann-num pink">1</span>
+        <div class="ann-body">
+          <strong>Aba "Bundles"</strong>
+          <p>Quinta aba do menu vertical Beauty. Exibe todos os pacotes ativos e histórico de consumo por cliente. O indicador numérico na aba mostra quantos bundles estão próximos do vencimento.</p>
+        </div>
+      </div>
+      <div class="ann-card">
+        <span class="ann-num blue">2</span>
+        <div class="ann-body">
+          <strong>Beauty Bundles</strong>
+          <p>Tela central de gestão de pacotes: criação, acompanhamento de sessões utilizadas vs. contratadas, validade e renovação. Conecta diretamente com Pagamentos e Agenda.</p>
+        </div>
+      </div>
+      <div class="ann-card">
+        <span class="ann-num teal">3</span>
+        <div class="ann-body">
+          <strong>Criar Novo Bundle</strong>
+          <p>Wizard em 3 etapas: (1) selecionar cliente da base Beauty, (2) escolher serviço(s) e quantidade de sessões, (3) definir desconto, validade e forma de pagamento (à vista ou parcelado).</p>
+        </div>
+      </div>
+      <div class="ann-card">
+        <span class="ann-num yellow">4</span>
+        <div class="ann-body">
+          <strong>Tabela de Bundles Ativos</strong>
+          <p>Exibe: cliente, pacote (ex.: "10× Depilação Laser"), sessões usadas vs. total, data de validade e status. Clique para ver sessões individualmente e registrar a próxima na agenda.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bubble-row">
+    <div class="bubble">
+      <strong>Alerta de Última Sessão</strong>
+      Quando o cliente usa a penúltima sessão do bundle, o sistema dispara automaticamente um WhatsApp de renovação: "Falta apenas 1 sessão no seu pacote. Renove agora com 10% de desconto."
+    </div>
+    <div class="bubble">
+      <strong>Bundle Vencido</strong>
+      Bundles com validade expirada são movidos para "Inativos" e o cliente não pode mais agendar. Uma automação oferece reativação com pagamento das sessões restantes.
+    </div>
+  </div>
+
+  <div class="callout success">
+    <span class="callout-icon">✅</span>
+    <div>
+      <strong>Impacto do Bundle na Retenção</strong>
+      <p>Clientes com bundles ativos têm taxa de retenção <strong>3,2× maior</strong> que clientes sem pacote. Priorize a oferta de bundles após o segundo atendimento — é o momento de maior propensão à compra.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>

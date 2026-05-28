@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Jornadas — Beleza (Beauty)</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.6; }
+
+    .top-bar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 14px 40px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; }
+    .top-bar .back { color: #64748b; text-decoration: none; font-size: 13px; }
+    .top-bar .back:hover { color: #fff; }
+    .top-bar .divider { color: #2d3148; }
+    .top-bar .title { font-weight: 700; font-size: 15px; color: #fff; }
+    .vertical-badge { background: rgba(236,72,153,.15); border: 1px solid rgba(236,72,153,.4); color: #f472b6; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; }
+
+    .hero { padding: 56px 40px 40px; border-bottom: 1px solid #2d3148; background: linear-gradient(135deg, #1a1020 0%, #0f1117 100%); }
+    .hero-inner { max-width: 900px; }
+    .hero-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #ec4899; margin-bottom: 10px; }
+    .hero h1 { font-size: 34px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .hero p { color: #94a3b8; font-size: 15px; max-width: 640px; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .htag { background: #1a1d27; border: 1px solid #2d3148; border-radius: 999px; padding: 4px 14px; font-size: 12px; color: #94a3b8; }
+    .htag.pink { border-color: rgba(236,72,153,.4); color: #f472b6; }
+
+    .content { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; }
+
+    /* Journey section */
+    .journey { margin-bottom: 72px; }
+    .journey-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+    .journey-num { width: 40px; height: 40px; border-radius: 10px; background: rgba(236,72,153,.15); border: 1px solid rgba(236,72,153,.3); color: #ec4899; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .journey-header h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .journey-header p { font-size: 13px; color: #64748b; }
+
+    /* Stepper */
+    .stepper { display: flex; gap: 0; margin-bottom: 36px; overflow-x: auto; padding-bottom: 4px; }
+    .step { display: flex; align-items: center; flex-shrink: 0; }
+    .step-box { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    .step-box .step-n { font-size: 10px; color: #ec4899; font-weight: 700; margin-bottom: 2px; }
+    .step-box .step-label { color: #e2e8f0; font-weight: 600; }
+    .step-arrow { color: #2d3148; font-size: 18px; padding: 0 8px; }
+
+    /* Screen cards */
+    .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 24px; }
+    .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; overflow: hidden; }
+    .card img { width: 100%; display: block; border-bottom: 1px solid #2d3148; aspect-ratio: 16/9; object-fit: cover; object-position: top; }
+    .card-body { padding: 16px; }
+    .card-route { font-family: monospace; font-size: 11px; color: #ec4899; margin-bottom: 6px; }
+    .card-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .card-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
+    .card-steps { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e2235; }
+    .card-step { font-size: 11px; color: #94a3b8; padding: 3px 0; display: flex; gap: 6px; }
+    .card-step::before { content: '→'; color: #ec4899; flex-shrink: 0; }
+
+    /* Info box */
+    .infobox { background: rgba(236,72,153,.06); border: 1px solid rgba(236,72,153,.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; font-size: 13px; color: #94a3b8; }
+    .infobox strong { color: #f472b6; }
+
+    /* Section divider */
+    .divider-line { border: none; border-top: 1px solid #2d3148; margin: 56px 0; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="index.html" class="back">← Hub de Verticais</a>
+  <span class="divider">|</span>
+  <span class="title">Beleza</span>
+  <span class="vertical-badge">Beauty</span>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">Vertical</div>
+    <h1>💄 Beleza</h1>
+    <p>Jornadas completas para salões, spas, barbearias e clínicas de estética. Cobertura de captação de leads, gestão de agenda, campanhas de retenção, bundles de serviços e controle financeiro.</p>
+    <div class="hero-tags">
+      <span class="htag pink">4 jornadas</span>
+      <span class="htag">7 telas dedicadas</span>
+      <span class="htag">QA: production-like</span>
+      <span class="htag">Replay: ativo</span>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ═══ JORNADA 1 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">1</div>
+      <div>
+        <h2>Captação e Conversão de Leads</h2>
+        <p>Da primeira interação via WhatsApp até o cliente agendado e convertido.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Lead entra via WhatsApp ou campanha de disparo. O sistema cria um registro em <em>Leads de Beleza</em>, o atendente qualifica e converte em agendamento.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Disparo de Campanha</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Lead Capturado</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Qualificação</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Conversão → Cliente</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Agendamento</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/cross_bulk.png" alt="Disparos em Massa" />
+        <div class="card-body">
+          <div class="card-route">/bulk-messaging</div>
+          <div class="card-title">Disparos em Massa</div>
+          <div class="card-desc">Criação de campanha de captação com templates WhatsApp aprovados pela Meta. Segmentação por região, serviço de interesse e histórico.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar campanha "Promo Semana" com template aprovado</div>
+            <div class="card-step">Segmentar base por interesse em serviço</div>
+            <div class="card-step">Agendar disparo no horário de maior abertura</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_leads.png" alt="Leads de Beleza" />
+        <div class="card-body">
+          <div class="card-route">/beauty/leads</div>
+          <div class="card-title">Leads de Beleza</div>
+          <div class="card-desc">Painel de leads com status de qualificação (Análise, QA Beauty). Filtros por campanha de origem, atendente e data. Ação direta de conversão para cliente.</div>
+          <div class="card-steps">
+            <div class="card-step">Visualizar leads gerados pela campanha</div>
+            <div class="card-step">Qualificar: interesse, orçamento, disponibilidade</div>
+            <div class="card-step">Converter lead em cliente registrado</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_customers.png" alt="Clientes de Beleza" />
+        <div class="card-body">
+          <div class="card-route">/beauty/customers</div>
+          <div class="card-title">Clientes de Beleza</div>
+          <div class="card-desc">Base de clientes com histórico completo: jornada, bundle contratado, indicadores de churn e follow-up. Visão 360 do relacionamento com cada cliente.</div>
+          <div class="card-steps">
+            <div class="card-step">Localizar cliente recém-convertido</div>
+            <div class="card-step">Registrar preferências e histórico de serviços</div>
+            <div class="card-step">Associar bundle de serviços e agenda</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_schedule.png" alt="Agenda de Beleza" />
+        <div class="card-body">
+          <div class="card-route">/beauty/schedule</div>
+          <div class="card-title">Agenda Beauty</div>
+          <div class="card-desc">Calendário operacional com visão diária. Colunas: Pendente, Confirmado, Em andamento, Concluído, No show. Filtro por data e atualização em tempo real.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar agendamento para o cliente convertido</div>
+            <div class="card-step">Confirmar horário e profissional responsável</div>
+            <div class="card-step">Monitorar status no dia do atendimento</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 2 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">2</div>
+      <div>
+        <h2>Gestão de Agenda e Atendimento</h2>
+        <p>Do agendamento confirmado ao pagamento recebido.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Cliente com agendamento confirmado chega para o atendimento. O fluxo cobre execução do serviço, registro de pagamento e follow-up pós-atendimento.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Check-in na Agenda</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Serviço Executado</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Pagamento</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Follow-up</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/beauty_schedule.png" alt="Agenda" />
+        <div class="card-body">
+          <div class="card-route">/beauty/schedule</div>
+          <div class="card-title">Agenda — Check-in</div>
+          <div class="card-desc">Mover agendamento de "Confirmado" para "Em andamento" quando o cliente chega. Registro de horário real de início para cálculo de pontualidade.</div>
+          <div class="card-steps">
+            <div class="card-step">Localizar agendamento do dia</div>
+            <div class="card-step">Atualizar status: Confirmado → Em andamento</div>
+            <div class="card-step">Registrar profissional e sala/cabine</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_services.png" alt="Serviços" />
+        <div class="card-body">
+          <div class="card-route">/beauty/services</div>
+          <div class="card-title">Catálogo de Serviços</div>
+          <div class="card-desc">Gestão do catálogo de serviços: preços, duração, profissionais habilitados e disponibilidade. Referência usada para compor agendamentos e bundles.</div>
+          <div class="card-steps">
+            <div class="card-step">Consultar serviço solicitado pelo cliente</div>
+            <div class="card-step">Verificar duração e valor vigente</div>
+            <div class="card-step">Confirmar profissional habilitado disponível</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_payments.png" alt="Pagamentos" />
+        <div class="card-body">
+          <div class="card-route">/beauty/payments</div>
+          <div class="card-title">Beauty Payments</div>
+          <div class="card-desc">Acompanhamento de cobranças com data, cliente, status e valor agendado. Registro de pagamentos realizados e pendentes. Exportação para conciliação.</div>
+          <div class="card-steps">
+            <div class="card-step">Registrar pagamento do serviço concluído</div>
+            <div class="card-step">Verificar método: PIX, cartão, dinheiro</div>
+            <div class="card-step">Confirmar recebimento e emitir comprovante</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_supervisor.png" alt="Supervisor" />
+        <div class="card-body">
+          <div class="card-route">/supervisor</div>
+          <div class="card-title">Painel Supervisor — Follow-up</div>
+          <div class="card-desc">Após o atendimento, o supervisor monitora NPS e envia follow-up automático via WhatsApp solicitando avaliação. Métrica de No show para ajuste de política.</div>
+          <div class="card-steps">
+            <div class="card-step">Verificar taxa de No show do dia</div>
+            <div class="card-step">Acionar automação de follow-up pós-atendimento</div>
+            <div class="card-step">Monitorar respostas de avaliação</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 3 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">3</div>
+      <div>
+        <h2>Campanhas de Retenção</h2>
+        <p>Reativação de clientes inativos e fidelização da base ativa.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Sistema identifica clientes sem agendamento há 30+ dias ou com indicador de churn elevado. Campanha personalizada é disparada automaticamente.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Identificar Inativos</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Criar Campanha</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Disparo WhatsApp</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Conversão</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Resultado</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/beauty_customers.png" alt="Clientes" />
+        <div class="card-body">
+          <div class="card-route">/beauty/customers</div>
+          <div class="card-title">Segmentação de Inativos</div>
+          <div class="card-desc">Filtrar clientes por última visita e indicador de churn. Exportar segmento para campanha de reativação personalizada.</div>
+          <div class="card-steps">
+            <div class="card-step">Filtrar: última visita > 30 dias</div>
+            <div class="card-step">Marcar segmento "Reativar"</div>
+            <div class="card-step">Exportar lista para campanha</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_campaigns.png" alt="Campanhas" />
+        <div class="card-body">
+          <div class="card-route">/beauty/campaigns</div>
+          <div class="card-title">Beauty Campaigns</div>
+          <div class="card-desc">Criação e gestão de campanhas específicas para a vertical Beauty. Tipos: Promoção Única QA, Promoção de Vitras de Semana, Promoção com Prazo. Métricas de abertura e conversão.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar campanha "Reativação — Desconto 20%"</div>
+            <div class="card-step">Associar template WhatsApp aprovado</div>
+            <div class="card-step">Configurar público-alvo e data de disparo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_templates.png" alt="Templates WhatsApp" />
+        <div class="card-body">
+          <div class="card-route">/whatsapp-templates</div>
+          <div class="card-title">Templates de Retenção</div>
+          <div class="card-desc">Templates aprovados para campanhas de retenção: "Sentimos sua falta", "Promoção exclusiva para você", "Agende agora com desconto". Variáveis dinâmicas de personalização.</div>
+          <div class="card-steps">
+            <div class="card-step">Selecionar template de reativação aprovado</div>
+            <div class="card-step">Personalizar variáveis: nome, último serviço, oferta</div>
+            <div class="card-step">Associar à campanha de disparos</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_analytics.png" alt="Analytics" />
+        <div class="card-body">
+          <div class="card-route">/analytics</div>
+          <div class="card-title">Resultado da Campanha</div>
+          <div class="card-desc">Métricas de abertura, resposta, conversão e ROI da campanha de retenção. Comparativo entre campanhas e identificação de melhores abordagens.</div>
+          <div class="card-steps">
+            <div class="card-step">Monitorar taxa de abertura em tempo real</div>
+            <div class="card-step">Acompanhar conversões para agendamento</div>
+            <div class="card-step">Calcular ROI da campanha</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 4 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">4</div>
+      <div>
+        <h2>Bundles de Serviços</h2>
+        <p>Venda de pacotes e acompanhamento do consumo pelo cliente.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Cliente demonstra interesse em pacote de serviços (ex.: 10 sessões de depilação). O bundle é criado, pago e o consumo monitorado sessão a sessão.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Apresentar Bundle</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Pagamento</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Agendamento Sessões</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Consumo e Renovação</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/beauty_services.png" alt="Serviços" />
+        <div class="card-body">
+          <div class="card-route">/beauty/services</div>
+          <div class="card-title">Serviços Disponíveis</div>
+          <div class="card-desc">Catálogo completo de serviços da vertical Beauty. Cada serviço tem duração, valor unitário e disponibilidade de composição em bundle.</div>
+          <div class="card-steps">
+            <div class="card-step">Consultar serviços elegíveis para bundle</div>
+            <div class="card-step">Verificar disponibilidade de profissionais</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_bundles.png" alt="Bundles" />
+        <div class="card-body">
+          <div class="card-route">/beauty/bundles</div>
+          <div class="card-title">Bundles de Beleza</div>
+          <div class="card-desc">Criação e gestão de pacotes de serviços. Definição de número de sessões, validade, desconto aplicado e status de consumo. Alertas de sessões próximas do vencimento.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar bundle "Pacote 10 Depilações"</div>
+            <div class="card-step">Definir validade e desconto do pacote</div>
+            <div class="card-step">Vincular ao cliente e registrar pagamento</div>
+            <div class="card-step">Monitorar consumo sessão a sessão</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_payments.png" alt="Pagamentos" />
+        <div class="card-body">
+          <div class="card-route">/beauty/payments</div>
+          <div class="card-title">Pagamento do Bundle</div>
+          <div class="card-desc">Registro de pagamento do bundle com parcelamento, data de vencimento e confirmação. Alertas automáticos para parcelas pendentes.</div>
+          <div class="card-steps">
+            <div class="card-step">Registrar pagamento inicial ou parcelamento</div>
+            <div class="card-step">Confirmar recebimento e ativar bundle</div>
+            <div class="card-step">Monitorar parcelas futuras</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/beauty_schedule.png" alt="Agenda" />
+        <div class="card-body">
+          <div class="card-route">/beauty/schedule</div>
+          <div class="card-title">Agendamento das Sessões</div>
+          <div class="card-desc">Agenda das sessões do bundle com rastreamento automático de consumo. Quando todas as sessões são realizadas, sistema alerta para renovação do bundle.</div>
+          <div class="card-steps">
+            <div class="card-step">Agendar sessões do bundle (recorrentes)</div>
+            <div class="card-step">Registrar presença ou No show por sessão</div>
+            <div class="card-step">Receber alerta de renovação na última sessão</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

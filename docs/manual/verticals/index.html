@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hub de Verticais — Results Autonomous Platform</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;line-height:1.6;min-height:100vh}
+    .top-bar{background:#1a1d27;border-bottom:1px solid #2d3148;padding:14px 40px;display:flex;align-items:center;gap:16px}
+    .top-bar .back{color:#64748b;text-decoration:none;font-size:13px}.top-bar .back:hover{color:#fff}
+    .top-bar .divider{color:#2d3148}
+    .top-bar .title{font-weight:700;font-size:15px;color:#fff}
+    .hero{padding:64px 40px 56px;text-align:center;border-bottom:1px solid #2d3148;background:linear-gradient(160deg,#13111e 0%,#0f1117 60%)}
+    .hero-kicker{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6366f1;margin-bottom:12px}
+    .hero h1{font-size:40px;font-weight:800;color:#fff;margin-bottom:14px}
+    .hero p{color:#64748b;font-size:16px;max-width:560px;margin:0 auto 28px}
+    .hero-stats{display:flex;gap:32px;justify-content:center;flex-wrap:wrap}
+    .stat{text-align:center}
+    .stat-n{font-size:28px;font-weight:800;color:#fff}
+    .stat-l{font-size:12px;color:#64748b;margin-top:2px}
+
+    .grid-section{max-width:1000px;margin:0 auto;padding:56px 40px 80px}
+    .section-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#475569;margin-bottom:24px}
+    .verticals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-bottom:56px}
+
+    .vcard{display:block;background:#1a1d27;border:1px solid #2d3148;border-radius:14px;padding:28px;text-decoration:none;transition:all .2s;position:relative;overflow:hidden}
+    .vcard::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s}
+    .vcard:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+
+    .vcard.beauty::before{background:linear-gradient(135deg,rgba(236,72,153,.08),transparent)}
+    .vcard.beauty:hover{border-color:rgba(236,72,153,.5)}.vcard.beauty::before{opacity:1}
+    .vcard.fitness::before{background:linear-gradient(135deg,rgba(16,185,129,.08),transparent)}
+    .vcard.fitness:hover{border-color:rgba(16,185,129,.5)}
+    .vcard.food::before{background:linear-gradient(135deg,rgba(249,115,22,.08),transparent)}
+    .vcard.food:hover{border-color:rgba(249,115,22,.5)}
+    .vcard.clinic::before{background:linear-gradient(135deg,rgba(20,184,166,.08),transparent)}
+    .vcard.clinic:hover{border-color:rgba(20,184,166,.5)}
+    .vcard.services::before{background:linear-gradient(135deg,rgba(59,130,246,.08),transparent)}
+    .vcard.services:hover{border-color:rgba(59,130,246,.5)}
+    .vcard.market::before{background:linear-gradient(135deg,rgba(139,92,246,.08),transparent)}
+    .vcard.market:hover{border-color:rgba(139,92,246,.5)}
+
+    .vcard-icon{font-size:32px;margin-bottom:16px;display:block}
+    .vcard-name{font-size:18px;font-weight:700;color:#fff;margin-bottom:6px}
+    .vcard-sub{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;display:inline-block;margin-bottom:12px}
+    .beauty .vcard-sub{background:rgba(236,72,153,.15);color:#f472b6}
+    .fitness .vcard-sub{background:rgba(16,185,129,.15);color:#34d399}
+    .food .vcard-sub{background:rgba(249,115,22,.15);color:#fb923c}
+    .clinic .vcard-sub{background:rgba(20,184,166,.15);color:#2dd4bf}
+    .services .vcard-sub{background:rgba(59,130,246,.15);color:#60a5fa}
+    .market .vcard-sub{background:rgba(139,92,246,.15);color:#a78bfa}
+
+    .vcard-desc{font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.5}
+    .vcard-meta{display:flex;gap:8px;flex-wrap:wrap}
+    .vmeta{font-size:11px;background:#0f1117;border:1px solid #2d3148;border-radius:6px;padding:3px 8px;color:#94a3b8}
+
+    .vcard-arrow{position:absolute;top:28px;right:28px;color:#2d3148;font-size:18px;transition:color .2s}
+    .vcard:hover .vcard-arrow{color:#64748b}
+
+    /* Journeys overview table */
+    .journey-table{width:100%;border-collapse:collapse;font-size:13px}
+    .journey-table th{text-align:left;padding:10px 14px;color:#475569;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #2d3148}
+    .journey-table td{padding:12px 14px;border-bottom:1px solid #1e2235;vertical-align:top}
+    .journey-table tr:last-child td{border-bottom:none}
+    .journey-table tr:hover td{background:#1e2235}
+    .jt-vertical{font-weight:600;color:#fff}
+    .jt-journey{color:#94a3b8}
+    .jt-status{border-radius:999px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap}
+    .approved{background:rgba(16,185,129,.1);color:#34d399}
+    .draft{background:rgba(245,158,11,.1);color:#fbbf24}
+    .jt-link{color:#3b82f6;text-decoration:none;font-size:12px}
+    .jt-link:hover{text-decoration:underline}
+
+    footer{text-align:center;padding:32px;border-top:1px solid #2d3148;color:#475569;font-size:12px}
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../index.html" class="back">← Manual Geral</a>
+  <span class="divider">|</span>
+  <span class="title">Hub de Verticais</span>
+</div>
+
+<div class="hero">
+  <div class="hero-kicker">Results Autonomous Platform</div>
+  <h1>Manuais por Vertical</h1>
+  <p>Jornadas completas de cada segmento de negócio — do primeiro contato ao resultado entregue.</p>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-n">6</div><div class="stat-l">Verticais</div></div>
+    <div class="stat"><div class="stat-n">15</div><div class="stat-l">Jornadas</div></div>
+    <div class="stat"><div class="stat-n">25</div><div class="stat-l">Telas Capturadas</div></div>
+    <div class="stat"><div class="stat-n">100%</div><div class="stat-l">QA Coberto</div></div>
+  </div>
+</div>
+
+<div class="grid-section">
+
+  <!-- Cards das verticais -->
+  <div class="section-label">Escolha uma vertical</div>
+  <div class="verticals-grid">
+
+    <a href="beauty.html" class="vcard beauty">
+      <span class="vcard-icon">💄</span>
+      <div class="vcard-name">Beleza</div>
+      <span class="vcard-sub">Beauty</span>
+      <div class="vcard-desc">Salões, spas, barbearias e clínicas de estética. Agenda, leads, campanhas, bundles e pagamentos.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">4 jornadas</span>
+        <span class="vmeta">7 telas</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+    <a href="fitness.html" class="vcard fitness">
+      <span class="vcard-icon">🏋️</span>
+      <div class="vcard-name">Fitness</div>
+      <span class="vcard-sub">Fitness</span>
+      <div class="vcard-desc">Academias, estúdios e centros wellness. Matrícula, presença, memberships e renovação.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">3 jornadas</span>
+        <span class="vmeta">3 telas</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+    <a href="food.html" class="vcard food">
+      <span class="vcard-icon">🍕</span>
+      <div class="vcard-name">Alimentação</div>
+      <span class="vcard-sub">Food</span>
+      <div class="vcard-desc">Restaurantes e dark kitchens. Pedido via WhatsApp, painel de cozinha, expedição e campanhas.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">2 jornadas</span>
+        <span class="vmeta">3 telas</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+    <a href="clinic.html" class="vcard clinic">
+      <span class="vcard-icon">🏥</span>
+      <div class="vcard-name">Clínica / Saúde</div>
+      <span class="vcard-sub">Clinic</span>
+      <div class="vcard-desc">Clínicas, consultórios e laboratórios. Triagem de paciente, agendamento e tickets com SLA.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">2 jornadas</span>
+        <span class="vmeta">SLA monitorado</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+    <a href="services.html" class="vcard services">
+      <span class="vcard-icon">🔧</span>
+      <div class="vcard-name">Serviços</div>
+      <span class="vcard-sub">Services</span>
+      <div class="vcard-desc">Agências e consultorias. Ativação de soluções, gestão de projetos e entrega rastreável.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">2 jornadas</span>
+        <span class="vmeta">IA assistida</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+    <a href="market.html" class="vcard market">
+      <span class="vcard-icon">🧩</span>
+      <div class="vcard-name">Marketplace</div>
+      <span class="vcard-sub">Market</span>
+      <div class="vcard-desc">Desenvolvedores que publicam e consomem nodes. Criação, teste, publicação e métricas de adoção.</div>
+      <div class="vcard-meta">
+        <span class="vmeta">1 jornada</span>
+        <span class="vmeta">Público: Devs</span>
+        <span class="vmeta approved" style="background:transparent;border-color:rgba(16,185,129,.3)">QA ✓</span>
+      </div>
+      <span class="vcard-arrow">→</span>
+    </a>
+
+  </div>
+
+  <!-- Tabela de cobertura de jornadas -->
+  <div class="section-label">Cobertura de jornadas por vertical</div>
+  <table class="journey-table">
+    <thead>
+      <tr>
+        <th>Vertical</th>
+        <th>Jornada</th>
+        <th>Cenários</th>
+        <th>Status QA</th>
+        <th>Manual</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="jt-vertical">💄 Beauty</td>
+        <td class="jt-journey">Captação e Conversão de Leads</td>
+        <td>Leads → Clientes → Agenda</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="beauty.html#journey-1" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">💄 Beauty</td>
+        <td class="jt-journey">Gestão de Agenda e Atendimento</td>
+        <td>Agenda → Serviços → Pagamentos</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="beauty.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">💄 Beauty</td>
+        <td class="jt-journey">Campanhas de Retenção</td>
+        <td>Clientes → Campanhas → Disparo → ROI</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="beauty.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">💄 Beauty</td>
+        <td class="jt-journey">Bundles de Serviços</td>
+        <td>Serviços → Bundles → Pagamentos → Agenda</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="beauty.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🏋️ Fitness</td>
+        <td class="jt-journey">Matrícula e Onboarding</td>
+        <td>Lead → Alunos → Memberships</td>
+        <td><span class="jt-status draft">Draft</span></td>
+        <td><a href="fitness.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🏋️ Fitness</td>
+        <td class="jt-journey">Controle Diário de Presença</td>
+        <td>Check-in → Presença → Alertas → Retenção</td>
+        <td><span class="jt-status draft">Draft</span></td>
+        <td><a href="fitness.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🏋️ Fitness</td>
+        <td class="jt-journey">Renovação e Cobrança</td>
+        <td>Vencimento → Cobrança → Renovação</td>
+        <td><span class="jt-status draft">Draft</span></td>
+        <td><a href="fitness.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🍕 Food</td>
+        <td class="jt-journey">Pedido WA até Expedição</td>
+        <td>WhatsApp → Pedidos → Cozinha → Dispatch</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="food.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🍕 Food</td>
+        <td class="jt-journey">Cardápio Digital e Campanhas</td>
+        <td>Template → Disparo → Pedidos → ROI</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="food.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🏥 Clinic</td>
+        <td class="jt-journey">Triagem e Agendamento</td>
+        <td>WhatsApp → Triagem → CRM → Confirmação</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="clinic.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🏥 Clinic</td>
+        <td class="jt-journey">Ticket de Manutenção com SLA</td>
+        <td>Reporte → Ticket → Resolução dentro SLA</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="clinic.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🔧 Services</td>
+        <td class="jt-journey">Ativação de Pacote de Solução</td>
+        <td>Solutions → Automations → Suporte → Analytics</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="services.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🔧 Services</td>
+        <td class="jt-journey">Gestão de Projetos de Entrega</td>
+        <td>CRM → IA → Projetos → Entrega</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="services.html" class="jt-link">Ver →</a></td>
+      </tr>
+      <tr>
+        <td class="jt-vertical">🧩 Market</td>
+        <td class="jt-journey">Publicação de Node</td>
+        <td>IA → Editor → Marketplace → Métricas</td>
+        <td><span class="jt-status approved">Aprovado</span></td>
+        <td><a href="market.html" class="jt-link">Ver →</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+
+<footer>
+  Results Autonomous Platform — Manuais de Verticais · 6 verticais · 15 jornadas · 25 telas
+</footer>
+
+</body>
+</html>

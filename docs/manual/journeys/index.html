@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Hub de Jornadas Detalhadas — RAP</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#222536;--border:#2d3148;--text:#e2e8f0;--muted:#64748b;--subtle:#94a3b8}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 40px;display:flex;align-items:center;gap:14px}
+.top-bar a{color:var(--muted);text-decoration:none;font-size:13px}.top-bar a:hover{color:#fff}
+.top-bar .sep{color:var(--border)}.top-bar .crumb{color:var(--text);font-weight:600;font-size:13px}
+
+.hero{padding:60px 40px 52px;text-align:center;background:linear-gradient(160deg,#12101e 0%,var(--bg) 65%);border-bottom:1px solid var(--border)}
+.hero-kicker{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6366f1;margin-bottom:12px}
+.hero h1{font-size:38px;font-weight:800;color:#fff;margin-bottom:12px}
+.hero p{color:var(--subtle);font-size:15px;max-width:560px;margin:0 auto 32px}
+
+.feature-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px}
+.feat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:12px;color:var(--subtle);display:flex;align-items:center;gap:8px}
+.feat-dot{width:8px;height:8px;border-radius:50%}
+
+.page{max-width:1060px;margin:0 auto;padding:52px 40px 80px}
+.section-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:20px}
+
+/* Journey cards */
+.journey-cards{display:grid;grid-template-columns:1fr;gap:20px;margin-bottom:52px}
+.jcard{display:flex;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;text-decoration:none;transition:all .2s}
+.jcard:hover{border-color:rgba(255,255,255,.15);box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(-1px)}
+.jcard-accent{width:6px;flex-shrink:0}
+.jcard-body{padding:24px 28px;flex:1;display:flex;gap:24px;align-items:flex-start}
+.jcard-icon{font-size:36px;flex-shrink:0;margin-top:2px}
+.jcard-content{flex:1}
+.jcard-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.jcard-badge{border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700}
+.jcard-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:6px}
+.jcard-desc{font-size:13px;color:var(--subtle);margin-bottom:14px;max-width:560px}
+.jcard-chips{display:flex;flex-wrap:wrap;gap:6px}
+.jchip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--subtle)}
+.jcard-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding-left:16px;border-left:1px solid var(--border);min-width:140px}
+.jcard-journeys{text-align:center;margin-bottom:12px}
+.jcard-journeys .n{font-size:28px;font-weight:800;color:#fff}
+.jcard-journeys .l{font-size:11px;color:var(--muted)}
+.jcard-cta{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.jcard:hover .jcard-cta{background:rgba(255,255,255,.08)}
+
+/* What's inside */
+.inside-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:48px}
+.inside-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.inside-icon{font-size:24px;margin-bottom:10px}
+.inside-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px}
+.inside-desc{font-size:12px;color:var(--subtle);line-height:1.5}
+
+footer{text-align:center;padding:32px;border-top:1px solid var(--border);color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../index.html">← Manual Geral</a>
+  <span class="sep">|</span>
+  <a href="../verticals/index.html">Hub de Verticais</a>
+  <span class="sep">|</span>
+  <span class="crumb">Jornadas Detalhadas</span>
+</div>
+
+<div class="hero">
+  <div class="hero-kicker">Results Autonomous Platform</div>
+  <h1>Manuais de Jornadas Detalhadas</h1>
+  <p>Fluxos passo a passo com anotações visuais, balões explicativos, hotspots numerados e guias de uso para cada tela.</p>
+  <div class="feature-row">
+    <div class="feat"><span class="feat-dot" style="background:#ec4899"></span> Hotspots numerados</div>
+    <div class="feat"><span class="feat-dot" style="background:#3b82f6"></span> Callout boxes contextuais</div>
+    <div class="feat"><span class="feat-dot" style="background:#10b981"></span> Fluxo visual passo a passo</div>
+    <div class="feat"><span class="feat-dot" style="background:#f59e0b"></span> Dicas e alertas operacionais</div>
+    <div class="feat"><span class="feat-dot" style="background:#8b5cf6"></span> KPIs de referência</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="section-eyebrow">Manuais disponíveis</div>
+
+  <div class="journey-cards">
+
+    <a href="beauty.html" class="jcard">
+      <div class="jcard-accent" style="background:#ec4899"></div>
+      <div class="jcard-body">
+        <span class="jcard-icon">💄</span>
+        <div class="jcard-content">
+          <div class="jcard-meta">
+            <span class="jcard-badge" style="background:rgba(236,72,153,.15);color:#f472b6">Beauty</span>
+            <span style="font-size:11px;color:var(--muted)">QA: production-like · Replay ativo</span>
+          </div>
+          <div class="jcard-title">Jornadas de Beleza</div>
+          <div class="jcard-desc">4 jornadas anotadas: captação de leads, gestão de agenda com check-in, campanhas de retenção e bundles de serviços. Cada tela tem hotspots numerados com explicação de cada elemento.</div>
+          <div class="jcard-chips">
+            <span class="jchip">Leads de Beleza — 5 anotações</span>
+            <span class="jchip">Clientes — 4 anotações</span>
+            <span class="jchip">Agenda — 6 anotações</span>
+            <span class="jchip">Payments — 5 anotações</span>
+            <span class="jchip">Campanhas — 7 anotações</span>
+            <span class="jchip">Bundles — 4 anotações</span>
+          </div>
+        </div>
+        <div class="jcard-right">
+          <div class="jcard-journeys"><div class="n">4</div><div class="l">jornadas</div></div>
+          <div class="jcard-cta">Abrir manual →</div>
+        </div>
+      </div>
+    </a>
+
+    <a href="fitness.html" class="jcard">
+      <div class="jcard-accent" style="background:#10b981"></div>
+      <div class="jcard-body">
+        <span class="jcard-icon">🏋️</span>
+        <div class="jcard-content">
+          <div class="jcard-meta">
+            <span class="jcard-badge" style="background:rgba(16,185,129,.15);color:#34d399">Fitness</span>
+            <span style="font-size:11px;color:var(--muted)">QA: production-like · Replay ativo</span>
+          </div>
+          <div class="jcard-title">Jornadas de Fitness</div>
+          <div class="jcard-desc">3 jornadas anotadas: matrícula com onboarding, controle diário de presença com automação de reengajamento, e renovação de membership com régua de cobrança completa (D-7 a D+3).</div>
+          <div class="jcard-chips">
+            <span class="jchip">Alunos — 8 anotações</span>
+            <span class="jchip">Memberships — 9 anotações</span>
+            <span class="jchip">Presença — 7 anotações</span>
+            <span class="jchip">Status de aluno (4 estados)</span>
+            <span class="jchip">KPIs de frequência</span>
+            <span class="jchip">Régua D-7 a D+3</span>
+          </div>
+        </div>
+        <div class="jcard-right">
+          <div class="jcard-journeys"><div class="n">3</div><div class="l">jornadas</div></div>
+          <div class="jcard-cta">Abrir manual →</div>
+        </div>
+      </div>
+    </a>
+
+    <a href="food.html" class="jcard">
+      <div class="jcard-accent" style="background:#f97316"></div>
+      <div class="jcard-body">
+        <span class="jcard-icon">🍕</span>
+        <div class="jcard-content">
+          <div class="jcard-meta">
+            <span class="jcard-badge" style="background:rgba(249,115,22,.15);color:#fb923c">Food</span>
+            <span style="font-size:11px;color:var(--muted)">QA: aprovado</span>
+          </div>
+          <div class="jcard-title">Jornadas de Alimentação</div>
+          <div class="jcard-desc">2 jornadas anotadas: pedido completo do WhatsApp até a expedição (com diagnóstico do erro de integração de API e solução), e campanha de cardápio digital com segmentação e janela de silêncio.</div>
+          <div class="jcard-chips">
+            <span class="jchip">Pedidos — 7 anotações</span>
+            <span class="jchip">Cozinha — 5 anotações</span>
+            <span class="jchip">Expedição — 5 anotações</span>
+            <span class="jchip">Diagnóstico de integração</span>
+            <span class="jchip">Fluxo visual WhatsApp → Entrega</span>
+          </div>
+        </div>
+        <div class="jcard-right">
+          <div class="jcard-journeys"><div class="n">2</div><div class="l">jornadas</div></div>
+          <div class="jcard-cta">Abrir manual →</div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- What's inside each manual -->
+  <div class="section-eyebrow">O que há em cada manual</div>
+  <div class="inside-grid">
+    <div class="inside-card">
+      <div class="inside-icon">🎯</div>
+      <div class="inside-title">Hotspots Numerados</div>
+      <div class="inside-desc">Círculos coloridos posicionados sobre os elementos reais de cada tela. Cada número corresponde a uma explicação detalhada na grade de anotações abaixo da imagem.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">💬</div>
+      <div class="inside-title">Callout Boxes</div>
+      <div class="inside-desc">Caixas de contexto em 4 tipos: Dica (azul), Atenção (amarelo), Perigo (vermelho) e Sucesso (verde). Cada tipo tem um nível de urgência diferente para a operação.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">🔄</div>
+      <div class="inside-title">Stepper Visual</div>
+      <div class="inside-desc">Linha do tempo horizontal mostrando os passos da jornada com rotas de cada tela. Permite ao operador saber exatamente onde está no fluxo e o que vem a seguir.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">⚡</div>
+      <div class="inside-title">Gatilho da Jornada</div>
+      <div class="inside-desc">Caixa laranja que explica o que inicia a jornada: ação do cliente, disparo automático, vencimento de prazo ou evento do sistema.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">🔀</div>
+      <div class="inside-title">Cards de Transição</div>
+      <div class="inside-desc">Banners "DE → PARA" que explicam o estado do sistema antes e depois de cada passo. Evita dúvidas sobre o que muda entre as telas.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">💭</div>
+      <div class="inside-title">Balões de Contexto</div>
+      <div class="inside-desc">Speech bubbles com explicações de regras de negócio que não são óbvias pela interface: thresholds, automações implícitas e configurações recomendadas.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">📊</div>
+      <div class="inside-title">KPIs de Referência</div>
+      <div class="inside-desc">Cards com métricas operacionais de referência (ex.: frequência mínima por plano Fitness, taxa de conversão esperada Beauty) para benchmarking da operação.</div>
+    </div>
+    <div class="inside-card">
+      <div class="inside-icon">🔧</div>
+      <div class="inside-title">Diagnóstico de Erros</div>
+      <div class="inside-desc">Quando uma tela apresenta erro (como toast de API), o manual inclui o diagnóstico do problema e o passo a passo para resolução, sem precisar abrir um ticket de suporte.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Results Autonomous Platform — Manuais de Jornadas Detalhadas · 3 verticais · 9 jornadas · 61 hotspots · 25 screenshots anotados
+</footer>
+
+</body>
+</html>

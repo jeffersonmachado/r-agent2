@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual da Plataforma RAP — Results Autonomous Platform</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+      background: #1a1d27; border-right: 1px solid #2d3148;
+      overflow-y: auto; padding: 24px 0; z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 0 24px 24px; border-bottom: 1px solid #2d3148;
+      font-weight: 700; font-size: 15px; color: #fff;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-logo .logo-badge {
+      background: #3b82f6; color: #fff; border-radius: 6px;
+      padding: 4px 8px; font-size: 12px; font-weight: 700;
+    }
+    .sidebar-section { padding: 16px 24px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase; color: #64748b; }
+    .sidebar a {
+      display: block; padding: 6px 24px; font-size: 13px; color: #94a3b8;
+      text-decoration: none; transition: all .15s;
+    }
+    .sidebar a:hover { color: #fff; background: rgba(59,130,246,.1); }
+
+    /* Main */
+    .main { margin-left: 260px; padding: 48px 48px 80px; max-width: 1200px; }
+
+    /* Cover */
+    .cover {
+      text-align: center; padding: 64px 32px; margin-bottom: 64px;
+      background: linear-gradient(135deg, #1e2235 0%, #161929 100%);
+      border-radius: 16px; border: 1px solid #2d3148;
+    }
+    .cover h1 { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .cover p { color: #64748b; font-size: 16px; }
+    .cover .badge-row { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+    .badge { background: #1e2235; border: 1px solid #2d3148; border-radius: 999px;
+      padding: 4px 14px; font-size: 12px; color: #94a3b8; }
+    .badge.blue { border-color: #3b82f6; color: #60a5fa; }
+
+    /* Section header */
+    .section-block { margin-bottom: 64px; }
+    .section-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 32px; padding-bottom: 16px;
+      border-bottom: 1px solid #2d3148;
+    }
+    .section-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .section-header h2 { font-size: 22px; font-weight: 700; color: #fff; }
+    .section-header p { font-size: 13px; color: #64748b; margin-top: 2px; }
+
+    /* Screen grid */
+    .screen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 28px; }
+    .screen-card {
+      background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; overflow: hidden;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .screen-card:hover { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6, 0 8px 32px rgba(0,0,0,.4); }
+    .screen-card img {
+      width: 100%; display: block; border-bottom: 1px solid #2d3148;
+      aspect-ratio: 16/9; object-fit: cover; object-position: top;
+    }
+    .screen-card img.tall { aspect-ratio: auto; max-height: 500px; object-fit: contain; background: #0f1117; }
+    .screen-meta { padding: 16px; }
+    .screen-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .screen-route { font-size: 11px; color: #3b82f6; font-family: monospace; margin-bottom: 6px; }
+    .screen-desc { font-size: 12px; color: #64748b; }
+    .screen-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .tag { background: #2d3148; border-radius: 4px; padding: 2px 8px; font-size: 10px; color: #94a3b8; }
+    .tag.green { background: rgba(16,185,129,.1); color: #34d399; }
+    .tag.blue  { background: rgba(59,130,246,.1); color: #60a5fa; }
+    .tag.purple { background: rgba(139,92,246,.1); color: #a78bfa; }
+    .tag.orange { background: rgba(249,115,22,.1); color: #fb923c; }
+
+    /* Color themes per section */
+    .icon-workspace { background: rgba(16,185,129,.15); }
+    .icon-atendimento { background: rgba(245,158,11,.15); }
+    .icon-operacao { background: rgba(59,130,246,.15); }
+    .icon-automacao { background: rgba(99,102,241,.15); }
+    .icon-inteligencia { background: rgba(20,184,166,.15); }
+    .icon-verticais { background: rgba(236,72,153,.15); }
+    .icon-plataforma { background: rgba(239,68,68,.15); }
+
+    /* TOC */
+    .toc { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; padding: 24px; margin-bottom: 48px; }
+    .toc h3 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 16px; }
+    .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .toc-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      background: #0f1117; border-radius: 8px; text-decoration: none; color: #94a3b8;
+      font-size: 12px; transition: all .15s; }
+    .toc-item:hover { color: #fff; background: #1e2235; }
+    .toc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 24px; }
+      .screen-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-badge">RAP</span>
+    Results Platform
+  </div>
+  <div class="sidebar-section">Navegação</div>
+  <a href="#visao-geral">◉ Visão Geral</a>
+  <a href="#relacionamento">◎ Relacionamento</a>
+  <a href="#crm">— CRM</a>
+  <a href="#canais">— Canais e Conteúdo</a>
+  <a href="#operacao">△ Operação</a>
+  <a href="#monitoramento">— Monitoramento</a>
+  <a href="#canais-op">— Canais</a>
+  <a href="#pbx">— PBX</a>
+  <a href="#automacao">□ Automação</a>
+  <a href="#modelagem">— Modelagem</a>
+  <a href="#execucao">— Execução</a>
+  <a href="#assistentes">— Assistentes</a>
+  <a href="#inteligencia">◇ Inteligência</a>
+  <a href="#verticais">▣ Verticais</a>
+  <a href="#plataforma">▤ Plataforma</a>
+  <a href="#administracao">— Administração</a>
+  <a href="#governanca">— Governança</a>
+  <a href="#qualidade">— Qualidade</a>
+  <a href="#super-admin">— Super Admin</a>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>Results Autonomous Platform</h1>
+    <p>Manual de telas, rotas e funcionalidades — gerado automaticamente via Playwright</p>
+    <div class="badge-row">
+      <span class="badge blue">v2026</span>
+      <span class="badge">63 telas</span>
+      <span class="badge">7 módulos</span>
+      <span class="badge">Node ≥ 20.19</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Índice de Módulos</h3>
+    <div class="toc-grid">
+      <a class="toc-item" href="#visao-geral"><span class="toc-dot" style="background:#10b981"></span>Visão Geral</a>
+      <a class="toc-item" href="#relacionamento"><span class="toc-dot" style="background:#f59e0b"></span>Relacionamento</a>
+      <a class="toc-item" href="#crm"><span class="toc-dot" style="background:#f59e0b"></span>CRM</a>
+      <a class="toc-item" href="#canais"><span class="toc-dot" style="background:#f59e0b"></span>Canais e Conteúdo</a>
+      <a class="toc-item" href="#operacao"><span class="toc-dot" style="background:#3b82f6"></span>Operação</a>
+      <a class="toc-item" href="#pbx"><span class="toc-dot" style="background:#3b82f6"></span>PBX</a>
+      <a class="toc-item" href="#automacao"><span class="toc-dot" style="background:#6366f1"></span>Automação</a>
+      <a class="toc-item" href="#inteligencia"><span class="toc-dot" style="background:#14b8a6"></span>Inteligência</a>
+      <a class="toc-item" href="#verticais"><span class="toc-dot" style="background:#ec4899"></span>Verticais</a>
+      <a class="toc-item" href="#plataforma"><span class="toc-dot" style="background:#ef4444"></span>Plataforma</a>
+      <a class="toc-item" href="#governanca"><span class="toc-dot" style="background:#ef4444"></span>Governança</a>
+      <a class="toc-item" href="#qualidade"><span class="toc-dot" style="background:#ef4444"></span>Qualidade</a>
+      <a class="toc-item" href="#super-admin"><span class="toc-dot" style="background:#ef4444"></span>Super Admin</a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 1. VISÃO GERAL -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="visao-geral">
+    <div class="section-header">
+      <div class="section-icon icon-workspace">◉</div>
+      <div>
+        <h2>Visão Geral — Painel</h2>
+        <p>Telas iniciais, dashboard operacional e espaço de trabalho 360.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/workspace.png" alt="RAP Workspace" />
+        <div class="screen-meta">
+          <div class="screen-title">RAP Workspace — Cliente 360</div>
+          <div class="screen-route">/workspace</div>
+          <div class="screen-desc">Tela principal pós-login. Busca de entidade unificada por contato, conversa, ticket, QA/RPA e operação. Ponto de entrada para todos os fluxos de atendimento.</div>
+          <div class="screen-tags">
+            <span class="tag green">Landing</span>
+            <span class="tag">Área: Espaço de Trabalho</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/dashboard.png" alt="Dashboard" />
+        <div class="screen-meta">
+          <div class="screen-title">Dashboard Operacional</div>
+          <div class="screen-route">/dashboard</div>
+          <div class="screen-desc">Estado do sistema em tempo real: alertas, KPIs (TME, TMA, abandono, conversão), filas, pulso e atalhos rápidos. Visão consolidada da operação.</div>
+          <div class="screen-tags">
+            <span class="tag blue">DashboardV2</span>
+            <span class="tag">Área: Espaço de Trabalho</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/dashboard_legacy.png" alt="Dashboard Legado" />
+        <div class="screen-meta">
+          <div class="screen-title">Dashboard Legado</div>
+          <div class="screen-route">/dashboard-legacy</div>
+          <div class="screen-desc">Hub anterior com catálogo completo de funcionalidades, backlog por fila e filtros rápidos. Mantido para compatibilidade e transição.</div>
+          <div class="screen-tags">
+            <span class="tag">Legacy</span>
+            <span class="tag">Área: Espaço de Trabalho</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 2. RELACIONAMENTO — Atendimento -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="relacionamento">
+    <div class="section-header">
+      <div class="section-icon icon-atendimento">◎</div>
+      <div>
+        <h2>Relacionamento — Atendimento</h2>
+        <p>Central de atendimento, caixa de entrada, respostas rápidas, departamentos e falhas de entrega.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/support.png" alt="Central de Atendimento" />
+        <div class="screen-meta">
+          <div class="screen-title">Central de Atendimento</div>
+          <div class="screen-route">/support</div>
+          <div class="screen-desc">Fila de tickets em tempo real via WebSocket. Filtros por status, prioridade e pendência. Painel lateral com detalhes do ticket selecionado.</div>
+          <div class="screen-tags">
+            <span class="tag green">WebSocket</span>
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/inbox.png" alt="Caixa de Entrada" />
+        <div class="screen-meta">
+          <div class="screen-title">Caixa de Entrada</div>
+          <div class="screen-route">/inbox</div>
+          <div class="screen-desc">Visualização consolidada de conversas abertas com filtros por status, fila, atendente, canal e SLA. Permite atribuição, transferência e notas internas.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/quick_replies.png" alt="Respostas Rápidas" />
+        <div class="screen-meta">
+          <div class="screen-title">Respostas Rápidas</div>
+          <div class="screen-route">/quick-replies</div>
+          <div class="screen-desc">Biblioteca de respostas pré-configuradas por categoria e tags. Acelera o atendimento com templates reutilizáveis.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/departments.png" alt="Departamentos" />
+        <div class="screen-meta">
+          <div class="screen-title">Departamentos</div>
+          <div class="screen-route">/departments</div>
+          <div class="screen-desc">Gestão de departamentos com filas associadas. Criação e edição de times de atendimento (ex.: Geral, Financeiro, Suporte Técnico, Vendas).</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/failed_messages.png" alt="Falhas de Entrega" />
+        <div class="screen-meta">
+          <div class="screen-title">Monitoramento de Mensagens</div>
+          <div class="screen-route">/failed-messages</div>
+          <div class="screen-desc">Rastreamento de mensagens falhadas e pendentes por canal. Filtros por status, canal e ID. Permite busca direta por ID de mensagem.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Monitoramento</span>
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 3. RELACIONAMENTO — CRM -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="crm">
+    <div class="section-header">
+      <div class="section-icon icon-atendimento">⊙</div>
+      <div>
+        <h2>Relacionamento — CRM</h2>
+        <p>Painel CRM com contas, contatos, leads, pipelines e oportunidades.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/crm.png" alt="Painel CRM" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel CRM</div>
+          <div class="screen-route">/crm</div>
+          <div class="screen-desc">Hub central do CRM com métricas de contas, contatos, leads e oportunidades. Navegação interna para Contas, Contatos, Leads, Pipelines, Oportunidades, Atividades e Análises.</div>
+          <div class="screen-tags">
+            <span class="tag blue">CRM</span>
+            <span class="tag">Área: Clientes</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 4. RELACIONAMENTO — Canais e Conteúdo -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="canais">
+    <div class="section-header">
+      <div class="section-icon icon-atendimento">📢</div>
+      <div>
+        <h2>Relacionamento — Canais e Conteúdo</h2>
+        <p>Disparos em massa, marketing e templates WhatsApp.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/bulk_messaging.png" alt="Disparos em Massa" />
+        <div class="screen-meta">
+          <div class="screen-title">Disparos em Massa</div>
+          <div class="screen-route">/bulk-messaging</div>
+          <div class="screen-desc">Gerenciamento de campanhas de envio em massa. Criação de novas campanhas com segmentação de audiência e agendamento.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/marketing.png" alt="Marketing" />
+        <div class="screen-meta">
+          <div class="screen-title">Marketing</div>
+          <div class="screen-route">/marketing</div>
+          <div class="screen-desc">Módulo de marketing integrado com canais de comunicação. Gestão de campanhas, segmentação e análise de resultados.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/whatsapp_templates.png" alt="Templates WhatsApp" />
+        <div class="screen-meta">
+          <div class="screen-title">Templates WhatsApp Business</div>
+          <div class="screen-route">/whatsapp-templates</div>
+          <div class="screen-desc">Biblioteca de templates aprovados para WhatsApp Business API. Categorização por tipo e status de aprovação da Meta.</div>
+          <div class="screen-tags">
+            <span class="tag green">WhatsApp API</span>
+            <span class="tag">Área: Atendimento</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 5. OPERAÇÃO — Monitoramento -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="operacao">
+    <div class="section-header">
+      <div class="section-icon icon-operacao">△</div>
+      <div>
+        <h2>Operação — Monitoramento</h2>
+        <p>Supervisor, painéis operacionais, analytics e saúde dos canais.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/supervisor.png" alt="Supervisor" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel Supervisor</div>
+          <div class="screen-route">/supervisor</div>
+          <div class="screen-desc">Métricas por agente: TME, TMA, abandono, tickets abertos. Filtros por período e grupo. Exportação CSV. Acompanhamento em tempo real de KPIs operacionais.</div>
+          <div class="screen-tags">
+            <span class="tag blue">Tempo Real</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/operations_dashboard.png" alt="Painel Operacional" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel Operacional</div>
+          <div class="screen-route">/operations-dashboard</div>
+          <div class="screen-desc">Dashboard consolidado de operações com visão macro de canais, filas e performance. Ideal para gestores e supervisores.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/analytics.png" alt="Análises" />
+        <div class="screen-meta">
+          <div class="screen-title">Análises e Métricas</div>
+          <div class="screen-route">/analytics</div>
+          <div class="screen-desc">Análises avançadas com gráficos de suporte, ROI, funil de conversão, voz, pedidos e métricas físicas. Segmentadas por período e canal.</div>
+          <div class="screen-tags">
+            <span class="tag purple">Analytics</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/tenant_intelligence.png" alt="Inteligência do Tenant" />
+        <div class="screen-meta">
+          <div class="screen-title">Inteligência do Tenant</div>
+          <div class="screen-route">/tenant-intelligence</div>
+          <div class="screen-desc">Insights automáticos baseados em dados do tenant. Padrões de comportamento, saúde da operação e recomendações inteligentes.</div>
+          <div class="screen-tags">
+            <span class="tag purple">IA</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/channel_health.png" alt="Saúde de Canais" />
+        <div class="screen-meta">
+          <div class="screen-title">Saúde de Canais</div>
+          <div class="screen-route">/channel-health</div>
+          <div class="screen-desc">Monitoramento da conectividade e status de cada canal de comunicação. Alertas de degradação e histórico de disponibilidade.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Monitoramento</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/plan_usage.png" alt="Plano e Uso" />
+        <div class="screen-meta">
+          <div class="screen-title">Plano e Uso</div>
+          <div class="screen-route">/plan-usage</div>
+          <div class="screen-desc">Consumo do plano atual: mensagens, agentes, armazenamento e limites. Histórico de uso e alertas de capacidade.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 6. OPERAÇÃO — Canais -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="canais-op">
+    <div class="section-header">
+      <div class="section-icon icon-operacao">📡</div>
+      <div>
+        <h2>Operação — Canais</h2>
+        <p>Contas de canal, conexões WhatsApp e configuração de URA.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/channel_accounts.png" alt="Contas de Canal" />
+        <div class="screen-meta">
+          <div class="screen-title">Contas de Canal</div>
+          <div class="screen-route">/channel-accounts</div>
+          <div class="screen-desc">Gestão de todas as contas de canal (WhatsApp, QR, etc.). Listagem com status ativo/inativo, teste de conectividade e remoção.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/whatsapp_connections.png" alt="Conexões WhatsApp" />
+        <div class="screen-meta">
+          <div class="screen-title">Conexões WhatsApp</div>
+          <div class="screen-route">/whatsapp-connections</div>
+          <div class="screen-desc">Gerenciamento de conexões WhatsApp via QR Code. Visualização do status de cada instância e reconexão em caso de desconexão.</div>
+          <div class="screen-tags">
+            <span class="tag green">WhatsApp</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/whatsapp_ivr.png" alt="URA WhatsApp" />
+        <div class="screen-meta">
+          <div class="screen-title">URA WhatsApp</div>
+          <div class="screen-route">/whatsapp-ivr</div>
+          <div class="screen-desc">Configuração de Unidade de Resposta Audível (URA) para WhatsApp. Fluxos de menu interativo e roteamento automático de conversas.</div>
+          <div class="screen-tags">
+            <span class="tag green">WhatsApp</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 7. OPERAÇÃO — PBX -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="pbx">
+    <div class="section-header">
+      <div class="section-icon icon-operacao">📞</div>
+      <div>
+        <h2>Operação — PBX</h2>
+        <p>Central telefônica: ramais, troncos, rotas, filas e painel operador.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/pbx.png" alt="PBX" />
+        <div class="screen-meta">
+          <div class="screen-title">PBX — Painel Principal</div>
+          <div class="screen-route">/pbx</div>
+          <div class="screen-desc">Dashboard unificado do PBX: snapshot de filas, ramais registrados, troncos ativos e métricas de chamadas. Acesso rápido a todos os módulos de telefonia.</div>
+          <div class="screen-tags">
+            <span class="tag blue">PBX</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/pbx_operator_panel.png" alt="Painel Operador PBX" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel Operador</div>
+          <div class="screen-route">/pbx/operator-panel</div>
+          <div class="screen-desc">Visão em tempo real dos agentes em chamada. Permite monitoramento, escuta e intervenção em chamadas ativas.</div>
+          <div class="screen-tags">
+            <span class="tag blue">PBX</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/pbx_extensions.png" alt="Ramais PBX" />
+        <div class="screen-meta">
+          <div class="screen-title">Ramais</div>
+          <div class="screen-route">/pbx/extensions</div>
+          <div class="screen-desc">Configuração e gestão de ramais SIP. Provisionamento em lote, ACLs e status de registro em tempo real.</div>
+          <div class="screen-tags">
+            <span class="tag blue">PBX</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/pbx_trunks.png" alt="Troncos PBX" />
+        <div class="screen-meta">
+          <div class="screen-title">Troncos</div>
+          <div class="screen-route">/pbx/trunks</div>
+          <div class="screen-desc">Gestão de troncos SIP e PSTN. Configuração de credenciais, codecs e parâmetros de registro.</div>
+          <div class="screen-tags">
+            <span class="tag blue">PBX</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/pbx_routes.png" alt="Rotas PBX" />
+        <div class="screen-meta">
+          <div class="screen-title">Rotas de Chamada</div>
+          <div class="screen-route">/pbx/routes</div>
+          <div class="screen-desc">Regras de roteamento de chamadas: entrada, saída e interna. Priorização de troncos e condições de fallback.</div>
+          <div class="screen-tags">
+            <span class="tag blue">PBX</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 8. AUTOMAÇÃO — Modelagem -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="automacao">
+    <div class="section-header">
+      <div class="section-icon icon-automacao">□</div>
+      <div>
+        <h2>Automação — Modelagem</h2>
+        <p>Editor de fluxos visual, BPMN, marketplace de nodes e pacotes de solução.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/editor.png" alt="Editor de Fluxos" />
+        <div class="screen-meta">
+          <div class="screen-title">Editor de Fluxos</div>
+          <div class="screen-route">/editor</div>
+          <div class="screen-desc">Editor visual drag-and-drop baseado em Rete.js. Mais de 30 tipos de nó (Mensagem, IA, Condição, API, Delay, Transferência…). Validação e simulação em tempo real.</div>
+          <div class="screen-tags">
+            <span class="tag purple">Rete.js</span>
+            <span class="tag blue">Drag &amp; Drop</span>
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/bpmn_editor.png" alt="Editor BPMN" />
+        <div class="screen-meta">
+          <div class="screen-title">Editor BPMN</div>
+          <div class="screen-route">/bpmn-editor</div>
+          <div class="screen-desc">Editor de processos de negócio baseado em bpmn-js. Modelagem de workflows empresariais com notação BPMN 2.0.</div>
+          <div class="screen-tags">
+            <span class="tag purple">BPMN 2.0</span>
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/node_marketplace.png" alt="Mercado de Nodes" />
+        <div class="screen-meta">
+          <div class="screen-title">Mercado de Nodes</div>
+          <div class="screen-route">/node-marketplace</div>
+          <div class="screen-desc">Catálogo de nodes especializados disponíveis para instalação. Filtragem por categoria, verticais e compatibilidade.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/solutions.png" alt="Pacotes de Solução" />
+        <div class="screen-meta">
+          <div class="screen-title">Pacotes de Solução</div>
+          <div class="screen-route">/solutions</div>
+          <div class="screen-desc">Templates de solução prontos para implantação por vertical. Acelera a configuração de fluxos com base em casos de uso pré-validados.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 9. AUTOMAÇÃO — Execução -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="execucao">
+    <div class="section-header">
+      <div class="section-icon icon-automacao">▶</div>
+      <div>
+        <h2>Automação — Execução</h2>
+        <p>Automações ativas, projetos e tarefas.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/automations.png" alt="Automações" />
+        <div class="screen-meta">
+          <div class="screen-title">Automações</div>
+          <div class="screen-route">/automations</div>
+          <div class="screen-desc">Listagem e gestão de automações ativas. Ativação/desativação, histórico de execuções e métricas de performance por automação.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/projects.png" alt="Projetos" />
+        <div class="screen-meta">
+          <div class="screen-title">Projetos</div>
+          <div class="screen-route">/projects</div>
+          <div class="screen-desc">Gestão de projetos com board, lista, dashboard, timeline, Gantt, calendário e atividades. Controle de itens, conclusões e atrasos por projeto.</div>
+          <div class="screen-tags">
+            <span class="tag blue">Kanban</span>
+            <span class="tag blue">Gantt</span>
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/tasks.png" alt="Tarefas" />
+        <div class="screen-meta">
+          <div class="screen-title">Tarefas</div>
+          <div class="screen-route">/tasks</div>
+          <div class="screen-desc">Gestão de tarefas operacionais. Criação, atribuição e acompanhamento de tarefas individuais associadas a fluxos ou projetos.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 10. AUTOMAÇÃO — Assistentes -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="assistentes">
+    <div class="section-header">
+      <div class="section-icon icon-automacao">🤖</div>
+      <div>
+        <h2>Automação — Assistentes IA</h2>
+        <p>Ferramentas de inteligência artificial e segmentação de audiência.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/ai_tools.png" alt="Ferramentas de IA" />
+        <div class="screen-meta">
+          <div class="screen-title">Ferramentas de IA</div>
+          <div class="screen-route">/ai-tools</div>
+          <div class="screen-desc">Suite de ferramentas de IA para suporte ao atendimento: sugestão de resposta, análise de sentimento, classificação e resumo de conversas.</div>
+          <div class="screen-tags">
+            <span class="tag purple">IA</span>
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/segmentation.png" alt="Segmentação" />
+        <div class="screen-meta">
+          <div class="screen-title">Segmentação</div>
+          <div class="screen-route">/segmentation</div>
+          <div class="screen-desc">Criação de segmentos de clientes com base em atributos, comportamento e histórico. Usados em campanhas e automações personalizadas.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Construtor</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 11. INTELIGÊNCIA -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="inteligencia">
+    <div class="section-header">
+      <div class="section-icon icon-inteligencia">◇</div>
+      <div>
+        <h2>Inteligência — Conhecimento</h2>
+        <p>Base de conhecimento, documentação, RAG e web scraping.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/knowledge_base.png" alt="Base de Conhecimento" />
+        <div class="screen-meta">
+          <div class="screen-title">Base de Conhecimento</div>
+          <div class="screen-route">/knowledge-base</div>
+          <div class="screen-desc">Repositório central de artigos e documentação interna. Busca por título e conteúdo com filtragem por categoria.</div>
+          <div class="screen-tags">
+            <span class="tag green">RAG</span>
+            <span class="tag">Área: Conhecimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/faq.png" alt="Perguntas Frequentes" />
+        <div class="screen-meta">
+          <div class="screen-title">Perguntas Frequentes</div>
+          <div class="screen-route">/faq</div>
+          <div class="screen-desc">Gestão de FAQs usadas pelo assistente IA para resposta automática. Pares pergunta/resposta categorizados por tema.</div>
+          <div class="screen-tags">
+            <span class="tag green">RAG</span>
+            <span class="tag">Área: Conhecimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/rag_documents.png" alt="Documentos RAG" />
+        <div class="screen-meta">
+          <div class="screen-title">Documentos RAG</div>
+          <div class="screen-route">/rag-documents</div>
+          <div class="screen-desc">Upload e gestão de documentos para o pipeline RAG (Retrieval-Augmented Generation). Suporte a PDF, DOCX e texto plano.</div>
+          <div class="screen-tags">
+            <span class="tag purple">RAG</span>
+            <span class="tag">Área: Conhecimento</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/web_scraping.png" alt="Raspagem de Sites" />
+        <div class="screen-meta">
+          <div class="screen-title">Raspagem de Sites</div>
+          <div class="screen-route">/web-scraping</div>
+          <div class="screen-desc">Captura automática de conteúdo de sites para enriquecer a base de conhecimento. Configuração de frequência e filtros de conteúdo.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Conhecimento</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 12. VERTICAIS -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="verticais">
+    <div class="section-header">
+      <div class="section-icon icon-verticais">▣</div>
+      <div>
+        <h2>Verticais</h2>
+        <p>Espaços de trabalho especializados por segmento de negócio.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/vertical_dashboard.png" alt="Painel Vertical" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel Vertical</div>
+          <div class="screen-route">/vertical/dashboard</div>
+          <div class="screen-desc">Hub consolidado de verticais disponíveis: Beleza, Fitness, Comércio Eletrônico, Varejo, Serviços, Saúde, Educação, Financeiro e Cobrança. Cada vertical acessa módulos específicos do segmento.</div>
+          <div class="screen-tags">
+            <span class="tag" style="background:rgba(236,72,153,.1);color:#f472b6">Beauty</span>
+            <span class="tag" style="background:rgba(16,185,129,.1);color:#34d399">Fitness</span>
+            <span class="tag" style="background:rgba(249,115,22,.1);color:#fb923c">E-commerce</span>
+            <span class="tag">Área: Operações</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 13. PLATAFORMA — Administração -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="plataforma">
+    <div class="section-header">
+      <div class="section-icon icon-plataforma">▤</div>
+      <div>
+        <h2>Plataforma — Administração</h2>
+        <p>Configuração do sistema, agentes, tenants, MFA e chaves de API.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/config.png" alt="Configuração" />
+        <div class="screen-meta">
+          <div class="screen-title">Configuração do Sistema</div>
+          <div class="screen-route">/config</div>
+          <div class="screen-desc">Painel de configuração completo com abas: Frontend, RAG, Billing, WhatsApp, Email SMTP, Fluxos, IA, Features, Scripts, Logging, Rate Limiting, Fallbacks e Geral.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/agents.png" alt="Agentes" />
+        <div class="screen-meta">
+          <div class="screen-title">Gerenciamento de Agentes</div>
+          <div class="screen-route">/agents</div>
+          <div class="screen-desc">Cadastro, edição e listagem de agentes com roles, emails e status. Criação de contas, atribuição de permissões e auditoria de acesso.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/onboarding.png" alt="Onboarding" />
+        <div class="screen-meta">
+          <div class="screen-title">Onboarding</div>
+          <div class="screen-route">/onboarding</div>
+          <div class="screen-desc">Fluxo guiado de configuração inicial do tenant. Configuração de canais, agentes, filas e primeiros fluxos.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/tenants.png" alt="Tenants" />
+        <div class="screen-meta">
+          <div class="screen-title">Organizações (Tenants)</div>
+          <div class="screen-route">/tenants</div>
+          <div class="screen-desc">Gestão multi-tenant: listagem de organizações, criação, configuração e status de cada tenant na plataforma.</div>
+          <div class="screen-tags">
+            <span class="tag">Multi-tenant</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/mfa.png" alt="MFA" />
+        <div class="screen-meta">
+          <div class="screen-title">Autenticação Multi-Fator</div>
+          <div class="screen-route">/mfa</div>
+          <div class="screen-desc">Configuração e gestão de MFA para agentes. Ativação por política, QR Code TOTP e códigos de recuperação.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Segurança</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/developer_keys.png" alt="Chaves de Desenvolvedor" />
+        <div class="screen-meta">
+          <div class="screen-title">Chaves de Desenvolvedor</div>
+          <div class="screen-route">/developer-keys</div>
+          <div class="screen-desc">Gestão de API Keys e tokens de acesso programático. Criação de chaves com escopos específicos e histórico de uso.</div>
+          <div class="screen-tags">
+            <span class="tag blue">API</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/agenda.png" alt="Agenda" />
+        <div class="screen-meta">
+          <div class="screen-title">Agenda</div>
+          <div class="screen-route">/agenda</div>
+          <div class="screen-desc">Calendário de agendamentos e eventos da operação. Visualização semanal com dias, hoje e próximos eventos.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido (área)</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/sla_policies.png" alt="SLA" />
+        <div class="screen-meta">
+          <div class="screen-title">Políticas de SLA</div>
+          <div class="screen-route">/sla-policies</div>
+          <div class="screen-desc">Definição de SLAs por fila e categoria de ticket. Metas de tempo de resposta e resolução com alertas automáticos.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido (área)</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 14. PLATAFORMA — Governança -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="governanca">
+    <div class="section-header">
+      <div class="section-icon icon-plataforma">🛡</div>
+      <div>
+        <h2>Plataforma — Governança</h2>
+        <p>Controle de acesso, RBAC, auditoria, SSO/SCIM e backup.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/access_control.png" alt="Controle de Acesso" />
+        <div class="screen-meta">
+          <div class="screen-title">Controle de Acesso</div>
+          <div class="screen-route">/access-control</div>
+          <div class="screen-desc">Painel MVP Operacional com perfis de acesso por dispositivo, credenciais, políticas e eventos. Monitoramento de saúde operacional e decisões críticas pendentes.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Segurança</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/audit.png" alt="Auditoria" />
+        <div class="screen-meta">
+          <div class="screen-title">Auditoria</div>
+          <div class="screen-route">/audit</div>
+          <div class="screen-desc">Log completo de ações na plataforma: quem fez o quê e quando. Filtros por usuário, ação, recurso e período. Exportação para compliance.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Compliance</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/sso_scim.png" alt="SSO / SCIM" />
+        <div class="screen-meta">
+          <div class="screen-title">SSO / SCIM</div>
+          <div class="screen-route">/sso-scim</div>
+          <div class="screen-desc">Integração de Single Sign-On e provisionamento automático via SCIM. Configuração de IdP (Identity Provider) e mapeamento de atributos.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Enterprise</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/backup.png" alt="Backup" />
+        <div class="screen-meta">
+          <div class="screen-title">Backup / Recuperação</div>
+          <div class="screen-route">/backup</div>
+          <div class="screen-desc">Gestão de backups automáticos e manuais. Política de retenção, restauração point-in-time e disaster recovery.</div>
+          <div class="screen-tags">
+            <span class="tag orange">DR</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 15. PLATAFORMA — Qualidade -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="qualidade">
+    <div class="section-header">
+      <div class="section-icon icon-plataforma">✓</div>
+      <div>
+        <h2>Plataforma — Qualidade</h2>
+        <p>QA, estabilidade e malha de execução unificada.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/qa.png" alt="QA" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel de Qualidade</div>
+          <div class="screen-route">/qa</div>
+          <div class="screen-desc">Dashboard de qualidade da plataforma com métricas de cobertura, resultado de testes e gates de governança. Integrado ao pipeline de release.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido (área)</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/qa_stability.png" alt="Estabilidade QA" />
+        <div class="screen-meta">
+          <div class="screen-title">Estabilidade QA</div>
+          <div class="screen-route">/qa/stability</div>
+          <div class="screen-desc">Análise de estabilidade ao longo do tempo: taxa de sucesso, flakiness de testes e tendências de degradação por módulo.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido (área)</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/qa_mesh.png" alt="QA Mesh" />
+        <div class="screen-meta">
+          <div class="screen-title">QA Mesh</div>
+          <div class="screen-route">/qa-mesh</div>
+          <div class="screen-desc">Malha unificada de execução de testes. Visão consolidada de todos os runners, waves e resultados de QA em um único painel.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido (área)</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 16. PLATAFORMA — Super Admin -->
+  <!-- ══════════════════════════════════════════ -->
+  <section class="section-block" id="super-admin">
+    <div class="section-header">
+      <div class="section-icon icon-plataforma">🛡</div>
+      <div>
+        <h2>Plataforma — Super Admin</h2>
+        <p>Ferramentas exclusivas de super-administrador: exportação, RPA, replays e status.</p>
+      </div>
+    </div>
+    <div class="screen-grid">
+
+      <div class="screen-card">
+        <img src="img/export.png" alt="Exportação" />
+        <div class="screen-meta">
+          <div class="screen-title">Exportação de Dados</div>
+          <div class="screen-route">/export</div>
+          <div class="screen-desc">Exportação governada de dados da plataforma. Seleção de período, escopo e formato. Auditoria de exportações realizadas.</div>
+          <div class="screen-tags">
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/super_admin.png" alt="Super Admin" />
+        <div class="screen-meta">
+          <div class="screen-title">Painel Super Admin</div>
+          <div class="screen-route">/super-admin</div>
+          <div class="screen-desc">Interface exclusiva para super-administradores. Acesso a configurações críticas, operações entre tenants e ferramentas avançadas de diagnóstico.</div>
+          <div class="screen-tags">
+            <span class="tag green">Corrigido</span>
+            <span class="tag orange">Super Admin</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/generate_system.png" alt="Gerar Sistema" />
+        <div class="screen-meta">
+          <div class="screen-title">Gerar Sistema / Fluxo / RPA</div>
+          <div class="screen-route">/generate-system</div>
+          <div class="screen-desc">Gerador de sistemas, fluxos, RPAs e seeds via IA. Input de prompt e configurações para geração automática de artefatos da plataforma.</div>
+          <div class="screen-tags">
+            <span class="tag purple">IA Generativa</span>
+            <span class="tag orange">Super Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/rpa_test.png" alt="Teste RPA" />
+        <div class="screen-meta">
+          <div class="screen-title">Execução de Testes RPA</div>
+          <div class="screen-route">/dev/rpa-test</div>
+          <div class="screen-desc">Interface de execução e monitoramento de testes RPA. Disparo manual de scripts de automação com visualização de resultados em tempo real.</div>
+          <div class="screen-tags">
+            <span class="tag blue">RPA</span>
+            <span class="tag orange">Super Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/rpa_replays.png" alt="Replays RPA" />
+        <div class="screen-meta">
+          <div class="screen-title">Replays RPA</div>
+          <div class="screen-route">/dev/rpa-replays</div>
+          <div class="screen-desc">Reprodução de execuções RPA anteriores para auditoria e diagnóstico. Hash de replay, validação de integridade e comparação de resultados.</div>
+          <div class="screen-tags">
+            <span class="tag blue">RPA</span>
+            <span class="tag orange">Governança</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen-card">
+        <img src="img/system_status.png" alt="Status do Sistema" />
+        <div class="screen-meta">
+          <div class="screen-title">Status dos Serviços</div>
+          <div class="screen-route">/dev/system-status</div>
+          <div class="screen-desc">Monitoramento em tempo real de todos os serviços: API, banco de dados, Redis, RAG e workers. Latências, uptime e alertas de degradação.</div>
+          <div class="screen-tags">
+            <span class="tag orange">Infra</span>
+            <span class="tag">Área: Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="border-top:1px solid #2d3148;padding-top:32px;color:#475569;font-size:12px;text-align:center;">
+    <p>Results Autonomous Platform — Manual gerado automaticamente via Playwright · 63 telas capturadas</p>
+    <p style="margin-top:4px;">Stack: Node ≥ 20.19 · Express 4 · React 18 · Rete 2.x · bpmn-js 18 · Vite 7</p>
+  </footer>
+
+</main>
+</body>
+</html>

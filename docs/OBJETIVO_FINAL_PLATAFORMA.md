@@ -94,3 +94,6 @@ Esses blocos reduzem risco e antecipam requisitos enterprise (governança, audit
 - **ROI de marketing e funil**: atribuição consistente, custo por aquisição e conversão por canal/jornada.
 - **Confiabilidade**: SLOs por runtime (scheduler/fila/executor), MTTR baixo, replay e auditoria completos.
 
+- Revisar visão e tese de mercado com base nas entregas recentes.
+- Adicionar referências para `docs/governance/PLATFORM_STATUS.md`.
+

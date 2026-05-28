@@ -10,7 +10,7 @@ Ele substitui a visão antiga “capability-driven vs benchmarks” como lista o
 > Em caso de conflito de interpretação, prevalecem a visão/north star de `docs/OBJETIVO_FINAL_PLATAFORMA.md` e a arquitetura-alvo de `docs/ARQUITETURA_TECNICA.md`.
 > O plano de lançamento de `01/03/2026` abaixo é mantido como histórico operacional e evidência de release, não como calendário vigente.
 
-> Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later) e `docs/O_QUE_FALTA_GAPS_VS_BENCHMARKS.md` (histórico/benchmark).
+> Referências: `docs/ROADMAP_3A5_ANOS.md` (Now/Next/Later).
 
 ## Update L-01/L-02/L-03/L-04/L-05 (13/02/2026)
 

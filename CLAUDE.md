@@ -1,6 +1,12 @@
 # CLAUDE.md — Results Autonomous Platform (r-agent2)
 # Lido automaticamente em toda sessão. Mantenha conciso.
 
+## Memoria operacional obrigatoria
+- Antes de propor arquitetura, fluxos, release ou navegacao, leia `AI_MEMORY/architecture.md`, `AI_MEMORY/project-map.md`, `AI_MEMORY/runtime-navigation.md` e o documento especifico da area alterada.
+- `AI_MEMORY/*` e a camada oficial de contexto para Claude, Copilot, Codex/OpenAI Agents e futuras automacoes.
+- Nao duplique documentacao canonica: consolide e referencie docs existentes em `docs/`, `docs/governance/`, `qa-mesh/`, `governance/` e `scripts/`.
+- Fluxos web devem ser validados no browser real com `tests/helpers/playwrightAuth.js` antes de serem documentados como comportamento real.
+
 ## Stack
 - Node >=20.19 ou >=22.12, npm >=10
 - Backend: Express 4 (CommonJS, 'use strict'), Sequelize 6, pg 8, ioredis 5, ws
@@ -14,6 +20,19 @@
 - Testes E2E: npm run test:flow
 - Pipeline:   npm run system:bootstrap → system:validate → system:release → system:deploy
 - Deploy dry: npm run deploy:gate:official (dry-run por padrão)
+
+## Governanca obrigatoria
+- QA Waves, QA Mesh, Replay Governance, Release Hardening, Self-Proving e Runtime Governance sao gates, nao sugestoes.
+- Se `docs/governance/PLATFORM_STATUS.md`, `qa-mesh/go-no-go-report.json` ou release gate indicarem `NO_GO`, nao declarar release final verde.
+- Preserve `replayHash`, checksum, signature, tamper detection, provenance e linkage em qualquer trabalho de replay.
+- Use `npm run zip:release`/`npm run system:release` como caminho oficial de release; nao empacotar a partir de workspace vivo sem gate.
+
+## Enforcement executavel
+- Antes de concluir mudancas com impacto operacional, rode os validadores em `scripts/governance/`.
+- Gate agregado: `npm run validate:governance-enforcement`.
+- Gates individuais: `validate:ai-memory`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:governance-summary`.
+- Relatorios oficiais ficam em `reports/*.json`; `reports/governance-score.json` e a unica fonte para `overallGovernance`.
+- Falhas nesses scripts sao bloqueantes. Nao converter falha em narrativa de sucesso.
 
 ## Arquitetura — camadas estritas (nunca misturar)
 - frontend/     → UI, transformação de formato, validação de UX apenas
@@ -52,6 +71,8 @@
 - Branch: main direto (projeto em sprint de finalização).
 - Antes de qualquer commit: npm run test:unit
 - Antes de deploy: npm run test:unit + test:flow + deploy:gate:official
+- Antes de inferir telas/rotas/permissoes: login browser real, menu/sidebar, DOM, network e console.
+- Para rotas divergentes, mapear solicitada -> canonica -> componente -> permissao em `AI_MEMORY/runtime-navigation.md`.
 - Ao trocar de área (ex: backend → frontend): /clear para limpar contexto.
 - Ao finalizar sessão longa: /compact para sumarizar antes de continuar.
 

@@ -1,0 +1,155 @@
+[
+  {
+    "name": "support",
+    "route": "/support",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/support.png",
+    "path": "/support",
+    "title": "💬 Atendimento",
+    "h": [
+      "Atendimento",
+      "Atendimento",
+      "Canais e Conteúdo",
+      "Central de Atendimento",
+      "💬 Atendimento"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nAtendimento\n\nFila ativa, con"
+  },
+  {
+    "name": "rpa-replays-canonical",
+    "route": "/dev/rpa-replays",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/rpa-replays-canonical.png",
+    "path": "/dev/rpa-replays",
+    "title": "📋 Replays RPA",
+    "h": [
+      "Construtor",
+      "Modelagem",
+      "Execução",
+      "Assistentes",
+      "Administração"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nConstrutor\n\nConstrução de fl"
+  },
+  {
+    "name": "rag-documents",
+    "route": "/rag-documents",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/rag-documents.png",
+    "path": "/rag-documents",
+    "title": "📚 Gerenciamento de Documentos RAG",
+    "h": [
+      "Conhecimento",
+      "Conhecimento",
+      "Qualidade",
+      "Documentos RAG",
+      "📚 Gerenciamento de Documentos RAG"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nConhecimento\n\nBase de conhec"
+  },
+  {
+    "name": "system-status-canonical",
+    "route": "/dev/system-status",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/system-status-canonical.png",
+    "path": "/dev/system-status",
+    "title": "📊 Status dos Serviços",
+    "h": [
+      "Operações",
+      "Monitoramento",
+      "Canais",
+      "PBX",
+      "Hub Vertical"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nOperações\n\nMonitoramento, ca"
+  },
+  {
+    "name": "channel-health",
+    "route": "/channel-health",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/channel-health.png",
+    "path": "/channel-health",
+    "title": "📡 Saúde de Canais",
+    "h": [
+      "Operações",
+      "Monitoramento",
+      "Canais",
+      "PBX",
+      "Hub Vertical"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nOperações\n\nMonitoramento, ca"
+  },
+  {
+    "name": "generate-system",
+    "route": "/generate-system",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/generate-system.png",
+    "path": "/generate-system",
+    "title": "🎯 Gerar Sistema / Fluxo / RPA / Seed",
+    "h": [
+      "Construtor",
+      "Modelagem",
+      "Execução",
+      "Assistentes",
+      "Administração"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nConstrutor\n\nConstrução de fl"
+  },
+  {
+    "name": "dashboard",
+    "route": "/dashboard",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/dashboard.png",
+    "path": "/dashboard",
+    "title": "📊 Dashboard",
+    "h": [
+      "Espaço de Trabalho",
+      "Atalhos",
+      "Dashboard",
+      "Estado do sistema, tarefas e capacidade operacional",
+      "Alertas"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nEspaço de Trabalho\n\nCliente "
+  },
+  {
+    "name": "workspace",
+    "route": "/workspace",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/workspace.png",
+    "path": "/workspace",
+    "title": "RAP Workspace",
+    "h": [
+      "Espaço de Trabalho",
+      "Atalhos",
+      "Painel",
+      "Clientes 360",
+      "5511925630264"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nEspaço de Trabalho\n\nCliente "
+  },
+  {
+    "name": "qa-waves",
+    "route": "/dev/qa-waves",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/qa-waves.png",
+    "path": "/dev/qa-waves",
+    "title": "🌊 QA Waves Integrado",
+    "h": [
+      "Admin",
+      "Monitoramento",
+      "Análises Governadas",
+      "Administração",
+      "Governança"
+    ],
+    "text": "RAP\nRAP\nEspaço de Trabalho\nATD\nAtendimento\nCRM\nClientes\nKB\nConhecimento\nOPS\nOperações\nBLD\nConstrutor\nDEV\nDev\nADM\nAdmin\n\nÁREA ATIVA\n\nAdmin\n\nConfigurações, govern"
+  },
+  {
+    "name": "system-status-requested-gap",
+    "route": "/system-status",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/system-status-requested-gap.png",
+    "path": "/system-status",
+    "title": "",
+    "h": [],
+    "text": "{\"error\":\"not_found\"}"
+  },
+  {
+    "name": "channel-accounts-gap",
+    "route": "/channel-accounts",
+    "screenshot": "AI_MEMORY/evidence/screenshots-2026-05-16/channel-accounts-gap.png",
+    "path": "/channel-accounts",
+    "title": "",
+    "h": [],
+    "text": "{\"error\":\"unauthorized\",\"message\":\"Token de autenticação não fornecido\"}"
+  }
+]

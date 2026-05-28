@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Jornadas Detalhadas — Fitness</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--green:#10b981;--green-dim:rgba(16,185,129,.15);--green-border:rgba(16,185,129,.35);--blue:#3b82f6;--teal:#14b8a6;--yellow:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--bg:#0f1117;--surface:#1a1d27;--surface2:#222536;--border:#2d3148;--text:#e2e8f0;--muted:#64748b;--subtle:#94a3b8}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 36px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+.top-bar a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .15s}.top-bar a:hover{color:#fff}
+.top-bar .sep{color:var(--border)}.top-bar .crumb{color:var(--text);font-weight:600;font-size:13px}
+.v-badge{background:var(--green-dim);border:1px solid var(--green-border);color:var(--green);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:700}
+.hero{padding:52px 36px 44px;background:linear-gradient(160deg,#091a11 0%,var(--bg) 70%);border-bottom:1px solid var(--border)}
+.hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px}
+.hero h1{font-size:36px;font-weight:800;color:#fff;margin-bottom:10px}
+.hero p{color:var(--subtle);font-size:15px;max-width:600px;margin-bottom:24px}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 14px;font-size:12px;color:var(--subtle)}
+.chip.green{border-color:var(--green-border);color:var(--green)}
+.page{max-width:1180px;margin:0 auto;padding:48px 36px 100px}
+.journey-block{margin-bottom:88px}
+.journey-label{display:inline-flex;align-items:center;gap:10px;background:var(--green-dim);border:1px solid var(--green-border);border-radius:8px;padding:6px 16px;margin-bottom:18px}
+.journey-label .jnum{font-size:12px;font-weight:800;color:var(--green)}
+.journey-label .jtitle{font-size:14px;font-weight:700;color:#fff}
+.journey-desc{font-size:14px;color:var(--subtle);max-width:720px;margin-bottom:28px}
+.trigger-box{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:10px;padding:16px 20px;margin-bottom:32px}
+.trigger-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.trigger-box strong{color:var(--green);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+.trigger-box p{font-size:13px;color:var(--subtle)}
+.stepper{display:flex;align-items:center;overflow-x:auto;gap:0;margin-bottom:36px;padding:2px 0 6px}
+.s-step{flex-shrink:0;display:flex;align-items:center}
+.s-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;min-width:130px}
+.s-box.active{border-color:var(--green);background:var(--green-dim)}
+.s-n{font-size:10px;font-weight:700;color:var(--green);margin-bottom:3px;letter-spacing:.04em}
+.s-label{font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.s-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.s-arrow{padding:0 10px;color:var(--border);font-size:20px;flex-shrink:0}
+.step-section{margin-bottom:52px}
+.step-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.step-num-badge{width:32px;height:32px;border-radius:50%;background:var(--green);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px var(--green-dim)}
+.step-header h3{font-size:17px;font-weight:700;color:#fff}
+.step-route{font-family:monospace;font-size:11px;color:var(--green);background:var(--green-dim);border:1px solid var(--green-border);border-radius:4px;padding:2px 8px;margin-left:4px}
+.annotated-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.screenshot-zone{position:relative;display:block;width:100%;line-height:0}
+.screenshot-zone img{width:100%;display:block;opacity:.95}
+.hs{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(16,185,129,.4),0 4px 12px rgba(0,0,0,.5);z-index:10}
+.hs.blue{background:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.yellow{background:var(--yellow);box-shadow:0 0 0 3px rgba(245,158,11,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.red{background:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.purple{background:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.teal{background:var(--teal);box-shadow:0 0 0 3px rgba(20,184,166,.4),0 4px 12px rgba(0,0,0,.5)}
+.hl{position:absolute;border:2px dashed var(--green);border-radius:6px;background:rgba(16,185,129,.08);pointer-events:none}
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:16px;background:var(--surface2)}
+.ann-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px}
+.ann-num{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.ann-num.green{background:var(--green)}.ann-num.blue{background:var(--blue)}.ann-num.yellow{background:var(--yellow)}.ann-num.red{background:var(--red)}.ann-num.purple{background:var(--purple)}.ann-num.teal{background:var(--teal)}
+.ann-body strong{font-size:12px;font-weight:700;color:#fff;display:block;margin-bottom:4px}
+.ann-body p{font-size:11px;color:var(--subtle);line-height:1.5}
+.callout{display:flex;gap:14px;border-radius:10px;padding:16px 18px;margin:18px 0;font-size:13px}
+.callout.tip{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.25);border-left:3px solid var(--blue)}
+.callout.warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-left:3px solid var(--yellow)}
+.callout.danger{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-left:3px solid var(--red)}
+.callout.success{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-left:3px solid var(--green)}
+.callout-icon{font-size:20px;flex-shrink:0;line-height:1.4}
+.callout strong{display:block;margin-bottom:4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.callout.tip strong{color:var(--blue)}.callout.warn strong{color:var(--yellow)}.callout.danger strong{color:var(--red)}.callout.success strong{color:var(--green)}
+.callout p{color:var(--subtle);line-height:1.5}
+.bubble-row{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;position:relative;flex:1;min-width:200px;font-size:13px;color:var(--subtle)}
+.bubble::before{content:'💬';position:absolute;top:-12px;left:16px;font-size:16px}
+.bubble strong{color:#fff;display:block;margin-bottom:4px;font-size:12px}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:16px 0}
+.status-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.status-card .s-icon{font-size:24px;margin-bottom:8px}
+.status-card .s-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+.status-card .s-desc{font-size:11px;color:var(--muted)}
+.status-card.liberado{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.05)}
+.status-card.atraso{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.05)}
+.status-card.bloqueado{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05)}
+.status-card.inadimplente{border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.05)}
+.transition{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:28px 0}
+.tr-from,.tr-to{padding:16px 22px;flex:1}
+.tr-from{border-right:1px solid var(--border)}
+.tr-from .label,.tr-to .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.tr-from .val,.tr-to .val{font-size:14px;font-weight:600;color:#fff}
+.tr-arrow-box{padding:0 20px;background:var(--green-dim);align-self:stretch;display:flex;align-items:center;color:var(--green);font-size:22px;font-weight:700}
+.tr-icon{padding:0 22px;font-size:24px}
+.jdivider{border:none;border-top:1px dashed var(--border);margin:64px 0;position:relative}
+.jdivider::after{content:'◇';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 12px;color:var(--border);font-size:14px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:20px 0}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.kpi-val{font-size:26px;font-weight:800;color:#fff;margin-bottom:4px}
+.kpi-label{font-size:11px;color:var(--muted)}
+.kpi-card.green .kpi-val{color:var(--green)}
+.kpi-card.yellow .kpi-val{color:var(--yellow)}
+.kpi-card.red .kpi-val{color:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../verticals/index.html">← Hub de Verticais</a>
+  <span class="sep">|</span>
+  <span class="crumb">Fitness — Jornadas Detalhadas</span>
+  <span class="v-badge">Fitness</span>
+</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">Manual de Jornadas — Vertical Fitness</div>
+  <h1>🏋️ Jornadas de Fitness</h1>
+  <p>Fluxos anotados para academias, estúdios e centros wellness. Matrícula, presença, renovação e retenção com visão operacional completa.</p>
+  <div class="hero-chips">
+    <span class="chip green">3 jornadas</span>
+    <span class="chip">3 telas verticais</span>
+    <span class="chip">QA: production-like</span>
+    <span class="chip">Replay ativo</span>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ════ JORNADA 1 — MATRÍCULA ════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 1</span>
+    <span class="jtitle">Matrícula e Onboarding do Aluno</span>
+  </div>
+  <p class="journey-desc">Da aula experimental à matrícula ativa. Cobre cadastro do aluno, escolha de plano e ativação do membership com liberação de acesso.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">⚡</span>
+    <div>
+      <strong>Gatilho</strong>
+      <p>Prospect realiza aula experimental ou solicita matrícula via WhatsApp. O recepcionista abre <em>/fitness/students</em>, cadastra o aluno e vincula um membership. O acesso físico é liberado automaticamente após confirmação do pagamento.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Cadastrar Aluno</div><div class="s-sub">fitness/students</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Escolher Plano</div><div class="s-sub">fitness/memberships</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Pagar</div><div class="s-sub">payment link</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Acesso Liberado</div><div class="s-sub">fitness/students</div></div></div>
+  </div>
+
+  <!-- Annotated: Students -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">1</div>
+      <h3>Alunos Fitness — Cadastro</h3>
+      <span class="step-route">/fitness/students</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/fitness_students.png" alt="Alunos Fitness" />
+        <div class="hs" style="left:11%;top:36%">1</div>
+        <div class="hs blue" style="left:40%;top:40%">2</div>
+        <div class="hs teal" style="left:40%;top:48%">3</div>
+        <div class="hs yellow" style="left:33%;top:57%">4</div>
+        <div class="hs green" style="left:24%;top:65%">5</div>
+        <div class="hs red" style="left:42%;top:65%">6</div>
+        <div class="hs purple" style="left:57%;top:65%">7</div>
+        <div class="hs" style="left:73%;top:65%;background:#6366f1">8</div>
+        <div class="hl" style="left:3%;top:33%;width:22%;height:5%"></div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num green">1</span>
+          <div class="ann-body">
+            <strong>Aba "Alunos" Ativa</strong>
+            <p>Primeira aba do menu vertical Fitness. Todas as operações de cadastro, bloqueio e liberação partem desta tela. A aba "Memberships" acessa os planos e a "Presença" o controle de check-ins.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Alunos Fitness</strong>
+            <p>"Busca operacional de alunos com alertas: membership, billing e histórico de presença." — o subtítulo explica as 3 dimensões principais monitoradas nesta tela para cada aluno.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Barra de Busca e Filtros</strong>
+            <p>Busque por nome, CPF, email ou ID do aluno. O campo "Todos os status" filtra por: Liberado, Em Atraso, Bloqueado. Use "Atualizar" para sincronizar com o gateway de pagamento e ver alterações de status em tempo real.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Totalizadores por Status</strong>
+            <p>Cards no topo: <strong>Total</strong> (todos os alunos), <strong>Liberados</strong> (com membership ativo e em dia), <strong>Em Atraso</strong> (membership vencido mas não bloqueado), <strong>Bloqueados</strong> (sem acesso). Clique para filtrar diretamente.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Coluna TOTAL</strong>
+            <p>Número total de alunos cadastrados na base do tenant. Inclui alunos ativos, inativos e bloqueados. Referência para cálculo de ocupação e capacidade da unidade.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num red">6</span>
+          <div class="ann-body">
+            <strong>Coluna LIBERADOS</strong>
+            <p>Alunos com membership ativo e pagamento em dia. Este é o número que determina a receita recorrente atual. Meta: manter acima de 85% do total cadastrado.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num purple">7</span>
+          <div class="ann-body">
+            <strong>Coluna EM ATRASO</strong>
+            <p>Alunos com membership vencido mas ainda não bloqueados (dentro do período de carência configurado, geralmente 3–7 dias). Ação recomendada: contato imediato de cobrança.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#6366f1">8</span>
+          <div class="ann-body">
+            <strong>Coluna BLOQUEADOS</strong>
+            <p>Alunos sem acesso físico por inadimplência ou suspensão manual. O bloqueio é automático após o período de carência. Liberação ocorre automaticamente após confirmação do pagamento.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status cards -->
+    <div style="margin:8px 0 4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Status do Aluno — Referência Rápida</div>
+    <div class="status-grid">
+      <div class="status-card liberado">
+        <div class="s-icon">✅</div>
+        <div class="s-name" style="color:#34d399">Liberado</div>
+        <div class="s-desc">Membership ativo e pagamento em dia. Acesso físico permitido.</div>
+      </div>
+      <div class="status-card atraso">
+        <div class="s-icon">⏳</div>
+        <div class="s-name" style="color:#fbbf24">Em Atraso</div>
+        <div class="s-desc">Dentro do período de carência (1–7 dias). Acesso ainda permitido.</div>
+      </div>
+      <div class="status-card bloqueado">
+        <div class="s-icon">🚫</div>
+        <div class="s-name" style="color:#f87171">Bloqueado</div>
+        <div class="s-desc">Sem acesso físico. Carência esgotada. Requer pagamento para liberar.</div>
+      </div>
+      <div class="status-card inadimplente">
+        <div class="s-icon">❌</div>
+        <div class="s-name" style="color:#a78bfa">Inadimplente</div>
+        <div class="s-desc">Múltiplos meses em atraso. Requer negociação especial para reativação.</div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Cadastro Rápido de Novo Aluno</strong>
+        <p>Clique em "Novo Aluno" no canto superior direito. O formulário pede: nome completo, CPF, data de nascimento, telefone WhatsApp, email e objetivo (musculação, cardio, etc.). Após salvar, vincule imediatamente ao plano/membership para liberar o acesso ainda na recepção.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotated: Memberships -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">2</div>
+      <h3>Fitness Memberships — Planos e Billing</h3>
+      <span class="step-route">/fitness/memberships</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/fitness_memberships.png" alt="Fitness Memberships" />
+        <div class="hs" style="left:11%;top:44%">1</div>
+        <div class="hs blue" style="left:40%;top:40%">2</div>
+        <div class="hs teal" style="left:40%;top:49%">3</div>
+        <div class="hs yellow" style="left:27%;top:56%">4</div>
+        <div class="hs green" style="left:41%;top:56%">5</div>
+        <div class="hs red" style="left:22%;top:66%">6</div>
+        <div class="hs purple" style="left:41%;top:66%">7</div>
+        <div class="hs" style="left:60%;top:66%;background:#06b6d4">8</div>
+        <div class="hs" style="left:80%;top:66%;background:#f97316">9</div>
+        <div class="hl" style="left:3%;top:41%;width:22%;height:5%"></div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num green">1</span>
+          <div class="ann-body">
+            <strong>Aba "Memberships" Ativa</strong>
+            <p>Segunda aba do menu Fitness. Controle central de todos os planos contratados: mensalidades, trimestrais, semestrais e anuais. Status de billing de cada aluno em um só lugar.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Fitness Memberships</strong>
+            <p>"Controle operacional de memberships, status de billing e status de validade." — três dimensões monitoras: (a) membership ativo/inativo, (b) pagamento em dia/atrasado, (c) dentro/fora da validade.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Filtro "Todos os billing status"</strong>
+            <p>Dropdown para filtrar por situação financeira: <em>active</em> (em dia), <em>past_due</em> (vencido aguardando pagamento), <em>canceled</em> (cancelado) e <em>trialing</em> (período de teste). Combine com busca por nome.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Botão "Atualizar"</strong>
+            <p>Sincroniza com o gateway de pagamento para trazer confirmações de PIX e cartão processadas nos últimos minutos. Use após um aluno relatar que pagou mas ainda aparece bloqueado.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Coluna ID</strong>
+            <p>Identificador único do membership no formato <code>gp-fitness-membership-[ID do tenant]-[número]</code>. Use este ID para rastrear o membership no painel do gateway de pagamento ou em relatórios de BI.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num red">6</span>
+          <div class="ann-body">
+            <strong>Coluna ALUNO</strong>
+            <p>Nome e ID do aluno vinculado ao membership. Clique no nome para abrir o perfil completo do aluno em /fitness/students. Essencial para verificar histórico antes de negociar inadimplência.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num purple">7</span>
+          <div class="ann-body">
+            <strong>Coluna EM ATRASO</strong>
+            <p>Indica se o membership está com pagamento atrasado (true/false). Quando "true", o sistema já disparou as notificações da régua de cobrança. Você pode verificar quantas tentativas foram feitas no painel de histórico.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#06b6d4">8</span>
+          <div class="ann-body">
+            <strong>Coluna BILLING</strong>
+            <p>Status de cobrança retornado pelo gateway: <span style="color:#34d399">active</span> = pago, <span style="color:#fbbf24">past_due</span> = vencido, <span style="color:#f87171">canceled</span> = cancelado. Atualiza em tempo real via webhook do gateway.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num" style="background:#f97316">9</span>
+          <div class="ann-body">
+            <strong>Coluna VENCIMENTO</strong>
+            <p>Data de vencimento do membership. Use esta coluna ordenada por "mais próximo" para identificar quem vai vencer nos próximos 7 dias e acionar a régua de renovação proativa.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <div>
+        <strong>Atenção: Bloqueio Automático</strong>
+        <p>O sistema bloqueia automaticamente o acesso quando o membership atinge <code>status: past_due</code> + carência esgotada. Configure a carência em <strong>/config → Billing</strong>. O valor padrão é 3 dias. Academias em região com alto índice de inadimplência costumam reduzir para 1 dia.</p>
+      </div>
+    </div>
+
+    <div class="bubble-row">
+      <div class="bubble">
+        <strong>Criar Novo Membership</strong>
+        Clique em "Novo Membership" (canto superior direito). Selecione o aluno, escolha o plano (mensal R$99, trimestral R$270, anual R$990), defina a data de início e envie o link de pagamento via WhatsApp. O membership fica com status "pending" até a confirmação.
+      </div>
+      <div class="bubble">
+        <strong>Reativar Membership Cancelado</strong>
+        Alunos que cancelaram podem ser reativados com desconto de reativação. Use o botão "Reativar" na linha do membership cancelado, selecione o novo plano e o sistema gera automaticamente um link de pagamento com o desconto configurado.
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════ JORNADA 2 — PRESENÇA ════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 2</span>
+    <span class="jtitle">Controle Diário de Presença e Retenção</span>
+  </div>
+  <p class="journey-desc">Check-in, monitoramento de frequência, alertas de inatividade e campanhas de reengajamento automatizadas.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">📍</span>
+    <div>
+      <strong>Gatilho Diário</strong>
+      <p>Aluno realiza check-in na recepção (QR code, biometria ou app). O sistema registra a presença em <em>/fitness/attendance</em> e atualiza o score de frequência. Alunos sem check-in há 7 dias recebem alerta automático de reengajamento.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Check-in Registrado</div><div class="s-sub">fitness/attendance</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Frequência Calculada</div><div class="s-sub">sistema</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Alerta Inatividade</div><div class="s-sub">automations</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Campanha WA</div><div class="s-sub">bulk-messaging</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 5</div><div class="s-label">Retorno do Aluno</div><div class="s-sub">fitness/attendance</div></div></div>
+  </div>
+
+  <!-- Annotated: Attendance -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">1</div>
+      <h3>Presença Fitness — Registro de Check-in</h3>
+      <span class="step-route">/fitness/attendance</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/fitness_attendance.png" alt="Presença Fitness" />
+        <div class="hs" style="left:11%;top:53%">1</div>
+        <div class="hs blue" style="left:40%;top:40%">2</div>
+        <div class="hs teal" style="left:40%;top:48%">3</div>
+        <div class="hs yellow" style="left:22%;top:60%">4</div>
+        <div class="hs green" style="left:41%;top:60%">5</div>
+        <div class="hs red" style="left:59%;top:60%">6</div>
+        <div class="hs purple" style="left:78%;top:60%">7</div>
+        <div class="hl" style="left:3%;top:49%;width:22%;height:5%"></div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num green">1</span>
+          <div class="ann-body">
+            <strong>Aba "Presença" Ativa</strong>
+            <p>Terceira aba do menu Fitness. Registro cronológico de todos os check-ins. Use para verificar frequência individual, calcular média de presença por período e identificar horários de pico.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Presença Fitness</strong>
+            <p>Tabela com histórico completo de presenças. Cada linha é um check-in único: quem entrou, quando e em qual unidade. Dados exportáveis para relatórios de frequência mensal.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Busca por Aluno</strong>
+            <p>Busque presença por nome, CPF ou ID do aluno. Útil para confirmar se um aluno específico fez check-in hoje antes de ligar para cobrar ou para verificar frequência em disputa de contrato.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Coluna PRESENÇA (ID)</strong>
+            <p>ID único do registro de presença no formato <code>att-[tenant]-[GUID]</code>. Use para rastrear registros específicos ao reportar problemas técnicos ou contestar cobranças.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Coluna ALUNO</strong>
+            <p>Nome e ID do aluno que fez o check-in. Clique no nome para acessar diretamente o perfil do aluno em /fitness/students e ver o histórico completo de frequência e membership.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num red">6</span>
+          <div class="ann-body">
+            <strong>Coluna ENTRADA</strong>
+            <p>Timestamp do check-in no formato <code>dd/MM/yyyy HH:mm:ss</code>. Permite análise de horários de pico, distribuição de frequência ao longo do dia e identificação de padrões por aluno.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num purple">7</span>
+          <div class="ann-body">
+            <strong>Coluna AÇÃO</strong>
+            <p>"Encerrar presença" encerra manualmente o check-in de um aluno (ex.: em caso de problema com o check-out automático). Gera log de auditoria com timestamp e operador responsável.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Automação de Inatividade — Como Configurar</strong>
+        <p>Vá em <strong>/automations</strong> e ative a automação "Fitness — Alerta de Inatividade". Configure: (a) dias sem check-in para disparar = 7, (b) template WhatsApp = "Sentimos sua falta!", (c) horário do disparo = 10h. A automação processa diariamente os alunos que atingiram o threshold e envia mensagem personalizada com o nome do aluno e quantos dias faltou.</p>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <div class="kpi-val">≥ 12×</div>
+        <div class="kpi-label">Presença/mês aluno retido</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-val">4–11×</div>
+        <div class="kpi-label">Presença/mês risco moderado</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-val">≤ 3×</div>
+        <div class="kpi-label">Presença/mês alto risco churn</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val">7 dias</div>
+        <div class="kpi-label">Threshold de inatividade</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════ JORNADA 3 — RENOVAÇÃO ════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 3</span>
+    <span class="jtitle">Renovação de Membership e Cobrança</span>
+  </div>
+  <p class="journey-desc">Ciclo completo de renovação: alerta proativo antes do vencimento, oferta de renovação, cobrança automática e gestão de inadimplência com bloqueio gradual.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">🔔</span>
+    <div>
+      <strong>Gatilho Automático — D-7</strong>
+      <p>7 dias antes do vencimento do membership, o sistema dispara a régua de renovação. Se não houver pagamento até D+3 após vencimento, o aluno é bloqueado automaticamente. Todo o fluxo é registrado em <em>/fitness/memberships</em>.</p>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step"><div class="s-box active"><div class="s-n">D-7</div><div class="s-label">Lembrete Amigável</div><div class="s-sub">WhatsApp</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">D-1</div><div class="s-label">Último Aviso</div><div class="s-sub">WhatsApp</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">D+0</div><div class="s-label">Vencimento</div><div class="s-sub">billing</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">D+3</div><div class="s-label">Bloqueio</div><div class="s-sub">automático</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">pago</div><div class="s-label">Liberação</div><div class="s-sub">automático</div></div></div>
+  </div>
+
+  <div class="transition">
+    <div class="tr-from">
+      <div class="label">ANTES DO VENCIMENTO (D-7)</div>
+      <div class="val">Aluno recebe link de renovação via WhatsApp com 5% de desconto por renovação antecipada</div>
+    </div>
+    <div class="tr-arrow-box">→</div>
+    <div class="tr-icon">💳</div>
+    <div class="tr-to">
+      <div class="label">APÓS PAGAMENTO</div>
+      <div class="val">Status muda para "active", acesso liberado, recibo enviado via WhatsApp em segundos</div>
+    </div>
+  </div>
+
+  <div class="callout danger">
+    <span class="callout-icon">⛔</span>
+    <div>
+      <strong>Cuidado: Bloqueio em Horário de Pico</strong>
+      <p>Configure a automação de bloqueio para não executar entre 6h-9h e 17h-20h (horários de pico). Um aluno bloqueado na entrada da academia gera situação constrangedora. O bloqueio às 00h01 de D+3 é a prática recomendada — o aluno está dormindo e não está tentando entrar.</p>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <span class="callout-icon">✅</span>
+    <div>
+      <strong>Resultado Esperado da Jornada 3</strong>
+      <p>Academias que implementam a régua completa (D-7, D-1, D+0, D+3) reduzem a inadimplência em <strong>40–60%</strong> comparado ao processo manual. O desconto de renovação antecipada (5%) custa menos que o custo de recuperação de um aluno bloqueado.</p>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

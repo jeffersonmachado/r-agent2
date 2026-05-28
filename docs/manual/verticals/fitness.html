@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Jornadas — Fitness</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.6; }
+
+    .top-bar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 14px 40px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; }
+    .top-bar .back { color: #64748b; text-decoration: none; font-size: 13px; }
+    .top-bar .back:hover { color: #fff; }
+    .top-bar .divider { color: #2d3148; }
+    .top-bar .title { font-weight: 700; font-size: 15px; color: #fff; }
+    .vertical-badge { background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.4); color: #34d399; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; }
+
+    .hero { padding: 56px 40px 40px; border-bottom: 1px solid #2d3148; background: linear-gradient(135deg, #0d1f18 0%, #0f1117 100%); }
+    .hero-inner { max-width: 900px; }
+    .hero-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #10b981; margin-bottom: 10px; }
+    .hero h1 { font-size: 34px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .hero p { color: #94a3b8; font-size: 15px; max-width: 640px; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .htag { background: #1a1d27; border: 1px solid #2d3148; border-radius: 999px; padding: 4px 14px; font-size: 12px; color: #94a3b8; }
+    .htag.green { border-color: rgba(16,185,129,.4); color: #34d399; }
+
+    .content { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; }
+
+    .journey { margin-bottom: 72px; }
+    .journey-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+    .journey-num { width: 40px; height: 40px; border-radius: 10px; background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3); color: #10b981; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .journey-header h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .journey-header p { font-size: 13px; color: #64748b; }
+
+    .stepper { display: flex; gap: 0; margin-bottom: 36px; overflow-x: auto; padding-bottom: 4px; }
+    .step { display: flex; align-items: center; flex-shrink: 0; }
+    .step-box { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    .step-box .step-n { font-size: 10px; color: #10b981; font-weight: 700; margin-bottom: 2px; }
+    .step-box .step-label { color: #e2e8f0; font-weight: 600; }
+    .step-arrow { color: #2d3148; font-size: 18px; padding: 0 8px; }
+
+    .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 24px; }
+    .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; overflow: hidden; }
+    .card img { width: 100%; display: block; border-bottom: 1px solid #2d3148; aspect-ratio: 16/9; object-fit: cover; object-position: top; }
+    .card-body { padding: 16px; }
+    .card-route { font-family: monospace; font-size: 11px; color: #10b981; margin-bottom: 6px; }
+    .card-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .card-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
+    .card-steps { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e2235; }
+    .card-step { font-size: 11px; color: #94a3b8; padding: 3px 0; display: flex; gap: 6px; }
+    .card-step::before { content: '→'; color: #10b981; flex-shrink: 0; }
+
+    .infobox { background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; font-size: 13px; color: #94a3b8; }
+    .infobox strong { color: #34d399; }
+    .divider-line { border: none; border-top: 1px solid #2d3148; margin: 56px 0; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="index.html" class="back">← Hub de Verticais</a>
+  <span class="divider">|</span>
+  <span class="title">Fitness</span>
+  <span class="vertical-badge">Fitness</span>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">Vertical</div>
+    <h1>🏋️ Fitness</h1>
+    <p>Jornadas para academias, estúdios de pilates, crossfit e centros de wellness. Cobertura de matrícula, controle de presença, gestão de memberships e renovação.</p>
+    <div class="hero-tags">
+      <span class="htag green">3 jornadas</span>
+      <span class="htag">3 telas dedicadas</span>
+      <span class="htag">QA: production-like</span>
+      <span class="htag">Replay: ativo</span>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ═══ JORNADA 1 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">1</div>
+      <div>
+        <h2>Matrícula e Onboarding do Aluno</h2>
+        <p>Da aula experimental à matrícula ativa com membership configurado.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Prospect solicita aula experimental via WhatsApp ou indicação. O fluxo cobre cadastro do aluno, agendamento da experimental, conversão e ativação do membership.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Interesse / Lead</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Aula Experimental</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Cadastro do Aluno</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Escolha de Plano</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Membership Ativo</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/cross_crm.png" alt="CRM" />
+        <div class="card-body">
+          <div class="card-route">/crm</div>
+          <div class="card-title">CRM — Registro do Prospect</div>
+          <div class="card-desc">Prospect é registrado no CRM como lead de academia. Campos: interesse (musculação, pilates, yoga), disponibilidade de horário e objetivo de saúde.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar lead com dados de contato e objetivo</div>
+            <div class="card-step">Agendar aula experimental via WhatsApp</div>
+            <div class="card-step">Registrar presença na experimental</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/fitness_students.png" alt="Alunos Fitness" />
+        <div class="card-body">
+          <div class="card-route">/fitness/students</div>
+          <div class="card-title">Alunos Fitness</div>
+          <div class="card-desc">Base operacional de alunos com métricas de liberação: Total, Liberados, Em Atraso e Bloqueados. Busca por nome, documento e billing. Ação rápida de detalhe operacional.</div>
+          <div class="card-steps">
+            <div class="card-step">Cadastrar novo aluno após conversão</div>
+            <div class="card-step">Vincular dados pessoais e objetivo</div>
+            <div class="card-step">Verificar status de liberação de acesso</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/fitness_memberships.png" alt="Memberships" />
+        <div class="card-body">
+          <div class="card-route">/fitness/memberships</div>
+          <div class="card-title">Fitness Memberships</div>
+          <div class="card-desc">Controle operacional de memberships: status de billing (active/inactive), aluno vinculado, data de vencimento e ação. Tabela com ID, aluno, status em atraso e próximo passo.</div>
+          <div class="card-steps">
+            <div class="card-step">Selecionar plano: mensal, trimestral, anual</div>
+            <div class="card-step">Registrar pagamento inicial e ativar membership</div>
+            <div class="card-step">Confirmar acesso liberado para o aluno</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 2 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">2</div>
+      <div>
+        <h2>Controle Diário de Presença</h2>
+        <p>Check-in, frequência e alertas de inatividade para retenção.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Aluno realiza check-in diário na academia. O sistema registra presença, calcula frequência e dispara alertas quando o aluno fica inativo por mais de 7 dias.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Check-in do Aluno</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Registro de Presença</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Análise de Frequência</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Alerta de Inatividade</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Ação de Retenção</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/fitness_attendance.png" alt="Presença Fitness" />
+        <div class="card-body">
+          <div class="card-route">/fitness/attendance</div>
+          <div class="card-title">Presença Fitness</div>
+          <div class="card-desc">Registro detalhado de presença com timestamp de entrada, identificação do aluno (ID e nome), data e ação disponível. Histórico completo de frequência por aluno.</div>
+          <div class="card-steps">
+            <div class="card-step">Registrar check-in do aluno com horário</div>
+            <div class="card-step">Confirmar identidade e membership ativo</div>
+            <div class="card-step">Registrar saída (quando aplicável)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/fitness_students.png" alt="Alunos" />
+        <div class="card-body">
+          <div class="card-route">/fitness/students</div>
+          <div class="card-title">Alunos — Frequência e Alertas</div>
+          <div class="card-desc">Visualizar alunos "Em Atraso" (sem check-in há X dias). Status de bloqueio por inadimplência. Ações: enviar mensagem, agendar retorno ou bloquear acesso.</div>
+          <div class="card-steps">
+            <div class="card-step">Filtrar alunos inativos há 7+ dias</div>
+            <div class="card-step">Identificar motivo: viagem, lesão ou desistência</div>
+            <div class="card-step">Acionar campanha de reengajamento</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_bulk.png" alt="Disparos" />
+        <div class="card-body">
+          <div class="card-route">/bulk-messaging</div>
+          <div class="card-title">Campanha de Reengajamento</div>
+          <div class="card-desc">Disparo segmentado para alunos inativos: "Sentimos sua falta!", oferta de personal trainer grátis ou avaliação física. Personalizado por nome e dias sem aparecer.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar campanha "Volte a treinar!"</div>
+            <div class="card-step">Segmentar por dias de inatividade</div>
+            <div class="card-step">Monitorar taxa de retorno</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_analytics.png" alt="Analytics" />
+        <div class="card-body">
+          <div class="card-route">/analytics</div>
+          <div class="card-title">Métricas de Retenção</div>
+          <div class="card-desc">Taxa de frequência média, churn mensal, pico de cancelamentos e impacto das campanhas de reengajamento. Comparativo entre faixas etárias e modalidades.</div>
+          <div class="card-steps">
+            <div class="card-step">Analisar frequência média por plano</div>
+            <div class="card-step">Identificar meses com maior evasão</div>
+            <div class="card-step">Ajustar campanhas com base em resultados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 3 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">3</div>
+      <div>
+        <h2>Renovação de Membership e Cobrança</h2>
+        <p>Ciclo de renovação automática com gestão de inadimplência.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Membership do aluno vence em 7 dias. Sistema envia notificação automática, processa renovação e, em caso de não-pagamento, inicia fluxo de cobrança e bloqueio gradual.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Alerta de Vencimento</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Oferta de Renovação</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Pagamento</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Membership Renovado</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/fitness_memberships.png" alt="Memberships" />
+        <div class="card-body">
+          <div class="card-route">/fitness/memberships</div>
+          <div class="card-title">Memberships — Controle de Vencimento</div>
+          <div class="card-desc">Filtrar memberships "Em Atraso" para ação imediata. Visualizar alunos com billing pendente, data de vencimento e valor devido. Ação direta de contato ou bloqueio.</div>
+          <div class="card-steps">
+            <div class="card-step">Identificar memberships a vencer em 7 dias</div>
+            <div class="card-step">Filtrar status: Em Atraso / Inadimplente</div>
+            <div class="card-step">Acionar fluxo de cobrança automatizado</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_templates.png" alt="Templates" />
+        <div class="card-body">
+          <div class="card-route">/whatsapp-templates</div>
+          <div class="card-title">Templates de Cobrança</div>
+          <div class="card-desc">Templates aprovados para régua de cobrança: D-7 (lembrete amigável), D-0 (vencimento), D+3 (aviso de bloqueio), D+7 (bloqueio ativo). Personalizados com valor e link de pagamento.</div>
+          <div class="card-steps">
+            <div class="card-step">Configurar régua D-7, D-0, D+3, D+7</div>
+            <div class="card-step">Personalizar templates com dados do aluno</div>
+            <div class="card-step">Incluir link de pagamento PIX/cartão</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/fitness_students.png" alt="Alunos bloqueados" />
+        <div class="card-body">
+          <div class="card-route">/fitness/students</div>
+          <div class="card-title">Alunos — Gestão de Bloqueio</div>
+          <div class="card-desc">Alunos inadimplentes aparecem como "Bloqueados". O acesso físico é negado até a regularização. Após pagamento, status volta para "Liberado" automaticamente.</div>
+          <div class="card-steps">
+            <div class="card-step">Verificar alunos com status Bloqueado</div>
+            <div class="card-step">Confirmar pagamento recebido</div>
+            <div class="card-step">Liberar acesso e renovar membership</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_supervisor.png" alt="Supervisor" />
+        <div class="card-body">
+          <div class="card-route">/supervisor</div>
+          <div class="card-title">KPIs de Renovação</div>
+          <div class="card-desc">Taxa de renovação automática, inadimplência atual, receita recorrente mensal (MRR) e churn por motivo. Painel para gestores acompanharem saúde financeira da unidade.</div>
+          <div class="card-steps">
+            <div class="card-step">Monitorar taxa de renovação em tempo real</div>
+            <div class="card-step">Acompanhar MRR e projeção mensal</div>
+            <div class="card-step">Identificar picos de inadimplência</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

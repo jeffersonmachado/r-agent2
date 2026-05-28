@@ -1,27 +1,27 @@
 # Mesh Canonical Blockers
 
-- Canonical mesh execution: mesh-business-screen-fix-001
-- Promoted at: 2026-05-11T22:17:12.435Z
-- Decision: GO
-- Scope: 58/58 scenarios executed
-- Result: 58 passed, 0 failed, 0 infra errors
-- History artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-business-screen-fix-001.json
+- Canonical mesh execution: mesh-2026-05-12T23-50-45-984Z
+- Decision: NO_GO
+- Scope: 62 scenarios declared
+- Result: 58 passed, 4 failed
+- Primary reason: BASELINE_PASS_RATE_REGRESSION
+- History artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-05-12T23-50-45-984Z.json
 
 ## Current State
 
-- There are no active blockers in the promoted canonical mesh.
-- Blocking domains: none.
-- The previously failing `beauty`, `fitness` and `mercado` business scenarios are cleared in the promoted execution.
+- There are active blockers in the canonical mesh.
+- Blocking domains: pbx.
+- The canonical status currently blocks release promotion until a new GO execution is promoted.
 
 ## What Still Blocks Overall Readiness
 
-- The consolidated platform readiness remains `NO_GO` for non-mesh reasons.
-- Replay coverage is still 33.33%, with missing prod-like evidence for the full WhatsApp -> AI -> handoff -> human -> backend mutation chronology.
-- Vertical coverage is still 16.67%, with only `fitness` counted as production-like in the current readiness model.
-- The readiness report still flags documentation link issues in legacy QA docs.
+- The consolidated platform readiness remains NO_GO due to mesh and gate checks.
+- qa-mesh go/no-go remains NO_GO with BASELINE_PASS_RATE_REGRESSION.
+- release-gate remains NO_GO while canonical mesh is not recovered.
+- Visual replay checks still report playwright_page_unavailable in critical journeys (high severity).
 
 ## Recommended Next Slice
 
-1. Treat the mesh canonical as clean and stable unless a newer promoted execution supersedes it.
-2. Focus follow-up work on prod-like replay coverage and vertical evidence expansion, not on mesh business failures.
-3. Fix the remaining broken markdown links if the docs score is intended to participate in final readiness gating.
+1. Recover the 4 regressions in the canonical mesh and promote a fresh GO execution.
+2. Rerun official release-gate with the recovered canonical execution and external RUNTIME_ROOT.
+3. Stabilize browser snapshots for critical journeys to clear visual_journeys high-severity findings.

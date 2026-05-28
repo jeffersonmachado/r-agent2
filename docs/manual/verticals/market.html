@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manual de Jornadas — Marketplace de Nodes</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;line-height:1.6}
+    .top-bar{background:#1a1d27;border-bottom:1px solid #2d3148;padding:14px 40px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50}
+    .top-bar .back{color:#64748b;text-decoration:none;font-size:13px}.top-bar .back:hover{color:#fff}
+    .top-bar .divider{color:#2d3148}.top-bar .title{font-weight:700;font-size:15px;color:#fff}
+    .vertical-badge{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:#a78bfa;border-radius:999px;padding:3px 12px;font-size:12px;font-weight:600}
+    .hero{padding:56px 40px 40px;border-bottom:1px solid #2d3148;background:linear-gradient(135deg,#100d1a 0%,#0f1117 100%)}
+    .hero-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8b5cf6;margin-bottom:10px}
+    .hero h1{font-size:34px;font-weight:800;color:#fff;margin-bottom:10px}
+    .hero p{color:#94a3b8;font-size:15px;max-width:640px}
+    .hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+    .htag{background:#1a1d27;border:1px solid #2d3148;border-radius:999px;padding:4px 14px;font-size:12px;color:#94a3b8}
+    .htag.purple{border-color:rgba(139,92,246,.4);color:#a78bfa}
+    .content{max-width:1100px;margin:0 auto;padding:48px 40px 80px}
+    .journey{margin-bottom:72px}
+    .journey-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:32px}
+    .journey-num{width:40px;height:40px;border-radius:10px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:#8b5cf6;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .journey-header h2{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+    .journey-header p{font-size:13px;color:#64748b}
+    .stepper{display:flex;gap:0;margin-bottom:36px;overflow-x:auto;padding-bottom:4px}
+    .step{display:flex;align-items:center;flex-shrink:0}
+    .step-box{background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:10px 16px;font-size:12px;white-space:nowrap}
+    .step-box .step-n{font-size:10px;color:#8b5cf6;font-weight:700;margin-bottom:2px}
+    .step-box .step-label{color:#e2e8f0;font-weight:600}
+    .step-arrow{color:#2d3148;font-size:18px;padding:0 8px}
+    .screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:24px}
+    .card{background:#1a1d27;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
+    .card img{width:100%;display:block;border-bottom:1px solid #2d3148;aspect-ratio:16/9;object-fit:cover;object-position:top}
+    .card-body{padding:16px}
+    .card-route{font-family:monospace;font-size:11px;color:#8b5cf6;margin-bottom:6px}
+    .card-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:6px}
+    .card-desc{font-size:12px;color:#64748b;line-height:1.5}
+    .card-steps{margin-top:10px;padding-top:10px;border-top:1px solid #1e2235}
+    .card-step{font-size:11px;color:#94a3b8;padding:3px 0;display:flex;gap:6px}
+    .card-step::before{content:'→';color:#8b5cf6;flex-shrink:0}
+    .infobox{background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:16px 20px;margin-bottom:28px;font-size:13px;color:#94a3b8}
+    .infobox strong{color:#a78bfa}
+    .divider-line{border:none;border-top:1px solid #2d3148;margin:56px 0}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="index.html" class="back">← Hub de Verticais</a>
+  <span class="divider">|</span>
+  <span class="title">Marketplace</span>
+  <span class="vertical-badge">Market</span>
+</div>
+<div class="hero">
+  <div class="hero-label">Vertical</div>
+  <h1>🧩 Marketplace de Nodes</h1>
+  <p>Jornadas para desenvolvedores e integradores que publicam e consomem nodes no marketplace da plataforma RAP. Criação de nodes customizados, publicação e monetização.</p>
+  <div class="hero-tags">
+    <span class="htag purple">1 jornada</span>
+    <span class="htag">QA: aprovado</span>
+    <span class="htag">Público: Devs</span>
+  </div>
+</div>
+<div class="content">
+
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">1</div>
+      <div><h2>Publicação de Node no Marketplace</h2><p>Do desenvolvimento do node à disponibilização para todos os tenants da plataforma.</p></div>
+    </div>
+    <div class="infobox"><strong>Trigger:</strong> Desenvolvedor cria um node customizado (integração com sistema externo, lógica especializada) e deseja publicá-lo no marketplace para outros tenants.</div>
+    <div class="stepper">
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Criar Node</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Testar no Editor</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Publicar</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Revisão</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Disponível</div></div></div>
+    </div>
+    <div class="screens">
+      <div class="card">
+        <img src="img/market_generate.png" alt="Gerar System" />
+        <div class="card-body">
+          <div class="card-route">/generate-system</div>
+          <div class="card-title">Gerador de Nodes com IA</div>
+          <div class="card-desc">Use IA para scaffoldar a estrutura do novo node: schema de portas de entrada/saída, configurações, validações e código base. Reduz tempo de desenvolvimento em até 70%.</div>
+          <div class="card-steps">
+            <div class="card-step">Descrever o comportamento do node para IA</div>
+            <div class="card-step">IA gera schema, código e documentação</div>
+            <div class="card-step">Revisar e ajustar o código gerado</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/services_automations.png" alt="Editor de Fluxos" />
+        <div class="card-body">
+          <div class="card-route">/editor</div>
+          <div class="card-title">Testar Node no Editor</div>
+          <div class="card-desc">O node em desenvolvimento aparece no editor de fluxos para testes. Adicione-o a um fluxo de teste, passe dados de exemplo e valide o comportamento das portas de saída.</div>
+          <div class="card-steps">
+            <div class="card-step">Abrir editor de fluxos com node em dev</div>
+            <div class="card-step">Criar fluxo de teste com dados reais</div>
+            <div class="card-step">Validar todas as portas e casos de erro</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/market_nodes.png" alt="Marketplace" />
+        <div class="card-body">
+          <div class="card-route">/node-marketplace</div>
+          <div class="card-title">Marketplace de Nodes</div>
+          <div class="card-desc">Catálogo de nodes disponíveis filtrado por categoria, integração e vertical. Após aprovação, o node do desenvolvedor aparece aqui para todos os tenants instalarem com 1 clique.</div>
+          <div class="card-steps">
+            <div class="card-step">Submeter node para revisão da plataforma</div>
+            <div class="card-step">Aguardar aprovação (QA + segurança)</div>
+            <div class="card-step">Node publicado e disponível no catálogo</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/cross_analytics.png" alt="Analytics" />
+        <div class="card-body">
+          <div class="card-route">/analytics</div>
+          <div class="card-title">Métricas de Adoção</div>
+          <div class="card-desc">Acompanhar instalações do node, tenants que o utilizam, execuções por período e erros reportados. Base para melhorias e versionamento do node.</div>
+          <div class="card-steps">
+            <div class="card-step">Monitorar instalações após publicação</div>
+            <div class="card-step">Analisar taxa de erro em produção</div>
+            <div class="card-step">Publicar nova versão com melhorias</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manual de Jornadas — Serviços</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;line-height:1.6}
+    .top-bar{background:#1a1d27;border-bottom:1px solid #2d3148;padding:14px 40px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50}
+    .top-bar .back{color:#64748b;text-decoration:none;font-size:13px}.top-bar .back:hover{color:#fff}
+    .top-bar .divider{color:#2d3148}.top-bar .title{font-weight:700;font-size:15px;color:#fff}
+    .vertical-badge{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);color:#60a5fa;border-radius:999px;padding:3px 12px;font-size:12px;font-weight:600}
+    .hero{padding:56px 40px 40px;border-bottom:1px solid #2d3148;background:linear-gradient(135deg,#0a0f1f 0%,#0f1117 100%)}
+    .hero-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;margin-bottom:10px}
+    .hero h1{font-size:34px;font-weight:800;color:#fff;margin-bottom:10px}
+    .hero p{color:#94a3b8;font-size:15px;max-width:640px}
+    .hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+    .htag{background:#1a1d27;border:1px solid #2d3148;border-radius:999px;padding:4px 14px;font-size:12px;color:#94a3b8}
+    .htag.blue{border-color:rgba(59,130,246,.4);color:#60a5fa}
+    .content{max-width:1100px;margin:0 auto;padding:48px 40px 80px}
+    .journey{margin-bottom:72px}
+    .journey-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:32px}
+    .journey-num{width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#3b82f6;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .journey-header h2{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+    .journey-header p{font-size:13px;color:#64748b}
+    .stepper{display:flex;gap:0;margin-bottom:36px;overflow-x:auto;padding-bottom:4px}
+    .step{display:flex;align-items:center;flex-shrink:0}
+    .step-box{background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:10px 16px;font-size:12px;white-space:nowrap}
+    .step-box .step-n{font-size:10px;color:#3b82f6;font-weight:700;margin-bottom:2px}
+    .step-box .step-label{color:#e2e8f0;font-weight:600}
+    .step-arrow{color:#2d3148;font-size:18px;padding:0 8px}
+    .screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:24px}
+    .card{background:#1a1d27;border:1px solid #2d3148;border-radius:12px;overflow:hidden}
+    .card img{width:100%;display:block;border-bottom:1px solid #2d3148;aspect-ratio:16/9;object-fit:cover;object-position:top}
+    .card-body{padding:16px}
+    .card-route{font-family:monospace;font-size:11px;color:#3b82f6;margin-bottom:6px}
+    .card-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:6px}
+    .card-desc{font-size:12px;color:#64748b;line-height:1.5}
+    .card-steps{margin-top:10px;padding-top:10px;border-top:1px solid #1e2235}
+    .card-step{font-size:11px;color:#94a3b8;padding:3px 0;display:flex;gap:6px}
+    .card-step::before{content:'→';color:#3b82f6;flex-shrink:0}
+    .infobox{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:16px 20px;margin-bottom:28px;font-size:13px;color:#94a3b8}
+    .infobox strong{color:#60a5fa}
+    .divider-line{border:none;border-top:1px solid #2d3148;margin:56px 0}
+  </style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="index.html" class="back">← Hub de Verticais</a>
+  <span class="divider">|</span>
+  <span class="title">Serviços</span>
+  <span class="vertical-badge">Services</span>
+</div>
+<div class="hero">
+  <div class="hero-label">Vertical</div>
+  <h1>🔧 Serviços</h1>
+  <p>Jornadas para agências, consultorias e prestadores de serviços. Ativação de soluções pré-construídas, automação de atendimento e entrega de projetos com rastreabilidade completa.</p>
+  <div class="hero-tags">
+    <span class="htag blue">2 jornadas</span>
+    <span class="htag">QA: aprovado</span>
+    <span class="htag">Replay: ativo</span>
+  </div>
+</div>
+<div class="content">
+
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">1</div>
+      <div><h2>Ativação de Pacote de Solução</h2><p>Da escolha do pacote ao fluxo em produção.</p></div>
+    </div>
+    <div class="infobox"><strong>Trigger:</strong> Novo cliente contrata pacote de serviço. Operador ativa o pacote de solução pré-construído, ajusta configurações e coloca em produção.</div>
+    <div class="stepper">
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Escolher Solução</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Configurar</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Testar</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Publicar</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Monitorar</div></div></div>
+    </div>
+    <div class="screens">
+      <div class="card">
+        <img src="img/services_solutions.png" alt="Soluções" />
+        <div class="card-body">
+          <div class="card-route">/solutions</div>
+          <div class="card-title">Pacotes de Solução</div>
+          <div class="card-desc">Catálogo de soluções pré-construídas por caso de uso: atendimento via WhatsApp, bot de triagem, CRM integrado, relatórios automáticos. Implantação com 1 clique.</div>
+          <div class="card-steps">
+            <div class="card-step">Navegar catálogo por segmento e funcionalidade</div>
+            <div class="card-step">Selecionar pacote adequado ao cliente</div>
+            <div class="card-step">Iniciar implantação guiada</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/services_automations.png" alt="Automações" />
+        <div class="card-body">
+          <div class="card-route">/automations</div>
+          <div class="card-title">Automações Ativas</div>
+          <div class="card-desc">Gerenciar automações implantadas pelo pacote de solução. Ativar, desativar, editar e monitorar execuções. Histórico de runs com métricas de performance.</div>
+          <div class="card-steps">
+            <div class="card-step">Validar automações criadas pelo pacote</div>
+            <div class="card-step">Ajustar parâmetros para o cliente</div>
+            <div class="card-step">Ativar e monitorar primeira execução</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/clinic_support.png" alt="Atendimento" />
+        <div class="card-body">
+          <div class="card-route">/support</div>
+          <div class="card-title">Atendimento Pós-Implantação</div>
+          <div class="card-desc">Suporte ao cliente após ativação da solução. Tickets de dúvidas, ajustes e melhorias. SLA definido pelo contrato de serviço.</div>
+          <div class="card-steps">
+            <div class="card-step">Receber tickets do cliente via WhatsApp</div>
+            <div class="card-step">Resolver ajustes de configuração</div>
+            <div class="card-step">Documentar e fechar dentro do SLA</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/cross_analytics.png" alt="Analytics" />
+        <div class="card-body">
+          <div class="card-route">/analytics</div>
+          <div class="card-title">Resultados da Solução</div>
+          <div class="card-desc">Relatório de performance da solução implantada: volume de atendimentos, taxa de resolução automática, ROI e comparativo antes/depois. Base para expansão do contrato.</div>
+          <div class="card-steps">
+            <div class="card-step">Gerar relatório mensal de resultados</div>
+            <div class="card-step">Comparar KPIs pré e pós-implantação</div>
+            <div class="card-step">Apresentar ROI ao cliente para renovação</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">2</div>
+      <div><h2>Gestão de Projetos de Entrega</h2><p>Rastreabilidade de entregas de projetos de serviço com o cliente.</p></div>
+    </div>
+    <div class="infobox"><strong>Trigger:</strong> Projeto contratado é criado na plataforma. Milestones definidos, equipe alocada e cliente acompanha progresso em tempo real.</div>
+    <div class="stepper">
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Criar Projeto</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Alocar Equipe</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Executar Tarefas</div></div><div class="step-arrow">→</div></div>
+      <div class="step"><div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Entrega Final</div></div><div class="step-arrow">→</div></div>
+    </div>
+    <div class="screens">
+      <div class="card">
+        <img src="img/cross_crm.png" alt="CRM" />
+        <div class="card-body">
+          <div class="card-route">/crm</div>
+          <div class="card-title">CRM — Conta do Cliente</div>
+          <div class="card-desc">Dados do cliente contratante: contatos, escopo contratado, valor e histórico de projetos anteriores. Base para todo o relacionamento durante a entrega.</div>
+          <div class="card-steps">
+            <div class="card-step">Registrar dados do contrato e escopo</div>
+            <div class="card-step">Vincular contatos e decisores do cliente</div>
+            <div class="card-step">Registrar marcos e aprovações</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <img src="img/market_generate.png" alt="Gerar Sistema" />
+        <div class="card-body">
+          <div class="card-route">/generate-system</div>
+          <div class="card-title">Geração de Artefatos com IA</div>
+          <div class="card-desc">Para projetos de implementação, uso do gerador de IA para criar fluxos, seeds e configurações iniciais do cliente. Acelera entregas em até 80%.</div>
+          <div class="card-steps">
+            <div class="card-step">Descrever contexto do cliente para IA</div>
+            <div class="card-step">Gerar fluxos e configurações iniciais</div>
+            <div class="card-step">Revisar e ajustar saída da IA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

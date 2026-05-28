@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Jornadas Detalhadas — Alimentação</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--orange:#f97316;--orange-dim:rgba(249,115,22,.15);--orange-border:rgba(249,115,22,.35);--blue:#3b82f6;--teal:#14b8a6;--yellow:#f59e0b;--green:#10b981;--red:#ef4444;--purple:#8b5cf6;--bg:#0f1117;--surface:#1a1d27;--surface2:#222536;--border:#2d3148;--text:#e2e8f0;--muted:#64748b;--subtle:#94a3b8}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.top-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 36px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:200}
+.top-bar a{color:var(--muted);text-decoration:none;font-size:13px}.top-bar a:hover{color:#fff}
+.top-bar .sep{color:var(--border)}.top-bar .crumb{color:var(--text);font-weight:600;font-size:13px}
+.v-badge{background:var(--orange-dim);border:1px solid var(--orange-border);color:var(--orange);border-radius:999px;padding:2px 12px;font-size:11px;font-weight:700}
+.hero{padding:52px 36px 44px;background:linear-gradient(160deg,#1a0d05 0%,var(--bg) 70%);border-bottom:1px solid var(--border)}
+.hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);margin-bottom:10px}
+.hero h1{font-size:36px;font-weight:800;color:#fff;margin-bottom:10px}
+.hero p{color:var(--subtle);font-size:15px;max-width:600px;margin-bottom:24px}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 14px;font-size:12px;color:var(--subtle)}
+.chip.orange{border-color:var(--orange-border);color:var(--orange)}
+.page{max-width:1180px;margin:0 auto;padding:48px 36px 100px}
+.journey-block{margin-bottom:88px}
+.journey-label{display:inline-flex;align-items:center;gap:10px;background:var(--orange-dim);border:1px solid var(--orange-border);border-radius:8px;padding:6px 16px;margin-bottom:18px}
+.journey-label .jnum{font-size:12px;font-weight:800;color:var(--orange)}
+.journey-label .jtitle{font-size:14px;font-weight:700;color:#fff}
+.journey-desc{font-size:14px;color:var(--subtle);max-width:720px;margin-bottom:28px}
+.trigger-box{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:10px;padding:16px 20px;margin-bottom:32px}
+.trigger-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.trigger-box strong{color:var(--orange);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px}
+.trigger-box p{font-size:13px;color:var(--subtle)}
+.stepper{display:flex;align-items:center;overflow-x:auto;gap:0;margin-bottom:36px;padding:2px 0 6px}
+.s-step{flex-shrink:0;display:flex;align-items:center}
+.s-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 18px;min-width:120px}
+.s-box.active{border-color:var(--orange);background:var(--orange-dim)}
+.s-n{font-size:10px;font-weight:700;color:var(--orange);margin-bottom:3px}
+.s-label{font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.s-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.s-arrow{padding:0 10px;color:var(--border);font-size:20px;flex-shrink:0}
+.step-section{margin-bottom:52px}
+.step-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.step-num-badge{width:32px;height:32px;border-radius:50%;background:var(--orange);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 4px var(--orange-dim)}
+.step-header h3{font-size:17px;font-weight:700;color:#fff}
+.step-route{font-family:monospace;font-size:11px;color:var(--orange);background:var(--orange-dim);border:1px solid var(--orange-border);border-radius:4px;padding:2px 8px;margin-left:4px}
+.annotated-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.screenshot-zone{position:relative;display:block;width:100%;line-height:0}
+.screenshot-zone img{width:100%;display:block;opacity:.95}
+.hs{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(249,115,22,.4),0 4px 12px rgba(0,0,0,.5);z-index:10}
+.hs.blue{background:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.teal{background:var(--teal);box-shadow:0 0 0 3px rgba(20,184,166,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.yellow{background:var(--yellow);box-shadow:0 0 0 3px rgba(245,158,11,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.green{background:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.red{background:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.4),0 4px 12px rgba(0,0,0,.5)}
+.hs.purple{background:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.4),0 4px 12px rgba(0,0,0,.5)}
+.hl{position:absolute;border:2px dashed var(--orange);border-radius:6px;background:rgba(249,115,22,.08);pointer-events:none}
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:16px;background:var(--surface2)}
+.ann-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;gap:10px}
+.ann-num{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;margin-top:1px}
+.ann-num.orange{background:var(--orange)}.ann-num.blue{background:var(--blue)}.ann-num.teal{background:var(--teal)}.ann-num.yellow{background:var(--yellow)}.ann-num.green{background:var(--green)}.ann-num.red{background:var(--red)}.ann-num.purple{background:var(--purple)}
+.ann-body strong{font-size:12px;font-weight:700;color:#fff;display:block;margin-bottom:4px}
+.ann-body p{font-size:11px;color:var(--subtle);line-height:1.5}
+.callout{display:flex;gap:14px;border-radius:10px;padding:16px 18px;margin:18px 0;font-size:13px}
+.callout.tip{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.25);border-left:3px solid var(--blue)}
+.callout.warn{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-left:3px solid var(--yellow)}
+.callout.danger{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-left:3px solid var(--red)}
+.callout.success{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-left:3px solid var(--green)}
+.callout-icon{font-size:20px;flex-shrink:0;line-height:1.4}
+.callout strong{display:block;margin-bottom:4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.callout.tip strong{color:var(--blue)}.callout.warn strong{color:var(--yellow)}.callout.danger strong{color:var(--red)}.callout.success strong{color:var(--green)}
+.callout p{color:var(--subtle);line-height:1.5}
+.bubble-row{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;position:relative;flex:1;min-width:200px;font-size:13px;color:var(--subtle)}
+.bubble::before{content:'💬';position:absolute;top:-12px;left:16px;font-size:16px}
+.bubble strong{color:#fff;display:block;margin-bottom:4px;font-size:12px}
+.flow-diagram{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px}
+.flow-node{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;text-align:center;min-width:100px}
+.flow-node .fn-icon{font-size:22px;margin-bottom:6px}
+.flow-node .fn-label{font-size:12px;font-weight:700;color:#fff}
+.flow-node .fn-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.flow-node.highlight{border-color:var(--orange);background:var(--orange-dim)}
+.flow-arrow{color:var(--orange);font-size:22px;padding:0 4px}
+.jdivider{border:none;border-top:1px dashed var(--border);margin:64px 0;position:relative}
+.jdivider::after{content:'◇';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 12px;color:var(--border);font-size:14px}
+.error-callout{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-left:3px solid var(--red);border-radius:10px;padding:14px 18px;margin:16px 0;display:flex;gap:12px;align-items:flex-start}
+.error-callout .icon{font-size:18px;flex-shrink:0}
+.error-callout strong{color:var(--red);font-size:12px;font-weight:700;display:block;margin-bottom:4px}
+.error-callout p{font-size:12px;color:var(--subtle);line-height:1.5}
+.error-callout code{background:rgba(239,68,68,.15);color:#fca5a5;border-radius:4px;padding:1px 6px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../verticals/index.html">← Hub de Verticais</a>
+  <span class="sep">|</span>
+  <span class="crumb">Alimentação — Jornadas Detalhadas</span>
+  <span class="v-badge">Food</span>
+</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">Manual de Jornadas — Vertical Alimentação</div>
+  <h1>🍕 Jornadas de Alimentação</h1>
+  <p>Fluxos anotados para restaurantes, dark kitchens e operações de delivery. Do pedido no WhatsApp à expedição com controle em tempo real.</p>
+  <div class="hero-chips">
+    <span class="chip orange">2 jornadas</span>
+    <span class="chip">Pedidos + Cozinha + Dispatch</span>
+    <span class="chip">QA: aprovado</span>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ════ JORNADA 1 — PEDIDO ATÉ EXPEDIÇÃO ════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 1</span>
+    <span class="jtitle">Pedido via WhatsApp até Expedição</span>
+  </div>
+  <p class="journey-desc">Fluxo completo de um pedido: recepção no WhatsApp, confirmação pelo atendente ou bot, envio para cozinha e despacho para entrega.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">💬</span>
+    <div>
+      <strong>Gatilho</strong>
+      <p>Cliente envia mensagem no WhatsApp com itens do pedido. O bot RAP coleta os itens, confirma o endereço e valor, e cria o pedido no sistema. A cozinha é notificada automaticamente em tempo real via WebSocket.</p>
+    </div>
+  </div>
+
+  <!-- Flow diagram -->
+  <div class="flow-diagram">
+    <div class="flow-node"><div class="fn-icon">📱</div><div class="fn-label">WhatsApp</div><div class="fn-sub">Pedido do cliente</div></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node"><div class="fn-icon">🤖</div><div class="fn-label">Bot RAP</div><div class="fn-sub">Coleta + confirma</div></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node highlight"><div class="fn-icon">🧾</div><div class="fn-label">Pedidos</div><div class="fn-sub">/orders</div></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node highlight"><div class="fn-icon">🍳</div><div class="fn-label">Cozinha</div><div class="fn-sub">/kitchen</div></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node highlight"><div class="fn-icon">🚚</div><div class="fn-label">Expedição</div><div class="fn-sub">/dispatch</div></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node"><div class="fn-icon">✅</div><div class="fn-label">Entregue</div><div class="fn-sub">Notif. WA</div></div>
+  </div>
+
+  <div class="stepper">
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 1</div><div class="s-label">Pedido Criado</div><div class="s-sub">/orders (confirmed)</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 2</div><div class="s-label">Em Preparo</div><div class="s-sub">/kitchen</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 3</div><div class="s-label">Pronto</div><div class="s-sub">/kitchen (ready)</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 4</div><div class="s-label">Despachado</div><div class="s-sub">/dispatch</div></div><div class="s-arrow">→</div></div>
+    <div class="s-step"><div class="s-box active"><div class="s-n">PASSO 5</div><div class="s-label">Entregue</div><div class="s-sub">WA confirmação</div></div></div>
+  </div>
+
+  <!-- Orders -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">1</div>
+      <h3>Painel de Pedidos</h3>
+      <span class="step-route">/orders</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/food_orders.png" alt="Pedidos" />
+        <div class="hs" style="left:11%;top:56%">1</div>
+        <div class="hs blue" style="left:40%;top:13%">2</div>
+        <div class="hs teal" style="left:23%;top:18%">3</div>
+        <div class="hs yellow" style="left:33%;top:18%">4</div>
+        <div class="hs green" style="left:50%;top:28%">5</div>
+        <div class="hs red" style="left:78%;top:7%">6</div>
+        <div class="hs purple" style="left:50%;top:68%">7</div>
+        <div class="hl" style="left:3%;top:52%;width:22%;height:5%"></div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num orange">1</span>
+          <div class="ann-body">
+            <strong>Menu — "Pedidos" Ativo</strong>
+            <p>Item "Pedidos" destacado no menu lateral Operações. Abaixo aparecem "Cozinha" e "Despacho" — os três módulos formam o fluxo completo da jornada de delivery. Clique em cada um para avançar no fluxo.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Título da Tela — Pedidos</strong>
+            <p>Header com breadcrumb "Operação / Monitoramento / Pedidos". Confirma que estamos na área de monitoramento operacional. O título muda para "Cozinha" ou "Expedição" nas telas seguintes.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Filtro "Todos"</strong>
+            <p>Dropdown que filtra por status do pedido: <em>Todos</em>, <em>Confirmado</em> (aguardando cozinha), <em>Em preparo</em>, <em>Pronto</em>, <em>Despachado</em>, <em>Entregue</em>. Mude para "Confirmado" para ver apenas novos pedidos aguardando.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Botão "Recarregar"</strong>
+            <p>Força sincronização com o backend. O painel atualiza automaticamente via WebSocket, mas este botão é útil quando há suspeita de latência ou perda de conexão WebSocket.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Seção de Filtros</strong>
+            <p>"Sem filtros específicos para esta tela." — os filtros são dinâmicos e aparecem quando há configurações de tenant específicas (ex.: filtro por unidade, por entregador ou por canal de origem do pedido).</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num red">6</span>
+          <div class="ann-body">
+            <strong>Toast de Erro da API</strong>
+            <p>A notificação vermelha indica que a rota de API <code>/orders?status=confirmed&amp;limit=50</code> retornou HTML ao invés de JSON. Isso ocorre porque a rota de API do tenant ainda precisa ser configurada em <strong>/config → Geral</strong>. Ver solução abaixo.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num purple">7</span>
+          <div class="ann-body">
+            <strong>Estado Vazio — "Nenhum pedido"</strong>
+            <p>Exibido quando não há pedidos com o filtro selecionado. Em operação normal, novos pedidos aparecem aqui em tempo real assim que são criados pelo bot ou atendente no módulo /support.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-callout">
+      <span class="icon">🔧</span>
+      <div>
+        <strong>Configuração Necessária — Rota de API</strong>
+        <p>O toast de erro indica que a integração com o sistema de pedidos do tenant não está configurada. Para resolver: (1) acesse <strong>/config → Geral</strong>, (2) configure o endpoint base do sistema de pedidos em <code>orders.api_base_url</code>, (3) adicione o token de autenticação em <code>orders.api_token</code>. Após salvar, recarregue a tela de Pedidos e os dados devem aparecer.</p>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>Fluxo Manual (sem integração)</strong>
+        <p>Enquanto a integração não está configurada, o atendente pode gerenciar pedidos diretamente em <strong>/support</strong>: (1) abre a conversa do cliente, (2) confirma os itens e valor, (3) clica em "Criar pedido manual" e (4) encaminha para a cozinha via chat interno. Menos eficiente, mas funcional até a integração ser ativada.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kitchen -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">2</div>
+      <h3>Painel de Cozinha</h3>
+      <span class="step-route">/kitchen</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/food_kitchen.png" alt="Cozinha" />
+        <div class="hs" style="left:11%;top:62%">1</div>
+        <div class="hs blue" style="left:40%;top:13%">2</div>
+        <div class="hs teal" style="left:27%;top:18%">3</div>
+        <div class="hs yellow" style="left:50%;top:28%">4</div>
+        <div class="hs green" style="left:50%;top:68%">5</div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num orange">1</span>
+          <div class="ann-body">
+            <strong>Menu — "Cozinha" Ativo</strong>
+            <p>Segundo item do submenu de delivery. Esta tela é geralmente aberta em um tablet ou monitor separado na cozinha, permanecendo em exibição contínua durante o expediente. Não requer login frequente.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Título — Cozinha</strong>
+            <p>Interface da equipe de preparo. Exibe em tempo real os pedidos aguardando preparo em ordem de chegada (FIFO). A equipe não vê o endereço do cliente — apenas os itens do pedido.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Botão Recarregar</strong>
+            <p>O painel de cozinha atualiza via WebSocket automaticamente. O botão "Recarregar" é um fallback manual para ambientes com rede instável. Recomenda-se instalar o painel em rede dedicada (não wifi dos clientes).</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Filtros de Cozinha</strong>
+            <p>Filtros dinâmicos por categoria de produto (ex.: Grelhados, Fritos, Sobremesas) permitem que cozinheiros filtrem apenas seus pedidos quando a cozinha tem estações especializadas.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>Fila de Preparo — "Nenhum pedido aguardando"</strong>
+            <p>Estado esperado quando a integração de pedidos não está configurada. Em operação, cada card mostra: número do pedido, itens, observações, tempo decorrido e botão "Marcar como Pronto" que move automaticamente para /dispatch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bubble-row">
+      <div class="bubble">
+        <strong>Timer Visual de Pedido</strong>
+        Cada card de pedido tem um timer que começa a contar no momento que o pedido chega. Cards ficam amarelos após 10 min e vermelhos após 20 min — alertas visuais que a equipe deve agir imediatamente.
+      </div>
+      <div class="bubble">
+        <strong>Prioridade de Preparo</strong>
+        Pedidos de clientes VIP (configurados no CRM) aparecem com um ícone de estrela dourada e são automaticamente movidos para o topo da fila independentemente da ordem de chegada.
+      </div>
+      <div class="bubble">
+        <strong>Marcar como Pronto</strong>
+        Ao clicar "Pronto", o pedido desaparece da cozinha e aparece instantaneamente em /dispatch. O cliente recebe uma notificação automática "Seu pedido está pronto e será entregue em breve!"
+      </div>
+    </div>
+  </div>
+
+  <!-- Dispatch -->
+  <div class="step-section">
+    <div class="step-header">
+      <div class="step-num-badge">4</div>
+      <h3>Expedição</h3>
+      <span class="step-route">/dispatch</span>
+    </div>
+
+    <div class="annotated-wrapper">
+      <div class="screenshot-zone">
+        <img src="../verticals/img/food_dispatch.png" alt="Despacho" />
+        <div class="hs" style="left:11%;top:68%">1</div>
+        <div class="hs blue" style="left:40%;top:13%">2</div>
+        <div class="hs teal" style="left:27%;top:18%">3</div>
+        <div class="hs yellow" style="left:50%;top:28%">4</div>
+        <div class="hs green" style="left:50%;top:68%">5</div>
+      </div>
+      <div class="ann-grid">
+        <div class="ann-card">
+          <span class="ann-num orange">1</span>
+          <div class="ann-body">
+            <strong>Menu — "Despacho" Ativo</strong>
+            <p>Terceiro item do fluxo de delivery. Esta tela é operada pelo despachante ou recepcionista da loja que coordena a saída dos entregadores e monitora pedidos em rota.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num blue">2</span>
+          <div class="ann-body">
+            <strong>Título — Expedição</strong>
+            <p>Pedidos prontos aguardando designação de entregador. O despachante seleciona o entregador disponível, confirma o endereço e clica "Despachar". O status do pedido muda para "Em rota".</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num teal">3</span>
+          <div class="ann-body">
+            <strong>Recarregar</strong>
+            <p>Sincroniza com os pedidos que a cozinha marcou como "Prontos". Qualquer pedido concluído na cozinha aparece aqui em segundos via WebSocket, sem necessidade de recarregar manualmente.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num yellow">4</span>
+          <div class="ann-body">
+            <strong>Filtros de Expedição</strong>
+            <p>Filtros por entregador, zona de entrega e modal (moto, bicicleta, a pé) permitem otimizar o despacho baseado na localização dos entregadores disponíveis no momento.</p>
+          </div>
+        </div>
+        <div class="ann-card">
+          <span class="ann-num green">5</span>
+          <div class="ann-body">
+            <strong>"Nenhum pedido pronto para expedição"</strong>
+            <p>Estado limpo esperado quando a integração não está configurada. Em operação normal, cada card mostra: endereço de entrega, tempo estimado, valor do pedido e campos para selecionar o entregador.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>
+        <strong>Notificação Automática ao Cliente</strong>
+        <p>Ao despachar, o sistema envia automaticamente ao cliente via WhatsApp: "Seu pedido #[número] saiu para entrega! Previsão: [tempo estimado] min. Pedido total: R$ [valor]." O cliente pode responder para comunicar com o atendente em /support se necessário.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="jdivider" />
+
+<!-- ════ JORNADA 2 — CAMPANHAS ════ -->
+<div class="journey-block">
+  <div class="journey-label">
+    <span class="jnum">JORNADA 2</span>
+    <span class="jtitle">Cardápio Digital e Campanhas de Fidelidade</span>
+  </div>
+  <p class="journey-desc">Publicação de novidades no cardápio e campanhas de retorno para clientes que pediram nos últimos 30 dias.</p>
+
+  <div class="trigger-box">
+    <span class="trigger-icon">📣</span>
+    <div>
+      <strong>Gatilho Semanal</strong>
+      <p>Toda quarta-feira, o operador cria uma campanha de novidade ou promoção do fim de semana. O template WhatsApp (aprovado pela Meta) é disparado para a base de clientes que pediram nos últimos 30 dias entre 11h e 13h.</p>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-icon">💡</span>
+    <div>
+      <strong>Segmentação por Último Pedido</strong>
+      <p>Use em <strong>/bulk-messaging</strong> a segmentação "Clientes do Food" → "Pedido nos últimos 30 dias" para garantir que apenas clientes recentes recebam a campanha. Clientes que não pediram há mais de 90 dias recebem a campanha de "Saudades de você" com desconto maior (ex.: 20% no próximo pedido).</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div>
+      <strong>Respeite a Janela de Silêncio</strong>
+      <p>Nunca dispare campanhas de Food entre 14h-17h (clientes acabaram de almoçar, propensão baixa) e após 21h (hora do jantar já passou). Os melhores horários são <strong>11h-12h</strong> (almoço) e <strong>18h-19h</strong> (jantar). Configure o agendamento em /bulk-messaging antes de criar a campanha.</p>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

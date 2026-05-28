@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Jornadas — Alimentação (Food)</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.6; }
+
+    .top-bar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 14px 40px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 50; }
+    .top-bar .back { color: #64748b; text-decoration: none; font-size: 13px; }
+    .top-bar .back:hover { color: #fff; }
+    .top-bar .divider { color: #2d3148; }
+    .top-bar .title { font-weight: 700; font-size: 15px; color: #fff; }
+    .vertical-badge { background: rgba(249,115,22,.15); border: 1px solid rgba(249,115,22,.4); color: #fb923c; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; }
+
+    .hero { padding: 56px 40px 40px; border-bottom: 1px solid #2d3148; background: linear-gradient(135deg, #1a1208 0%, #0f1117 100%); }
+    .hero-inner { max-width: 900px; }
+    .hero-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #f97316; margin-bottom: 10px; }
+    .hero h1 { font-size: 34px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .hero p { color: #94a3b8; font-size: 15px; max-width: 640px; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .htag { background: #1a1d27; border: 1px solid #2d3148; border-radius: 999px; padding: 4px 14px; font-size: 12px; color: #94a3b8; }
+    .htag.orange { border-color: rgba(249,115,22,.4); color: #fb923c; }
+
+    .content { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; }
+
+    .journey { margin-bottom: 72px; }
+    .journey-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
+    .journey-num { width: 40px; height: 40px; border-radius: 10px; background: rgba(249,115,22,.15); border: 1px solid rgba(249,115,22,.3); color: #f97316; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .journey-header h2 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .journey-header p { font-size: 13px; color: #64748b; }
+
+    .stepper { display: flex; gap: 0; margin-bottom: 36px; overflow-x: auto; padding-bottom: 4px; }
+    .step { display: flex; align-items: center; flex-shrink: 0; }
+    .step-box { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 16px; font-size: 12px; white-space: nowrap; }
+    .step-box .step-n { font-size: 10px; color: #f97316; font-weight: 700; margin-bottom: 2px; }
+    .step-box .step-label { color: #e2e8f0; font-weight: 600; }
+    .step-arrow { color: #2d3148; font-size: 18px; padding: 0 8px; }
+
+    .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 24px; }
+    .card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; overflow: hidden; }
+    .card img { width: 100%; display: block; border-bottom: 1px solid #2d3148; aspect-ratio: 16/9; object-fit: cover; object-position: top; }
+    .card-body { padding: 16px; }
+    .card-route { font-family: monospace; font-size: 11px; color: #f97316; margin-bottom: 6px; }
+    .card-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .card-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
+    .card-steps { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e2235; }
+    .card-step { font-size: 11px; color: #94a3b8; padding: 3px 0; display: flex; gap: 6px; }
+    .card-step::before { content: '→'; color: #f97316; flex-shrink: 0; }
+
+    .infobox { background: rgba(249,115,22,.06); border: 1px solid rgba(249,115,22,.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; font-size: 13px; color: #94a3b8; }
+    .infobox strong { color: #fb923c; }
+    .divider-line { border: none; border-top: 1px solid #2d3148; margin: 56px 0; }
+    .flow-diagram { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; padding: 24px; margin-bottom: 32px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+    .flow-node { background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; padding: 10px 16px; text-align: center; font-size: 12px; }
+    .flow-node .icon { font-size: 20px; display: block; margin-bottom: 4px; }
+    .flow-node .label { color: #e2e8f0; font-weight: 600; }
+    .flow-node .sub { color: #64748b; font-size: 10px; }
+    .flow-arrow { color: #f97316; font-size: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="index.html" class="back">← Hub de Verticais</a>
+  <span class="divider">|</span>
+  <span class="title">Alimentação</span>
+  <span class="vertical-badge">Food</span>
+</div>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">Vertical</div>
+    <h1>🍕 Alimentação</h1>
+    <p>Jornadas para restaurantes, dark kitchens, lanchonetes e delivery. Cobertura do pedido via WhatsApp até a expedição, com painel de cozinha em tempo real.</p>
+    <div class="hero-tags">
+      <span class="htag orange">2 jornadas</span>
+      <span class="htag">3 telas dedicadas</span>
+      <span class="htag">QA: aprovado</span>
+      <span class="htag">Replay: ativo</span>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ═══ JORNADA 1 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">1</div>
+      <div>
+        <h2>Pedido via WhatsApp até Expedição</h2>
+        <p>Da mensagem do cliente ao pedido entregue, com controle em tempo real.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Cliente envia mensagem no WhatsApp com pedido. O bot de atendimento coleta os itens, confirma o endereço e cria o pedido no sistema. A cozinha recebe e inicia o preparo.
+    </div>
+
+    <div class="flow-diagram">
+      <div class="flow-node"><span class="icon">💬</span><span class="label">WhatsApp</span><span class="sub">Pedido do cliente</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><span class="icon">🤖</span><span class="label">Bot RAP</span><span class="sub">Coleta itens + endereço</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><span class="icon">🧾</span><span class="label">Pedidos</span><span class="sub">/orders</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><span class="icon">🍳</span><span class="label">Cozinha</span><span class="sub">/kitchen</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><span class="icon">🚚</span><span class="label">Expedição</span><span class="sub">/dispatch</span></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node"><span class="icon">✅</span><span class="label">Entregue</span><span class="sub">Confirmação WA</span></div>
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Pedido Recebido</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Em Preparo</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Pronto p/ Entrega</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Em Rota</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Entregue</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/clinic_support.png" alt="Atendimento" />
+        <div class="card-body">
+          <div class="card-route">/support</div>
+          <div class="card-title">Atendimento — Recepção do Pedido</div>
+          <div class="card-desc">O atendente (ou bot) recebe a conversa do cliente no WhatsApp. Confirma os itens do pedido, verifica disponibilidade e registra endereço de entrega ou retirada.</div>
+          <div class="card-steps">
+            <div class="card-step">Receber mensagem de pedido no WhatsApp</div>
+            <div class="card-step">Confirmar itens e valor total com o cliente</div>
+            <div class="card-step">Registrar forma de pagamento e entrega/retirada</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/food_orders.png" alt="Pedidos" />
+        <div class="card-body">
+          <div class="card-route">/orders</div>
+          <div class="card-title">Painel de Pedidos</div>
+          <div class="card-desc">Visão consolidada de todos os pedidos do dia com filtros por status (confirmed, ready, dispatched). Atualização em tempo real via WebSocket. Sem pedido fica aguardando o fluxo de entrada.</div>
+          <div class="card-steps">
+            <div class="card-step">Visualizar pedido recém-criado (status: confirmed)</div>
+            <div class="card-step">Encaminhar para cozinha com 1 clique</div>
+            <div class="card-step">Acompanhar status de todos os pedidos</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/food_kitchen.png" alt="Cozinha" />
+        <div class="card-body">
+          <div class="card-route">/kitchen</div>
+          <div class="card-title">Painel de Cozinha</div>
+          <div class="card-desc">Interface da equipe de preparo. Exibe pedidos aguardando preparo em ordem de chegada. Ao concluir, a equipe marca como pronto e o pedido vai para expedição automaticamente.</div>
+          <div class="card-steps">
+            <div class="card-step">Visualizar fila de preparo em tempo real</div>
+            <div class="card-step">Iniciar preparo e marcar tempo de início</div>
+            <div class="card-step">Marcar "Pronto" → pedido vai para expedição</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/food_dispatch.png" alt="Expedição" />
+        <div class="card-body">
+          <div class="card-route">/dispatch</div>
+          <div class="card-title">Expedição</div>
+          <div class="card-desc">Painel de despacho com pedidos prontos para saída. O despachante associa o entregador, registra saída e o cliente recebe notificação automática de "Em rota" via WhatsApp.</div>
+          <div class="card-steps">
+            <div class="card-step">Receber pedidos prontos da cozinha</div>
+            <div class="card-step">Associar entregador disponível</div>
+            <div class="card-step">Despachar e notificar cliente via WhatsApp</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider-line" />
+
+  <!-- ═══ JORNADA 2 ═══ -->
+  <div class="journey">
+    <div class="journey-header">
+      <div class="journey-num">2</div>
+      <div>
+        <h2>Cardápio Digital e Campanhas</h2>
+        <p>Publicação de cardápio via WhatsApp e campanhas de fidelidade.</p>
+      </div>
+    </div>
+
+    <div class="infobox">
+      <strong>Trigger:</strong> Operador atualiza o cardápio e deseja comunicar aos clientes. Disparo de campanha "Novidade no cardápio" ou promoção de fidelidade para base cadastrada.
+    </div>
+
+    <div class="stepper">
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 1</div><div class="step-label">Criar Template</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 2</div><div class="step-label">Segmentar Base</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 3</div><div class="step-label">Disparar Campanha</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 4</div><div class="step-label">Pedidos Recebidos</div></div>
+        <div class="step-arrow">→</div>
+      </div>
+      <div class="step">
+        <div class="step-box"><div class="step-n">PASSO 5</div><div class="step-label">Análise de ROI</div></div>
+      </div>
+    </div>
+
+    <div class="screens">
+      <div class="card">
+        <img src="img/cross_templates.png" alt="Templates" />
+        <div class="card-body">
+          <div class="card-route">/whatsapp-templates</div>
+          <div class="card-title">Template "Novidade no Cardápio"</div>
+          <div class="card-desc">Criação de template aprovado pela Meta com foto do prato, descrição e CTA "Peça agora". Variáveis: nome do cliente, nome do prato, preço especial.</div>
+          <div class="card-steps">
+            <div class="card-step">Criar template com imagem do prato</div>
+            <div class="card-step">Aguardar aprovação Meta (24-48h)</div>
+            <div class="card-step">Ativar para disparo em massa</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_bulk.png" alt="Disparos" />
+        <div class="card-body">
+          <div class="card-route">/bulk-messaging</div>
+          <div class="card-title">Campanha "Promoção do Dia"</div>
+          <div class="card-desc">Disparo segmentado para clientes que pediram nos últimos 30 dias. Personalização com nome e último pedido favorito. Limite de horário de envio (11h-13h ou 18h-20h).</div>
+          <div class="card-steps">
+            <div class="card-step">Selecionar base: pedidos últimos 30 dias</div>
+            <div class="card-step">Programar para horário de decisão (11h ou 18h)</div>
+            <div class="card-step">Monitorar aberturas e respostas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="img/cross_analytics.png" alt="Analytics" />
+        <div class="card-body">
+          <div class="card-route">/analytics</div>
+          <div class="card-title">ROI da Campanha</div>
+          <div class="card-desc">Métricas: pedidos gerados pela campanha, ticket médio, taxa de conversão (mensagem → pedido), custo por conversão e ROI final da ação promocional.</div>
+          <div class="card-steps">
+            <div class="card-step">Correlacionar disparos com pedidos recebidos</div>
+            <div class="card-step">Calcular ticket médio dos pedidos de campanha</div>
+            <div class="card-step">Ajustar estratégia para próxima campanha</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
