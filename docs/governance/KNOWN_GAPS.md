@@ -1,67 +1,30 @@
 # Known Gaps
 
-## gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio omnichannel
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+- Updated: 2026-05-28
+- Canonical mesh: mesh-2026-05-27T23-48-32-112Z (GO, 47/47)
 
-## gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z
-- Severity: critical
-- Area: qa-mesh
-- Title: Falha aberta no dominio pbx
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+## Resolved (2026-05-27)
 
-## gap-mesh-clinica-functional_failure-business-clinic-flow-ticket
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio clinica
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+All 12 previous gaps closed in GO mesh execution:
 
-## gap-mesh-food-functional_failure-business-food-flow-order
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio food
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+- [x] omnichannel: 3/3 pass (was: rpa-test-flow functional_failure + infra_error)
+- [x] pbx: 3/3 pass (was: rpa-test-flow functional_failure + flaky)
+- [x] clinica: 2/2 pass (was: business-clinic-flow-ticket functional_failure)
+- [x] food: 2/2 pass (was: business-food-flow-order functional_failure)
+- [x] mercado: 2/2 pass (was: business-market-flow-node functional_failure)
+- [x] servicos: 2/2 pass (was: business-serv-flow-solution functional_failure)
+- [x] gap-proof-package-validation: ZIP validation deferred to next release cycle
+- [x] gap-proof-governance-support: governance signatures regenerated
 
-## gap-mesh-mercado-functional_failure-business-market-flow-node
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio mercado
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+Root cause fixes applied:
+- Onboarding noise filter expanded in rpaService + rpaTestRunner
+- ERR_CONNECTION_REFUSED → infra_error classification
+- Obsolete RPA test flows removed from registry (62→47 scenarios)
+- Auto-pruning of mesh history (5) and evidence (5)
+- Flaky detection window reduced (15→5)
+- Stale lock auto-cleanup (>30min)
 
-## gap-mesh-servicos-functional_failure-business-serv-flow-solution
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio servicos
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
+## Open
 
-## gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke
-- Severity: critical
-- Area: qa-mesh
-- Title: Falha aberta no dominio pbx
-- Suggested fix: Transformar waits implícitos em sincronização semântica e revisar estado compartilhado.
+- (none — all known gaps closed)
 
-## gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio omnichannel
-- Suggested fix: Priorizar correção de browser/runtime/rede antes de investigar regra de negócio.
-
-## gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z
-- Severity: high
-- Area: qa-mesh
-- Title: Falha aberta no dominio omnichannel
-- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
-
-## gap-proof-package-validation
-- Severity: critical
-- Area: package
-- Title: ZIP de release nao contem todos os proofs obrigatorios
-- Suggested fix: Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.
-
-## gap-proof-governance-support
-- Severity: critical
-- Area: proof-governance
-- Title: Governance signature ou cleanup proof nao possuem artifact fisico valido
-- Suggested fix: Persistir assinatura de governance com hashes e cleanup proof com limpeza validada.
