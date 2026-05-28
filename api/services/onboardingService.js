@@ -45,40 +45,119 @@ function safeErrorMessage(err, fallback = '') {
 }
 
 /**
- * Checklist de onboarding.
+ * Checklist de onboarding com 3 níveis de prioridade.
+ * 
+ * 🔴 required: bloqueia acesso se não completo (validado via API)
+ * 🟡 recommended: aparece com destaque, não bloqueia
+ * ⚪ optional: aparece na checklist sem urgência
  */
 const ONBOARDING_CHECKLIST = {
+  // 🔴 OBRIGATÓRIO — validado automaticamente
+  configure_ai_provider: {
+    label: 'Configurar provider de IA',
+    description: 'Configure OpenAI, DeepSeek ou Anthropic para o motor de IA',
+    required: true,
+    category: 'required',
+    autoDetect: true,
+  },
   create_admin_user: {
     label: 'Criar usuário administrador',
     description: 'Crie o primeiro usuário administrador do tenant',
     required: true,
+    category: 'required',
+    autoDetect: true,
+  },
+
+  // 🟡 RECOMENDADO
+  configure_billing: {
+    label: 'Configurar billing',
+    description: 'Configure o provider de cobrança (Asaas ou Mercado Pago)',
+    required: false,
+    category: 'recommended',
+  },
+  configure_notifications: {
+    label: 'Configurar notificações',
+    description: 'Configure email e WhatsApp para notificações do sistema',
+    required: false,
+    category: 'recommended',
   },
   create_first_agent: {
     label: 'Criar primeiro agente IA',
     description: 'Configure seu primeiro agente de IA',
     required: false,
+    category: 'recommended',
   },
+
+  // ⚪ OPCIONAL
   create_first_flow: {
     label: 'Criar primeiro fluxo',
     description: 'Crie seu primeiro fluxo de conversação',
     required: false,
+    category: 'optional',
   },
   create_first_queue: {
     label: 'Criar primeira fila',
     description: 'Configure sua primeira fila de atendimento',
     required: false,
+    category: 'optional',
   },
   configure_branding: {
     label: 'Configurar branding',
     description: 'Personalize o visual da plataforma',
     required: false,
+    category: 'optional',
   },
   index_documents: {
     label: 'Indexar documentos',
     description: 'Adicione documentos à base de conhecimento',
     required: false,
+    category: 'optional',
   },
 };
+
+/**
+ * Auto-detecção: verifica se já existe um admin no tenant.
+ */
+function hasAdminUser(tenant) {
+  try {
+    const agents = tenant?.settings?.agents || tenant?.agents || [];
+    if (Array.isArray(agents) && agents.length > 0) {
+      return agents.some(a => {
+        const role = String(a?.role || '').trim().toLowerCase();
+        return role === 'admin' || role === 'owner' || role === 'super_admin';
+      });
+    }
+    return Boolean(tenant?.ownerId || tenant?.createdBy);
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Auto-detecção: verifica se o tenant tem provider de IA configurado.
+ */
+function hasAiProvider(tenant) {
+  try {
+    const aiConfig = tenant?.settings?.ai || tenant?.aiConfig || {};
+    const primary = aiConfig?.primary || aiConfig?.provider || null;
+    return Boolean(primary);
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Verifica se o onboarding está bloqueando o acesso.
+ * @returns {{ blocking: boolean, missingSteps: string[] }}
+ */
+function isOnboardingBlocking(tenantId) {
+  const status = getOnboardingStatus(tenantId);
+  if (!status) return { blocking: false, missingSteps: [] };
+  const missing = status.steps
+    .filter(s => s.required && !s.completed)
+    .map(s => s.id);
+  return { blocking: missing.length > 0, missingSteps: missing };
+}
 
 /**
  * Obtém o status de onboarding de um tenant.
@@ -94,8 +173,16 @@ function getOnboardingStatus(tenantId) {
 
   const onboarding = tenant.settings?.onboarding || {};
   const completed = onboarding.completed || false;
-  const completedSteps = onboarding.completedSteps || [];
-  const currentStep = onboarding.currentStep || 'create_admin_user';
+  let completedSteps = onboarding.completedSteps || [];
+  const currentStep = onboarding.currentStep || 'configure_ai_provider';
+
+  // Auto-detecção: marca steps que já estão satisfeitos
+  if (hasAdminUser(tenant) && !completedSteps.includes('create_admin_user')) {
+    completedSteps = [...completedSteps, 'create_admin_user'];
+  }
+  if (hasAiProvider(tenant) && !completedSteps.includes('configure_ai_provider')) {
+    completedSteps = [...completedSteps, 'configure_ai_provider'];
+  }
 
   // Calcula progresso
   const totalSteps = Object.keys(ONBOARDING_CHECKLIST).length;
@@ -485,6 +572,7 @@ async function completeOnboarding(tenantId) {
 
 module.exports = {
   getOnboardingStatus,
+  isOnboardingBlocking,
   completeOnboardingStep,
   startOnboarding,
   createInitialTemplates,

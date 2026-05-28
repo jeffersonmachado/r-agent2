@@ -11,7 +11,7 @@ import { useToast } from './Toast';
 import { TenantSelectorModal } from './TenantSelectorModal';
 import logger from '../utils/logger';
 import { getBasePath, getStaticUrl } from '../utils';
-import { validateTenantAiCredentials, getIntegrationConfigReadiness } from '../api/config';
+import { getOnboardingCheck } from '../api/onboarding';
 import { isSuperAdmin as checkIsSuperAdmin } from '../utils/menuPermissions';
 
 export function Login() {
@@ -79,123 +79,47 @@ export function Login() {
           return;
         }
         
-        // Verifica se o tenant tem provider de IA válido ANTES de atualizar o agente e fechar o modal
-        // IMPORTANTE: O login via formulário sempre exige confirmação do tenant
+        // Verifica se o onboarding está bloqueando o acesso
+        // Usa GET /onboarding/check que consolida todas as verificações obrigatórias
         try {
-          console.log('[Login] Verificando provider de IA para o tenant selecionado:', tenant.id);
-          const aiCredentialsStatus = await validateTenantAiCredentials({ tenantId: tenant.id });
-          console.log('[Login] Resposta completa da verificação (ai-credentials/test):', JSON.stringify(aiCredentialsStatus, null, 2));
-          
-          // Regra estrita: precisa ser explicitamente valid === true
-          const hasValidProvider = aiCredentialsStatus && 
-                               typeof aiCredentialsStatus === 'object' && 
-                               aiCredentialsStatus.valid === true;
-          
-          if (!hasValidProvider) {
-            console.log('[Login] ❌ Tenant NÃO tem provider de IA válido. Status:', aiCredentialsStatus);
-            console.log('[Login] Detalhes da verificação:', {
-              hasStatus: !!aiCredentialsStatus,
-              isObject: typeof aiCredentialsStatus === 'object',
-              validValue: aiCredentialsStatus?.valid,
-              validType: typeof aiCredentialsStatus?.valid,
-              isTrue: aiCredentialsStatus?.valid === true,
-              provider: aiCredentialsStatus?.provider ?? null,
-              error: aiCredentialsStatus?.error ?? null,
-            });
-            
-            // IMPORTANTE: Atualiza o agente ANTES de redirecionar para que o campo de config apareça
-            console.log('[Login] Atualizando agente antes de redirecionar para /config...');
+          console.log('[Login] Verificando onboarding para o tenant:', tenant.id);
+          const onboardingCheck = await getOnboardingCheck();
+          console.log('[Login] Onboarding check:', JSON.stringify(onboardingCheck));
+
+          if (onboardingCheck?.blocking) {
+            const missingPreview = (onboardingCheck.missingSteps || []).join(', ');
+            console.log('[Login] ❌ Onboarding bloqueado. Steps pendentes:', missingPreview);
+
             updateAgent(updatedAgent);
             setIsSuperAdminLogin(false);
-            // Fecha o modal antes de redirecionar para evitar "travamento" visual
-            // (a navegação ocorre, mas o modal ficava por cima e dava a impressão de que não acessou)
             setShowTenantModal(false);
-            
+
             showToast(
-              aiCredentialsStatus?.error
-                ? `Provider de IA inválido/não configurado: ${aiCredentialsStatus.error}`
-                : 'Configure um provider de IA para o tenant antes de continuar',
-              'warning'
+              'Configure os itens obrigatórios do onboarding para continuar.',
+              'warning',
+              8000
             );
-            
-            // Usa requestAnimationFrame para garantir que o React processou a atualização do estado
+
             requestAnimationFrame(() => {
               setTimeout(() => {
-                console.log('[Login] Redirecionando para /config após verificação de provider');
                 try {
-                  navigate(`/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`);
-                  console.log('[Login] Comando navigate para /onboarding executado');
-                  
-                  // Verifica se o redirecionamento funcionou após um tempo
-                  setTimeout(() => {
-                    const stillInLogin = window.location.pathname.includes('/login');
-                    const inOnboarding = window.location.pathname.includes('/onboarding');
-                    if (stillInLogin || !inOnboarding) {
-                      console.warn('[Login] ⚠️ Redirecionamento via SPA falhou, usando hard redirect');
-                      const basePath = getBasePath() || '';
-                      window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
-                    }
-                  }, 500);
-                } catch (err) {
-                  console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
+                  navigate(`/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}`);
+                } catch (_) {
                   const basePath = getBasePath() || '';
-                  window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
+                  window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}`;
                 }
               }, 300);
             });
-            return; // Não continua para /support, mas agente já foi atualizado
-          }
-          
-          console.log('[Login] ✅ Tenant tem provider de IA válido, continuando para /support');
-
-          // Verificação global de integrações (billing/notificações/whatsapp).
-          // ⚠️ NÃO bloqueia mais o acesso — apenas exibe aviso com toast.
-          // O servidor continua carregando normalmente; redirect só ocorre se o usuário
-          // quiser resolver pendências explicitamente.
-          try {
-            const readiness = await getIntegrationConfigReadiness();
-            if (!readiness?.ready) {
-              const missing = (readiness?.missing || []).map((item) => item?.path).filter(Boolean);
-              const preview = missing.slice(0, 4).join(', ');
-              showToast(
-                preview
-                  ? `⚠️ Configurações pendentes: ${preview}${missing.length > 4 ? '...' : ''}. Configure em Admin > Onboarding.`
-                  : '⚠️ Configurações de integração pendentes. Configure em Admin > Onboarding.',
-                'warning',
-                12000
-              );
-              // NÃO bloqueia: continua para /workspace normalmente
-            }
-          } catch (readinessErr) {
-            logger.warn('Não foi possível validar prontidão de integrações no login', readinessErr);
+            return;
           }
         } catch (err) {
-          console.error('[Login] Erro ao verificar provider de IA:', err);
-          logger.warn('Erro ao verificar provider de IA do tenant, bloqueando fluxo e redirecionando para onboarding', err);
-          
-          // Neste caso, NÃO podemos ignorar: sem saber o status do provider, não deixamos prosseguir.
-          // Atualiza o agente e redireciona para onboarding obrigatório do tenant selecionado.
-          updateAgent(updatedAgent);
-          setIsSuperAdminLogin(false);
-          setShowTenantModal(false);
-          
-          showToast('Não foi possível verificar o provider de IA do tenant. Redirecionando para onboarding obrigatório.', 'warning', 8000);
-          
-          requestAnimationFrame(() => {
-            setTimeout(() => {
-              try {
-                navigate(`/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`);
-              } catch (navErr) {
-                console.error('[Login] Erro ao usar navigate, tentando window.location:', navErr);
-                const basePath = getBasePath() || '';
-                window.location.href = `${basePath}/onboarding?source=login&tenant=${encodeURIComponent(tenant.id)}&required=ai`;
-              }
-            }, 300);
-          });
-          return;
+          console.error('[Login] Erro ao verificar onboarding:', err);
+          logger.warn('Erro ao verificar onboarding, permitindo acesso', err);
+          // Se falhar a verificação, permite acesso (não bloqueia por erro de rede)
         }
-        
-        // Só atualiza agente e fecha modal se chegou até aqui (provider válido ou erro na verificação)
+
+        console.log('[Login] ✅ Onboarding check passou, continuando para /workspace');
+
         // Atualiza o agente no contexto de autenticação
         console.log('[Login] Atualizando agente antes de redirecionar...');
         updateAgent(updatedAgent);

@@ -42,6 +42,25 @@ async function handleOnboardingRoutes(ctx) {
     return true;
   }
 
+  // GET /onboarding/check — verifica se onboarding bloqueia acesso
+  if (method === 'GET' && pathname === '/onboarding/check') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+
+    if (!req.tenantId) {
+      sendJson(res, 403, { error: 'tenant_id_required' });
+      return true;
+    }
+
+    const { isOnboardingBlocking } = require('../../services/onboardingService');
+    const result = isOnboardingBlocking(req.tenantId);
+    sendJson(res, 200, result);
+    return true;
+  }
+
   // POST /onboarding/start
   if (method === 'POST' && pathname === '/onboarding/start') {
     const authResult = requireAuth(req);

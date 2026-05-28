@@ -1,6 +1,16 @@
 import { fetchJson } from './client';
 
 /**
+ * Verifica se o onboarding está bloqueando o acesso.
+ * Retorna { blocking: boolean, missingSteps: string[] }
+ */
+export async function getOnboardingCheck() {
+  return fetchJson('/onboarding/check', {
+    method: 'GET',
+  });
+}
+
+/**
  * Obtém status de onboarding do tenant
  */
 export async function getOnboardingStatus() {

@@ -220,6 +220,61 @@ export function OnboardingPage() {
     }
   };
 
+  // Renderiza um step da checklist
+  const renderStep = (step) => (
+    <div
+      key={step.id}
+      className={`p-4 rounded-lg border ${
+        step.completed
+          ? 'bg-green-500/10 border-green-500/30'
+          : step.required
+          ? 'bg-yellow-500/10 border-yellow-500/30'
+          : 'bg-bg-secondary border-border-default'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            {step.completed ? (
+              <span className="text-2xl">✅</span>
+            ) : step.autoDetect ? (
+              <span className="text-2xl">🔍</span>
+            ) : (
+              <span className="text-2xl">⭕</span>
+            )}
+            <h3 className="text-lg font-medium text-text-primary">
+              {step.label}
+              {step.required && (
+                <span className="ml-2 text-xs text-red-500">(Obrigatório)</span>
+              )}
+            </h3>
+          </div>
+          <p className="text-sm text-text-secondary ml-11">{step.description}</p>
+        </div>
+        {!step.completed && !step.autoDetect && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              if (step.id === 'create_first_queue' || step.id === 'index_documents') {
+                handleCreateTemplates();
+              } else {
+                handleCompleteStep(step.id);
+              }
+            }}
+          >
+            Completar
+          </Button>
+        )}
+        {!step.completed && step.autoDetect && (
+          <span className="text-xs text-text-tertiary px-3 py-1 rounded bg-bg-tertiary">
+            Detectado automaticamente — recarregue para verificar
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -408,54 +463,49 @@ export function OnboardingPage() {
           </div>
         </div>
         <h2 className="text-xl font-semibold mb-4">Checklist de Configuração</h2>
-        <div className="space-y-4">
-          {onboarding.steps?.map((step) => (
-            <div
-              key={step.id}
-              className={`p-4 rounded-lg border ${
-                step.completed
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : step.required
-                  ? 'bg-yellow-500/10 border-yellow-500/30'
-                  : 'bg-bg-secondary border-border-default'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {step.completed ? (
-                      <span className="text-2xl">✅</span>
-                    ) : (
-                      <span className="text-2xl">⭕</span>
-                    )}
-                    <h3 className="text-lg font-medium text-text-primary">
-                      {step.label}
-                      {step.required && (
-                        <span className="ml-2 text-xs text-yellow-500">(Obrigatório)</span>
-                      )}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-text-secondary ml-11">{step.description}</p>
-                </div>
-                {!step.completed && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => {
-                      if (step.id === 'create_first_queue' || step.id === 'index_documents') {
-                        handleCreateTemplates();
-                      } else {
-                        handleCompleteStep(step.id);
-                      }
-                    }}
-                  >
-                    Completar
-                  </Button>
-                )}
-              </div>
+
+        {/* 🔴 Obrigatório */}
+        {onboarding.steps?.filter(s => s.category === 'required').length > 0 && (
+          <>
+            <h3 className="text-lg font-medium text-status-error mb-3 mt-6 flex items-center gap-2">
+              <span>🔴</span> Obrigatório — bloqueia o acesso se não completo
+            </h3>
+            <div className="space-y-4 mb-6">
+              {onboarding.steps?.filter(s => s.category === 'required').map(renderStep)}
             </div>
-          ))}
-        </div>
+          </>
+        )}
+
+        {/* 🟡 Recomendado */}
+        {onboarding.steps?.filter(s => s.category === 'recommended').length > 0 && (
+          <>
+            <h3 className="text-lg font-medium text-status-warning mb-3 mt-6 flex items-center gap-2">
+              <span>🟡</span> Recomendado
+            </h3>
+            <div className="space-y-4 mb-6">
+              {onboarding.steps?.filter(s => s.category === 'recommended').map(renderStep)}
+            </div>
+          </>
+        )}
+
+        {/* ⚪ Opcional */}
+        {onboarding.steps?.filter(s => s.category === 'optional').length > 0 && (
+          <>
+            <h3 className="text-lg font-medium text-text-secondary mb-3 mt-6 flex items-center gap-2">
+              <span>⚪</span> Opcional
+            </h3>
+            <div className="space-y-4">
+              {onboarding.steps?.filter(s => s.category === 'optional').map(renderStep)}
+            </div>
+          </>
+        )}
+
+        {onboarding.steps?.filter(s => s.category === 'required' && !s.completed).length === 0 && (
+          <div className="mt-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
+            <p className="text-green-500 font-medium">✅ Todos os itens obrigatórios estão completos!</p>
+          </div>
+        )}
+      </div>
 
         {onboarding.completed && (
           <div className="mt-6">
@@ -479,7 +529,6 @@ export function OnboardingPage() {
             </Button>
           </div>
         )}
-      </div>
 
       <ToastContainer />
     </CrudPageBase>
