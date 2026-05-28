@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useRouter } from '../hooks/useRouter';
+import { useAuth } from '../context/authContext';
 import { signupSaas } from '../api/auth';
+import { getOnboardingCheck } from '../api/onboarding';
 import './saasPublic.css';
 
 const productItems = [
@@ -160,6 +162,8 @@ function SaasPricing({ onNavigate }) {
 }
 
 function SignupForm({ onNavigate }) {
+  const { login } = useAuth();
+  const { navigate } = useRouter();
   const [form, setForm] = useState({
     name: '',
     company: '',
@@ -169,6 +173,7 @@ function SignupForm({ onNavigate }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
 
   const canSubmit = useMemo(() => Object.values(form).every((value) => String(value).trim().length > 2), [form]);
 
@@ -182,8 +187,34 @@ function SignupForm({ onNavigate }) {
     setSubmitting(true);
     setError('');
     try {
-      await signupSaas(form);
-      setSubmitted(true);
+      // 1. Cria conta SaaS (tenant + user)
+      const signupResult = await signupSaas(form);
+      const username = signupResult?.credentials?.username || form.email.split('@')[0].replace(/[^a-z0-9]/gi, '.').toLowerCase();
+      
+      // 2. Auto-login com as credenciais recém-criadas
+      setRedirecting(true);
+      const loginResult = await login({
+        username,
+        password: form.password,
+      });
+
+      if (loginResult?.success || loginResult?.agent) {
+        // 3. Verifica se onboarding bloqueia
+        try {
+          const check = await getOnboardingCheck();
+          if (check?.blocking) {
+            navigate('/onboarding?source=signup');
+          } else {
+            navigate('/workspace');
+          }
+        } catch (_) {
+          navigate('/workspace');
+        }
+      } else {
+        // Login fallback: manda pro /login manualmente
+        setSubmitted(true);
+        setRedirecting(false);
+      }
     } catch (err) {
       setError(err?.body?.message || err?.message || 'Não foi possível criar conta agora.');
     } finally {
@@ -191,14 +222,20 @@ function SignupForm({ onNavigate }) {
     }
   };
 
-  if (submitted) {
+  if (submitted || redirecting) {
     return (
       <section className="saas-section saas-signup-wrap">
-        <h2>Conta em preparação</h2>
-        <p className="saas-muted">Recebemos seus dados. Próximo passo: validar tenant e iniciar onboarding obrigatório.</p>
-        <button type="button" className="saas-btn saas-btn-solid" onClick={() => onNavigate('/login')}>
-          Ir para login
-        </button>
+        <h2>{redirecting ? 'Redirecionando...' : 'Conta em preparação'}</h2>
+        <p className="saas-muted">
+          {redirecting
+            ? 'Login automático realizado. Encaminhando para o sistema...'
+            : 'Recebemos seus dados. Próximo passo: validar tenant e iniciar onboarding obrigatório.'}
+        </p>
+        {!redirecting && (
+          <button type="button" className="saas-btn saas-btn-solid" onClick={() => onNavigate('/login')}>
+            Ir para login
+          </button>
+        )}
       </section>
     );
   }
