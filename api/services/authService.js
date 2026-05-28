@@ -228,11 +228,7 @@ async function initialize() {
 
   initializingPromise = (async () => {
     if (!dbAvailable()) {
-      // Em testes/unit sem DB, mantém apenas em memória (sem persistência).
-      agents.clear();
-      sessions.clear();
-      initialized = true;
-      return;
+      throw new Error('PostgreSQL é obrigatório para o serviço de autenticação. Configure a conexão com o banco de dados.');
     }
 
     await ensureDefaultAdminIfEmpty();
@@ -282,27 +278,7 @@ async function createAgent({ tenantId, username, email, password, role, name }) 
   }
 
   if (!dbAvailable()) {
-    // fallback de testes
-    const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const now = new Date().toISOString();
-    const passwordHash = hashPassword(password);
-    const agent = {
-      id,
-      tenantId,
-      username: username.trim(),
-      email: email.trim(),
-      role: normalizedRole,
-      name: name || username.trim(),
-      active: true,
-      status: 'active',
-      mfaEnabled: false,
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: null,
-      _passwordHash: passwordHash,
-    };
-    agents.set(id, agent);
-    return { success: true, agent: toAgentSafe(agent) };
+    return { success: false, error: 'PostgreSQL é obrigatório para criar agentes' };
   }
 
   const UserModel = typeof User === 'function' ? User() : User;

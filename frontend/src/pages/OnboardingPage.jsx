@@ -323,8 +323,11 @@ export function OnboardingPage() {
     );
   }
 
-  return (
-    <CrudPageBase>
+  const hasBlockingSteps = onboarding?.steps?.filter(s => s.required && !s.completed).length > 0;
+
+  // Corpo do onboarding (reutilizado nos dois modos: overlay e normal)
+  const body = (
+    <>
       <div className="support-header">
         <h1>🚀 Onboarding - Configuração Inicial</h1>
       </div>
@@ -533,6 +536,26 @@ export function OnboardingPage() {
         )}
 
       <ToastContainer />
+    </>
+  );
+
+  // Overlay full-screen quando há steps obrigatórios pendentes
+  if (hasBlockingSteps) {
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 9999, background: 'var(--bg-primary, #0f1117)', overflow: 'auto',
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
+          {body}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <CrudPageBase>
+      {body}
     </CrudPageBase>
   );
 }
