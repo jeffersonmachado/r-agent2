@@ -1,16 +1,16 @@
 {
   "pass": true,
-  "currentZipName": "r-agent2-20260516-005740.zip",
-  "governedArtifact": "r-agent2-20260516-005740.payload.zip",
+  "currentZipName": "r-agent2-20260516-112227.zip",
+  "governedArtifact": "r-agent2-20260516-112227.payload.zip",
   "hash": "7bb0c2344df033952a974cc7871ae92e90e3e5a9308380540aefc951c9fe64ab",
   "overallConsistencyScore": 100,
   "allChecksPass": true,
   "regeneratedAt": "2026-05-14T19:13:36.641Z",
   "source": "clean-governance.js",
-  "generatedAt": "2026-05-16T04:00:28.034Z",
-  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260516-005740.manifest.json",
-  "currentZipManifest": "dist/r-agent2-20260516-005740.manifest.json",
-  "currentZipTimestamp": "2026-05-16T04:00:27Z",
-  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "reboundAt": "2026-05-16T04:00:28.541Z"
+  "generatedAt": "2026-05-16T14:24:46.083Z",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260516-112227.manifest.json",
+  "currentZipManifest": "dist/r-agent2-20260516-112227.manifest.json",
+  "currentZipTimestamp": "2026-05-16T14:24:45Z",
+  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "reboundAt": "2026-05-16T14:24:46.459Z"
 }

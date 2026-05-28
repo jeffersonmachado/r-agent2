@@ -1,0 +1,123 @@
+{
+  "id": "test-flow-da6f66c1-20260131T041500000Z",
+  "name": "IA - Teste RPA - studiooly",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-da6f66c1",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-31T04:15:00.000Z",
+    "dependenciesResolved": false,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "begin"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "validate bot greeting"
+      },
+      {
+        "nodeId": "user_input_faq",
+        "nodeType": "user_input",
+        "action": "send FAQ question"
+      },
+      {
+        "nodeId": "ai_faq",
+        "nodeType": "ai",
+        "action": "validate AI answer contains contact info"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "finish"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "action.page",
+      "value": "http://localhost:5173",
+      "description": "Abrir o frontend do chatbot",
+      "critical": "true",
+      "url": "http://localhost:5173/chat?flowId=flow-da6f66c1"
+    },
+    {
+      "type": "assert",
+      "selector": "action.page.url",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173"
+      },
+      "description": "Assert: a URL base foi carregada",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Assert: mensagem inicial do bot exibida",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "WhatsApp"
+      },
+      "description": "Assert: resposta menciona canal de contato (WhatsApp)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "35138939"
+      },
+      "description": "Assert: resposta contém o telefone/WhatsApp esperado",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": 2,
+      "type": "url",
+      "selector": "action.page.url",
+      "expected": "http://localhost:5173",
+      "description": "A página deve estar na URL base do frontend"
+    },
+    {
+      "step": 3,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "O bot deve exibir a saudação inicial do fluxo"
+    },
+    {
+      "step": 4,
+      "type": "text",
+      "selector": "body",
+      "expected": "WhatsApp",
+      "description": "A resposta da IA deve incluir o canal WhatsApp para contato"
+    },
+    {
+      "step": 5,
+      "type": "text",
+      "selector": "body",
+      "expected": "35138939",
+      "description": "A resposta da IA deve incluir o número de telefone/WhatsApp"
+    }
+  ]
+}

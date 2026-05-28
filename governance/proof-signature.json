@@ -1,31 +1,49 @@
 {
-  "generatedAt": "2026-05-16T03:58:53.363Z",
+  "generatedAt": "2026-05-16T14:23:28.872Z",
   "sourceArtifact": "qa/qa-waves-enterprise-governance.json",
-  "signature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-  "reportHash": "80216dedac34847115cd62489181ad81a6b681fe971cba317de5f8b60b614034",
+  "signature": "gov-sha256:65817dc79d646c8784c5d7d491b84bf0b2e7fd541bac621b2dbb5ccb3954ae05",
+  "reportHash": "6f02eeda523b1318806a44ba9b43dca17832ff79192c4765b5f9275736aafbf6",
   "subjectHashes": [
     {
       "journeyId": "support_ticket_flow",
-      "replayHash": "01bafe1d384bf207ac3fd5c69beedf79ba81487939ba5dba38cc36ba28cf2bf0",
-      "replayChecksum": "sha256:01bafe1d384bf207ac3fd5c69beedf79ba81487939ba5dba38cc36ba28cf2bf0",
+      "replayHash": "47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
+      "replayChecksum": "sha256:47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "replayHash": "bb041cce01611e0a8189d3808e46ff9f7b069d01169a7825ba957f4d7d0aaecf",
-      "replayChecksum": "sha256:bb041cce01611e0a8189d3808e46ff9f7b069d01169a7825ba957f4d7d0aaecf",
+      "replayHash": "6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
+      "replayChecksum": "sha256:6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
     },
     {
       "journeyId": "booking_flow",
-      "replayHash": "d31440fddb4fb90bb92f1db0e637438303ae938af2fc255a40d1f5d1f3b6f734",
-      "replayChecksum": "sha256:d31440fddb4fb90bb92f1db0e637438303ae938af2fc255a40d1f5d1f3b6f734",
+      "replayHash": "6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
+      "replayChecksum": "sha256:6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
     },
     {
       "journeyId": "payment_charge_flow",
-      "replayHash": "0dfc5f09e3e9008107fc101bc2b1b881da04b04ebe9671e1b473149aa7127001",
-      "replayChecksum": "sha256:0dfc5f09e3e9008107fc101bc2b1b881da04b04ebe9671e1b473149aa7127001",
+      "replayHash": "bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
+      "replayChecksum": "sha256:bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
+      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+    },
+    {
+      "journeyId": "food_order_status_flow",
+      "replayHash": "c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
+      "replayChecksum": "sha256:c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
+      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+    },
+    {
+      "journeyId": "market_node_publish_flow",
+      "replayHash": "32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
+      "replayChecksum": "sha256:32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
+      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+    },
+    {
+      "journeyId": "clinic_calendar_block_flow",
+      "replayHash": "d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
+      "replayChecksum": "sha256:d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
     }
   ],
@@ -55,8 +73,26 @@
         "valid": true,
         "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+      },
+      {
+        "journeyId": "food_order_status_flow",
+        "valid": true,
+        "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+      },
+      {
+        "journeyId": "market_node_publish_flow",
+        "valid": true,
+        "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+      },
+      {
+        "journeyId": "clinic_calendar_block_flow",
+        "valid": true,
+        "expected": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
       }
     ]
   },
-  "reboundAt": "2026-05-16T04:00:28.549Z"
+  "reboundAt": "2026-05-16T14:24:46.462Z"
 }

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-05-16T04:00:28.034Z",
-  "expectedZipName": "r-agent2-20260516-005740.zip",
+  "generatedAt": "2026-05-16T14:24:46.083Z",
+  "expectedZipName": "r-agent2-20260516-112227.zip",
   "pbxMaturity": "enterprise-real",
   "contradictions": [
     {
@@ -24,5 +24,5 @@
   "maximumAllowedReadiness": "operational",
   "autonomousReadyBlocked": true,
   "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational.",
-  "reboundAt": "2026-05-16T04:00:28.542Z"
+  "reboundAt": "2026-05-16T14:24:46.459Z"
 }

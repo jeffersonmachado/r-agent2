@@ -1,0 +1,118 @@
+{
+  "id": "test-flow-cf71792a-20260129T034806356Z",
+  "name": "IA - Teste RPA - studiooly",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-cf71792a",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-29T03:48:06.356Z",
+    "dependenciesResolved": false,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "iniciar sessão do chat"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "validar mensagem de boas-vindas"
+      },
+      {
+        "nodeId": "fallback_1",
+        "nodeType": "fallback",
+        "action": "enviar entrada não reconhecida e validar fallback/escalonamento"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "encerrar fluxo após fallback"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "selector": "",
+      "value": "http://localhost:5173",
+      "description": "Navegar para a aplicação (base URL) para iniciar o teste do chatbot",
+      "critical": "true",
+      "url": "http://localhost:5173/chat?flowId=flow-cf71792a"
+    },
+    {
+      "type": "assert",
+      "selector": "",
+      "assert": {
+        "type": "url",
+        "expected": "http://localhost:5173"
+      },
+      "description": "Assert crítico: garantir que a navegação foi feita para a URL base correta",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "visible",
+        "expected": "true"
+      },
+      "description": "Assert crítico: garantir que o corpo da página está visível (app carregada)",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Assert crítico: validar mensagem do nó message_1 exibida no chat",
+      "critical": "true"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "ticket"
+      },
+      "description": "Assert crítico: validar indício de escalonamento no modo 'ticket' (fallback_1) na interface",
+      "critical": "true"
+    }
+  ],
+  "asserts": [
+    {
+      "step": 2,
+      "type": "url",
+      "selector": "",
+      "expected": "http://localhost:5173",
+      "description": "URL deve ser exatamente a base definida para o frontend"
+    },
+    {
+      "step": 3,
+      "type": "visible",
+      "selector": "body",
+      "expected": "true",
+      "description": "Aplicação deve estar visível (body renderizado)"
+    },
+    {
+      "step": 4,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Mensagem inicial do fluxo (message_1) deve estar presente na tela"
+    },
+    {
+      "step": 5,
+      "type": "text",
+      "selector": "body",
+      "expected": "ticket",
+      "description": "Interface deve apresentar indicativo textual de escalonamento/ticket após fallback"
+    }
+  ]
+}

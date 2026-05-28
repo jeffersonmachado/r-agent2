@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-16T03:58:53.359Z",
-  "status": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "canonicalMeshExecutionId": "mesh-2026-05-12T23-50-45-984Z",
-  "totalCoverage": 82.69,
+  "generatedAt": "2026-05-16T14:23:28.870Z",
+  "status": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "canonicalMeshExecutionId": "mesh-2026-05-16T10-17-23-237Z",
+  "totalCoverage": 79.87,
   "verticalCoverage": [
     {
       "vertical": "beauty",
@@ -14,19 +14,19 @@
     },
     {
       "vertical": "fitness",
-      "classification": "validated",
+      "classification": "production-like",
       "scenarioCount": 15,
       "journeyCount": 9,
-      "blockers": [
-        "qa_mesh_failures_open"
-      ]
+      "blockers": []
     },
     {
       "vertical": "food",
-      "classification": "production-like",
+      "classification": "validated",
       "scenarioCount": 3,
       "journeyCount": 2,
-      "blockers": []
+      "blockers": [
+        "qa_mesh_failures_open"
+      ]
     },
     {
       "vertical": "services",
@@ -68,14 +68,18 @@
     ]
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-05-12T23-50-45-984Z",
-    "percent": 96.77,
-    "observedFailureFreePercent": 96.77,
+    "executionId": "mesh-2026-05-16T10-17-23-237Z",
+    "percent": 85.48,
+    "observedFailureFreePercent": 85.48,
     "registryDeclaredTotal": 62,
     "canonicalRegistryTotal": 62,
     "blockingDomains": [
-      "fitness",
-      "pbx"
+      "clinica",
+      "food",
+      "mercado",
+      "omnichannel",
+      "pbx",
+      "servicos"
     ],
     "status": "NO_GO"
   },
@@ -350,7 +354,7 @@
     ]
   },
   "proofReport": {
-    "generatedAt": "2026-05-16T03:59:27.538Z",
+    "generatedAt": "2026-05-16T14:23:50.569Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -358,7 +362,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 2,
+    "blockerCount": 9,
     "replayCoverage": {
       "required": 6,
       "found": 7,
@@ -4572,23 +4576,12 @@
     "intelligenceStability": {
       "status": "STABLE",
       "unstableDomains": [],
-      "recurringFailures": [
-        {
-          "domain": "pbx",
-          "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
-          "recurringCount": 9
-        },
-        {
-          "domain": "fitness",
-          "fingerprint": "fitness::flaky::[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
-          "recurringCount": 3
-        }
-      ],
+      "recurringFailures": [],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-16T04:00:28.034Z",
-      "expectedZipName": "r-agent2-20260516-005740.zip",
+      "generatedAt": "2026-05-16T14:24:46.083Z",
+      "expectedZipName": "r-agent2-20260516-112227.zip",
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
       "blockers": [],
@@ -4598,13 +4591,13 @@
       "maximumAllowedReadiness": "autonomous-ready",
       "autonomousReadyBlocked": false,
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-      "expectedZipSha256Ref": "dist/r-agent2-20260516-005740.manifest.json#sha256"
+      "expectedZipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256"
     },
     "packageValidation": {
-      "generatedAt": "2026-05-16T04:00:28.034Z",
+      "generatedAt": "2026-05-16T14:24:46.083Z",
       "ok": false,
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-005740.zip",
-      "zipName": "r-agent2-20260516-005740.zip",
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.zip",
+      "zipName": "r-agent2-20260516-112227.zip",
       "requiredEntries": [
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
@@ -4629,11 +4622,11 @@
       ],
       "missingEntries": [],
       "error": "artifact_missing:none_found_in_dist",
-      "zipSha256Ref": "dist/r-agent2-20260516-005740.manifest.json#sha256",
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-005740.manifest.json"
+      "zipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256",
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.manifest.json"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-16T03:59:27.531Z",
+      "generatedAt": "2026-05-16T14:23:50.567Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -4964,9 +4957,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "24fbcfc26731a3590b4808164b7e5ef2db523d1dce5eeb48666d18a63dc3553d",
-          "checksum": "24fbcfc26731a3590b4808164b7e5ef2db523d1dce5eeb48666d18a63dc3553d",
-          "timestamp": "2026-05-12T11:29:07.120Z",
+          "hash": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
+          "checksum": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
+          "timestamp": "2026-05-16T11:20:12.462Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4982,9 +4975,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3ff268eb21f1707f5ed73b9c494006b2dd92fe418576d6c720c94cf1fb640009",
-          "checksum": "3ff268eb21f1707f5ed73b9c494006b2dd92fe418576d6c720c94cf1fb640009",
-          "timestamp": "2026-05-16T03:58:53.363Z",
+          "hash": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
+          "checksum": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
+          "timestamp": "2026-05-16T14:23:28.871Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5000,9 +4993,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8bfc84d8175c2e62bba3f1928c3ccf702f707c95e69e9bf7efc542cf4c816136",
-          "checksum": "8bfc84d8175c2e62bba3f1928c3ccf702f707c95e69e9bf7efc542cf4c816136",
-          "timestamp": "2026-05-16T03:58:53.602Z",
+          "hash": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
+          "checksum": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
+          "timestamp": "2026-05-16T14:23:29.208Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5018,9 +5011,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "adb12abeb7d8d88ef99d2df8479f9d3631442eef353dbdbf6d7a5aee9588419a",
-          "checksum": "adb12abeb7d8d88ef99d2df8479f9d3631442eef353dbdbf6d7a5aee9588419a",
-          "timestamp": "2026-05-16T03:50:00.763Z",
+          "hash": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
+          "checksum": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
+          "timestamp": "2026-05-16T14:13:46.921Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5233,21 +5226,51 @@
   },
   "blockingGaps": [
     {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "rpa-test-flow-28d2aea0-20260129T000000000Z",
+          "rpa-test-flow-3571aa07-20260129T034520103Z",
+          "rpa-test-flow-3b6cada8-20260129T042632607Z",
+          "rpa-test-flow-6309e70a-20260129T033246247Z",
+          "rpa-test-flow-7fa30156-20260129T030733925Z",
+          "rpa-test-flow-937dd7c3-20260129T000000000Z",
+          "rpa-test-flow-c0ea1c71-20260129T045514294Z",
+          "rpa-test-flow-cca122f2-20260129T000000000Z",
+          "rpa-test-flow-da6f66c1-20260131T041500000Z"
+        ],
+        "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
       "blockingClassification": "release-blocker",
       "suggestions": {
         "journeys": [],
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+      "id": "gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z",
       "severity": "critical",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio pbx",
       "evidence": {
         "scenarios": [
-          "qa-pbx-call-events-runtime-smoke"
+          "rpa-test-flow-659d7749-20260129T035608952Z",
+          "rpa-test-flow-6f484f7a-20260129T050243761Z",
+          "rpa-test-flow-a41fb4e3-20260129T051056368Z",
+          "rpa-test-flow-a85c4a4d-20260129T052758707Z"
         ],
-        "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+        "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
       },
       "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
@@ -5258,17 +5281,131 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-fitness-flaky-business-f1",
+      "id": "gap-mesh-clinica-functional_failure-business-clinic-flow-ticket",
       "severity": "high",
       "area": "qa-mesh",
-      "title": "Falha aberta no dominio fitness",
+      "title": "Falha aberta no dominio clinica",
       "evidence": {
         "scenarios": [
-          "business-f1"
+          "business-clinic-flow-ticket"
         ],
         "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
       },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-food-functional_failure-business-food-flow-order",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio food",
+      "evidence": {
+        "scenarios": [
+          "business-food-flow-order"
+        ],
+        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-mercado-functional_failure-business-market-flow-node",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio mercado",
+      "evidence": {
+        "scenarios": [
+          "business-market-flow-node"
+        ],
+        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-servicos-functional_failure-business-serv-flow-solution",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio servicos",
+      "evidence": {
+        "scenarios": [
+          "business-serv-flow-solution"
+        ],
+        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio pbx",
+      "evidence": {
+        "scenarios": [
+          "qa-ura-publish-rollback-smoke"
+        ],
+        "sampleError": "[ura-publish-rollback-smoke] FAIL pbx_signature_not_changed_between_versions"
+      },
       "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "rpa-test-flow-6e8af7c1-20260129T033828021Z"
+        ],
+        "sampleError": "Texto deve conter \"Olá\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "rpa-test-flow-cf71792a-20260129T034806356Z"
+        ],
+        "sampleError": "Elemento não visível quando esperado visível"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "id": "gap-proof-package-validation",
@@ -5297,8 +5434,15 @@
     }
   ],
   "noGoReasons": [
-    "Falha aberta no dominio pbx [gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke]",
-    "Falha aberta no dominio fitness [gap-mesh-fitness-flaky-business-f1]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z]",
+    "Falha aberta no dominio pbx [gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z]",
+    "Falha aberta no dominio clinica [gap-mesh-clinica-functional_failure-business-clinic-flow-ticket]",
+    "Falha aberta no dominio food [gap-mesh-food-functional_failure-business-food-flow-order]",
+    "Falha aberta no dominio mercado [gap-mesh-mercado-functional_failure-business-market-flow-node]",
+    "Falha aberta no dominio servicos [gap-mesh-servicos-functional_failure-business-serv-flow-solution]",
+    "Falha aberta no dominio pbx [gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z]",
     "ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]",
     "Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]"
   ],
@@ -5306,5 +5450,5 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "reboundAt": "2026-05-16T04:00:28.508Z"
+  "reboundAt": "2026-05-16T14:24:46.448Z"
 }

@@ -1,0 +1,245 @@
+{
+  "id": "test-flow-cca122f2-20260129T000000000Z",
+  "name": "IA - Teste RPA - studiooly",
+  "type": "test",
+  "source": "flow",
+  "flowId": "flow-cca122f2",
+  "flowVersion": 1,
+  "generatedBy": "ai",
+  "editable": true,
+  "metadata": {
+    "generatedAt": "2026-01-29T00:00:00.000Z",
+    "dependenciesResolved": false,
+    "seedsExecuted": [],
+    "pathTaken": [
+      {
+        "nodeId": "start_1",
+        "nodeType": "start",
+        "action": "open_chat"
+      },
+      {
+        "nodeId": "message_1",
+        "nodeType": "message",
+        "action": "assert_greeting_message"
+      },
+      {
+        "nodeId": "fallback_1",
+        "nodeType": "fallback",
+        "action": "send_unrecognized_messages_until_escalation"
+      },
+      {
+        "nodeId": "end_1",
+        "nodeType": "end",
+        "action": "assert_conversation_ended_or_escalated"
+      }
+    ],
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "http://localhost:5173/maintenance",
+      "description": "Navegar para página de filas para criar: default",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "description": "Aguardar carregamento da página de filas"
+    },
+    {
+      "type": "click",
+      "selector": "[data-testid=\"queue-manager-toggle\"], button:has-text(\"Gerenciar Filas\"), button:has-text(\"⚙️ Gerenciar Filas\")",
+      "description": "Abrir gerenciador de filas",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "input.queue-manager-input, input[placeholder*=\"Nome da fila\" i]",
+      "description": "Aguardar campo de criação de fila aparecer"
+    },
+    {
+      "type": "fill",
+      "selector": "input.queue-manager-input, input[placeholder*=\"Nome da fila\" i]",
+      "value": "default",
+      "description": "Preencher nome da fila: default",
+      "critical": true
+    },
+    {
+      "type": "click",
+      "selector": "button:has-text(\"➕ Criar\"), button:has-text(\"Criar\")",
+      "description": "Criar fila",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "description": "Aguardar confirmação de criação da fila"
+    },
+    {
+      "type": "navigate",
+      "selector": "",
+      "value": "http://localhost:5173",
+      "description": "Abrir o frontend (página inicial) para iniciar o chat.",
+      "critical": true,
+      "url": "http://localhost:5173/chat?flowId=flow-cca122f2"
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "exists",
+        "expected": "true"
+      },
+      "description": "Garantir que a página carregou (body presente).",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "500",
+      "description": "Aguardar estabilização inicial da UI.",
+      "critical": false
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Validar mensagem inicial do fluxo (message_1).",
+      "critical": true
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], textarea",
+      "value": "zzz_invalido_1",
+      "description": "Enviar mensagem não reconhecida (1ª tentativa) para acionar fallback.",
+      "critical": true
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button",
+      "value": "",
+      "description": "Enviar a mensagem (submit).",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "500",
+      "description": "Aguardar resposta do chatbot após 1ª tentativa.",
+      "critical": false
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Garantir que o contexto do chat continua visível após 1ª tentativa (mensagem inicial ainda presente).",
+      "critical": true
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], textarea",
+      "value": "zzz_invalido_2",
+      "description": "Enviar mensagem não reconhecida (2ª tentativa) para continuar fallback.",
+      "critical": true
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button",
+      "value": "",
+      "description": "Enviar a mensagem (submit).",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "500",
+      "description": "Aguardar resposta do chatbot após 2ª tentativa.",
+      "critical": false
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "Olá! Como posso ajudar?"
+      },
+      "description": "Garantir que o chat continua ativo após 2ª tentativa (mensagem inicial ainda presente).",
+      "critical": true
+    },
+    {
+      "type": "fill",
+      "selector": "input[type='text'], textarea",
+      "value": "zzz_invalido_3",
+      "description": "Enviar mensagem não reconhecida (3ª tentativa) para atingir maxAttempts e acionar escalonamento (ticket).",
+      "critical": true
+    },
+    {
+      "type": "click",
+      "selector": "button[type='submit'], button",
+      "value": "",
+      "description": "Enviar a mensagem (submit).",
+      "critical": true
+    },
+    {
+      "type": "wait",
+      "selector": "body",
+      "value": "800",
+      "description": "Aguardar possível escalonamento/encerramento após 3ª tentativa.",
+      "critical": false
+    },
+    {
+      "type": "assert",
+      "selector": "body",
+      "assert": {
+        "type": "text",
+        "expected": "ticket"
+      },
+      "description": "Validar que ocorreu escalonamento (modo ticket) após atingir maxAttempts. Observação: como o texto exato pode variar, valida-se a presença do termo 'ticket' no corpo.",
+      "critical": true
+    }
+  ],
+  "asserts": [
+    {
+      "step": 9,
+      "type": "exists",
+      "selector": "body",
+      "expected": "true",
+      "description": "Página carregada com sucesso (body existe)."
+    },
+    {
+      "step": 11,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Mensagem inicial do fluxo exibida."
+    },
+    {
+      "step": 15,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Após 1ª tentativa inválida, mensagem inicial continua visível (chat não quebrou)."
+    },
+    {
+      "step": 19,
+      "type": "text",
+      "selector": "body",
+      "expected": "Olá! Como posso ajudar?",
+      "description": "Após 2ª tentativa inválida, chat continua ativo."
+    },
+    {
+      "step": 23,
+      "type": "text",
+      "selector": "body",
+      "expected": "ticket",
+      "description": "Após 3ª tentativa inválida (maxAttempts=3), ocorreu escalonamento no modo ticket."
+    }
+  ]
+}

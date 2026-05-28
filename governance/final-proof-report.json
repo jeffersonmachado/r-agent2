@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-16T03:59:27.538Z",
+  "generatedAt": "2026-05-16T14:23:50.569Z",
   "proofCoverage": {
     "total": 20,
     "valid": 20,
@@ -7,7 +7,7 @@
   },
   "missingArtifacts": [],
   "invalidReferences": [],
-  "blockerCount": 2,
+  "blockerCount": 9,
   "replayCoverage": {
     "required": 6,
     "found": 7,
@@ -4221,23 +4221,12 @@
   "intelligenceStability": {
     "status": "STABLE",
     "unstableDomains": [],
-    "recurringFailures": [
-      {
-        "domain": "pbx",
-        "fingerprint": "pbx::functional_failure::[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted",
-        "recurringCount": 9
-      },
-      {
-        "domain": "fitness",
-        "fingerprint": "fitness::flaky::[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json",
-        "recurringCount": 3
-      }
-    ],
+    "recurringFailures": [],
     "blocksAutonomous": false
   },
   "crossReportConsistency": {
-    "generatedAt": "2026-05-16T04:00:28.034Z",
-    "expectedZipName": "r-agent2-20260516-005740.zip",
+    "generatedAt": "2026-05-16T14:24:46.083Z",
+    "expectedZipName": "r-agent2-20260516-112227.zip",
     "pbxMaturity": "enterprise-real",
     "contradictions": [],
     "blockers": [],
@@ -4247,13 +4236,13 @@
     "maximumAllowedReadiness": "autonomous-ready",
     "autonomousReadyBlocked": false,
     "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-    "expectedZipSha256Ref": "dist/r-agent2-20260516-005740.manifest.json#sha256"
+    "expectedZipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256"
   },
   "packageValidation": {
-    "generatedAt": "2026-05-16T04:00:28.034Z",
+    "generatedAt": "2026-05-16T14:24:46.083Z",
     "ok": false,
-    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-005740.zip",
-    "zipName": "r-agent2-20260516-005740.zip",
+    "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.zip",
+    "zipName": "r-agent2-20260516-112227.zip",
     "requiredEntries": [
       "qa/smoke-evidence.json",
       "qa/l01-physical-queue-evidence.json",
@@ -4278,11 +4267,11 @@
     ],
     "missingEntries": [],
     "error": "artifact_missing:none_found_in_dist",
-    "zipSha256Ref": "dist/r-agent2-20260516-005740.manifest.json#sha256",
-    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-005740.manifest.json"
+    "zipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256",
+    "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.manifest.json"
   },
   "evidenceManifest": {
-    "generatedAt": "2026-05-16T03:59:27.531Z",
+    "generatedAt": "2026-05-16T14:23:50.567Z",
     "runtimeRoot": null,
     "artifacts": [
       {
@@ -4613,9 +4602,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/qa/qa-waves-enterprise-governance.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "24fbcfc26731a3590b4808164b7e5ef2db523d1dce5eeb48666d18a63dc3553d",
-        "checksum": "24fbcfc26731a3590b4808164b7e5ef2db523d1dce5eeb48666d18a63dc3553d",
-        "timestamp": "2026-05-12T11:29:07.120Z",
+        "hash": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
+        "checksum": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
+        "timestamp": "2026-05-16T11:20:12.462Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4631,9 +4620,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "3ff268eb21f1707f5ed73b9c494006b2dd92fe418576d6c720c94cf1fb640009",
-        "checksum": "3ff268eb21f1707f5ed73b9c494006b2dd92fe418576d6c720c94cf1fb640009",
-        "timestamp": "2026-05-16T03:58:53.363Z",
+        "hash": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
+        "checksum": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
+        "timestamp": "2026-05-16T14:23:28.871Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4649,9 +4638,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "8bfc84d8175c2e62bba3f1928c3ccf702f707c95e69e9bf7efc542cf4c816136",
-        "checksum": "8bfc84d8175c2e62bba3f1928c3ccf702f707c95e69e9bf7efc542cf4c816136",
-        "timestamp": "2026-05-16T03:58:53.602Z",
+        "hash": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
+        "checksum": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
+        "timestamp": "2026-05-16T14:23:29.208Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4667,9 +4656,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "adb12abeb7d8d88ef99d2df8479f9d3631442eef353dbdbf6d7a5aee9588419a",
-        "checksum": "adb12abeb7d8d88ef99d2df8479f9d3631442eef353dbdbf6d7a5aee9588419a",
-        "timestamp": "2026-05-16T03:50:00.763Z",
+        "hash": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
+        "checksum": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
+        "timestamp": "2026-05-16T14:13:46.921Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4807,7 +4796,7 @@
       "allPassed": false
     }
   },
-  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
   "blockingGaps": [
     {
       "id": "gap-proof-package-validation",
@@ -4836,6 +4825,6 @@
     }
   ],
   "meshHardBlocked": true,
-  "meshBlockReason": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "reboundAt": "2026-05-16T04:00:28.451Z"
+  "meshBlockReason": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
+  "reboundAt": "2026-05-16T14:24:46.430Z"
 }

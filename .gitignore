@@ -107,6 +107,16 @@ qa-mesh/repairPlan.json
 qa-mesh/scheduler-state.json
 qa-mesh/intelligence/latest.json
 qa-mesh/meshRegistry.json
+qa-mesh/mesh-running.lock
+qa-mesh/canonical.lock.json
+qa-mesh/go-no-go-report.json
+qa-mesh/release-gate-report.json
+qa-mesh/scheduler-activity.log
+
+# Artefatos locais de QA / release (auto-gerados, não versionar)
+governance/*.json
+governance/locks/
+reports/
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

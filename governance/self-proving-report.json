@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-05-16T04:00:38.152Z",
+  "generatedAt": "2026-05-16T14:24:52.104Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260516-005740.zip",
+  "artifact": "r-agent2-20260516-112227.zip",
   "verifierExecuted": true,
   "verifierPassed": false,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260516-005740.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260516-112227.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260516-005740.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260516-112227.manifest.json",
   "staleReferencesFound": 1,
   "staleHashesFound": 0,
   "staleFilesAffected": [
@@ -45,15 +45,15 @@
   "governanceValidation": {
     "pass": false,
     "chainValid": true,
-    "chainRoot": "57485a44e9db115e0cbc71450addd9e5",
+    "chainRoot": "fa3f423454d8de2e5d6dd1e3d1e9b960",
     "overallConsistencyScore": 100,
     "blockerCount": 1,
     "allChecksPass": true,
-    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]"
+    "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]"
   },
   "replayValidation": {
     "pass": true,
-    "replayCount": 4,
+    "replayCount": 7,
     "allSigned": true,
     "allSignaturesValid": true,
     "replaySigPresent": true,
@@ -62,7 +62,10 @@
       "support_ticket_flow",
       "fitness_customer_checkin",
       "booking_flow",
-      "payment_charge_flow"
+      "payment_charge_flow",
+      "food_order_status_flow",
+      "market_node_publish_flow",
+      "clinic_calendar_block_flow"
     ]
   },
   "offlineAuditability": {
@@ -77,8 +80,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "20f3f814f305452275a5b3c623c472403074c83d92227f20cc700e1536e1e7de",
-    "zipName": "r-agent2-20260516-005740.zip",
+    "sidecarHash": "0594e2ec7b9cdc70b4a3f38ba7ba9561ae01f9656461b0d042eb1dfab4cf9fb6",
+    "zipName": "r-agent2-20260516-112227.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -115,5 +118,5 @@
   "pass": false,
   "passCount": 8,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260516-005740.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 60/100."
+  "summary": "Pacote r-agent2-20260516-112227.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 60/100."
 }
