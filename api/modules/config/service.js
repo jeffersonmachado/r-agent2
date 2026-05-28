@@ -42,6 +42,26 @@ async function validateProviderCredentials(provider, apiKey) {
       return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
     }
 
+    if (provider === 'deepseek') {
+      const response = await fetch('https://api.deepseek.com/v1/models', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${cleanApiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        return Array.isArray(data?.data)
+          ? { valid: true, error: null }
+          : { valid: false, error: 'Resposta inválida da API DeepSeek' };
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
+      if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
+      return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
+    }
+
     if (provider === 'anthropic') {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',

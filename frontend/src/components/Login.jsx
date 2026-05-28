@@ -48,6 +48,7 @@ export function Login() {
       // Atualiza o tenantId do agente
       if (loginResult && loginResult.agent) {
         const isSuperAdmin = checkIsSuperAdmin(loginResult.agent);
+        const isSystemTenant = String(tenant.id || '').trim().toLowerCase() === 'system';
         const updatedAgent = {
           ...loginResult.agent,
           tenantId: tenant.id,
@@ -55,6 +56,28 @@ export function Login() {
         };
         
         console.log('[Login] Atualizando agente com novo tenantId:', updatedAgent);
+        console.log('[Login] isSuperAdmin:', isSuperAdmin, 'isSystemTenant:', isSystemTenant);
+        
+        // Super-admin OU tenant system: pula verificações de provider/integrações
+        // Tenant system é para administração da plataforma, não operação de negócio
+        if (isSuperAdmin || isSystemTenant) {
+          console.log('[Login] ⏩ Pulando verificações de onboarding (super-admin ou tenant system)');
+          updateAgent(updatedAgent);
+          setIsSuperAdminLogin(false);
+          setShowTenantModal(false);
+          showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              try {
+                navigate('/workspace');
+              } catch (_) {
+                const basePath = getBasePath() || '';
+                window.location.href = `${basePath}/workspace`;
+              }
+            }, 300);
+          });
+          return;
+        }
         
         // Verifica se o tenant tem provider de IA válido ANTES de atualizar o agente e fechar o modal
         // IMPORTANTE: O login via formulário sempre exige confirmação do tenant
@@ -126,35 +149,22 @@ export function Login() {
           console.log('[Login] ✅ Tenant tem provider de IA válido, continuando para /support');
 
           // Verificação global de integrações (billing/notificações/whatsapp).
-          // O servidor continua carregando normalmente; aqui apenas orientamos configuração pendente.
+          // ⚠️ NÃO bloqueia mais o acesso — apenas exibe aviso com toast.
+          // O servidor continua carregando normalmente; redirect só ocorre se o usuário
+          // quiser resolver pendências explicitamente.
           try {
             const readiness = await getIntegrationConfigReadiness();
             if (!readiness?.ready) {
               const missing = (readiness?.missing || []).map((item) => item?.path).filter(Boolean);
               const preview = missing.slice(0, 4).join(', ');
-              updateAgent(updatedAgent);
-              setIsSuperAdminLogin(false);
-              setShowTenantModal(false);
-
               showToast(
                 preview
-                  ? `Configurações obrigatórias pendentes: ${preview}${missing.length > 4 ? '...' : ''}`
-                  : 'Configurações obrigatórias de integrações pendentes.',
+                  ? `⚠️ Configurações pendentes: ${preview}${missing.length > 4 ? '...' : ''}. Configure em Admin > Onboarding.`
+                  : '⚠️ Configurações de integração pendentes. Configure em Admin > Onboarding.',
                 'warning',
-                9000
+                12000
               );
-
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  try {
-                    navigate('/onboarding?source=login&required=integrations&tab=email');
-                  } catch (_) {
-                    const basePath = getBasePath() || '';
-                  window.location.href = `${basePath}/onboarding?source=login&required=integrations&tab=email`;
-                  }
-                }, 300);
-              });
-              return;
+              // NÃO bloqueia: continua para /workspace normalmente
             }
           } catch (readinessErr) {
             logger.warn('Não foi possível validar prontidão de integrações no login', readinessErr);

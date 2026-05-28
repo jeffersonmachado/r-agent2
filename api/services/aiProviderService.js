@@ -379,6 +379,80 @@ function createAnthropicProvider() {
 
 
 /**
+ * Provider de IA usando DeepSeek (API OpenAI-compatible)
+ */
+function createDeepSeekProvider() {
+  return {
+    async generate(prompt, context) {
+      try {
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error('DeepSeek: tenantId é obrigatório para resolver credenciais por tenant');
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), 'deepseek');
+        } catch (e) {
+          logger.warn('⚠️ DeepSeek: falha ao obter API key do tenant (DB)', { tenantId, error: safeErrorMessage(e) });
+        }
+
+        if (!apiKey) {
+          throw new Error(`DeepSeek API key não configurada para o tenant: ${tenantId}`);
+        }
+
+        const model = config.get('ai.deepseek.model', 'deepseek-chat');
+        logger.debug('🤖 DeepSeek: Iniciando geração', {
+          source: context?.source || null,
+          executionId: context?.executionId || null,
+          model,
+          promptLength: prompt.length,
+        });
+
+        // DeepSeek é OpenAI-compatible: usa fetch direto
+        const url = 'https://api.deepseek.com/v1/chat/completions';
+        const response = await fetch(url, {
+          method: 'POST',
+          signal: context?.signal || undefined,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 1000,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `DeepSeek API error: ${response.status}`;
+          const e = new Error(errorMessage);
+          e.status = response.status;
+          e.code = errorData?.error?.code || null;
+          throw e;
+        }
+
+        const data = await response.json();
+        return {
+          text: data.choices?.[0]?.message?.content || '[Resposta vazia da DeepSeek]',
+          usage: data.usage || null,
+        };
+      } catch (error) {
+        logger.error('❌ DeepSeek: Erro ao gerar resposta', {
+          message: safeErrorMessage(error),
+          stack: error.stack,
+        });
+        throw error;
+      }
+    },
+  };
+}
+
+
+/**
  * Inicializa os providers de IA baseado na configuração
  * Carrega configurações do banco de dados (PostgreSQL) ou do config.json como fallback
  */
@@ -400,6 +474,15 @@ async function initializeAiProviders() {
       logger.info('✅ Provider Anthropic registrado');
     } catch (err) {
       logger.warn('⚠️  Anthropic não configurado', { message: safeErrorMessage(err) });
+    }
+
+    // Tenta registrar DeepSeek se configurado
+    try {
+      const deepseekProvider = createDeepSeekProvider();
+      registerAiProvider('deepseek', deepseekProvider);
+      logger.info('✅ Provider DeepSeek registrado');
+    } catch (err) {
+      logger.warn('⚠️  DeepSeek não configurado', { message: safeErrorMessage(err) });
     }
 
     // Tenta carregar configurações do banco de dados

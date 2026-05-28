@@ -56,6 +56,7 @@ export function ConfigAiTab({
       const providerLabel = (p) => {
         if (!p) return '—';
         if (p === 'openai') return 'OpenAI';
+        if (p === 'deepseek') return 'DeepSeek';
         if (p === 'anthropic') return 'Anthropic (Claude)';
         return String(p);
       };
@@ -171,6 +172,7 @@ export function ConfigAiTab({
               >
                 <option value="">Selecione um provider...</option>
                 <option value="openai">OpenAI</option>
+                <option value="deepseek">DeepSeek</option>
                 <option value="anthropic">Anthropic (Claude)</option>
               </select>
             </div>
@@ -193,6 +195,7 @@ export function ConfigAiTab({
               >
                 <option value="">Nenhum</option>
                 {currentConfig.primary !== 'openai' && <option value="openai">OpenAI</option>}
+                {currentConfig.primary !== 'deepseek' && <option value="deepseek">DeepSeek</option>}
                 {currentConfig.primary !== 'anthropic' && <option value="anthropic">Anthropic (Claude)</option>}
               </select>
             </div>
@@ -257,6 +260,12 @@ export function ConfigAiTab({
                           <option value="gpt-4">GPT-4</option>
                           <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                         </optgroup>
+                      </>
+                    )}
+                    {currentConfig.primary === 'deepseek' && (
+                      <>
+                        <option value="deepseek-chat">DeepSeek Chat (V3)</option>
+                        <option value="deepseek-reasoner">DeepSeek Reasoner (R1)</option>
                       </>
                     )}
                     {currentConfig.primary === 'anthropic' && (
@@ -340,8 +349,8 @@ export function ConfigAiTab({
                   className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
                 >
                   <option value="">Selecione um provider...</option>
-                  {currentConfig.primary && <option value={currentConfig.primary}>{currentConfig.primary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
-                  {currentConfig.secondary && <option value={currentConfig.secondary}>{currentConfig.secondary === 'openai' ? 'OpenAI' : 'Anthropic (Claude)'}</option>}
+                  {currentConfig.primary && <option value={currentConfig.primary}>{currentConfig.primary === 'openai' ? 'OpenAI' : currentConfig.primary === 'deepseek' ? 'DeepSeek' : 'Anthropic (Claude)'}</option>}
+                  {currentConfig.secondary && <option value={currentConfig.secondary}>{currentConfig.secondary === 'openai' ? 'OpenAI' : currentConfig.secondary === 'deepseek' ? 'DeepSeek' : 'Anthropic (Claude)'}</option>}
                 </select>
               </div>
 
@@ -434,9 +443,9 @@ export function ConfigAiTab({
                         });
 
                         if (result.valid) {
-                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} válida!`, 'success');
+                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : apiKeyProvider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} válida!`, 'success');
                         } else {
-                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : 'Anthropic'} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
+                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : apiKeyProvider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
                         }
                       } catch (error) {
                         logger.error('Erro ao validar API Key', error);

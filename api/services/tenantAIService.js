@@ -23,7 +23,7 @@ function getModels() {
 const { encrypt, decrypt } = require('../utils/crypto');
 const logger = require('../utils/logger');
 
-const SUPPORTED_AI_PROVIDERS = new Set(['openai', 'anthropic']);
+const SUPPORTED_AI_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek']);
 
 function normalizeProvider(provider) {
   if (typeof provider !== 'string') return null;
