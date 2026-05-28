@@ -79,6 +79,13 @@ export function Login() {
           return;
         }
         
+        // Atualiza o agente PRIMEIRO (salva tenantId no localStorage)
+        // para que getOnboardingCheck() consiga enviar X-Tenant-Id no header
+        updateAgent(updatedAgent);
+        
+        // Pequena pausa para garantir que localStorage foi atualizado
+        await new Promise(r => setTimeout(r, 100));
+
         // Verifica se o onboarding está bloqueando o acesso
         // Usa GET /onboarding/check que consolida todas as verificações obrigatórias
         try {
@@ -90,7 +97,6 @@ export function Login() {
             const missingPreview = (onboardingCheck.missingSteps || []).join(', ');
             console.log('[Login] ❌ Onboarding bloqueado. Steps pendentes:', missingPreview);
 
-            updateAgent(updatedAgent);
             setIsSuperAdminLogin(false);
             setShowTenantModal(false);
 
@@ -120,10 +126,6 @@ export function Login() {
 
         console.log('[Login] ✅ Onboarding check passou, continuando para /workspace');
 
-        // Atualiza o agente no contexto de autenticação
-        console.log('[Login] Atualizando agente antes de redirecionar...');
-        updateAgent(updatedAgent);
-        
         // Marca que não é mais login de super-admin (tenant foi selecionado)
         setIsSuperAdminLogin(false);
         
@@ -245,14 +247,30 @@ export function Login() {
         showToast('Login realizado. Selecione o tenant para continuar.', 'info');
         setLoading(false);
       } else if (result.agent?.tenantId) {
-        // Admin normal com tenantId já integrado: faz login direto
-        console.log('[Login] Admin normal com tenantId: redirecionando para /workspace');
+        // Admin/usuário normal com tenantId: verifica onboarding antes de redirecionar
+        console.log('[Login] Usuário com tenantId:', result.agent.tenantId);
+        updateAgent(result.agent);
+        await new Promise(r => setTimeout(r, 100));
+        
+        try {
+          const onboardingCheck = await getOnboardingCheck();
+          console.log('[Login] Onboarding check:', JSON.stringify(onboardingCheck));
+          
+          if (onboardingCheck?.blocking) {
+            console.log('[Login] ❌ Onboarding bloqueado, redirecionando...');
+            showToast('Configure os itens obrigatórios do onboarding para continuar.', 'warning', 8000);
+            setLoading(false);
+            setTimeout(() => navigate('/onboarding?source=login'), 100);
+            return;
+          }
+        } catch (err) {
+          console.warn('[Login] Erro ao verificar onboarding, continuando:', err);
+        }
+        
+        console.log('[Login] Redirecionando para /workspace');
         showToast('Login realizado com sucesso!', 'success');
         setLoading(false);
-        // Redireciona imediatamente para o RAP Workspace
-        setTimeout(() => {
-          navigate('/workspace');
-        }, 100);
+        setTimeout(() => navigate('/workspace'), 100);
       } else {
         // Admin sem tenantId: precisa selecionar
         console.log('[Login] Admin sem tenantId: abrindo modal de seleção');
