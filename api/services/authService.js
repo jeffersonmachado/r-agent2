@@ -307,32 +307,38 @@ async function createAgent({ tenantId, username, email, password, role, name }) 
 
   const UserModel = typeof User === 'function' ? User() : User;
 
-  // Evita duplicação
-  const existing = await UserModel.findOne({
-    where: {
-      // username e email são unique no schema
-      [UserModel.sequelize.constructor.Op.or]: [
-        UserModel.sequelize.where(
-          UserModel.sequelize.fn('lower', UserModel.sequelize.col('username')),
-          username.trim().toLowerCase()
-        ),
-        UserModel.sequelize.where(
-          UserModel.sequelize.fn('lower', UserModel.sequelize.col('email')),
-          email.trim().toLowerCase()
-        ),
-      ],
-    },
+  // Evita duplicação: se username já existe globalmente, usa username@tenantId
+  const trimmedUsername = username.trim();
+  const trimmedEmail = email.trim();
+  
+  const existingUsername = await UserModel.findOne({
+    where: UserModel.sequelize.where(
+      UserModel.sequelize.fn('lower', UserModel.sequelize.col('username')),
+      trimmedUsername.toLowerCase()
+    ),
   }).catch(() => null);
 
-  if (existing) {
-    return { success: false, error: 'Usuário já existe (username/email)' };
+  const existingEmail = await UserModel.findOne({
+    where: UserModel.sequelize.where(
+      UserModel.sequelize.fn('lower', UserModel.sequelize.col('email')),
+      trimmedEmail.toLowerCase()
+    ),
+  }).catch(() => null);
+
+  if (existingEmail) {
+    return { success: false, error: 'Email já cadastrado' };
   }
+
+  // Se username já existe em OUTRO tenant, aplica sufixo @tenantId
+  const finalUsername = existingUsername
+    ? `${trimmedUsername}@${tenantId}`
+    : trimmedUsername;
 
   const passwordHash = hashPassword(password);
   const created = await UserModel.create({
     tenant_key: tenantId,
-    username: username.trim(),
-    email: email.trim(),
+    username: finalUsername,
+    email: trimmedEmail,
     name: name || username.trim(),
     password_hash: passwordHash,
     role: normalizedRole,
@@ -420,14 +426,13 @@ async function createSaasSignupAccount({ name, company, email, password }) {
 
   const baseUsername = toUsernameFromEmail(safeEmail);
   let username = baseUsername;
-  let usernameIndex = 1;
-  while (true) {
-    const usernameExists = await UserModel.findOne({
-      where: sequelize.where(sequelize.fn('lower', sequelize.col('username')), username.toLowerCase()),
-    });
-    if (!usernameExists) break;
-    usernameIndex += 1;
-    username = `${baseUsername}.${usernameIndex}`;
+  // Verifica se username já existe globalmente
+  const usernameExists = await UserModel.findOne({
+    where: sequelize.where(sequelize.fn('lower', sequelize.col('username')), username.toLowerCase()),
+  });
+  // Se existir, usa formato username@tenantKey (único por tenant)
+  if (usernameExists) {
+    username = `${baseUsername}@${tenantKey}`;
   }
 
   const result = await sequelize.transaction(async (transaction) => {
