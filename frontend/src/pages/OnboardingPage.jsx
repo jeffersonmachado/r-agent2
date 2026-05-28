@@ -251,25 +251,27 @@ export function OnboardingPage() {
           </div>
           <p className="text-sm text-text-secondary ml-11">{step.description}</p>
         </div>
-        {!step.completed && !step.autoDetect && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              if (step.id === 'create_first_queue' || step.id === 'index_documents') {
-                handleCreateTemplates();
-              } else {
-                handleCompleteStep(step.id);
-              }
-            }}
-          >
-            Completar
-          </Button>
-        )}
-        {!step.completed && step.autoDetect && (
-          <span className="text-xs text-text-tertiary px-3 py-1 rounded bg-bg-tertiary">
-            Detectado automaticamente — recarregue para verificar
-          </span>
+        {!step.completed && (
+          <div className="flex items-center gap-2">
+            {step.autoDetect && (
+              <span className="text-xs text-text-tertiary px-2 py-1 rounded bg-bg-tertiary">
+                🔍 Auto-detect
+              </span>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                if (step.id === 'create_first_queue' || step.id === 'index_documents') {
+                  handleCreateTemplates();
+                } else {
+                  handleCompleteStep(step.id);
+                }
+              }}
+            >
+              Completar
+            </Button>
+          </div>
         )}
       </div>
     </div>
