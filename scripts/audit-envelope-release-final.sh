@@ -23,11 +23,32 @@ NC='\033[0m'
 
 PASS=true
 REASONS=()
+VALIDATOR_TIMEOUT_SECONDS="${VALIDATOR_TIMEOUT_SECONDS:-45}"
 
 step() { echo -e "${BLUE}[audit-final] $*${NC}"; }
 ok() { echo -e "${GREEN}  ✓ $*${NC}"; }
 warn() { echo -e "${YELLOW}  ⚠ $*${NC}"; }
 fail() { echo -e "${RED}  ✗ $*${NC}"; PASS=false; REASONS+=("$*"); }
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --signal=TERM --kill-after=5s "${seconds}s" "$@"
+  else
+    "$@"
+  fi
+}
+
+cleanup_tmp() {
+  [[ -n "${TMP:-}" && -d "${TMP:-}" ]] && rm -rf "$TMP"
+}
+
+cleanup_stale_tmp_dirs() {
+  run_with_timeout 5 find /tmp -maxdepth 1 -type d -name 'r-agent2-final-audit-*' -mmin +60 -exec rm -rf {} + >/dev/null 2>&1 || true
+  run_with_timeout 5 find /tmp -maxdepth 1 -type d -name 'r-agent2-audit-*' -mmin +60 -exec rm -rf {} + >/dev/null 2>&1 || true
+}
 
 contains_forbidden_tokens() {
   local file="$1"
@@ -51,11 +72,22 @@ check_banned_hashes() {
   : > "$log_path"
   local found=false
   local hash
+  local target
   for hash in "${BANNED_HASHES[@]}"; do
-    if grep -RIn "$hash" "$@" >> "$log_path" 2>/dev/null; then
-      fail "hash stale detectado: $hash"
-      found=true
-    fi
+    for target in "$@"; do
+      [[ -e "$target" ]] || continue
+      if [[ -d "$target" ]]; then
+        while IFS= read -r file; do
+          if run_with_timeout 5 grep -In "$hash" "$file" >> "$log_path" 2>/dev/null; then
+            fail "hash stale detectado: $hash"
+            found=true
+          fi
+        done < <(run_with_timeout 5 find "$target" -maxdepth 1 -type f \( -name '*.json' -o -name '*.sig' \) -print 2>/dev/null || true)
+      elif run_with_timeout 5 grep -In "$hash" "$target" >> "$log_path" 2>/dev/null; then
+        fail "hash stale detectado: $hash"
+        found=true
+      fi
+    done
   done
   [[ "$found" == false ]] && rm -f "$log_path"
 }
@@ -66,16 +98,28 @@ check_banned_timestamps() {
   : > "$log_path"
   local found=false
   local ts
+  local target
   for ts in "${BANNED_TIMESTAMPS[@]}"; do
-    if grep -RIn "$ts" "$@" >> "$log_path" 2>/dev/null; then
-      fail "referência antiga detectada: $ts"
-      found=true
-    fi
+    for target in "$@"; do
+      [[ -e "$target" ]] || continue
+      if [[ -d "$target" ]]; then
+        while IFS= read -r file; do
+          if run_with_timeout 5 grep -In "$ts" "$file" >> "$log_path" 2>/dev/null; then
+            fail "referência antiga detectada: $ts"
+            found=true
+          fi
+        done < <(run_with_timeout 5 find "$target" -maxdepth 1 -type f \( -name '*.json' -o -name '*.sig' \) -print 2>/dev/null || true)
+      elif run_with_timeout 5 grep -In "$ts" "$target" >> "$log_path" 2>/dev/null; then
+        fail "referência antiga detectada: $ts"
+        found=true
+      fi
+    done
   done
   [[ "$found" == false ]] && rm -f "$log_path"
 }
 
 cd "$PROJECT_ROOT"
+cleanup_stale_tmp_dirs
 
 DIST_RELEASE="$DIST_ROOT/release"
 DIST_GOV="$DIST_ROOT/governance"
@@ -117,17 +161,17 @@ fi
 
 step "3. Extrair envelope e payload"
 TMP="$(mktemp -d -t r-agent2-final-audit-XXXXXX)"
-trap 'rm -rf "$TMP"' EXIT
+trap cleanup_tmp EXIT
 if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
   release_envelope_validate_zip "$ENVELOPE_PATH" || fail "envelope contém entradas inesperadas"
-  unzip -qq "$ENVELOPE_PATH" -d "$TMP/envelope" 2>/dev/null || fail "falha ao extrair envelope"
+  release_payload_extract_zip "$ENVELOPE_PATH" "$TMP/envelope" 2>/dev/null || fail "falha/timeout ao extrair envelope"
 else
   for d in "$DIST_RELEASE" "$DIST_GOV" "$DIST_SIG" "$DIST_VER"; do
     [[ -d "$d" ]] || fail "envelope descompactado incompleto: $d"
   done
 fi
 release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME" || fail "payload contém arquivo proibido"
-unzip -qq "$PAYLOAD_PATH" -d "$TMP/payload" 2>/dev/null || fail "falha ao extrair payload"
+release_payload_extract_zip "$PAYLOAD_PATH" "$TMP/payload" 2>/dev/null || fail "falha/timeout ao extrair payload"
 
 IN_GOV="$TMP/payload/r-agent2/dist/governance"
 IN_SIG="$TMP/payload/r-agent2/dist/signatures"
@@ -239,10 +283,15 @@ VERIFY_ARGS=(--payload "$PAYLOAD_PATH")
 if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
   VERIFY_ARGS+=(--envelope "$ENVELOPE_PATH")
 fi
-if bash "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}" >/tmp/audit-v2.log 2>&1; then
+if run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" bash "$VERIFY_SCRIPT" "${VERIFY_ARGS[@]}" >/tmp/audit-v2.log 2>&1; then
   ok "verify-enterprise-governance-v2 PASS"
 else
-  fail "verify-enterprise-governance-v2 FAIL"
+  rc=$?
+  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+    fail "verify-enterprise-governance-v2 TIMEOUT"
+  else
+    fail "verify-enterprise-governance-v2 FAIL"
+  fi
   tail -n 30 /tmp/audit-v2.log | sed 's/^/    /' || true
 fi
 

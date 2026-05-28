@@ -221,10 +221,42 @@ export function ConfigAiTab({
                     <option value="">Padrão do provider</option>
                     {currentConfig.primary === 'openai' && (
                       <>
-                        <option value="gpt-4">GPT-4</option>
-                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                        <option value="gpt-4o">GPT-4o</option>
-                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        <optgroup label="GPT-5.5">
+                          <option value="gpt-5.5">GPT-5.5</option>
+                          <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
+                        </optgroup>
+                        <optgroup label="GPT-5.4">
+                          <option value="gpt-5.4">GPT-5.4</option>
+                          <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
+                          <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
+                          <option value="gpt-5.4-nano">GPT-5.4 Nano</option>
+                        </optgroup>
+                        <optgroup label="GPT-5">
+                          <option value="gpt-5">GPT-5</option>
+                          <option value="gpt-5-mini">GPT-5 Mini</option>
+                          <option value="gpt-5-nano">GPT-5 Nano</option>
+                        </optgroup>
+                        <optgroup label="Codex">
+                          <option value="gpt-5-codex">GPT-5 Codex</option>
+                          <option value="gpt-5.3-codex">GPT-5.3 Codex</option>
+                        </optgroup>
+                        <optgroup label="GPT-4.1">
+                          <option value="gpt-4.1">GPT-4.1</option>
+                          <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                          <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                        </optgroup>
+                        <optgroup label="o-Series (raciocínio)">
+                          <option value="o4">o4</option>
+                          <option value="o4-mini">o4-mini</option>
+                          <option value="o3">o3</option>
+                          <option value="o3-mini">o3-mini</option>
+                        </optgroup>
+                        <optgroup label="GPT-4 (legado)">
+                          <option value="gpt-4o">GPT-4o</option>
+                          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                          <option value="gpt-4">GPT-4</option>
+                          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </optgroup>
                       </>
                     )}
                     {currentConfig.primary === 'anthropic' && (

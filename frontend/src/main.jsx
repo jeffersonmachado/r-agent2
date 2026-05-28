@@ -432,6 +432,7 @@ function AppWithAuth() {
   const isWebScraping = isRoute('/web-scraping');
   const isRpaTest = isRoute('/dev/rpa-test');
   const isRpaReplays = isRoute('/dev/rpa-replays');
+  const isRpaReplaysAlias = isRoute('/rpa-replays');
   const isRpaSeeds = isRoute('/rpa-seeds');
   const isChat = isRoute('/chat');
   const isQaStability = isRoute('/qa/stability');
@@ -439,6 +440,7 @@ function AppWithAuth() {
   const isQaMesh = isRoute('/qa-mesh');
   const isGenerateSystem = isRoute('/generate-system');
   const isSystemStatus = isRoute('/dev/system-status');
+  const isSystemStatusAlias = isRoute('/system-status');
   const isChannelHealth = isRoute('/channel-health');
   const isChannelAccounts = isRoute('/channel-accounts');
   const isPlanUsage = isRoute('/plan-usage');
@@ -446,8 +448,7 @@ function AppWithAuth() {
   const isPbxTrunks = isRoute('/pbx/trunks');
   const isPbxRoutes = isRoute('/pbx/routes');
   const isPbxOperatorPanel = isRoute('/pbx/operator-panel');
-  const isPbxBulkProvisioning = isRoute('/pbx/provisioning-lote');
-  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxOperatorPanel && !isPbxBulkProvisioning;
+  const isPbxModule = currentPath.startsWith('/pbx/') && !isPbxExtensions && !isPbxTrunks && !isPbxRoutes && !isPbxOperatorPanel;
   const isPbx = isRoute('/pbx');
   const isChatHumanoDashboard = isRoute('/chat-humano');
   // Suporta CRM com ou sem prefixo /r-agent2 em produção
@@ -536,11 +537,11 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaReplaysAlias, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isSystemStatusAlias, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
-      isWorkManagement, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance,
+      isWorkManagement, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
       isLogin
     ];
@@ -817,6 +818,20 @@ function AppWithAuth() {
     );
   }
 
+  const workspaceKeys = getWorkspaceKeysForPath(currentPath, {
+    tenantContext: tenantProfile?.context || null,
+    tenantProfile,
+    includeAllVerticals: isSuperAdmin,
+  });
+  const inferredTenantWorkspaceKey = inferWorkspaceKeyFromTenantProfile(tenantProfile);
+  const sidebarVerticalKeys = isSuperAdmin
+    ? Object.keys(verticalWorkspaces)
+    : (inferredTenantWorkspaceKey ? [inferredTenantWorkspaceKey] : []);
+  const subNavVerticalLabels = sidebarVerticalKeys
+    .map((key) => verticalWorkspaces[key]?.label)
+    .filter(Boolean);
+  const subNavTenantLabel = tenantProfile?.tenant?.name || agent?.tenantId || '';
+
   let pageContent = null;
   if (isDashboard) {
     pageContent = <DashboardV2 />;
@@ -918,7 +933,7 @@ function AppWithAuth() {
     pageContent = <WebScrapingPage />;
   } else if (isRpaTest) {
     pageContent = <RpaTestPage />;
-  } else if (isRpaReplays) {
+  } else if (isRpaReplays || isRpaReplaysAlias) {
     pageContent = <RpaReplaysPage />;
   } else if (isRpaSeeds) {
     pageContent = <RpaSeedsPage />;
@@ -932,7 +947,7 @@ function AppWithAuth() {
     pageContent = <QaMeshPage />;
   } else if (isGenerateSystem) {
     pageContent = <GenerateSystemPage />;
-  } else if (isSystemStatus) {
+  } else if (isSystemStatus || isSystemStatusAlias) {
     pageContent = <SystemStatusPage />;
   } else if (isChannelHealth) {
     pageContent = <ChannelHealthPage />;
@@ -1004,6 +1019,8 @@ function AppWithAuth() {
     pageContent = <BeautyServicesPage />;
   } else if (isBeautyPayments) {
     pageContent = <BeautyPaymentsPage />;
+  } else if (isVerticalDashboard) {
+    pageContent = <VerticalOperationalDashboardPage workspaceKeys={workspaceKeys} isSuperAdmin={isSuperAdmin} />;
   } else if (isSolutions) {
     pageContent = <SolutionsPage />;
   } else if (isNodeMarketplace) {
@@ -1036,24 +1053,6 @@ function AppWithAuth() {
         </button>
       </div>
     );
-  }
-
-  const workspaceKeys = getWorkspaceKeysForPath(currentPath, {
-    tenantContext: tenantProfile?.context || null,
-    tenantProfile,
-    includeAllVerticals: isSuperAdmin,
-  });
-  const inferredTenantWorkspaceKey = inferWorkspaceKeyFromTenantProfile(tenantProfile);
-  const sidebarVerticalKeys = isSuperAdmin
-    ? Object.keys(verticalWorkspaces)
-    : (inferredTenantWorkspaceKey ? [inferredTenantWorkspaceKey] : []);
-  const subNavVerticalLabels = sidebarVerticalKeys
-    .map((key) => verticalWorkspaces[key]?.label)
-    .filter(Boolean);
-  const subNavTenantLabel = tenantProfile?.tenant?.name || agent?.tenantId || '';
-
-  if (isVerticalDashboard) {
-    pageContent = <VerticalOperationalDashboardPage workspaceKeys={workspaceKeys} isSuperAdmin={isSuperAdmin} />;
   }
 
   if (newNavigationEnabled && workspaceKeys.length > 0) {

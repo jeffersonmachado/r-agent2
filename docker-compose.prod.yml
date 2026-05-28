@@ -1,6 +1,12 @@
 # Docker Compose para PRODUÇÃO
 # Uso: docker-compose -f docker-compose.prod.yml up -d
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "${DOCKER_LOG_MAX_SIZE:-50m}"
+    max-file: "${DOCKER_LOG_MAX_FILE:-5}"
+
 services:
   api:
     build:
@@ -35,7 +41,7 @@ services:
       PGDATABASE: ${POSTGRES_DB:-results_saas}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY obrigatória}
+      ENCRYPTION_KEY: "${ENCRYPTION_KEY:?ENCRYPTION_KEY obrigatória}"
       # -------------------------------------------------------------------
       # Bootstrap de usuários (criados automaticamente pelo seed)
       # -------------------------------------------------------------------
@@ -44,13 +50,13 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@exemplo.com}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}
       # Recomenda-se definir explicitamente no .env do servidor remoto
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Erro: ADMIN_PASSWORD não definida}
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Erro: ADMIN_PASSWORD não definida}"
       # SystemAdmin (super-admin global)
       SYSTEMADMIN_USERNAME: ${SYSTEMADMIN_USERNAME:-systemadmin}
       SYSTEMADMIN_EMAIL: ${SYSTEMADMIN_EMAIL:-systemadmin@exemplo.com}
       SYSTEMADMIN_NAME: ${SYSTEMADMIN_NAME:-System Admin}
       # Recomenda-se definir explicitamente no .env do servidor remoto
-      SYSTEMADMIN_PASSWORD: ${SYSTEMADMIN_PASSWORD:?Erro: SYSTEMADMIN_PASSWORD não definida}
+      SYSTEMADMIN_PASSWORD: "${SYSTEMADMIN_PASSWORD:?Erro: SYSTEMADMIN_PASSWORD não definida}"
       # OpenAI API Key (opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RUNTIME_ROOT: ${RUNTIME_ROOT:-/var/lib/ragent2}
@@ -67,7 +73,7 @@ services:
       AMI_HOST: ${AMI_HOST:-asterisk}
       AMI_PORT: ${AMI_PORT:-5038}
       AMI_USERNAME: ${AMI_USERNAME:-ragent2}
-      AMI_SECRET: ${AMI_SECRET:?Erro: AMI_SECRET não definida}
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
       AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
       PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
       PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
@@ -92,6 +98,7 @@ services:
       asterisk:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
@@ -129,6 +136,7 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
@@ -179,6 +187,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
@@ -215,10 +224,11 @@ services:
       # Scripts de inicialização (opcional)
       # - ./scripts/postgres-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -271,6 +281,7 @@ services:
       - "${AMI_PUBLIC_PORT:-5038}:5038"
       - "${SIP_UDP_PORT:-5060}:5060/udp"
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
@@ -292,6 +303,7 @@ services:
       - r-agent2-redis-data:/data
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - r-agent2-network
     healthcheck:
@@ -320,4 +332,3 @@ volumes:
 networks:
   r-agent2-network:
     driver: bridge
-

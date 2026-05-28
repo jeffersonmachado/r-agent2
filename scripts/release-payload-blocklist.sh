@@ -60,6 +60,43 @@ RELEASE_PAYLOAD_IMAGE_ALLOWED_PREFIXES=(
   'assets/release-approved/'
 )
 
+RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS="${RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS:-20}"
+RELEASE_PAYLOAD_SCAN_TIMEOUT_SECONDS="${RELEASE_PAYLOAD_SCAN_TIMEOUT_SECONDS:-15}"
+
+release_payload_timeout() {
+  local seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --signal=TERM --kill-after=5s "${seconds}s" "$@"
+  else
+    "$@"
+  fi
+}
+
+release_payload_cleanup_stale_tmp() {
+  local prefix="$1"
+
+  [[ -n "$prefix" ]] || return 0
+  release_payload_timeout 5 find /tmp -maxdepth 1 -type f -name "${prefix}*" -mmin +60 -delete >/dev/null 2>&1 || true
+  release_payload_timeout 5 find /tmp -maxdepth 1 -type d -name "${prefix}*" -mmin +60 -exec rm -rf {} + >/dev/null 2>&1 || true
+}
+
+release_payload_zip_list() {
+  local zip_path="$1"
+  local list_file="$2"
+
+  release_payload_timeout "$RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS" unzip -Z1 "$zip_path" > "$list_file"
+}
+
+release_payload_extract_zip() {
+  local zip_path="$1"
+  local destination="$2"
+
+  mkdir -p "$destination"
+  release_payload_timeout "$RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS" unzip -qq -o "$zip_path" -d "$destination"
+}
+
 RELEASE_PAYLOAD_FORBIDDEN_REGEX=(
   '(^|/)rpa-token\.json$'
   '(^|/)\.env($|[./])'
@@ -220,21 +257,39 @@ release_payload_validate_zip() {
   local zip_path="$1"
   local label="${2:-payload}"
   local list_file
+  local rc
 
   if [[ -z "$zip_path" || ! -f "$zip_path" ]]; then
     echo "Payload validation failed: $label zip not found: $zip_path" >&2
     return 1
   fi
 
+  release_payload_cleanup_stale_tmp "r-agent2-payload-list."
   list_file="$(mktemp -t r-agent2-payload-list.XXXXXX)"
-  unzip -Z1 "$zip_path" > "$list_file"
+  if release_payload_zip_list "$zip_path" "$list_file"; then
+    rc=0
+  else
+    rc=$?
+    rm -f "$list_file"
+    if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+      echo "Payload validation failed: listing timed out for $label ($zip_path)" >&2
+    else
+      echo "Payload validation failed: malformed or unreadable zip for $label ($zip_path)" >&2
+    fi
+    return 1
+  fi
 
   if release_payload_scan_list "$list_file"; then
     rm -f "$list_file"
     return 0
   fi
+  rc=$?
 
-  echo "Payload validation failed: forbidden entries in $label ($zip_path)" >&2
+  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+    echo "Payload validation failed: scan timed out for $label ($zip_path)" >&2
+  else
+    echo "Payload validation failed: forbidden entries in $label ($zip_path)" >&2
+  fi
   rm -f "$list_file"
   return 1
 }
@@ -243,16 +298,29 @@ release_envelope_validate_zip() {
   local zip_path="$1"
   local list_file
   local bad
+  local rc
 
   if [[ -z "$zip_path" || ! -f "$zip_path" ]]; then
     echo "Envelope validation failed: zip not found: $zip_path" >&2
     return 1
   fi
 
+  release_payload_cleanup_stale_tmp "r-agent2-envelope-list."
   list_file="$(mktemp -t r-agent2-envelope-list.XXXXXX)"
-  unzip -Z1 "$zip_path" > "$list_file"
+  if release_payload_zip_list "$zip_path" "$list_file"; then
+    rc=0
+  else
+    rc=$?
+    rm -f "$list_file"
+    if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+      echo "Envelope validation failed: listing timed out for $zip_path" >&2
+    else
+      echo "Envelope validation failed: malformed or unreadable zip: $zip_path" >&2
+    fi
+    return 1
+  fi
 
-  bad="$(grep -Ev '^((r-agent2/)?$|(r-agent2/)?dist/$|(r-agent2/)?dist/(release|governance|signatures|verifier)/$|(r-agent2/)?dist/(release/[^/]+\.(payload\.zip|manifest\.json|zip)|governance/[^/]+\.json|signatures/[^/]+\.sig|verifier/[^/]+\.sh|verifier/verify-result\.json))$' "$list_file" || true)"
+  bad="$(release_payload_timeout "$RELEASE_PAYLOAD_SCAN_TIMEOUT_SECONDS" grep -Ev '^((r-agent2/)?$|(r-agent2/)?dist/$|(r-agent2/)?dist/(release|governance|signatures|verifier)/$|(r-agent2/)?dist/(release/[^/]+\.(payload\.zip|manifest\.json|zip)|governance/[^/]+\.json|signatures/[^/]+\.sig|verifier/[^/]+\.sh|verifier/verify-result\.json))$' "$list_file" || true)"
   if [[ -n "$bad" ]]; then
     echo "Envelope validation failed: unexpected entries:" >&2
     printf '%s\n' "$bad" | head -50 >&2

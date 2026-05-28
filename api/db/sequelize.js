@@ -18,8 +18,8 @@ function shouldEnableSequelizeLogging() {
     if (['1', 'true', 'on', 'yes'].includes(v)) return true;
   }
 
-  // Padrão: log de SQL apenas em development
-  return process.env.NODE_ENV === 'development';
+  // Padrão: log de SQL desabilitado. Use SEQUELIZE_LOGGING=true para ativar.
+  return false;
 }
 
 /**

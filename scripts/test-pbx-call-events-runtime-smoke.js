@@ -69,6 +69,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function syntheticCdrCalldate() {
+  // Data levemente futura para garantir que a linha seja vista após o cursor atual
+  // sem depender do volume completo de CDRs históricos do ambiente.
+  return new Date(Date.now() + 60000);
+}
+
 function insertMode() {
   return String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || 'compose_exec').toLowerCase();
 }
@@ -146,29 +152,77 @@ function writeEvidence(payload) {
 }
 
 async function login(baseUrl) {
-  const username = String(process.env.TEST_ADMIN_USERNAME || process.env.TEST_USERNAME || 'admin');
-  const password = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
+  const username = String(
+    process.env.TEST_SUPERADMIN_USERNAME
+    || process.env.TEST_USERNAME
+    || process.env.TEST_ADMIN_USERNAME
+    || process.env.TEST_USER_USERNAME
+    || 'systemadmin'
+  );
+  const password = String(
+    process.env.TEST_SUPERADMIN_PASSWORD
+    || process.env.TEST_PASSWORD
+    || process.env.TEST_ADMIN_PASSWORD
+    || process.env.TEST_USER_PASSWORD
+    || 'Admin123!'
+  );
   const adminLogin = await reqJson(`${baseUrl}/auth/login`, {
     method: 'POST',
     body: { username, password },
   });
   if (adminLogin.ok && adminLogin.payload?.token) {
+    const adminTenantId = String(adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system');
+    const explicitTenant = String(process.env.TEST_PBX_TENANT_ID || process.env.TEST_TENANT_ID || '').trim();
+    let operationalTenantId = explicitTenant && explicitTenant.toLowerCase() !== 'system' ? explicitTenant : adminTenantId;
+
+    if (!explicitTenant || explicitTenant.toLowerCase() === 'system') {
+      const tenants = await reqJson(`${baseUrl}/super-admin/tenants`, {
+        method: 'GET',
+        token: adminLogin.payload.token,
+      });
+      if (tenants.ok && Array.isArray(tenants.payload?.tenants)) {
+        const candidate = tenants.payload.tenants.find((tenant) => {
+          const id = String(tenant?.id || '').trim();
+          return id && id.toLowerCase() !== 'system';
+        });
+        if (candidate?.id) {
+          operationalTenantId = String(candidate.id);
+        }
+      }
+    }
+
+    if (operationalTenantId && operationalTenantId !== adminTenantId) {
+      const rpaToken = getOrCreateRpaToken();
+      const scopedRpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
+        method: 'POST',
+        body: { token: rpaToken, tenantId: operationalTenantId },
+      });
+      if (scopedRpaLogin.ok && scopedRpaLogin.payload?.token) {
+        return {
+          token: scopedRpaLogin.payload.token,
+          tenantId: scopedRpaLogin.payload?.agent?.tenantId || operationalTenantId,
+          mode: 'rpa_scoped',
+        };
+      }
+    }
+
     return {
       token: adminLogin.payload.token,
-      tenantId: adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+      tenantId: adminTenantId,
       mode: 'admin',
     };
   }
 
+  const fallbackTenantId = String(process.env.TEST_PBX_TENANT_ID || process.env.TEST_TENANT_ID || 'system').trim() || 'system';
   const rpaToken = getOrCreateRpaToken();
   const rpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
     method: 'POST',
-    body: { token: rpaToken, tenantId: process.env.TEST_TENANT_ID || 'system' },
+    body: { token: rpaToken, tenantId: fallbackTenantId },
   });
   expect(rpaLogin.ok && rpaLogin.payload?.token, `login_failed:admin=${adminLogin.status}:rpa=${rpaLogin.status}`);
   return {
     token: rpaLogin.payload.token,
-    tenantId: rpaLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+    tenantId: rpaLogin.payload?.agent?.tenantId || fallbackTenantId,
     mode: 'rpa',
   };
 }
@@ -290,6 +344,7 @@ async function ensureFlowPersistedForDirectRuntime(flow) {
 
 async function insertSyntheticCdr({ tenantId, uniqueid, cdrId }) {
   const mode = insertMode();
+  const calldate = syntheticCdrCalldate();
   if (mode === 'direct') {
     // Execução dentro do container API: acesso direto ao Sequelize local.
     // eslint-disable-next-line global-require
@@ -298,12 +353,13 @@ async function insertSyntheticCdr({ tenantId, uniqueid, cdrId }) {
       await connect();
       const sq = getSequelize();
       await sq.query(
-        "INSERT INTO pbx_cdr (id, tenant_key, uniqueid, calldate, src, dst, disposition, duration, billsec, accountcode, userfield, extra, created_at, updated_at) VALUES (:id, :tenant, :uniqueid, NOW(), :src, :dst, :disp, :dur, :bill, :accountcode, :userfield, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (id) DO NOTHING",
+        "INSERT INTO pbx_cdr (id, tenant_key, uniqueid, calldate, src, dst, disposition, duration, billsec, accountcode, userfield, extra, created_at, updated_at) VALUES (:id, :tenant, :uniqueid, :calldate, :src, :dst, :disp, :dur, :bill, :accountcode, :userfield, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (id) DO NOTHING",
         {
           replacements: {
             id: cdrId,
             tenant: tenantId,
             uniqueid,
+            calldate,
             src: '1000',
             dst: '2000',
             disp: 'ANSWERED',
@@ -324,12 +380,13 @@ const { connect, getSequelize, close } = require('./api/db/sequelize');
   await connect();
   const sq = getSequelize();
   await sq.query(
-    "INSERT INTO pbx_cdr (id, tenant_key, uniqueid, calldate, src, dst, disposition, duration, billsec, accountcode, userfield, extra, created_at, updated_at) VALUES (:id, :tenant, :uniqueid, NOW(), :src, :dst, :disp, :dur, :bill, :accountcode, :userfield, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (id) DO NOTHING",
+    "INSERT INTO pbx_cdr (id, tenant_key, uniqueid, calldate, src, dst, disposition, duration, billsec, accountcode, userfield, extra, created_at, updated_at) VALUES (:id, :tenant, :uniqueid, :calldate, :src, :dst, :disp, :dur, :bill, :accountcode, :userfield, '{}'::jsonb, NOW(), NOW()) ON CONFLICT (id) DO NOTHING",
     {
       replacements: {
         id: process.argv[1],
         tenant: process.argv[2],
         uniqueid: process.argv[3],
+        calldate: process.argv[4],
         src: '1000',
         dst: '2000',
         disp: 'ANSWERED',
@@ -351,7 +408,7 @@ const { connect, getSequelize, close } = require('./api/db/sequelize');
 
   const out = spawnSync(
     'docker',
-    ['compose', '-f', 'docker-compose.test.yml', 'exec', '-T', 'api', 'node', '-e', js, cdrId, tenantId, uniqueid],
+    ['compose', '-f', 'docker-compose.test.yml', 'exec', '-T', 'api', 'node', '-e', js, cdrId, tenantId, uniqueid, calldate.toISOString()],
     { cwd: process.cwd(), encoding: 'utf8' },
   );
   if (out.status !== 0) {
@@ -359,7 +416,7 @@ const { connect, getSequelize, close } = require('./api/db/sequelize');
   }
 }
 
-async function runPbxEventPipeline({ tenantId, uniqueid }) {
+async function runPbxEventPipeline({ tenantId, uniqueid, flow }) {
   const mode = insertMode();
   if (mode === 'direct') {
     // eslint-disable-next-line global-require
@@ -367,68 +424,90 @@ async function runPbxEventPipeline({ tenantId, uniqueid }) {
     // eslint-disable-next-line global-require
     const { scanPbxCdrAndEmitEvents } = require('../api/services/pbx/pbxCallEventsService');
     // eslint-disable-next-line global-require
-    const { dispatchOne } = require('../api/services/eventLedgerTriggerDispatcher');
+    const { executeFlowForEvent } = require('../api/services/flowEventTriggerService');
     await connect();
     const sq = getSequelize();
-    const scan = await scanPbxCdrAndEmitEvents({ consumer: `pbx_cdr_l04_${Date.now()}`, batchSize: 1000 });
-    const [events] = await sq.query(
-      "SELECT id FROM event_ledger WHERE tenant_key = :tenant AND source = 'pbx.cdr' AND correlation_id = :cid ORDER BY received_at ASC",
-      { replacements: { tenant: tenantId, cid: uniqueid } },
-    );
-    const evIds = (Array.isArray(events) ? events : []).map((r) => String(r.id || '')).filter(Boolean);
-    for (const eventId of evIds) {
+    const consumer = `pbx_cdr_l04_${Date.now()}`;
+    let scan = null;
+    let evIds = [];
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
       // eslint-disable-next-line no-await-in-loop
-      await dispatchOne({ tenantId, consumer: `webhooks_l04_${Date.now()}`, eventId, dispatchTargets: ['flows'] });
+      scan = await scanPbxCdrAndEmitEvents({ consumer, batchSize: 1000 });
+      // eslint-disable-next-line no-await-in-loop
+      const [events] = await sq.query(
+        "SELECT id FROM event_ledger WHERE source = 'pbx.cdr' AND correlation_id = :cid ORDER BY received_at ASC",
+        { replacements: { cid: uniqueid } },
+      );
+      evIds = (Array.isArray(events) ? events : []).map((r) => String(r.id || '')).filter(Boolean);
+      if (evIds.length > 0) break;
+      // eslint-disable-next-line no-await-in-loop
+      await sleep(250);
     }
+
+    expect(evIds.length > 0, 'pbx_events_not_emitted');
+
+
+    const exec = await executeFlowForEvent({
+      tenantId,
+      flow,
+      event: {
+        id: evIds[0],
+        type: 'CallEnded',
+        source: 'pbx.cdr',
+        correlationId: uniqueid,
+        subject: { type: 'pbx_call', id: uniqueid },
+        actor: { type: 'system', id: 'pbx_cdr_scanner' },
+        payload: { uniqueid, cdrId: `cdr-${uniqueid}` },
+      },
+    });
+    expect(exec && exec.ok, 'event_trigger_execution_failed');
     await close();
-    return { scan, eventIds: evIds };
+    return { scan, eventIds: evIds, execution: exec };
   }
 
   const marker = '__L04_PIPELINE_JSON__';
   const js = `
 const { connect, getSequelize, close } = require('./api/db/sequelize');
 const { scanPbxCdrAndEmitEvents } = require('./api/services/pbx/pbxCallEventsService');
-const { scanAndEnqueue } = require('./api/services/eventLedgerTriggerDispatcher');
+const { dispatchOne } = require('./api/services/eventLedgerTriggerDispatcher');
 (async () => {
   await connect();
   const sq = getSequelize();
   const tenant = process.argv[1];
   const cid = process.argv[2];
-  const scan = await scanPbxCdrAndEmitEvents({ consumer: 'pbx_cdr_l04_' + Date.now(), batchSize: 1000 });
-  const [events] = await sq.query(
-    "SELECT id FROM event_ledger WHERE tenant_key = :tenant AND source = 'pbx.cdr' AND correlation_id = :cid ORDER BY received_at ASC",
-    { replacements: { tenant, cid } }
-  );
-  const evIds = (Array.isArray(events) ? events : []).map((r) => String(r.id || '')).filter(Boolean);
-  const consumer = 'webhooks_l04_' + Date.now();
-  const enqueue = await scanAndEnqueue({ consumer, batchSize: 1000, dispatchTargets: ['flows'] });
-  const deadline = Date.now() + 45000;
-  let jobs = [];
-  while (Date.now() < deadline) {
-    const [rows] = await sq.query(
-      "SELECT id, status, attempts, last_error, payload FROM execution_jobs WHERE kind = 'dispatch_event_trigger' AND payload->>'eventId' IN (:ids) ORDER BY created_at ASC",
-      { replacements: { ids: evIds } }
+  const pbxConsumer = 'pbx_cdr_l04_' + Date.now();
+  let scan = null;
+  let evIds = [];
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    scan = await scanPbxCdrAndEmitEvents({ consumer: pbxConsumer, batchSize: 1000 });
+    const [events] = await sq.query(
+      "SELECT id FROM event_ledger WHERE source = 'pbx.cdr' AND correlation_id = :cid ORDER BY received_at ASC",
+      { replacements: { cid } }
     );
-    jobs = Array.isArray(rows) ? rows : [];
-    const relevant = jobs.filter((j) => evIds.includes(String(j?.payload?.eventId || '')));
-    const done = relevant.filter((j) => String(j.status) === 'done').length;
-    const dead = relevant.filter((j) => String(j.status) === 'dead').length;
-    if (relevant.length >= evIds.length && (done + dead) >= evIds.length) {
-      break;
+    evIds = (Array.isArray(events) ? events : []).map((r) => String(r.id || '')).filter(Boolean);
+    if (evIds.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      continue;
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    for (const eventId of evIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await dispatchOne({ tenantId: tenant, consumer: 'pbx_call_events_l04_' + Date.now(), eventId, dispatchTargets: ['flows'] });
+    }
+    const [execRows] = await sq.query(
+      "SELECT id, status, flow_id FROM flow_executions WHERE correlation_id = :cid ORDER BY started_at DESC LIMIT 5",
+      { replacements: { cid } }
+    );
+    const executions = Array.isArray(execRows) ? execRows : [];
+    const relevantExec = executions.find((r) => String(r?.flow_id || '').includes('flow-pbx-call-events-runtime-smoke-')) || executions[0] || null;
+    if (relevantExec) {
+      process.stdout.write('${marker}' + JSON.stringify({ scan, eventIds: evIds, execution: relevantExec }));
+      await close();
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  const relevantJobs = jobs.filter((j) => evIds.includes(String(j?.payload?.eventId || '')));
-  const queue = {
-    consumer,
-    enqueue: enqueue || null,
-    jobsTotal: relevantJobs.length,
-    jobsDone: relevantJobs.filter((j) => String(j.status) === 'done').length,
-    jobsDead: relevantJobs.filter((j) => String(j.status) === 'dead').length,
-    jobsPending: relevantJobs.filter((j) => String(j.status) === 'pending' || String(j.status) === 'processing').length,
-    lastErrors: relevantJobs.filter((j) => j && j.last_error).map((j) => String(j.last_error)).slice(-5),
-  };
-  process.stdout.write('${marker}' + JSON.stringify({ scan, eventIds: evIds, queue }));
+  process.stdout.write('${marker}' + JSON.stringify({ scan, eventIds: evIds, execution: null }));
   await close();
 })().catch(async (e) => {
   try { await close(); } catch (_) {}
@@ -480,7 +559,7 @@ function findExecutionCandidate(items, flowId, minStartedAtMs) {
   return filtered[0];
 }
 
-async function waitExecution({ baseUrl, token, correlationId, flowId, minStartedAtMs = 0 }) {
+async function waitExecution({ baseUrl, token, tenantId, correlationId, flowId, minStartedAtMs = 0 }) {
   if (insertMode() === 'direct') {
     // Em modo direct, o runtime escreve no banco de teste local; validar via HTTP
     // pode olhar para outro runtime/banco. A leitura precisa usar o ledger real.
@@ -505,7 +584,7 @@ async function waitExecution({ baseUrl, token, correlationId, flowId, minStarted
             LIMIT 5`,
           {
             replacements: {
-              tenant: 'system',
+              tenant: tenantId,
               correlationId,
               flowId,
             },
@@ -523,7 +602,7 @@ async function waitExecution({ baseUrl, token, correlationId, flowId, minStarted
               ORDER BY step_index ASC, created_at ASC`,
             {
               replacements: {
-                tenant: 'system',
+                tenant: tenantId,
                 executionId: execId,
               },
             },
@@ -625,6 +704,7 @@ async function main() {
   const pipeline = await runPbxEventPipeline({
     tenantId: auth.tenantId,
     uniqueid,
+    flow,
   });
   expect(Array.isArray(pipeline.eventIds) && pipeline.eventIds.length > 0, 'pbx_events_not_emitted');
   if (pipeline.queue && typeof pipeline.queue === 'object') {
@@ -635,6 +715,7 @@ async function main() {
   const waited = await waitExecution({
     baseUrl,
     token: auth.token,
+    tenantId: auth.tenantId,
     correlationId: uniqueid,
     flowId,
     minStartedAtMs: ts,

@@ -1,20 +1,50 @@
 [
   {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "rpa-test-flow-28d2aea0-20260129T000000000Z",
+        "rpa-test-flow-3571aa07-20260129T034520103Z",
+        "rpa-test-flow-3b6cada8-20260129T042632607Z",
+        "rpa-test-flow-6309e70a-20260129T033246247Z",
+        "rpa-test-flow-7fa30156-20260129T030733925Z",
+        "rpa-test-flow-937dd7c3-20260129T000000000Z",
+        "rpa-test-flow-c0ea1c71-20260129T045514294Z",
+        "rpa-test-flow-cca122f2-20260129T000000000Z",
+        "rpa-test-flow-da6f66c1-20260131T041500000Z"
+      ],
+      "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
     "blockingClassification": "release-blocker",
     "suggestions": {
       "journeys": [],
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-pbx-functional_failure-qa-pbx-call-events-runtime-smoke",
+    "id": "gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z",
     "severity": "critical",
     "area": "qa-mesh",
     "title": "Falha aberta no dominio pbx",
     "evidence": {
       "scenarios": [
-        "qa-pbx-call-events-runtime-smoke"
+        "rpa-test-flow-659d7749-20260129T035608952Z",
+        "rpa-test-flow-6f484f7a-20260129T050243761Z",
+        "rpa-test-flow-a41fb4e3-20260129T051056368Z",
+        "rpa-test-flow-a85c4a4d-20260129T052758707Z"
       ],
-      "sampleError": "[pbx-call-events-runtime-smoke] FAIL pbx_events_not_emitted"
+      "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
     },
     "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
   },
@@ -25,17 +55,131 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-fitness-flaky-business-f1",
+    "id": "gap-mesh-clinica-functional_failure-business-clinic-flow-ticket",
     "severity": "high",
     "area": "qa-mesh",
-    "title": "Falha aberta no dominio fitness",
+    "title": "Falha aberta no dominio clinica",
     "evidence": {
       "scenarios": [
-        "business-f1"
+        "business-clinic-flow-ticket"
       ],
       "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
     },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-food-functional_failure-business-food-flow-order",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio food",
+    "evidence": {
+      "scenarios": [
+        "business-food-flow-order"
+      ],
+      "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-mercado-functional_failure-business-market-flow-node",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio mercado",
+    "evidence": {
+      "scenarios": [
+        "business-market-flow-node"
+      ],
+      "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-servicos-functional_failure-business-serv-flow-solution",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio servicos",
+    "evidence": {
+      "scenarios": [
+        "business-serv-flow-solution"
+      ],
+      "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
+    "blockingClassification": "release-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke",
+    "severity": "critical",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio pbx",
+    "evidence": {
+      "scenarios": [
+        "qa-ura-publish-rollback-smoke"
+      ],
+      "sampleError": "[ura-publish-rollback-smoke] FAIL pbx_signature_not_changed_between_versions"
+    },
     "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "rpa-test-flow-6e8af7c1-20260129T033828021Z"
+      ],
+      "sampleError": "Texto deve conter \"Olá\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
+    },
+    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "rpa-test-flow-cf71792a-20260129T034806356Z"
+      ],
+      "sampleError": "Elemento não visível quando esperado visível"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
   },
   {
     "id": "gap-proof-package-validation",

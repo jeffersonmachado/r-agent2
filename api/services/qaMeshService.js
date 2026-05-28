@@ -2,14 +2,18 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+const os = require('os');
 const { isInPipeline } = require('../../pipeline/guard');
 const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
 const { buildScheduleStatus, runScheduledMesh, startScheduler } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
 const { emitEvent } = require('./websocketService');
 const qaWavesLogger = require('../utils/qaWavesLogger');
+const logger = require('../utils/logger');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
+const MESH_RUNNING_LOCK_PATH = path.join(ROOT_DIR, 'qa-mesh', 'mesh-running.lock');
 const STABILITY_SNAPSHOT_PATH = path.join(ROOT_DIR, 'qa/mesh/intelligence/stabilitySnapshot.json');
 const STABILITY_HISTORY_INDEX_PATH = path.join(ROOT_DIR, 'qa/mesh/intelligence/history/index.json');
 const CHECKPOINT_WAVES_DIR = path.join(ROOT_DIR, 'qa/checkpoints/waves');
@@ -18,6 +22,51 @@ const CHECKPOINT_FAILURES_PATH = path.join(ROOT_DIR, 'qa/checkpoints/state/failu
 const LEARN_BASE_DIR = path.join(ROOT_DIR, 'qa/mesh/intelligence/learning');
 const QA_MESH_GO_NO_GO_PATH = path.join(ROOT_DIR, 'qa-mesh', 'go-no-go-report.json');
 const QA_MESH_RELEASE_GATE_PATH = path.join(ROOT_DIR, 'qa-mesh', 'release-gate-report.json');
+
+// ── Proteção contra execuções simultâneas ──
+
+function isMeshAlreadyRunning() {
+  if (fs.existsSync(MESH_RUNNING_LOCK_PATH)) {
+    try {
+      const lockData = JSON.parse(fs.readFileSync(MESH_RUNNING_LOCK_PATH, 'utf8'));
+      try {
+        process.kill(lockData.pid, 0);
+        return { running: true, reason: 'lock_active', details: lockData };
+      } catch (_) {
+        fs.unlinkSync(MESH_RUNNING_LOCK_PATH);
+        return { running: false, reason: 'stale_lock_cleared' };
+      }
+    } catch (_) {
+      try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (__) {}
+      return { running: false, reason: 'corrupt_lock_cleared' };
+    }
+  }
+
+  try {
+    const procs = execSync(
+      'ps aux | grep "meshRunner\\.js" | grep -v grep | grep -v meshScheduler',
+      { encoding: 'utf8', timeout: 3000 }
+    ).trim();
+    if (procs) {
+      const pids = procs.split('\n').map(l => l.trim().split(/\s+/)[1]).filter(Boolean);
+      return { running: true, reason: 'process_found', pids };
+    }
+  } catch (_) { /* ps falhou, ignora */ }
+
+  return { running: false, reason: 'clear' };
+}
+
+function acquireMeshLock() {
+  fs.writeFileSync(MESH_RUNNING_LOCK_PATH, JSON.stringify({
+    pid: process.pid,
+    startedAt: new Date().toISOString(),
+    host: os.hostname(),
+  }, null, 2), 'utf8');
+}
+
+function releaseMeshLock() {
+  try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (_) {}
+}
 
 if (process.env.RUNNING_IN_PIPELINE !== '1' && process.env.QA_MESH_DISABLE_SCHEDULER !== '1') {
   startScheduler();
@@ -247,8 +296,26 @@ function emitQaWavesExecutionRealtime(executionId, tenantId, eventName = 'qa-wav
 function queueMeshRun(options = {}) {
   return enqueueExecution('run', options, async (executionId) => {
     const tenantId = options.tenantId || null;
-    qaWavesLogger.info(`[RUN] Iniciando execução`, { executionId, tenantId, scenarioIds: options.scenarioIds });
-    const result = await runMesh({
+
+    // ── Proteção: não inicia se já tem mesh rodando ──
+    const running = isMeshAlreadyRunning();
+    if (running.running) {
+      logger.warn('[qaMesh] Mesh já em execução — ignorando nova solicitação', {
+        executionId,
+        reason: running.reason,
+        details: running.details || running.pids,
+      });
+      return {
+        skipped: true,
+        reason: 'mesh_already_running',
+        details: running,
+      };
+    }
+    acquireMeshLock();
+
+    try {
+      qaWavesLogger.info(`[RUN] Iniciando execução`, { executionId, tenantId, scenarioIds: options.scenarioIds });
+      const result = await runMesh({
       executionId,
       executionOrigin: 'manual_run',
       closeGovernanceDbAfterIntegration: false,
@@ -304,6 +371,9 @@ function queueMeshRun(options = {}) {
     });
     emitQaWavesExecutionRealtime(executionId, tenantId);
     return result;
+    } finally {
+      releaseMeshLock();
+    }
   });
 }
 
@@ -320,8 +390,26 @@ function queueScenarioReplay(scenarioId, options = {}) {
   }
   return enqueueExecution('replay', { scenarioId }, async (executionId) => {
     const tenantId = options.tenantId || null;
-    qaWavesLogger.info(`[REPLAY] Iniciando replay: ${scenarioId}`, { executionId, tenantId });
-    const result = await runMesh({
+
+    // ── Proteção: não inicia replay se já tem mesh rodando ──
+    const running = isMeshAlreadyRunning();
+    if (running.running) {
+      logger.warn('[qaMesh] Mesh já em execução — ignorando replay', {
+        executionId,
+        scenarioId,
+        reason: running.reason,
+      });
+      return {
+        skipped: true,
+        reason: 'mesh_already_running',
+        details: running,
+      };
+    }
+    acquireMeshLock();
+
+    try {
+      qaWavesLogger.info(`[REPLAY] Iniciando replay: ${scenarioId}`, { executionId, tenantId });
+      const result = await runMesh({
       executionId,
       executionOrigin: 'manual_replay',
       closeGovernanceDbAfterIntegration: false,
@@ -371,6 +459,9 @@ function queueScenarioReplay(scenarioId, options = {}) {
     });
     emitQaWavesExecutionRealtime(executionId, tenantId);
     return result;
+    } finally {
+      releaseMeshLock();
+    }
   });
 }
 

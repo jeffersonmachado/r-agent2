@@ -443,8 +443,8 @@ export function SupervisorPage() {
               <div style={{ fontWeight: 600, marginBottom: '8px' }}>Filas</div>
               {queueLoad.length === 0 ? (
                 <div style={{ color: 'var(--color-text-tertiary)' }}>Sem dados</div>
-              ) : queueLoad.map((item) => (
-                <div key={item.label} style={{ marginBottom: '8px' }}>
+              ) : queueLoad.map((item, i) => (
+                <div key={`queue-${i}-${item.label}`} style={{ marginBottom: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
@@ -466,8 +466,8 @@ export function SupervisorPage() {
               <div style={{ fontWeight: 600, marginBottom: '8px' }}>Agentes</div>
               {agentLoad.length === 0 ? (
                 <div style={{ color: 'var(--color-text-tertiary)' }}>Sem dados</div>
-              ) : agentLoad.map((item) => (
-                <div key={item.label} style={{ marginBottom: '8px' }}>
+              ) : agentLoad.map((item, i) => (
+                <div key={`agent-${i}-${item.label}`} style={{ marginBottom: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>

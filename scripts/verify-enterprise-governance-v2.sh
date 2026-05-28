@@ -31,6 +31,7 @@ TARGET_PAYLOAD=""
 OVERALL_PASS=true
 REASONS=()
 STEPS=()
+VALIDATOR_TIMEOUT_SECONDS="${VALIDATOR_TIMEOUT_SECONDS:-45}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -51,6 +52,26 @@ fail() {
   [[ "$JSON_MODE" == false ]] && echo -e "${RED}  ✗ $*${NC}" || true
   OVERALL_PASS=false
   REASONS+=("$*")
+}
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --signal=TERM --kill-after=5s "${seconds}s" "$@"
+  else
+    "$@"
+  fi
+}
+
+cleanup_tmp() {
+  [[ -n "${TMP:-}" && -d "${TMP:-}" ]] && rm -rf "$TMP"
+}
+
+cleanup_stale_tmp_dirs() {
+  run_with_timeout 5 find /tmp -maxdepth 1 -type d -name 'r-agent2-audit-*' -mmin +60 -exec rm -rf {} + >/dev/null 2>&1 || true
+  run_with_timeout 5 find /tmp -maxdepth 1 -type d -name 'r-agent2-final-audit-*' -mmin +60 -exec rm -rf {} + >/dev/null 2>&1 || true
 }
 
 contains_forbidden_tokens() {
@@ -75,11 +96,22 @@ check_banned_hashes() {
   : > "$log_path"
   local found=false
   local hash
+  local target
   for hash in "${BANNED_HASHES[@]}"; do
-    if grep -RIn "$hash" "$@" >> "$log_path" 2>/dev/null; then
-      fail "Referência stale detectada: $hash"
-      found=true
-    fi
+    for target in "$@"; do
+      [[ -e "$target" ]] || continue
+      if [[ -d "$target" ]]; then
+        while IFS= read -r file; do
+          if run_with_timeout 5 grep -In "$hash" "$file" >> "$log_path" 2>/dev/null; then
+            fail "Referência stale detectada: $hash"
+            found=true
+          fi
+        done < <(run_with_timeout 5 find "$target" -maxdepth 1 -type f \( -name '*.json' -o -name '*.sig' \) -print 2>/dev/null || true)
+      elif run_with_timeout 5 grep -In "$hash" "$target" >> "$log_path" 2>/dev/null; then
+        fail "Referência stale detectada: $hash"
+        found=true
+      fi
+    done
   done
   [[ "$found" == false ]] && rm -f "$log_path"
 }
@@ -90,11 +122,22 @@ check_banned_timestamps() {
   : > "$log_path"
   local found=false
   local ts
+  local target
   for ts in "${BANNED_TIMESTAMPS[@]}"; do
-    if grep -RIn "$ts" "$@" >> "$log_path" 2>/dev/null; then
-      fail "Referência antiga detectada: $ts"
-      found=true
-    fi
+    for target in "$@"; do
+      [[ -e "$target" ]] || continue
+      if [[ -d "$target" ]]; then
+        while IFS= read -r file; do
+          if run_with_timeout 5 grep -In "$ts" "$file" >> "$log_path" 2>/dev/null; then
+            fail "Referência antiga detectada: $ts"
+            found=true
+          fi
+        done < <(run_with_timeout 5 find "$target" -maxdepth 1 -type f \( -name '*.json' -o -name '*.sig' \) -print 2>/dev/null || true)
+      elif run_with_timeout 5 grep -In "$ts" "$target" >> "$log_path" 2>/dev/null; then
+        fail "Referência antiga detectada: $ts"
+        found=true
+      fi
+    done
   done
   [[ "$found" == false ]] && rm -f "$log_path"
 }
@@ -133,6 +176,7 @@ write_verify_result() {
 }
 
 cd "$PROJECT_ROOT" || exit 1
+cleanup_stale_tmp_dirs
 DIST_RELEASE="$DIST_ROOT/release"
 DIST_GOV="$DIST_ROOT/governance"
 DIST_SIG="$DIST_ROOT/signatures"
@@ -196,7 +240,7 @@ fi
 step "3. Validando conteúdo obrigatório do envelope (zip ou descompactado)"
 if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
   release_envelope_validate_zip "$ENVELOPE_PATH" || fail "Envelope contém entradas inesperadas"
-  ENVELOPE_LIST="$(unzip -l "$ENVELOPE_PATH" 2>/dev/null || true)"
+  ENVELOPE_LIST="$(run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" unzip -l "$ENVELOPE_PATH" 2>/dev/null || true)"
   for item in \
     "r-agent2/dist/release/$PAYLOAD_NAME" \
     "r-agent2/dist/release/$MANIFEST_NAME" \
@@ -264,15 +308,16 @@ done
 
 step "5. Validando estrutura interna do payload (modelo mínimo envelope-governed)"
 TMP="$(mktemp -d -t r-agent2-audit-XXXXXX)"
-trap 'rm -rf "$TMP"' EXIT
-if [[ "$ENVELOPE_AVAILABLE" == true ]]; then
-  unzip -qq "$ENVELOPE_PATH" -d "$TMP/envelope" 2>/dev/null || true
-fi
-unzip -qq "$PAYLOAD_PATH" -d "$TMP/payload" 2>/dev/null || true
+trap cleanup_tmp EXIT
 if release_payload_validate_zip "$PAYLOAD_PATH" "$PAYLOAD_NAME"; then
   ok "Payload sem arquivos proibidos"
 else
   fail "Payload contaminado por arquivo proibido"
+fi
+if release_payload_extract_zip "$PAYLOAD_PATH" "$TMP/payload" 2>/dev/null; then
+  ok "Payload extraído para validação interna"
+else
+  fail "Falha/timeout ao extrair payload para validação interna"
 fi
 
 IN_GOV_DIR="$TMP/payload/r-agent2/dist/governance"

@@ -87,30 +87,88 @@ function writeEvidence(payload) {
   return out;
 }
 
+async function resolveOperationalTenantId(baseUrl, token) {
+  const explicitTenant = String(process.env.TEST_PBX_TENANT_ID || process.env.TEST_TENANT_ID || '').trim();
+  if (explicitTenant && explicitTenant.toLowerCase() !== 'system') {
+    return explicitTenant;
+  }
+  if (!token) {
+    return explicitTenant || 'system';
+  }
+
+  const tenants = await reqJson(`${baseUrl}/super-admin/tenants`, {
+    method: 'GET',
+    token,
+  });
+
+  if (tenants.ok && Array.isArray(tenants.payload?.tenants)) {
+    const candidate = tenants.payload.tenants.find((tenant) => {
+      const id = String(tenant?.id || '').trim();
+      return id && id.toLowerCase() !== 'system';
+    });
+    if (candidate?.id) {
+      return String(candidate.id);
+    }
+  }
+
+  return explicitTenant || 'system';
+}
+
 async function login(baseUrl) {
-  const username = String(process.env.TEST_ADMIN_USERNAME || process.env.TEST_USERNAME || 'admin');
-  const password = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
+  const username = String(
+    process.env.TEST_SUPERADMIN_USERNAME
+    || process.env.TEST_USERNAME
+    || process.env.TEST_ADMIN_USERNAME
+    || process.env.TEST_USER_USERNAME
+    || 'systemadmin'
+  );
+  const password = String(
+    process.env.TEST_SUPERADMIN_PASSWORD
+    || process.env.TEST_PASSWORD
+    || process.env.TEST_ADMIN_PASSWORD
+    || process.env.TEST_USER_PASSWORD
+    || 'Admin123!'
+  );
   const adminLogin = await reqJson(`${baseUrl}/auth/login`, {
     method: 'POST',
     body: { username, password },
   });
   if (adminLogin.ok && adminLogin.payload?.token) {
+    const adminTenantId = String(adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system');
+    const operationalTenantId = await resolveOperationalTenantId(baseUrl, adminLogin.payload.token);
+
+    if (operationalTenantId && operationalTenantId !== adminTenantId) {
+      const rpaToken = getOrCreateRpaToken();
+      const scopedRpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
+        method: 'POST',
+        body: { token: rpaToken, tenantId: operationalTenantId },
+      });
+      if (scopedRpaLogin.ok && scopedRpaLogin.payload?.token) {
+        return {
+          token: scopedRpaLogin.payload.token,
+          tenantId: scopedRpaLogin.payload?.agent?.tenantId || operationalTenantId,
+          mode: 'rpa_scoped',
+        };
+      }
+    }
+
     return {
       token: adminLogin.payload.token,
-      tenantId: adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+      tenantId: adminTenantId,
       mode: 'admin',
     };
   }
 
+  const operationalTenantId = await resolveOperationalTenantId(baseUrl, null);
   const rpaToken = getOrCreateRpaToken();
   const rpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
     method: 'POST',
-    body: { token: rpaToken, tenantId: process.env.TEST_TENANT_ID || 'system' },
+    body: { token: rpaToken, tenantId: operationalTenantId },
   });
   expect(rpaLogin.ok && rpaLogin.payload?.token, `login_failed:admin=${adminLogin.status}:rpa=${rpaLogin.status}`);
   return {
     token: rpaLogin.payload.token,
-    tenantId: rpaLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+    tenantId: rpaLogin.payload?.agent?.tenantId || operationalTenantId,
     mode: 'rpa',
   };
 }
@@ -120,21 +178,24 @@ async function main() {
   const auth = await login(baseUrl);
   const ts = Date.now();
 
-  const queueA = `900${String(ts).slice(-4)}`;
-  const queueB = `901${String(ts).slice(-4)}`;
+  const ruleName = `URA Smoke ${ts}`;
+  const contextSuffix = `ura_smoke_${String(ts).slice(-8)}`;
 
-  const createQueue = async (name) => {
-    const out = await reqJson(`${baseUrl}/api/pbx/queues`, {
+  const upsertIvrDialplan = async (dialplanText) => {
+    const out = await reqJson(`${baseUrl}/api/pbx/call-rules`, {
       method: 'POST',
       token: auth.token,
       body: {
-        name,
-        displayName: `URA Smoke ${name}`,
-        strategy: 'ringall',
-        options: { timeout: 15 },
+        type: 'ivr_dialplan_text',
+        name: ruleName,
+        enabled: true,
+        definition: {
+          contextSuffix,
+          dialplanText,
+        },
       },
     });
-    expect(out.ok, `pbx_queue_create_failed:${name}:${out.status}`);
+    expect(out.ok, `pbx_call_rule_upsert_failed:${out.status}`);
   };
 
   const applyDialplan = async () => {
@@ -156,11 +217,15 @@ async function main() {
     return out.payload.items;
   };
 
-  await createQueue(queueA);
+  await upsertIvrDialplan(
+    '[ivr]\nexten => s,1,NoOp(URA Smoke V1)\nexten => s,n,Playback(demo-congrats)\nexten => s,n,Hangup()'
+  );
   const firstApply = await applyDialplan();
   const sigV1 = String(firstApply.signature);
 
-  await createQueue(queueB);
+  await upsertIvrDialplan(
+    '[ivr]\nexten => s,1,NoOp(URA Smoke V2)\nexten => s,n,Playback(demo-thanks)\nexten => s,n,Hangup()'
+  );
   const secondApply = await applyDialplan();
   const sigV2 = String(secondApply.signature);
   expect(sigV1 !== sigV2, 'pbx_signature_not_changed_between_versions');

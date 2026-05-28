@@ -5,10 +5,22 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 function runCommand(command, args, options = {}) {
+  const meshAuthEnv = {
+    TEST_TENANT_ID: process.env.TEST_TENANT_ID || 'system',
+    TEST_SUPERADMIN_USERNAME: process.env.TEST_SUPERADMIN_USERNAME || process.env.TEST_USERNAME || 'systemadmin',
+    TEST_SUPERADMIN_PASSWORD: process.env.TEST_SUPERADMIN_PASSWORD || process.env.TEST_PASSWORD || 'Admin123!',
+    TEST_USERNAME: process.env.TEST_USERNAME || process.env.TEST_SUPERADMIN_USERNAME || 'systemadmin',
+    TEST_PASSWORD: process.env.TEST_PASSWORD || process.env.TEST_SUPERADMIN_PASSWORD || 'Admin123!',
+    TEST_ADMIN_USERNAME: process.env.TEST_ADMIN_USERNAME || process.env.TEST_SUPERADMIN_USERNAME || process.env.TEST_USERNAME || 'systemadmin',
+    TEST_ADMIN_PASSWORD: process.env.TEST_ADMIN_PASSWORD || process.env.TEST_SUPERADMIN_PASSWORD || process.env.TEST_PASSWORD || 'Admin123!',
+    TEST_USER_USERNAME: process.env.TEST_USER_USERNAME || process.env.TEST_SUPERADMIN_USERNAME || process.env.TEST_USERNAME || 'systemadmin',
+    TEST_USER_PASSWORD: process.env.TEST_USER_PASSWORD || process.env.TEST_SUPERADMIN_PASSWORD || process.env.TEST_PASSWORD || 'Admin123!',
+  };
+
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: { ...process.env, ...(options.env || {}) },
+      env: { ...process.env, ...meshAuthEnv, ...(options.env || {}) },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const logs = [];

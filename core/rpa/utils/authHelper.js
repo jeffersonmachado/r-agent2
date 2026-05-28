@@ -113,6 +113,7 @@ async function handleTenantSelectorModalIfPresent(page, options = {}) {
 async function performLogin(page, options = {}) {
   // O frontend atual usa username/senha (não email).
   const username = options.username ||
+                   process.env.TEST_SUPERADMIN_USERNAME ||
                    process.env.TEST_USERNAME ||
                    process.env.TEST_ADMIN_USERNAME ||
                    process.env.TEST_USER_USERNAME ||
@@ -120,6 +121,8 @@ async function performLogin(page, options = {}) {
                    'systemadmin';
   
   const password = options.password || 
+                   process.env.TEST_SUPERADMIN_PASSWORD ||
+                   process.env.TEST_PASSWORD ||
                    process.env.TEST_USER_PASSWORD || 
                    process.env.TEST_ADMIN_PASSWORD || 
                    // Defaults alinhados com docs e seed do projeto
@@ -544,7 +547,7 @@ async function ensureAuthenticated(page, options = {}) {
       return { success: true, loggedIn: true };
     }
 
-    const strategy = String(options.loginStrategy || 'rpa_then_ui').toLowerCase();
+    const strategy = String(options.loginStrategy || process.env.RPA_LOGIN_STRATEGY || 'rpa_then_ui').toLowerCase();
     const tryRpaFirst = strategy === 'rpa_then_ui' || strategy === 'rpa';
     const tryUiFirst = strategy === 'ui_then_rpa' || strategy === 'ui';
 

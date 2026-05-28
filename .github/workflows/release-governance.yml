@@ -92,11 +92,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: "[AI/1] validate AI_MEMORY"
+        run: npm run validate:ai-memory
+
+      - name: "[AI/2] validate browser evidence"
+        run: npm run validate:browser-evidence
+
+      - name: "[AI/3] validate operational rules"
+        run: npm run validate:operational-rules
+
+      - name: "[AI/4] validate runtime routes"
+        run: npm run validate:runtime
+        env:
+          RUNTIME_BASE_URL: ${{ vars.RUNTIME_BASE_URL || 'http://127.0.0.1:5173' }}
+          TEST_TENANT_ID: system
+
       - name: Generate release artifacts
         if: ${{ github.event.inputs.skip_build != 'true' }}
         run: npm run zip:release
         env:
           CI: true
+
+      - name: "[AI/5] validate QA governance"
+        run: npm run validate:qa-governance
+
+      - name: "[AI/6] validate replay governance"
+        run: npm run validate:replay-governance
+
+      - name: "[AI/7] validate release governance"
+        run: npm run validate:release-governance
+
+      - name: "[AI/8] validate dist cleanliness"
+        run: npm run validate:dist
+
+      - name: "[AI/9] validate agent adherence"
+        run: npm run validate:agent-adherence
+
+      - name: "[AI/10] validate self-proving"
+        run: npm run validate:self-proving
+
+      - name: "[AI/11] governance score"
+        run: npm run validate:governance-summary
 
       - name: Tornar scripts executáveis
         run: chmod +x scripts/*.sh

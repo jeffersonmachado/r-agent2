@@ -71,27 +71,69 @@ function sleep(ms) {
 }
 
 async function loginRpa(baseUrl) {
+  const tenantId = String(process.env.TEST_TENANT_ID || 'system').trim() || 'system';
   const rpaToken = getOrCreateRpaToken();
   const login = await reqJson(`${baseUrl}/auth/rpa/login`, {
     method: 'POST',
     body: {
       token: rpaToken,
-      tenantId: process.env.TEST_TENANT_ID || 'system',
+      tenantId,
     },
   });
   expect(login.ok && login.payload?.token, `rpa_login_failed:${login.status}`);
-  return login.payload.token;
+  return {
+    token: login.payload.token,
+    tenantId: String(login.payload?.agent?.tenantId || tenantId),
+    authMode: 'rpa',
+  };
 }
 
 async function loginAdmin(baseUrl) {
-  const username = String(process.env.TEST_ADMIN_USERNAME || process.env.TEST_USERNAME || 'admin');
-  const password = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
+  const username = String(
+    process.env.TEST_SUPERADMIN_USERNAME
+    || process.env.TEST_USERNAME
+    || process.env.TEST_ADMIN_USERNAME
+    || process.env.TEST_USER_USERNAME
+    || 'systemadmin'
+  );
+  const password = String(
+    process.env.TEST_SUPERADMIN_PASSWORD
+    || process.env.TEST_PASSWORD
+    || process.env.TEST_ADMIN_PASSWORD
+    || process.env.TEST_USER_PASSWORD
+    || 'Admin123!'
+  );
   const login = await reqJson(`${baseUrl}/auth/login`, {
     method: 'POST',
     body: { username, password },
   });
   if (!login.ok || !login.payload?.token) return null;
-  return login.payload.token;
+  return {
+    token: login.payload.token,
+    tenantId: String(login.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system'),
+    authMode: 'admin',
+  };
+}
+
+async function resolveOperationalTenantId(baseUrl, token, fallbackTenantId) {
+  const explicitTenant = String(process.env.TEST_TENANT_ID || '').trim();
+  if (explicitTenant && explicitTenant.toLowerCase() !== 'system') {
+    return explicitTenant;
+  }
+
+  const tenants = await reqJson(`${baseUrl}/super-admin/tenants`, {
+    method: 'GET',
+    token,
+  });
+  if (tenants.ok && Array.isArray(tenants.payload?.tenants)) {
+    const candidate = tenants.payload.tenants.find((tenant) => {
+      const id = String(tenant?.id || '').trim();
+      return id && id.toLowerCase() !== 'system';
+    });
+    if (candidate?.id) return String(candidate.id);
+  }
+
+  return String(fallbackTenantId || 'system');
 }
 
 function payloadSnippet(payload) {
@@ -118,10 +160,33 @@ function writeEvidence(payload) {
 
 async function main() {
   const baseUrl = apiBaseUrl();
-  const adminToken = await loginAdmin(baseUrl);
-  const token = adminToken || (await loginRpa(baseUrl));
-  const authMode = adminToken ? 'admin' : 'rpa';
-  const tenantId = process.env.TEST_TENANT_ID || 'system';
+  const adminAuth = await loginAdmin(baseUrl);
+  const fallbackRpaAuth = async () => loginRpa(baseUrl);
+
+  let auth = adminAuth;
+  if (auth?.token) {
+    const operationalTenantId = await resolveOperationalTenantId(baseUrl, auth.token, auth.tenantId);
+    if (operationalTenantId && operationalTenantId !== auth.tenantId) {
+      const rpaToken = getOrCreateRpaToken();
+      const scopedRpa = await reqJson(`${baseUrl}/auth/rpa/login`, {
+        method: 'POST',
+        body: { token: rpaToken, tenantId: operationalTenantId },
+      });
+      if (scopedRpa.ok && scopedRpa.payload?.token) {
+        auth = {
+          token: scopedRpa.payload.token,
+          tenantId: String(scopedRpa.payload?.agent?.tenantId || operationalTenantId),
+          authMode: 'rpa_scoped',
+        };
+      }
+    }
+  } else {
+    auth = await fallbackRpaAuth();
+  }
+
+  const token = auth.token;
+  const authMode = auth.authMode;
+  const tenantId = auth.tenantId;
   const ts = Date.now();
 
   const evidence = {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavigationLink } from './NavigationLink';
 import { filterNavigationTree } from '../utils/menuPermissions';
 import { navigationMenu, pathMatches } from '../navigation/menu';
@@ -80,6 +80,7 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange }) {
   const [collapsedSections, setCollapsedSections] = useState({});
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const prevPathRef = useRef(currentPath);
 
   const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
   const { activeArea } = useMemo(
@@ -119,12 +120,23 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange }) {
     }
   }, [searchTerm]);
 
+  // Abre o painel sempre que a rota mudar — garante que clique no rail sempre exibe o menu secundário.
+  useEffect(() => {
+    if (currentPath !== prevPathRef.current) {
+      prevPathRef.current = currentPath;
+      setIsMobilePanelOpen(true);
+    }
+  }, [currentPath]);
+
   useEffect(() => {
     if (!isMobilePanelOpen) return undefined;
 
     const handleOutsideClick = (event) => {
       const panel = event.target?.closest?.('.rap-secondary-nav');
-      if (!panel) {
+      // Cliques no PrimaryRail nunca devem fechar o menu secundário —
+      // a navegação via rail sempre deve abrir/manter o menu visível.
+      const rail = event.target?.closest?.('.rap-primary-rail');
+      if (!panel && !rail) {
         setIsMobilePanelOpen(false);
       }
     };

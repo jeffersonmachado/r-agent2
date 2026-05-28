@@ -145,6 +145,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
 
   // --- Routers de domínio (via composition) ---
   const ticketRouter = createTicketExpressRouter();
+  const tenantRouter = createTenantExpressRouter();
 
   // --- Rate limit middleware ---
   app.use(tenantRateLimitExpressMiddleware);
@@ -162,7 +163,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const routeRegistry = createRouteRegistry({
     publicSystemRouter,
     authRouter,
-    tenantRouter: createTenantExpressRouter(),
+    tenantRouter,
     domainAdminRouter,
     domainIdentityRouter,
     domainFlowRouter,
@@ -177,7 +178,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaWavesRouter,
     qaMeshRouter,
     demoRouter,
-    operationalStatusRouter: { path: '/qa', router: operationalStatusRouter },
+    operationalStatusRouter,
     rpaTestsRouter,
     testExecutionsRouter,
     devManagementRouter,
@@ -228,15 +229,6 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
 
   app.use((req, res) => {
     notFound(res);
-  });
-
-  app.use((err, req, res, next) => {
-    if (res.writableEnded) return;
-    if (err?.type === 'entity.parse.failed') {
-      res.status(400).json({ error: 'bad_request', message: 'JSON inválido no corpo da requisição' });
-      return;
-    }
-    res.status(500).json({ error: 'internal_error', message: err?.message || 'Erro interno' });
   });
 }
 

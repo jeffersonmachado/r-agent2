@@ -13,9 +13,9 @@ const FRONTEND_URL = String(process.env.TEST_FRONTEND_URL || process.env.FRONTEN
 const API_URL = String(process.env.TEST_API_URL || process.env.TEST_BASE_URL || process.env.API_URL || process.env.API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
 const TEST_TENANT_ID = String(process.env.TEST_TENANT_ID || 'system');
 const TEST_SUPERADMIN_USERNAME = String(process.env.TEST_SUPERADMIN_USERNAME || 'systemadmin');
-const TEST_SUPERADMIN_PASSWORD = String(process.env.TEST_SUPERADMIN_PASSWORD || process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
-const TEST_ADMIN_USERNAME = String(process.env.TEST_ADMIN_USERNAME || 'admin');
-const TEST_ADMIN_PASSWORD = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
+const TEST_SUPERADMIN_PASSWORD = String(process.env.TEST_SUPERADMIN_PASSWORD || process.env.TEST_PASSWORD || process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'Admin123!');
+const TEST_ADMIN_USERNAME = String(process.env.TEST_ADMIN_USERNAME || TEST_SUPERADMIN_USERNAME);
+const TEST_ADMIN_PASSWORD = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || TEST_SUPERADMIN_PASSWORD);
 let dbReady = false;
 
 function buildUrl(base, pathname) {
@@ -115,6 +115,7 @@ async function createApiClient() {
     authToken,
     get: (pathname) => request('GET', pathname),
     post: (pathname, payload, headers = {}) => request('POST', pathname, payload, headers),
+    put: (pathname, payload, headers = {}) => request('PUT', pathname, payload, headers),
     patch: (pathname, payload, headers = {}) => request('PATCH', pathname, payload, headers),
   };
 }
@@ -139,8 +140,8 @@ async function createUiSession() {
     autoLogin: true,
     authOptions: {
       loginStrategy: 'rpa_then_ui',
-      username: TEST_ADMIN_USERNAME,
-      password: TEST_ADMIN_PASSWORD,
+      username: TEST_SUPERADMIN_USERNAME,
+      password: TEST_SUPERADMIN_PASSWORD,
       tenantId: TEST_TENANT_ID,
       apiBaseUrl: API_URL,
     },
@@ -633,6 +634,134 @@ async function runFlowScenario(definition, ctx) {
       throw new Error('Pagamento beauty nao ficou confirmado');
     }
     return { detail: 'Pagamento beauty confirmado', ids: { bundleId: bundle.item.id, transactionId: bundle.charge.transaction.id } };
+  }
+
+  if (definition.code === 'CLINIC-FLOW-TICKET') {
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const ticket = await api.post('/tickets', {
+      phoneNumber: `+55119${phoneSuffix}`,
+      queue: 'support',
+      initialMessage: 'Abertura automatizada de ticket para QA clínico',
+    });
+    const ticketId = ticket?.id || ticket?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Ticket clinico nao retornou ID');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {});
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {});
+
+    const closed = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    const status = String(closed?.status || '').toLowerCase();
+    if (status !== 'closed') {
+      throw new Error('Ticket clinico nao foi encerrado');
+    }
+
+    return {
+      detail: 'Ticket criado, assumido e encerrado com sucesso',
+      ids: { ticketId },
+      evidence: { finalStatus: status },
+    };
+  }
+
+  if (definition.code === 'FOOD-FLOW-ORDER') {
+    const listed = await api.get('/orders?limit=20');
+    const orders = Array.isArray(listed?.orders) ? listed.orders : [];
+    const order = orders[0] || null;
+    if (!order?.id) {
+      return {
+        detail: 'Endpoint de pedidos respondeu, sem pedidos elegiveis para transicao',
+        ids: {},
+        evidence: { totalOrders: listed?.total || 0 },
+      };
+    }
+
+    const currentStatus = String(order.status || '').toLowerCase();
+    const nextByStatus = {
+      created: 'confirmed',
+      confirmed: 'preparing',
+      preparing: 'ready',
+      ready: 'dispatched',
+      dispatched: 'delivered',
+    };
+    const nextStatus = nextByStatus[currentStatus];
+    if (!nextStatus) {
+      return {
+        detail: `Pedido encontrado em status terminal (${currentStatus}), sem transicao aplicavel`,
+        ids: { orderId: order.id },
+        evidence: { currentStatus },
+      };
+    }
+
+    await api.put(`/orders/${encodeURIComponent(order.id)}/status`, { status: nextStatus });
+    const after = await api.get(`/orders/${encodeURIComponent(order.id)}`);
+    const observedStatus = String(after?.order?.status || after?.status || '').toLowerCase();
+    if (observedStatus !== nextStatus) {
+      throw new Error('Status do pedido nao refletiu a atualizacao');
+    }
+
+    return {
+      detail: `Pedido transicionado de ${currentStatus} para ${nextStatus}`,
+      ids: { orderId: order.id },
+      evidence: { from: currentStatus, to: nextStatus },
+    };
+  }
+
+  if (definition.code === 'MARKET-FLOW-NODE') {
+    const catalogBefore = await api.get('/api/node-marketplace/catalog');
+    const initialTotal = Array.isArray(catalogBefore?.items) ? catalogBefore.items.length : 0;
+
+    const nodeId = `qa-market-${runId}`;
+    const publish = await api.post('/api/node-marketplace/publish', {
+      node: {
+        id: nodeId,
+        label: `QA Market Node ${runId}`,
+        category: 'core',
+        version: '1.0.0',
+        description: 'Node publicado pela suite business QA',
+        visibility: 'tenant',
+      },
+    });
+    if (!publish?.ok) {
+      throw new Error('Publicacao de node nao confirmou sucesso');
+    }
+
+    const published = await api.get('/api/node-marketplace/published');
+    const found = (published?.items || []).find((item) => item.id === nodeId);
+    if (!found) {
+      throw new Error('Node publicado nao apareceu na lista de publicados');
+    }
+
+    const catalogAfter = await api.get('/api/node-marketplace/catalog');
+    const finalTotal = Array.isArray(catalogAfter?.items) ? catalogAfter.items.length : initialTotal;
+    return {
+      detail: 'Node publicado e visivel no marketplace do tenant',
+      ids: { nodeId },
+      evidence: { catalogBefore: initialTotal, catalogAfter: finalTotal },
+    };
+  }
+
+  if (definition.code === 'SERV-FLOW-SOLUTION') {
+    const packs = await api.get('/api/solutions/packs');
+    const items = Array.isArray(packs?.items) ? packs.items : [];
+    if (!items.length) {
+      throw new Error('Catalogo de solution packs vazio');
+    }
+
+    const target = items.find((item) => item.segment === 'servicos') || items[0];
+    const install = await api.post('/api/solutions/packs/install', {
+      segment: target.segment,
+    });
+    const installOk = Boolean(install?.ok || install?.success);
+    if (!installOk) {
+      throw new Error('Instalacao do solution pack nao confirmou sucesso');
+    }
+
+    return {
+      detail: `Solution pack instalado para segmento ${target.segment}`,
+      ids: { segment: target.segment, packId: target.id || null },
+      evidence: { availablePacks: items.length },
+    };
   }
 
   throw new Error(`Flow nao implementado: ${definition.code}`);

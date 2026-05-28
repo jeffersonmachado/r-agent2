@@ -293,6 +293,34 @@ function readJsonStrict(relPath, label) {
   }
 }
 
+function loadQaMeshReportWithFallback(qaMeshPaths) {
+  try {
+    return {
+      report: readJsonStrict(qaMeshPaths.reportPath, 'qa_mesh_report'),
+      source: 'report',
+    };
+  } catch (error) {
+    if (!String(error?.message || '').startsWith('qa_mesh_report_missing:')) {
+      throw error;
+    }
+
+    const summaryPath = path.join(qaMeshPaths.evidenceDir, qaMeshPaths.executionId, 'summary.json');
+    const summaryAbsPath = resolveWorkspacePath(summaryPath);
+    if (!fs.existsSync(summaryAbsPath)) {
+      throw error;
+    }
+
+    const summary = readJsonStrict(summaryPath, 'qa_mesh_summary');
+    const reportAbsPath = resolveWorkspacePath(qaMeshPaths.reportPath);
+    fs.mkdirSync(path.dirname(reportAbsPath), { recursive: true });
+    fs.writeFileSync(reportAbsPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    return {
+      report: summary,
+      source: 'summary_fallback',
+    };
+  }
+}
+
 function loadEvidenceMaybe(relPath) {
   const candidates = resolveEvidenceCandidates(ROOT_DIR, relPath, null, process.env);
   for (const absPath of candidates) {
@@ -450,12 +478,14 @@ async function main() {
       log('[system:validate] Extended checks desabilitados (use SYSTEM_VALIDATE_INCLUDE_EXTENDED=1 para habilitar).', YELLOW);
     }
 
-    const qaMeshReport = readJsonStrict(qaMeshPaths.reportPath, 'qa_mesh_report');
+    const qaMeshLoaded = loadQaMeshReportWithFallback(qaMeshPaths);
+    const qaMeshReport = qaMeshLoaded.report;
     if (String(qaMeshReport.goNoGo || '').toUpperCase() === 'NO_GO') {
       throw new Error('qa_mesh_report_no_go');
     }
     report.evidence.qaMesh = {
       path: qaMeshPaths.reportPath,
+      source: qaMeshLoaded.source,
       goNoGo: qaMeshReport.goNoGo || 'missing',
       attempted: qaMeshReport.attempted || qaMeshReport.total || null,
       executed: qaMeshReport.executed || null,

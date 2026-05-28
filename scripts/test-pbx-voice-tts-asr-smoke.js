@@ -134,29 +134,77 @@ function buildVoiceArtifacts({ callId, flow, promptTranscript, asrTranscript }) 
 }
 
 async function login(baseUrl) {
-  const username = String(process.env.TEST_ADMIN_USERNAME || process.env.TEST_USERNAME || 'admin');
-  const password = String(process.env.TEST_ADMIN_PASSWORD || process.env.TEST_USER_PASSWORD || 'admin123');
+  const username = String(
+    process.env.TEST_SUPERADMIN_USERNAME
+    || process.env.TEST_USERNAME
+    || process.env.TEST_ADMIN_USERNAME
+    || process.env.TEST_USER_USERNAME
+    || 'systemadmin'
+  );
+  const password = String(
+    process.env.TEST_SUPERADMIN_PASSWORD
+    || process.env.TEST_PASSWORD
+    || process.env.TEST_ADMIN_PASSWORD
+    || process.env.TEST_USER_PASSWORD
+    || 'Admin123!'
+  );
   const adminLogin = await reqJson(`${baseUrl}/auth/login`, {
     method: 'POST',
     body: { username, password },
   });
   if (adminLogin.ok && adminLogin.payload?.token) {
+    const adminTenantId = String(adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system');
+    const explicitTenant = String(process.env.TEST_PBX_TENANT_ID || process.env.TEST_TENANT_ID || '').trim();
+    let operationalTenantId = explicitTenant && explicitTenant.toLowerCase() !== 'system' ? explicitTenant : adminTenantId;
+
+    if (!explicitTenant || explicitTenant.toLowerCase() === 'system') {
+      const tenants = await reqJson(`${baseUrl}/super-admin/tenants`, {
+        method: 'GET',
+        token: adminLogin.payload.token,
+      });
+      if (tenants.ok && Array.isArray(tenants.payload?.tenants)) {
+        const candidate = tenants.payload.tenants.find((tenant) => {
+          const id = String(tenant?.id || '').trim();
+          return id && id.toLowerCase() !== 'system';
+        });
+        if (candidate?.id) {
+          operationalTenantId = String(candidate.id);
+        }
+      }
+    }
+
+    if (operationalTenantId && operationalTenantId !== adminTenantId) {
+      const rpaToken = getOrCreateRpaToken();
+      const scopedRpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
+        method: 'POST',
+        body: { token: rpaToken, tenantId: operationalTenantId },
+      });
+      if (scopedRpaLogin.ok && scopedRpaLogin.payload?.token) {
+        return {
+          token: scopedRpaLogin.payload.token,
+          tenantId: scopedRpaLogin.payload?.agent?.tenantId || operationalTenantId,
+          mode: 'rpa_scoped',
+        };
+      }
+    }
+
     return {
       token: adminLogin.payload.token,
-      tenantId: adminLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+      tenantId: adminTenantId,
       mode: 'admin',
     };
   }
 
+  const fallbackTenantId = String(process.env.TEST_PBX_TENANT_ID || process.env.TEST_TENANT_ID || 'system').trim() || 'system';
   const rpaToken = getOrCreateRpaToken();
   const rpaLogin = await reqJson(`${baseUrl}/auth/rpa/login`, {
     method: 'POST',
-    body: { token: rpaToken, tenantId: process.env.TEST_TENANT_ID || 'system' },
+    body: { token: rpaToken, tenantId: fallbackTenantId },
   });
   expect(rpaLogin.ok && rpaLogin.payload?.token, `login_failed:admin=${adminLogin.status}:rpa=${rpaLogin.status}`);
   return {
     token: rpaLogin.payload.token,
-    tenantId: rpaLogin.payload?.agent?.tenantId || process.env.TEST_TENANT_ID || 'system',
+    tenantId: rpaLogin.payload?.agent?.tenantId || fallbackTenantId,
     mode: 'rpa',
   };
 }

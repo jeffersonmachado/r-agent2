@@ -19,6 +19,7 @@ function createRouteRegistry(routers) {
     { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
     { router: routers.demoRouter },
+    { path: '/qa', router: routers.operationalStatusRouter },
     { router: routers.rpaTestsRouter },
     { router: routers.testExecutionsRouter },
     { router: routers.devManagementRouter },

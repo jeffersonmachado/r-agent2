@@ -2,12 +2,23 @@ async function handleChannelAccountRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson, badRequest, hasJsonContentType, parseJsonBody, logger } = deps;
 
+  function isHtmlNavigationRequest() {
+    const accept = String(req.headers?.accept || '').toLowerCase();
+    const secFetchDest = String(req.headers?.['sec-fetch-dest'] || '').toLowerCase();
+    return accept.includes('text/html') || secFetchDest === 'document';
+  }
+
   if (!pathname.startsWith('/channel-accounts')) {
     return false;
   }
 
   // GET /channel-accounts
   if (method === 'GET' && pathname === '/channel-accounts') {
+    // Navegação de página deve ser tratada pelo frontend fallback.
+    if (isHtmlNavigationRequest()) {
+      return false;
+    }
+
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });

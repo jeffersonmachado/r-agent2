@@ -1,36 +1,34 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-05-12T23-50-45-984Z",
+  "executionId": "mesh-2026-05-27T23-48-32-112Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "NO_GO",
-  "reasons": [
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "status": "GO",
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-05-12T23-50-45-984Z",
-    "startedAt": "2026-05-12T23:50:45.984Z",
+    "executionId": "mesh-2026-05-27T23-48-32-112Z",
+    "startedAt": "2026-05-27T23:48:32.112Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-05-13T00:14:45.156Z",
-    "registryTotal": 62,
-    "goNoGo": "NO_GO",
+    "promotedAt": "2026-05-27T23:59:01.472Z",
+    "registryTotal": 47,
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-05-12T23-50-45-984Z",
-    "timestamp": "2026-05-12T23:50:45.984Z",
+    "executionId": "mesh-2026-05-27T23-48-32-112Z",
+    "timestamp": "2026-05-27T23:48:32.112Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 62,
-    "attempted": 62,
-    "executed": 62,
-    "total": 62,
-    "passed": 58,
+    "registryTotal": 47,
+    "attempted": 47,
+    "executed": 47,
+    "total": 47,
+    "passed": 47,
     "fallbackPassed": 0,
-    "failed": 4,
+    "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -58,9 +56,9 @@
         "total": 12
       },
       "clinica": {
-        "passed": 1,
+        "passed": 2,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -78,9 +76,9 @@
         "total": 14
       },
       "food": {
-        "passed": 1,
+        "passed": 2,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -88,9 +86,9 @@
         "total": 2
       },
       "mercado": {
-        "passed": 1,
+        "passed": 2,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -98,9 +96,9 @@
         "total": 2
       },
       "servicos": {
-        "passed": 1,
+        "passed": 2,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -108,14 +106,14 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 14,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 14
+        "total": 3
       },
       "bpmn": {
         "passed": 1,
@@ -138,14 +136,14 @@
         "total": 5
       },
       "pbx": {
-        "passed": 7,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 7
+        "total": 3
       },
       "workspace": {
         "passed": 1,
@@ -158,51 +156,41 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "clinica": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.5
-      },
-      "food": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.5
-      },
-      "mercado": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.5
-      },
-      "servicos": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.5
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
         "byType": {},
         "successRate": 1
       },
+      "clinica": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "fitness": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "food": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "mercado": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "servicos": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -239,39 +227,20 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 4
-    },
-    "topErrors": [
-      {
-        "message": "[2026-05-12T23:53:09.905Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
-        "count": 1
-      },
-      {
-        "message": "[2026-05-12T23:55:09.495Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
-        "count": 1
-      },
-      {
-        "message": "[2026-05-12T23:55:33.299Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
-        "count": 1
-      },
-      {
-        "message": "[2026-05-12T23:55:57.182Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-05-12T23-50-45-984Z",
-      "startedAt": "2026-05-12T23:50:45.984Z",
+      "executionId": "mesh-2026-05-27T23-48-32-112Z",
+      "startedAt": "2026-05-27T23:48:32.112Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-05-13T00:14:45.156Z",
-      "registryTotal": 62,
-      "goNoGo": "NO_GO",
+      "promotedAt": "2026-05-27T23:59:01.472Z",
+      "registryTotal": 47,
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-05-13T00:14:45.157Z"
+  "generatedAt": "2026-05-27T23:59:01.472Z"
 }

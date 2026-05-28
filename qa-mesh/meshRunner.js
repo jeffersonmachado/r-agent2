@@ -28,8 +28,53 @@ const INTELLIGENCE_DIR = process.env.QA_MESH_INTELLIGENCE_DIR || path.join(__dir
 const QA_MESH_GO_NO_GO_PATH = process.env.QA_MESH_GO_NO_GO_PATH || path.join(__dirname, 'go-no-go-report.json');
 const QA_MESH_RELEASE_GATE_PATH = process.env.QA_MESH_RELEASE_GATE_PATH || path.join(__dirname, 'release-gate-report.json');
 const QA_MESH_CANONICAL_LOCK_PATH = process.env.QA_MESH_CANONICAL_LOCK_PATH || path.join(__dirname, 'canonical.lock.json');
+
+// Configuracoes de auto-limpeza do ambiente
+const MAX_HISTORY_FILES = parseInt(process.env.QA_MESH_MAX_HISTORY || '5', 10);
+const MAX_EVIDENCE_DIRS = parseInt(process.env.QA_MESH_MAX_EVIDENCE || '5', 10);
+const FLKY_HISTORY_WINDOW = parseInt(process.env.QA_MESH_FLKY_WINDOW || '5', 10);
+const STALE_LOCK_MINUTES = parseInt(process.env.QA_MESH_STALE_LOCK_MINUTES || '30', 10);
 const QA_MESH_CANONICAL_PROMOTION_PATH = process.env.QA_MESH_CANONICAL_PROMOTION_PATH || path.join(__dirname, 'canonical-promotion.json');
 const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
+
+function ensureMeshAuthDefaults() {
+  const tenantId = process.env.TEST_TENANT_ID || 'system';
+  const forceSuperadmin = process.env.QA_MESH_FORCE_SUPERADMIN !== '0';
+  const username = process.env.TEST_SUPERADMIN_USERNAME
+    || (forceSuperadmin ? 'systemadmin' : null)
+    || process.env.TEST_USERNAME
+    || process.env.TEST_ADMIN_USERNAME
+    || process.env.TEST_USER_USERNAME
+    || 'systemadmin';
+  const password = process.env.TEST_SUPERADMIN_PASSWORD
+    || (forceSuperadmin ? 'Admin123!' : null)
+    || process.env.TEST_PASSWORD
+    || process.env.TEST_ADMIN_PASSWORD
+    || process.env.TEST_USER_PASSWORD
+    || 'Admin123!';
+
+  process.env.TEST_TENANT_ID = tenantId;
+  process.env.TEST_SUPERADMIN_USERNAME = process.env.TEST_SUPERADMIN_USERNAME || username;
+  process.env.TEST_SUPERADMIN_PASSWORD = process.env.TEST_SUPERADMIN_PASSWORD || password;
+
+  if (forceSuperadmin) {
+    // Evita drift de variaveis TEST_* herdadas na sessao local.
+    process.env.TEST_USERNAME = process.env.TEST_SUPERADMIN_USERNAME;
+    process.env.TEST_PASSWORD = process.env.TEST_SUPERADMIN_PASSWORD;
+    process.env.TEST_ADMIN_USERNAME = process.env.TEST_SUPERADMIN_USERNAME;
+    process.env.TEST_ADMIN_PASSWORD = process.env.TEST_SUPERADMIN_PASSWORD;
+    process.env.TEST_USER_USERNAME = process.env.TEST_SUPERADMIN_USERNAME;
+    process.env.TEST_USER_PASSWORD = process.env.TEST_SUPERADMIN_PASSWORD;
+  } else {
+    process.env.TEST_USERNAME = process.env.TEST_USERNAME || username;
+    process.env.TEST_PASSWORD = process.env.TEST_PASSWORD || password;
+    process.env.TEST_ADMIN_USERNAME = process.env.TEST_ADMIN_USERNAME || username;
+    process.env.TEST_ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || password;
+    process.env.TEST_USER_USERNAME = process.env.TEST_USER_USERNAME || username;
+    process.env.TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || password;
+  }
+  process.env.RPA_LOGIN_STRATEGY = process.env.RPA_LOGIN_STRATEGY || 'ui_then_rpa';
+}
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -970,15 +1015,55 @@ function extractEvidenceHints(artifacts = []) {
   return hints.filter(Boolean);
 }
 
+function parseBusinessQaReportPathFromLogs(logs = []) {
+  for (const entry of logs) {
+    const line = compactText(entry?.message || entry);
+    if (!line) continue;
+    const match = line.match(/- json:\s*(\/\S+business-qa-[^\s]+\.json)/i);
+    if (match && match[1]) return match[1];
+  }
+  return null;
+}
+
+function extractBusinessQaHints(result) {
+  const hints = [];
+  const reportPath = parseBusinessQaReportPathFromLogs(result?.logs || []);
+  if (!reportPath) return hints;
+
+  const report = safeReadJson(reportPath, null);
+  if (!report || !Array.isArray(report.scenarios)) return hints;
+
+  const failedScenarios = report.scenarios.filter((item) => item && item.status === 'FAIL');
+  for (const scenario of failedScenarios) {
+    const rootCause = compactText(scenario?.resumo?.causaRaiz);
+    if (rootCause) hints.push(rootCause);
+
+    const failedStep = Array.isArray(scenario?.etapas)
+      ? scenario.etapas.find((step) => step && step.status === 'FAIL' && step.detalhe)
+      : null;
+    const stepDetail = compactText(failedStep?.detalhe);
+    if (stepDetail) hints.push(stepDetail);
+  }
+
+  return hints;
+}
+
+function isLowSignalDiagnostic(text) {
+  const normalized = String(text || '').toLowerCase();
+  return normalized.includes('[config] configuração carregada');
+}
+
 function collectScenarioDiagnostics(result) {
+  const fromBusinessQa = extractBusinessQaHints(result);
   const fromErrors = normalizeErrorList(result.errors)
     .map((item) => compactText(item?.error || item?.message || item))
     .filter(Boolean);
   const fromLogs = (result.logs || [])
     .map((item) => compactText(item?.error || item?.message || item))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((item) => !isLowSignalDiagnostic(item));
   const fromArtifacts = extractEvidenceHints(result.artifacts || []);
-  return [...fromErrors, ...fromLogs, ...fromArtifacts].filter(Boolean);
+  return [...fromBusinessQa, ...fromErrors, ...fromLogs, ...fromArtifacts].filter(Boolean);
 }
 
 function detectFailureType(diagnostics = []) {
@@ -1057,6 +1142,7 @@ function detectFailureType(diagnostics = []) {
     text.includes('timeout') ||
     text.includes('timed out') ||
     text.includes('econnrefused') ||
+    text.includes('err_connection_refused') ||
     text.includes('service "') && text.includes('is not running') ||
     text.includes('fetch failed') ||
     text.includes('service unavailable') ||
@@ -1075,6 +1161,8 @@ function detectFailureType(diagnostics = []) {
     };
   }
   if (
+    text.includes('não implementado') ||
+    text.includes('nao implementado') ||
     text.includes('assert') ||
     text.includes('validation failed') ||
     text.includes('expected') ||
@@ -1168,7 +1256,10 @@ function classifyScenarioResult(result, history = [], options = {}) {
     .map((item) => item.status);
   const hasIntermittentHistory = recentStatuses.includes('passed') && recentStatuses.some((item) => item !== 'passed');
 
-  if (hasIntermittentHistory) {
+  // Não converte infra_error ou environment_missing para flaky — são problemas de infraestrutura, não intermitência funcional
+  const isInfraFailure = classification.failureType === 'infra_error' || classification.failureType === 'environment_missing';
+
+  if (hasIntermittentHistory && !isInfraFailure) {
     return {
       ...result,
       status: 'flaky',
@@ -1491,13 +1582,64 @@ function writeSummary(baseDir, summary) {
   return target;
 }
 
-function loadHistory(limit = 20) {
+function pruneOldHistory() {
+  ensureDir(HISTORY_DIR);
+  const files = fs.readdirSync(HISTORY_DIR)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .reverse();
+  if (files.length <= MAX_HISTORY_FILES) return;
+  const toRemove = files.slice(MAX_HISTORY_FILES);
+  for (const file of toRemove) {
+    try { fs.unlinkSync(path.join(HISTORY_DIR, file)); } catch (_) { /* ignore */ }
+  }
+  if (toRemove.length > 0) {
+    console.log(`[mesh:cleanup] Removidos ${toRemove.length} arquivos de historico antigos (mantidos ${MAX_HISTORY_FILES})`);
+  }
+}
+
+function pruneOldEvidence() {
+  ensureDir(EVIDENCE_DIR);
+  const dirs = fs.readdirSync(EVIDENCE_DIR)
+    .filter((f) => fs.statSync(path.join(EVIDENCE_DIR, f)).isDirectory())
+    .sort()
+    .reverse();
+  if (dirs.length <= MAX_EVIDENCE_DIRS) return;
+  const toRemove = dirs.slice(MAX_EVIDENCE_DIRS);
+  for (const dir of toRemove) {
+    try { fs.rmSync(path.join(EVIDENCE_DIR, dir), { recursive: true, force: true }); } catch (_) { /* ignore */ }
+  }
+  if (toRemove.length > 0) {
+    console.log(`[mesh:cleanup] Removidos ${toRemove.length} diretorios de evidencia antigos (mantidos ${MAX_EVIDENCE_DIRS})`);
+  }
+}
+
+function cleanStaleLocks() {
+  const locks = [
+    QA_MESH_CANONICAL_LOCK_PATH,
+    path.join(__dirname, 'mesh-running.lock'),
+  ];
+  const now = Date.now();
+  const staleThreshold = STALE_LOCK_MINUTES * 60 * 1000;
+  for (const lockPath of locks) {
+    try {
+      const stat = fs.statSync(lockPath);
+      if (now - stat.mtimeMs > staleThreshold) {
+        fs.unlinkSync(lockPath);
+        console.log(`[mesh:cleanup] Lock stale removido: ${path.basename(lockPath)} (${Math.round((now - stat.mtimeMs) / 60000)}min)`);
+      }
+    } catch (_) { /* lock nao existe, ok */ }
+  }
+}
+
+function loadHistory(limit = MAX_HISTORY_FILES) {
+  pruneOldHistory();
   ensureDir(HISTORY_DIR);
   return fs.readdirSync(HISTORY_DIR)
     .filter((file) => file.endsWith('.json'))
     .sort()
     .reverse()
-    .slice(0, limit)
+    .slice(0, Math.min(limit, MAX_HISTORY_FILES))
     .map((file) => normalizeExecutionRecord(safeReadJson(path.join(HISTORY_DIR, file), null)))
     .filter(Boolean);
 }
@@ -1661,6 +1803,7 @@ async function executeScenarioWithFallback(scenario, context) {
 }
 
 async function runMesh(options = {}) {
+  ensureMeshAuthDefaults();
   ensureDir(HISTORY_DIR);
   ensureDir(EVIDENCE_DIR);
   const requestedCanonicalOutputs = options.writeCanonicalOutputs !== false;
@@ -1675,7 +1818,9 @@ async function runMesh(options = {}) {
     changes: ['Execucao de malha QA iniciada'],
   });
 
-  const priorHistory = loadHistory(15);
+  cleanStaleLocks();
+  pruneOldEvidence();
+  const priorHistory = loadHistory(FLKY_HISTORY_WINDOW);
   const registry = Array.isArray(options.registry)
     ? options.registry
     : (options.refreshRegistry === false ? loadRegistry() : refreshRegistry());

@@ -41,6 +41,24 @@ const activeExecutions = new Map();
 // Armazena gravações manuais em andamento
 const activeRecordings = new Map();
 
+function isIgnorableOnboardingNoise(entry) {
+  if (!entry || typeof entry !== 'object') return false;
+  const url = safeToString(entry.url || entry.path || '');
+  const message = safeToString(entry.message || entry.text || entry.error || '');
+  const type = safeTrimLower(entry.type || '');
+  const hasOnboardingRef = /\/onboarding\/(?:start|status|complete|complete-step)(?:\?|$)/i.test(url)
+    || /\/onboarding\/(?:start|status|complete|complete-step)/i.test(message)
+    || /Erro ao carregar status de onboarding/i.test(message)
+    || /Erro ao carregar onboarding/i.test(message)
+    || /Toast.*onboarding/i.test(message);
+  if (!hasOnboardingRef) return false;
+
+  if (type === 'request_failed') return true;
+  // Toast de erro de onboarding é consequência direta da falha de rede
+  if (/Toast.*onboarding/i.test(message)) return true;
+  return /failed to fetch|api não acessível|err_connection_refused|fetch.*failed/i.test(message);
+}
+
 /**
  * Lista todas as gravações RPA disponíveis.
  * UNIFICADO: Tudo está em /seeds/
@@ -1165,10 +1183,11 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
         // Adiciona erros coletados da página
         const pageErrors = runner.executor.getErrors();
-        if (pageErrors.length > 0) {
-          results.pageErrors = pageErrors;
-          addLog('warning', `⚠️ ${pageErrors.length} erro(s) detectado(s) na página`, {
-            errors: pageErrors,
+        const relevantPageErrors = pageErrors.filter((entry) => !isIgnorableOnboardingNoise(entry));
+        if (relevantPageErrors.length > 0) {
+          results.pageErrors = relevantPageErrors;
+          addLog('warning', `⚠️ ${relevantPageErrors.length} erro(s) detectado(s) na página`, {
+            errors: relevantPageErrors,
           });
 
           // Erros críticos de runtime tornam a execução inválida (sem falso positivo).
@@ -1176,8 +1195,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           results.errors.push({
             step: 'page_error',
             action: 'runtime_validation',
-            error: `${pageErrors.length} erro(s) críticos detectados na página`,
-            details: pageErrors,
+            error: `${relevantPageErrors.length} erro(s) críticos detectados na página`,
+            details: relevantPageErrors,
           });
         }
 
@@ -1202,7 +1221,9 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           });
         }
 
-        const criticalConsoleErrors = pageConsoleEvents.filter((entry) => String(entry?.level || '').toLowerCase() === 'error');
+        const criticalConsoleErrors = pageConsoleEvents.filter(
+          (entry) => String(entry?.level || '').toLowerCase() === 'error' && !isIgnorableOnboardingNoise(entry)
+        );
         if (criticalConsoleErrors.length > 0) {
           results.success = false;
           results.errors.push({

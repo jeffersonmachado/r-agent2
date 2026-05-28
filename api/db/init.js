@@ -84,7 +84,8 @@ async function syncDatabase(options = {}) {
       if (['0', 'false', 'off', 'no'].includes(v)) return false;
       if (['1', 'true', 'on', 'yes'].includes(v)) return true;
     }
-    return nodeEnv === 'development';
+    // Padrão: log de SQL desabilitado. Use SEQUELIZE_LOGGING=true para ativar.
+    return false;
   }
   
   // REGRA A: PRODUÇÃO - NUNCA executar sync() - BLOQUEIO ABSOLUTO

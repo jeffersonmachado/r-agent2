@@ -52,27 +52,30 @@ function frontendRoutesPlugin() {
         // - /web-scraping/scrape e /web-scraping/scrape-batch são rotas de API, mas /web-scraping é rota de página
         // - /rpa/* são rotas de API (RPA recordings, execute, etc)
         // - /config pode ser tanto API quanto página (depende do Accept header)
-        const isApiRoute = url.startsWith('/tickets') || 
-                          url.startsWith('/queues') || 
-                          url.startsWith('/inbox') ||
+        const isApiRoute = url.startsWith('/tickets') ||
+                          url.startsWith('/queues') ||
+                          // /inbox é página SPA; somente subrotas /inbox/* são API
+                          (url.startsWith('/inbox/') || (url === '/inbox' && isApiRequest)) ||
                           (url.startsWith('/supervisor/') && url !== '/supervisor') ||
                           (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
                           url.startsWith('/public') ||
                           (url === '/segmentation' && isApiRequest) ||
                           (url.startsWith('/segmentation/') && url !== '/segmentation') ||
-                          url.startsWith('/quick-replies') ||
+                          // /quick-replies é página SPA; somente subrotas /quick-replies/* são API
+                          (url.startsWith('/quick-replies/') || (url === '/quick-replies' && isApiRequest)) ||
                           url.startsWith('/close-reasons') ||
                           url.startsWith('/bulk-campaigns') ||
-                          url.startsWith('/channel-accounts') ||
+                          // /channel-accounts é página SPA; somente subrotas /channel-accounts/* são API
+                          (url.startsWith('/channel-accounts/') || (url === '/channel-accounts' && isApiRequest)) ||
                           (url === '/whatsapp' || url.startsWith('/whatsapp/')) ||
                           (url === '/ai' || url.startsWith('/ai/')) ||
                           url.startsWith('/flow-templates') ||
-                          url.startsWith('/flows') || 
-                          url.startsWith('/health') || 
-                          url.startsWith('/version') || 
-                          url.startsWith('/replay') || 
-                          url.startsWith('/templates') || 
-                          url.startsWith('/server') || 
+                          url.startsWith('/flows') ||
+                          url.startsWith('/health') ||
+                          url.startsWith('/version') ||
+                          url.startsWith('/replay') ||
+                          url.startsWith('/templates') ||
+                          url.startsWith('/server') ||
                           url.startsWith('/billing') ||
                           url.startsWith('/api') ||
                           url.startsWith('/metrics') ||
@@ -82,8 +85,9 @@ function frontendRoutesPlugin() {
                           // IMPORTANTE: endpoints de API são /rag e /rag/*.
                           // A página do frontend é /rag-documents (não deve ser proxyada).
                           (url === '/rag' || url.startsWith('/rag/')) ||
-                          url.startsWith('/super-admin') ||
-                          url.startsWith('/onboarding') ||
+                          // /super-admin e /onboarding são páginas SPA; somente subrotas são API
+                          (url.startsWith('/super-admin/') || (url === '/super-admin' && isApiRequest)) ||
+                          (url.startsWith('/onboarding/') || (url === '/onboarding' && isApiRequest)) ||
                           url.startsWith('/admin') ||
                           url === '/dev/files' ||
                           url.startsWith('/dev/files/') ||
@@ -331,6 +335,15 @@ const viteConfig = defineConfig(({ mode }) => {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+        bypass(req) {
+          if (req.method === 'GET' && req.url === '/quick-replies') {
+            const accept = req.headers.accept || '';
+            if (accept.includes('text/html') && !accept.includes('application/json')) {
+              return false;
+            }
+          }
+          return undefined;
+        },
       },
       '^/close-reasons': {
         target: apiProxyTarget,
@@ -364,6 +377,15 @@ const viteConfig = defineConfig(({ mode }) => {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
+        bypass(req) {
+          if (req.method === 'GET' && req.url === '/channel-accounts') {
+            const accept = req.headers.accept || '';
+            if (accept.includes('text/html') && !accept.includes('application/json')) {
+              return false;
+            }
+          }
+          return undefined;
+        },
       },
       '^/whatsapp': {
         target: apiProxyTarget,

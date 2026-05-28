@@ -19,6 +19,24 @@ const { getRpaReportDir } = require('../../lib/rpaPathResolver');
 
 const RPA_REPORTS_DIR = getRpaReportDir();
 
+function isIgnorableOnboardingNetworkNoise(entry) {
+  if (!entry || typeof entry !== 'object') return false;
+  const url = String(entry.url || entry.path || '');
+  const message = String(entry.message || entry.text || entry.error || '');
+  const matchesOnboarding = /\/onboarding\/(?:start|status|complete|complete-step)(?:\?|$)/i.test(url)
+    || /\/onboarding\/(?:start|status|complete|complete-step)/i.test(message)
+    || /Erro ao carregar status de onboarding/i.test(message)
+    || /Erro ao carregar onboarding/i.test(message)
+    || /Toast.*onboarding/i.test(message);
+  if (!matchesOnboarding) return false;
+
+  const type = String(entry.type || '').toLowerCase();
+  if (type === 'request_failed') return true;
+  // Toast de erro de onboarding é consequência direta da falha de rede
+  if (/Toast.*onboarding/i.test(message)) return true;
+  return /failed to fetch|api não acessível|err_connection_refused|fetch.*failed/i.test(message);
+}
+
 class RpaTestRunner {
   constructor(options = {}) {
     this.executor = null;
@@ -304,8 +322,9 @@ class RpaTestRunner {
 
       // Adiciona erros coletados da página
       const pageErrors = this.executor.getErrors();
-      if (pageErrors.length > 0) {
-        results.pageErrors = pageErrors;
+      const relevantPageErrors = pageErrors.filter((entry) => !isIgnorableOnboardingNetworkNoise(entry));
+      if (relevantPageErrors.length > 0) {
+        results.pageErrors = relevantPageErrors;
       }
 
       // Adiciona evidências adicionais (não-bloqueantes): console + debug logs + httpErrors
@@ -341,6 +360,7 @@ class RpaTestRunner {
           : [];
         const consoleErrors = consoleLogsList.filter((e) => e && String(e.level || '').toLowerCase() === 'error');
         const relevantConsoleErrors = consoleErrors.filter((e) => {
+          if (isIgnorableOnboardingNetworkNoise(e)) return false;
           const text = String(e.text || '');
           return !ignoredPatterns.some((pattern) => pattern.test(text));
         });

@@ -22,6 +22,8 @@ function isTransientRpaFailure(result) {
     status === 'timeout' ||
     text.includes('tempo limite excedido aguardando execução rpa') ||
     text.includes('target page, context or browser has been closed') ||
+    text.includes('err_connection_refused') ||
+    text.includes('net::err_connection_refused') ||
     (text.includes('locator(\'body\')') && text.includes('timeout')) ||
     (text.includes('locator(\'html\')') && text.includes('timeout'))
   );
