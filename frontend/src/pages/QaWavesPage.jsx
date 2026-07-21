@@ -5,6 +5,7 @@ import JourneyTree from '../components/qa-waves/JourneyTree';
 import StepBreakdown from '../components/qa-waves/StepBreakdown';
 import ReplayDetailsModal from '../components/qa-waves/ReplayDetailsModal';
 import { CoverageGapsTab } from '../components/qa-waves/CoverageGapsTab';
+import { QaWavesDocsTab } from '../components/qa-waves/QaWavesDocsTab';
 import { useExecutionPolling } from '../components/qa-waves/useExecutionPolling';
 import { ExecutionProgress } from '../components/qa-waves/ExecutionProgress';
 import { useToast } from '../components/Toast';
@@ -921,6 +922,7 @@ export function QaWavesPage() {
           { id: 'jornadas', label: 'Jornadas e Cenários' },
           { id: 'cenarios', label: 'Cenários' },
           { id: 'cobertura', label: 'Cobertura e Gaps' },
+          { id: 'docs', label: '📚 Documentação' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -945,6 +947,9 @@ export function QaWavesPage() {
 
       {/* Tab: Cobertura e Gaps */}
       {activeTab === 'cobertura' && <CoverageGapsTab />}
+
+      {/* Tab: Documentação */}
+      {activeTab === 'docs' && <QaWavesDocsTab />}
 
       {/* Tab: Jornadas e Cenários (sidebar compartilhado) */}
       {(activeTab === 'jornadas' || activeTab === 'cenarios') && (<>

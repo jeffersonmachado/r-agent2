@@ -518,6 +518,47 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
+  // ─── Docs (roteiros + diagramas) ───────────────────────────────────────
+  router.get('/api/qa-waves/docs/:type', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const docType = req.params.type;
+      const docName = req.query.name || null;
+      const baseDir = docType === 'roteiros' ? 'docs/roteiros' : 'docs/diagrams/qa-waves';
+      const fullPath = path.join(ROOT_DIR, baseDir);
+
+      if (!fs.existsSync(fullPath)) {
+        deps.sendJson(res, 404, { error: 'not_found', message: 'Diretório de documentação não encontrado' });
+        return;
+      }
+
+      if (docName) {
+        // Serve specific doc
+        const filePath = path.join(fullPath, docName);
+        if (!fs.existsSync(filePath)) {
+          deps.sendJson(res, 404, { error: 'not_found', message: 'Documento não encontrado: ' + docName });
+          return;
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        deps.sendJson(res, 200, { name: docName, type: docType, content });
+      } else {
+        // List all docs
+        const files = fs.readdirSync(fullPath)
+          .filter(f => f.endsWith('.md'))
+          .map(f => ({ name: f, type: docType }));
+        deps.sendJson(res, 200, { type: docType, count: files.length, files });
+      }
+    } catch (error) {
+      deps.logger.error('Erro ao servir documentação:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao servir documentação' });
+    }
+  });
+
   registerJsonPost('/api/qa-waves/intelligence/generate-scenario', async (deps, body) => {
     const { vertical, journey, stage, gap, context } = body;
     if (!vertical || !journey || !stage || !gap) {
