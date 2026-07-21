@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Business Rules Contracts",
+  "definitions": {
+    "InferredRule": {
+      "type": "object",
+      "required": ["ruleId", "description", "dependsOn", "enables", "dependencyType", "isCritical"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "description": { "type": "string" },
+        "dependsOn": { "type": "string" },
+        "enables": { "type": "string" },
+        "dependencyType": { "type": "string", "const": "requires" },
+        "isCritical": { "type": "boolean" }
+      }
+    },
+    "FlowStep": {
+      "type": "object",
+      "required": ["entity", "operation", "why"],
+      "properties": {
+        "entity": { "type": "string" },
+        "operation": { "type": "string" },
+        "why": { "type": "string" }
+      }
+    },
+    "InferredFlow": {
+      "type": "object",
+      "required": ["flowId", "flowName", "description", "steps", "entitiesInFlow", "coverage", "coveredEntities", "totalEntities"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "flowName": { "type": "string" },
+        "description": { "type": "string" },
+        "steps": { "type": "array", "items": { "$ref": "#/definitions/FlowStep" } },
+        "entitiesInFlow": { "type": "array", "items": { "type": "string" } },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "coveredEntities": { "type": "integer" },
+        "totalEntities": { "type": "integer" }
+      }
+    },
+    "BusinessGap": {
+      "type": "object",
+      "required": ["gapId", "severity", "description", "missingEntity", "affectedFlow", "impact", "recommendation", "suggestedFiles", "status"],
+      "properties": {
+        "gapId": { "type": "string" },
+        "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+        "description": { "type": "string" },
+        "missingEntity": { "type": "string" },
+        "affectedFlow": { "type": "string" },
+        "impact": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "suggestedFiles": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["open", "investigating", "resolved", "dismissed"] }
+      }
+    },
+    "BusinessRulesState": {
+      "type": "object",
+      "required": ["rulesEvaluated", "rulesOk", "rulesBroken", "gaps", "flows", "recommendation", "sourceInfo"],
+      "properties": {
+        "rulesEvaluated": { "type": "integer" },
+        "rulesOk": { "type": "integer" },
+        "rulesBroken": { "type": "integer" },
+        "gaps": { "type": "array", "items": { "$ref": "#/definitions/BusinessGap" } },
+        "flows": { "type": "array", "items": { "$ref": "#/definitions/InferredFlow" } },
+        "recommendation": { "type": "string" },
+        "sourceInfo": { "type": "string" }
+      }
+    },
+    "PipelineInput": {
+      "type": "object",
+      "required": ["entities", "relationships"],
+      "properties": {
+        "sourceLabel": { "type": "string" },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "fields": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" }
+            }
+          }
+        },
+        "sourceFiles": {
+          "type": "object",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

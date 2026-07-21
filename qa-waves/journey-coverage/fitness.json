@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-16T14:23:28.870Z",
+  "generatedAt": "2026-07-21T02:22:00.743Z",
   "vertical": "fitness",
   "maturity": "production-like",
   "replaySupported": true,
@@ -111,6 +111,373 @@
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journey": "fitness_customer_checkin",
+      "replaySupport": true,
+      "qaSupport": false,
+      "scenarios": [
+        {
+          "scenarioId": "business-e2e-fitness_customer_checkin",
+          "scenario": "Check-in Completo de Aluno Fitness",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp",
+            "app"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_fitness_customer_checkin_001",
+              "expected": {
+                "customerIdentified": true,
+                "membershipFound": true
+              }
+            },
+            {
+              "stepId": "step_fitness_customer_checkin_002",
+              "expected": {
+                "membershipActive": true,
+                "noPendingPayments": true,
+                "planValid": true
+              }
+            },
+            {
+              "stepId": "step_fitness_customer_checkin_003",
+              "expected": {
+                "accessGranted": true,
+                "turnstileReleased": true,
+                "timestamp": "now"
+              }
+            },
+            {
+              "stepId": "step_fitness_customer_checkin_004",
+              "expected": {
+                "attendanceRecorded": true,
+                "checkinTime": "now",
+                "crmUpdated": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-customer_identification",
+          "scenario": "Validação: Customer Identification",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_customer_identification_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-membership_validation",
+          "scenario": "Validação: Membership Validation",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend",
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_membership_validation_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            },
+            {
+              "stepId": "step_cap_membership_validation_2",
+              "expected": {
+                "dependenciesValid": true,
+                "deps": [
+                  "access_decision"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-access_decision",
+          "scenario": "Validação: Access Decision",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_access_decision_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-turnstile_release",
+          "scenario": "Validação: Turnstile Release",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend",
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_turnstile_release_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            },
+            {
+              "stepId": "step_cap_turnstile_release_2",
+              "expected": {
+                "dependenciesValid": true,
+                "deps": [
+                  "customer_identification",
+                  "membership_validation",
+                  "access_decision"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-attendance_record",
+          "scenario": "Validação: Attendance Record",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend",
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_attendance_record_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            },
+            {
+              "stepId": "step_cap_attendance_record_2",
+              "expected": {
+                "dependenciesValid": true,
+                "deps": [
+                  "customer_identification",
+                  "access_decision"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-crm_update",
+          "scenario": "Validação: Crm Update",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend",
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_crm_update_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            },
+            {
+              "stepId": "step_cap_crm_update_2",
+              "expected": {
+                "dependenciesValid": true,
+                "deps": [
+                  "attendance_record"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
+          "scenario": "Precondição: Crm Contact Exists",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_crm_contact_exists_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_customer_checkin-membership_exists",
+          "scenario": "Precondição: Membership Exists",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_exists_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_customer_checkin-credential_exists",
+          "scenario": "Precondição: Credential Exists",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_credential_exists_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_customer_checkin-device_available",
+          "scenario": "Precondição: Device Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_device_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
+          "scenario": "Precondição: Attendance Database Accessible",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_attendance_database_accessible_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },

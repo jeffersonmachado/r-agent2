@@ -1,21 +1,21 @@
 {
-  "generatedAt": "2026-05-14T20:11:00.738Z",
-  "artifact": "r-agent2-20260516-112227.zip",
+  "generatedAt": "2026-05-29T03:22:09.428Z",
+  "artifact": "r-agent2-20260612-165011.zip",
   "pass": false,
   "decision": "NO_GO",
   "totalChecks": 9,
-  "failedChecks": 7,
-  "criticalChecks": 4,
+  "failedChecks": 5,
+  "criticalChecks": 3,
   "checks": [
     {
       "check": "package_integrity",
-      "pass": false,
+      "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260516-112227.zip",
-        "computedHash": "4740879b14d258c368e17244451d08926da2395bf9c9fa6e82a35c819cd8fe72",
-        "recordedHash": "58013d8c57c18d6777703be2369b3f86b7bb9431d0bd86d618c1b0c529466dfa",
-        "match": false
+        "zipName": "r-agent2-20260612-165011.zip",
+        "computedHash": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
+        "recordedHash": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
+        "match": true
       }
     },
     {
@@ -48,7 +48,85 @@
       "pass": false,
       "severity": "CRITICAL",
       "details": {
-        "storedChainRoot": "7bb0c2344df033952a974cc7…"
+        "chainLength": 10,
+        "chainRootValid": false,
+        "tampered": true,
+        "failures": [
+          {
+            "id": "package",
+            "reason": "hash_mismatch",
+            "expected": "a2e7821eadc422f876e8eb29d322a232c18ebabe09644bea520c9a32bdceeff9",
+            "actual": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
+            "path": "dist/r-agent2-20260612-165011.zip"
+          },
+          {
+            "id": "sidecar_manifest",
+            "reason": "hash_mismatch",
+            "expected": "59ca39e01150819863e050534a85b2bc4d53bac0c000e4f520904804bd384226",
+            "actual": "7c09acd8469ace801473659cdcfbe4f41f9887ef7fdabb16931031216170a3d5",
+            "path": "dist/r-agent2-20260612-165011.manifest.json"
+          },
+          {
+            "id": "evidence_manifest",
+            "reason": "hash_mismatch",
+            "expected": "76fa91bdcfbf0121470ea068b0b09ce236a3d06107fe51da5cdfd40075eb2bd3",
+            "actual": "02bc34a8cbd76e69db2a57bf0aed3d6524d6217646b3af759072169e234d5e8e",
+            "path": "governance/evidence-manifest.json"
+          },
+          {
+            "id": "final_proof_report",
+            "reason": "hash_mismatch",
+            "expected": "d6c76532057d6f2c95bbe0a03e23a6ef6c46dea79066cd1e15bb421005cb2d1d",
+            "actual": "6f76448e97301712b88d04fdcf5f6dfb0ec8065b0b307bbbf581baaa4d693476",
+            "path": "governance/final-proof-report.json"
+          },
+          {
+            "id": "final_readiness",
+            "reason": "hash_mismatch",
+            "expected": "a6cdf77d8bbf3f9b782239b99c9466438e8ccc72d0d0fc793514dccd31107482",
+            "actual": "aea8469c0af96bc247558ad64ecb6100d4e8116b49d43a1759da3f64fc8770ee",
+            "path": "governance/final-readiness-report.json"
+          },
+          {
+            "id": "consistency_report",
+            "reason": "cumulative_hash_broken",
+            "expected": "d653dea9383b4d75048b8d965f74d96604b1b6131965546eb5a186fe5e66f003",
+            "actual": "ee0b1ae4b223316b9130decb589ebe1829da7bcbc1a91e1ae5e5fa744670210d"
+          },
+          {
+            "id": "cross_report",
+            "reason": "cumulative_hash_broken",
+            "expected": "96dcbb80ab1aba8dec6e9081b315fcf4d56c7a21f2311e8e4dddad94de22033e",
+            "actual": "904b11fc05773f634c69d803dd4a1ac9e2fdbaefaeb3be95664fb98472ca2d90"
+          },
+          {
+            "id": "proof_signature",
+            "reason": "hash_mismatch",
+            "expected": "a88231e0cfd3032e7da62ad24bcc73f4643b50727d59ce0ee61e5015f82855c9",
+            "actual": "474f73ed25aa856c8aa335f9a253326cbe833595d5805eaed17ddce91672ef4b",
+            "path": "governance/proof-signature.json"
+          },
+          {
+            "id": "blocker_engine",
+            "reason": "cumulative_hash_broken",
+            "expected": "3e52f5bd9a106bdb4f37bbbb27576c98bc74ccb0d957e3ac9e36fa3e65f5f4d6",
+            "actual": "ad3c3bd2f4e3864342515937faa9bc7b62edcd895815ab5538a1b44cf2456765"
+          },
+          {
+            "id": "package_validation",
+            "reason": "hash_mismatch",
+            "expected": "dbca2691977bcc6e2bda8a914ab59381dc7f8bc432cb658d4028e9fe2c8abcbe",
+            "actual": "9351b6ab7da8eace777d396818668dfaf8d8e141a40e6a78607d6ee0db23d716",
+            "path": "governance/package-validation-report.json"
+          },
+          {
+            "id": "chain_root",
+            "reason": "chain_root_mismatch",
+            "expected": "d9e64c9ccad714d332ac69932df5fe0eda1bf5f4c4c00a89de21db6eacc241e7",
+            "actual": "82bd87bee3e2baca92825d4e2291767ed97c86a03e4c0e0b8eaacd7cc0fffdb9"
+          }
+        ],
+        "storedChainRoot": "d9e64c9ccad714d332ac6993…"
       }
     },
     {
@@ -56,7 +134,7 @@
       "pass": true,
       "severity": "HIGH",
       "details": {
-        "totalReplays": 4,
+        "totalReplays": 7,
         "allValid": true,
         "invalidReplays": []
       }
@@ -67,29 +145,17 @@
       "severity": "CRITICAL",
       "details": {
         "overallConsistencyScore": 100,
-        "allChecksPass": true
+        "allChecksPass": true,
+        "finalDecision": "NO_GO:AUTONOMOUS_READY_GO"
       }
     },
     {
       "check": "stale_artifacts",
-      "pass": false,
+      "pass": true,
       "severity": "HIGH",
       "details": {
-        "staleCount": 2,
-        "stale": [
-          {
-            "file": "governance/package-validation-report.json",
-            "field": "zipName",
-            "found": "r-agent2-20260516-112227.payload.zip",
-            "expected": "r-agent2-20260516-112227.zip"
-          },
-          {
-            "file": "governance/final-consistency-report.json",
-            "field": "currentZipName",
-            "found": "r-agent2-20260516-112227.payload.zip",
-            "expected": "r-agent2-20260516-112227.zip"
-          }
-        ]
+        "staleCount": 0,
+        "stale": []
       }
     },
     {
@@ -101,6 +167,6 @@
       }
     }
   ],
-  "summary": "7 check(s) falharam (4 críticos). Adulteração ou configuração incompleta detectada.",
-  "reboundAt": "2026-05-16T14:24:46.700Z"
+  "summary": "5 check(s) falharam (3 críticos). Adulteração ou configuração incompleta detectada.",
+  "reboundAt": "2026-06-12T19:51:56.630Z"
 }

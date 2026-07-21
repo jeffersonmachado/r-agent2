@@ -43,5 +43,20 @@
     "required": ["pbx_service_available", "agent_available", "call_queue_writable"],
     "optional": ["recording_storage"],
     "timeout": 8000
-  }
-}
+      },
+      "omnichannel_engagement": {
+        "required": ["whatsapp_channel_active", "webchat_channel_active", "pbx_trunk_active", "email_gateway_active"],
+        "optional": ["recording_storage"],
+        "timeout": 30000
+      },
+      "booking_flow": {
+        "required": ["schedule_service_available", "calendar_writable", "notification_service_active"],
+        "optional": ["reminder_webhook"],
+        "timeout": 20000
+      },
+      "payment_charge_flow": {
+        "required": ["payment_gateway_available", "ledger_writable", "invoice_service_active"],
+        "optional": ["webhook_endpoint"],
+        "timeout": 25000
+      }
+    }

@@ -32,8 +32,9 @@ for rel in "${DIR_TARGETS[@]}"; do
 done
 
 echo "[clean-test-artifacts] Limpando screenshots/traces/videos residuais..."
+# training/ é preservado — contém material de treinamento de usuários
 find "$PROJECT_ROOT" \
-  \( -path "$PROJECT_ROOT/.git" -o -path "$PROJECT_ROOT/node_modules" -o -path "$PROJECT_ROOT/frontend-e2e/node_modules" \) -prune \
+  \( -path "$PROJECT_ROOT/.git" -o -path "$PROJECT_ROOT/node_modules" -o -path "$PROJECT_ROOT/frontend-e2e/node_modules" -o -path "$PROJECT_ROOT/training" \) -prune \
   -o -type d \( -name screenshots -o -name traces -o -name videos \) -print0 \
   | while IFS= read -r -d '' dir; do
       rm -rf "$dir"
@@ -42,7 +43,7 @@ find "$PROJECT_ROOT" \
 
 echo "[clean-test-artifacts] Limpando arquivos *.trace.zip, *.webm, *.har..."
 find "$PROJECT_ROOT" \
-  \( -path "$PROJECT_ROOT/.git" -o -path "$PROJECT_ROOT/node_modules" -o -path "$PROJECT_ROOT/frontend-e2e/node_modules" \) -prune \
+  \( -path "$PROJECT_ROOT/.git" -o -path "$PROJECT_ROOT/node_modules" -o -path "$PROJECT_ROOT/frontend-e2e/node_modules" -o -path "$PROJECT_ROOT/training" \) -prune \
   -o -type f \( -name '*.trace.zip' -o -name '*.webm' -o -name '*.har' \) -print0 \
   | while IFS= read -r -d '' file; do
       rm -f "$file"

@@ -1,10 +1,40 @@
 {
-  "version": "1.0",
-  "lastUpdated": "2025-01-02",
-  "description": "Fonte única da verdade sobre as capacidades reais e implementadas do sistema de chatbot",
+  "version": "2.0",
+  "lastUpdated": "2026-06-11",
+  "description": "Fonte única da verdade sobre as capacidades reais e implementadas do RAP - Results Autonomous Platform",
   "rule": "CDR - Capability-Driven Responses: O chatbot só pode responder com base em capacidades declaradas neste arquivo",
   
   "capabilities": {
+    "agentOperatingSystem": {
+      "id": "agent_os",
+      "name": "Agent Operating System",
+      "description": "Sistema operacional de agentes corporativos com registry, factory, knowledge graph, journey registry, aprendizado contínuo, governança, marketplace e orquestração",
+      "status": "active",
+      "implementation": {
+        "module": "api/modules/agent-os/",
+        "composition": "api/composition/agent-os/",
+        "frontend": "frontend/src/pages/AgentOsHubPage.jsx",
+        "models": "api/db/models/CorporateAgent.js, KnowledgeGraphNode.js, KnowledgeGraphEdge.js, JourneyRegistry.js, LearningRecord.js, AiGovernanceRecord.js, VerticalTemplate.js"
+      },
+      "subCapabilities": {
+        "agentRegistry": "Registro corporativo de agentes de IA com classificação PRODUCTION/SUPPORT/DEVELOPMENT",
+        "agentFactory": "Factory de criação de agentes com fluxo Create→Configure→Knowledge→QA Wave→Approval→Publish",
+        "knowledgeGraph": "Grafo de conhecimento corporativo conectando Customer, Lead, Conversation, Ticket, Journey, Agent, Replay, Wave, Campaign, Appointment, Contract, Invoice",
+        "journeyRegistry": "Registro de jornadas de negócio como entidades de primeira classe (domain→journey→scenario→wave→execution→replay→evidence)",
+        "rapLearn": "Ciclo de aprendizado contínuo: Failure→Classification→Root Cause→Suggestion→Validation→Promotion",
+        "aiGovernance": "Governança de IA com audit trail, decision log e compliance reports",
+        "agentMarketplace": "Catálogo interno com 10 agentes padrão (SDR, CRM, Support, Scheduling, Collection, Campaign, Knowledge, QA, Discovery, Dev)",
+        "agentOrchestrator": "Orquestrador que seleciona e executa agentes baseado em intents",
+        "verticalTemplates": "Templates por vertical (Beauty, Fitness, Food, Clinic, Bakery, Services, Retail)"
+      },
+      "constraints": [
+        "Agentes PRODUCTION visíveis para usuários operacionais",
+        "Agentes SUPPORT visíveis apenas para suporte",
+        "Agentes DEVELOPMENT restritos à engenharia",
+        "Toda publicação passa por QA Wave (GO/NO_GO)",
+        "Nenhuma correção aplicada diretamente em produção sem approval"
+      ]
+    },
     "flowGeneration": {
       "id": "flow_generation",
       "name": "Geração de Fluxos de Chatbot",

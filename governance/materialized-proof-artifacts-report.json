@@ -1,8 +1,7 @@
 {
-  "generatedAt": "2026-05-16T14:24:46.083Z",
+  "generatedAt": "2026-07-21T02:22:00.993Z",
   "writtenArtifacts": [
     "governance/proof-signature.json",
     "governance/cleanup-proof.json"
-  ],
-  "reboundAt": "2026-05-16T14:24:46.460Z"
+  ]
 }

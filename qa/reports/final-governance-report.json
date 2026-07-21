@@ -1,35 +1,28 @@
 {
-  "generatedAt": "2026-05-16T14:24:49.438Z",
+  "generatedAt": "2026-06-12T19:51:58.583Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
-  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (FAILURE_RATE_ABOVE_THRESHOLD, CRITICAL_DOMAIN_FAILED:omnichannel, CRITICAL_DOMAIN_FAILED:pbx, BASELINE_PASS_RATE_REGRESSION, BASELINE_BLOCKING_REGRESSION, BASELINE_INFRA_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]",
+  "finalDecision": "NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]",
   "autonomousReady": false,
   "allChecksPass": false,
-  "criticalBlocked": true,
+  "criticalBlocked": false,
   "checks": [
     {
       "id": "mesh_go_no_go",
-      "pass": false,
-      "severity": "CRITICAL",
-      "status": "NO_GO",
-      "reasons": [
-        "FAILURE_RATE_ABOVE_THRESHOLD",
-        "CRITICAL_DOMAIN_FAILED:omnichannel",
-        "CRITICAL_DOMAIN_FAILED:pbx",
-        "BASELINE_PASS_RATE_REGRESSION",
-        "BASELINE_BLOCKING_REGRESSION",
-        "BASELINE_INFRA_REGRESSION"
-      ],
-      "executionId": "mesh-2026-05-16T10-17-23-237Z",
-      "passRate": "42/62",
-      "reason": "qa-mesh go-no-go = NO_GO (FAILURE_RATE_ABOVE_THRESHOLD, CRITICAL_DOMAIN_FAILED:omnichannel, CRITICAL_DOMAIN_FAILED:pbx, BASELINE_PASS_RATE_REGRESSION, BASELINE_BLOCKING_REGRESSION, BASELINE_INFRA_REGRESSION)"
+      "pass": true,
+      "severity": "OK",
+      "status": "GO",
+      "reasons": [],
+      "executionId": "mesh-2026-06-11T22-13-23-346Z",
+      "passRate": "47/47",
+      "reason": null
     },
     {
       "id": "release_gate",
-      "pass": false,
-      "severity": "CRITICAL",
-      "gate": "NO_GO",
-      "reason": "release-gate = NO_GO"
+      "pass": true,
+      "severity": "OK",
+      "gate": "GO",
+      "reason": null
     },
     {
       "id": "replay_false_positives",
@@ -919,19 +912,19 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260516-112227.zip",
-      "computed": "0594e2ec7b9cdc70b4a3f38b…",
-      "recorded": "0594e2ec7b9cdc70b4a3f38b…",
+      "zipName": "r-agent2-20260612-165011.zip",
+      "computed": "559d6ba79f3fb78663daed01…",
+      "recorded": "559d6ba79f3fb78663daed01…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
     {
       "id": "critical_blockers",
-      "pass": false,
-      "severity": "CRITICAL",
+      "pass": true,
+      "severity": "OK",
       "criticalCount": 0,
-      "blockerCount": 1,
-      "reason": "0 blocker(s) crítico(s) não resolvido(s)"
+      "blockerCount": 0,
+      "reason": null
     },
     {
       "id": "governance_signature",
@@ -940,25 +933,12 @@
       "reason": null
     }
   ],
-  "criticalFailed": [
-    {
-      "id": "mesh_go_no_go",
-      "reason": "qa-mesh go-no-go = NO_GO (FAILURE_RATE_ABOVE_THRESHOLD, CRITICAL_DOMAIN_FAILED:omnichannel, CRITICAL_DOMAIN_FAILED:pbx, BASELINE_PASS_RATE_REGRESSION, BASELINE_BLOCKING_REGRESSION, BASELINE_INFRA_REGRESSION)"
-    },
-    {
-      "id": "release_gate",
-      "reason": "release-gate = NO_GO"
-    },
-    {
-      "id": "critical_blockers",
-      "reason": "0 blocker(s) crítico(s) não resolvido(s)"
-    }
-  ],
+  "criticalFailed": [],
   "highFailed": [
     {
       "id": "visual_journeys",
       "reason": "98 step(s) com ui.available=false em jornadas visuais críticas"
     }
   ],
-  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (FAILURE_RATE_ABOVE_THRESHOLD, CRITICAL_DOMAIN_FAILED:omnichannel, CRITICAL_DOMAIN_FAILED:pbx, BASELINE_PASS_RATE_REGRESSION, BASELINE_BLOCKING_REGRESSION, BASELINE_INFRA_REGRESSION) | release-gate = NO_GO | 0 blocker(s) crítico(s) não resolvido(s)]"
+  "summary": "0 bloqueio(s) crítico(s). Decisão: NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]"
 }

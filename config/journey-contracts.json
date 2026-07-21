@@ -44,7 +44,7 @@
         "billing_validation"
       ],
       "missingCapabilities": [],
-      "confidence": 0.67
+      "confidence": 0.85
     }
   }
 }

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-13T17:36:59.540Z",
+  "generatedAt": "2026-05-29T03:22:03.156Z",
   "engine": "replay-hardening-engine/v2",
   "pass": false,
   "decision": "REPLAY_HARDENING_NO_GO",
-  "totalReplaysAnalyzed": 8,
-  "hardenedReplays": 1,
+  "totalReplaysAnalyzed": 9,
+  "hardenedReplays": 2,
   "violations": 98,
   "uiViolations": 98,
   "failedReplays": 0,
@@ -772,6 +772,19 @@
       "replayDeterministicHash": "fbf6f84a0562ae9f0a38f0f0c62eb53668d4075c3e13153c39863dbbd09aedbc",
       "replayExecutionHash": "1ca62c875af1fbee16a78e9763bf855e8651570c4449f9f373b3d8d989cb86d3",
       "replayEvidenceHash": "5908d81bc1a8daa1fe9f29becb348a32643c0b7335012253fc386ec680310ac0"
+    },
+    {
+      "journeyId": "omnichannel_email",
+      "source": "qa/smoke/prod-like/omnichannel_email-replay.json",
+      "status": "GO",
+      "failedStepCount": 0,
+      "stepCount": 1,
+      "isVisualCritical": false,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "e990564bada277dc954c98d3e66139b0fa3ddbebf2641a5f395ffe57af31504a",
+      "replayExecutionHash": "cc8ae37ec8bc52f827fa9c66d0e2e65fccb070bd67062aa656f8494cd1fa6b23",
+      "replayEvidenceHash": "7ede1466014bbb7560e69d04dcdc52c7d11e55743277f4a912994e2c406cfd29"
     },
     {
       "journeyId": "qa/enterprise/human-handoff-full-validation.json",
@@ -1657,5 +1670,5 @@
     }
   ],
   "summary": "98 violação(ões): 98 UI indisponível, 0 replay falso positivo",
-  "reboundAt": "2026-05-16T14:24:46.704Z"
+  "reboundAt": "2026-06-12T19:51:56.632Z"
 }

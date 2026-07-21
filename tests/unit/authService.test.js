@@ -36,30 +36,27 @@ describe('AuthService', () => {
     expect(shortPass.success).toBe(false);
   });
 
-  test('createAgent + login funciona sem DB (fallback in-memory)', async () => {
+  test('createAgent + login sem DB falham com erro explicito (sem fallback in-memory)', async () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
     jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => ({})), Session: jest.fn(() => ({})) }));
 
     // eslint-disable-next-line global-require
     const svc = require('../../api/services/authService');
 
-    const created = await svc.createAgent({
+    // Convenção do projeto: persistência obrigatória, sem fallback em memória.
+    await expect(svc.createAgent({
       tenantId: 'tenant-1',
       username: 'john',
       email: 'john@example.com',
       password: '123456',
       role: 'agent',
       name: 'John',
-    });
-    expect(created.success).toBe(true);
+    })).rejects.toThrow(/PostgreSQL/);
 
-    const login = await svc.login('john', '123456');
-    expect(login.success).toBe(true);
-    expect(typeof login.token).toBe('string');
-    expect(login.agent.username).toBe('john');
+    await expect(svc.login('john', '123456')).rejects.toThrow(/PostgreSQL/);
   });
 
-  test('login com username hostil nao quebra e retorna erro de credenciais', async () => {
+  test('login com username hostil nao quebra com erro de coercao', async () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
     jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => ({})), Session: jest.fn(() => ({})) }));
 
@@ -72,8 +69,9 @@ describe('AuthService', () => {
       },
     };
 
-    const result = await svc.login(hostile, '123456');
-    expect(result.success).toBe(false);
+    // Sem DB o erro deve ser o de persistência obrigatória — nunca o boom_toString
+    // do input hostil (coerção defensiva preserva o fluxo até o gate de persistência).
+    await expect(svc.login(hostile, '123456')).rejects.toThrow(/PostgreSQL/);
   });
 
   test('validateToken rejeita token invalido e nao inicializado', async () => {

@@ -18,8 +18,22 @@ describe('authService coercion hardening', () => {
   });
 
   test('createAgent não quebra quando checkLimit lança erro com message hostil', async () => {
-    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
-    jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => ({})), Session: jest.fn(() => ({})) }));
+    // DB mockado como disponível: persistência é obrigatória (sem fallback in-memory).
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+    const userModel = {
+      sequelize: { where: jest.fn(() => ({})), fn: jest.fn(() => ({})), col: jest.fn(() => ({})) },
+      count: jest.fn(async () => 1),
+      findAll: jest.fn(async () => []),
+      findOne: jest.fn(async () => null),
+      create: jest.fn(async (row) => ({
+        id: 'u-1',
+        ...row,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })),
+    };
+    const sessionModel = { findAll: jest.fn(async () => []) };
+    jest.doMock('../../api/db/models', () => ({ User: jest.fn(() => userModel), Session: jest.fn(() => sessionModel) }));
 
     const { checkLimit } = require('../../api/services/planLimitsService');
 

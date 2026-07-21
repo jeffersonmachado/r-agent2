@@ -1,0 +1,68 @@
+{
+  "startedAt": "2026-06-12T18:38:01.093Z",
+  "tests": [
+    {
+      "name": "Login",
+      "status": "PASS",
+      "detail": "Redirected to http://127.0.0.1:5173/workspace",
+      "at": "2026-06-12T18:38:10.877Z"
+    },
+    {
+      "name": "Workspace",
+      "status": "PASS",
+      "detail": "Content: 7017 chars",
+      "at": "2026-06-12T18:38:13.547Z"
+    },
+    {
+      "name": "Inbox",
+      "status": "PASS",
+      "detail": "Content: 2829 chars",
+      "at": "2026-06-12T18:38:15.908Z"
+    },
+    {
+      "name": "Support",
+      "status": "PASS",
+      "detail": "Content: 1576 chars",
+      "at": "2026-06-12T18:38:18.573Z"
+    },
+    {
+      "name": "Agent OS Hub",
+      "status": "FAIL",
+      "detail": "page.goto: net::ERR_TOO_MANY_REDIRECTS at http://127.0.0.1:5173/admin/agents",
+      "at": "2026-06-12T18:38:19.169Z"
+    },
+    {
+      "name": "QA Waves",
+      "status": "FAIL",
+      "detail": "page.goto: Navigation to \"http://127.0.0.1:5173/dev/qa-waves\" is interrupted by another navigation to \"http://127.0.0.1:5173/workspace\"",
+      "at": "2026-06-12T18:38:19.281Z"
+    },
+    {
+      "name": "RPA Replays",
+      "status": "FAIL",
+      "detail": "page.goto: Navigation to \"http://127.0.0.1:5173/dev/rpa-replays\" is interrupted by another navigation to \"http://127.0.0.1:5173/workspace\"",
+      "at": "2026-06-12T18:38:19.322Z"
+    },
+    {
+      "name": "API /auth/me",
+      "status": "FAIL",
+      "detail": "fetch failed",
+      "at": "2026-06-12T18:38:19.373Z"
+    },
+    {
+      "name": "Console errors",
+      "status": "WARN",
+      "detail": "16 errors",
+      "at": "2026-06-12T18:38:19.374Z"
+    },
+    {
+      "name": "Network",
+      "status": "WARN",
+      "detail": "13 failures",
+      "at": "2026-06-12T18:38:19.375Z"
+    }
+  ],
+  "passed": 4,
+  "failed": 6,
+  "finishedAt": "2026-06-12T18:38:19.495Z"
+}

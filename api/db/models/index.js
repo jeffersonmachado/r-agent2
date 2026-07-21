@@ -141,6 +141,13 @@ const getResource = require('./Resource');
 const getResourceAvailability = require('./ResourceAvailability');
 const getResourceBooking = require('./ResourceBooking');
 const getPaymentEvent = require('./PaymentEvent');
+const getCorporateAgent = require('./CorporateAgent');
+const getKnowledgeGraphNode = require('./KnowledgeGraphNode');
+const getKnowledgeGraphEdge = require('./KnowledgeGraphEdge');
+const getJourneyRegistry = require('./JourneyRegistry');
+const getLearningRecord = require('./LearningRecord');
+const getAiGovernanceRecord = require('./AiGovernanceRecord');
+const getVerticalTemplate = require('./VerticalTemplate');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -281,6 +288,13 @@ const Resource = () => getResource();
 const ResourceAvailability = () => getResourceAvailability();
 const ResourceBooking = () => getResourceBooking();
 const PaymentEvent = () => getPaymentEvent();
+const CorporateAgent = () => getCorporateAgent();
+const KnowledgeGraphNode = () => getKnowledgeGraphNode();
+const KnowledgeGraphEdge = () => getKnowledgeGraphEdge();
+const JourneyRegistry = () => getJourneyRegistry();
+const LearningRecord = () => getLearningRecord();
+const AiGovernanceRecord = () => getAiGovernanceRecord();
+const VerticalTemplate = () => getVerticalTemplate();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -344,6 +358,13 @@ function defineRelationships() {
   const ResourceAvailabilityModel = ResourceAvailability();
   const ResourceBookingModel = ResourceBooking();
   const PaymentEventModel = PaymentEvent();
+  const CorporateAgentModel = CorporateAgent();
+  const KnowledgeGraphNodeModel = KnowledgeGraphNode();
+  const KnowledgeGraphEdgeModel = KnowledgeGraphEdge();
+  const JourneyRegistryModel = JourneyRegistry();
+  const LearningRecordModel = LearningRecord();
+  const AiGovernanceRecordModel = AiGovernanceRecord();
+  const VerticalTemplateModel = VerticalTemplate();
 
   TenantInsightModel.hasMany(TenantInsightEvidenceModel, {
     foreignKey: 'insight_id',
@@ -713,6 +734,24 @@ function defineRelationships() {
     foreignKey: 'tenant_id',
     as: 'tenant',
   });
+
+  // Knowledge Graph relationships
+  KnowledgeGraphNodeModel.hasMany(KnowledgeGraphEdgeModel, {
+    foreignKey: 'source_node_id',
+    as: 'outgoingEdges',
+  });
+  KnowledgeGraphEdgeModel.belongsTo(KnowledgeGraphNodeModel, {
+    foreignKey: 'source_node_id',
+    as: 'sourceNode',
+  });
+  KnowledgeGraphNodeModel.hasMany(KnowledgeGraphEdgeModel, {
+    foreignKey: 'target_node_id',
+    as: 'incomingEdges',
+  });
+  KnowledgeGraphEdgeModel.belongsTo(KnowledgeGraphNodeModel, {
+    foreignKey: 'target_node_id',
+    as: 'targetNode',
+  });
 }
 
 module.exports = {
@@ -854,6 +893,13 @@ module.exports = {
   ResourceAvailability,
   ResourceBooking,
   PaymentEvent,
+  CorporateAgent,
+  KnowledgeGraphNode,
+  KnowledgeGraphEdge,
+  JourneyRegistry,
+  LearningRecord,
+  AiGovernanceRecord,
+  VerticalTemplate,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -994,4 +1040,11 @@ module.exports = {
   getResourceAvailability,
   getResourceBooking,
   getPaymentEvent,
+  getCorporateAgent,
+  getKnowledgeGraphNode,
+  getKnowledgeGraphEdge,
+  getJourneyRegistry,
+  getLearningRecord,
+  getAiGovernanceRecord,
+  getVerticalTemplate,
 };

@@ -1543,6 +1543,44 @@ function buildSyntheticReplay(scenario, result, baseDir) {
       : 'api_replay_summary';
   const startedAt = result.startedAt || null;
   const finishedAt = result.finishedAt || null;
+
+  // ── Training metadata ──────────────────────────────────────────
+  // Use trainingSteps do registry (narrativos) ou steps tecnicos como fallback
+  const trainingSteps = Array.isArray(scenario.trainingSteps) && scenario.trainingSteps.length > 0
+    ? scenario.trainingSteps
+    : null;
+
+  // Se o adapter retornou enrichedSteps (API com parsing de logs), usa esses
+  const adapterEnrichedSteps = result.enrichedSteps || null;
+
+  // Constrói steps enriquecidos para o replay
+  const rawSteps = (scenario.steps || []).map((step, index) => ({
+    index: index + 1,
+    name: typeof step === 'string' ? step : step.type || JSON.stringify(step),
+    // Se tem trainingSteps, anexa descrição narrativa
+    trainingDescription: trainingSteps && trainingSteps[index]
+      ? (typeof trainingSteps[index] === 'string' ? trainingSteps[index] : trainingSteps[index].description || trainingSteps[index].name)
+      : null,
+    // Dica visual (screenshot esperado, indicador visual)
+    trainingHint: trainingSteps && trainingSteps[index] && trainingSteps[index].hint
+      ? trainingSteps[index].hint
+      : null,
+    actor: trainingSteps && trainingSteps[index] && trainingSteps[index].actor
+      ? trainingSteps[index].actor
+      : (scenario.adapter === 'rpa' ? 'rpa' : 'api'),
+    category: trainingSteps && trainingSteps[index] && trainingSteps[index].category
+      ? trainingSteps[index].category
+      : 'SYSTEM_EVENT',
+    expectedVisual: trainingSteps && trainingSteps[index] && trainingSteps[index].expectedVisual
+      ? trainingSteps[index].expectedVisual
+      : null,
+  }));
+
+  // Se temos enrichedSteps do adapter, mescla informação de log
+  const finalSteps = adapterEnrichedSteps && adapterEnrichedSteps.length > 0
+    ? adapterEnrichedSteps
+    : rawSteps;
+
   const payload = {
     scenarioId: scenario.id,
     flow: scenario.flow,
@@ -1554,10 +1592,18 @@ function buildSyntheticReplay(scenario, result, baseDir) {
     startedAt,
     finishedAt,
     durationMs: durationMs(startedAt, finishedAt),
-    steps: (scenario.steps || []).map((step, index) => ({
-      index: index + 1,
-      name: typeof step === 'string' ? step : step.type || JSON.stringify(step),
-    })),
+    steps: finalSteps,
+    // Metadados de treinamento
+    training: {
+      enabled: !!(trainingSteps || adapterEnrichedSteps),
+      trainingSteps: trainingSteps || null,
+      domain: scenario.domain,
+      businessFlow: scenario.flow,
+      difficulty: scenario.trainingDifficulty || 'intermediate',
+      estimatedDuration: scenario.trainingDuration || '5min',
+      prerequisites: scenario.trainingPrerequisites || [],
+      learningObjectives: scenario.trainingObjectives || [],
+    },
     assertions: scenario.assertions || [],
     logs: result.logs || [],
     errors: result.errors || [],
@@ -1854,6 +1900,11 @@ async function runMesh(options = {}) {
   ensureDir(path.join(evidenceDir, 'screenshots'));
   ensureDir(path.join(evidenceDir, 'videos'));
   ensureDir(path.join(evidenceDir, 'replays'));
+  // Diretório de treinamento persistente (não limpo pelo release)
+  const trainingDir = path.join(ROOT_DIR, '..', 'training');
+  ensureDir(path.join(trainingDir, 'replays'));
+  ensureDir(path.join(trainingDir, 'screenshots'));
+  ensureDir(path.join(trainingDir, 'videos'));
 
   const results = [];
   const executionLogs = [];
@@ -1915,6 +1966,32 @@ async function runMesh(options = {}) {
     const replayArtifact = buildSyntheticReplay(effectiveScenario, result, evidenceDir);
     result.artifacts = [...result.artifacts, replayArtifact];
     result.replayArtifact = replayArtifact.path;
+
+    // Salvar replay enriquecido no diretório de treinamento (persistente)
+    try {
+      const trainingReplayPath = path.join(trainingDir, 'replays', `${effectiveScenario.id}.json`);
+      const replayContent = safeReadJson(replayArtifact.path, null);
+      if (replayContent) {
+        writeJson(trainingReplayPath, replayContent);
+      }
+      // Copiar screenshots para training/
+      const screenshots = (result.artifacts || []).filter((a) => a && a.type === 'screenshot');
+      for (const shot of screenshots) {
+        if (shot.path && fs.existsSync(shot.path)) {
+          const destName = `${effectiveScenario.id}-${path.basename(shot.path)}`;
+          fs.copyFileSync(shot.path, path.join(trainingDir, 'screenshots', destName));
+        }
+      }
+      // Copiar videos para training/
+      const videos = (result.artifacts || []).filter((a) => a && a.type === 'video');
+      for (const vid of videos) {
+        if (vid.path && fs.existsSync(vid.path)) {
+          const destName = `${effectiveScenario.id}-${path.basename(vid.path)}`;
+          fs.copyFileSync(vid.path, path.join(trainingDir, 'videos', destName));
+        }
+      }
+    } catch (_) { /* non-blocking: training save is best-effort */ }
+
     const classifiedResult = classifyScenarioResult(result, priorHistory, options);
     classifiedResult.evidencePath = writeScenarioEvidence(evidenceDir, classifiedResult);
     results.push(classifiedResult);

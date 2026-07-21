@@ -68,6 +68,7 @@ export function RpaReplaysPage() {
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(false);
   const [replayEvidenceTab, setReplayEvidenceTab] = useState('states');
+  const [trainingMode, setTrainingMode] = useState(false);
   
   // Filtros
   const [searchText, setSearchText] = useState('');
@@ -1640,6 +1641,24 @@ export function RpaReplaysPage() {
                       >
                         {replayStepByStep ? '📋 Ver Lista Completa' : '▶️ Play'}
                       </Button>
+                      {replayData?.training?.enabled && (
+                        <Button
+                          onClick={() => {
+                            setTrainingMode(!trainingMode);
+                            if (!trainingMode && !replayStepByStep) {
+                              setReplayStepByStep(true);
+                              setCurrentReplayStep(0);
+                              setIsPlaying(false);
+                            }
+                          }}
+                          variant={trainingMode ? 'primary' : 'outline'}
+                          size="sm"
+                          className="text-xs"
+                          title="Modo Treinamento: mostra descrições narrativas e dicas visuais para cada passo"
+                        >
+                          {trainingMode ? '🎓 Treinando' : '🎓 Treinar'}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1710,6 +1729,45 @@ export function RpaReplaysPage() {
                       </p>
                     </div>
                   )}
+                  {/* ── Resumo de Treinamento ── */}
+                  {replayData?.training?.enabled && (
+                    <div className="col-span-2 p-3 rounded-lg bg-accent-primary/5 border border-accent-primary/20 space-y-1">
+                      <span className="text-xs font-semibold text-accent-primary flex items-center gap-1">
+                        🎓 Jornada de Treinamento
+                      </span>
+                      {replayData.training.domain && (
+                        <p className="text-xs text-text-secondary">
+                          <span className="text-text-tertiary">Domínio:</span> {replayData.training.domain}
+                          {replayData.training.difficulty && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default">
+                              {replayData.training.difficulty}
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {replayData.training.businessFlow && (
+                        <p className="text-xs text-text-secondary">
+                          <span className="text-text-tertiary">Fluxo:</span> {replayData.training.businessFlow}
+                        </p>
+                      )}
+                      {replayData.training.estimatedDuration && (
+                        <p className="text-xs text-text-secondary">
+                          <span className="text-text-tertiary">Duração estimada:</span> {replayData.training.estimatedDuration}
+                        </p>
+                      )}
+                      {replayData.training.learningObjectives?.length > 0 && (
+                        <div className="text-xs text-text-secondary">
+                          <span className="text-text-tertiary">Objetivos:</span>
+                          <ul className="list-disc list-inside mt-1">
+                            {replayData.training.learningObjectives.map((obj, i) => (
+                              <li key={i}>{obj}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* ── Fim Resumo de Treinamento ── */}
                   {replayData.errors?.length > 0 && (
                     <div>
                       <span className="text-text-tertiary block mb-1">Erros:</span>
@@ -2436,6 +2494,44 @@ export function RpaReplaysPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ── Modo Treinamento ── */}
+                  {trainingMode && currentStep && (() => {
+                    const stepData = currentStep.type === 'trace-step' ? currentStep.data : null;
+                    const trainingDesc = stepData?.trainingDescription;
+                    const trainingHint = stepData?.trainingHint;
+                    const expectedVisual = stepData?.expectedVisual;
+                    const actor = stepData?.actor;
+                    const hasTraining = trainingDesc || trainingHint || expectedVisual;
+                    if (!hasTraining) return null;
+                    return (
+                      <div className="p-3 rounded-lg bg-accent-primary/10 border border-accent-primary/30 space-y-2">
+                        <div className="text-xs font-semibold text-accent-primary flex items-center gap-1">
+                          🎓 Material de Treinamento
+                          {actor && <span className="text-text-tertiary font-normal">· {actor}</span>}
+                        </div>
+                        {trainingDesc && (
+                          <div className="text-xs text-text-primary leading-relaxed">
+                            <span className="text-text-tertiary">📖 </span>
+                            {trainingDesc}
+                          </div>
+                        )}
+                        {trainingHint && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+                            <span className="text-text-tertiary">💡 Dica: </span>
+                            {trainingHint}
+                          </div>
+                        )}
+                        {expectedVisual && (
+                          <div className="text-xs text-text-secondary leading-relaxed">
+                            <span className="text-text-tertiary">👁️ Visual esperado: </span>
+                            {expectedVisual}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {/* ── Fim Modo Treinamento ── */}
 
                   {/* Conteúdo do passo atual - APENAS Screenshots */}
                   {((currentStep.type === 'screen' && currentStep.data.screenshot)

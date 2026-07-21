@@ -29,7 +29,8 @@ const {
 // Cache de metadados para listReplayFiles com validação por mtime
 const REPLAY_LIST_PREFIX_BYTES = 16 * 1024;
 const REPLAY_LIST_SUFFIX_BYTES = 32 * 1024;
-const REPLAY_LIST_FULL_THRESHOLD = 64 * 1024 * 1024; // lê arquivo completo até 64MB (contagem precisa)
+// NOTA: Para listagem de metadados, SEMPRE usamos prefix+suffix.
+// A leitura completa só ocorre no endpoint de replay individual (getReplayFile).
 let replayListCache = null;
 let replayListCacheMtimes = null;
 
@@ -64,18 +65,18 @@ function readFilePrefix(filePath, maxBytes = REPLAY_LIST_PREFIX_BYTES) {
 function readFilePrefixAndSuffix(filePath, fileSize) {
   let fd;
   try {
-    if (fileSize <= REPLAY_LIST_FULL_THRESHOLD) {
-      const buffer = Buffer.alloc(fileSize);
-      fd = fs.openSync(filePath, 'r');
-      fs.readSync(fd, buffer, 0, fileSize, 0);
-      return { prefixBuf: buffer, suffixBuf: buffer };
-    }
-    const prefixBuf = Buffer.alloc(REPLAY_LIST_PREFIX_BYTES);
-    const suffixBuf = Buffer.alloc(REPLAY_LIST_SUFFIX_BYTES);
+    // Sempre usa prefix+suffix para listagem de metadados (evita ler arquivos grandes inteiros)
+    const prefixBytes = Math.min(REPLAY_LIST_PREFIX_BYTES, fileSize);
+    const suffixBytes = Math.min(REPLAY_LIST_SUFFIX_BYTES, fileSize);
+    const prefixBuf = Buffer.alloc(prefixBytes);
+    const suffixBuf = Buffer.alloc(suffixBytes);
     fd = fs.openSync(filePath, 'r');
-    fs.readSync(fd, prefixBuf, 0, REPLAY_LIST_PREFIX_BYTES, 0);
-    const suffixOffset = Math.max(0, fileSize - REPLAY_LIST_SUFFIX_BYTES);
-    fs.readSync(fd, suffixBuf, 0, REPLAY_LIST_SUFFIX_BYTES, suffixOffset);
+    fs.readSync(fd, prefixBuf, 0, prefixBytes, 0);
+    const suffixOffset = Math.max(0, fileSize - suffixBytes);
+    if (suffixOffset > prefixBytes || fileSize <= prefixBytes) {
+      // Só lê suffix se não houver overlap com prefix
+      fs.readSync(fd, suffixBuf, 0, suffixBytes, suffixOffset);
+    }
     return { prefixBuf, suffixBuf };
   } catch (_) {
     return { prefixBuf: Buffer.alloc(0), suffixBuf: Buffer.alloc(0) };

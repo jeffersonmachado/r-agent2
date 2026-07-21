@@ -47,7 +47,6 @@ JSON_REPORT=false
 OFFLINE_TEST=true
 CI_LOG_DIR="$DIST_ROOT/ci-logs"
 CI_LOG="$CI_LOG_DIR/ci-governance-audit.log"
-VALIDATOR_TIMEOUT_SECONDS="${VALIDATOR_TIMEOUT_SECONDS:-60}"
 
 # Timestamps banidos — referências de releases antigas que NÃO devem aparecer
 # em artifacts finais (governance, signatures, manifest, verify-result).
@@ -72,40 +71,6 @@ ok()     { echo -e "${GREEN}  ✓ $*${NC}"               | tee -a "$CI_LOG"; }
 warn()   { echo -e "${YELLOW}  ⚠ WARNING: $*${NC}"     | tee -a "$CI_LOG"; WARN_REASONS+=("$*"); }
 fail()   { echo -e "${RED}  ✗ FAIL: $*${NC}"           | tee -a "$CI_LOG"; PASS=false; FAIL_REASONS+=("$*"); }
 info()   { echo -e "${CYAN}  ℹ $*${NC}"               | tee -a "$CI_LOG"; }
-
-run_with_timeout() {
-  local seconds="$1"
-  shift
-
-  if command -v timeout >/dev/null 2>&1; then
-    timeout --signal=TERM --kill-after=5s "${seconds}s" "$@"
-  else
-    "$@"
-  fi
-}
-
-run_logged_gate() {
-  local label="$1"
-  shift
-  local tmp_log rc
-
-  tmp_log="$(mktemp -t r-agent2-ci-gate.XXXXXX)"
-  if run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" "$@" > "$tmp_log" 2>&1; then
-    cat "$tmp_log" | tee -a "$CI_LOG"
-    rm -f "$tmp_log"
-    ok "$label PASSOU"
-    return 0
-  fi
-  rc=$?
-  cat "$tmp_log" | tee -a "$CI_LOG"
-  rm -f "$tmp_log"
-  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
-    fail "$label TIMEOUT"
-  else
-    fail "$label FALHOU"
-  fi
-  return 1
-}
 
 strict_fail() {
   if [[ "$STRICT_MODE" == "true" ]]; then
@@ -184,35 +149,55 @@ step "ETAPA 2: Validação estrutural (check-dist-clean)"
 # a validação estrutural do pacote de release.
 rm -rf "$PROJECT_ROOT/dist/regression-tests"
 
-run_logged_gate "check-dist-clean" bash "$SCRIPT_DIR/check-dist-clean.sh" || true
+if bash "$SCRIPT_DIR/check-dist-clean.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "check-dist-clean PASSOU"
+else
+  fail "check-dist-clean FALHOU"
+fi
 
 # =============================================================================
 # ETAPA 3: Verificação enterprise (wrapper)
 # =============================================================================
 step "ETAPA 3: verify-enterprise-governance (wrapper oficial)"
 
-run_logged_gate "verify-enterprise-governance" bash "$SCRIPT_DIR/verify-enterprise-governance.sh" || true
+if bash "$SCRIPT_DIR/verify-enterprise-governance.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "verify-enterprise-governance PASSOU"
+else
+  fail "verify-enterprise-governance FALHOU"
+fi
 
 # =============================================================================
 # ETAPA 4: Verificação enterprise v2 (rígida)
 # =============================================================================
 step "ETAPA 4: verify-enterprise-governance-v2 (verificação rígida)"
 
-run_logged_gate "verify-enterprise-governance-v2" bash "$SCRIPT_DIR/verify-enterprise-governance-v2.sh" || true
+if bash "$SCRIPT_DIR/verify-enterprise-governance-v2.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "verify-enterprise-governance-v2 PASSOU"
+else
+  fail "verify-enterprise-governance-v2 FALHOU"
+fi
 
 # =============================================================================
 # ETAPA 5: Auditoria profunda final
 # =============================================================================
 step "ETAPA 5: audit-envelope-release-final (auditoria profunda)"
 
-run_logged_gate "audit-envelope-release-final" bash "$SCRIPT_DIR/audit-envelope-release-final.sh" || true
+if bash "$SCRIPT_DIR/audit-envelope-release-final.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "audit-envelope-release-final PASSOU"
+else
+  fail "audit-envelope-release-final FALHOU"
+fi
 
 # =============================================================================
 # ETAPA 5b: Regressão de contaminação do payload
 # =============================================================================
 step "ETAPA 5b: Regressão de blacklist/payload contamination"
 
-run_logged_gate "payload contamination regression" bash "$SCRIPT_DIR/test-payload-contamination-regression.sh" || true
+if bash "$SCRIPT_DIR/test-payload-contamination-regression.sh" 2>&1 | tee -a "$CI_LOG"; then
+  ok "payload contamination regression PASSOU"
+else
+  fail "payload contamination regression FALHOU"
+fi
 
 # =============================================================================
 # ETAPA 6: Validações granulares de artifacts
@@ -435,7 +420,7 @@ if [[ "$OFFLINE_TEST" == "true" ]]; then
       echo "# Offline verifier test — $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
       echo "Extraindo envelope: $ENVELOPE_ABS"
       cd "$TMPDIR_OFFLINE"
-      run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" unzip -q -o "$ENVELOPE_ABS"
+      unzip -q "$ENVELOPE_ABS"
       ls -la
 
       VERIFIER_SCRIPT=""
@@ -451,13 +436,13 @@ if [[ "$OFFLINE_TEST" == "true" ]]; then
 
       chmod +x "$VERIFIER_SCRIPT" 2>/dev/null || true
       echo "Executando: bash $VERIFIER_SCRIPT"
-      run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" bash "$VERIFIER_SCRIPT"
+      bash "$VERIFIER_SCRIPT"
     } > "$OFFLINE_LOG" 2>&1 || OFFLINE_RESULT=$?
   else
     {
       echo "# Expanded-envelope verifier test — $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
       echo "Envelope externo não embutido em dist/release; executando verifier sobre dist/ descompactado"
-      run_with_timeout "$VALIDATOR_TIMEOUT_SECONDS" bash "$SCRIPT_DIR/verify-enterprise-governance.sh"
+      bash "$SCRIPT_DIR/verify-enterprise-governance.sh"
     } > "$OFFLINE_LOG" 2>&1 || OFFLINE_RESULT=$?
   fi
 

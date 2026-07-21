@@ -1,5 +1,6 @@
-import { Radar, Repeat2 } from 'lucide-react';
+import { Radar, Repeat2, Workflow } from 'lucide-react';
 import { useState } from 'react';
+import BusinessRulesPage from './pages/BusinessRulesPage';
 import ReplayPage from './pages/ReplayPage';
 import WavesPage from './pages/WavesPage';
 
@@ -26,10 +27,14 @@ export default function App() {
         <button className={activeTab === 'replays' ? 'tab active' : 'tab'} onClick={() => setActiveTab('replays')}>
           <Repeat2 size={16} /> Replays
         </button>
+        <button className={activeTab === 'business-rules' ? 'tab active' : 'tab'} onClick={() => setActiveTab('business-rules')}>
+          <Workflow size={16} /> Engenharia
+        </button>
       </nav>
 
       {activeTab === 'waves' && <WavesPage onExecutionCompleted={handleExecutionCompleted} />}
       {activeTab === 'replays' && <ReplayPage refreshKey={replayRefreshKey} />}
+      {activeTab === 'business-rules' && <BusinessRulesPage />}
     </main>
   );
 }

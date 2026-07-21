@@ -189,3 +189,4 @@ frontend-e2e/test-results/
 rpa/traces/
 *.trace.zip
 *.webm
+training/

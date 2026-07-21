@@ -96,6 +96,7 @@ FORBIDDEN_PATTERNS=(
   '(^|/)rpa/traces/'
   '(^|/)rpa/screenshots/'
   '(^|/)rpa/replay/'
+  '# training/ preservado — material de treinamento de usuários'
   '\.trace\.zip$'
   '\.webm$'
   '\.har$'

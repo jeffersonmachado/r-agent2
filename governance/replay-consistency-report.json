@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-05-13T17:37:07.757Z",
+  "generatedAt": "2026-05-29T03:22:08.490Z",
   "engine": "replay-consistency-engine/v2",
   "pass": false,
   "decision": "REPLAY_CONSISTENCY_NO_GO",
   "hardeningDecision": "REPLAY_NO_GO",
   "hardeningBlocks": true,
-  "replaysAnalyzed": 16,
+  "replaysAnalyzed": 17,
   "semanticViolations": 56,
   "smokeVsIndivViolations": 0,
   "hardeningAlignmentViolations": 0,
@@ -561,5 +561,5 @@
     }
   ],
   "summary": "56 inconsistência(s): 56 crítica(s), 0 alta(s). Hardening: REPLAY_NO_GO",
-  "reboundAt": "2026-05-16T14:24:46.702Z"
+  "reboundAt": "2026-06-12T19:51:56.631Z"
 }

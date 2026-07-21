@@ -1,0 +1,1816 @@
+[
+  {
+    "id": "business-b1",
+    "domain": "beauty",
+    "type": "business",
+    "source": "qa",
+    "flow": "Beauty campanha de unhas até pagamento",
+    "steps": [
+      "Campanha e sandbox billing habilitados"
+    ],
+    "assertions": [
+      "Campanha criada",
+      "Lead captado",
+      "Cliente convertido",
+      "Agendamento válido",
+      "Preço promocional aplicado",
+      "Pagamento confirmado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=B1"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "B1"
+  },
+  {
+    "id": "business-b2",
+    "domain": "beauty",
+    "type": "business",
+    "source": "qa",
+    "flow": "Beauty reagendamento",
+    "steps": [
+      "Agendamento existente"
+    ],
+    "assertions": [
+      "Agendamento localizado",
+      "Horário alterado",
+      "Consistência mantida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=B2"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "B2"
+  },
+  {
+    "id": "business-beauty-flow-appointment",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty agendamento simples",
+    "steps": [
+      "Cliente beauty existente"
+    ],
+    "assertions": [
+      "Agendamento criado",
+      "Confirmacao emitida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-APPOINTMENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-APPOINTMENT"
+  },
+  {
+    "id": "business-beauty-flow-campaign",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty criação de campanha",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Campanha criada",
+      "Campanha publicada/simulada"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-CAMPAIGN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-CAMPAIGN"
+  },
+  {
+    "id": "business-beauty-flow-lead",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty lead para cliente",
+    "steps": [
+      "Campanha existente"
+    ],
+    "assertions": [
+      "Lead criado",
+      "Lead qualificado",
+      "Lead convertido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-LEAD"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-LEAD"
+  },
+  {
+    "id": "business-beauty-flow-payment",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty pagamento isolado",
+    "steps": [
+      "Bundle/cobrança criada"
+    ],
+    "assertions": [
+      "Cobrança criada",
+      "Pagamento confirmado",
+      "Bundle ativo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-PAYMENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-PAYMENT"
+  },
+  {
+    "id": "business-beauty-scr-01",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Campaigns screen smoke",
+    "steps": [
+      "Campanha baseline seeded"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-01"
+  },
+  {
+    "id": "business-beauty-scr-02",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Leads screen smoke",
+    "steps": [
+      "Lead baseline seeded"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-02"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-02"
+  },
+  {
+    "id": "business-beauty-scr-03",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Customers screen smoke",
+    "steps": [
+      "Cliente beauty seeded"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-03"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-03"
+  },
+  {
+    "id": "business-beauty-scr-04",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Schedule screen smoke",
+    "steps": [
+      "Agendamento baseline disponível"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-04"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-04"
+  },
+  {
+    "id": "business-beauty-scr-05",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Services screen smoke",
+    "steps": [
+      "Serviços beauty publicados"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-05"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-05"
+  },
+  {
+    "id": "business-beauty-scr-06",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Payments screen smoke",
+    "steps": [
+      "Cobrança beauty criada"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-06"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-06"
+  },
+  {
+    "id": "business-clinic-flow-ticket",
+    "domain": "clinica",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Clinic abertura e resolução de ticket de manutenção",
+    "steps": [
+      "Operação autenticada",
+      "Módulo de manutenção ativo"
+    ],
+    "assertions": [
+      "Ticket de manutenção criado",
+      "Atribuição ao atendente registrada",
+      "Status resolvido confirmado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "clinica",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CLINIC-FLOW-TICKET"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CLINIC-FLOW-TICKET"
+  },
+  {
+    "id": "business-clinic-scr-01",
+    "domain": "clinica",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Clinic maintenance screen smoke",
+    "steps": [
+      "Operação autenticada com acesso à manutenção"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "clinica",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=CLINIC-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CLINIC-SCR-01"
+  },
+  {
+    "id": "business-f1",
+    "domain": "fitness",
+    "type": "business",
+    "source": "qa",
+    "flow": "Fitness novo aluno até pagamento e ativação",
+    "steps": [
+      "Sandbox billing habilitado"
+    ],
+    "assertions": [
+      "Aluno criado",
+      "Plano aplicado",
+      "Cobrança criada",
+      "Pagamento reconhecido",
+      "Status ativo",
+      "Reflexo em check-in/financeiro"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=F1"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "F1"
+  },
+  {
+    "id": "business-f2",
+    "domain": "fitness",
+    "type": "business",
+    "source": "qa",
+    "flow": "Fitness renovação/rematrícula",
+    "steps": [
+      "Aluno existente seeded"
+    ],
+    "assertions": [
+      "Nova cobrança criada",
+      "Pagamento confirmado",
+      "Sem duplicação indevida",
+      "Status mantido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=F2"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "F2"
+  },
+  {
+    "id": "business-fit-flow-charge",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness geração de cobrança e pagamento isolado",
+    "steps": [
+      "Membership existente"
+    ],
+    "assertions": [
+      "Cobrança criada",
+      "Pagamento confirmado",
+      "Status ativo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-CHARGE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-CHARGE"
+  },
+  {
+    "id": "business-fit-flow-checkin",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness check-in e controle de acesso",
+    "steps": [
+      "Membership ativa"
+    ],
+    "assertions": [
+      "Check-in permitido",
+      "Atendimento aberto",
+      "Check-out encerra registro"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-CHECKIN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-CHECKIN"
+  },
+  {
+    "id": "business-fit-flow-student",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness cadastro de aluno e salvamento",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Aluno criado",
+      "Membership associado",
+      "Busca localiza aluno"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-STUDENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-STUDENT"
+  },
+  {
+    "id": "business-fit-scr-01",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Students screen smoke",
+    "steps": [
+      "Tenant autenticado",
+      "Aluno baseline seeded"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-01"
+  },
+  {
+    "id": "business-fit-scr-02",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Memberships screen smoke",
+    "steps": [
+      "Membership baseline seeded"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-02"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-02"
+  },
+  {
+    "id": "business-fit-scr-03",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Attendance screen smoke",
+    "steps": [
+      "Attendance route ativa"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-03"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-03"
+  },
+  {
+    "id": "business-food-flow-order",
+    "domain": "food",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Food pedido via WhatsApp até confirmação",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido recebido via webhook",
+      "Status atualizado para em_preparo",
+      "Notificação enviada ao cliente"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FOOD-FLOW-ORDER"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-FLOW-ORDER"
+  },
+  {
+    "id": "business-food-scr-01",
+    "domain": "food",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Food Orders screen smoke",
+    "steps": [
+      "Módulo de pedidos disponível"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FOOD-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-SCR-01"
+  },
+  {
+    "id": "business-market-flow-node",
+    "domain": "mercado",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Market publicação de nó no marketplace",
+    "steps": [
+      "Marketplace carregável no tenant",
+      "Nó disponível para publicação"
+    ],
+    "assertions": [
+      "Nó submetido ao marketplace",
+      "Marketplace reflete publicação",
+      "Metadados do nó validados"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "mercado",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=MARKET-FLOW-NODE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "MARKET-FLOW-NODE"
+  },
+  {
+    "id": "business-market-scr-01",
+    "domain": "mercado",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Market node marketplace screen smoke",
+    "steps": [
+      "Marketplace carregável no tenant"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "mercado",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=MARKET-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "MARKET-SCR-01"
+  },
+  {
+    "id": "business-serv-flow-solution",
+    "domain": "servicos",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Services ativação de pacote de soluções",
+    "steps": [
+      "Catálogo de soluções publicado",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pacote selecionado",
+      "Ativação registrada no backend",
+      "Status de cobertura atualizado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "servicos",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=SERV-FLOW-SOLUTION"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "SERV-FLOW-SOLUTION"
+  },
+  {
+    "id": "business-serv-scr-01",
+    "domain": "servicos",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Services solutions screen smoke",
+    "steps": [
+      "Catálogo de soluções publicado"
+    ],
+    "assertions": [],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "servicos",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=SERV-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "SERV-SCR-01"
+  },
+  {
+    "id": "fitness-matricula-agendamento",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Agendamento de Aula Experimental",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-agendamento",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "agendamento"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-agendamento",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-cancelamento",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Cancelamento de Matrícula",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-cancelamento",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "cancelamento"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-cancelamento",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-checkin",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Check-in Diário na Academia",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-checkin",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "checkin"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-checkin",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-checkout",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Checkout e Pagamento",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-checkout",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "checkout"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-checkout",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-leads",
+    "domain": "omnichannel",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Captação de Lead via WhatsApp",
+    "steps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "send_message",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Cliente envia mensagem WhatsApp",
+        "description": "Lead envia mensagem inicial consultando planos da academia",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "input": {
+          "variants": [
+            "Oi, quero saber sobre planos",
+            "Olá, quais são os planos disponíveis?",
+            "Bom dia, tenho interesse em me matricular"
+          ]
+        },
+        "expected": {
+          "delivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "trigger_channel_event",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema recebe inbound WhatsApp",
+        "description": "Plataforma registra inbound e cria ou atualiza conversa",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "expected": {
+          "eventType": "inbound_received",
+          "conversationCreated": true
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "validate_intent",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "IA classifica intenção do cliente",
+        "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+        "adapter": "aiIntentService",
+        "channel": "whatsapp",
+        "expected": {
+          "intent": "fitness_lead",
+          "confidenceMin": 0.6
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_flow_transition",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "Sistema decide roteamento: bot ou humano",
+        "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+        "adapter": "flowEngine",
+        "channel": "whatsapp",
+        "expected": {
+          "routingDecision": [
+            "bot",
+            "human"
+          ],
+          "nextNode": "bot_response"
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "BOT_ACTION",
+        "actor": "bot",
+        "name": "Bot gera e envia resposta ao cliente",
+        "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+        "adapter": "ragService",
+        "channel": "whatsapp",
+        "expected": {
+          "semantic": "planos academia",
+          "responseDelivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_006",
+        "order": 6,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar criação do lead no backend",
+        "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+        "adapter": "api",
+        "channel": "whatsapp",
+        "expected": {
+          "backendEntity": "lead",
+          "leadCreated": true,
+          "fields": [
+            "name",
+            "phone",
+            "channel",
+            "intent"
+          ]
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_007",
+        "order": 7,
+        "type": "validate_sla",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar SLA de resposta ao lead",
+        "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+        "adapter": "meshValidator",
+        "channel": "whatsapp",
+        "expected": {
+          "withinSla": true
+        },
+        "data": {
+          "maxMs": 15000
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-leads",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "omnichannel",
+      "leads"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-leads",
+    "semanticSteps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "send_message",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Cliente envia mensagem WhatsApp",
+        "description": "Lead envia mensagem inicial consultando planos da academia",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "input": {
+          "variants": [
+            "Oi, quero saber sobre planos",
+            "Olá, quais são os planos disponíveis?",
+            "Bom dia, tenho interesse em me matricular"
+          ]
+        },
+        "expected": {
+          "delivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "trigger_channel_event",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema recebe inbound WhatsApp",
+        "description": "Plataforma registra inbound e cria ou atualiza conversa",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "expected": {
+          "eventType": "inbound_received",
+          "conversationCreated": true
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "validate_intent",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "IA classifica intenção do cliente",
+        "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+        "adapter": "aiIntentService",
+        "channel": "whatsapp",
+        "expected": {
+          "intent": "fitness_lead",
+          "confidenceMin": 0.6
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_flow_transition",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "Sistema decide roteamento: bot ou humano",
+        "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+        "adapter": "flowEngine",
+        "channel": "whatsapp",
+        "expected": {
+          "routingDecision": [
+            "bot",
+            "human"
+          ],
+          "nextNode": "bot_response"
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "BOT_ACTION",
+        "actor": "bot",
+        "name": "Bot gera e envia resposta ao cliente",
+        "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+        "adapter": "ragService",
+        "channel": "whatsapp",
+        "expected": {
+          "semantic": "planos academia",
+          "responseDelivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_006",
+        "order": 6,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar criação do lead no backend",
+        "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+        "adapter": "api",
+        "channel": "whatsapp",
+        "expected": {
+          "backendEntity": "lead",
+          "leadCreated": true,
+          "fields": [
+            "name",
+            "phone",
+            "channel",
+            "intent"
+          ]
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_007",
+        "order": 7,
+        "type": "validate_sla",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar SLA de resposta ao lead",
+        "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+        "adapter": "meshValidator",
+        "channel": "whatsapp",
+        "expected": {
+          "withinSla": true
+        },
+        "data": {
+          "maxMs": 15000
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-onboarding",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Onboarding do Novo Aluno",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-onboarding",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "onboarding"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-onboarding",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-renovacao",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Renovação de Matrícula",
+    "steps": [
+      "navigate",
+      "assert",
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-renovacao",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "renovacao"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-renovacao",
+    "semanticSteps": [],
+    "wave": "wave-fitness-matricula",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "qa-bpmn-editor-smoke",
+    "domain": "bpmn",
+    "type": "technical",
+    "source": "qa",
+    "flow": "bpmn_editor_smoke",
+    "steps": [],
+    "assertions": [
+      "import/export BPMN preservado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "wrappers"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:bpmn:smoke"
+    ],
+    "env": {
+      "FRONTEND_URL": "http://localhost:5173"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l06-bpmn-editor-evidence.json",
+      "/opt/results/ria/r-agent2/qa/bpmn-smoke-artifacts/diagram.bpmn"
+    ]
+  },
+  {
+    "id": "qa-chatpro-omnichannel-smoke",
+    "domain": "omnichannel",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "chatpro_omnichannel",
+    "steps": [],
+    "assertions": [
+      "tickets e fila omnichannel respondem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "telemetry",
+      "ci"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:inbox:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-core-auth-login",
+    "domain": "core",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "core_auth_login",
+    "steps": [],
+    "assertions": [
+      "login funcional"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/login.test.js"
+    ]
+  },
+  {
+    "id": "qa-core-config-tenant-intelligence",
+    "domain": "core",
+    "type": "technical",
+    "source": "qa",
+    "flow": "core_config_tenant_intelligence",
+    "steps": [],
+    "assertions": [
+      "configuração crítica respondendo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:tenant-intelligence:smoke"
+    ]
+  },
+  {
+    "id": "qa-core-tenants-create",
+    "domain": "core",
+    "type": "regression",
+    "source": "hybrid",
+    "flow": "core_tenants_create",
+    "steps": [],
+    "assertions": [
+      "tenant criado via fluxo oficial"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "exec",
+      "--",
+      "jest",
+      "--runTestsByPath",
+      "tests/rpa/createTenantByAI.test.js",
+      "--runInBand",
+      "--testPathIgnorePatterns",
+      "[]"
+    ]
+  },
+  {
+    "id": "qa-pbx-call-events-runtime-smoke",
+    "domain": "pbx",
+    "type": "technical",
+    "source": "qa",
+    "flow": "pbx_call_events_runtime",
+    "steps": [],
+    "assertions": [
+      "eventos de chamada entregues"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "telemetry",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:pbx:call-events-runtime:smoke"
+    ],
+    "env": {
+      "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE": "direct",
+      "PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK": "1"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-pbx-voice-tts-asr-smoke",
+    "domain": "pbx",
+    "type": "technical",
+    "source": "qa",
+    "flow": "pbx_voice_tts_asr",
+    "steps": [],
+    "assertions": [
+      "pipeline TTS/ASR operacional"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "ci",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:pbx:voice:tts-asr:smoke"
+    ],
+    "env": {
+      "L03_ALLOW_SYNTHETIC_ORIGINATE": "true"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-physical-queue-smoke",
+    "domain": "core",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "physical_queue_smoke",
+    "steps": [],
+    "assertions": [
+      "fila física responde"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:physical:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-ura-publish-rollback-smoke",
+    "domain": "pbx",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "ura_publish_rollback",
+    "steps": [],
+    "assertions": [
+      "publicação e rollback da URA"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "ci",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:ura:publish-rollback:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json"
+    ]
+  },
+  {
+    "id": "rpa-example-test",
+    "domain": "core",
+    "type": "regression",
+    "source": "rpa",
+    "flow": "Exemplo de Teste RPA",
+    "steps": [
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "example-test",
+    "criticality": "medium",
+    "adapter": "rpa",
+    "impactScopes": [
+      "core",
+      "executors",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false
+  },
+  {
+    "id": "rpa-whatsapp-connections-rpa",
+    "domain": "omnichannel",
+    "type": "regression",
+    "source": "rpa",
+    "flow": "WhatsAppConnectionsPage RPA",
+    "steps": [
+      "navigate",
+      "wait",
+      "assert",
+      "assert",
+      "wait"
+    ],
+    "assertions": [
+      "execução RPA concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "whatsapp-connections-rpa",
+    "criticality": "medium",
+    "adapter": "rpa",
+    "impactScopes": [
+      "omnichannel",
+      "executors",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false
+  },
+  {
+    "id": "workspace-core",
+    "domain": "workspace",
+    "type": "workspace",
+    "source": "qa",
+    "flow": "Workspace Core Journey",
+    "steps": [
+      "create_workspace_entity",
+      "simulate_inbound_message",
+      "create_ticket",
+      "create_task",
+      "generate_insight",
+      "generate_action",
+      "validate_timeline",
+      "generate_evidence",
+      "create_autocorrection_run"
+    ],
+    "assertions": [
+      "entity criada",
+      "links criados",
+      "timeline correta",
+      "evidence gerada",
+      "replay gerado",
+      "insight critico criado",
+      "action criada",
+      "autocorrection pendente de revisao humana"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api-rpa",
+    "impactScopes": [
+      "workspace",
+      "qa",
+      "rpa",
+      "autocorrection",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "name": "Workspace Core Journey",
+    "category": "business",
+    "replay": true,
+    "evidence": true,
+    "modes": [
+      "real",
+      "failure"
+    ],
+    "script": "scripts/workspace-core-smoke.js",
+    "command": "node",
+    "commandArgs": [
+      "scripts/workspace-core-smoke.js"
+    ],
+    "description": "Validação real do Workspace com suporte a failure injection e autocorrection.",
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/workspace-core/evidence"
+    ]
+  }
+]

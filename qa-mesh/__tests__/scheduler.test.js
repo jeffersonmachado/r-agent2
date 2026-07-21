@@ -6,6 +6,8 @@ jest.mock('fs', () => ({
     throw new Error('missing');
   }),
   writeFileSync: jest.fn(),
+  appendFileSync: jest.fn(),
+  unlinkSync: jest.fn(),
 }));
 
 jest.mock('../meshRunner', () => ({

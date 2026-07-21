@@ -72,12 +72,32 @@ async function executeScenario(scenario, context = {}) {
     }
   );
 
+  const artifacts = collectArtifacts(scenario.expectedArtifacts || []);
+
+  // Enriquecer steps com training metadata
+  const trainingSteps = Array.isArray(scenario.trainingSteps) && scenario.trainingSteps.length > 0
+    ? scenario.trainingSteps
+    : null;
+
+  // Construir steps narrativos a partir dos logs quando possível
+  const enrichedSteps = (result.logs || [])
+    .filter((l) => l.level === 'stdout')
+    .slice(0, 50)
+    .map((l, i) => ({
+      index: i + 1,
+      name: l.message.substring(0, 200),
+      actor: 'api',
+      category: 'API_CALL',
+    }));
+
   return {
     success: result.success,
     logs: result.logs,
     metrics: result.metrics,
     errors: result.errors,
-    artifacts: collectArtifacts(scenario.expectedArtifacts || []),
+    artifacts,
+    trainingSteps,
+    enrichedSteps: enrichedSteps.length > 0 ? enrichedSteps : null,
   };
 }
 

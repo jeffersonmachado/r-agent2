@@ -7,8 +7,7 @@ const mockLogin = vi.fn();
 const mockUpdateAgent = vi.fn();
 const mockNavigate = vi.fn();
 const mockShowToast = vi.fn();
-const mockValidateTenantAiCredentials = vi.fn();
-const mockGetIntegrationConfigReadiness = vi.fn();
+const mockGetOnboardingCheck = vi.fn();
 const mockListAllTenants = vi.fn();
 const mockListTenants = vi.fn();
 
@@ -18,7 +17,7 @@ async function loadLoginWithMocks() {
   vi.unmock('../hooks/useRouter');
   vi.unmock('../components/Toast');
   vi.unmock('../styles/themeContext');
-  vi.unmock('../api/config');
+  vi.unmock('../api/onboarding');
   vi.unmock('../api/superAdmin');
   vi.unmock('../api/tenants');
 
@@ -58,9 +57,8 @@ async function loadLoginWithMocks() {
     }),
   }));
 
-  vi.doMock('../api/config', () => ({
-    validateTenantAiCredentials: mockValidateTenantAiCredentials,
-    getIntegrationConfigReadiness: mockGetIntegrationConfigReadiness,
+  vi.doMock('../api/onboarding', () => ({
+    getOnboardingCheck: mockGetOnboardingCheck,
   }));
 
   vi.doMock('../api/superAdmin', () => ({
@@ -78,17 +76,63 @@ async function loadLoginWithMocks() {
   return { Login };
 }
 
+/**
+ * Fluxo atual (onboarding check unificado):
+ * - usuário normal com tenantId passa por GET /onboarding/check no login;
+ *   se `blocking`, é redirecionado para /onboarding?source=login.
+ * - super-admin pula as verificações de onboarding ao selecionar tenant
+ *   (vai direto para /workspace).
+ */
 describe('Login redirect for SMTP onboarding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.stubGlobal('requestAnimationFrame', (cb) => cb());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('usuário normal com onboarding bloqueante (SMTP pendente) é redirecionado para /onboarding', async () => {
+    const user = userEvent.setup();
+
+    mockLogin.mockResolvedValue({
+      token: 'new-token',
+      agent: { id: 'a1', username: 'admin1', tenantId: 'tenant-demo', role: 'admin' },
+    });
+    mockGetOnboardingCheck.mockResolvedValue({
+      blocking: true,
+      missingSteps: ['notifications.email.smtp.host', 'notifications.email.fromAddress'],
+    });
+
+    const { Login } = await loadLoginWithMocks();
+    render(<Login />);
+
+    await user.type(await screen.findByPlaceholderText('Digite seu username'), 'admin1');
+    await user.type(await screen.findByPlaceholderText('Digite sua senha'), 'pw');
+    await user.click(screen.getByRole('button', { name: /entrar/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/onboarding?source=login');
+    });
+
+    expect(mockGetOnboardingCheck).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      'Configure os itens obrigatórios do onboarding para continuar.',
+      'warning',
+      8000
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith('/workspace');
+  });
+
+  it('super-admin selecionando tenant pula verificações de onboarding e vai para /workspace', async () => {
+    const user = userEvent.setup();
 
     mockLogin.mockResolvedValue({
       token: 'new-token',
       agent: { id: 'sa', username: 'systemadmin', tenantId: 'system', role: 'super_admin' },
     });
-
     mockListAllTenants.mockResolvedValue({
       tenants: [
         { id: 'system', name: 'System' },
@@ -96,24 +140,7 @@ describe('Login redirect for SMTP onboarding', () => {
       ],
     });
 
-    mockValidateTenantAiCredentials.mockResolvedValue({ valid: true });
-    mockGetIntegrationConfigReadiness.mockResolvedValue({
-      ready: false,
-      missing: [
-        { path: 'notifications.email.smtp.host' },
-        { path: 'notifications.email.fromAddress' },
-      ],
-    });
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('redireciona para onboarding de integrações já apontando para SMTP', async () => {
-    const user = userEvent.setup();
     const { Login } = await loadLoginWithMocks();
-
     render(<Login />);
 
     await user.type(await screen.findByPlaceholderText('Digite seu username'), 'systemadmin');
@@ -125,13 +152,9 @@ describe('Login redirect for SMTP onboarding', () => {
     await user.click(screen.getByRole('button', { name: 'Acessar' }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/onboarding?source=login&required=integrations&tab=email');
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace');
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      expect.stringContaining('notifications.email.smtp.host'),
-      'warning',
-      9000
-    );
+    expect(mockGetOnboardingCheck).not.toHaveBeenCalled();
   });
 });

@@ -28,6 +28,8 @@ function createRouteRegistry(routers) {
     { router: routers.accessControlRouter },
     { router: routers.voiceRouter },
     { router: routers.workspaceRouter },
+    { router: routers.agentOsRouter },
+    { router: routers.cognitiveRouter },
     { router: routers.analyticsRouter },
     { router: routers.bulkCampaignsRouter },
     { router: routers.quickRepliesRouter },

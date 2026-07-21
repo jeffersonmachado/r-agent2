@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-16T14:23:28.870Z",
+  "generatedAt": "2026-07-21T02:22:00.743Z",
   "vertical": "food",
-  "maturity": "validated",
+  "maturity": "production-like",
   "replaySupported": true,
   "journeys": [
     {

@@ -18,6 +18,9 @@ function run(command, label) {
 
 function main() {
   run('npm run system:validate', 'Validação oficial (backend + frontend + QA)');
+  // A validação acima gera resíduos de runtime (ex.: frontend/test-results);
+  // o cleanup oficial precisa rodar antes do readiness materializar o cleanup-proof.
+  run('npm run runtime:clean', 'Limpando resíduos de runtime antes da prova de cleanup');
   run('npm run system:platform-readiness', 'Materializando proof reports e blockers antes do pacote');
   run('npm run zip:release:clean', 'Gerando artefato limpo e manifesto SHA-256');
   run('npm run system:package-validator', 'Validando o ZIP candidato contra o manifest de prova');

@@ -97,6 +97,8 @@ import { SolutionsPage } from './pages/SolutionsPage';
 import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
 import { SsoScimPage } from './pages/SsoScimPage';
 import { BackupPage } from './pages/BackupPage';
+import { AgentOsHubPage } from './pages/AgentOsHubPage';
+import { QaAuditPage } from './pages/QaAuditPage';
 import { StorefrontOrderPage } from './pages/StorefrontOrderPage';
 import { StorefrontOrderStatusPage } from './pages/StorefrontOrderStatusPage';
 import { OrdersPage } from './pages/OrdersPage';
@@ -461,6 +463,8 @@ function AppWithAuth() {
   const isQaGaps = isRoute('/dev/qa-gaps');
   const isQaWavesOperationalHealth = isRoute('/dev/qa-waves/operational-health');
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
+  const isAgentOsHub = isRoute('/admin/agents');
+  const isQaAudit = isRoute('/dev/qa-audit');
   const isWorkManagement = currentPath === '/dev/work-management' || currentPath.startsWith('/dev/work-management/');
   const isOrders = isRoute('/orders');
   const isKitchen = isRoute('/kitchen');
@@ -542,6 +546,8 @@ function AppWithAuth() {
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
       isWorkManagement, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance,
+      isAgentOsHub,
+      isQaAudit,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
       isLogin
     ];
@@ -1029,6 +1035,10 @@ function AppWithAuth() {
     pageContent = <SsoScimPage />;
   } else if (isBackup) {
     pageContent = <BackupPage />;
+  } else if (isAgentOsHub) {
+    pageContent = <AgentOsHubPage />;
+  } else if (isQaAudit) {
+    pageContent = <QaAuditPage />;
   } else if (isDevDashboard) {
     pageContent = isSuperAdmin ? (
       <DevDashboardPage />

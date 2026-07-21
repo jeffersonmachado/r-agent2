@@ -15,7 +15,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
   
   testEnvironment: 'node',
-  roots: ['<rootDir>/engine', '<rootDir>/api', '<rootDir>/tests', '<rootDir>/qa', '<rootDir>/qa-mesh', '<rootDir>/lib'],
+  roots: ['<rootDir>/engine', '<rootDir>/api', '<rootDir>/tests', '<rootDir>/qa', '<rootDir>/qa-mesh', '<rootDir>/lib', '/opt/results/packages'],
   testMatch: ['**/__tests__/**/*.test.js', '**/*.test.js'],
   testPathIgnorePatterns: [
     '/node_modules/',

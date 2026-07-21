@@ -179,7 +179,11 @@ describe('Login (via formulário) - seleção de tenant obrigatória', () => {
           username: 'systemadmin',
         })
       );
-      expect(mockValidateTenantAiCredentials).toHaveBeenCalledWith({ tenantId: 'tenant-demo' });
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace');
     });
+
+    // Fluxo atual: super-admin pula verificações de onboarding/credenciais de IA
+    // ao trocar de tenant (verificação fica na operação, não no login).
+    expect(mockValidateTenantAiCredentials).not.toHaveBeenCalled();
   });
 });

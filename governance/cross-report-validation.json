@@ -1,28 +1,14 @@
 {
-  "generatedAt": "2026-05-16T14:24:46.083Z",
-  "expectedZipName": "r-agent2-20260516-112227.zip",
+  "generatedAt": "2026-06-12T19:51:56.091Z",
+  "expectedZipName": "r-agent2-20260612-165011.zip",
   "pbxMaturity": "enterprise-real",
-  "contradictions": [
-    {
-      "type": "package_validation_failed",
-      "missingEntries": [],
-      "blocker": true,
-      "message": "Pacote não passou na validação: 0 entradas ausentes."
-    }
-  ],
-  "blockers": [
-    {
-      "type": "package_validation_failed",
-      "missingEntries": [],
-      "blocker": true,
-      "message": "Pacote não passou na validação: 0 entradas ausentes."
-    }
-  ],
+  "contradictions": [],
+  "blockers": [],
   "warnings": [],
-  "blockerCount": 1,
+  "blockerCount": 0,
   "warningCount": 0,
-  "maximumAllowedReadiness": "operational",
-  "autonomousReadyBlocked": true,
-  "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational.",
-  "reboundAt": "2026-05-16T14:24:46.459Z"
+  "maximumAllowedReadiness": "autonomous-ready",
+  "autonomousReadyBlocked": false,
+  "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
+  "reboundAt": "2026-06-12T19:51:56.395Z"
 }

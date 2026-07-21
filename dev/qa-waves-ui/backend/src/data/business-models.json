@@ -1,0 +1,182 @@
+{
+  "verticals": {
+    "beauty": {
+      "label": "Beauty (Salões e Estética)",
+      "entities": [
+        { "name": "CLIENTE", "fields": ["id", "nome", "telefone", "email"] },
+        { "name": "AGENDAMENTO", "fields": ["id", "cliente_id", "servico_id", "profissional_id", "data_hora"] },
+        { "name": "SERVICO", "fields": ["id", "nome", "duracao", "preco_base"] },
+        { "name": "PROFISSIONAL", "fields": ["id", "nome", "especialidade"] },
+        { "name": "PAGAMENTO", "fields": ["id", "agendamento_id", "valor", "status"] },
+        { "name": "CAMPANHA", "fields": ["id", "nome", "tipo", "ativa"] },
+        { "name": "LEAD", "fields": ["id", "campanha_id", "cliente_id", "status"] }
+      ],
+      "relationships": [
+        { "from": "AGENDAMENTO", "to": "CLIENTE" },
+        { "from": "AGENDAMENTO", "to": "SERVICO" },
+        { "from": "AGENDAMENTO", "to": "PROFISSIONAL" },
+        { "from": "PAGAMENTO", "to": "AGENDAMENTO" },
+        { "from": "LEAD", "to": "CAMPANHA" },
+        { "from": "LEAD", "to": "CLIENTE" }
+      ],
+      "sourceFiles": {
+        "CLIENTE": ["src/models/Cliente.ts", "src/services/clienteService.ts"],
+        "AGENDAMENTO": ["src/models/Agendamento.ts", "src/services/agendamentoService.ts"],
+        "SERVICO": ["src/models/Servico.ts"],
+        "PROFISSIONAL": ["src/models/Profissional.ts", "src/services/profissionalService.ts"],
+        "PAGAMENTO": ["src/services/pagamentoService.ts"],
+        "CAMPANHA": [],
+        "LEAD": []
+      },
+      "qaEntityMap": {
+        "campaign": "CAMPANHA",
+        "payment": "PAGAMENTO",
+        "lead": "LEAD",
+        "customer": "CLIENTE",
+        "schedule": "AGENDAMENTO",
+        "service": "SERVICO",
+        "appointment": "AGENDAMENTO"
+      }
+    },
+    "clinic": {
+      "label": "Clinic (Manutenção e Facilities)",
+      "entities": [
+        { "name": "TICKET", "fields": ["id", "cliente_id", "tipo", "status", "sla_id"] },
+        { "name": "CLIENTE", "fields": ["id", "nome", "contrato"] },
+        { "name": "MANUTENCAO", "fields": ["id", "ticket_id", "equipamento_id", "tecnico"] },
+        { "name": "EQUIPAMENTO", "fields": ["id", "nome", "local", "critico"] },
+        { "name": "SLA", "fields": ["id", "ticket_id", "prazo_horas", "cumprido"] }
+      ],
+      "relationships": [
+        { "from": "TICKET", "to": "CLIENTE" },
+        { "from": "MANUTENCAO", "to": "TICKET" },
+        { "from": "MANUTENCAO", "to": "EQUIPAMENTO" },
+        { "from": "SLA", "to": "TICKET" }
+      ],
+      "sourceFiles": {
+        "TICKET": ["src/models/Ticket.ts", "src/services/ticketService.ts"],
+        "CLIENTE": ["src/models/Cliente.ts"],
+        "MANUTENCAO": ["src/services/manutencaoService.ts"],
+        "EQUIPAMENTO": [],
+        "SLA": ["src/models/Sla.ts"]
+      },
+      "qaEntityMap": {
+        "ticket": "TICKET",
+        "maintenance": "MANUTENCAO"
+      }
+    },
+    "fitness": {
+      "label": "Fitness (Academias)",
+      "entities": [
+        { "name": "ALUNO", "fields": ["id", "nome", "cpf", "email"] },
+        { "name": "MATRICULA", "fields": ["id", "aluno_id", "plano_id", "status", "data_inicio"] },
+        { "name": "PLANO", "fields": ["id", "nome", "valor_mensal", "ativo"] },
+        { "name": "PAGAMENTO", "fields": ["id", "matricula_id", "valor", "status", "vencimento"] },
+        { "name": "CHECKIN", "fields": ["id", "matricula_id", "data_hora", "catraca"] },
+        { "name": "ACESSO", "fields": ["id", "checkin_id", "liberado", "motivo_bloqueio"] }
+      ],
+      "relationships": [
+        { "from": "MATRICULA", "to": "ALUNO" },
+        { "from": "MATRICULA", "to": "PLANO" },
+        { "from": "PAGAMENTO", "to": "MATRICULA" },
+        { "from": "CHECKIN", "to": "MATRICULA" },
+        { "from": "ACESSO", "to": "CHECKIN" }
+      ],
+      "sourceFiles": {
+        "ALUNO": ["src/models/Aluno.ts", "src/services/alunoService.ts"],
+        "MATRICULA": ["src/models/Matricula.ts", "src/services/matriculaService.ts"],
+        "PLANO": ["src/models/Plano.ts"],
+        "PAGAMENTO": ["src/services/pagamentoService.ts"],
+        "CHECKIN": [],
+        "ACESSO": []
+      },
+      "qaEntityMap": {
+        "customer": "ALUNO",
+        "membership": "MATRICULA",
+        "payment": "PAGAMENTO",
+        "plan": "PLANO",
+        "attendance": "CHECKIN",
+        "access": "ACESSO",
+        "crm": "ALUNO"
+      }
+    },
+    "food": {
+      "label": "Food (Delivery e Restaurantes)",
+      "entities": [
+        { "name": "CLIENTE", "fields": ["id", "nome", "telefone", "endereco"] },
+        { "name": "PEDIDO", "fields": ["id", "cliente_id", "status", "data", "total"] },
+        { "name": "ITEM_PEDIDO", "fields": ["id", "pedido_id", "cardapio_id", "quantidade", "preco"] },
+        { "name": "CARDAPIO", "fields": ["id", "nome", "preco", "disponivel"] },
+        { "name": "ENTREGA", "fields": ["id", "pedido_id", "entregador", "status", "previsao"] },
+        { "name": "PAGAMENTO", "fields": ["id", "pedido_id", "valor", "forma", "status"] }
+      ],
+      "relationships": [
+        { "from": "PEDIDO", "to": "CLIENTE" },
+        { "from": "ITEM_PEDIDO", "to": "PEDIDO" },
+        { "from": "ITEM_PEDIDO", "to": "CARDAPIO" },
+        { "from": "ENTREGA", "to": "PEDIDO" },
+        { "from": "PAGAMENTO", "to": "PEDIDO" }
+      ],
+      "sourceFiles": {
+        "CLIENTE": ["src/models/Cliente.ts"],
+        "PEDIDO": ["src/models/Pedido.ts", "src/services/pedidoService.ts"],
+        "ITEM_PEDIDO": ["src/models/ItemPedido.ts"],
+        "CARDAPIO": ["src/models/Cardapio.ts", "src/services/cardapioService.ts"],
+        "ENTREGA": [],
+        "PAGAMENTO": ["src/services/pagamentoService.ts"]
+      },
+      "qaEntityMap": {
+        "order": "PEDIDO"
+      }
+    },
+    "market": {
+      "label": "Market (Marketplace de Agentes)",
+      "entities": [
+        { "name": "NO", "fields": ["id", "nome", "categoria_id", "versao", "status"] },
+        { "name": "CATEGORIA", "fields": ["id", "nome", "descricao"] },
+        { "name": "PUBLICACAO", "fields": ["id", "no_id", "tenant_id", "data", "aprovado"] },
+        { "name": "TENANT", "fields": ["id", "nome", "plano", "ativo"] }
+      ],
+      "relationships": [
+        { "from": "NO", "to": "CATEGORIA" },
+        { "from": "PUBLICACAO", "to": "NO" },
+        { "from": "PUBLICACAO", "to": "TENANT" }
+      ],
+      "sourceFiles": {
+        "NO": ["src/models/No.ts", "src/services/noService.ts"],
+        "CATEGORIA": ["src/models/Categoria.ts"],
+        "PUBLICACAO": ["src/services/publicacaoService.ts"],
+        "TENANT": ["src/models/Tenant.ts", "src/services/tenantService.ts"]
+      },
+      "qaEntityMap": {
+        "node": "NO"
+      }
+    },
+    "services": {
+      "label": "Services (Pacotes de Soluções)",
+      "entities": [
+        { "name": "SOLUCAO", "fields": ["id", "nome", "pacote_id", "status"] },
+        { "name": "PACOTE", "fields": ["id", "nome", "descricao", "preco"] },
+        { "name": "ATIVACAO", "fields": ["id", "solucao_id", "tenant_id", "data"] },
+        { "name": "TENANT", "fields": ["id", "nome", "plano", "ativo"] },
+        { "name": "MODULO", "fields": ["id", "pacote_id", "nome", "habilitado"] }
+      ],
+      "relationships": [
+        { "from": "SOLUCAO", "to": "PACOTE" },
+        { "from": "ATIVACAO", "to": "SOLUCAO" },
+        { "from": "ATIVACAO", "to": "TENANT" },
+        { "from": "MODULO", "to": "PACOTE" }
+      ],
+      "sourceFiles": {
+        "SOLUCAO": ["src/models/Solucao.ts", "src/services/solucaoService.ts"],
+        "PACOTE": ["src/models/Pacote.ts"],
+        "ATIVACAO": [],
+        "TENANT": ["src/models/Tenant.ts", "src/services/tenantService.ts"],
+        "MODULO": ["src/models/Modulo.ts"]
+      },
+      "qaEntityMap": {
+        "solution": "SOLUCAO"
+      }
+    }
+  }
+}

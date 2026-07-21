@@ -26,7 +26,11 @@
     },
     {
       "type": "navigate",
-      "url": "{{urls.frontend}}/atendimento"
+      "url": "{{urls.frontend}}/support"
+    },
+    {
+      "type": "wait",
+      "value": 3000
     },
     {
       "type": "assert",

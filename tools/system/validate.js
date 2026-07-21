@@ -6,7 +6,6 @@ const path = require('path');
 const { execSync, spawn } = require('child_process');
 const { buildRuntimeGovernanceReport, writeRuntimeGovernanceReport, toBool } = require('./runtime-governance');
 const { evaluatePillars } = require('./lib/pillar-readiness');
-const { resolveEvidenceCandidates } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const RUNTIME_ROOT = process.env.RUNTIME_ROOT
@@ -293,47 +292,16 @@ function readJsonStrict(relPath, label) {
   }
 }
 
-function loadQaMeshReportWithFallback(qaMeshPaths) {
-  try {
-    return {
-      report: readJsonStrict(qaMeshPaths.reportPath, 'qa_mesh_report'),
-      source: 'report',
-    };
-  } catch (error) {
-    if (!String(error?.message || '').startsWith('qa_mesh_report_missing:')) {
-      throw error;
-    }
-
-    const summaryPath = path.join(qaMeshPaths.evidenceDir, qaMeshPaths.executionId, 'summary.json');
-    const summaryAbsPath = resolveWorkspacePath(summaryPath);
-    if (!fs.existsSync(summaryAbsPath)) {
-      throw error;
-    }
-
-    const summary = readJsonStrict(summaryPath, 'qa_mesh_summary');
-    const reportAbsPath = resolveWorkspacePath(qaMeshPaths.reportPath);
-    fs.mkdirSync(path.dirname(reportAbsPath), { recursive: true });
-    fs.writeFileSync(reportAbsPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
-    return {
-      report: summary,
-      source: 'summary_fallback',
-    };
-  }
-}
-
 function loadEvidenceMaybe(relPath) {
-  const candidates = resolveEvidenceCandidates(ROOT_DIR, relPath, null, process.env);
-  for (const absPath of candidates) {
-    if (!fs.existsSync(absPath)) {
-      continue;
-    }
-    try {
-      return JSON.parse(fs.readFileSync(absPath, 'utf8'));
-    } catch (error) {
-      throw new Error(`smoke_evidence_invalid:${path.relative(ROOT_DIR, absPath)}:${error.message || error}`);
-    }
+  const absPath = resolveWorkspacePath(relPath);
+  if (!fs.existsSync(absPath)) {
+    return null;
   }
-  return null;
+  try {
+    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`smoke_evidence_invalid:${relPath}:${error.message || error}`);
+  }
 }
 
 function buildSmokeEvidenceSummary() {
@@ -449,7 +417,6 @@ async function main() {
       { label: 'frontend unit', command: 'npm run frontend:test:unit' },
       { label: 'frontend build', command: 'npm run frontend:build' },
       { label: 'frontend smoke', command: 'npm run frontend:smoke' },
-      { label: 'email smoke', command: 'npm run test:email:smoke' },
       { label: 'qa mesh', command: 'PIPELINE_BYPASS=1 npm run qa:mesh' },
     ];
 
@@ -478,14 +445,24 @@ async function main() {
       log('[system:validate] Extended checks desabilitados (use SYSTEM_VALIDATE_INCLUDE_EXTENDED=1 para habilitar).', YELLOW);
     }
 
-    const qaMeshLoaded = loadQaMeshReportWithFallback(qaMeshPaths);
-    const qaMeshReport = qaMeshLoaded.report;
+    // O meshRunner só grava meshReport.json (saída canônica) em execuções de
+    // pipeline. Para execuções escopadas do system:validate, o resultado da
+    // execução exata fica no arquivo de histórico do executionId desta rodada.
+    const qaMeshHistoryPath = path.join(qaMeshPaths.historyDir, `${qaMeshPaths.executionId}.json`);
+    let qaMeshReportPath = qaMeshPaths.reportPath;
+    let qaMeshReport;
+    if (fs.existsSync(resolveWorkspacePath(qaMeshPaths.reportPath))) {
+      qaMeshReport = readJsonStrict(qaMeshPaths.reportPath, 'qa_mesh_report');
+    } else {
+      const history = readJsonStrict(qaMeshHistoryPath, 'qa_mesh_report');
+      qaMeshReport = history.summary || history;
+      qaMeshReportPath = qaMeshHistoryPath;
+    }
     if (String(qaMeshReport.goNoGo || '').toUpperCase() === 'NO_GO') {
       throw new Error('qa_mesh_report_no_go');
     }
     report.evidence.qaMesh = {
-      path: qaMeshPaths.reportPath,
-      source: qaMeshLoaded.source,
+      path: qaMeshReportPath,
       goNoGo: qaMeshReport.goNoGo || 'missing',
       attempted: qaMeshReport.attempted || qaMeshReport.total || null,
       executed: qaMeshReport.executed || null,

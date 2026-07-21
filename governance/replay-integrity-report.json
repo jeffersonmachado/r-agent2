@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-05-16T14:24:46.698Z",
-  "artifact": "r-agent2-20260516-112227.zip",
+  "generatedAt": "2026-06-12T19:51:56.629Z",
+  "artifact": "r-agent2-20260612-165011.zip",
   "pass": true,
   "totalReplays": 7,
   "physicalHashes": 7,
@@ -17,9 +17,9 @@
       "replayHash": "47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
       "parentReplayHash": "0000000000000000000000000000000000000000000000000000000000000000",
       "cumulativeHash": "1a026ef48446fc681e2ed27c3b6e388bc918ef4b75443494a3fb3db652921859",
-      "evidenceHash": "d4b75eb77102ce261dcdbf2644d7553cb2597adb360c37e25d4e938791897c4c",
+      "evidenceHash": "25f4f672ec297cd47b04d75e1ff64d25824fbfdd0d52322b932bc8386167e808",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -30,9 +30,9 @@
       "replayHash": "6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
       "parentReplayHash": "47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
       "cumulativeHash": "3869aa5613a700420c14c1a0edd6124bd805991703284a411e2ce89c98339fe0",
-      "evidenceHash": "a56ee84f68e9b11b1c363deab01cc23bed35e0b1bb16df70e777acea91abfa79",
+      "evidenceHash": "962d02f5a8a483fd980a40d3df9c714759d295a05b3c603da23760d6aed8079c",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -43,9 +43,9 @@
       "replayHash": "6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
       "parentReplayHash": "6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
       "cumulativeHash": "660b8ff8cd8e1fc63e7cf7a9105cb2ad07d504fa6491a0a20f83a6e7326abb99",
-      "evidenceHash": "7bc8afbd5e9e4514565a067c71670ecd85e44a49affd04ca0912c034daadd8b0",
+      "evidenceHash": "e860ceeb8d95ae39a7c37395cb4e5ff2e7ab586838fdd24840558ce66def0b61",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -56,9 +56,9 @@
       "replayHash": "bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
       "parentReplayHash": "6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
       "cumulativeHash": "f9a06300052c83751b36fd4a0d044ffba14c7e702a25ffa2e7a4d4d54392d49e",
-      "evidenceHash": "0c9ec641bf08682d1d4f11d580e6bac7bc0f19cae1455d579600df2fe7305271",
+      "evidenceHash": "eab09311b83fe746d0ee76e8aa97a1209e65311c8544c54cc10d0b94f3f948e1",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -69,9 +69,9 @@
       "replayHash": "c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
       "parentReplayHash": "bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
       "cumulativeHash": "cc3ad182e8053bd5f39ecc66698ff19fd6369ea1e97e7cc6952c8c86c33da345",
-      "evidenceHash": "98f84bbda1124a5902799ee066e33d8682a1c94d45cfd77dce319bdb10570436",
+      "evidenceHash": "4435c37e713ff64dbcd2d27453cbd4a6948e1fa5535008b0e0a6bb704ca61431",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -82,9 +82,9 @@
       "replayHash": "32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
       "parentReplayHash": "c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
       "cumulativeHash": "960325d2b907670a0a28fd01f07be58ee2795d374ef74d9cfdee411f6cab5f2a",
-      "evidenceHash": "ca421682e7a31b4e42c156d945e59fe22947606928b056f627972fa57c37b014",
+      "evidenceHash": "540f8c0f8a594970318cea58be3b058280cf2a447826db9680e290d38c261b59",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     },
@@ -95,14 +95,14 @@
       "replayHash": "d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
       "parentReplayHash": "32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
       "cumulativeHash": "9f8902895d3e1474419a637517713fc78cfe9a882408d28e3ad1cc8302256e12",
-      "evidenceHash": "4f6b539d5546bd2b029418dc327fb8818ed4100208c96eaba1d2efb658f7b0a9",
+      "evidenceHash": "83febb489fe2b11a1af42a0e39a8a514286544c7cda0d49067ad1f7edebdc6fd",
       "governanceHash": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-      "timestamp": "2026-05-16T14:23:28.872Z",
+      "timestamp": "2026-06-12T19:50:47.763Z",
       "declared": false,
       "hasPhysicalHash": true
     }
   ],
   "governanceSignature": "gov-sha256:65817dc79d646c8784c5d7d491b84bf0b2e7fd541bac621b2dbb5ccb3954ae05",
   "summary": "Todos os 7 replays têm integridade verificada.",
-  "reboundAt": "2026-05-16T14:24:46.699Z"
+  "reboundAt": "2026-06-12T19:51:56.629Z"
 }

@@ -102,6 +102,57 @@ function loadEvidenceManifest(manifestPath = DEFAULT_MANIFEST_PATH) {
   }
 }
 
+/**
+ * Modelo envelope-payload-split (payload-centric):
+ * o ZIP "r-agent2-*.zip" em dist/release é apenas o envelope de governança;
+ * o artefato governado (com os proofs) é o payload referenciado pelo manifest
+ * sidecar. A validação de entradas deve ocorrer contra o payload, com binding
+ * estrito por sha256 e audit derivado do verificador offline (verify-result.json)
+ * vinculado ao mesmo hash. Nunca afrouxa: hash divergente = não auditado.
+ */
+function resolvePayloadCentricArtifact(artifact) {
+  const manifest = artifact.manifest;
+  const isPayloadCentric = Boolean(
+    manifest
+    && (manifest.architecture === 'envelope-payload-split' || manifest.governanceModel === 'payload-centric')
+    && manifest.canonicalPath,
+  );
+  if (!isPayloadCentric) return artifact;
+
+  const payloadPath = path.isAbsolute(manifest.canonicalPath)
+    ? manifest.canonicalPath
+    : path.join(ROOT, manifest.canonicalPath);
+  if (!fs.existsSync(payloadPath)) {
+    return { ...artifact, selectionError: `payload_missing:${manifest.canonicalPath}` };
+  }
+
+  const payloadSha256 = sha256File(payloadPath);
+  if (manifest.sha256 && payloadSha256 !== manifest.sha256) {
+    return { ...artifact, selectionError: `payload_hash_mismatch:${payloadSha256}` };
+  }
+
+  // Audit: o verificador offline v2 precisa ter validado ESTE payload (hash-bound).
+  let verifierAudit = null;
+  try {
+    const verifyResult = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist', 'verifier', 'verify-result.json'), 'utf8'));
+    const hashBound = String(verifyResult.payloadSha256 || '') === payloadSha256;
+    const passed = verifyResult.pass === true && verifyResult.payloadValidated === true;
+    verifierAudit = hashBound && passed ? 'passed' : 'failed';
+  } catch (_) {
+    verifierAudit = null;
+  }
+
+  return {
+    ...artifact,
+    zipPath: payloadPath,
+    zip: path.basename(payloadPath),
+    envelopePath: artifact.zipPath,
+    envelopeZip: artifact.zip,
+    payloadCentric: true,
+    manifest: { ...manifest, audit: verifierAudit },
+  };
+}
+
 function resolveArtifactForValidation(options = {}) {
   if (options.zipPath) {
     const zipPath = path.resolve(ROOT, options.zipPath);
@@ -186,7 +237,7 @@ function validatePackage(options = {}) {
     assertSelfContainment();
   }
 
-  const artifact = resolveArtifactForValidation(options);
+  const artifact = resolvePayloadCentricArtifact(resolveArtifactForValidation(options));
   const requireAuditPassed = options.requireAuditPassed !== false;
   const auditSatisfied = !requireAuditPassed || (artifact.manifest?.audit === 'passed' && artifact.candidateFallbackUsed !== true);
 
@@ -220,6 +271,8 @@ function validatePackage(options = {}) {
     zipPath: artifact.zipPath,
     zipName: artifact.zip,
     zipSha256,
+    payloadCentric: artifact.payloadCentric === true,
+    envelopePath: artifact.envelopePath || null,
     selectionMode: artifact.selectionMode,
     candidateFallbackUsed: artifact.candidateFallbackUsed,
     manifestPath: artifact.manifestPath || null,

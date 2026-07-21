@@ -410,7 +410,7 @@ ok "Pré-condições verificadas"
 # ── Limpeza inicial ───────────────────────────────────────────────────────────
 step "Limpando artefatos de runtime e teste..."
 bash "$PROJECT_ROOT/scripts/clean-test-artifacts.sh" 2>/dev/null || true
-bash "$PROJECT_ROOT/scripts/clean-runtime-state.js"  2>/dev/null || true
+bash "$PROJECT_ROOT/scripts/clean-runtime-state.sh" 2>/dev/null || true
 ok "Limpeza concluída"
 
 # ══════════════════════════════════════════════════════════════════════════════

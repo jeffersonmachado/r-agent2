@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { executeRecording, getExecutionStatus } = require('../../api/services/rpaService');
 
@@ -42,6 +43,10 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
       if (results.replayPath) artifacts.push({ type: 'replay', path: path.resolve(results.replayPath) });
       if (Array.isArray(results.screenshots)) {
         results.screenshots.forEach((item) => artifacts.push({ type: 'screenshot', path: path.resolve(item) }));
+      }
+      // Vídeo de treinamento
+      if (results.videoPath && fs.existsSync(results.videoPath)) {
+        artifacts.push({ type: 'video', path: path.resolve(results.videoPath) });
       }
 
       const firstFailedStep = Array.isArray(results.steps)
@@ -91,6 +96,12 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
 }
 
 async function executeScenario(scenario, adapterContext = {}) {
+  // Configuração de vídeo para treinamento
+  const recordVideo = scenario.recordVideo !== false && process.env.QA_MESH_RECORD_VIDEO !== '0';
+  const videoDir = recordVideo
+    ? path.join(adapterContext.repoRoot || process.cwd(), 'training', 'videos', scenario.id)
+    : null;
+
   const maxAttempt = Number(process.env.QA_MESH_RPA_MAX_ATTEMPTS || 2);
   const effectiveAttempts = Number.isFinite(maxAttempt) && maxAttempt > 0 ? maxAttempt : 2;
   const requestedWaitTimeout = Number(scenario.timeoutMs);
@@ -109,6 +120,8 @@ async function executeScenario(scenario, adapterContext = {}) {
         slowMo: scenario.slowMo || 0,
         timeout: scenario.timeout || 30000,
         screenshotOnFailure: true,
+        recordVideo,
+        videoDir,
       },
       scenario.data || {}
     );

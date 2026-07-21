@@ -1,52 +1,159 @@
-# AGENTS.md - RAP/r-agent2 Agent Operating Contract
+# AGENTS.md — RAP / r-agent2 (Results Autonomous Platform)
 
-This repository is AI-native. All agents must use `AI_MEMORY/` as the first operational memory layer and must preserve existing governance.
+Este repositório é AI-native. Todo agente deve usar `AI_MEMORY/` como primeira camada de memória operacional e preservar a governança existente.
 
-## Mandatory startup
+## Visão geral do projeto
 
-1. Read `AI_MEMORY/architecture.md`, `AI_MEMORY/project-map.md`, `AI_MEMORY/project-runtime-map.md`, `AI_MEMORY/operational-rules.md` and the area-specific memory file.
-2. Check `docs/governance/PLATFORM_STATUS.md` before release/governance claims.
-3. Inspect existing docs before creating new docs.
-4. Preserve user/worktree changes; do not revert unrelated files.
-5. Run or preserve the relevant executable enforcement gates before claiming completion.
+RAP (Results Autonomous Platform) é uma plataforma multi-tenant de operações autônomas: eventos operacionais se tornam estado de projeto/cliente, decisões, execuções, aprendizado, evidências de QA e governança de release.
 
-## Executable enforcement
+Loop central: **Observe → Project State → Decide → Execute → Learn** (eventos → estado → decisão → execução → aprendizado).
 
-Documentation is not sufficient. Agents must use the blocking validators in `scripts/governance/`:
+O pacote npm raiz chama-se `chatbot-engine` (nome histórico): engine de fluxos de chatbot em Node.js com execução determinística e replay. Sobre ela foram construídas as camadas de Agent OS, Cognitive Core, QA Mesh/Waves e governança de release.
 
-- `npm run validate:ai-memory`
-- `npm run validate:runtime`
-- `npm run validate:browser-evidence`
-- `npm run validate:qa-governance`
-- `npm run validate:replay-governance`
-- `npm run validate:release-governance`
-- `npm run validate:dist`
-- `npm run validate:agent-adherence`
-- `npm run validate:self-proving`
-- `npm run validate:governance-summary`
+O **Cognitive Core** (2026-06-12) é o núcleo obrigatório de inteligência da plataforma; agentes (Agent OS) são camada opcional sobre ele. Código em `src/core/cognitive/` (pipeline INPUT → CONTEXT → INTENT → PLAN → EXECUTE → VALIDATE → LEARN, com engines `context-engine`, `intent-engine`, `action-planner`, `execution-engine`, `validation-engine`, `learning-engine`, `tool-registry` e `cognitive-orchestrator`); docs canônicas em `docs/cognitive-core/`.
 
-`npm run validate:governance-enforcement` is the aggregate gate. If any validator fails, the task is not release-green and the failure must be reported with the generated `reports/*.json` evidence.
+## Memória operacional obrigatória (startup)
 
-## Runtime validation
+1. Ler `AI_MEMORY/architecture.md`, `AI_MEMORY/project-map.md`, `AI_MEMORY/project-runtime-map.md`, `AI_MEMORY/operational-rules.md` e o arquivo de memória específico da área alterada.
+2. Consultar `docs/governance/PLATFORM_STATUS.md` antes de qualquer afirmação sobre release/governança.
+3. Inspecionar a documentação existente antes de criar novos docs (`docs/00_DOCUMENTACAO_INDEX.md` e `docs/governance/00_DOCUMENTATION_INDEX.md` são os índices canônicos).
+4. Preservar mudanças do usuário/worktree; não reverter arquivos não relacionados.
+5. Rodar (ou preservar) os gates executáveis relevantes antes de declarar conclusão.
 
-- Before documenting web behavior, authenticate in the real frontend with `tests/helpers/playwrightAuth.js`.
-- Use `systemadmin`/`Admin123!` and tenant `system` only for local QA validation unless the task specifies another credential source.
-- Validate DOM, final URL, menu/sidebar origin, permissions, console errors and network failures.
-- Record aliases and gaps in `AI_MEMORY/runtime-navigation.md` and `AI_MEMORY/project-runtime-map.md`.
+## Stack tecnológica
 
-## Governance
+- **Runtime:** Node.js >= 20.19 ou >= 22.12, npm >= 10 (ver `engines` em `package.json`).
+- **Backend (`api/`):** Express 4, CommonJS com `'use strict'`, Sequelize 6 + `pg` 8 (PostgreSQL 16 com pgvector; `mysql2` também presente como dependência), `ioredis` 5 (Redis), `ws` (WebSocket), Umzug para migrations, rate limiting via `rate-limiter-flexible` + Redis (`infra/rate-limit/`). Entry point: `api/server.js` (`npm start`, porta 3001).
+- **Frontend (`frontend/`):** pacote `chatbot-flow-editor` — React 18, ES modules, Vite 7 + Vitest (config canônica `vite.config.mjs` / `vitest.config.mjs`), Rete 2.x (editor visual de fluxos), bpmn-js 18, Tailwind 4, PWA. Dev server Vite na porta 5173 (com `VITE_CACHE_DIR=/tmp/r-agent2-vite`).
+- **Engine (`engine/`):** núcleo determinístico da engine de fluxos — funções puras, zero I/O direto (compilação, execução de steps, replay, simulador, validador, registry de nós).
+- **RAG (`rag-service/`):** serviço Python separado — FastAPI + Uvicorn (porta 8000), sentence-transformers (all-MiniLM-L6-v2, torch CPU), pgvector como vector store, OpenAI opcional. Testes com pytest (`rag-service/pytest.ini`, venv em `rag-service/venv`).
+- **RPA (`core/rpa/`):** gravação/replay/player determinísticos com Playwright, CLI em `core/rpa/cli.js`.
+- **Mobile:** `apps/mobile/` existe mas está vazio (apenas `node_modules`).
+- **Infra:** Docker Compose (produção), systemd (redis + rag-service), Apache como reverse proxy. **Nunca introduzir PM2.**
+- **Dependência externa de pacote:** `@results/auth` é dependência `file:../../packages/auth`; o Jest inclui `/opt/results/packages` em `roots` (ver `jest.config.cjs`). Em clones fora de `/opt/results/ria/`, garantir que o diretório irmão `packages/` exista.
 
-- QA Waves, QA Mesh, replay integrity, package validation, release gate and self-proving are release blockers.
-- Never declare `GO_FINAL_HARDENED` while canonical mesh/release governance is `NO_GO`.
-- Never claim `overallGovernance >= 95` unless `reports/governance-score.json` exists and reports `status=PASS`.
-- Keep evidence outside `dist/` and out of release payloads unless explicitly approved by release tooling.
-- Never commit `.env`, `.token.env`, tokens, dumps, backups, `node_modules` or transient browser auth caches.
+## Organização do código e camadas estritas
 
-## Implementation standards
+Camadas (nunca misturar):
 
-- Follow existing architecture and conventions before adding abstractions.
-- Backend is CommonJS; frontend is ES modules.
-- Frontend route truth is `frontend/src/main.jsx`; menu truth is `frontend/src/navigation/menu.js`.
-- Official release path is `npm run system:validate`, `npm run zip:release`, `npm run system:release`.
-- Official AI-native enforcement path is `npm run validate:governance-enforcement` followed by `npm run zip:release` when release packaging is in scope.
-- Browser tests must reuse `tests/helpers/playwrightAuth.js`.
+- `frontend/` → UI, transformação de formato e validação de UX apenas. Nunca contém lógica de negócio.
+- `api/` → boundary HTTP. Registro de rotas em `api/app/registerRoutes.js` e `api/app/routeRegistry.js`; composição em `api/composition/{core,platform,extended}`.
+- `api/modules/*` → módulos de rotas delimitados (~75 módulos: auth, workspace, CRM, inbox, queue, pbx, rag-documents, qa, qa-mesh, qa-waves, process-runtime, agent-os, agent-registry, knowledge-graph, journey-registry, rap-learn, ai-governance, agent-marketplace, vertical-templates etc.).
+- `api/services/` → ~160 serviços de domínio/aplicação que orquestram casos de uso.
+- `engine/` → núcleo determinístico da engine de fluxos (sem I/O).
+- `src/core/cognitive/` → Cognitive Core (núcleo de inteligência; Tool Registry delega a serviços existentes, nunca executa direto).
+- `rag-service/` → serviço Python separado.
+
+Outros diretórios relevantes:
+
+- `core/rpa/` → CLI, recorder, player, replay determinístico e recuperação de RPA.
+- `qa/`, `qa-mesh/`, `qa-waves/` → runner de QA, malha de cenários (registry, runner, scheduler, go/no-go) e cobertura por ondas. São insumos de governança de release, não extras opcionais.
+- `governance/` → engines e relatórios de prova: self-proving, integridade de replay, validação de pacote, tamper detection, readiness.
+- `pipeline/` → validação completa, release gate e autocorreção (`pipeline/runFullValidation.js`, `pipeline/entrypoints/`).
+- `tools/system/` → comandos oficiais do ciclo de vida do sistema (bootstrap, validate, release, deploy, release-gate, go-no-go etc.).
+- `config/`, `contracts/` → registries de capacidades/jornadas e contratos JSON (versões em `contracts/versions.json`).
+- `migrations/` → DDL SQL (ex.: `agent-os-2026-06-11.sql`); migrations da API em `api/db/migrate.js`.
+- `scripts/` → automação de bootstrap, release, deploy, smokes e governança (`scripts/governance/` contém os validadores bloqueantes).
+- `tests/` → suítes Jest (unit, flow, integration, contracts, governance, ci, runtime, organizational, stress, rate-limit, rpa, security etc.).
+- `reports/` → relatórios oficiais de governança em JSON (ver seção de governança).
+
+### Legado a ignorar
+
+- Arquivos soltos na raiz: `test-*.js`, `debug-*.js`, `validate-*.js`, `direct-*.js`.
+- Diretórios: `frontend_backup/`, `backups/`, `remote-dumps/`, `remote-dumps2/`, `scripts/legacy/`.
+- Relatórios `.md` na raiz (`PHASE2_*`, `EXECUTIVE_*`, `GO_REPORT_*`, `REFACTORING_*`) e PNGs de screenshot na raiz.
+- Docs históricos em `dev Documentos/` e relatórios de raiz são históricos, salvo quando um índice canônico os referencia.
+
+## Comandos de build, teste e release
+
+Pré-requisitos: Node 20.19+/22.12+, npm 10+, PostgreSQL e Redis acessíveis. Rodar `npm install` (ou `npm ci`) antes de qualquer validação Jest (o ZIP de origem exclui `node_modules`).
+
+### Fluxo oficial do sistema
+
+```bash
+npm ci
+npm run system:bootstrap     # cria .env e api/data/config.json a partir dos examples
+npm run system:validate
+npm run system:release       # pipeline completo: validação + gate + packaging + manifestos
+npm run system:deploy        # dry-run por padrão; deploy real exige SYSTEM_DEPLOY_EXECUTE=1
+```
+
+### Build e dev
+
+- `npm run build` → backend (`scripts/build-backend.sh`) + frontend.
+- `npm run dev` / `npm run dev:api` / `npm run dev:frontend` (frontend via Vite, porta 5173; API na 3001).
+- `npm start` → `node api/server.js`.
+- `npm run rag:dev` → uvicorn com reload na porta 8000.
+- `npm run db:migrate` / `npm run db:migrate:status` (Umzug via `api/db/migrate.js`).
+
+### Testes
+
+- `npm test` → `test:unit` + `test:flow` + `test:rpa:jest`.
+- `npm run test:unit` → `jest tests/unit` (rodar após toda alteração de domínio).
+- `npm run test:flow` → testes E2E de fluxo (`tests/flow`).
+- `npm run test:rpa:jest` → testes RPA sem browser (flags `RPA_SKIP_BROWSER_TESTS`/`SKIP_RPA_INTEGRATION_TESTS`).
+- `npm run test:system` → contratos, governança, CI, runtime, organizacional, stress e rate-limit.
+- `npm run test:vertical:proof` → prova das verticais Beauty/Fitness (unit + integration + `scripts/vertical-e2e-validate.js`).
+- Frontend: `npm run frontend:test` (Vitest, config `frontend/vitest.config.mjs`) e `npm run frontend:test:e2e` (Playwright, em `frontend-e2e/`).
+- RAG: `pytest` dentro de `rag-service/` (usando o venv local).
+- Smokes: diversos `test:*:smoke` (voice, pbx, whatsapp, inbox, demo, bpmn etc.) via `scripts/`.
+- Jest: config em `jest.config.cjs` (timeout 10s, `bail: 1`, ambiente node, roots em `engine/`, `api/`, `tests/`, `qa/`, `qa-mesh/`, `lib/` e `/opt/results/packages`; `tests/rpa/` ignorado por padrão).
+
+### Governança executável (bloqueante)
+
+Documentação não é suficiente. Use os validadores bloqueantes em `scripts/governance/`:
+
+- `npm run validate:ai-memory`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:cleanup`, `validate:operational-rules`, `validate:coverage-completeness`, `validate:business-needs`, `validate:governance-summary`.
+- Validadores adicionais: `validate:ai-memory-consistency`, `validate:layer-conventions`, `validate:invariants`.
+- `npm run validate:governance-enforcement` é o **gate agregado**. Se qualquer validador falhar, a tarefa não está release-green; reporte a falha com a evidência gerada em `reports/*.json`.
+- `npm run qa:mesh` → malha canônica de cenários (go/no-go em `qa-mesh/go-no-go-report.json`).
+- Relatórios oficiais ficam em `reports/*.json`; `reports/governance-score.json` é a única fonte para `overallGovernance`.
+
+### Release e deploy
+
+- Caminho oficial de release: `npm run system:validate` → `npm run zip:release` → `npm run system:release`.
+- Caminho AI-native: `npm run validate:governance-enforcement` seguido de `npm run zip:release` quando packaging está em escopo.
+- `npm run zip:release` (`scripts/release-package.sh`) gera ZIP auditado + manifesto SHA-256 em `dist/`; **bloqueia** se detectar `.env`, `.token.env`, dumps ou backups; mantém apenas os 3 ZIPs mais recentes.
+- `npm run runtime:clean` limpa estado transitório antes do pacote (`runtime:clean:check` falha se restar resíduo).
+- Deploy apenas a partir de artefato aprovado: `npm run system:deploy`; gate pré-deploy `npm run deploy:gate:official` (dry-run por padrão). Deploy real exige `SYSTEM_DEPLOY_EXECUTE=1` e manifesto com `audit: passed` + `goNoGo: GO`.
+- Produção via Docker Compose: `docker-compose.prod.yml` (serviços: api, frontend, rag-service, postgres/pgvector, redis, asterisk). Comandos `deploy:build`, `deploy:up`, `deploy:full` etc. CI de release: `.github/workflows/release-governance.yml`.
+
+## Convenções de código
+
+- Backend: **CommonJS** (`require`/`module.exports`, `'use strict'`). Frontend: **ES modules**.
+- Rotas frontend: fonte da verdade em `frontend/src/main.jsx`; menu em `frontend/src/navigation/menu.js` (áreas em `frontend/src/navigation/workspaceAreas.js`).
+- Rotas backend: composição em `api/app/registerRoutes.js`, `api/app/routeRegistry.js` e `api/composition/*`; handlers devem delegar a serviços de domínio, sem concentrar regras.
+- Módulos compartilhados do frontend vivem em `frontend/src/shared/`.
+- Estado realtime via **WebSocket**; PROIBIDO `setInterval` para sincronizar estado.
+- Persistência: sem fallback em memória. Falha de DB deve gerar erro explícito (`persistence_required`).
+- Logger/Config: usar `api/utils/logger` e `api/utils/config` (nunca `console.log` direto). Coerção defensiva: `api/utils/defensiveCoercion`.
+- Flow Editor: configs de nó sempre via `SidebarProperties`; `frontend/src/editor/nodeSchemas.js` é a fonte única para campos, portas e validação.
+- Estilos: classes CSS reutilizáveis; inline apenas para valores dinâmicos.
+- Siga a arquitetura e os padrões existentes antes de criar abstrações novas.
+- Fontes canônicas de estilo: `CLAUDE.md`, `PROJECT_RULES.md`, `CURSOR_RULES.md` (raiz do repo).
+
+## Validação em runtime (browser real)
+
+- Antes de documentar comportamento web, autenticar no frontend real com `tests/helpers/playwrightAuth.js` (todos os testes de browser devem reutilizá-lo).
+- Credenciais de QA local: `systemadmin` / `Admin123!`, tenant `system` — apenas para validação local, salvo indicação em contrário.
+- Validar DOM, URL final, origem do menu/sidebar, permissões, erros de console e falhas de rede.
+- Registrar aliases e gaps em `AI_MEMORY/runtime-navigation.md` e `AI_MEMORY/project-runtime-map.md`.
+
+## Regras de governança e segurança
+
+- QA Waves, QA Mesh, integridade de replay, validação de pacote, release gate e self-proving são **bloqueadores de release**, não sugestões.
+- Nunca declarar `GO_FINAL_HARDENED` enquanto a governança canônica de mesh/release estiver `NO_GO`.
+- Nunca afirmar `overallGovernance >= 95` sem que `reports/governance-score.json` exista e reporte `status=PASS`.
+- Preservar `replayHash`, checksum, assinatura, tamper detection, provenance e linkage em qualquer trabalho de replay.
+- Nunca converter falha de gate em narrativa de sucesso; falhas dos scripts de governança são bloqueantes.
+- Não fazer fallback silencioso de runtime real para sintético quando um gate exige runtime real.
+- Evidências (screenshots/traces) ficam em diretórios governados (`AI_MEMORY/evidence/`, `qa/...`), nunca em `dist/` nem em payloads de release; podar artefatos transitórios.
+- `dist/` deve permanecer limpo, exceto ZIPs/manifestos de release aprovados.
+- Nunca commitar/empacotar `.env`, `.token.env`, tokens, dumps, backups, `node_modules`, caches de auth do WhatsApp ou caches transitórios de autenticação de browser.
+- `.env` exige `ENCRYPTION_KEY` válida; `.env` e `api/data/config.json` são criados pelo `system:bootstrap` a partir dos exemplos do repositório.
+- Caminhos de runtime/evidência devem usar raízes externas quando possível (`RUNTIME_ROOT`, padrão `/var/lib/ragent2` em containers); ver `docs/runtime-paths.md`.
+- Docker é o modelo oficial de runtime/deploy em produção; nunca introduzir PM2.
+
+## Estado de governança observado
+
+Conforme `docs/governance/PLATFORM_STATUS.md` (gerado em 2026-06-12): mesh canônico **GO**, mas decisão de readiness **NO_GO:AUTONOMOUS_READY_GO** (score 83.5) — o ZIP de release não contém todos os proofs obrigatórios (`gap-proof-package-validation`). QA coverage 100%, vertical coverage 100%. Sempre reconsulte o arquivo antes de afirmações de status.

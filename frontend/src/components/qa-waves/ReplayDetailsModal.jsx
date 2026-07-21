@@ -93,6 +93,10 @@ export function ReplayDetailsModal({ details, onClose }) {
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
   const [showActorTimeline, setShowActorTimeline] = useState(false);
+  const [trainingMode, setTrainingMode] = useState(false);
+
+  const training = details?.training || null;
+  const hasTraining = !!(training?.enabled && (training?.trainingSteps || details?.steps?.some(s => s?.trainingDescription)));
 
   const steps = details?.steps || [];
   const totalSteps = steps.length;
@@ -238,6 +242,17 @@ export function ReplayDetailsModal({ details, onClose }) {
                   <div className="flex items-center gap-2">
                     {!infoCollapsed && (
                       <span className="text-xs text-text-tertiary">{totalSteps} passo{totalSteps !== 1 ? 's' : ''}</span>
+                    )}
+                    {hasTraining && (
+                      <Button
+                        onClick={() => { setTrainingMode((v) => !v); if (!trainingMode && !stepByStep) { setStepByStep(true); setCurrentStep(0); setIsPlaying(false); } }}
+                        variant={trainingMode ? 'primary' : 'outline'}
+                        size="sm"
+                        className="text-xs"
+                        title="Modo Treinamento: mostra descrições narrativas e dicas visuais para cada passo"
+                      >
+                        {trainingMode ? '🎓 Treinando' : '🎓 Treinar'}
+                      </Button>
                     )}
                     <Button
                       onClick={() => { setStepByStep((v) => !v); if (!stepByStep) { setCurrentStep(0); setIsPlaying(false); } }}
@@ -663,6 +678,33 @@ export function ReplayDetailsModal({ details, onClose }) {
                   {activeStep.description && (
                     <div className="text-xs text-text-secondary mb-2">{activeStep.description}</div>
                   )}
+                  {/* ── Modo Treinamento ── */}
+                  {trainingMode && (activeStep.trainingDescription || activeStep.trainingHint || activeStep.expectedVisual) && (
+                    <div className="mt-2 p-3 rounded-lg bg-accent-primary/10 border border-accent-primary/30 space-y-2">
+                      <div className="text-xs font-semibold text-accent-primary flex items-center gap-1">
+                        🎓 Material de Treinamento
+                      </div>
+                      {activeStep.trainingDescription && (
+                        <div className="text-xs text-text-primary leading-relaxed">
+                          <span className="text-text-tertiary">📖 </span>
+                          {activeStep.trainingDescription}
+                        </div>
+                      )}
+                      {activeStep.trainingHint && (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+                          <span className="text-text-tertiary">💡 Dica: </span>
+                          {activeStep.trainingHint}
+                        </div>
+                      )}
+                      {activeStep.expectedVisual && (
+                        <div className="text-xs text-text-secondary leading-relaxed">
+                          <span className="text-text-tertiary">👁️ Visual esperado: </span>
+                          {activeStep.expectedVisual}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* ── Fim Modo Treinamento ── */}
                   <div className="text-xs text-text-tertiary">{formatDate(activeStep.at || activeStep.startedAt)}</div>
                   <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                     <div><span className="text-text-tertiary">Ação:</span> <span className="text-text-primary">{activeStep.action || activeStep.stepType || activeStep.type || '-'}</span></div>

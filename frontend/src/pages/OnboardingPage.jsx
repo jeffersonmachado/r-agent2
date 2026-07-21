@@ -424,14 +424,85 @@ export function OnboardingPage() {
       <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-text-primary">Progresso</span>
+            <span className="text-sm font-medium text-text-primary">Progresso geral</span>
             <span className="text-sm font-medium text-text-primary">{onboarding.progress}%</span>
           </div>
-          <div className="w-full bg-bg-secondary rounded-full h-4">
-            <div
-              className="bg-accent-primary h-4 rounded-full transition-all duration-300"
-              style={{ width: `${onboarding.progress}%` }}
-            ></div>
+          {/* Barra segmentada: obrigatórios + outros */}
+          <div className="w-full bg-bg-secondary rounded-full h-6 overflow-hidden flex">
+            {(() => {
+              const requiredSteps = onboarding.steps?.filter(s => s.required) || [];
+              const otherSteps = onboarding.steps?.filter(s => !s.required) || [];
+              const totalSteps = onboarding.steps?.length || 1;
+              const reqDone = requiredSteps.filter(s => s.completed).length;
+              const reqTotal = requiredSteps.length || 0;
+              const otherDone = otherSteps.filter(s => s.completed).length;
+              const otherTotal = otherSteps.length || 0;
+              const reqPct = (reqDone / totalSteps) * 100;
+              const otherPct = (otherDone / totalSteps) * 100;
+              return (
+                <>
+                  {reqTotal > 0 && (
+                    <div
+                      className="h-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-white"
+                      style={{
+                        width: `${reqPct}%`,
+                        background: reqDone === reqTotal
+                          ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                          : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                      }}
+                      title={`${reqDone}/${reqTotal} obrigatórios`}
+                    >
+                      {reqPct > 8 ? `${reqDone}/${reqTotal}` : ''}
+                    </div>
+                  )}
+                  {otherTotal > 0 && (
+                    <div
+                      className="h-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-white"
+                      style={{
+                        width: `${otherPct}%`,
+                        background: 'linear-gradient(90deg, #6366f1, #4f46e5)',
+                      }}
+                      title={`${otherDone}/${otherTotal} outros`}
+                    >
+                      {otherPct > 8 ? `${otherDone}/${otherTotal}` : ''}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+          {/* Legenda */}
+          <div className="flex gap-4 mt-2 text-xs text-text-secondary">
+            {(() => {
+              const requiredSteps = onboarding.steps?.filter(s => s.required) || [];
+              const reqDone = requiredSteps.filter(s => s.completed).length;
+              const reqTotal = requiredSteps.length;
+              if (reqTotal === 0) return null;
+              return (
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm inline-block" style={{
+                    background: reqDone === reqTotal
+                      ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                      : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                  }}></span>
+                  🔴 Obrigatórios: {reqDone}/{reqTotal}
+                  {reqDone === reqTotal && ' ✅'}
+                  {reqDone < reqTotal && ' — bloqueia acesso'}
+                </span>
+              );
+            })()}
+            {(() => {
+              const otherSteps = onboarding.steps?.filter(s => !s.required) || [];
+              const otherDone = otherSteps.filter(s => s.completed).length;
+              const otherTotal = otherSteps.length;
+              if (otherTotal === 0) return null;
+              return (
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm inline-block" style={{ background: 'linear-gradient(90deg, #6366f1, #4f46e5)' }}></span>
+                  Outros: {otherDone}/{otherTotal}
+                </span>
+              );
+            })()}
           </div>
         </div>
         {onboarding.completed && (

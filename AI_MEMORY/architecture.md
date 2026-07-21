@@ -6,6 +6,8 @@ RAP/r-agent2 is the Results Autonomous Platform: a multi-tenant Autonomous Opera
 
 Core loop: Observe -> Project State -> Decide -> Execute -> Learn.
 
+Agent OS layer (2026-06-11): see `AI_MEMORY/agent-os.md` for Agent Registry, Factory, Knowledge Graph, Journey Registry, RAP Learn, AI Governance, Marketplace, Orchestrator and Vertical Templates.
+
 ## Canonical sources to read first
 
 - `README.md`
@@ -40,5 +42,17 @@ QA Waves and QA Mesh are not optional test extras. They are governance inputs fo
 
 ## Current governance state observed
 
-As of `docs/governance/PLATFORM_STATUS.md`, the canonical mesh decision is `NO_GO` with blocker domain `pbx` and `BASELINE_PASS_RATE_REGRESSION`. Agents must not declare a final hardened release while this status remains unresolved.
+As of `docs/governance/PLATFORM_STATUS.md` (updated 2026-05-28), the canonical mesh decision is `GO` with 47/47 scenarios passed, 0 failures across all 11 domains. All blocker domains (pbx, omnichannel) are resolved. Release readiness is GO.
 
+
+## Cognitive Core (2026-06-12)
+
+RAP Cognitive Core e o nucleo obrigatorio de inteligencia da plataforma; agentes (Agent OS) sao camada opcional sobre ele.
+
+- Codigo: `src/core/cognitive/` (context-engine, intent-engine, action-planner, tool-registry, execution-engine, validation-engine, learning-engine, cognitive-orchestrator).
+- Pipeline obrigatorio: INPUT -> CONTEXT -> INTENT -> PLAN -> EXECUTE -> VALIDATE -> LEARN.
+- Docs canonicas: `docs/cognitive-core/` (current-state, gap-analysis, architecture, tool-registry, visibility-policy, acceptance-report).
+- Tool Registry delega para servicos existentes (marketingService, scheduleService, queueService, whatsappService, handoverService, ccClick2CallService, ccCampaignsService, WorkspaceInsightService). Nenhuma execucao direta.
+- Visibility PRODUCTION/SUPPORT/DEVELOPMENT reutiliza a politica de `api/modules/agent-os/experience-segregation.js`; QA Waves/Replay/Seeds/Mesh/RPA permanecem ocultos da operacao.
+- Aprendizado: event ledger (`cognitive.execution.*`) + RAP Learn em falhas. Nao altera regras criticas automaticamente.
+- Agentes opcionais: `src/core/agents/README.md`.
