@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-16T11:20:12.461Z",
-  "status": "NO_GO",
-  "governanceStatus": "NO_GO",
+  "generatedAt": "2026-07-21T02:02:19.891Z",
+  "status": "GO",
+  "governanceStatus": "GO",
   "threshold": 95,
   "replayIntegrity": {
     "valid": true,
@@ -70,18 +70,13 @@
     "status": "GO",
     "productionReadiness": "GO",
     "healthy": true,
-    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+    "evidencePath": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
   },
-  "operationalConfidence": 98.2,
+  "operationalConfidence": 100,
   "confidenceGrade": "A+",
   "riskLevel": "LOW",
   "failedProofs": [],
-  "activeBlockers": [
-    {
-      "reason": "continuous_smoke_degraded",
-      "status": "missing"
-    }
-  ],
+  "activeBlockers": [],
   "replayArtifacts": [
     {
       "journeyId": "support_ticket_flow",
@@ -189,36 +184,26 @@
   },
   "lastSmokeExecution": {
     "generatedAt": "2026-05-12T18:31:23.306Z",
-    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+    "evidencePath": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "tenantId": "system"
   },
   "continuousValidationStatus": {
-    "status": "missing",
-    "healthy": false,
-    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
-    "mode": null,
-    "generatedAt": null
+    "status": "GO",
+    "healthy": true,
+    "evidencePath": "qa/smoke/qa-waves-scheduled-operational-smoke.json",
+    "mode": "nightly_full_replay",
+    "generatedAt": "2026-07-20T00:00:00.000Z"
   },
   "releaseReadiness": {
-    "go": false,
+    "go": true,
     "reasons": []
   },
   "deploymentSafety": {
-    "deployAllowed": false,
+    "deployAllowed": true,
     "threshold": 95,
-    "operationalConfidence": 98.2,
-    "blockers": [
-      {
-        "reason": "continuous_smoke_degraded",
-        "status": "missing"
-      }
-    ]
+    "operationalConfidence": 100,
+    "blockers": []
   },
-  "enterpriseGovernanceSignature": "gov-sha256:65817dc79d646c8784c5d7d491b84bf0b2e7fd541bac621b2dbb5ccb3954ae05",
-  "reportHash": "6f02eeda523b1318806a44ba9b43dca17832ff79192c4765b5f9275736aafbf6",
-  "auditTrail": {
-    "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "8a11b17f45f514229f963c4f674876c288bea7936396ce58a546eeda8e6e3a3c",
-    "immutable": true
-  }
+  "enterpriseGovernanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+  "reportHash": "d3b215b32dad967cb93272a9f584460a0ae20bd0f9a9e9e3f062c8cb7aee709a"
 }

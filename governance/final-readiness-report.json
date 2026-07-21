@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-05-16T14:23:28.870Z",
-  "status": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "finalDecision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (FAILURE_RATE_ABOVE_THRESHOLD,CRITICAL_DOMAIN_FAILED:omnichannel,CRITICAL_DOMAIN_FAILED:pbx,BASELINE_PASS_RATE_REGRESSION,BASELINE_BLOCKING_REGRESSION,BASELINE_INFRA_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-  "canonicalMeshExecutionId": "mesh-2026-05-16T10-17-23-237Z",
-  "totalCoverage": 79.87,
+  "generatedAt": "2026-07-21T02:22:00.743Z",
+  "status": "AUTONOMOUS_READY_GO",
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "canonicalMeshExecutionId": "mesh-2026-06-11T22-13-23-346Z",
+  "totalCoverage": 98.5,
   "verticalCoverage": [
     {
       "vertical": "beauty",
@@ -15,18 +15,16 @@
     {
       "vertical": "fitness",
       "classification": "production-like",
-      "scenarioCount": 15,
-      "journeyCount": 9,
+      "scenarioCount": 27,
+      "journeyCount": 10,
       "blockers": []
     },
     {
       "vertical": "food",
-      "classification": "validated",
+      "classification": "production-like",
       "scenarioCount": 3,
       "journeyCount": 2,
-      "blockers": [
-        "qa_mesh_failures_open"
-      ]
+      "blockers": []
     },
     {
       "vertical": "services",
@@ -68,20 +66,13 @@
     ]
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-05-16T10-17-23-237Z",
-    "percent": 85.48,
-    "observedFailureFreePercent": 85.48,
-    "registryDeclaredTotal": 62,
-    "canonicalRegistryTotal": 62,
-    "blockingDomains": [
-      "clinica",
-      "food",
-      "mercado",
-      "omnichannel",
-      "pbx",
-      "servicos"
-    ],
-    "status": "NO_GO"
+    "executionId": "mesh-2026-06-11T22-13-23-346Z",
+    "percent": 100,
+    "observedFailureFreePercent": 100,
+    "registryDeclaredTotal": 47,
+    "canonicalRegistryTotal": 47,
+    "blockingDomains": [],
+    "status": "GO"
   },
   "integrationsCoverage": [
     {
@@ -91,7 +82,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -101,7 +92,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 13,
       "blocker": false
     },
     {
@@ -111,7 +102,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 5,
+      "scenarioCount": 42,
       "blocker": false
     },
     {
@@ -121,7 +112,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 2,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -131,7 +122,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 4,
       "blocker": false
     },
     {
@@ -141,7 +132,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 12,
+      "scenarioCount": 14,
       "blocker": false
     },
     {
@@ -151,7 +142,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 8,
+      "scenarioCount": 14,
       "blocker": false
     },
     {
@@ -161,7 +152,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 16,
       "blocker": false
     },
     {
@@ -171,7 +162,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 6,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -181,7 +172,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 6,
       "blocker": false
     }
   ],
@@ -192,7 +183,7 @@
     "evidence": [
       "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
     ],
-    "scenarioCount": 1,
+    "scenarioCount": 13,
     "blocker": false
   },
   "pbxCoverage": {
@@ -202,7 +193,7 @@
     "evidence": [
       "qa/enterprise/pbx-voice-flow-prod-like.json"
     ],
-    "scenarioCount": 5,
+    "scenarioCount": 42,
     "blocker": false
   },
   "aiCoverage": {
@@ -210,8 +201,8 @@
     "blockers": []
   },
   "productionReadiness": {
-    "status": "NO_GO:PRODLIKE_GO",
-    "classification": "enterprise-partial",
+    "status": "AUTONOMOUS_READY_GO",
+    "classification": "autonomous-ready",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -232,7 +223,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -242,7 +233,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 13,
       "blocker": false
     },
     {
@@ -252,7 +243,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 5,
+      "scenarioCount": 42,
       "blocker": false
     },
     {
@@ -262,7 +253,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 2,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -272,7 +263,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 4,
       "blocker": false
     },
     {
@@ -282,7 +273,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 12,
+      "scenarioCount": 14,
       "blocker": false
     },
     {
@@ -292,7 +283,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 8,
+      "scenarioCount": 14,
       "blocker": false
     },
     {
@@ -302,7 +293,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 16,
       "blocker": false
     },
     {
@@ -312,7 +303,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 6,
+      "scenarioCount": 11,
       "blocker": false
     },
     {
@@ -322,18 +313,16 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 1,
+      "scenarioCount": 6,
       "blocker": false
     }
   ],
   "enterpriseReadiness": {
-    "status": "prod-like",
+    "status": "autonomous-ready",
     "evidenceBased": true,
-    "missingProofs": [
-      "vertical_prod_like_coverage"
-    ]
+    "missingProofs": []
   },
-  "platformMaturity": "enterprise-partial",
+  "platformMaturity": "autonomous-ready",
   "enterpriseProofs": {
     "proofs": {
       "foundation_prod_like": true,
@@ -341,20 +330,18 @@
       "pbx_prod_like": true,
       "omnichannel_unified_replay": true,
       "replay_universalization": true,
-      "vertical_prod_like_coverage": false,
-      "proof_based_governance": false,
-      "enterprise_ready": false,
-      "autonomous_ready": false
+      "vertical_prod_like_coverage": true,
+      "proof_based_governance": true,
+      "enterprise_ready": true,
+      "autonomous_ready": true
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 5,
-    "omnichannelScenarioCount": 0,
-    "missingProofs": [
-      "vertical_prod_like_coverage"
-    ]
+    "verticalProdLikeCount": 6,
+    "omnichannelScenarioCount": 1,
+    "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-05-16T14:23:50.569Z",
+    "generatedAt": "2026-07-21T02:22:16.008Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -362,7 +349,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 9,
+    "blockerCount": 0,
     "replayCoverage": {
       "required": 6,
       "found": 7,
@@ -370,14 +357,14 @@
     },
     "prodLikeCoverage": {
       "required": 6,
-      "found": 5,
-      "percent": 83.33
+      "found": 6,
+      "percent": 100
     },
     "verticalCoverage": {
-      "status": "PARTIAL",
-      "validated": 5,
+      "status": "VALIDATED",
+      "validated": 6,
       "required": 6,
-      "percent": 83.33,
+      "percent": 100,
       "invalidClaims": []
     },
     "omnichannelCoverage": {
@@ -4566,12 +4553,10 @@
       ]
     },
     "governanceCoverage": {
-      "status": "NOT_VALIDATED",
+      "status": "VALIDATED",
       "signatureArtifact": "governance/proof-signature.json",
       "cleanupArtifact": "governance/cleanup-proof.json",
-      "missing": [
-        "cleanup_status"
-      ]
+      "missing": []
     },
     "intelligenceStability": {
       "status": "STABLE",
@@ -4580,8 +4565,8 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-05-16T14:24:46.083Z",
-      "expectedZipName": "r-agent2-20260516-112227.zip",
+      "generatedAt": "2026-07-21T02:22:15.748Z",
+      "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
       "blockers": [],
@@ -4590,15 +4575,29 @@
       "warningCount": 0,
       "maximumAllowedReadiness": "autonomous-ready",
       "autonomousReadyBlocked": false,
-      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-      "expectedZipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256"
+      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-05-16T14:24:46.083Z",
-      "ok": false,
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.zip",
-      "zipName": "r-agent2-20260516-112227.zip",
+      "generatedAt": "2026-07-21T02:22:16.007Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260612-165011.payload.zip",
+      "zipName": "r-agent2-20260612-165011.payload.zip",
+      "zipSha256": "5821b023e94b14e3dde295e27187209f61cde44e5e7894ec176b64e65da738e0",
+      "payloadCentric": true,
+      "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260612-165011.zip",
+      "selectionMode": "audited",
+      "candidateFallbackUsed": false,
+      "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260612-165011.manifest.json",
+      "manifestAudit": "passed",
+      "auditSatisfied": true,
+      "selfContainmentCheck": {
+        "passed": true,
+        "missing": []
+      },
       "requiredEntries": [
+        "governance/final-proof-report.json",
+        "governance/evidence-manifest.json",
+        "governance/blocker-engine.js",
+        "governance/final-consistency-report.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -4620,13 +4619,20 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
+      "entryCount": 4897,
       "missingEntries": [],
-      "error": "artifact_missing:none_found_in_dist",
-      "zipSha256Ref": "dist/r-agent2-20260516-112227.manifest.json#sha256",
-      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260516-112227.manifest.json"
+      "ok": true,
+      "error": null,
+      "packageBinding": {
+        "boundTo": "r-agent2-20260612-165011.payload.zip",
+        "sha256": "5821b023e94b14e3dde295e27187209f61cde44e5e7894ec176b64e65da738e0",
+        "immutable": true,
+        "selfProving": true,
+        "offlineAuditable": true
+      }
     },
     "evidenceManifest": {
-      "generatedAt": "2026-05-16T14:23:50.567Z",
+      "generatedAt": "2026-07-21T02:22:15.749Z",
       "runtimeRoot": null,
       "artifacts": [
         {
@@ -4829,9 +4835,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "5c165cfda2ec6e4f83ea38a08fd6c6cbfa289e5172b46c736d26854e8c1d1e8e",
-          "checksum": "5c165cfda2ec6e4f83ea38a08fd6c6cbfa289e5172b46c736d26854e8c1d1e8e",
-          "timestamp": "2026-05-12T11:59:36.150Z",
+          "hash": "dd20d030c44ddd8700be369601f405938ce4298106e41a1b22e0550d6b08e400",
+          "checksum": "dd20d030c44ddd8700be369601f405938ce4298106e41a1b22e0550d6b08e400",
+          "timestamp": "2026-06-12T19:50:47.759Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -4851,9 +4857,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e44059d471dc4646d655b1ae498260b4c0ce3f3bdb01a288ebc7ed41e9526b8e",
-          "checksum": "e44059d471dc4646d655b1ae498260b4c0ce3f3bdb01a288ebc7ed41e9526b8e",
-          "timestamp": "2026-05-12T11:59:36.151Z",
+          "hash": "90ea8c41786de26dada851ee9de31f76b8aa17a575012aaa8f10e5e902d8ef93",
+          "checksum": "90ea8c41786de26dada851ee9de31f76b8aa17a575012aaa8f10e5e902d8ef93",
+          "timestamp": "2026-06-12T19:50:47.760Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -4873,9 +4879,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "bd3a8e30ca7b50427f507ea496ca5b16999c4716b5cd9812aad1874552b432d0",
-          "checksum": "bd3a8e30ca7b50427f507ea496ca5b16999c4716b5cd9812aad1874552b432d0",
-          "timestamp": "2026-05-12T11:59:36.151Z",
+          "hash": "d4bc51e6b5fc6e5b8983bfa2de7bde6fb42f98627f0788e5e9d7e355151b705a",
+          "checksum": "d4bc51e6b5fc6e5b8983bfa2de7bde6fb42f98627f0788e5e9d7e355151b705a",
+          "timestamp": "2026-06-12T19:50:47.761Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -4897,7 +4903,7 @@
           "packageRequired": true,
           "hash": "393b909dc054996eb00252c36411f5cd175a689b3e77f4d1da6745cf7a30097c",
           "checksum": "393b909dc054996eb00252c36411f5cd175a689b3e77f4d1da6745cf7a30097c",
-          "timestamp": "2026-05-12T11:27:28.522Z",
+          "timestamp": "2026-06-12T17:32:15.237Z",
           "proofStatus": "present",
           "replayLinkage": [
             "omnichannel_unified_replay"
@@ -4919,7 +4925,7 @@
           "packageRequired": true,
           "hash": "6118978113c13054203757d74cb316d045dc365088f92bce019f15a6e82c0143",
           "checksum": "6118978113c13054203757d74cb316d045dc365088f92bce019f15a6e82c0143",
-          "timestamp": "2026-05-12T17:54:32.494Z",
+          "timestamp": "2026-06-12T17:32:15.237Z",
           "proofStatus": "present",
           "replayLinkage": [
             "omnichannel_unified_replay"
@@ -4957,9 +4963,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
-          "checksum": "b36f9b59712edf2d2b7670805deabc71ca8da6db7c012c2d7809e9446bf6603c",
-          "timestamp": "2026-05-16T11:20:12.462Z",
+          "hash": "85afd8bd16698a717d35213026b1202f54d7fca71a751afe78b598bf77442f86",
+          "checksum": "85afd8bd16698a717d35213026b1202f54d7fca71a751afe78b598bf77442f86",
+          "timestamp": "2026-07-21T02:02:19.891Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4975,9 +4981,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
-          "checksum": "8c9a8c9c1d2b4fef4a4d475e8b7537ea276d2a714e2096dbe93a129a900ade59",
-          "timestamp": "2026-05-16T14:23:28.871Z",
+          "hash": "d53aaec7aceefcdd2ad83d31f619fc3664290bc58339af2e50710bd4ef603dbe",
+          "checksum": "d53aaec7aceefcdd2ad83d31f619fc3664290bc58339af2e50710bd4ef603dbe",
+          "timestamp": "2026-07-21T02:22:00.746Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4993,9 +4999,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
-          "checksum": "b0771f46cc6269f28f58209c0639af7403cb05090fe012f23dcf5c5c2b1d178d",
-          "timestamp": "2026-05-16T14:23:29.208Z",
+          "hash": "ff43adc7b392c357b7a092e21e31c0fb8188812c1a321ac8a601b1775b6699c6",
+          "checksum": "ff43adc7b392c357b7a092e21e31c0fb8188812c1a321ac8a601b1775b6699c6",
+          "timestamp": "2026-07-21T02:22:00.992Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5011,9 +5017,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
-          "checksum": "085fc104bda84589404d77500a4152eb4da3012d8654c57777cc28965077640a",
-          "timestamp": "2026-05-16T14:13:46.921Z",
+          "hash": "bb66fc4ebd8d15e4b461dcaf66772959ae3645b5458b9b814b7973b14b934742",
+          "checksum": "bb66fc4ebd8d15e4b461dcaf66772959ae3645b5458b9b814b7973b14b934742",
+          "timestamp": "2026-06-12T19:51:56.392Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5024,8 +5030,8 @@
       ]
     },
     "proofQualityScore": {
-      "score": 90,
-      "raw": 108,
+      "score": 100,
+      "raw": 120,
       "max": 120,
       "grade": "A",
       "breakdown": [
@@ -5076,7 +5082,7 @@
         },
         {
           "label": "governance_validated",
-          "earned": 0,
+          "earned": 10,
           "max": 10
         },
         {
@@ -5096,7 +5102,7 @@
         },
         {
           "label": "runtime_cleanup",
-          "earned": 0,
+          "earned": 2,
           "max": 2
         }
       ]
@@ -5120,21 +5126,21 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "prod-like",
-      "blockersClear": false,
+      "currentLevel": "autonomous-ready",
+      "blockersClear": true,
       "gateChecks": {
-        "blockersClear": false,
+        "blockersClear": true,
         "proofsComplete": true,
         "replayCoverageOk": true,
-        "prodLikeCoverageOk": false,
+        "prodLikeCoverageOk": true,
         "omnichannelCoverageOk": true,
         "PBXCoverageOk": true,
         "pbxFullyReal": true,
         "humanHandoffCoverageOk": true,
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
-        "governanceCoverageOk": false,
-        "packageValidationOk": false,
+        "governanceCoverageOk": true,
+        "packageValidationOk": true,
         "evidenceManifestValid": true,
         "intelligenceStable": true,
         "crossReportConsistent": true,
@@ -5148,40 +5154,14 @@
         "intelligenceStable": true,
         "crossReportConsistent": true,
         "verticalCoverageValid": true,
-        "allPassed": false
+        "allPassed": true
       }
     },
-    "finalDecision": "NO_GO:PRODLIKE_GO",
-    "blockingGaps": [
-      {
-        "id": "gap-proof-package-validation",
-        "severity": "critical",
-        "area": "package",
-        "title": "ZIP de release nao contem todos os proofs obrigatorios",
-        "evidence": {
-          "missingEntries": []
-        },
-        "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-      },
-      {
-        "id": "gap-proof-governance-support",
-        "severity": "critical",
-        "area": "proof-governance",
-        "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
-        "evidence": {
-          "status": "NOT_VALIDATED",
-          "signatureArtifact": "governance/proof-signature.json",
-          "cleanupArtifact": "governance/cleanup-proof.json",
-          "missing": [
-            "cleanup_status"
-          ]
-        },
-        "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
-      }
-    ]
+    "finalDecision": "AUTONOMOUS_READY_GO",
+    "blockingGaps": []
   },
   "operationalDigitalTwin": {
-    "status": "partial",
+    "status": "complete",
     "description": "Operational Digital Twin representa o trace viewer operacional enterprise com replay, decisoes de IA, acoes humanas e estados internos.",
     "observedSignals": [
       "chronological_replays",
@@ -5207,7 +5187,7 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 40,
+    "scenarioCount": 77,
     "executableScenarioCount": 34,
     "executableJourneyIds": [
       "beauty_booking",
@@ -5224,231 +5204,10 @@
     "orphanJourneys": [],
     "missingBackendAssertions": []
   },
-  "blockingGaps": [
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
-      "evidence": {
-        "scenarios": [
-          "rpa-test-flow-28d2aea0-20260129T000000000Z",
-          "rpa-test-flow-3571aa07-20260129T034520103Z",
-          "rpa-test-flow-3b6cada8-20260129T042632607Z",
-          "rpa-test-flow-6309e70a-20260129T033246247Z",
-          "rpa-test-flow-7fa30156-20260129T030733925Z",
-          "rpa-test-flow-937dd7c3-20260129T000000000Z",
-          "rpa-test-flow-c0ea1c71-20260129T045514294Z",
-          "rpa-test-flow-cca122f2-20260129T000000000Z",
-          "rpa-test-flow-da6f66c1-20260131T041500000Z"
-        ],
-        "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "release-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio pbx",
-      "evidence": {
-        "scenarios": [
-          "rpa-test-flow-659d7749-20260129T035608952Z",
-          "rpa-test-flow-6f484f7a-20260129T050243761Z",
-          "rpa-test-flow-a41fb4e3-20260129T051056368Z",
-          "rpa-test-flow-a85c4a4d-20260129T052758707Z"
-        ],
-        "sampleError": "Texto deve conter \"Olá! Como posso ajudar?\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-clinica-functional_failure-business-clinic-flow-ticket",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio clinica",
-      "evidence": {
-        "scenarios": [
-          "business-clinic-flow-ticket"
-        ],
-        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-food-functional_failure-business-food-flow-order",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio food",
-      "evidence": {
-        "scenarios": [
-          "business-food-flow-order"
-        ],
-        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-mercado-functional_failure-business-market-flow-node",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio mercado",
-      "evidence": {
-        "scenarios": [
-          "business-market-flow-node"
-        ],
-        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-servicos-functional_failure-business-serv-flow-solution",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio servicos",
-      "evidence": {
-        "scenarios": [
-          "business-serv-flow-solution"
-        ],
-        "sampleError": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "release-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio pbx",
-      "evidence": {
-        "scenarios": [
-          "qa-ura-publish-rollback-smoke"
-        ],
-        "sampleError": "[ura-publish-rollback-smoke] FAIL pbx_signature_not_changed_between_versions"
-      },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
-      "evidence": {
-        "scenarios": [
-          "rpa-test-flow-6e8af7c1-20260129T033828021Z"
-        ],
-        "sampleError": "Texto deve conter \"Olá\", recebido \" Acesso NegadoSeu perfil não possui permissão para acessar este módulo.Voltar para Atendimento import registerDevSW from '/@vite-plugin-pwa/pwa-entry-point-loaded'; registerDevSW(); \""
-      },
-      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
-      "evidence": {
-        "scenarios": [
-          "rpa-test-flow-cf71792a-20260129T034806356Z"
-        ],
-        "sampleError": "Elemento não visível quando esperado visível"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "id": "gap-proof-package-validation",
-      "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
-      "evidence": {
-        "missingEntries": []
-      },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    },
-    {
-      "id": "gap-proof-governance-support",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
-      "evidence": {
-        "status": "NOT_VALIDATED",
-        "signatureArtifact": "governance/proof-signature.json",
-        "cleanupArtifact": "governance/cleanup-proof.json",
-        "missing": [
-          "cleanup_status"
-        ]
-      },
-      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
-    }
-  ],
-  "noGoReasons": [
-    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-functional_failure-rpa-test-flow-28d2aea0-20260129T000000000Z-rpa-test-flow-3571aa07-20260129T034520103Z-rpa-test-flow-3b6cada8-20260129T042632607Z-rpa-test-flow-6309e70a-20260129T033246247Z-rpa-test-flow-7fa30156-20260129T030733925Z-rpa-test-flow-937dd7c3-20260129T000000000Z-rpa-test-flow-c0ea1c71-20260129T045514294Z-rpa-test-flow-cca122f2-20260129T000000000Z-rpa-test-flow-da6f66c1-20260131T041500000Z]",
-    "Falha aberta no dominio pbx [gap-mesh-pbx-functional_failure-rpa-test-flow-659d7749-20260129T035608952Z-rpa-test-flow-6f484f7a-20260129T050243761Z-rpa-test-flow-a41fb4e3-20260129T051056368Z-rpa-test-flow-a85c4a4d-20260129T052758707Z]",
-    "Falha aberta no dominio clinica [gap-mesh-clinica-functional_failure-business-clinic-flow-ticket]",
-    "Falha aberta no dominio food [gap-mesh-food-functional_failure-business-food-flow-order]",
-    "Falha aberta no dominio mercado [gap-mesh-mercado-functional_failure-business-market-flow-node]",
-    "Falha aberta no dominio servicos [gap-mesh-servicos-functional_failure-business-serv-flow-solution]",
-    "Falha aberta no dominio pbx [gap-mesh-pbx-flaky-qa-ura-publish-rollback-smoke]",
-    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-rpa-test-flow-6e8af7c1-20260129T033828021Z]",
-    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-functional_failure-rpa-test-flow-cf71792a-20260129T034806356Z]",
-    "ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]",
-    "Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]"
-  ],
+  "blockingGaps": [],
+  "noGoReasons": [],
   "goReasons": [
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
-  ],
-  "reboundAt": "2026-05-16T14:24:46.448Z"
+  ]
 }
