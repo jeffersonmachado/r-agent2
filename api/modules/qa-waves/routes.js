@@ -500,6 +500,24 @@ function createQaWavesRoutes({ buildDeps }) {
     return deps.analyzeWaveCoverageGaps({ vertical, journey: journey || null }, allScenarios);
   });
 
+  // ─── Business Gaps ──────────────────────────────────────────────────────
+  router.get('/api/qa-waves/intelligence/business-gaps', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    try {
+      const { vertical, journey } = req.query || {};
+      const result = deps.getBusinessGaps({ vertical: vertical || null, journey: journey || null });
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      deps.logger.error('Erro ao obter business gaps:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter business gaps' });
+    }
+  });
+
   registerJsonPost('/api/qa-waves/intelligence/generate-scenario', async (deps, body) => {
     const { vertical, journey, stage, gap, context } = body;
     if (!vertical || !journey || !stage || !gap) {

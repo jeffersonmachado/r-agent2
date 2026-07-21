@@ -39,6 +39,7 @@ const {
 const {
   getCoverageSummary,
   analyzeCoverageGaps,
+  getBusinessGaps,
   generateScenarioDraft,
   generateSeedsForScenario,
   listDrafts,
@@ -122,6 +123,7 @@ function buildQaWavesRouteDeps() {
     listWaveDrafts: listDrafts,
     approveWaveDraft: approveDraft,
     rejectWaveDraft: rejectDraft,
+    getBusinessGaps: () => getBusinessGaps(),
     // Governance
     evaluateWaveGovernance,
     listWaveGovernanceReports: listGovernanceReports,

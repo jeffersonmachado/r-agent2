@@ -1001,6 +1001,110 @@ function suggestMeshLinks(waveScenarios = [], meshRegistry = []) {
   return suggestions;
 }
 
+// ─── Business Gaps (contracts × coverage) ──────────────────────────────────
+
+/**
+ * Returns business-level gap analysis suitable for UI display.
+ * Cross-references journey-contracts.json × journey-coverage × scenario-store.
+ */
+function getBusinessGaps({ vertical = null, journey = null } = {}) {
+  const contractsPath = path.join(ROOT_DIR, 'config', 'journey-contracts.json');
+  const coverageDir = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
+  const storeData = loadScenarioStore();
+  const scenarios = (storeData.scenarios || storeData || []).map((s) => normalizeScenarioRecord(s));
+
+  // Load contracts
+  let contracts = { journeys: {} };
+  try { contracts = JSON.parse(fs.readFileSync(contractsPath, 'utf8')); } catch (_) {}
+
+  // Build scenario index by vertical+journey
+  const scenarioIndex = {};
+  for (const s of scenarios) {
+    const v = s.vertical || 'unknown';
+    const j = s.journey || s.journeyId || 'unknown';
+    const key = `${v}/${j}`;
+    if (!scenarioIndex[key]) scenarioIndex[key] = [];
+    scenarioIndex[key].push(s);
+  }
+
+  const results = [];
+
+  // Load journey coverage
+  if (fs.existsSync(coverageDir)) {
+    for (const file of fs.readdirSync(coverageDir)) {
+      if (!file.endsWith('.json')) continue;
+      let covData = null;
+      try { covData = JSON.parse(fs.readFileSync(path.join(coverageDir, file), 'utf8')); } catch (_) { continue; }
+      const vert = covData.vertical || file.replace('.json', '');
+
+      if (vertical && vert !== vertical) continue;
+
+      for (const covJourney of (covData.journeys || [])) {
+        const jId = covJourney.journey;
+        if (journey && jId !== journey) continue;
+
+        const contract = (contracts.journeys || {})[jId] || null;
+        const requiredCaps = contract?.requiredCapabilities || [];
+        const confidence = contract?.confidence || 0;
+        const key = `${vert}/${jId}`;
+        const storeScenarios = scenarioIndex[key] || [];
+        const approvedCount = storeScenarios.filter(s => s.status === 'approved').length;
+        const totalTarget = (covJourney.scenarios || []).length;
+
+        // Find capabilities without QA scenario
+        const coveredCaps = new Set();
+        for (const s of storeScenarios) {
+          for (const step of (s.steps || [])) {
+            const entity = step.expected?.backendEntity || step.targetCapability || '';
+            if (entity) coveredCaps.add(entity);
+          }
+          if (s.targetCapability) coveredCaps.add(s.targetCapability);
+        }
+
+        const capGaps = requiredCaps.filter(c => !coveredCaps.has(c));
+        const capCoverage = requiredCaps.length > 0
+          ? Math.round(((requiredCaps.length - capGaps.length) / requiredCaps.length) * 100) / 100
+          : 0;
+
+        results.push({
+          vertical: vert,
+          journeyId: jId,
+          journeyName: covJourney.journey || jId,
+          contract: {
+            exists: Boolean(contract),
+            requiredCapabilities: requiredCaps,
+            confidence: Number((confidence * 100).toFixed(0)) / 100,
+          },
+          coverage: {
+            approvedScenarios: approvedCount,
+            targetScenarios: totalTarget,
+            coverage: totalTarget > 0 ? Math.round((approvedCount / totalTarget) * 100) / 100 : 0,
+          },
+          gaps: {
+            capabilityGaps: capGaps,
+            capabilityCoverage: capCoverage,
+            missingCount: capGaps.length,
+            hasGaps: capGaps.length > 0,
+          },
+        });
+      }
+    }
+  }
+
+  return {
+    verticals: results,
+    summary: {
+      totalJourneys: results.length,
+      journeysWithGaps: results.filter(r => r.gaps.hasGaps).length,
+      journeysWithoutContract: results.filter(r => !r.contract.exists).length,
+      averageConfidence: results.length > 0
+        ? Math.round(results.reduce((s, r) => s + r.contract.confidence, 0) / results.length * 100) / 100
+        : 0,
+    },
+    generatedAt: nowIso(),
+  };
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1015,6 +1119,7 @@ module.exports = {
   // Gap Analysis
   analyzeCoverageGaps,
   buildReplayIndex,
+  getBusinessGaps,
 
   // AI Generation (draft_ai status — requer aprovação manual)
   generateScenarioDraft,
