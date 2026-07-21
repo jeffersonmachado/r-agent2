@@ -72,6 +72,8 @@ export function CoverageGapsTab() {
   const [governance, setGovernance] = useState([]);
   const [loadingCoverage, setLoadingCoverage] = useState(false);
   const [loadingGaps, setLoadingGaps] = useState(false);
+  const [businessGaps, setBusinessGaps] = useState(null);
+  const [loadingBusinessGaps, setLoadingBusinessGaps] = useState(false);
   const [loadingGenerate, setLoadingGenerate] = useState(false);
   const [loadingReview, setLoadingReview] = useState(null);
   const { showToast, ToastContainer } = useToast();
@@ -131,11 +133,24 @@ export function CoverageGapsTab() {
     }
   }, []);
 
+  const loadBusinessGaps = useCallback(async () => {
+    setLoadingBusinessGaps(true);
+    try {
+      const data = await fetchJson('/api/qa-waves/intelligence/business-gaps');
+      setBusinessGaps(data);
+    } catch (_) {
+      // silencioso
+    } finally {
+      setLoadingBusinessGaps(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadCoverage();
     loadDrafts();
     loadGovernance();
-  }, [loadCoverage, loadDrafts, loadGovernance]);
+    loadBusinessGaps();
+  }, [loadCoverage, loadDrafts, loadGovernance, loadBusinessGaps]);
 
   // ─── Análise de gaps ─────────────────────────────────────────────────────
 
@@ -426,6 +441,73 @@ export function CoverageGapsTab() {
               </details>
             )}
           </div>
+        )}
+      </section>
+
+      {/* ── Business Gaps (contratos x cobertura) ── */}
+      <section className="qa-waves-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 className="qa-waves-section-title" style={{ marginBottom: 0 }}>
+            📋 Gaps de Negócio (Contratos × Cobertura)
+          </h2>
+          <button type="button" onClick={loadBusinessGaps} disabled={loadingBusinessGaps} className="qa-btn-primary" style={{ fontSize: 12 }}>
+            {loadingBusinessGaps ? 'Carregando…' : '↻ Atualizar'}
+          </button>
+        </div>
+
+        {businessGaps && (
+          <div style={{ marginBottom: 8, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13 }}>
+            <span><strong>{businessGaps.summary?.totalJourneys || 0}</strong> jornadas</span>
+            <span style={{ color: 'var(--color-status-error)' }}><strong>{businessGaps.summary?.journeysWithGaps || 0}</strong> com gaps</span>
+            <span>Confiança média: <strong>{(businessGaps.summary?.averageConfidence * 100).toFixed(0)}%</strong></span>
+          </div>
+        )}
+
+        {businessGaps && (businessGaps.verticals || []).map((item) => (
+          <details key={item.vertical + '/' + item.journeyId} style={{ marginBottom: 8, border: '1px solid var(--color-border-default)', borderRadius: 8, padding: '8px 12px' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{item.vertical}/{item.journeyId}</span>
+              <span style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+                <span>Conf: {(item.contract.confidence * 100).toFixed(0)}%</span>
+                <span>{item.coverage.approvedScenarios}/{item.coverage.targetScenarios} cenários</span>
+                {item.gaps.hasGaps ? (
+                  <span style={{ color: 'var(--color-status-error)' }}>🔴 {item.gaps.missingCount} gaps</span>
+                ) : (
+                  <span style={{ color: 'var(--color-status-success)' }}>✅</span>
+                )}
+              </span>
+            </summary>
+            <div style={{ marginTop: 8 }}>
+              {item.contract.requiredCapabilities.length > 0 && (
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Capabilities requeridas: </span>
+                  {item.contract.requiredCapabilities.map(cap => {
+                    const isGap = (item.gaps.capabilityGaps || []).includes(cap);
+                    return (
+                      <span key={cap} style={{
+                        display: 'inline-block',
+                        margin: '2px 4px 2px 0',
+                        padding: '2px 8px',
+                        borderRadius: 10,
+                        fontSize: 11,
+                        background: isGap ? 'var(--color-bg-error)' : 'var(--color-bg-success)',
+                        color: isGap ? 'var(--color-status-error)' : 'var(--color-status-success)',
+                      }}>{isGap ? '✗ ' : '✓ '}{cap}</span>
+                    );
+                  })}
+                </div>
+              )}
+              {(item.gaps.capabilityGaps || []).length > 0 && (
+                <div style={{ fontSize: 11, color: 'var(--color-status-error)' }}>
+                  ⚠️ Sem cenário QA para: {item.gaps.capabilityGaps.join(', ')}
+                </div>
+              )}
+            </div>
+          </details>
+        ))}
+
+        {!businessGaps && !loadingBusinessGaps && (
+          <p className="qa-empty">Clique em "Atualizar" para carregar os gaps de negócio.</p>
         )}
       </section>
 
