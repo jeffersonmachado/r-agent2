@@ -10,13 +10,13 @@ jest.mock('../../api/utils/logger', () => ({
   error: jest.fn(),
 }));
 
-describe('ticketInsightService coercion hardening', () => {
+describe('ticketInsightService coercion hardening (IA-only, sem fallback)', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
   });
 
-  test('generateAiSummary: fallback disabled does not crash with hostile error.message getter', async () => {
+  test('generateAiSummary: propaga erro com hostile error.message getter (sem fallback)', async () => {
     const ticket = { id: 't-1', tenantId: 'tenant-1', queue: 'geral', status: 'in_progress', context: { variables: {} } };
 
     jest.doMock('../../api/services/queueService', () => ({
@@ -25,81 +25,32 @@ describe('ticketInsightService coercion hardening', () => {
       updateTicket: jest.fn(),
     }));
 
-    jest.doMock('../../api/services/aiProviderService', () => ({
-      generateAiResponse: jest.fn().mockRejectedValue({
-        get message() {
-          throw new Error('poisoned message getter');
-        },
-        toString() {
-          throw new Error('poisoned toString');
-        },
-      }),
-    }));
-
-    jest.doMock('../../api/utils/config', () => ({
-      get: jest.fn((_path, defaultValue) => defaultValue),
-    }));
-
-    const svc = require('../../api/services/ticketInsightService');
-    const result = await svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1', agent: { id: 'a-1', username: 'ana' } });
-
-    expect(result).toEqual(expect.objectContaining({
-      success: false,
-      error: 'ai_summary_failed',
-      message: 'Erro ao gerar resumo por IA',
-    }));
-  });
-
-  test('generateAiSummary: fallback enabled still returns heuristic summary with hostile error.message getter', async () => {
-    const ticket = {
-      id: 't-1',
-      tenantId: 'tenant-1',
-      queue: 'geral',
-      status: 'in_progress',
-      context: { variables: { nome: 'Joao' } },
-      lastUserMessage: 'Preciso de ajuda',
-      tags: ['urgente'],
+    const hostileError = {
+      get message() {
+        throw new Error('poisoned message getter');
+      },
+      toString() {
+        throw new Error('poisoned toString');
+      },
     };
 
-    jest.doMock('../../api/services/queueService', () => ({
-      getTicket: jest.fn(() => ticket),
-      getTicketMessages: jest.fn(() => []),
-      updateTicket: jest.fn(),
-    }));
-
     jest.doMock('../../api/services/aiProviderService', () => ({
-      generateAiResponse: jest.fn().mockRejectedValue({
-        get message() {
-          throw new Error('poisoned message getter');
-        },
-        toString() {
-          throw new Error('poisoned toString');
-        },
-      }),
-    }));
-
-    jest.doMock('../../api/utils/config', () => ({
-      get: jest.fn((key, defaultValue) => {
-        if (key === 'fallbacks.ticketInsightHeuristic') return true;
-        return defaultValue;
-      }),
+      generateAiResponse: jest.fn().mockRejectedValue(hostileError),
     }));
 
     const svc = require('../../api/services/ticketInsightService');
-    const result = await svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1', agent: { id: 'a-1', username: 'ana' } });
 
-    expect(result.success).toBe(true);
-    expect(result.summary.text).toContain('Última mensagem');
+    // Erro propaga naturalmente — sem try/catch no serviço
+    await expect(svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1' }))
+      .rejects.toBe(hostileError);
   });
 
-  test('static guard: no direct err/error.message outside safeErrorMessage helper', () => {
+  test('static guard: no heuristic fallback or safeErrorMessage helper in source', () => {
     const sourcePath = path.resolve(__dirname, '../../api/services/ticketInsightService.js');
     const source = fs.readFileSync(sourcePath, 'utf8');
-    const sanitizedSource = source
-      .split('\n')
-      .filter((line) => !line.includes('String(err.message)'))
-      .join('\n');
-
-    expect(sanitizedSource).not.toMatch(/\b(?:error|err)\.message\b/);
+    expect(source).not.toMatch(/heuristicSummary/);
+    expect(source).not.toMatch(/fallbacks\.ticketInsightHeuristic/);
+    expect(source).not.toMatch(/safeErrorMessage/);
+    expect(source).not.toMatch(/config\.get/);
   });
 });

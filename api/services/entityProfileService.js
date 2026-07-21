@@ -331,14 +331,14 @@ function enforceNoInvention(profile, evidenceTexts, meta) {
   return out;
 }
 
-function computeHeuristicConfidence({ chunks, profile }) {
-  const sources = Array.isArray(chunks) ? chunks : [];
-  const n = sources.length;
-  const avgScore = n > 0
-    ? sources.reduce((sum, c) => sum + (Number(c?.score) || 0), 0) / n
-    : 0;
-
+/**
+ * Confidence based on profile completeness (AI-filled fields).
+ * No heuristic fallback — confidence is derived from AI output quality.
+ */
+function computeAiConfidence({ profile }) {
+  if (!profile || typeof profile !== 'object') return 0;
   let filled = 0;
+  const total = 12;
   if (profile.name) filled += 1;
   if (profile.website) filled += 1;
   if (profile.whatItDoes) filled += 2;
@@ -349,11 +349,7 @@ function computeHeuristicConfidence({ chunks, profile }) {
   if ((profile.operatingHours || []).length > 0) filled += 1;
   if ((profile.locations || []).length > 0) filled += 1;
   if ((profile.proofPoints || []).length > 0) filled += 1;
-
-  const richness = Math.min(1, filled / 12);
-  const volume = Math.min(1, n / 10);
-  const score = Math.min(1, avgScore); // score já tende a 0-1
-  return clamp01(0.15 + 0.35 * richness + 0.25 * volume + 0.25 * score);
+  return clamp01(filled / total);
 }
 
 function buildProfilePrompt({ tenantName, website, urls, fileNames, chunks, prefilled }) {
@@ -447,7 +443,7 @@ async function buildEntityProfile(tenantId, input = {}) {
     p.paymentMethods = deterministic.paymentMethods || [];
     p.proofPoints = deterministic.proofPoints || [];
     p.productsServices = deterministic.productsServices || [];
-    p.confidence = computeHeuristicConfidence({ chunks, profile: p });
+    p.confidence = computeAiConfidence({ profile: p });
     return { profile: p, usedAi: false };
   }
 
@@ -479,9 +475,9 @@ async function buildEntityProfile(tenantId, input = {}) {
   if (!profile.name && tenantName) profile.name = tenantName;
   if (!profile.website && website) profile.website = website;
 
-  // Confiança final: heurística + (se IA retornou algo) pondera, mas sem passar de 1
-  const heuristic = computeHeuristicConfidence({ chunks, profile });
-  profile.confidence = clamp01(Math.max(profile.confidence || 0, heuristic));
+  // Confiança final: baseada na completude do perfil extraído pela IA
+  const aiConfidence = computeAiConfidence({ profile });
+  profile.confidence = clamp01(Math.max(profile.confidence || 0, aiConfidence));
 
   return { profile, usedAi: true };
 }

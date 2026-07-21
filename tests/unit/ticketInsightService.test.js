@@ -1,5 +1,5 @@
 /**
- * Testes unitários: TicketInsightService (IA + fallback).
+ * Testes unitários: TicketInsightService (IA-only, sem fallback heurístico).
  */
 
 jest.mock('../../api/utils/logger', () => ({
@@ -15,7 +15,7 @@ describe('TicketInsightService', () => {
     jest.clearAllMocks();
   });
 
-  test('generateAiSummary usa fallback heurístico quando IA falha', async () => {
+  test('generateAiSummary propaga erro quando IA falha (sem fallback)', async () => {
     const ticket = {
       id: 't-1',
       tenantId: 'tenant-1',
@@ -41,29 +41,16 @@ describe('TicketInsightService', () => {
     jest.doMock('../../api/services/aiProviderService', () => ({
       generateAiResponse: jest.fn().mockRejectedValue(new Error('no api key')),
     }));
-    jest.doMock('../../api/utils/config', () => ({
-      get: jest.fn((path, defaultValue) => {
-        if (path === 'fallbacks.ticketInsightHeuristic') return true;
-        return defaultValue;
-      }),
-    }));
 
     // eslint-disable-next-line global-require
     const svc = require('../../api/services/ticketInsightService');
 
-    const result = await svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1', agent: { id: 'a-1', username: 'ana' } });
-    expect(result.success).toBe(true);
-    expect(result.summary.text).toContain('Última mensagem');
-    expect(updateTicket).toHaveBeenCalledWith('t-1', expect.objectContaining({
-      context: expect.objectContaining({
-        aiSummary: expect.objectContaining({
-          text: expect.any(String),
-        }),
-      }),
-    }));
+    await expect(svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1' }))
+      .rejects.toThrow('no api key');
+    expect(updateTicket).not.toHaveBeenCalled();
   });
 
-  test('generateAiSummary falha quando IA falha e fallback heurístico está desabilitado (default)', async () => {
+  test('generateAiSummary retorna erro quando IA retorna texto vazio', async () => {
     const ticket = { id: 't-1', tenantId: 'tenant-1', queue: 'geral', status: 'in_progress', context: { variables: {} } };
     const updateTicket = jest.fn();
 
@@ -73,18 +60,15 @@ describe('TicketInsightService', () => {
       updateTicket,
     }));
     jest.doMock('../../api/services/aiProviderService', () => ({
-      generateAiResponse: jest.fn().mockRejectedValue(new Error('no api key')),
-    }));
-    jest.doMock('../../api/utils/config', () => ({
-      get: jest.fn((_path, defaultValue) => defaultValue), // mantém default (false)
+      generateAiResponse: jest.fn().mockResolvedValue({ text: '' }),
     }));
 
     // eslint-disable-next-line global-require
     const svc = require('../../api/services/ticketInsightService');
 
-    const result = await svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1', agent: { id: 'a-1', username: 'ana' } });
+    const result = await svc.generateAiSummary({ ticketId: 't-1', tenantId: 'tenant-1' });
     expect(result.success).toBe(false);
-    expect(result.error).toBe('ai_summary_failed');
+    expect(result.error).toBe('ai_summary_empty');
     expect(updateTicket).not.toHaveBeenCalled();
   });
 

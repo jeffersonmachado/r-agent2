@@ -11,7 +11,7 @@
  * - Reactivation candidates
  *
  * Writes signals to vertical_engagement_signals for operational use.
- * All computation uses heuristic fallbacks – plug real ML later.
+ * REQUIRES AI/ML provider. No heuristic fallback.
  */
 
 const crypto = require('crypto');
@@ -65,41 +65,19 @@ async function getRecentAttendances({ tenantId, vertical, subjectId, windowDays 
 // ── Score computation ─────────────────────────────────────────────────────
 
 /**
- * Compute churn/evasion risk score for fitness (0.0 = low, 1.0 = high).
- * Heuristic: uses recency + frequency + billing status.
+ * REQUIRES AI/ML provider. No heuristic fallback.
+ * Throws with clear error message when AI is unavailable.
  */
 function computeFitnessChurnScore({ daysSinceLastVisit, frequency30d, billingStatus }) {
-  let score = 0;
-  const thresholds = DEFAULTS.fitness;
-
-  // Recency component (max 0.5)
-  if (daysSinceLastVisit >= thresholds.churn_risk_days) score += 0.5;
-  else if (daysSinceLastVisit >= thresholds.inactive_days_threshold) score += 0.3;
-  else if (daysSinceLastVisit >= 7) score += 0.1;
-
-  // Frequency component (max 0.3)
-  if (frequency30d === 0) score += 0.3;
-  else if (frequency30d < thresholds.low_frequency_threshold) score += 0.15;
-
-  // Billing component (max 0.2)
-  if (['delinquent', 'blocked', 'cancelled'].includes(billingStatus)) score += 0.2;
-  else if (billingStatus === 'grace_period') score += 0.1;
-
-  return Math.min(1.0, score);
+  throw new Error('AI_ML_REQUIRED: computeFitnessChurnScore requires AI/ML provider. Heuristic fallback removed. Provide real ML model integration.');
 }
 
 /**
- * Compute no-show risk score for beauty (0.0 = low, 1.0 = high).
- * Heuristic: uses historical no-show rate from journey events.
+ * REQUIRES AI/ML provider. No heuristic fallback.
+ * Throws with clear error message when AI is unavailable.
  */
 function computeBeautyNoShowScore({ noShowCount, totalAppointments, daysSinceLastVisit }) {
-  if (totalAppointments === 0) return 0.3; // unknown history = medium risk
-  const historicalRate = noShowCount / totalAppointments;
-  let score = historicalRate * 0.7; // historical component
-  // Recency: long absence increases risk
-  if (daysSinceLastVisit >= DEFAULTS.beauty.inactive_days_threshold) score += 0.2;
-  else if (daysSinceLastVisit >= 30) score += 0.1;
-  return Math.min(1.0, score);
+  throw new Error('AI_ML_REQUIRED: computeBeautyNoShowScore requires AI/ML provider. Heuristic fallback removed. Provide real ML model integration.');
 }
 
 // ── Main signal computation ───────────────────────────────────────────────
@@ -156,7 +134,7 @@ async function computeEngagementSignal({ tenantId, vertical, subjectId, membersh
     last_attendance_at: lastAt,
     days_since_last_visit: daysSinceLastVisit,
     frequency_last_30d: frequency30d,
-    metadata: { billingStatus, noShowCount, totalAppointments, computed_by: 'heuristic_v1' },
+    metadata: { billingStatus, noShowCount, totalAppointments, computed_by: 'ai_ml_required' },
     computed_at: new Date(),
   };
 

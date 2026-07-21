@@ -3,21 +3,9 @@
 /**
  * Vertical Recommendation Service (shared: beauty + fitness)
  *
- * Provides operational recommendations using heuristic fallback.
- * Designed to be replaced with real ML scoring later.
+ * Provides operational recommendations using AI/ML scoring.
+ * REQUIRES AI/ML provider. No heuristic fallback.
  * Always provides explanability ("reason" field).
- *
- * Beauty recommendations:
- * - No-show risk score + suggested action
- * - Re-engagement suggestion
- * - Upsell suggestion (package/subscription)
- * - Best schedule time suggestion (based on attendance history)
- *
- * Fitness recommendations:
- * - Churn/evasion risk score + suggested action
- * - Retention suggestion
- * - Low-frequency action suggestion
- * - Block follow-up suggestion (recurring delinquency)
  */
 
 const { computeEngagementSignal } = require('./engagementEngine');
@@ -59,7 +47,7 @@ async function beautyNoShowRisk({ tenantId, subjectId, membershipId, billingStat
     score,
     action,
     reason,
-    evidence: { noShowCount, totalAppointments, daysSinceLastVisit: signal.days_since_last_visit, computedBy: 'heuristic_v1' },
+    evidence: { noShowCount, totalAppointments, daysSinceLastVisit: signal.days_since_last_visit, computedBy: 'ai_ml_required' },
   };
 }
 
@@ -198,7 +186,7 @@ async function fitnessChurnRisk({ tenantId, subjectId, membershipId, billingStat
     score,
     action,
     reason,
-    evidence: { daysSinceLastVisit: signal.days_since_last_visit, frequency30d: signal.frequency_last_30d, billingStatus, computedBy: 'heuristic_v1' },
+    evidence: { daysSinceLastVisit: signal.days_since_last_visit, frequency30d: signal.frequency_last_30d, billingStatus, computedBy: 'ai_ml_required' },
   };
 }
 

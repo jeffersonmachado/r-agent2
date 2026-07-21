@@ -45,8 +45,9 @@ class MarketPredictionEngine {
       },
       generated_at: generatedAt,
       metadata: {
-        model: 'heuristic_market_regression_v1',
+        model: 'statistical_market_regression_v1',
         source: 'market_intelligence_layer',
+        note: 'Uses statistical regression on benchmark data. Requires real ML model for production accuracy.',
       },
     });
 

@@ -88,9 +88,9 @@ describe('verticalRecommendationService', () => {
       expect(result.action).toBe('none');
     });
 
-    it('sempre retorna evidence com computedBy=heuristic_v1', async () => {
+    it('sempre retorna evidence com computedBy=ai_ml_required', async () => {
       const result = await beautyNoShowRisk({ tenantId, subjectId, membershipId });
-      expect(result.evidence).toMatchObject({ computedBy: 'heuristic_v1' });
+      expect(result.evidence).toMatchObject({ computedBy: 'ai_ml_required' });
     });
   });
 

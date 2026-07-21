@@ -6,18 +6,12 @@
 'use strict';
 
 const logger = require('../utils/logger');
-const config = require('../utils/config');
 const { getTicket, getTicketMessages, updateTicket } = require('./queueService');
 const { generateAiResponse } = require('./aiProviderService');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
   try { return String(value); } catch (_) { return fallback; }
-}
-
-function safeErrorMessage(err, fallback = '') {
-  if (err == null) return fallback;
-  try { return String(err.message); } catch (_) { return safeToString(err, fallback); }
 }
 
 function buildPrompt(ticket, messages) {
@@ -53,39 +47,17 @@ ${lastMsgs}
 Retorne APENAS o texto do resumo (sem markdown de título).`;
 }
 
-function heuristicSummary(ticket, messages) {
-  const vars = ticket?.context?.variables && typeof ticket.context.variables === 'object'
-    ? ticket.context.variables
-    : {};
-  const lastUser = ticket?.lastUserMessage || (messages || []).slice().reverse().find(m => m.sender === 'user')?.text || '';
-  const keys = Object.keys(vars).slice(0, 8);
-  const parts = [];
-  if (lastUser) parts.push(`- Última mensagem do cliente: ${lastUser}`);
-  if ((ticket.tags || []).length) parts.push(`- Tags: ${(ticket.tags || []).join(', ')}`);
-  if (keys.length) parts.push(`- Variáveis: ${keys.map(k => `${k}=${JSON.stringify(vars[k])}`).join(', ')}`);
-  parts.push(`- Status: ${ticket.status} • Fila: ${ticket.queue}`);
-  return parts.join('\n');
-}
-
 async function generateAiSummary({ ticketId, tenantId }) {
   const ticket = getTicket(ticketId);
   if (!ticket) return { success: false, error: 'ticket_not_found' };
   const messages = getTicketMessages(ticketId) || [];
 
-  let text = '';
-  try {
-    const prompt = buildPrompt(ticket, messages);
-    const result = await generateAiResponse(prompt, tenantId, { purpose: 'ticket_ai_summary', ticketId });
-    text = result?.text || '';
-  } catch (err) {
-    const errorMessage = safeErrorMessage(err, 'Erro ao gerar resumo por IA');
-    const allowHeuristicFallback = config.get('fallbacks.ticketInsightHeuristic', false) === true;
-    if (!allowHeuristicFallback) {
-      logger.warn('[TicketInsight] Falha ao gerar resumo por IA (sem fallback heurístico)', { error: errorMessage });
-      return { success: false, error: 'ai_summary_failed', message: errorMessage };
-    }
-    logger.warn('[TicketInsight] Falha ao gerar resumo por IA (fallback heurístico)', { error: errorMessage });
-    text = heuristicSummary(ticket, messages);
+  const prompt = buildPrompt(ticket, messages);
+  const result = await generateAiResponse(prompt, tenantId, { purpose: 'ticket_ai_summary', ticketId });
+  const text = result?.text || '';
+  if (!text) {
+    logger.error('[TicketInsight] IA retornou resumo vazio. Heuristic fallback removido.', { ticketId });
+    return { success: false, error: 'ai_summary_empty', message: 'IA retornou resposta vazia. Heuristic fallback removido — o sistema requer IA funcional.' };
   }
 
   const summary = {
