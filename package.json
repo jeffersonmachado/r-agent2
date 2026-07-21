@@ -123,6 +123,7 @@
     "qa:waves:diagrams": "node scripts/qa-waves/generate-mermaid-diagrams.js",
     "qa:waves:runbooks": "node scripts/qa-waves/generate-journey-runbooks.js",
     "qa:waves:batch": "node scripts/qa-waves/batch-generate-scenarios.js",
+    "qa:waves:contracts": "node scripts/qa-waves/generate-business-contracts.js",
     "validate:business-needs": "node scripts/governance/validate-business-needs.js",
     "mesh:diagnose": "node scripts/mesh/mesh-diagnose.js",
     "dashboard:executive": "node scripts/reports/executive-dashboard.js",

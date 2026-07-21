@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "generatedAt": "2026-05-12T01:33:53.576Z",
+  "version": 2,
+  "generatedAt": "2026-07-21T11:30:09.336Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -42,6 +42,172 @@
     "payment_charge_flow": {
       "requiredCapabilities": [
         "billing_validation"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.67
+    },
+    "beauty_booking": {
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.93
+    },
+    "beauty_new_customer": {
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "clinic_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "agendamento": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "notifications",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "cancelamento": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "checkin": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "checkout": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.91
+    },
+    "fitness_active_customer": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "fitness_new_customer": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.97
+    },
+    "leads": {
+      "requiredCapabilities": [
+        "lead_capture",
+        "customer_identification",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.69
+    },
+    "onboarding": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "crm_updates",
+        "notifications",
+        "onboarding"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "renovacao": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.88
+    },
+    "food_customer_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.66
+    },
+    "food_order_flow": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.72
+    },
+    "market_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications",
+        "crm_updates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "services_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
       ],
       "missingCapabilities": [],
       "confidence": 0.85
