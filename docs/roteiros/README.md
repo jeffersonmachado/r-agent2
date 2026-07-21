@@ -1,6 +1,6 @@
 # QA Waves — Roteiros por Jornada
 
-Gerado: 2026-07-21T02:36:27.483Z
+Gerado: 2026-07-21T09:12:35.349Z
 Total de jornadas: 17
 
 | Vertical | Jornada | Cenários | Aprovados |

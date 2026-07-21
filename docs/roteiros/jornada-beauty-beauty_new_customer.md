@@ -1,6 +1,6 @@
 # Beleza & Estética — Beauty New Customer
 
-> Gerado: 2026-07-21T02:36:27.478Z | Vertical: beauty | Jornada: beauty_new_customer
+> Gerado: 2026-07-21T09:12:35.344Z | Vertical: beauty | Jornada: beauty_new_customer
 
 ## 1. Objetivo
 

@@ -1,6 +1,6 @@
 # Fitness — Checkout
 
-> Gerado: 2026-07-21T02:36:27.480Z | Vertical: fitness | Jornada: checkout
+> Gerado: 2026-07-21T09:12:35.346Z | Vertical: fitness | Jornada: checkout
 
 ## 1. Objetivo
 

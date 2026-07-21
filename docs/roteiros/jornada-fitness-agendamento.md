@@ -1,6 +1,6 @@
 # Fitness — Agendamento
 
-> Gerado: 2026-07-21T02:36:27.479Z | Vertical: fitness | Jornada: agendamento
+> Gerado: 2026-07-21T09:12:35.345Z | Vertical: fitness | Jornada: agendamento
 
 ## 1. Objetivo
 

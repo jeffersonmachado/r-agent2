@@ -1,6 +1,6 @@
 # Serviços — Services Default Journey
 
-> Gerado: 2026-07-21T02:36:27.483Z | Vertical: services | Jornada: services_default_journey
+> Gerado: 2026-07-21T09:12:35.348Z | Vertical: services | Jornada: services_default_journey
 
 ## 1. Objetivo
 

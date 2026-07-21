@@ -1,6 +1,6 @@
 # Fitness — Fitness Customer Checkin
 
-> Gerado: 2026-07-21T02:36:27.480Z | Vertical: fitness | Jornada: fitness_customer_checkin
+> Gerado: 2026-07-21T09:12:35.346Z | Vertical: fitness | Jornada: fitness_customer_checkin
 
 ## 1. Objetivo
 

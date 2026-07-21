@@ -1,6 +1,6 @@
 # Fitness — Fitness New Customer
 
-> Gerado: 2026-07-21T02:36:27.481Z | Vertical: fitness | Jornada: fitness_new_customer
+> Gerado: 2026-07-21T09:12:35.347Z | Vertical: fitness | Jornada: fitness_new_customer
 
 ## 1. Objetivo
 

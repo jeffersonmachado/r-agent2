@@ -1,6 +1,6 @@
 # Fitness — Cancelamento
 
-> Gerado: 2026-07-21T02:36:27.480Z | Vertical: fitness | Jornada: cancelamento
+> Gerado: 2026-07-21T09:12:35.345Z | Vertical: fitness | Jornada: cancelamento
 
 ## 1. Objetivo
 

@@ -1,6 +1,6 @@
 # Clínica & Saúde — Clinic Default Journey
 
-> Gerado: 2026-07-21T02:36:27.479Z | Vertical: clinic | Jornada: clinic_default_journey
+> Gerado: 2026-07-21T09:12:35.344Z | Vertical: clinic | Jornada: clinic_default_journey
 
 ## 1. Objetivo
 
