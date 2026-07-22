@@ -80,6 +80,9 @@ const EVENT_TYPES_V1 = new Set([
 
   // CRM - Operational signals
   'CrmOperationalEvent',
+
+  // Learning routine (RAP Learn)
+  'LearningRoutineCompleted',
 ]);
 
 function makeId(prefix) {

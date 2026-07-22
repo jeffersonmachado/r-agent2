@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T01:33:53.574Z",
+  "generatedAt": "2026-07-21T09:08:58.834Z",
   "dependencies": {
     "access_decision": {
       "dependsOn": []
@@ -39,7 +39,9 @@
       ]
     },
     "omnichannel_whatsapp": {
-      "dependsOn": []
+      "dependsOn": [
+        "customer_identification"
+      ]
     },
     "support_ticket_flow": {
       "dependsOn": []

@@ -31,15 +31,15 @@
       ],
       "platformScenarioIds": [],
       "criticality": "medium",
-      "status": "draft_ai",
+      "status": "rejected",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:38:34.092216Z",
       "approvedAt": null,
-      "rejectedAt": null,
-      "rejectionReason": null,
-      "createdAt": "2026-07-21T02:34:02.601Z",
-      "updatedAt": "2026-07-21T02:34:02.601Z",
+      "rejectedAt": "2026-07-21T09:38:34.092216Z",
+      "rejectionReason": "Fallback estrutural sem conteúdo real (IA indisponível na geração); substituído por draft manual fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
+      "createdAt": "2026-07-21T09:35:10.027Z",
+      "updatedAt": "2026-07-21T09:38:34.092216Z",
       "aiModel": "intelligence_engine_v1"
     },
     {
@@ -125,15 +125,15 @@
       ],
       "platformScenarioIds": [],
       "criticality": "critical",
-      "status": "draft_ai",
+      "status": "approved",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
-      "approvedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.427Z",
+      "approvedAt": "2026-07-21T09:39:17.427Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "createdAt": "2026-07-21T02:31:00.736Z",
-      "updatedAt": "2026-07-21T02:31:00.736Z",
+      "updatedAt": "2026-07-21T09:39:17.427Z",
       "aiModel": "intelligence_engine_v1"
     },
     {
@@ -219,15 +219,15 @@
       ],
       "platformScenarioIds": [],
       "criticality": "critical",
-      "status": "draft_ai",
+      "status": "approved",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
-      "approvedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.475Z",
+      "approvedAt": "2026-07-21T09:39:17.475Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "createdAt": "2026-07-21T02:33:07.426Z",
-      "updatedAt": "2026-07-21T02:33:07.426Z",
+      "updatedAt": "2026-07-21T09:39:17.475Z",
       "aiModel": "intelligence_engine_v1"
     },
     {
@@ -304,15 +304,15 @@
       ],
       "platformScenarioIds": [],
       "criticality": "critical",
-      "status": "draft_ai",
+      "status": "approved",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
-      "approvedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.526Z",
+      "approvedAt": "2026-07-21T09:39:17.526Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "createdAt": "2026-07-21T02:34:30.243Z",
-      "updatedAt": "2026-07-21T02:34:30.243Z",
+      "updatedAt": "2026-07-21T09:39:17.526Z",
       "aiModel": "intelligence_engine_v1"
     },
     {
@@ -406,15 +406,15 @@
       ],
       "platformScenarioIds": [],
       "criticality": "critical",
-      "status": "draft_ai",
+      "status": "approved",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
-      "approvedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.575Z",
+      "approvedAt": "2026-07-21T09:39:17.575Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "createdAt": "2026-07-21T02:34:59.527Z",
-      "updatedAt": "2026-07-21T02:34:59.527Z",
+      "updatedAt": "2026-07-21T09:39:17.575Z",
       "aiModel": "intelligence_engine_v1"
     },
     {
@@ -496,17 +496,700 @@
       ],
       "platformScenarioIds": [],
       "criticality": "critical",
-      "status": "draft_ai",
+      "status": "approved",
       "source": "ai_generated",
-      "reviewedBy": null,
-      "reviewedAt": null,
-      "approvedAt": null,
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.621Z",
+      "approvedAt": "2026-07-21T09:39:17.621Z",
       "rejectedAt": null,
       "rejectionReason": null,
       "createdAt": "2026-07-21T02:35:27.684Z",
-      "updatedAt": "2026-07-21T02:35:27.684Z",
+      "updatedAt": "2026-07-21T09:39:17.621Z",
       "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
+      "waveId": "fitness-checkout",
+      "title": "Checkout end-to-end no WhatsApp: compra de plano mensal + matrícula, pagamento via Pix, aprovação e liberação imediata de acesso",
+      "vertical": "fitness",
+      "journey": "checkout",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Iniciar conversa no WhatsApp a partir do link/QR de checkout do plano mensal, preservando parâmetro de campanha (UTM) e identificador do plano."
+        },
+        {
+          "type": "send_message",
+          "expected": "Usuário solicita fechar a compra do plano mensal com matrícula e pergunta o total antes de pagar."
+        },
+        {
+          "type": "validate_intent",
+          "expected": "checkout_initiate"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente apresenta resumo do pedido (plano mensal + taxa de matrícula), valor total, periodicidade, política de cancelamento básica e pergunta dados mínimos para finalizar."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Fornecer nome completo, CPF válido, e-mail e aceitar termos/contrato do plano; confirmar unidade (se aplicável) e data de início imediata."
+        },
+        {
+          "type": "validate_context",
+          "expected": "Contexto mantém itens do carrinho (plano mensal + matrícula), valor total e canal WhatsApp; CPF e e-mail ficam associados ao mesmo lead/cliente durante o fluxo."
+        },
+        {
+          "type": "create_payment",
+          "expected": "Gerar cobrança Pix com valor exato do total, com QR Code/copia-e-cola, vencimento e instrução de pagamento; o identificador da transação deve estar vinculado ao pedido."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente envia QR Code Pix (ou copia-e-cola), valor, prazo de vencimento e orienta que a confirmação pode levar alguns segundos; oferece opção 'Já paguei' e 'Cancelar compra'."
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Aguardar evento assíncrono de pagamento aprovado para a transação Pix criada (webhook/retorno do provedor)."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Pedido muda para status 'paid/approved'; registrar transação Pix, conciliar valor, gerar assinatura do plano mensal e lançar cobrança recorrente futura conforme contrato."
+        },
+        {
+          "type": "validate_access_release",
+          "expected": "Acesso liberado imediatamente após aprovação: status do membro ativo, permissão para entrada/uso registrada no backend e/ou link de app/credencial disponibilizado."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente confirma pagamento aprovado, ativa o plano, informa data de início, instruções de primeiro acesso (app/portal), e fornece comprovante/recibo ou referência da transação."
+        },
+        {
+          "type": "validate_flow_transition",
+          "expected": "Encaminhar para pós-compra: oferecer agendar avaliação inicial ou tirar dúvidas; não solicitar novamente dados já coletados."
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Da confirmação do pagamento (evento) até a mensagem de aprovação e liberação de acesso no WhatsApp: <= 60 segundos."
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "checkout_payment_pix_approved_access_granted"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.672Z",
+      "approvedAt": "2026-07-21T09:39:17.672Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:04:49.639Z",
+      "updatedAt": "2026-07-21T09:39:17.672Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
+      "waveId": "fitness-checkin",
+      "title": "Check-in completo via WhatsApp com QR dinâmico, validação de biometria na catraca e liberação de acesso (alto risco)",
+      "vertical": "fitness",
+      "journey": "checkin",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "send_message",
+          "expected": "Cliente inicia no WhatsApp solicitando check-in imediato para treinar agora, informando que está na porta da academia."
+        },
+        {
+          "type": "validate_intent",
+          "expected": "Sistema identifica intenção de realizar check-in para entrada na unidade via WhatsApp."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Sistema solicita e o cliente confirma dados mínimos para localizar a matrícula (ex.: CPF e unidade)."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Sistema valida no backend: matrícula ativa, plano vigente, ausência de bloqueio financeiro/administrativo, e unidade autorizada para acesso."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Sistema informa status da elegibilidade e orienta que será gerado um QR de check-in válido por tempo curto, com instruções de uso na catraca."
+        },
+        {
+          "type": "trigger_channel_event",
+          "expected": "Sistema envia no WhatsApp um QR dinâmico (ou link seguro) associado ao check-in, com timestamp e janela de validade, e aviso de uso único."
+        },
+        {
+          "type": "validate_context",
+          "expected": "Sistema mantém contexto de sessão (membro, unidade, intenção de check-in) e registra o token/QR emitido para evitar reutilização."
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Sistema aguarda evento de leitura do QR na catraca/controle de acesso dentro do SLA definido."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Ao receber evento de leitura, sistema valida: token válido e não expirado, não reutilizado, correspondência com membro/unidade, e exigência de biometria (se aplicável)."
+        },
+        {
+          "type": "validate_access_release",
+          "expected": "Sistema aciona liberação da catraca quando a validação for bem-sucedida; se biometria for exigida, só libera após confirmação biométrica aprovada."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Sistema confirma no WhatsApp o check-in concluído com sucesso, registrando data/hora e unidade, e orienta o cliente a entrar."
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Tempo total entre emissão do QR e confirmação de check-in deve respeitar o SLA do canal (ex.: confirmação em até 60s após o evento de leitura)."
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente tenta reutilizar o mesmo QR imediatamente após entrar, informando que 'não funcionou' e pede para tentar de novo."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Sistema detecta tentativa de reutilização (token já consumido) e bloqueia novo uso do mesmo QR, registrando tentativa suspeita."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Sistema responde no WhatsApp que o QR é de uso único e já foi utilizado; oferece opção de gerar novo QR apenas se o cliente ainda não tiver conseguido entrar (com checagem de status de acesso) ou direciona para suporte da unidade."
+        },
+        {
+          "type": "validate_fallback",
+          "expected": "Se houver falha na integração com controle de acesso, sistema orienta procedimento seguro: apresentar documento na recepção, sem liberar acesso por mensagem, e registra incidente."
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "fitness_checkin"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.739Z",
+      "approvedAt": "2026-07-21T09:39:17.739Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:06:01.990Z",
+      "updatedAt": "2026-07-21T09:39:17.739Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
+      "waveId": "fitness-renovacao",
+      "title": "Renovação E2E via WhatsApp de plano anual com cartão expirado, oferta de atualização de pagamento e confirmação de renovação sem duplicidade de cobrança",
+      "vertical": "fitness",
+      "journey": "renovacao",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Iniciar conversa no WhatsApp a partir do número do cliente já associado à conta, garantindo identificação automática (sem solicitar login).",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente informa que recebeu aviso de vencimento e quer renovar o plano anual.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_intent",
+          "expected": "Detectar intenção de renovação de plano (renovacao) e manter o canal WhatsApp como contexto.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "provide_data",
+          "expected": "Disponibilizar dados de contexto: plano atual = 'Anual', status = 'expirando em 3 dias', método de pagamento atual = 'cartão', cartão = 'expirado', cliente elegível a renovação automática = true, última tentativa de cobrança = 'falha por validade expirada'."
+        },
+        {
+          "type": "validate_context",
+          "expected": "O assistente confirma o plano atual e a data de vencimento, reconhece falha de cobrança por cartão expirado e solicita atualização do meio de pagamento para concluir a renovação, sem expor dados sensíveis (não pedir número completo do cartão).",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente confirma que deseja renovar agora e pede para pagar via link no WhatsApp.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "create_payment",
+          "expected": "Gerar link de pagamento seguro para renovação do plano anual (valor correto e moeda correta), com validade mínima de 15 minutos e identificação do pedido para evitar cobrança duplicada.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_response",
+          "expected": "O assistente envia o link de pagamento no WhatsApp com instruções claras (prazo de validade, confirmação após pagamento) e informa que a renovação será ativada automaticamente após a confirmação, sem criar nova assinatura paralela.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Aguardar evento de confirmação de pagamento (payment_succeeded) referente ao link gerado."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Após payment_succeeded: assinatura/contrato é renovado (nova data de término = término atual + 12 meses), status = ativo, e não existe segunda cobrança ou segunda assinatura criada para o mesmo período (idempotência garantida)."
+        },
+        {
+          "type": "validate_flow_transition",
+          "expected": "Transicionar do fluxo de pagamento para o fluxo de confirmação de renovação, mantendo o contexto do cliente e do pedido de pagamento."
+        },
+        {
+          "type": "validate_response",
+          "expected": "O assistente confirma no WhatsApp que a renovação foi concluída, informa nova data de validade do plano e disponibiliza comprovante/recibo ou referência do pagamento, com orientação de onde consultar no app/portal.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Tempo total até enviar o link de pagamento: <= 60s após solicitação do cliente; confirmação enviada <= 30s após evento payment_succeeded."
+        },
+        {
+          "type": "validate_fallback",
+          "expected": "Se o pagamento não for confirmado em até 15 minutos, o assistente deve oferecer reenvio do link ou alternativa (PIX/boleto, se disponível) sem reiniciar a jornada e sem perder contexto.",
+          "adapter": "whatsapp"
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "renovacao"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.777Z",
+      "approvedAt": "2026-07-21T09:39:17.777Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:06:35.992Z",
+      "updatedAt": "2026-07-21T09:39:17.777Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
+      "waveId": "fitness-cancelamento",
+      "title": "WhatsApp: cancelamento E2E de plano anual com cobrança recente, confirmação de identidade, cálculo de reembolso e bloqueio de acesso",
+      "vertical": "fitness",
+      "journey": "cancelamento",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Iniciar conversa no WhatsApp com identificação do cliente e contexto de conta ativa (plano anual) e última cobrança recente disponível para consulta."
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente solicita cancelamento do plano via WhatsApp e menciona que foi cobrado recentemente e quer reembolso proporcional."
+        },
+        {
+          "type": "validate_intent",
+          "expected": "cancelamento_plano"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente confirma que pode ajudar a cancelar, informa que precisará validar titularidade e que explicará regras de reembolso antes de concluir."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Cliente fornece dados de confirmação solicitados (ex.: CPF parcial + data de nascimento) e aceita receber código de verificação."
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Recebimento do evento de verificação/OTP validado com sucesso para o titular da conta."
+        },
+        {
+          "type": "validate_context",
+          "expected": "Assistente identifica corretamente: plano anual ativo, data de renovação, última cobrança dentro de janela de elegibilidade para reembolso e acesso ativo a treinos/app."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente apresenta opções claras: (1) cancelar ao fim do período vigente sem reembolso; (2) cancelar imediato com política de reembolso aplicável; solicita confirmação explícita da opção desejada."
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente escolhe cancelamento imediato com reembolso proporcional e confirma que deseja prosseguir."
+        },
+        {
+          "type": "validate_flow_transition",
+          "expected": "Fluxo transita para etapa de confirmação final de cancelamento e consentimento para término de acesso e processamento de reembolso."
+        },
+        {
+          "type": "send_message",
+          "expected": "Cliente confirma novamente (sim) o cancelamento imediato e aceita os termos informados (perda de acesso após efetivação + prazo de estorno)."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Cancelamento é registrado no backend com status 'canceled' e motivo 'solicitado pelo cliente'; pedido de reembolso/estorno é criado com valor proporcional e referência à transação da última cobrança."
+        },
+        {
+          "type": "validate_access_release",
+          "expected": "Acesso premium ao app/plataforma é removido após efetivação do cancelamento (ou marcado para remoção imediata), mantendo apenas acesso básico conforme política."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Assistente confirma cancelamento concluído, informa data/hora de efetivação, valor estimado do reembolso (ou critérios de cálculo), prazo e meio do estorno (mesmo método de pagamento), e fornece protocolo/ID do cancelamento."
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Assistente informa SLA de reembolso compatível com alto risco (ex.: cartão em até X dias úteis; PIX em até Y), orienta o que fazer se não ocorrer no prazo e disponibiliza canal de acompanhamento pelo WhatsApp."
+        },
+        {
+          "type": "validate_fallback",
+          "expected": "Se o reembolso não puder ser calculado automaticamente, assistente abre ticket com prioridade alta, coleta dados mínimos e confirma protocolo sem bloquear o cancelamento."
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "cancelamento_plano_com_reembolso"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.824Z",
+      "approvedAt": "2026-07-21T09:39:17.824Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:07:11.624Z",
+      "updatedAt": "2026-07-21T09:39:17.824Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
+      "waveId": "fitness-agendamento",
+      "title": "WhatsApp: agendar avaliação física com personal, validar disponibilidade, pagamento antecipado e confirmação com política de cancelamento",
+      "vertical": "fitness",
+      "journey": "agendamento",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Iniciar atendimento via WhatsApp com sessão nova e sem contexto prévio."
+        },
+        {
+          "type": "send_message",
+          "expected": "Usuário solicita agendamento de avaliação física com personal: \"Quero marcar uma avaliação física com personal\"."
+        },
+        {
+          "type": "validate_intent",
+          "expected": "Identificar intenção principal como agendamento de serviço (avaliação física) no canal WhatsApp."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Coletar unidade desejada e restrições: usuário informa \"Unidade Paulista\" e preferência \"depois das 18h\"."
+        },
+        {
+          "type": "check_availability",
+          "expected": "Consultar agenda para avaliação física na Unidade Paulista após 18h para os próximos 7 dias e retornar pelo menos 3 opções de horários com data/hora e fuso local."
+        },
+        {
+          "type": "select_slot",
+          "expected": "Usuário seleciona um horário específico dentre os retornados (ex.: \"Quarta 19:00\"); sistema confirma o slot selecionado antes de prosseguir."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Coletar dados mínimos obrigatórios para reserva: nome completo, CPF (ou documento), e-mail e data de nascimento; usuário fornece os dados."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Sistema valida formato dos dados (CPF com dígitos, e-mail válido, data de nascimento) e solicita correção em caso de inconsistência sem perder o slot selecionado por pelo menos 5 minutos."
+        },
+        {
+          "type": "create_payment",
+          "expected": "Informar que a avaliação exige pagamento antecipado (valor, moeda, taxas se houver) e oferecer método de pagamento compatível com WhatsApp (ex.: link de pagamento)."
+        },
+        {
+          "type": "send_message",
+          "expected": "Usuário confirma que quer pagar agora e solicita o link: \"Pode mandar o link\"."
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Gerar e enviar o link de pagamento em até 30 segundos após a confirmação, mantendo o contexto do slot escolhido."
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Aguardar evento de pagamento aprovado por até 10 minutos, mantendo a conversa ativa e informando status quando solicitado."
+        },
+        {
+          "type": "trigger_channel_event",
+          "expected": "Receber evento externo: pagamento aprovado para a cobrança gerada."
+        },
+        {
+          "type": "create_booking",
+          "expected": "Criar a reserva definitiva para o slot selecionado vinculando o pagamento aprovado e gerando código/localizador do agendamento."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Confirmar no backend: status da reserva = confirmada, serviço = avaliação física, unidade = Paulista, horário = escolhido, pagamento = aprovado, e dados do cliente associados corretamente."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Enviar confirmação no WhatsApp com: data/hora, unidade/endereço, instruções de chegada (ex.: antecedência), itens necessários, política de cancelamento/remarcação e código do agendamento."
+        },
+        {
+          "type": "validate_context",
+          "expected": "Ao usuário perguntar \"Qual é o código?\", o sistema retorna o mesmo localizador gerado sem reiniciar o fluxo."
+        },
+        {
+          "type": "validate_flow_transition",
+          "expected": "Encerrar o fluxo de agendamento oferecendo próximos passos: adicionar ao calendário, remarcar/cancelar e tirar dúvidas, sem solicitar novamente dados já coletados."
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "agendamento_avaliacao_fisica"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.872Z",
+      "approvedAt": "2026-07-21T09:39:17.872Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:20:04.327Z",
+      "updatedAt": "2026-07-21T09:39:17.872Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
+      "waveId": "fitness-checkout",
+      "title": "WhatsApp checkout completo: compra de plano mensal com cupom, PIX, aprovação e liberação imediata de acesso no app",
+      "vertical": "fitness",
+      "journey": "checkout",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Iniciar conversa no WhatsApp a partir do link oficial de checkout do plano (deep link com identificação de campanha) e manter o contexto de compra ativo.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "send_message",
+          "expected": "Usuário solicita assinatura do plano mensal com objetivo de iniciar hoje e pergunta sobre formas de pagamento disponíveis (incluindo PIX).",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_intent",
+          "expected": "checkout_start",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Bot apresenta opções de planos (mensal/anual) com preços, benefícios, e pergunta qual deseja; informa formas de pagamento (PIX/cartão) e condições principais (renovação/cancelamento).",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "provide_data",
+          "expected": "Selecionar plano mensal e informar que possui cupom de desconto 'TREINO10'.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Bot valida o cupom, confirma desconto aplicado, apresenta resumo do pedido (plano, valor original, desconto, valor final) e solicita confirmação para prosseguir ao pagamento.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "send_message",
+          "expected": "Confirmar o resumo e escolher pagamento via PIX.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_intent",
+          "expected": "checkout_select_payment_pix",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "create_payment",
+          "expected": "Sistema gera cobrança PIX (QR Code e código copia-e-cola) vinculada ao pedido, com prazo de expiração explícito e instruções de pagamento no WhatsApp.",
+          "adapter": "payments"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Bot envia QR Code/PIX copia-e-cola, valor final, validade/expiração, e orienta que a confirmação pode levar alguns segundos; oferece opção de 'Já paguei' e suporte caso falhe.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "wait_for_event",
+          "expected": "Receber evento de confirmação de pagamento PIX aprovado para o pedido dentro do SLA esperado para pagamentos (ex.: até 2 minutos).",
+          "adapter": "webhook_payments"
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Pedido deve transitar para status 'paid/approved', gerar assinatura ativa (plano mensal) associada ao usuário e registrar transação com cupom aplicado.",
+          "adapter": "billing"
+        },
+        {
+          "type": "validate_access_release",
+          "expected": "Acesso premium é liberado imediatamente (flag de entitlement ativa) e credenciais/conta ficam aptas a login no app; se usuário já existe, manter histórico e não duplicar conta.",
+          "adapter": "entitlements"
+        },
+        {
+          "type": "validate_response",
+          "expected": "Bot confirma pagamento aprovado, informa data de início e próxima renovação, envia link de acesso ao app/área do aluno e instruções para começar o treino hoje; oferece recibo/nota se aplicável.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_context",
+          "expected": "Contexto final deve refletir: plano mensal selecionado, cupom TREINO10 aplicado, pagamento via PIX aprovado, assinatura ativa e acesso liberado; sem solicitar dados já fornecidos.",
+          "adapter": "whatsapp"
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Tempo total entre geração do PIX e confirmação ao usuário no WhatsApp dentro do SLA definido para risco alto (ex.: notificação <= 120s após evento de aprovação).",
+          "adapter": "observability"
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "checkout_complete_success"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "critical",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.925Z",
+      "approvedAt": "2026-07-21T09:39:17.925Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:20:37.121Z",
+      "updatedAt": "2026-07-21T09:39:17.925Z",
+      "aiModel": "intelligence_engine_v1"
+    },
+    {
+      "id": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
+      "waveId": "fitness-onboarding",
+      "title": "[Manual] Onboarding de novo aluno via WhatsApp — primeiro acesso completo",
+      "vertical": "fitness",
+      "journey": "onboarding",
+      "stage": "full",
+      "gap": "missing_e2e_scenario",
+      "semanticSteps": [
+        {
+          "type": "trigger_channel_event",
+          "expected": "Novo aluno inicia conversa pelo WhatsApp após matrícula e recebe saudação de boas-vindas com opções de onboarding."
+        },
+        {
+          "type": "send_message",
+          "expected": "Aluno informa que acabou de se matricular e quer entender como começar (primeiro acesso)."
+        },
+        {
+          "type": "validate_intent",
+          "expected": "Assistente identifica intenção de onboarding de novo aluno e inicia fluxo de boas-vindas."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Aluno informa nome completo e CPF para localizar a matrícula."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Sistema localiza matrícula ativa no CRM e confirma plano contratado."
+        },
+        {
+          "type": "validate_context",
+          "expected": "Contexto do aluno carregado: plano, unidade, data de início e status da matrícula."
+        },
+        {
+          "type": "send_message",
+          "expected": "Assistente apresenta visão geral: app, horários, modalidades e regras da unidade."
+        },
+        {
+          "type": "provide_data",
+          "expected": "Aluno escolhe modalidade de interesse (ex.: musculação) e informa disponibilidade de horários."
+        },
+        {
+          "type": "check_availability",
+          "expected": "Sistema verifica disponibilidade de avaliação física inicial na unidade escolhida."
+        },
+        {
+          "type": "select_slot",
+          "expected": "Aluno seleciona slot para avaliação física inicial entre as opções apresentadas."
+        },
+        {
+          "type": "create_booking",
+          "expected": "Agendamento da avaliação física inicial é criado e confirmado para o aluno."
+        },
+        {
+          "type": "validate_backend",
+          "expected": "Agendamento persistido na agenda da unidade e vínculo aluno-avaliação registrado."
+        },
+        {
+          "type": "send_message",
+          "expected": "Assistente envia confirmação com data/hora, orientações (roupa, documentos) e link do app."
+        },
+        {
+          "type": "validate_access_release",
+          "expected": "Acesso do aluno à catraca liberado a partir da data de início do plano."
+        },
+        {
+          "type": "validate_response",
+          "expected": "Aluno confirma recebimento das orientações e do agendamento."
+        },
+        {
+          "type": "validate_sla",
+          "expected": "Fluxo completo de onboarding concluído dentro do SLA de atendimento."
+        },
+        {
+          "type": "validate_flow_transition",
+          "expected": "Transição de estado onboarding → aluno_ativo registrada corretamente."
+        },
+        {
+          "type": "validate_fallback",
+          "expected": "Em caso de dúvida fora do fluxo, assistente aplica fallback e oferece handoff humano."
+        }
+      ],
+      "seeds": [],
+      "validators": [
+        {
+          "type": "semantic_intent",
+          "expected": "onboarding_novo_aluno_fitness"
+        }
+      ],
+      "platformScenarioIds": [],
+      "criticality": "high",
+      "status": "approved",
+      "source": "ai_generated",
+      "reviewedBy": "batch-generator",
+      "reviewedAt": "2026-07-21T09:39:17.973Z",
+      "approvedAt": "2026-07-21T09:39:17.973Z",
+      "rejectedAt": null,
+      "rejectionReason": null,
+      "createdAt": "2026-07-21T09:38:34.092216Z",
+      "updatedAt": "2026-07-21T09:39:17.973Z",
+      "aiModel": "manual_batch_generator"
     }
   ],
-  "updatedAt": "2026-07-21T02:35:27.685Z"
+  "updatedAt": "2026-07-21T09:39:18.012Z"
 }

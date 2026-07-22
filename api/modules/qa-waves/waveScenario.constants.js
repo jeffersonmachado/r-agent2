@@ -70,6 +70,7 @@ const ALLOWED_STEP_TYPES = [
   'validate_backend',
   'validate_sla',
   'validate_context',
+  'validate_fallback',
   'validate_flow_transition',
   'validate_access_release',
   'wait_for_event',
@@ -108,7 +109,19 @@ const ALLOWED_ADAPTERS = [
 ];
 
 const ALLOWED_CHANNELS = ['whatsapp', 'chat', 'pbx', 'api'];
-const ALLOWED_SCENARIO_SOURCES = ['ai_inferred', 'manual', 'imported', 'replay_regression'];
+// Fontes permitidas: além das manuais/importadas, incluem as geradas pelos
+// próprios geradores do subsistema (scripts/qa-waves/generate-business-*.js)
+// e o catálogo inicial do store.
+const ALLOWED_SCENARIO_SOURCES = [
+  'ai_inferred',
+  'manual',
+  'imported',
+  'replay_regression',
+  'catalog',
+  'auto-generated-e2e',
+  'auto-generated-cap',
+  'auto-generated-precond',
+];
 
 /**
  * Status do ciclo de vida de cenários:
@@ -151,6 +164,11 @@ const KNOWN_BACKEND_ENTITIES = [
   'schedule',
   'customer',
   'conversation',
+  'campaign',
+  'order',
+  'ticket',
+  'solution',
+  'node',
 ];
 
 module.exports = {

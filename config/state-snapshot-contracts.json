@@ -34,5 +34,19 @@
     "after": [
       "db.booking.count:incremented"
     ]
+  },
+  "leads": {
+    "before": [
+      "crm.leads.count",
+      "crm.activities.count",
+      "events.audit.count"
+    ],
+    "after": [
+      "crm.leads.count",
+      "crm.activities.count",
+      "events.audit.count",
+      "replay.exists:exists",
+      "replay.stepCount:incremented"
+    ]
   }
 }

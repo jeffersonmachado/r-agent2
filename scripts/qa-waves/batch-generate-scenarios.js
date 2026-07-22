@@ -188,10 +188,21 @@ async function validateScenario(scenarioId) {
   return res.body;
 }
 
-async function approveScenario(draftId) {
-  const res = await apiPost('/api/qa-waves/intelligence/approve-scenario', {
-    draftId,
-    approvedBy: 'batch-generator',
+async function approveScenario(scenarioId) {
+  // Cenários já materializados no store são aprovados via save-scenario
+  // (transição de status). O endpoint intelligence/approve-scenario atua
+  // apenas sobre drafts de ai-drafts.json.
+  const store = readJson(path.join(ROOT, 'qa', 'qa-waves', 'scenario-store.json'));
+  const scenario = (store?.scenarios || []).find(s => s.id === scenarioId);
+  if (!scenario) {
+    console.log(`  ❌ Cenário não encontrado no store: ${scenarioId}`);
+    return false;
+  }
+  const res = await apiPost('/api/qa-waves/save-scenario', {
+    ...scenario,
+    status: 'approved',
+    reviewedBy: 'batch-generator',
+    approvedAt: new Date().toISOString(),
   });
   if (res.status >= 400) {
     console.log(`  ❌ Aprovação falhou (${res.status}): ${JSON.stringify(res.body).slice(0, 200)}`);
@@ -245,13 +256,18 @@ async function main() {
   console.log('');
 
   // ─── PHASE 1: Generate skeletons (needs AI/RAG) ──────────────────────
+  const phase2Only = process.argv.includes('--phase2-only');
+  if (phase2Only) {
+    console.log('⏭️  --phase2-only: pulando FASE 1 (geração de esqueletos)');
+    console.log('');
+  }
   console.log('━'.repeat(50));
   console.log('FASE 1: Gerando esqueletos (requer RAG service)');
   console.log('━'.repeat(50));
   console.log('');
 
   let skeletonResults = { generated: 0, failed: 0, skipped: 0 };
-  for (const skel of skeletons) {
+  for (const skel of phase2Only ? [] : skeletons) {
     console.log(`📝 ${skel.id} (${skel.vertical}/${skel.journey})`);
     const result = await generateScenario(skel.vertical, skel.journey);
     if (result === null) {
@@ -293,7 +309,8 @@ async function main() {
     } else {
       phase2Results.rejected++;
       const errors = validation?.errors || ['validation_failed'];
-      console.log(`  ❌ Rejeitado: ${errors.join(', ')}`);
+      const rendered = errors.map((e) => (typeof e === 'object' && e !== null ? (e.message || e.code || JSON.stringify(e)) : String(e)));
+      console.log(`  ❌ Rejeitado: ${rendered.join(', ')}`);
     }
     console.log('');
     await sleep(500);

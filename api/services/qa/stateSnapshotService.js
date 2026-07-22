@@ -157,6 +157,9 @@ function getRequiredSources(journeyId) {
   if (normalized === 'payment_charge_flow') {
     return ['db', 'api', 'billing', 'notifications'];
   }
+  if (normalized === 'leads') {
+    return ['db', 'api', 'crm', 'audit'];
+  }
   return ['db', 'api'];
 }
 
@@ -252,6 +255,55 @@ async function collectSupportTicketSnapshot(ctx, models) {
         auditLogs: auditLogs.ok,
       },
       sourceErrors: [ticket.reason, messageCount.reason, auditEvents.reason, auditLogs.reason, crmEvents.reason].filter(Boolean),
+    },
+  };
+}
+
+async function collectLeadsSnapshot(ctx, models) {
+  const tenantWhere = buildWhere({ tenant_key: ctx.tenantId }, {});
+  const leads = await countModel(models, 'MarketingLead', tenantWhere);
+  const latestLead = await findOneModel(models, 'MarketingLead', tenantWhere, { order: [['updated_at', 'DESC']] });
+  const leadRow = latestLead.item || {};
+  const crmEvents = await countModel(models, 'VerticalJourneyEvent', tenantWhere);
+  const auditEvents = await countModel(models, 'AuditEvent', tenantWhere);
+  const auditLogs = await countModel(models, 'AuditLog', {});
+
+  return {
+    state: null,
+    db: {
+      leads: {
+        count: leads.count,
+        latestId: leadRow.id || null,
+        latestStage: leadRow.stage || null,
+        updatedAt: leadRow.updatedAt || leadRow.updated_at || null,
+      },
+    },
+    api: {
+      crm: { tenantId: ctx.tenantId },
+    },
+    crm: {
+      leads: { count: leads.count, source: 'MarketingLead', available: leads.ok },
+      activities: { count: crmEvents.count, source: 'VerticalJourneyEvent', available: crmEvents.ok },
+    },
+    events: {
+      audit: {
+        count: auditEvents.count + auditLogs.count,
+        auditEventsAvailable: auditEvents.ok,
+        auditLogsAvailable: auditLogs.ok,
+      },
+    },
+    metadata: {
+      sources: {
+        db: leads.ok,
+        api: true,
+        crm: leads.ok && crmEvents.ok,
+        audit: auditEvents.ok || auditLogs.ok,
+        leads: leads.ok,
+        activities: crmEvents.ok,
+        auditEvents: auditEvents.ok,
+        auditLogs: auditLogs.ok,
+      },
+      sourceErrors: [leads.reason, latestLead.reason, crmEvents.reason, auditEvents.reason, auditLogs.reason].filter(Boolean),
     },
   };
 }
@@ -1004,6 +1056,8 @@ async function collectOperationalSnapshot(options = {}) {
     collected = await collectBookingSnapshot(ctx, models);
   } else if (ctx.journeyId === 'payment_charge_flow') {
     collected = await collectPaymentChargeSnapshot(ctx, models);
+  } else if (ctx.journeyId === 'leads') {
+    collected = await collectLeadsSnapshot(ctx, models);
   } else {
     collected = {
       state: null,

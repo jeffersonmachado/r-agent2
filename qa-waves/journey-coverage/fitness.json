@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T02:22:00.743Z",
+  "generatedAt": "2026-07-21T09:55:40.291Z",
   "vertical": "fitness",
   "maturity": "production-like",
   "replaySupported": true,
@@ -13,12 +13,236 @@
         {
           "scenarioId": "fitness-matricula-agendamento",
           "scenario": "Agendamento de Aula Experimental",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
+          "scenario": "E2E no WhatsApp: agendar aula (pilates) com escolha de unidade, checagem de elegibilidade, pagamento e confirmação com política de cancelamento",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "schedulingService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "validate_context",
+            "check_availability",
+            "select_slot",
+            "validate_backend",
+            "create_payment",
+            "wait_for_event",
+            "trigger_channel_event",
+            "create_booking",
+            "validate_backend",
+            "validate_response",
+            "validate_sla",
+            "validate_flow_transition"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Usuário inicia conversa pelo WhatsApp e recebe saudação com opções relacionadas a aulas/agendamento."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita agendamento de aula de pilates para amanhã à noite em uma unidade específica."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Assistente identifica intenção de agendamento de aula (pilates) e solicita dados mínimos faltantes (unidade, data/horário, modalidade, perfil do aluno)."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Usuário informa: unidade (ex.: 'Unidade Paulista'), modalidade (Pilates Solo), preferência de horário (19:00-21:00) e confirma que é aluno ativo."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Assistente mantém contexto (modalidade=Pilates, unidade=Paulista, janela=19:00-21:00, canal=WhatsApp) sem pedir os mesmos dados novamente."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Assistente consulta disponibilidade para a unidade e janela solicitadas e retorna lista de horários com capacidade e data, no fuso correto."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Usuário escolhe um dos horários oferecidos (ex.: '20:00'). Assistente confirma data, horário, unidade e duração antes de prosseguir."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Assistente valida elegibilidade: aluno ativo, sem bloqueio financeiro, sem conflito com outro agendamento no mesmo horário, e identifica que a aula requer pagamento/credit."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Assistente apresenta valor final, formas de pagamento disponíveis no WhatsApp (ex.: link/PIX/cartão via link), prazo para pagamento e inicia cobrança gerando link/identificador."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Assistente aguarda confirmação de pagamento (evento assíncrono) mantendo o contexto do slot reservado temporariamente."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Evento de pagamento aprovado chega ao assistente (com identificador da cobrança e status=paid)."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Assistente converte a pré-reserva em agendamento confirmado, gera código/localizador e associa ao perfil do usuário."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Backend registra booking confirmado com: unidade correta, modalidade, data/hora, status=confirmed, pagamento vinculado e capacidade decrementada."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Assistente envia confirmação no WhatsApp com: unidade, endereço (se disponível), data/hora, modalidade, instrutor (se disponível), código de agendamento, política de cancelamento e instrução para reagendar/cancelar."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Tempo total do fluxo até confirmação (excluindo espera por pagamento) permanece dentro do SLA definido para WhatsApp; mensagens intermediárias não excedem tempo de resposta esperado."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Após confirmar, assistente oferece próximos passos relevantes (ver próximos horários, cancelar, adicionar ao calendário, tirar dúvidas) sem retornar ao início do funil."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
+          "scenario": "WhatsApp: agendar avaliação física com personal, validar disponibilidade, pagamento antecipado e confirmação com política de cancelamento",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "schedulingService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "check_availability",
+            "select_slot",
+            "provide_data",
+            "validate_response",
+            "create_payment",
+            "send_message",
+            "validate_sla",
+            "wait_for_event",
+            "trigger_channel_event",
+            "create_booking",
+            "validate_backend",
+            "validate_response",
+            "validate_context",
+            "validate_flow_transition"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar atendimento via WhatsApp com sessão nova e sem contexto prévio."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita agendamento de avaliação física com personal: \"Quero marcar uma avaliação física com personal\"."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Identificar intenção principal como agendamento de serviço (avaliação física) no canal WhatsApp."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Coletar unidade desejada e restrições: usuário informa \"Unidade Paulista\" e preferência \"depois das 18h\"."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Consultar agenda para avaliação física na Unidade Paulista após 18h para os próximos 7 dias e retornar pelo menos 3 opções de horários com data/hora e fuso local."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Usuário seleciona um horário específico dentre os retornados (ex.: \"Quarta 19:00\"); sistema confirma o slot selecionado antes de prosseguir."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Coletar dados mínimos obrigatórios para reserva: nome completo, CPF (ou documento), e-mail e data de nascimento; usuário fornece os dados."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Sistema valida formato dos dados (CPF com dígitos, e-mail válido, data de nascimento) e solicita correção em caso de inconsistência sem perder o slot selecionado por pelo menos 5 minutos."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Informar que a avaliação exige pagamento antecipado (valor, moeda, taxas se houver) e oferecer método de pagamento compatível com WhatsApp (ex.: link de pagamento)."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Usuário confirma que quer pagar agora e solicita o link: \"Pode mandar o link\"."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Gerar e enviar o link de pagamento em até 30 segundos após a confirmação, mantendo o contexto do slot escolhido."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Aguardar evento de pagamento aprovado por até 10 minutos, mantendo a conversa ativa e informando status quando solicitado."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Receber evento externo: pagamento aprovado para a cobrança gerada."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Criar a reserva definitiva para o slot selecionado vinculando o pagamento aprovado e gerando código/localizador do agendamento."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Confirmar no backend: status da reserva = confirmada, serviço = avaliação física, unidade = Paulista, horário = escolhido, pagamento = aprovado, e dados do cliente associados corretamente."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Enviar confirmação no WhatsApp com: data/hora, unidade/endereço, instruções de chegada (ex.: antecedência), itens necessários, política de cancelamento/remarcação e código do agendamento."
+            },
+            {
+              "stepId": "step_017",
+              "expected": "Ao usuário perguntar \"Qual é o código?\", o sistema retorna o mesmo localizador gerado sem reiniciar o fluxo."
+            },
+            {
+              "stepId": "step_018",
+              "expected": "Encerrar o fluxo de agendamento oferecendo próximos passos: adicionar ao calendário, remarcar/cancelar e tirar dúvidas, sem solicitar novamente dados já coletados."
+            }
+          ]
         }
       ]
     },
@@ -31,12 +255,218 @@
         {
           "scenarioId": "fitness-matricula-cancelamento",
           "scenario": "Cancelamento de Matrícula",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
+          "scenario": "Cancelamento E2E via WhatsApp com retenção, confirmação de identidade, efetivação imediata e liberação de acesso (alto risco)",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "flowEngine",
+            "meshValidator",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "validate_response",
+            "provide_data",
+            "validate_backend",
+            "validate_response",
+            "send_message",
+            "validate_flow_transition",
+            "send_message",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_sla",
+            "validate_context"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp a partir de um número válido e entregar o contexto do canal (whatsapp) para a sessão."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita cancelamento da assinatura no WhatsApp usando linguagem natural e menciona que não quer ser cobrado novamente."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Detectar intenção de cancelamento de plano/assinatura e identificar que é uma solicitação sensível (risco alto) com necessidade de verificação."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Assistente deve explicar o que acontece ao cancelar (parada de cobranças futuras, política de acesso, possíveis reembolsos se aplicável) e solicitar confirmação de identidade antes de concluir."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Usuário informa e-mail cadastrado e CPF (ou últimos 4 dígitos) conforme política de verificação para WhatsApp."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Sistema valida que os dados correspondem a uma conta ativa com assinatura recorrente vigente e próximo ciclo de cobrança futuro."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Assistente apresenta tentativa de retenção específica (ex.: pausar por 30 dias ou mudar para plano mais barato) e pede escolha: Pausar / Trocar plano / Cancelar mesmo assim."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Usuário recusa retenção e confirma: 'Quero cancelar agora'."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Fluxo transiciona para etapa de confirmação final de cancelamento com resumo do impacto (data efetiva, acesso, cobrança, fatura)."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Usuário confirma explicitamente a ação final (ex.: 'Confirmo o cancelamento')."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Assinatura é cancelada no provedor de billing (status cancelado, recorrência desativada) e a próxima cobrança agendada é removida."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Acesso premium é ajustado conforme política: revogação imediata ou manutenção até o fim do período já pago; deve refletir no perfil do usuário."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Assistente confirma cancelamento concluído, informa status e data efetiva, orienta como recuperar comprovante no WhatsApp (ou link) e oferece suporte caso haja cobrança indevida."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Todo o fluxo deve concluir sem encaminhar para humano, mantendo clareza e tempo de resposta compatível com WhatsApp; se houver indisponibilidade de backend, deve oferecer retorno assíncrono."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Contexto final deve registrar canal=whatsapp, intenção=cancelamento, resultado=cancelado, e armazenar o identificador da assinatura cancelada."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
+          "scenario": "WhatsApp: cancelamento E2E de plano anual com cobrança recente, confirmação de identidade, cálculo de reembolso e bloqueio de acesso",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "validate_response",
+            "provide_data",
+            "wait_for_event",
+            "validate_context",
+            "validate_response",
+            "send_message",
+            "validate_flow_transition",
+            "send_message",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_sla",
+            "validate_fallback"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp com identificação do cliente e contexto de conta ativa (plano anual) e última cobrança recente disponível para consulta."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Cliente solicita cancelamento do plano via WhatsApp e menciona que foi cobrado recentemente e quer reembolso proporcional."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "cancelamento_plano"
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Assistente confirma que pode ajudar a cancelar, informa que precisará validar titularidade e que explicará regras de reembolso antes de concluir."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Cliente fornece dados de confirmação solicitados (ex.: CPF parcial + data de nascimento) e aceita receber código de verificação."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Recebimento do evento de verificação/OTP validado com sucesso para o titular da conta."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Assistente identifica corretamente: plano anual ativo, data de renovação, última cobrança dentro de janela de elegibilidade para reembolso e acesso ativo a treinos/app."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Assistente apresenta opções claras: (1) cancelar ao fim do período vigente sem reembolso; (2) cancelar imediato com política de reembolso aplicável; solicita confirmação explícita da opção desejada."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Cliente escolhe cancelamento imediato com reembolso proporcional e confirma que deseja prosseguir."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Fluxo transita para etapa de confirmação final de cancelamento e consentimento para término de acesso e processamento de reembolso."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Cliente confirma novamente (sim) o cancelamento imediato e aceita os termos informados (perda de acesso após efetivação + prazo de estorno)."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Cancelamento é registrado no backend com status 'canceled' e motivo 'solicitado pelo cliente'; pedido de reembolso/estorno é criado com valor proporcional e referência à transação da última cobrança."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Acesso premium ao app/plataforma é removido após efetivação do cancelamento (ou marcado para remoção imediata), mantendo apenas acesso básico conforme política."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Assistente confirma cancelamento concluído, informa data/hora de efetivação, valor estimado do reembolso (ou critérios de cálculo), prazo e meio do estorno (mesmo método de pagamento), e fornece protocolo/ID do cancelamento."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Assistente informa SLA de reembolso compatível com alto risco (ex.: cartão em até X dias úteis; PIX em até Y), orienta o que fazer se não ocorrer no prazo e disponibiliza canal de acompanhamento pelo WhatsApp."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Se o reembolso não puder ser calculado automaticamente, assistente abre ticket com prioridade alta, coleta dados mínimos e confirma protocolo sem bloquear o cancelamento."
+            }
+          ]
         }
       ]
     },
@@ -49,12 +479,209 @@
         {
           "scenarioId": "fitness-matricula-checkin",
           "scenario": "Check-in Diário na Academia",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp",
+          "scenario": "Check-in via WhatsApp sem reserva ativa e com pagamento pendente: orientar, bloquear entrada e oferecer regularização",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "validate_response",
+            "create_payment",
+            "validate_sla",
+            "wait_for_event",
+            "trigger_channel_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_flow_transition",
+            "validate_context"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp com um novo cliente identificado (telefone) e contexto de unidade configurado para 'Academia Central - Unidade Paulista'."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Cliente envia: \"Cheguei na Paulista, quero fazer meu check-in agora\"."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Detectar intenção de check-in (entrada na academia/unidade)."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Backend indica: cliente tem plano ativo, porém mensalidade do mês atual está em atraso; não há reserva de aula vinculada; política da unidade exige pagamento em dia para liberar catraca."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Assistente confirma unidade (Paulista) e informa que há pendência de pagamento impedindo o check-in/liberação de acesso, explicando de forma direta e oferecendo opções: (1) gerar link/QR de pagamento, (2) falar com recepção, (3) tentar novamente após pagamento. Não deve confirmar check-in como realizado."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Ao cliente responder que deseja pagar, o assistente gera link de pagamento para a mensalidade pendente com valor e vencimento exibidos, e registra a intenção de pagamento associada ao telefone do cliente."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Resposta com link de pagamento deve ocorrer em até 10 segundos no canal WhatsApp."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Aguardar evento de confirmação de pagamento (webhook) por até 2 minutos; caso não chegue, manter orientação para concluir o pagamento e tentar novamente."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Receber evento de pagamento aprovado para a cobrança gerada (status=paid) associado ao cliente e unidade."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Backend atualiza status financeiro para 'em dia' e elegibilidade de acesso para 'liberado' para a unidade Paulista."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Assistente confirma pagamento aprovado e informa que o acesso/check-in está liberado; oferece instrução específica: aproximar QR/CPF na catraca ou informar na recepção, conforme política cadastrada da unidade."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Fluxo deve transicionar de 'checkin_bloqueado_por_pagamento' para 'checkin_liberado' sem perder o contexto de unidade e identificação do cliente."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Manter no contexto: unidade=Academia Central - Unidade Paulista; canal=WhatsApp; motivo do bloqueio anterior=pagamento pendente; pagamento gerado e quitado na mesma conversa."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
+          "scenario": "Check-in completo via WhatsApp com QR dinâmico, validação de biometria na catraca e liberação de acesso (alto risco)",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "meshValidator",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "validate_backend",
+            "validate_response",
+            "trigger_channel_event",
+            "validate_context",
+            "wait_for_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_sla",
+            "send_message",
+            "validate_backend",
+            "validate_response",
+            "validate_fallback"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Cliente inicia no WhatsApp solicitando check-in imediato para treinar agora, informando que está na porta da academia."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Sistema identifica intenção de realizar check-in para entrada na unidade via WhatsApp."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Sistema solicita e o cliente confirma dados mínimos para localizar a matrícula (ex.: CPF e unidade)."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Sistema valida no backend: matrícula ativa, plano vigente, ausência de bloqueio financeiro/administrativo, e unidade autorizada para acesso."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Sistema informa status da elegibilidade e orienta que será gerado um QR de check-in válido por tempo curto, com instruções de uso na catraca."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Sistema envia no WhatsApp um QR dinâmico (ou link seguro) associado ao check-in, com timestamp e janela de validade, e aviso de uso único."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Sistema mantém contexto de sessão (membro, unidade, intenção de check-in) e registra o token/QR emitido para evitar reutilização."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Sistema aguarda evento de leitura do QR na catraca/controle de acesso dentro do SLA definido."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Ao receber evento de leitura, sistema valida: token válido e não expirado, não reutilizado, correspondência com membro/unidade, e exigência de biometria (se aplicável)."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Sistema aciona liberação da catraca quando a validação for bem-sucedida; se biometria for exigida, só libera após confirmação biométrica aprovada."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Sistema confirma no WhatsApp o check-in concluído com sucesso, registrando data/hora e unidade, e orienta o cliente a entrar."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Tempo total entre emissão do QR e confirmação de check-in deve respeitar o SLA do canal (ex.: confirmação em até 60s após o evento de leitura)."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Cliente tenta reutilizar o mesmo QR imediatamente após entrar, informando que 'não funcionou' e pede para tentar de novo."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Sistema detecta tentativa de reutilização (token já consumido) e bloqueia novo uso do mesmo QR, registrando tentativa suspeita."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Sistema responde no WhatsApp que o QR é de uso único e já foi utilizado; oferece opção de gerar novo QR apenas se o cliente ainda não tiver conseguido entrar (com checagem de status de acesso) ou direciona para suporte da unidade."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Se houver falha na integração com controle de acesso, sistema orienta procedimento seguro: apresentar documento na recepção, sem liberar acesso por mensagem, e registra incidente."
+            }
+          ]
         }
       ]
     },
@@ -67,12 +694,320 @@
         {
           "scenarioId": "fitness-matricula-checkout",
           "scenario": "Checkout e Pagamento de Matrícula",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_whatsapp_checkout_pix_confirmacao_e2e",
+          "scenario": "WhatsApp: checkout completo de plano mensal com PIX e confirmação de matrícula (E2E) para academia",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "schedulingService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "check_availability",
+            "validate_response",
+            "send_message",
+            "create_payment",
+            "validate_context",
+            "wait_for_event",
+            "trigger_channel_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_flow_transition",
+            "validate_sla"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar atendimento no WhatsApp com sessão nova, exibindo mensagem de boas-vindas e opção de planos/assinaturas."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita contratação de plano mensal e informa intenção de pagar via PIX: 'Quero assinar o plano mensal e pagar no PIX'."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "checkout_initiate_plan_subscription_pix"
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Usuário informa a unidade desejada (ex.: 'Unidade Paulista') e aceita iniciar checkout."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Plataforma valida disponibilidade do plano mensal na unidade informada, preço vigente e regras (taxa de matrícula, fidelidade/sem fidelidade, validade da promoção)."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Bot apresenta resumo do pedido com valores detalhados (mensalidade, taxa de matrícula/adesão se houver, descontos, total) e pergunta confirmação para prosseguir com o pagamento via PIX."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Usuário confirma o resumo e prossegue: 'Confirmo, pode gerar o PIX'."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Sistema gera cobrança PIX com QR Code (imagem) e/ou código copia-e-cola, valor e prazo de expiração claramente informados, além de identificador do pedido."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Contexto do checkout mantém: plano=mensal, unidade selecionada, método=PIX, valor total, id do pedido e status do pagamento como 'pendente'."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Aguardar notificação de pagamento aprovado (webhook/evento) dentro da janela de expiração do PIX."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Receber evento de pagamento aprovado associado ao mesmo id do pedido, sem duplicidade."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Backend registra pagamento como 'aprovado' para o pedido correto e cria assinatura/matrícula do plano mensal, com data de início e status 'ativa'."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Acesso liberado: usuário recebe confirmação de matrícula/assinatura ativa e instruções para acesso (ex.: cadastro de biometria/QR na recepção, app, horário de funcionamento da unidade)."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Mensagem final no WhatsApp confirma: pagamento aprovado, plano mensal ativado na unidade escolhida, recibo/identificador e próximos passos; sem solicitar pagamento novamente."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Fluxo transita de 'checkout' para 'pos_compra/onboarding' mantendo contexto da assinatura e oferecendo opções: ver contrato, enviar comprovante/recibo, tirar dúvidas."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Confirmação pós-pagamento enviada no WhatsApp em até 60s após evento de aprovação, devido ao risco alto no checkout."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
+          "scenario": "Checkout end-to-end no WhatsApp: compra de plano mensal + matrícula, pagamento via Pix, aprovação e liberação imediata de acesso",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "validate_response",
+            "provide_data",
+            "validate_context",
+            "create_payment",
+            "validate_response",
+            "wait_for_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_flow_transition",
+            "validate_sla"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp a partir do link/QR de checkout do plano mensal, preservando parâmetro de campanha (UTM) e identificador do plano."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita fechar a compra do plano mensal com matrícula e pergunta o total antes de pagar."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "checkout_initiate"
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Assistente apresenta resumo do pedido (plano mensal + taxa de matrícula), valor total, periodicidade, política de cancelamento básica e pergunta dados mínimos para finalizar."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Fornecer nome completo, CPF válido, e-mail e aceitar termos/contrato do plano; confirmar unidade (se aplicável) e data de início imediata."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Contexto mantém itens do carrinho (plano mensal + matrícula), valor total e canal WhatsApp; CPF e e-mail ficam associados ao mesmo lead/cliente durante o fluxo."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Gerar cobrança Pix com valor exato do total, com QR Code/copia-e-cola, vencimento e instrução de pagamento; o identificador da transação deve estar vinculado ao pedido."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Assistente envia QR Code Pix (ou copia-e-cola), valor, prazo de vencimento e orienta que a confirmação pode levar alguns segundos; oferece opção 'Já paguei' e 'Cancelar compra'."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Aguardar evento assíncrono de pagamento aprovado para a transação Pix criada (webhook/retorno do provedor)."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Pedido muda para status 'paid/approved'; registrar transação Pix, conciliar valor, gerar assinatura do plano mensal e lançar cobrança recorrente futura conforme contrato."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Acesso liberado imediatamente após aprovação: status do membro ativo, permissão para entrada/uso registrada no backend e/ou link de app/credencial disponibilizado."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Assistente confirma pagamento aprovado, ativa o plano, informa data de início, instruções de primeiro acesso (app/portal), e fornece comprovante/recibo ou referência da transação."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Encaminhar para pós-compra: oferecer agendar avaliação inicial ou tirar dúvidas; não solicitar novamente dados já coletados."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Da confirmação do pagamento (evento) até a mensagem de aprovação e liberação de acesso no WhatsApp: <= 60 segundos."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
+          "scenario": "WhatsApp checkout completo: compra de plano mensal com cupom, PIX, aprovação e liberação imediata de acesso no app",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "api",
+            "eventMesh",
+            "meshValidator",
+            "paymentService",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "validate_response",
+            "provide_data",
+            "validate_response",
+            "send_message",
+            "validate_intent",
+            "create_payment",
+            "validate_response",
+            "wait_for_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_context",
+            "validate_sla"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp a partir do link oficial de checkout do plano (deep link com identificação de campanha) e manter o contexto de compra ativo."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita assinatura do plano mensal com objetivo de iniciar hoje e pergunta sobre formas de pagamento disponíveis (incluindo PIX)."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "checkout_start"
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Bot apresenta opções de planos (mensal/anual) com preços, benefícios, e pergunta qual deseja; informa formas de pagamento (PIX/cartão) e condições principais (renovação/cancelamento)."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Selecionar plano mensal e informar que possui cupom de desconto 'TREINO10'."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Bot valida o cupom, confirma desconto aplicado, apresenta resumo do pedido (plano, valor original, desconto, valor final) e solicita confirmação para prosseguir ao pagamento."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Confirmar o resumo e escolher pagamento via PIX."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "checkout_select_payment_pix"
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Sistema gera cobrança PIX (QR Code e código copia-e-cola) vinculada ao pedido, com prazo de expiração explícito e instruções de pagamento no WhatsApp."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Bot envia QR Code/PIX copia-e-cola, valor final, validade/expiração, e orienta que a confirmação pode levar alguns segundos; oferece opção de 'Já paguei' e suporte caso falhe."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Receber evento de confirmação de pagamento PIX aprovado para o pedido dentro do SLA esperado para pagamentos (ex.: até 2 minutos)."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Pedido deve transitar para status 'paid/approved', gerar assinatura ativa (plano mensal) associada ao usuário e registrar transação com cupom aplicado."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Acesso premium é liberado imediatamente (flag de entitlement ativa) e credenciais/conta ficam aptas a login no app; se usuário já existe, manter histórico e não duplicar conta."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Bot confirma pagamento aprovado, informa data de início e próxima renovação, envia link de acesso ao app/área do aluno e instruções para começar o treino hoje; oferece recibo/nota se aplicável."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Contexto final deve refletir: plano mensal selecionado, cupom TREINO10 aplicado, pagamento via PIX aprovado, assinatura ativa e acesso liberado; sem solicitar dados já fornecidos."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Tempo total entre geração do PIX e confirmação ao usuário no WhatsApp dentro do SLA definido para risco alto (ex.: notificação <= 120s após evento de aprovação)."
+            }
+          ]
         }
       ]
     },
@@ -123,10 +1058,9 @@
         {
           "scenarioId": "business-e2e-fitness_customer_checkin",
           "scenario": "Check-in Completo de Aluno Fitness",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
-            "whatsapp",
-            "app"
+            "whatsapp"
           ],
           "preconditions": [],
           "integrations": [
@@ -175,7 +1109,7 @@
         {
           "scenarioId": "cap-customer_identification",
           "scenario": "Validação: Customer Identification",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -199,7 +1133,7 @@
         {
           "scenarioId": "cap-membership_validation",
           "scenario": "Validação: Membership Validation",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -233,7 +1167,7 @@
         {
           "scenarioId": "cap-access_decision",
           "scenario": "Validação: Access Decision",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -257,7 +1191,7 @@
         {
           "scenarioId": "cap-turnstile_release",
           "scenario": "Validação: Turnstile Release",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -293,7 +1227,7 @@
         {
           "scenarioId": "cap-attendance_record",
           "scenario": "Validação: Attendance Record",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -328,7 +1262,7 @@
         {
           "scenarioId": "cap-crm_update",
           "scenario": "Validação: Crm Update",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -362,7 +1296,7 @@
         {
           "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
           "scenario": "Precondição: Crm Contact Exists",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -386,7 +1320,7 @@
         {
           "scenarioId": "precond-fitness_customer_checkin-membership_exists",
           "scenario": "Precondição: Membership Exists",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -410,7 +1344,7 @@
         {
           "scenarioId": "precond-fitness_customer_checkin-credential_exists",
           "scenario": "Precondição: Credential Exists",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -434,7 +1368,7 @@
         {
           "scenarioId": "precond-fitness_customer_checkin-device_available",
           "scenario": "Precondição: Device Available",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -458,7 +1392,7 @@
         {
           "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
           "scenario": "Precondição: Attendance Database Accessible",
-          "status": "draft_ai",
+          "status": "approved",
           "channels": [
             "api"
           ],
@@ -640,12 +1574,128 @@
         {
           "scenarioId": "fitness-matricula-onboarding",
           "scenario": "Onboarding do Novo Aluno",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
+          "scenario": "[Manual] Onboarding de novo aluno via WhatsApp — primeiro acesso completo",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "flowEngine",
+            "meshValidator",
+            "ragService",
+            "schedulingService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "validate_backend",
+            "validate_context",
+            "send_message",
+            "provide_data",
+            "check_availability",
+            "select_slot",
+            "create_booking",
+            "validate_backend",
+            "send_message",
+            "validate_access_release",
+            "validate_response",
+            "validate_sla",
+            "validate_flow_transition",
+            "validate_fallback"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Novo aluno inicia conversa pelo WhatsApp após matrícula e recebe saudação de boas-vindas com opções de onboarding."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Aluno informa que acabou de se matricular e quer entender como começar (primeiro acesso)."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Assistente identifica intenção de onboarding de novo aluno e inicia fluxo de boas-vindas."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Aluno informa nome completo e CPF para localizar a matrícula."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Sistema localiza matrícula ativa no CRM e confirma plano contratado."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Contexto do aluno carregado: plano, unidade, data de início e status da matrícula."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Assistente apresenta visão geral: app, horários, modalidades e regras da unidade."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Aluno escolhe modalidade de interesse (ex.: musculação) e informa disponibilidade de horários."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Sistema verifica disponibilidade de avaliação física inicial na unidade escolhida."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Aluno seleciona slot para avaliação física inicial entre as opções apresentadas."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Agendamento da avaliação física inicial é criado e confirmado para o aluno."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Agendamento persistido na agenda da unidade e vínculo aluno-avaliação registrado."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Assistente envia confirmação com data/hora, orientações (roupa, documentos) e link do app."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Acesso do aluno à catraca liberado a partir da data de início do plano."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Aluno confirma recebimento das orientações e do agendamento."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Fluxo completo de onboarding concluído dentro do SLA de atendimento."
+            },
+            {
+              "stepId": "step_017",
+              "expected": "Transição de estado onboarding → aluno_ativo registrada corretamente."
+            },
+            {
+              "stepId": "step_018",
+              "expected": "Em caso de dúvida fora do fluxo, assistente aplica fallback e oferece handoff humano."
+            }
+          ]
         }
       ]
     },
@@ -658,12 +1708,221 @@
         {
           "scenarioId": "fitness-matricula-renovacao",
           "scenario": "Renovação de Matrícula",
-          "status": "draft",
+          "status": "deprecated",
           "channels": [],
           "preconditions": [],
           "integrations": [],
           "steps": [],
           "operationalAssertions": []
+        },
+        {
+          "scenarioId": "fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao",
+          "scenario": "Renovação de plano via WhatsApp com falha de pagamento no cartão, recuperação com PIX e confirmação de renovação sem duplicidade",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "accessControlService",
+            "aiIntentService",
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "paymentService",
+            "ragService",
+            "semanticValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "validate_context",
+            "validate_response",
+            "send_message",
+            "provide_data",
+            "create_payment",
+            "wait_for_event",
+            "validate_response",
+            "send_message",
+            "create_payment",
+            "validate_sla",
+            "wait_for_event",
+            "validate_backend",
+            "validate_access_release",
+            "validate_response",
+            "validate_flow_transition"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp a partir de um cliente autenticado e reconhecido pelo número, com contexto de assinatura ativa prestes a expirar."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Usuário solicita renovação do plano mensal e pede para manter o mesmo plano atual: 'Quero renovar meu plano mensal que vence essa semana'."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Sistema identifica intenção de renovação de assinatura/plano."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Assistente recupera e confirma dados do cliente: plano atual, data de vencimento próxima, valor de renovação e status de adimplência, sem solicitar informações já disponíveis."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "Assistente apresenta opções de renovação específicas (mesmo plano/upgrade/downgrade) e formas de pagamento disponíveis no WhatsApp (link de pagamento/cartão/PIX), incluindo valor e periodicidade."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Usuário confirma manter o mesmo plano e escolhe pagar com cartão: 'Mantém o mesmo e vou pagar no cartão'."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Usuário informa dados mínimos necessários para pagamento via link (ou confirma cartão salvo, se houver), sem expor dados sensíveis no chat; assistente direciona para link seguro."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "Sistema gera cobrança para renovação (cartão) e retorna link/fluxo seguro de pagamento, registrando tentativa de pagamento associada à assinatura do cliente."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Sistema aguarda evento assíncrono do gateway indicando falha no pagamento do cartão (ex.: recusado/limite/antifraude) sem encerrar a conversa."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Assistente comunica falha de pagamento com motivo genérico (sem detalhes sensíveis), oferece alternativas imediatas (tentar outro cartão, PIX) e mantém o contexto da renovação."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Usuário escolhe PIX: 'Pode ser no PIX então'."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "Sistema gera cobrança PIX para a mesma renovação (sem duplicar a assinatura), retorna QR Code/código copia e cola e prazo de validade."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Assistente informa tempo esperado para confirmação do PIX (ex.: até X minutos) e orienta como proceder se não confirmar no prazo."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Sistema recebe evento do gateway confirmando pagamento PIX aprovado para a cobrança gerada."
+            },
+            {
+              "stepId": "step_015",
+              "expected": "Backend atualiza assinatura: renovação aplicada com nova data de vigência, status ativo/renovado, e apenas uma renovação registrada (sem duplicidade de cobrança ou de assinatura)."
+            },
+            {
+              "stepId": "step_016",
+              "expected": "Acesso do cliente é mantido/estendido imediatamente após confirmação, sem bloqueio por falha anterior no cartão."
+            },
+            {
+              "stepId": "step_017",
+              "expected": "Assistente confirma renovação concluída, informa novo período de vigência, envia comprovante/recibo (ou referência), e oferece próximos passos (ex.: ver fatura, alterar forma de pagamento automática)."
+            },
+            {
+              "stepId": "step_018",
+              "expected": "Fluxo encerra em estado de 'renovação concluída' com contexto preservado e sem solicitar recomeço do processo."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
+          "scenario": "Renovação E2E via WhatsApp de plano anual com cartão expirado, oferta de atualização de pagamento e confirmação de renovação sem duplicidade de cobrança",
+          "status": "active",
+          "channels": [
+            "whatsapp",
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api",
+            "eventMesh",
+            "flowEngine",
+            "meshValidator",
+            "whatsapp"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "send_message",
+            "validate_intent",
+            "provide_data",
+            "validate_context",
+            "send_message",
+            "create_payment",
+            "validate_response",
+            "wait_for_event",
+            "validate_backend",
+            "validate_flow_transition",
+            "validate_response",
+            "validate_sla",
+            "validate_fallback"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": "Iniciar conversa no WhatsApp a partir do número do cliente já associado à conta, garantindo identificação automática (sem solicitar login)."
+            },
+            {
+              "stepId": "step_002",
+              "expected": "Cliente informa que recebeu aviso de vencimento e quer renovar o plano anual."
+            },
+            {
+              "stepId": "step_003",
+              "expected": "Detectar intenção de renovação de plano (renovacao) e manter o canal WhatsApp como contexto."
+            },
+            {
+              "stepId": "step_004",
+              "expected": "Disponibilizar dados de contexto: plano atual = 'Anual', status = 'expirando em 3 dias', método de pagamento atual = 'cartão', cartão = 'expirado', cliente elegível a renovação automática = true, última tentativa de cobrança = 'falha por validade expirada'."
+            },
+            {
+              "stepId": "step_005",
+              "expected": "O assistente confirma o plano atual e a data de vencimento, reconhece falha de cobrança por cartão expirado e solicita atualização do meio de pagamento para concluir a renovação, sem expor dados sensíveis (não pedir número completo do cartão)."
+            },
+            {
+              "stepId": "step_006",
+              "expected": "Cliente confirma que deseja renovar agora e pede para pagar via link no WhatsApp."
+            },
+            {
+              "stepId": "step_007",
+              "expected": "Gerar link de pagamento seguro para renovação do plano anual (valor correto e moeda correta), com validade mínima de 15 minutos e identificação do pedido para evitar cobrança duplicada."
+            },
+            {
+              "stepId": "step_008",
+              "expected": "O assistente envia o link de pagamento no WhatsApp com instruções claras (prazo de validade, confirmação após pagamento) e informa que a renovação será ativada automaticamente após a confirmação, sem criar nova assinatura paralela."
+            },
+            {
+              "stepId": "step_009",
+              "expected": "Aguardar evento de confirmação de pagamento (payment_succeeded) referente ao link gerado."
+            },
+            {
+              "stepId": "step_010",
+              "expected": "Após payment_succeeded: assinatura/contrato é renovado (nova data de término = término atual + 12 meses), status = ativo, e não existe segunda cobrança ou segunda assinatura criada para o mesmo período (idempotência garantida)."
+            },
+            {
+              "stepId": "step_011",
+              "expected": "Transicionar do fluxo de pagamento para o fluxo de confirmação de renovação, mantendo o contexto do cliente e do pedido de pagamento."
+            },
+            {
+              "stepId": "step_012",
+              "expected": "O assistente confirma no WhatsApp que a renovação foi concluída, informa nova data de validade do plano e disponibiliza comprovante/recibo ou referência do pagamento, com orientação de onde consultar no app/portal."
+            },
+            {
+              "stepId": "step_013",
+              "expected": "Tempo total até enviar o link de pagamento: <= 60s após solicitação do cliente; confirmação enviada <= 30s após evento payment_succeeded."
+            },
+            {
+              "stepId": "step_014",
+              "expected": "Se o pagamento não for confirmado em até 15 minutos, o assistente deve oferecer reenvio do link ou alternativa (PIX/boleto, se disponível) sem reiniciar a jornada e sem perder contexto."
+            }
+          ]
         }
       ]
     }

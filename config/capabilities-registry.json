@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-12T01:33:53.574Z",
+  "generatedAt": "2026-07-21T09:08:58.834Z",
   "capabilities": [
     {
       "id": "access_decision",
@@ -39,8 +39,8 @@
         "api/db/migrations/20260318100000-vertical-beauty-fitness-core.js",
         "api/db/models/AccessDecision.js",
         "api/db/models/AccessEvent.js",
+        "api/db/models/AiGovernanceRecord.js",
         "api/db/models/VerticalAttendance.js",
-        "api/db/models/index.js",
         "frontend-e2e/fitness-customer-checkin.spec.ts",
         "scripts/smoke/qa-waves-operational-final-smoke.js"
       ]
@@ -70,7 +70,12 @@
         "browseroperationalrunner",
         "test",
         "causalhardeninggovernance",
-        "evidenceproofvalidator"
+        "evidenceproofvalidator",
+        "domain",
+        "map",
+        "service",
+        "model",
+        "driven"
       ],
       "confidence": 1,
       "sources": [
@@ -84,17 +89,19 @@
         "api/db/models/VerticalAttendance.js",
         "api/events/eventModelV1.js",
         "api/modules/access-control/accessDecisionService.js",
+        "api/modules/agent-os/services/domain-map-service.js",
+        "api/modules/agent-os/services/model-driven-pipeline.js",
         "api/modules/vertical/handleFitnessAttendanceRoutes.js",
         "api/services/__tests__/browserOperationalRunner.test.js",
         "api/services/__tests__/causalHardeningGovernance.test.js",
         "api/services/__tests__/evidenceProofValidator.test.js",
-        "api/services/__tests__/operationalSemanticConsistency.test.js",
-        "api/services/__tests__/operationalStateEngine.test.js",
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/qa-waves/generate-business-100pct.js",
+        "scripts/qa-waves/generate-business-e2e.js",
+        "scripts/smoke/qa-waves-operational-final-smoke.js",
         "frontend/src/api/verticalPilot.js",
         "frontend/src/pages/FitnessStudentsPage.jsx",
         "frontend/src/pages/OperationsDashboardPage.jsx",
-        "frontend-e2e/fitness-customer-checkin.spec.ts",
-        "scripts/smoke/qa-waves-operational-final-smoke.js",
         "fitness_customer_checkin-replay.json",
         "qa-waves-operational-prod-like-smoke.json"
       ]
@@ -123,7 +130,10 @@
         "qawavesoperationalservice",
         "runtimeintegrations",
         "test",
-        "proofpipelinephases"
+        "proofpipelinephases",
+        "service",
+        "domain",
+        "map"
       ],
       "confidence": 1,
       "sources": [
@@ -136,17 +146,17 @@
         "api/db/models/BillingSubscription.js",
         "api/db/models/index.js",
         "api/integrations/paymentProvider.js",
+        "api/modules/agent-marketplace/service.js",
+        "api/modules/agent-os/services/domain-map-service.js",
         "api/modules/billing/handleBillingRoutes.js",
         "api/modules/vertical/handleFitnessMembershipRoutes.js",
         "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
         "api/services/__tests__/proofPipelinePhases.test.js",
-        "api/services/__tests__/qaWavesOperationalService.runtimeIntegrations.test.js",
-        "api/services/autocorrection/FailureDiagnosisService.js",
-        "business-fit-flow-charge.json",
-        "fitness-matricula-renovacao.json",
-        "fitness-matricula-leads.json",
         "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
         "payment_charge_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
         "support_ticket_flow-replay.json",
@@ -178,7 +188,13 @@
         "qa",
         "wave",
         "renovacao",
-        "booking"
+        "booking",
+        "domain",
+        "map",
+        "model",
+        "driven",
+        "pipeline",
+        "flow"
       ],
       "confidence": 1,
       "sources": [
@@ -188,19 +204,20 @@
       ],
       "evidence": [
         "api/db/models/index.js",
+        "api/modules/agent-marketplace/service.js",
+        "api/modules/agent-os/services/domain-map-service.js",
+        "api/modules/agent-os/services/model-driven-pipeline.js",
         "api/modules/crm/routes.js",
         "api/modules/domain-operations/routes.js",
         "api/modules/marketing/controller.js",
         "api/modules/qa-waves/routes.test.js",
         "api/modules/scheduling-support/controller.js",
         "api/modules/scheduling-support/handleSchedulingSupportRoutes.js",
-        "api/modules/scheduling-support/routes.js",
-        "api/modules/scheduling-support/service.js",
-        "api/services/__tests__/autonomousGapClosureEngine.loop.test.js",
-        "fitness-matricula-renovacao.json",
-        "fitness-matricula-leads.json",
         "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
         "payment_charge_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
         "support_ticket_flow-replay.json",
@@ -235,7 +252,11 @@
         "qa",
         "waves",
         "operational",
-        "prod"
+        "prod",
+        "fitness",
+        "checkin",
+        "market",
+        "node"
       ],
       "confidence": 1,
       "sources": [
@@ -251,6 +272,8 @@
         "api/services/qa/scanners/frontendCapabilityScanner.js",
         "api/services/qa/scanners/replayCapabilityScanner.js",
         "booking_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "market_node_publish_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
         "support_ticket_flow-replay.json",
         "frontend-e2e/fitness-customer-checkin.spec.ts",
@@ -374,21 +397,21 @@
         "api/db/migrations/20260204010000-pbx-cc-menu-domains.js",
         "api/db/migrations/20260204020000-create-event-ledger.js",
         "api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js",
+        "api/db/migrations/20260512101000-pbx-cdr-adaptive-runtime-fix.js",
         "api/db/models/PbxCallRule.js",
         "api/db/models/PbxCdr.js",
         "api/db/models/PbxExtension.js",
         "api/db/models/index.js",
-        "api/events/eventModelV1.js",
         "qa-pbx-call-events-runtime-smoke.json",
         "qa-pbx-voice-tts-asr-smoke.json",
         "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
         "payment_charge_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
         "support_ticket_flow-replay.json",
-        "scripts/test-pbx-call-events-runtime-smoke.js",
-        "scripts/test-pbx-voice-tts-asr-smoke.js",
-        "scripts/test-ura-publish-rollback-smoke.js"
+        "scripts/smoke/qa-waves-enterprise-proof-smoke.js"
       ]
     },
     {
@@ -443,7 +466,7 @@
     {
       "id": "omnichannel_whatsapp",
       "domain": "fitness",
-      "module": "rpa-test-flow-cca122f2-20260129T000000000Z.json",
+      "module": "booking_flow-replay.json",
       "type": "operational",
       "required": true,
       "tags": [
@@ -464,7 +487,18 @@
         "renovacao",
         "a41fb4e3",
         "20260129t051056368z",
-        "a85c4a4d"
+        "a85c4a4d",
+        "booking",
+        "replay",
+        "clinic",
+        "calendar",
+        "block",
+        "customer",
+        "checkin",
+        "food",
+        "order",
+        "status",
+        "market"
       ],
       "confidence": 1,
       "sources": [
@@ -473,16 +507,15 @@
         "e2e"
       ],
       "evidence": [
-        "rpa-test-flow-cca122f2-20260129T000000000Z.json",
-        "rpa-whatsapp-connections-rpa.json",
-        "rpa-test-flow-28d2aea0-20260129T000000000Z.json",
-        "fitness-matricula-renovacao.json",
-        "rpa-test-flow-a41fb4e3-20260129T051056368Z.json",
-        "rpa-test-flow-a85c4a4d-20260129T052758707Z.json",
-        "fitness-matricula-leads.json",
         "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
         "omnichannel_email-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
         "api/services/qa/scanners/backendCapabilityScanner.js",
         "api/services/qa/scanners/deviceCapabilityScanner.js",
         "api/services/whatsappTemplateService.js",
@@ -527,9 +560,9 @@
         "api/db/models/PhysicalTicket.js",
         "api/db/models/Ticket.js",
         "api/events/eventModelV1.js",
-        "api/modules/domain-operations/routes.js",
-        "api/modules/order/controller.js",
-        "api/modules/order/handleOrderRoutes.js",
+        "api/modules/agent-marketplace/service.js",
+        "api/modules/agent-os/routes/agent-orchestrator.js",
+        "api/modules/agent-os/services/domain-map-service.js",
         "frontend/src/Toolbar.jsx",
         "frontend/src/__tests__/ScheduleModal.test.jsx",
         "frontend/src/__tests__/SupportModals.test.jsx",
@@ -539,7 +572,7 @@
         "frontend/src/api/tickets.js",
         "frontend/src/bpmn/bpmnRoundTrip.test.js",
         "frontend/src/components/ContextPanel.jsx",
-        "frontend/src/components/Login.jsx"
+        "frontend/src/components/PrimaryRail.jsx"
       ]
     },
     {
