@@ -46,6 +46,15 @@ function normalizeRpaTestUrls(test) {
       return url;
     }
 
+    // Preserva templates Handlebars para que a substituição aconteça
+    // mais tarde com os dados reais do runner (ex.: {{urls.frontend}}/editor).
+    // Sem esta guarda, "{{urls.frontend}}/dev/qa-waves" virava
+    // "http://localhost:5173/{{urls.frontend}}/dev/qa-waves" e a navegação caía
+    // em rota desconhecida (redirect para /workspace).
+    if (/\{\{[^}]+\}\}/.test(url)) {
+      return url;
+    }
+
     // Se já é uma URL absoluta válida (http:// ou https://), verifica se é inválida
     if (url.match(/^https?:\/\//)) {
       // Reescreve URLs antigas do frontend (localhost:5173) para a base ativa do ambiente.

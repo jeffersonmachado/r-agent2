@@ -8,7 +8,7 @@
  */
 
 const rpaConfig = require('../rpaConfig');
-const { ensureAuthenticated } = require('./authHelper');
+const { ensureAuthenticated, handleTenantSelectorModalIfPresent } = require('./authHelper');
 
 function resolveFrontendBaseUrl(frontendBaseUrl) {
   return (
@@ -265,11 +265,17 @@ async function autoLoginBeforeSteps(page, params = {}) {
   });
 
   if (authResult.success && authResult.loggedIn && targetUrl && allowAutoLoginForTarget) {
-    const currentUrl = typeof page.url === 'function' ? page.url() : null;
-    if (currentUrl !== targetUrl) {
+    const targetPath = (() => {
+      try { return new URL(targetUrl).pathname; } catch (_) { return null; }
+    })();
+    // Sempre recarrega a rota alvo após o login: em rotas protegidas o app pode
+    // manter a URL original enquanto renderiza o Login, e o componente Login
+    // redireciona para /workspace de forma assíncrona — confiar na URL atual
+    // cria corrida (observado: /dev/qa-waves caindo em /workspace sob carga).
+    // Retry único com resolução do modal de tenant se o app redirecionar.
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
         await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: navigationTimeoutMs });
-        await page.waitForTimeout(Math.min(waitAfterGotoMs, 1000));
       } catch (error) {
         return {
           success: false,
@@ -278,6 +284,19 @@ async function autoLoginBeforeSteps(page, params = {}) {
           baseUrl,
           targetUrl,
         };
+      }
+
+      // Aguarda a SPA assentar (redirects tardios de Login/guards de rota).
+      await page.waitForTimeout(Math.max(waitAfterGotoMs, 2500));
+
+      const landedUrl = typeof page.url === 'function' ? page.url() : null;
+      const landedPath = (() => {
+        try { return new URL(landedUrl).pathname; } catch (_) { return landedUrl; }
+      })();
+      if (!targetPath || landedPath === targetPath) break;
+      if (attempt < 2) {
+        await handleTenantSelectorModalIfPresent(page, { timeout: 30000 }).catch(() => null);
+        await page.waitForTimeout(500);
       }
     }
   }

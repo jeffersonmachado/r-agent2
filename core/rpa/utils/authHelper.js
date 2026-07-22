@@ -60,12 +60,21 @@ async function handleTenantSelectorModalIfPresent(page, options = {}) {
   const tenantId = options.tenantId || process.env.TEST_TENANT_ID || process.env.RPA_TENANT_ID || 'system';
 
   try {
-    // Detecta pelo título do modal e/ou botão "Acessar"
+    // Detecta pelo título do modal e/ou botão "Acessar".
+    // Sob carga o modal pode demorar vários segundos para renderizar após o login;
+    // faz polling em vez de uma única verificação de 1.5s.
     const modalTitle = page.locator('text=Selecione o Tenant');
     const accessButton = page.locator('button:has-text("Acessar")');
 
-    const modalVisible = await modalTitle.isVisible({ timeout: 1500 }).catch(() => false);
-    const accessVisible = await accessButton.isVisible({ timeout: 1500 }).catch(() => false);
+    let modalVisible = false;
+    let accessVisible = false;
+    const pollDeadline = Date.now() + Math.max(timeout, 8000);
+    while (Date.now() < pollDeadline) {
+      modalVisible = await modalTitle.isVisible().catch(() => false);
+      accessVisible = await accessButton.isVisible().catch(() => false);
+      if (modalVisible || accessVisible) break;
+      await page.waitForTimeout(500);
+    }
 
     if (!modalVisible && !accessVisible) {
       return { handled: false };
@@ -244,7 +253,8 @@ async function performLogin(page, options = {}) {
     await page.waitForTimeout(1500);
 
     // Se for super-admin, pode abrir modal de seleção de tenant.
-    const modalHandled = await handleTenantSelectorModalIfPresent(page, { timeout, tenantId: options.tenantId });
+    // Janela ampla: sob carga o modal (fetch /super-admin/tenants + render) pode demorar.
+    const modalHandled = await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 30000, tenantId: options.tenantId });
     if (modalHandled.error) {
       // Não falha por isso; só registra via retorno se ainda ficar travado
     }
@@ -563,7 +573,7 @@ async function ensureAuthenticated(page, options = {}) {
       }
 
       await handleTenantSelectorModalIfPresent(page, {
-        timeout: options.timeout || 10000,
+        timeout: options.timeout || 30000,
         tenantId: options.tenantId,
       }).catch(() => null);
 
@@ -643,4 +653,5 @@ module.exports = {
   isLoginPage,
   waitForLoginPage,
   ensureAuthenticated,
+  handleTenantSelectorModalIfPresent,
 };
