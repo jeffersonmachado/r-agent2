@@ -11,8 +11,10 @@
  *  - pipeline RAP Learn em falhas (rap-learn recordFailure → learning_records)
  *
  * Política: o Learning Engine SOMENTE registra. Não altera regras críticas
- * automaticamente (promoção de correção continua passando pelo pipeline
- * RAP Learn com validação humana/QA).
+ * automaticamente. A promoção de correção passa pelo pipeline RAP Learn com
+ * validação humana/QA — ou, desde 2026-07-22 (decisão explícita do usuário),
+ * pela auto-promoção com QA gate de `learningAutoPromotionService.js`,
+ * DESLIGADA por padrão e ativada apenas via LEARN_AUTOPROMOTE=1.
  *
  * Registro é best-effort: falha de persistência de aprendizado nunca derruba
  * o fluxo de negócio, mas é sempre logada.

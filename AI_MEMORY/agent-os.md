@@ -73,6 +73,16 @@ RAP Learn
 | `/api/rap-learn/suggest/:id` | POST | Gerar sugestão |
 | `/api/rap-learn/validate/:id` | POST | Validar sugestão |
 | `/api/rap-learn/promote/:id` | POST | Promover correção |
+
+## Learning Routine (2026-07-22)
+
+Rotina agregadora de aprendizado — automatiza o trecho não-humano do pipeline RAP Learn:
+
+- `api/services/learningRoutineService.js` → `runLearningRoutine()`: `detectRegressions` (janela 24h default) → agrupa falhas `detected` por `source::classification` (armazenada ou inferida) → grupos ≥ 3 ocorrências são classificados por regras determinísticas (`CLASSIFICATION_RULES`: timeout, intent, canal, provider IA, persistência, auth) e o registro representativo recebe sugestão (IA via `generateAiResponse` quando disponível; fallback determinístico explícito quando não).
+- **Governança (atualizada 2026-07-22, decisão explícita do usuário):** a rotina base NUNCA valida nem promove. Existe estágio opcional de **auto-promoção** (`api/services/learningAutoPromotionService.js`), DESLIGADO por padrão e ativado só via `LEARN_AUTOPROMOTE=1`. Regras não negociáveis: só sugestões geradas por IA com `confidence >= LEARN_MIN_CONFIDENCE` (default 0.8) são elegíveis — sugestões determinísticas exigem humano sempre; o gate de QA executável (default `node scripts/governance/validate-qa-governance.js`, configurável via `LEARN_AUTOPROMOTE_QA_CMD`) deve sair 0, senão NO_GO → `rejected`; toda decisão grava `validationResult` (checks + qaGate), `promotedBy='learning-routine:auto'` e evento no ledger — nada é silencioso.
+- `npm run learning:routine` → `scripts/learning-routine.js` (roda uma vez e sai; agendar via cron/systemd timer — nunca setInterval). Vars: `LEARN_TENANT_ID`, `LEARN_WINDOW_HOURS`, `LEARN_MIN_GROUP`, `LEARN_DRY_RUN=1`, `LEARN_NO_AI=1`, `LEARN_AUTOPROMOTE=1`, `LEARN_MIN_CONFIDENCE`, `LEARN_AUTOPROMOTE_QA_CMD`. Relatório: `reports/learning-routine-latest.json`.
+- Encerramento registra `LearningRoutineCompleted` no event ledger (tipo adicionado em `api/events/eventModelV1.js`).
+- Testes: `tests/unit/learningRoutineService.test.js` (13) + `tests/unit/learningAutoPromotionService.test.js` (11).
 | `/api/ai-governance/audit-trail` | GET | Trilha de auditoria |
 | `/api/ai-governance/decision-log` | GET | Log de decisões |
 | `/api/ai-governance/compliance-report` | GET | Relatório de compliance |
