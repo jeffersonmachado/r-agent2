@@ -298,6 +298,14 @@ export function RpaReplaysPage() {
         data: step,
         timestamp: step.startedAt || step.timestamp || step.at,
       }));
+      // Passo a passo das telas da UI (ações RPA: navigate/click/fill/assert
+      // com screenshots ANTES/DEPOIS inline) — entra na mesma navegação de passos
+      const uiTraceSteps = (replayData.uiTrace || []).map((step, index) => ({
+        type: 'trace-step',
+        index,
+        data: { ...step, isUiStep: true },
+        timestamp: step.startedAt || step.finishedAt,
+      }));
       // Inclui eventos de timeline como entradas de log junto com os trace-steps
       const timelineEvents = (replayData.timeline || replayData.logs || []).map((event, index) => ({
         type: 'log-event',
@@ -311,7 +319,7 @@ export function RpaReplaysPage() {
         data: screen,
         timestamp: screen.timestamp,
       }));
-      return [...traceSteps, ...timelineEvents, ...screenItems].sort((a, b) => {
+      return [...traceSteps, ...uiTraceSteps, ...timelineEvents, ...screenItems].sort((a, b) => {
         const tA = new Date(a.timestamp || 0).getTime();
         const tB = new Date(b.timestamp || 0).getTime();
         return tA - tB;
@@ -2728,9 +2736,14 @@ export function RpaReplaysPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="text-text-primary font-semibold break-words">
-                                    📌 Passo {stepNumber}: {actionLabel}
+                                    {traceStep.isUiStep ? '🖥️' : '📌'} Passo {stepNumber}: {actionLabel}
                                   </div>
                                   <div className="text-text-secondary mt-1 break-words">▶️ Ação: {traceStep.action || '-'}</div>
+                                  {traceStep.isUiStep && traceStep.input !== null && traceStep.input !== undefined && typeof traceStep.input !== 'object' && (
+                                    <div className="text-text-secondary mt-1 break-words">
+                                      📝 Valor preenchido: <span className="font-mono">&quot;{String(traceStep.input)}&quot;</span>
+                                    </div>
+                                  )}
                                   {variantText && (
                                     <div className="text-text-secondary mt-1 break-words">
                                       📝 Variante: <span className="font-mono">&quot;{variantText}&quot;</span>

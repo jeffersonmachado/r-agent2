@@ -609,6 +609,33 @@ function normalizeErrorList(value) {
   return [value];
 }
 
+/**
+ * Mantém do rawStatus do adapter apenas o necessário para evidências de replay
+ * (passo a passo rico do RPA com screenshots ANTES/DEPOIS, network events).
+ * Remove domSnapshot/consoleLogs/logs para não inchar histórico em disco.
+ */
+function compactRawStatus(rawStatus) {
+  if (!rawStatus || typeof rawStatus !== 'object') return null;
+  const { logs: _rawLogs, ...rawRest } = rawStatus;
+  const results = rawStatus.results && typeof rawStatus.results === 'object'
+    ? rawStatus.results
+    : {};
+  const steps = Array.isArray(results.steps)
+    ? results.steps.map((step) => {
+      if (!step || typeof step !== 'object') return step;
+      const { domSnapshot, consoleLogs, ...rest } = step;
+      return rest;
+    })
+    : [];
+  return {
+    ...rawRest,
+    results: {
+      ...results,
+      steps,
+    },
+  };
+}
+
 function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return filePath;
@@ -1953,6 +1980,8 @@ async function runMesh(options = {}) {
       assertions: effectiveScenario.assertions || [],
       rpaRecordingId: effectiveScenario.rpaRecordingId || null,
       mode: effectiveScenario.runtimeMode || null,
+      // rawStatus compacto alimenta o uiTrace do replay QA Waves (passo a passo das telas).
+      rawStatus: compactRawStatus(adapterResult.rawStatus),
     };
     const waveGovernance = await evaluateScenarioGovernance(effectiveScenario, result, {
       closeGovernanceDbAfterIntegration: options.closeGovernanceDbAfterIntegration,

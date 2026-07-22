@@ -1,38 +1,104 @@
 {
   "id": "fitness-matricula-leads",
   "name": "Fitness Matrícula — Captação de Lead via WhatsApp",
-  "version": "1.2.0",
+  "version": "1.5.1",
   "metadata": {
     "autoLogin": true,
+    "authOptions": {
+      "loginStrategy": "ui"
+    },
     "vertical": "fitness",
     "journey": "leads",
-    "purpose": "Verificar jornada leads no fluxo fitness matrícula via interface"
+    "purpose": "Verificar jornada leads no fluxo fitness matrícula via interface, com passo a passo das telas (seleção de jornada/cenário e busca de replay). Login via UI (perfil completo) e tenant persistido pelo authHelper; interações best-effort (critical=false) para não comprometer o gate. Sequência de cliques espelha o driver scripts/qa-waves/browser-run-cycle.js: a jornada Leads é selecionada duas vezes (visão inicial e aba Cenários, pois o filtro selectedJourneyId é por aba)."
   },
   "steps": [
     {
+      "name": "Abrir página QA Waves",
       "type": "navigate",
       "url": "{{urls.frontend}}/dev/qa-waves"
     },
     {
-      "type": "assert",
-      "page": {
-        "landmarks": [
-          {
-            "selector": "body",
-            "exists": true
-          }
-        ]
-      }
-    },
-    {
-      "type": "navigate",
-      "url": "{{urls.frontend}}/support"
-    },
-    {
+      "name": "Aguardar título da página QA Waves",
       "type": "wait",
-      "value": 3000
+      "critical": false,
+      "selector": "h1.qa-waves-title",
+      "timeout": 30000
     },
     {
+      "name": "Selecionar jornada Leads (visão inicial)",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "button:has-text(\"Leads\")"
+    },
+    {
+      "name": "Aguardar painel da jornada",
+      "type": "wait",
+      "value": 1500
+    },
+    {
+      "name": "Abrir aba Cenários",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "button:text-is(\"Cenários\")"
+    },
+    {
+      "name": "Aguardar aba Cenários",
+      "type": "wait",
+      "value": 1000
+    },
+    {
+      "name": "Selecionar jornada Leads na aba Cenários",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "button:has-text(\"Leads\")"
+    },
+    {
+      "name": "Aguardar lista de cenários da jornada",
+      "type": "wait",
+      "value": 1500
+    },
+    {
+      "name": "Selecionar cenário fitness-matricula-leads",
+      "type": "click",
+      "critical": false,
+      "timeout": 30000,
+      "selector": "button:has-text(\"fitness-matricula-leads@\")"
+    },
+    {
+      "name": "Aguardar detalhe do cenário",
+      "type": "wait",
+      "value": 1500
+    },
+    {
+      "name": "Abrir lista de replays RPA",
+      "type": "navigate",
+      "url": "{{urls.frontend}}/dev/rpa-replays"
+    },
+    {
+      "name": "Aguardar página de replays",
+      "type": "wait",
+      "critical": false,
+      "selector": "[data-testid=\"rpa-replays-page\"]",
+      "timeout": 30000
+    },
+    {
+      "name": "Preencher busca de replay",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "input[placeholder*=\"Nome, ID ou Gravação\"]",
+      "value": "qa_wave_replay"
+    },
+    {
+      "name": "Aguardar resultado da busca",
+      "type": "wait",
+      "value": 2000
+    },
+    {
+      "name": "Validar lista de replays",
       "type": "assert",
       "page": {
         "landmarks": [
