@@ -240,7 +240,7 @@ function createQaMeshRoutes({ buildDeps }) {
     }
     try {
       const body = await deps.parseJsonBody(req);
-      const result = deps.queueMeshRun(body || {});
+      const result = deps.queueMeshRun({ ...(body || {}), tenantId: req.agent?.tenantId || body?.tenantId || null });
       deps.sendJson(res, 202, result);
     } catch (error) {
       if (error.code === 'EXECUTION_ALREADY_RUNNING') {

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { Button } from '../styles/Button';
 import { CrudPageBase } from '../modules/crud-base';
 import * as qaMeshApi from '../api/qaMesh';
@@ -160,24 +161,33 @@ export function QaMeshPage() {
     }
   }, [authLoading, isAuthenticated, filters.domain]);
 
+  // WebSocket: acompanha a execução em tempo real (sem polling REST).
+  // O payload do evento usa status público (success/failed/processing);
+  // a página trabalha com completed/failed/running/queued.
+  const executionStatusRef = useRef(null);
   useEffect(() => {
-    if (!executionStatus?.executionId) return undefined;
-    if (!['queued', 'running'].includes(executionStatus.status)) return undefined;
+    executionStatusRef.current = executionStatus;
+  }, [executionStatus]);
 
-    const timer = setInterval(async () => {
-      try {
-        const next = await qaMeshApi.getQaMeshExecutionStatus(executionStatus.executionId);
-        setExecutionStatus(next);
-        if (['completed', 'failed'].includes(next.status)) {
-          await refreshAll();
-          setRunning(false);
-        }
-      } catch (_) {
-        // Mantém polling discreto.
-      }
-    }, 1500);
-    return () => clearInterval(timer);
-  }, [executionStatus?.executionId, executionStatus?.status]);
+  const handleMeshWsEvent = useCallback((eventName, payload) => {
+    if (eventName !== 'qa-waves.execution.updated') return;
+    const current = executionStatusRef.current;
+    if (!current?.executionId || payload?.executionId !== current.executionId) return;
+
+    const statusMap = { success: 'completed', failed: 'failed', processing: 'running' };
+    const nextStatus = statusMap[String(payload?.status || '').toLowerCase()] || current.status;
+    setExecutionStatus({ ...current, ...payload, status: nextStatus });
+
+    if (['completed', 'failed'].includes(nextStatus)) {
+      refreshAll();
+      setRunning(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useWebSocketContext({
+    onEvent: handleMeshWsEvent,
+    subscribeEvents: ['qa-waves.execution.updated'],
+  });
 
   const domainOptions = useMemo(() => ['all', ...Array.from(new Set(registry.map((item) => item.domain))).sort()], [registry]);
   const criticalityOptions = useMemo(() => ['all', ...Array.from(new Set(registry.map((item) => item.criticality))).sort()], [registry]);

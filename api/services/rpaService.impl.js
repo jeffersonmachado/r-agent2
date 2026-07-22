@@ -41,6 +41,61 @@ const activeExecutions = new Map();
 // Armazena gravações manuais em andamento
 const activeRecordings = new Map();
 
+// Barramento em processo para mudanças de estado das execuções RPA.
+// Consumidores (adapter do QA Mesh) assinam eventos em vez de fazer polling.
+const { EventEmitter } = require('events');
+const rpaExecutionEvents = new EventEmitter();
+rpaExecutionEvents.setMaxListeners(200);
+
+function emitRpaExecutionEvent(execution) {
+  if (!execution || !execution.id) return;
+  rpaExecutionEvents.emit('updated', {
+    id: execution.id,
+    status: execution.status,
+    progress: execution.progress,
+    currentStep: execution.currentStep,
+    totalSteps: execution.totalSteps,
+    error: execution.error || null,
+    // Logs recentes mantêm a UI viva sem polling REST.
+    logs: Array.isArray(execution.logs) ? execution.logs.slice(-50) : [],
+  });
+}
+
+// Ponte WebSocket: propaga mudanças de estado em tempo real para o frontend,
+// eliminando polling. Execuções/gravações RPA não carregam tenant, então o
+// broadcast é global (allowGlobal) e os clientes filtram pelo executionId.
+let wsEmitCached;
+function getWsEmit() {
+  if (wsEmitCached === undefined) {
+    try {
+      wsEmitCached = require('./websocketService').emitEvent || null;
+    } catch (error) {
+      wsEmitCached = null;
+    }
+  }
+  return wsEmitCached;
+}
+
+rpaExecutionEvents.on('updated', (event) => {
+  const emit = getWsEmit();
+  if (!emit) return;
+  try {
+    emit('rpa.execution.updated', event, { allowGlobal: true });
+  } catch (error) {
+    logger.warn('[RPA] Falha ao emitir evento WebSocket de execução', { error: safeErrorMessage(error) });
+  }
+});
+
+function emitRecordingWsEvent(recordingId, status, extra = {}) {
+  const emit = getWsEmit();
+  if (!emit) return;
+  try {
+    emit('rpa.recording.updated', { recordingId, status, ...extra }, { allowGlobal: true });
+  } catch (error) {
+    logger.warn('[RPA] Falha ao emitir evento WebSocket de gravação', { error: safeErrorMessage(error) });
+  }
+}
+
 function isIgnorableOnboardingNoise(entry) {
   if (!entry || typeof entry !== 'object') return false;
   const url = safeToString(entry.url || entry.path || '');
@@ -201,6 +256,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
     currentStepIndex: 0, // Índice do step atual
   };
   activeExecutions.set(executionId, execution);
+  emitRpaExecutionEvent(execution);
 
   // Função para adicionar log
   const addLog = (level, message, details = {}) => {
@@ -262,6 +318,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           execution.status = 'cancelled';
           execution.endTime = new Date().toISOString();
           execution.error = 'Navegador fechado pelo usuário';
+          emitRpaExecutionEvent(execution);
           
           // Tenta fechar o runner (pode falhar se já estiver fechado)
           try {
@@ -403,6 +460,11 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           firstStep: recording.steps?.[0],
           autoLogin: recording?.metadata?.autoLogin !== false && mergedData.autoLogin !== false,
           templateData: mergedData,
+          // Permite que a gravação escolha a estratégia de login (ex.: "ui" para
+          // telas que exigem perfil com permissões completas, como /dev/qa-waves)
+          authOptions: recording?.metadata?.authOptions && typeof recording.metadata.authOptions === 'object'
+            ? recording.metadata.authOptions
+            : {},
           frontendBaseUrl: process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || config.get('frontend.url') || 'http://localhost:5173',
           apiBaseUrl: process.env.TEST_API_URL || process.env.API_URL || process.env.API_BASE_URL || config.get('api.baseUrl') || `http://localhost:${Number(config.get('api.port', 3001))}`,
         });
@@ -442,6 +504,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           // Atualiza progresso
           execution.progress = Math.round((stepNumber / totalSteps) * 100);
           execution.currentStep = `Ação ${stepNumber}/${totalSteps}: ${step.type}`;
+          emitRpaExecutionEvent(execution);
           
           // Log da ação
           const actionNames = {
@@ -481,6 +544,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             logger.info(`[RPA Overlay] ✅ Condição atendida! Injetando overlay...`);
             execution.paused = true;
             execution.status = 'paused';
+            emitRpaExecutionEvent(execution);
             addLog('info', `⏸️ Pausado - Aguardando confirmação para continuar...`, {
               step: stepNumber,
               action: 'pause',
@@ -1010,6 +1074,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             // Continua execução
             execution.paused = false;
             execution.status = 'running';
+            emitRpaExecutionEvent(execution);
             execution.continuePromise = null;
             execution.continueResolve = null;
             
@@ -1261,6 +1326,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         execution.results = results;
         execution.tracePath = results.tracePath || null;
         execution.currentStep = null;
+        emitRpaExecutionEvent(execution);
 
         if (results.success) {
           addLog('success', '🎉 Execução concluída com sucesso!', {
@@ -1294,6 +1360,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         execution.endTime = new Date().toISOString();
         execution.tracePath = results.tracePath || null;
         execution.currentStep = null;
+        emitRpaExecutionEvent(execution);
 
         try {
           if (runner.executor?.stopTracing) {
@@ -1320,6 +1387,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       execution.error = safeErrorMessage(error);
       execution.endTime = new Date().toISOString();
       execution.currentStep = null;
+      emitRpaExecutionEvent(execution);
       
       try {
         await runner.close();
@@ -1470,6 +1538,7 @@ async function cancelExecution(executionId) {
     await execution.runner.close();
     execution.status = 'cancelled';
     execution.endTime = new Date().toISOString();
+    emitRpaExecutionEvent(execution);
     return { success: true };
   } catch (error) {
     return { success: false, error: safeErrorMessage(error) };
@@ -1648,6 +1717,7 @@ async function startManualRecording(seedName, initialUrl) {
     });
 
     logger.info('Gravação manual iniciada', { seedName, url });
+    emitRecordingWsEvent(seedName, 'recording', { seedName });
 
     return {
       success: true,
@@ -1696,6 +1766,7 @@ async function stopManualRecording(recordingId) {
     activeRecordings.delete(recordingId);
 
     logger.info('Gravação manual finalizada', { recordingId, seedPath: result.seedPath });
+    emitRecordingWsEvent(recordingId, 'completed', { seedPath: result.seedPath || null });
 
     return {
       success: true,
@@ -1709,6 +1780,7 @@ async function stopManualRecording(recordingId) {
     
     // Remove da lista mesmo em caso de erro
     activeRecordings.delete(recordingId);
+    emitRecordingWsEvent(recordingId, 'failed', { error: safeErrorMessage(error) || null });
     
     return {
       success: false,
@@ -1766,4 +1838,5 @@ module.exports = {
   startManualRecording,
   stopManualRecording,
   getRecordingStatus,
+  rpaExecutionEvents,
 };

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { RpaConfigDialog } from '../components/RpaConfigDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Dialog } from '../components/Dialog';
 import { Button } from '../styles/Button';
-import { listRpaRecordings, executeRpaRecording, getRpaExecutionStatus, cancelRpaExecution, deleteRpaRecording, startManualRecording, stopManualRecording, getRecordingStatus } from '../api/rpa';
+import { listRpaRecordings, executeRpaRecording, cancelRpaExecution, deleteRpaRecording, startManualRecording, stopManualRecording } from '../api/rpa';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
 
@@ -37,7 +38,6 @@ export function RpaSeedsPage() {
   const [newSeedName, setNewSeedName] = useState('');
   const [newSeedUrl, setNewSeedUrl] = useState('');
   const logsEndRef = useRef(null);
-  const previousStatusRef = useRef(null);
 
   // Proteção: redireciona para login se não estiver autenticado
   useEffect(() => {
@@ -58,87 +58,63 @@ export function RpaSeedsPage() {
     }
   }, [executionStatus?.logs]);
 
-  // Polling do status de gravação manual
+  // WebSocket: status de gravação manual em tempo real (sem polling REST).
+  const recordingIdRef = useRef(null);
   useEffect(() => {
-    if (!recordingId || !recording) return;
+    recordingIdRef.current = recordingId;
+  }, [recordingId]);
 
-    const pollRecordingStatus = async () => {
-      try {
-        const status = await getRecordingStatus(recordingId);
-        if (status.success) {
-          setRecordingStatus(status);
-        } else {
-          // Gravação não encontrada ou finalizada
-          setRecording(false);
-          setRecordingId(null);
-          setRecordingStatus(null);
-        }
-      } catch (error) {
-        logger.error('Erro ao verificar status da gravação', error);
+  const executionIdRef = useRef(null);
+  useEffect(() => {
+    executionIdRef.current = executionId;
+  }, [executionId]);
+
+  const handleRpaWsEvent = useCallback((eventName, payload) => {
+    if (eventName === 'rpa.recording.updated') {
+      if (!payload?.recordingId || payload.recordingId !== recordingIdRef.current) return;
+      if (payload.status === 'recording') {
+        setRecordingStatus({ success: true, status: 'recording', seedName: payload.seedName });
+        return;
       }
-    };
+      // Gravação finalizada (completed/failed): encerra modo de gravação na UI.
+      setRecording(false);
+      setRecordingId(null);
+      setRecordingStatus(null);
+      if (payload.status === 'completed') loadSeeds();
+      return;
+    }
 
-    const interval = setInterval(pollRecordingStatus, 2000);
-    return () => clearInterval(interval);
-  }, [recordingId, recording]);
+    if (eventName === 'rpa.execution.updated') {
+      if (!payload?.id || payload.id !== executionIdRef.current) return;
+      setExecutionStatus((prev) => ({ ...(prev || {}), ...payload }));
 
-  // Polling do status de execução
+      if (['completed', 'failed', 'cancelled'].includes(payload.status)) {
+        setExecuting(false);
+        if (payload.status === 'completed') {
+          showToast('Seed executado com sucesso!', 'success');
+        } else if (payload.status === 'failed') {
+          const errorMsg = payload.error || 'Erro desconhecido';
+          showToast(`Seed falhou: ${errorMsg.substring(0, 100)}${errorMsg.length > 100 ? '...' : ''}`, 'error');
+        } else {
+          showToast('Execução do seed cancelada', 'info');
+        }
+      }
+    }
+  }, [showToast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useWebSocketContext({
+    onEvent: handleRpaWsEvent,
+    subscribeEvents: ['rpa.execution.updated', 'rpa.recording.updated'],
+  });
+
+  // Rede de segurança: se nenhum evento chegar em 10 min, destrava a UI.
   useEffect(() => {
-    if (!executionId || !executing) return;
-
-    let timeoutId;
-    let pollingTimeoutId;
-    const maxTime = 10 * 60 * 1000; // 10 minutos
-
-    timeoutId = setTimeout(() => {
-      if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
+    if (!executionId || !executing) return undefined;
+    const timeoutId = setTimeout(() => {
       setExecuting(false);
       showToast('Timeout: Execução RPA demorou muito tempo', 'warning');
-    }, maxTime);
-
-    const pollStatus = async () => {
-      try {
-        const status = await getRpaExecutionStatus(executionId);
-        if (!status) {
-          if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
-          clearTimeout(timeoutId);
-          setExecuting(false);
-          showToast('Execução RPA não encontrada', 'warning');
-          return;
-        }
-
-        setExecutionStatus(status);
-        previousStatusRef.current = status;
-
-        if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
-          if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
-          clearTimeout(timeoutId);
-          setExecuting(false);
-
-          if (status.status === 'completed') {
-            showToast('Seed executado com sucesso!', 'success');
-          } else if (status.status === 'failed') {
-            const errorMsg = status.error || status.message || 'Erro desconhecido';
-            showToast(`Seed falhou: ${errorMsg.substring(0, 100)}${errorMsg.length > 100 ? '...' : ''}`, 'error');
-          } else {
-            showToast('Execução do seed cancelada', 'info');
-          }
-        } else {
-          pollingTimeoutId = setTimeout(pollStatus, 2000);
-        }
-      } catch (error) {
-        logger.error('Erro ao verificar status da execução', error);
-        showToast('Erro ao verificar status da execução', 'error');
-        pollingTimeoutId = setTimeout(pollStatus, 5000);
-      }
-    };
-
-    pollStatus();
-
-    return () => {
-      if (pollingTimeoutId) clearTimeout(pollingTimeoutId);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+    }, 10 * 60 * 1000);
+    return () => clearTimeout(timeoutId);
   }, [executionId, executing, showToast]);
 
   const loadSeeds = async () => {

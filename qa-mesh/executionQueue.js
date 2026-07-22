@@ -1,6 +1,60 @@
 'use strict';
 
+const { EventEmitter } = require('events');
+
 const executions = new Map();
+
+// Barramento em processo para sincronização em tempo real das execuções do mesh.
+// Consumidores (monitor QA Waves, adapters) assinam eventos em vez de fazer polling.
+const executionEvents = new EventEmitter();
+executionEvents.setMaxListeners(200);
+
+const TERMINAL_STATUSES = ['completed', 'failed', 'cancelled'];
+
+function isTerminalStatus(status) {
+  return TERMINAL_STATUSES.includes(String(status || '').toLowerCase());
+}
+
+/**
+ * Aguarda uma execução atingir status terminal, orientado a evento (sem polling).
+ * Resolve com o registro da execução; rejeita com code 'EXECUTION_WAIT_TIMEOUT'
+ * ao estourar o orçamento de tempo (um único deadline, não um loop de polling).
+ */
+function waitForQueuedExecution(executionId, { timeoutMs = 60000, onUpdate = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const existing = executions.get(executionId);
+    if (existing && isTerminalStatus(existing.status)) {
+      resolve(existing);
+      return;
+    }
+
+    let settled = false;
+    const deadline = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      executionEvents.off('updated', handleUpdate);
+      const err = new Error(`Timeout aguardando execução ${executionId}`);
+      err.code = 'EXECUTION_WAIT_TIMEOUT';
+      reject(err);
+    }, timeoutMs);
+    if (typeof deadline.unref === 'function') deadline.unref();
+
+    function handleUpdate(record) {
+      if (!record || record.executionId !== executionId || settled) return;
+      if (typeof onUpdate === 'function') {
+        try { onUpdate(record); } catch (_) { /* listener não quebra o wait */ }
+      }
+      if (isTerminalStatus(record.status)) {
+        settled = true;
+        clearTimeout(deadline);
+        executionEvents.off('updated', handleUpdate);
+        resolve(record);
+      }
+    }
+
+    executionEvents.on('updated', handleUpdate);
+  });
+}
 
 function nowIso() {
   return new Date().toISOString();
@@ -44,6 +98,7 @@ function updateExecution(executionId, patch = {}) {
   const record = executions.get(executionId);
   if (!record) return null;
   Object.assign(record, patch);
+  executionEvents.emit('updated', record);
   return record;
 }
 
@@ -121,4 +176,7 @@ module.exports = {
   getAllExecutions,
   enqueueExecution,
   clearExecutions,
+  executionEvents,
+  waitForQueuedExecution,
+  isTerminalStatus,
 };

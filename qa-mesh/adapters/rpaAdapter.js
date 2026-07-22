@@ -2,10 +2,113 @@
 
 const fs = require('fs');
 const path = require('path');
-const { executeRecording, getExecutionStatus } = require('../../api/services/rpaService');
+const { executeRecording, getExecutionStatus, rpaExecutionEvents } = require('../../api/services/rpaService');
 
 async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const RPA_TERMINAL_STATUSES = ['completed', 'failed', 'cancelled'];
+
+function buildTerminalResult(status) {
+  const results = status.results || {};
+  const artifacts = [];
+  if (results.replayPath) artifacts.push({ type: 'replay', path: path.resolve(results.replayPath) });
+  if (Array.isArray(results.screenshots)) {
+    results.screenshots.forEach((item) => artifacts.push({ type: 'screenshot', path: path.resolve(item) }));
+  }
+  // Vídeo de treinamento
+  if (results.videoPath && fs.existsSync(results.videoPath)) {
+    artifacts.push({ type: 'video', path: path.resolve(results.videoPath) });
+  }
+
+  const firstFailedStep = Array.isArray(results.steps)
+    ? results.steps.find((step) => step && step.success === false)
+    : null;
+  const diagnostics = firstFailedStep?.debug?.diagnostics || null;
+  const stepSpecific = diagnostics?.stepSpecific || diagnostics || null;
+  const maintenanceClassification = stepSpecific?.classification || null;
+  const maintenanceArtifactPath = stepSpecific?.maintenance?.artifactPath || null;
+
+  if (maintenanceArtifactPath) {
+    artifacts.push({ type: 'diagnostic', path: path.resolve(maintenanceArtifactPath) });
+  }
+
+  const normalizedErrors = Array.isArray(results.errors) ? [...results.errors] : [];
+  if (maintenanceClassification) {
+    normalizedErrors.push({ error: `maintenance_classification:${maintenanceClassification}` });
+  }
+
+  return {
+    success: status.status === 'completed' && results.success !== false,
+    logs: status.logs || [],
+    metrics: {
+      status: status.status,
+      progress: status.progress,
+      totalSteps: status.totalSteps,
+    },
+    errors: normalizedErrors.length > 0 ? normalizedErrors : (status.error ? [{ error: status.error }] : []),
+    artifacts,
+    rawStatus: status,
+  };
+}
+
+// Orientado a evento (sem polling): acorda a cada mudança de estado emitida
+// pelo rpaService; o orçamento de tempo é um único deadline.
+async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context = {}) {
+  const notifyProgress = (status) => {
+    if (!status || RPA_TERMINAL_STATUSES.includes(status.status)) return;
+    context.onStepProgress?.({
+      progress: status.progress ?? 0,
+      currentStep: status.currentStep ?? null,
+      totalSteps: status.totalSteps ?? 0,
+    });
+  };
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      rpaExecutionEvents.off('updated', handleUpdate);
+      resolve(result);
+    };
+
+    const checkNow = () => {
+      const status = getExecutionStatus(executionId);
+      if (!status) {
+        finish({ success: false, logs: [], metrics: { status: 'missing' }, errors: ['Execução não encontrada'], artifacts: [] });
+        return;
+      }
+      if (RPA_TERMINAL_STATUSES.includes(status.status)) {
+        finish(buildTerminalResult(status));
+        return;
+      }
+      notifyProgress(status);
+    };
+
+    const handleUpdate = (event) => {
+      if (!event || event.id !== executionId || settled) return;
+      checkNow();
+    };
+
+    const deadline = setTimeout(() => {
+      finish({
+        success: false,
+        logs: [],
+        metrics: { status: 'timeout' },
+        errors: [{ error: 'Tempo limite excedido aguardando execução RPA' }],
+        artifacts: [],
+      });
+    }, timeoutMs);
+    if (typeof deadline.unref === 'function') deadline.unref();
+
+    rpaExecutionEvents.on('updated', handleUpdate);
+    // Primeira leitura síncrona: cobre execução já terminal antes da assinatura.
+    checkNow();
+  });
 }
 
 function compactErrorText(entry) {
@@ -28,71 +131,6 @@ function isTransientRpaFailure(result) {
     (text.includes('locator(\'body\')') && text.includes('timeout')) ||
     (text.includes('locator(\'html\')') && text.includes('timeout'))
   );
-}
-
-async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context = {}) {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    const status = getExecutionStatus(executionId);
-    if (!status) {
-      return { success: false, logs: [], metrics: { status: 'missing' }, errors: ['Execução não encontrada'], artifacts: [] };
-    }
-    if (['completed', 'failed', 'cancelled'].includes(status.status)) {
-      const results = status.results || {};
-      const artifacts = [];
-      if (results.replayPath) artifacts.push({ type: 'replay', path: path.resolve(results.replayPath) });
-      if (Array.isArray(results.screenshots)) {
-        results.screenshots.forEach((item) => artifacts.push({ type: 'screenshot', path: path.resolve(item) }));
-      }
-      // Vídeo de treinamento
-      if (results.videoPath && fs.existsSync(results.videoPath)) {
-        artifacts.push({ type: 'video', path: path.resolve(results.videoPath) });
-      }
-
-      const firstFailedStep = Array.isArray(results.steps)
-        ? results.steps.find((step) => step && step.success === false)
-        : null;
-      const diagnostics = firstFailedStep?.debug?.diagnostics || null;
-      const stepSpecific = diagnostics?.stepSpecific || diagnostics || null;
-      const maintenanceClassification = stepSpecific?.classification || null;
-      const maintenanceArtifactPath = stepSpecific?.maintenance?.artifactPath || null;
-
-      if (maintenanceArtifactPath) {
-        artifacts.push({ type: 'diagnostic', path: path.resolve(maintenanceArtifactPath) });
-      }
-
-      const normalizedErrors = Array.isArray(results.errors) ? [...results.errors] : [];
-      if (maintenanceClassification) {
-        normalizedErrors.push({ error: `maintenance_classification:${maintenanceClassification}` });
-      }
-
-      return {
-        success: status.status === 'completed' && results.success !== false,
-        logs: status.logs || [],
-        metrics: {
-          status: status.status,
-          progress: status.progress,
-          totalSteps: status.totalSteps,
-        },
-        errors: normalizedErrors.length > 0 ? normalizedErrors : (status.error ? [{ error: status.error }] : []),
-        artifacts,
-        rawStatus: status,
-      };
-    }
-    context.onStepProgress?.({
-      progress: status.progress ?? 0,
-      currentStep: status.currentStep ?? null,
-      totalSteps: status.totalSteps ?? 0,
-    });
-    await sleep(1000);
-  }
-  return {
-    success: false,
-    logs: [],
-    metrics: { status: 'timeout' },
-    errors: [{ error: 'Tempo limite excedido aguardando execução RPA' }],
-    artifacts: [],
-  };
 }
 
 async function executeScenario(scenario, adapterContext = {}) {

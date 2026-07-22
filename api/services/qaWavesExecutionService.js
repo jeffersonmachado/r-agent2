@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
-const { clearExecutions } = require('../../qa-mesh/executionQueue');
+const { clearExecutions, waitForQueuedExecution } = require('../../qa-mesh/executionQueue');
 const logger = require('../utils/logger');
 const qaWavesLogger = require('../utils/qaWavesLogger');
 const { emitEvent } = require('./websocketService');
@@ -70,7 +70,10 @@ function resolvePlatformAdapter(platformScenarioIds = []) {
   return adapters.includes('rpa') ? 'rpa' : (adapters[0] || 'api');
 }
 const DEFAULT_POLL_INTERVAL_MS = 1000;
-const DEFAULT_MAX_POLLS = 120;
+// O adapter RPA tolera até QA_MESH_RPA_MAX_WAIT_MS (padrão 10 min) por execução;
+// o monitor precisa cobrir execuções RPA reais com screenshots por passo sob carga
+// (~6-8 min observados) e ainda deixar margem para a finalização dos artefatos.
+const DEFAULT_MAX_POLLS = Number(process.env.QA_WAVES_MONITOR_MAX_POLLS) || 720;
 
 // Cache do índice de replays com validação por mtime
 let replayArtifactsIndexCache = null;
@@ -885,6 +888,56 @@ function extractPrimaryReplayData(result) {
   return { replayArtifact, rpaReplayData };
 }
 
+const UI_TRACE_MAX_SCREENSHOT_BYTES = 900 * 1024;
+
+/**
+ * Converte um caminho de screenshot PNG em data URI base64 para embutir no replay.
+ * Segue o mesmo padrão do operationalStepExecutor (screenshots inline no step).
+ * Retorna null quando o arquivo não existe ou excede o limite de tamanho.
+ */
+function screenshotFileToDataUri(filePath) {
+  if (!filePath || typeof filePath !== 'string') return null;
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile() || stat.size > UI_TRACE_MAX_SCREENSHOT_BYTES) return null;
+    return `data:image/png;base64,${fs.readFileSync(filePath).toString('base64')}`;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Monta o passo a passo das telas da UI executadas pelo RPA (navigate/click/fill/assert)
+ * a partir dos steps ricos retornados pelo rpaService (rawStatus.results.steps).
+ * Cada entrada carrega ação, seletor, valor preenchido, resultado e screenshots
+ * ANTES/DEPOIS como data URI, permitindo que o modal do replay exiba o
+ * preenchimento das telas passo a passo.
+ */
+function buildUiTrace(result) {
+  const rawSteps = result?.rawStatus?.results?.steps;
+  if (!Array.isArray(rawSteps) || rawSteps.length === 0) return [];
+  return rawSteps.map((step, index) => ({
+    id: step.id || `ui-step-${index + 1}`,
+    index: index + 1,
+    name: step.name || `Passo ${index + 1}`,
+    action: step.action || null,
+    selector: step.selector || null,
+    input: step.input !== undefined ? step.input : null,
+    expected: step.expected !== undefined ? step.expected : null,
+    actual: step.actual !== undefined ? step.actual : null,
+    status: step.status || (step.success ? 'success' : 'failed'),
+    success: step.success === true,
+    error: step.error || null,
+    startedAt: step.startedAt || step.timestamp || null,
+    finishedAt: step.finishedAt || null,
+    durationMs: Number.isFinite(step.durationMs) ? step.durationMs : null,
+    screenshotBefore: screenshotFileToDataUri(step.screenshotBefore),
+    screenshotAfter: screenshotFileToDataUri(step.screenshotAfter),
+    networkEvents: Array.isArray(step.networkEvents) ? step.networkEvents : [],
+  }));
+}
+
 function findMeshResult(execution, platformScenarioIds = []) {
   const results = Array.isArray(execution?.results) ? execution.results : [];
   const matched = results.find((result) => platformScenarioIds.includes(result?.id));
@@ -1064,6 +1117,8 @@ async function buildReplayPatch(replayArtifact, execution) {
     // _runtimeBlockers: blockers do browser/executor para uso em finalizeExecutionArtifacts.
     // Não é persistido em disco — extraído antes de updateReplayArtifact.
     _runtimeBlockers: operationalRuntime.blockers || [],
+    // Passo a passo das telas da UI (ações RPA com screenshots ANTES/DEPOIS inline)
+    uiTrace: buildUiTrace(result),
   };
 }
 
@@ -1239,8 +1294,8 @@ async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
 function monitorExecution(executionId, replayArtifacts, options = {}) {
   const pollIntervalMs = Number(options.pollIntervalMs) || DEFAULT_POLL_INTERVAL_MS;
   const maxPolls = Number(options.maxPolls) || DEFAULT_MAX_POLLS;
+  const timeoutMs = pollIntervalMs * maxPolls;
   const tenantId = options.tenantId || null;
-  let attempts = 0;
 
   function emitWsUpdate(status, extra = {}) {
     const firstArtifact = replayArtifacts[0];
@@ -1254,54 +1309,45 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
     }, { tenantId });
   }
 
-  function poll() {
-    attempts += 1;
-    const execution = qaMeshService.getQueuedExecutionStatus(executionId);
-
-    if (!execution) {
-      if (attempts >= maxPolls) {
-        finalizeExecutionArtifacts({
-          executionId,
-          status: 'failed',
-          finishedAt: nowIso(),
-          error: 'Execução não encontrada para reconciliar replay QA Waves',
-          results: [],
-        }, replayArtifacts).catch((error) => logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error));
-        emitWsUpdate('failed', { error: 'execution_not_found' });
-        return;
-      }
-      setTimeout(poll, pollIntervalMs);
-      return;
-    }
-
-    const rawStatus = String(execution.status || '').toLowerCase();
-    if (rawStatus === 'queued' || rawStatus === 'running' || rawStatus === 'processing') {
-      if (attempts >= maxPolls) {
-        finalizeExecutionArtifacts({
-          ...execution,
-          status: 'failed',
-          finishedAt: nowIso(),
-          error: 'Timeout aguardando execução QA Waves',
-        }, replayArtifacts).catch((error) => logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error));
-        emitWsUpdate('failed', { error: 'timeout' });
-        return;
-      }
-      setTimeout(poll, pollIntervalMs);
-      return;
-    }
-
-    finalizeExecutionArtifacts(execution, replayArtifacts)
-      .then(() => {
-        const finalStatus = String(execution.status || 'completed').toLowerCase();
-        emitWsUpdate(finalStatus);
-      })
-      .catch((error) => {
-        logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error);
-        emitWsUpdate('failed', { error: 'artifact_finalization_failed' });
-      });
+  function failAndFinalize(execution, errorMessage, wsError) {
+    finalizeExecutionArtifacts({
+      executionId,
+      results: [],
+      ...(execution || {}),
+      status: 'failed',
+      finishedAt: nowIso(),
+      error: errorMessage,
+    }, replayArtifacts).catch((error) => logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error));
+    emitWsUpdate('failed', { error: wsError });
   }
 
-  setTimeout(poll, pollIntervalMs);
+  // Orientado a evento (sem polling): aguarda status terminal via barramento
+  // em processo; o orçamento de tempo é um único deadline, não um loop.
+  waitForQueuedExecution(executionId, { timeoutMs })
+    .then((execution) => {
+      finalizeExecutionArtifacts(execution, replayArtifacts)
+        .then(() => {
+          const finalStatus = String(execution.status || 'completed').toLowerCase();
+          emitWsUpdate(finalStatus);
+        })
+        .catch((error) => {
+          logger.error('[QaWavesExecutionService] Falha ao finalizar artifacts', error);
+          emitWsUpdate('failed', { error: 'artifact_finalization_failed' });
+        });
+    })
+    .catch((error) => {
+      if (error && error.code === 'EXECUTION_WAIT_TIMEOUT') {
+        const execution = qaMeshService.getQueuedExecutionStatus(executionId);
+        if (!execution) {
+          failAndFinalize(null, 'Execução não encontrada para reconciliar replay QA Waves', 'execution_not_found');
+          return;
+        }
+        failAndFinalize(execution, 'Timeout aguardando execução QA Waves', 'timeout');
+        return;
+      }
+      logger.error('[QaWavesExecutionService] Falha no monitor de execução', error);
+      emitWsUpdate('failed', { error: 'monitor_failed' });
+    });
 }
 
 async function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null, runtimeOptions = {} }) {
@@ -1534,4 +1580,5 @@ module.exports = {
   finalizeExecutionArtifacts,
   monitorExecution,
   rebuildGovernanceState,
+  buildUiTrace,
 };

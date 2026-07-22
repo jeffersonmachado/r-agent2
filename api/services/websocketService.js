@@ -377,7 +377,7 @@ function sendToAgent(agentId, data) {
  * @param {Object} options - Opções (tenantId, agentId)
  */
 function emitEvent(event, payload, options = {}) {
-  const { tenantId, agentId, executionId } = options;
+  const { tenantId, agentId, executionId, allowGlobal } = options;
 
   const message = {
     type: 'event',
@@ -405,7 +405,9 @@ function emitEvent(event, payload, options = {}) {
     sendToAgent(agentId, message);
   } else {
     // Broadcast para todos (cuidado!)
-    logger.warn('[WebSocketService] Emitindo evento sem tenantId ou agentId - broadcast global');
+    if (!allowGlobal) {
+      logger.warn('[WebSocketService] Emitindo evento sem tenantId ou agentId - broadcast global');
+    }
     for (const [clientId, client] of clients.entries()) {
       if (client.ws.readyState === 1) {
         try {
