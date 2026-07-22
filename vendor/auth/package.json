@@ -1,0 +1,10 @@
+{
+  "name": "@results/auth",
+  "version": "1.0.0",
+  "description": "Token-based authentication module — opaque session tokens, bcrypt, in-memory Map cache, adapter-based persistence. Framework-agnostic. Zero JWT.",
+  "main": "index.js",
+  "files": ["index.js", "token-service.js", "middleware.js", "session-store.js", "password.js", "adapters/"],
+  "keywords": ["authentication", "token", "session", "bcrypt", "opaque-token"],
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20.0.0" }
+}
