@@ -1,6 +1,6 @@
 # Fitness — Onboarding
 
-> Gerado: 2026-07-21T09:12:35.347Z | Vertical: fitness | Jornada: onboarding
+> Gerado: 2026-07-21T09:45:57.449Z | Vertical: fitness | Jornada: onboarding
 
 ## 1. Objetivo
 
@@ -24,7 +24,7 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 ### ⬜ Onboarding do Novo Aluno
 
 - **ID**: `fitness-matricula-onboarding`
-- **Status**: draft
+- **Status**: deprecated
 - **Canais**: não definidos
 - **Pré-condições**: nenhuma
 - **Integrações**: não definidas

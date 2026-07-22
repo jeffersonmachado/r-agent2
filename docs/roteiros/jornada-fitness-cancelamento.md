@@ -1,6 +1,6 @@
 # Fitness — Cancelamento
 
-> Gerado: 2026-07-21T09:12:35.345Z | Vertical: fitness | Jornada: cancelamento
+> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: cancelamento
 
 ## 1. Objetivo
 
@@ -24,7 +24,7 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 ### ⬜ Cancelamento de Matrícula
 
 - **ID**: `fitness-matricula-cancelamento`
-- **Status**: draft
+- **Status**: deprecated
 - **Canais**: não definidos
 - **Pré-condições**: nenhuma
 - **Integrações**: não definidas

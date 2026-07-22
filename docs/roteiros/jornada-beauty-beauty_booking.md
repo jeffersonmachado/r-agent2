@@ -1,6 +1,6 @@
 # Beleza & Estética — Beauty Booking
 
-> Gerado: 2026-07-21T09:12:35.342Z | Vertical: beauty | Jornada: beauty_booking
+> Gerado: 2026-07-21T09:45:57.444Z | Vertical: beauty | Jornada: beauty_booking
 
 ## 1. Objetivo
 

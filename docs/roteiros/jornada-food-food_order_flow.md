@@ -1,6 +1,6 @@
 # Alimentação — Food Order Flow
 
-> Gerado: 2026-07-21T09:12:35.348Z | Vertical: food | Jornada: food_order_flow
+> Gerado: 2026-07-21T09:45:57.449Z | Vertical: food | Jornada: food_order_flow
 
 ## 1. Objetivo
 

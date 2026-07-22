@@ -1,6 +1,6 @@
 # Alimentação — Food Customer Journey
 
-> Gerado: 2026-07-21T09:12:35.348Z | Vertical: food | Jornada: food_customer_journey
+> Gerado: 2026-07-21T09:45:57.449Z | Vertical: food | Jornada: food_customer_journey
 
 ## 1. Objetivo
 

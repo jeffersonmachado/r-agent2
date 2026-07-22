@@ -1,6 +1,6 @@
 # Fitness — Fitness Customer Checkin
 
-> Gerado: 2026-07-21T09:12:35.346Z | Vertical: fitness | Jornada: fitness_customer_checkin
+> Gerado: 2026-07-21T09:45:57.448Z | Vertical: fitness | Jornada: fitness_customer_checkin
 
 ## 1. Objetivo
 
@@ -27,12 +27,12 @@ Validar o fluxo operacional completo da jornada **fitness_customer_checkin** com
 
 ## 3. Cenários
 
-Total: **12** cenários (0 aprovados, 12 drafts)
+Total: **12** cenários (12 aprovados, 0 drafts)
 
-### ⬜ Check-in Completo de Aluno Fitness
+### ✅ Check-in Completo de Aluno Fitness
 
 - **ID**: `business-e2e-fitness_customer_checkin`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: whatsapp, app
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -41,17 +41,17 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Evento de Canal | - | api | - | 20000ms |
-| 2 | Validação de Backend | - | api | - | 20000ms |
-| 3 | validate_access_release | - | api | - | 20000ms |
-| 4 | Validação de Backend | - | api | - | 20000ms |
+| 1 | Evento de Canal | - | api | whatsapp | 20000ms |
+| 2 | Validação de Backend | - | api | whatsapp | 20000ms |
+| 3 | validate_access_release | - | api | whatsapp | 20000ms |
+| 4 | Validação de Backend | - | api | whatsapp | 20000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Customer Identification
+### ✅ Validação: Customer Identification
 
 - **ID**: `cap-customer_identification`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -60,14 +60,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Membership Validation
+### ✅ Validação: Membership Validation
 
 - **ID**: `cap-membership_validation`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -76,15 +76,15 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
-| 2 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
+| 2 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Access Decision
+### ✅ Validação: Access Decision
 
 - **ID**: `cap-access_decision`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -93,14 +93,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Turnstile Release
+### ✅ Validação: Turnstile Release
 
 - **ID**: `cap-turnstile_release`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -109,15 +109,15 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
-| 2 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
+| 2 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Attendance Record
+### ✅ Validação: Attendance Record
 
 - **ID**: `cap-attendance_record`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -126,15 +126,15 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
-| 2 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
+| 2 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Validação: Crm Update
+### ✅ Validação: Crm Update
 
 - **ID**: `cap-crm_update`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -143,15 +143,15 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 15000ms |
-| 2 | Validação de Backend | - | api | - | 15000ms |
+| 1 | Validação de Backend | - | api | api | 15000ms |
+| 2 | Validação de Backend | - | api | api | 15000ms |
 
 **Validações**: replay=true, backend=true
 
-### ⬜ Precondição: Crm Contact Exists
+### ✅ Precondição: Crm Contact Exists
 
 - **ID**: `precond-fitness_customer_checkin-crm_contact_exists`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -160,14 +160,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 10000ms |
+| 1 | Validação de Backend | - | api | api | 10000ms |
 
-**Validações**: replay=false, backend=true
+**Validações**: replay=true, backend=true
 
-### ⬜ Precondição: Membership Exists
+### ✅ Precondição: Membership Exists
 
 - **ID**: `precond-fitness_customer_checkin-membership_exists`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -176,14 +176,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 10000ms |
+| 1 | Validação de Backend | - | api | api | 10000ms |
 
-**Validações**: replay=false, backend=true
+**Validações**: replay=true, backend=true
 
-### ⬜ Precondição: Credential Exists
+### ✅ Precondição: Credential Exists
 
 - **ID**: `precond-fitness_customer_checkin-credential_exists`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -192,14 +192,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 10000ms |
+| 1 | Validação de Backend | - | api | api | 10000ms |
 
-**Validações**: replay=false, backend=true
+**Validações**: replay=true, backend=true
 
-### ⬜ Precondição: Device Available
+### ✅ Precondição: Device Available
 
 - **ID**: `precond-fitness_customer_checkin-device_available`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -208,14 +208,14 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 10000ms |
+| 1 | Validação de Backend | - | api | api | 10000ms |
 
-**Validações**: replay=false, backend=true
+**Validações**: replay=true, backend=true
 
-### ⬜ Precondição: Attendance Database Accessible
+### ✅ Precondição: Attendance Database Accessible
 
 - **ID**: `precond-fitness_customer_checkin-attendance_database_accessible`
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Pré-condições**: nenhuma
 - **Integrações**: api
@@ -224,9 +224,9 @@ Total: **12** cenários (0 aprovados, 12 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Validação de Backend | - | api | - | 10000ms |
+| 1 | Validação de Backend | - | api | api | 10000ms |
 
-**Validações**: replay=false, backend=true
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

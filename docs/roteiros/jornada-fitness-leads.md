@@ -1,6 +1,6 @@
 # Fitness — Leads
 
-> Gerado: 2026-07-21T09:12:35.347Z | Vertical: fitness | Jornada: leads
+> Gerado: 2026-07-21T09:45:57.448Z | Vertical: fitness | Jornada: leads
 
 ## 1. Objetivo
 

@@ -4,11 +4,11 @@ title: core/support_ticket_flow — Validação: Support Ticket Flow
 
 ```mermaid
 flowchart LR
-    step_cap_support_ticket_flow_1["validate_backend\n⚙ api"]
+    step_cap_support_ticket_flow_1["validate_backend\n📡 api\n⚙ api"]
 
 ```
 
-- **Status**: draft_ai
+- **Status**: approved
 - **Canais**: api
 - **Risco**: high
 - **Pré-condições**: nenhuma

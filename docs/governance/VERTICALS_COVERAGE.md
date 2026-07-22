@@ -9,7 +9,7 @@
 ## fitness
 - Classification: production-like
 - Journeys: 10
-- Scenarios: 27
+- Scenarios: 39
 - Blockers: none
 
 ## food

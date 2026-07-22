@@ -1,6 +1,6 @@
 # Fitness — Checkin
 
-> Gerado: 2026-07-21T09:12:35.346Z | Vertical: fitness | Jornada: checkin
+> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: checkin
 
 ## 1. Objetivo
 
@@ -24,7 +24,7 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 ### ⬜ Check-in Diário na Academia
 
 - **ID**: `fitness-matricula-checkin`
-- **Status**: draft
+- **Status**: deprecated
 - **Canais**: não definidos
 - **Pré-condições**: nenhuma
 - **Integrações**: não definidas
