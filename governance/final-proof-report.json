@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T02:22:16.008Z",
+  "generatedAt": "2026-07-21T09:55:52.763Z",
   "proofCoverage": {
     "total": 20,
     "valid": 20,
@@ -4223,7 +4223,7 @@
     "blocksAutonomous": false
   },
   "crossReportConsistency": {
-    "generatedAt": "2026-07-21T02:22:15.748Z",
+    "generatedAt": "2026-07-21T09:55:52.549Z",
     "expectedZipName": null,
     "pbxMaturity": "enterprise-real",
     "contradictions": [],
@@ -4236,7 +4236,7 @@
     "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
   },
   "packageValidation": {
-    "generatedAt": "2026-07-21T02:22:16.007Z",
+    "generatedAt": "2026-07-21T09:55:52.762Z",
     "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260612-165011.payload.zip",
     "zipName": "r-agent2-20260612-165011.payload.zip",
     "zipSha256": "5821b023e94b14e3dde295e27187209f61cde44e5e7894ec176b64e65da738e0",
@@ -4290,7 +4290,7 @@
     }
   },
   "evidenceManifest": {
-    "generatedAt": "2026-07-21T02:22:15.749Z",
+    "generatedAt": "2026-07-21T09:55:52.549Z",
     "runtimeRoot": null,
     "artifacts": [
       {
@@ -4493,9 +4493,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "dd20d030c44ddd8700be369601f405938ce4298106e41a1b22e0550d6b08e400",
-        "checksum": "dd20d030c44ddd8700be369601f405938ce4298106e41a1b22e0550d6b08e400",
-        "timestamp": "2026-06-12T19:50:47.759Z",
+        "hash": "df0681bcfbe68eadfe083f255bdb4cbfb767f455aa48ac9d2a1d09c9c0605e89",
+        "checksum": "df0681bcfbe68eadfe083f255bdb4cbfb767f455aa48ac9d2a1d09c9c0605e89",
+        "timestamp": "2026-07-21T09:10:46.316Z",
         "proofStatus": "present",
         "replayLinkage": [
           "pbx_voice_flow_prod_like"
@@ -4515,9 +4515,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "90ea8c41786de26dada851ee9de31f76b8aa17a575012aaa8f10e5e902d8ef93",
-        "checksum": "90ea8c41786de26dada851ee9de31f76b8aa17a575012aaa8f10e5e902d8ef93",
-        "timestamp": "2026-06-12T19:50:47.760Z",
+        "hash": "1ff4403f941d4b054729a297b62f18a6324a5e10b4b184b7d36345dc474ae8b7",
+        "checksum": "1ff4403f941d4b054729a297b62f18a6324a5e10b4b184b7d36345dc474ae8b7",
+        "timestamp": "2026-07-21T09:10:46.317Z",
         "proofStatus": "present",
         "replayLinkage": [
           "pbx_voice_flow_prod_like"
@@ -4537,9 +4537,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "d4bc51e6b5fc6e5b8983bfa2de7bde6fb42f98627f0788e5e9d7e355151b705a",
-        "checksum": "d4bc51e6b5fc6e5b8983bfa2de7bde6fb42f98627f0788e5e9d7e355151b705a",
-        "timestamp": "2026-06-12T19:50:47.761Z",
+        "hash": "be4cbf96e9e065ad658b13a0084b7084e4e1549a35ec36ab27c2661a4040ab72",
+        "checksum": "be4cbf96e9e065ad658b13a0084b7084e4e1549a35ec36ab27c2661a4040ab72",
+        "timestamp": "2026-07-21T09:10:46.317Z",
         "proofStatus": "present",
         "replayLinkage": [
           "pbx_voice_flow_prod_like"
@@ -4621,9 +4621,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/qa/qa-waves-enterprise-governance.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "85afd8bd16698a717d35213026b1202f54d7fca71a751afe78b598bf77442f86",
-        "checksum": "85afd8bd16698a717d35213026b1202f54d7fca71a751afe78b598bf77442f86",
-        "timestamp": "2026-07-21T02:02:19.891Z",
+        "hash": "fd1afc67e18702062cd87ec3d38997c416bb5708e02c9b9c4137eabb8317d922",
+        "checksum": "fd1afc67e18702062cd87ec3d38997c416bb5708e02c9b9c4137eabb8317d922",
+        "timestamp": "2026-07-21T09:09:13.215Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4639,9 +4639,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "d53aaec7aceefcdd2ad83d31f619fc3664290bc58339af2e50710bd4ef603dbe",
-        "checksum": "d53aaec7aceefcdd2ad83d31f619fc3664290bc58339af2e50710bd4ef603dbe",
-        "timestamp": "2026-07-21T02:22:00.746Z",
+        "hash": "7d0bacf442166e101b5a2fceb0de932adfa7d14f09f0ee23f7b7dbc1a114b696",
+        "checksum": "7d0bacf442166e101b5a2fceb0de932adfa7d14f09f0ee23f7b7dbc1a114b696",
+        "timestamp": "2026-07-21T09:55:40.292Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4657,9 +4657,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "ff43adc7b392c357b7a092e21e31c0fb8188812c1a321ac8a601b1775b6699c6",
-        "checksum": "ff43adc7b392c357b7a092e21e31c0fb8188812c1a321ac8a601b1775b6699c6",
-        "timestamp": "2026-07-21T02:22:00.992Z",
+        "hash": "bfaf8ed783f90eeb3550dcba1f1fca94c9091d1afb8c91c8a558d363f21d09bb",
+        "checksum": "bfaf8ed783f90eeb3550dcba1f1fca94c9091d1afb8c91c8a558d363f21d09bb",
+        "timestamp": "2026-07-21T09:55:40.710Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],
@@ -4675,9 +4675,9 @@
         "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
         "exists": true,
         "packageRequired": true,
-        "hash": "bb66fc4ebd8d15e4b461dcaf66772959ae3645b5458b9b814b7973b14b934742",
-        "checksum": "bb66fc4ebd8d15e4b461dcaf66772959ae3645b5458b9b814b7973b14b934742",
-        "timestamp": "2026-06-12T19:51:56.392Z",
+        "hash": "d809e802b87b8c6706323e9ae8e63d3ade8b4a3a27cc81424c1b9c2549d20371",
+        "checksum": "d809e802b87b8c6706323e9ae8e63d3ade8b4a3a27cc81424c1b9c2549d20371",
+        "timestamp": "2026-07-21T09:53:31.344Z",
         "proofStatus": "present",
         "replayLinkage": [],
         "journeyLinkage": [],

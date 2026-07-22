@@ -1,0 +1,151 @@
+{
+  "runId": "2026-07-22T20-28-18-983Z",
+  "baseUrl": "http://localhost:5173",
+  "stages": [
+    {
+      "name": "login",
+      "at": "2026-07-22T20:28:25.435Z",
+      "ok": true
+    },
+    {
+      "name": "tenant",
+      "at": "2026-07-22T20:28:57.747Z",
+      "modalHandled": true
+    },
+    {
+      "name": "select-journey",
+      "at": "2026-07-22T20:29:00.892Z",
+      "journey": "fitness/leads",
+      "clicked": true
+    },
+    {
+      "name": "select-scenario",
+      "at": "2026-07-22T20:29:03.885Z",
+      "scenario": "fitness-matricula-leads",
+      "clicked": true
+    },
+    {
+      "name": "qa-waves-page",
+      "at": "2026-07-22T20:29:04.049Z",
+      "title": "QA Waves Integrado",
+      "url": "http://localhost:5173/dev/qa-waves"
+    },
+    {
+      "name": "execute-scenario",
+      "at": "2026-07-22T20:29:04.691Z",
+      "httpStatus": 202,
+      "executionId": "meshq-1784752144172-whub9u",
+      "replayId": "qa_wave_replay_1784752144172_emuot9"
+    },
+    {
+      "name": "execution-finished",
+      "at": "2026-07-22T20:32:05.873Z",
+      "status": "timeout_waiting"
+    },
+    {
+      "name": "replay-list",
+      "at": "2026-07-22T20:32:08.067Z",
+      "replayId": "qa_wave_replay_1784752144172_emuot9",
+      "visible": true
+    },
+    {
+      "name": "replay-detail",
+      "at": "2026-07-22T20:32:10.689Z",
+      "sidebarVisible": true,
+      "stepCount": 22
+    },
+    {
+      "name": "operational-health",
+      "at": "2026-07-22T20:32:15.387Z",
+      "url": "http://localhost:5173/dev/qa-waves/operational-health"
+    },
+    {
+      "name": "enterprise-governance",
+      "at": "2026-07-22T20:32:19.972Z",
+      "url": "http://localhost:5173/dev/qa-waves/enterprise-governance"
+    }
+  ],
+  "consoleErrors": [
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /api/qa-waves/journeys, url: /api/qa-waves/journeys}",
+    "[2026-07-22T20:28:25.511Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/api/qa-waves/journeys\",\n  \"path\": \"/api/qa-waves/journeys\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /tickets?status=in_progress&limit=1000, url: /tickets?status=in_progress&limit=1000}",
+    "[2026-07-22T20:28:25.511Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/tickets?status=in_progress&limit=1000\",\n  \"path\": \"/tickets?status=in_progress&limit=1000\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /api/qa-waves/journeys, url: /api/qa-waves/journeys}",
+    "[2026-07-22T20:28:25.512Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/api/qa-waves/journeys\",\n  \"path\": \"/api/qa-waves/journeys\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /api/qa-waves/journey-status, url: /api/qa-waves/journey-status}",
+    "[2026-07-22T20:28:25.512Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/api/qa-waves/journey-status\",\n  \"path\": \"/api/qa-waves/journey-status\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /tenants/system, url: /tenants/system}",
+    "[2026-07-22T20:28:25.513Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/tenants/system\",\n  \"path\": \"/tenants/system\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /tenants/system/context, url: /tenants/system/context}",
+    "[2026-07-22T20:28:25.513Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/tenants/system/context\",\n  \"path\": \"/tenants/system/context\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /api/qa-waves/journey-status, url: /api/qa-waves/journey-status}",
+    "[2026-07-22T20:28:25.513Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/api/qa-waves/journey-status\",\n  \"path\": \"/api/qa-waves/journey-status\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /tickets?status=in_progress&limit=1000, url: /tickets?status=in_progress&limit=1000}",
+    "[2026-07-22T20:28:25.514Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/tickets?status=in_progress&limit=1000\",\n  \"path\": \"/tickets?status=in_progress&limit=1000\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /super-admin/tenants, url: /super-admin/tenants}",
+    "[2026-07-22T20:28:25.514Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/super-admin/tenants\",\n  \"path\": \"/super-admin/tenants\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[HTTP Client] 💥 Erro capturado no catch: {name: TypeError, message: Failed to fetch, status: undefined, path: /super-admin/tenants, url: /super-admin/tenants}",
+    "[2026-07-22T20:28:25.514Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/super-admin/tenants\",\n  \"path\": \"/super-admin/tenants\",\n  \"hint\": \"Verifique se a API está acessível no caminho configurado\"\n}",
+    "[2026-07-22T20:28:25.515Z] [ERROR] Toast [error]: API temporariamente indisponível. Tentando reconectar... {\n  \"type\": \"error\",\n  \"duration\": 6000\n}",
+    "[TenantSelectorModal] listAllTenants falhou: TypeError: Failed to fetch\n    at fetchWithTimeout (http://localhost:5173/src/api/client.js:70:28)\n    at fetchJson (http://localhost:5173/src/api/client.js:191:28)\n    at listAllTenants (http://localhost:5173/src/api/superAdmin.js:18:10)\n    at loadTenants (http://localhost:5173/src/components/TenantSelectorModal.jsx:125:26)\n    at http://localhost:5173/src/components/TenantSelectorModal.jsx:194:5\n    at commitHookEffectListMount (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:16963:34)\n    at invokePassiveEffectMountInDEV (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18374:19)\n    at invokeEffectsInDev (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:19754:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:19739:15)\n    at flushPassiveEffectsImpl (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:19556:13)",
+    "[TenantSelectorModal] Erro completo: {message: Failed to fetch, status: 0, body: undefined, stack: TypeError: Failed to fetch\n    at fetchWithTimeout…-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:19556:13)}",
+    "[TenantSelectorModal] listAllTenants falhou: TypeError: Failed to fetch\n    at fetchWithTimeout (http://localhost:5173/src/api/client.js:70:28)\n    at fetchJson (http://localhost:5173/src/api/client.js:191:28)\n    at listAllTenants (http://localhost:5173/src/api/superAdmin.js:18:10)\n    at loadTenants (http://localhost:5173/src/components/TenantSelectorModal.jsx:125:26)\n    at http://localhost:5173/src/components/TenantSelectorModal.jsx:194:5\n    at commitHookEffectListMount (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:16963:34)\n    at commitPassiveMountOnFiber (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18206:19)\n    at commitPassiveMountEffects_complete (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18179:17)\n    at commitPassiveMountEffects_begin (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18169:15)\n    at commitPassiveMountEffects (http://localhost:5173/@fs/tmp/r-agent2-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18159:11)",
+    "[TenantSelectorModal] Erro completo: {message: Failed to fetch, status: 0, body: undefined, stack: TypeError: Failed to fetch\n    at fetchWithTimeout…-vite/deps/chunk-NSEVK5JE.js?v=edd794aa:18159:11)}",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "failedRequests": [
+    "GET http://localhost:5173/api/qa-waves/journeys :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/journeys :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/scenarios :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/journey-status :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/executions?limit=50 :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/scenarios :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/scenarios :: net::ERR_ABORTED",
+    "GET http://localhost:5173/tenants/system :: net::ERR_ABORTED",
+    "GET http://localhost:5173/tenants/system/context :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/journey-status :: net::ERR_ABORTED",
+    "GET http://localhost:5173/tickets?status=in_progress&limit=1000 :: net::ERR_ABORTED",
+    "GET http://localhost:5173/super-admin/tenants :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/scenarios :: net::ERR_ABORTED",
+    "GET http://localhost:5173/super-admin/tenants :: net::ERR_ABORTED",
+    "GET http://localhost:5173/tickets?status=in_progress&limit=1000 :: net::ERR_ABORTED",
+    "GET http://localhost:5173/api/qa-waves/executions?limit=50 :: net::ERR_ABORTED"
+  ],
+  "executionId": "meshq-1784752144172-whub9u",
+  "replayId": "qa_wave_replay_1784752144172_emuot9",
+  "finishedAt": "2026-07-22T20:32:19.972Z"
+}

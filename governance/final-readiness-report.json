@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T09:10:46.312Z",
+  "generatedAt": "2026-07-21T09:55:40.291Z",
   "status": "AUTONOMOUS_READY_GO",
   "finalDecision": "AUTONOMOUS_READY_GO",
   "canonicalMeshExecutionId": "mesh-2026-06-11T22-13-23-346Z",
@@ -15,7 +15,7 @@
     {
       "vertical": "fitness",
       "classification": "production-like",
-      "scenarioCount": 27,
+      "scenarioCount": 39,
       "journeyCount": 10,
       "blockers": []
     },
@@ -82,7 +82,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 24,
       "blocker": false
     },
     {
@@ -92,7 +92,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 13,
+      "scenarioCount": 24,
       "blocker": false
     },
     {
@@ -102,7 +102,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 42,
+      "scenarioCount": 56,
       "blocker": false
     },
     {
@@ -122,7 +122,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 6,
       "blocker": false
     },
     {
@@ -132,7 +132,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 14,
+      "scenarioCount": 65,
       "blocker": false
     },
     {
@@ -142,7 +142,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 14,
+      "scenarioCount": 49,
       "blocker": false
     },
     {
@@ -152,7 +152,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 16,
+      "scenarioCount": 18,
       "blocker": false
     },
     {
@@ -162,7 +162,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 40,
       "blocker": false
     },
     {
@@ -172,7 +172,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 6,
+      "scenarioCount": 19,
       "blocker": false
     }
   ],
@@ -183,7 +183,7 @@
     "evidence": [
       "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
     ],
-    "scenarioCount": 13,
+    "scenarioCount": 24,
     "blocker": false
   },
   "pbxCoverage": {
@@ -193,7 +193,7 @@
     "evidence": [
       "qa/enterprise/pbx-voice-flow-prod-like.json"
     ],
-    "scenarioCount": 42,
+    "scenarioCount": 56,
     "blocker": false
   },
   "aiCoverage": {
@@ -223,7 +223,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 24,
       "blocker": false
     },
     {
@@ -233,7 +233,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 13,
+      "scenarioCount": 24,
       "blocker": false
     },
     {
@@ -243,7 +243,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 42,
+      "scenarioCount": 56,
       "blocker": false
     },
     {
@@ -263,7 +263,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 4,
+      "scenarioCount": 6,
       "blocker": false
     },
     {
@@ -273,7 +273,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 14,
+      "scenarioCount": 65,
       "blocker": false
     },
     {
@@ -283,7 +283,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 14,
+      "scenarioCount": 49,
       "blocker": false
     },
     {
@@ -293,7 +293,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 16,
+      "scenarioCount": 18,
       "blocker": false
     },
     {
@@ -303,7 +303,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 11,
+      "scenarioCount": 40,
       "blocker": false
     },
     {
@@ -313,7 +313,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 6,
+      "scenarioCount": 19,
       "blocker": false
     }
   ],
@@ -341,7 +341,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-07-21T09:11:02.629Z",
+    "generatedAt": "2026-07-21T09:55:52.763Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -4565,7 +4565,7 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-07-21T09:11:02.361Z",
+      "generatedAt": "2026-07-21T09:55:52.549Z",
       "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
@@ -4578,7 +4578,7 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-07-21T09:11:02.628Z",
+      "generatedAt": "2026-07-21T09:55:52.762Z",
       "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260612-165011.payload.zip",
       "zipName": "r-agent2-20260612-165011.payload.zip",
       "zipSha256": "5821b023e94b14e3dde295e27187209f61cde44e5e7894ec176b64e65da738e0",
@@ -4632,20 +4632,20 @@
       }
     },
     "evidenceManifest": {
-      "generatedAt": "2026-07-21T09:11:02.361Z",
-      "runtimeRoot": "/tmp/ragent2-runtime-dev",
+      "generatedAt": "2026-07-21T09:55:52.549Z",
+      "runtimeRoot": null,
       "artifacts": [
         {
           "id": "smoke_summary",
           "domain": "foundation",
           "path": "qa/smoke-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/smoke-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/smoke-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/smoke-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/smoke-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e76591ceee5ecc17a26db549063b39b7d6d1728c2070ba569e813ae67c7e6ff1",
-          "checksum": "e76591ceee5ecc17a26db549063b39b7d6d1728c2070ba569e813ae67c7e6ff1",
-          "timestamp": "2026-07-21T02:48:20.744Z",
+          "hash": "a917a5813c10e10cc86c22f3e398754874ed7b7cd89327addf8be05081191171",
+          "checksum": "a917a5813c10e10cc86c22f3e398754874ed7b7cd89327addf8be05081191171",
+          "timestamp": "2026-04-20T16:23:48.414Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4657,13 +4657,13 @@
           "id": "smoke_l01",
           "domain": "foundation",
           "path": "qa/l01-physical-queue-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/l01-physical-queue-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/l01-physical-queue-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "6e07b442f0c8c0000053916d9290c6c4ae532762946dcec486a4fe6290d42839",
-          "checksum": "6e07b442f0c8c0000053916d9290c6c4ae532762946dcec486a4fe6290d42839",
-          "timestamp": "2026-07-21T02:48:06.930Z",
+          "hash": "3a7ef07c43c308f62a65804e7fd7777f5adc47320152ceea3e392fc0b8d257f2",
+          "checksum": "3a7ef07c43c308f62a65804e7fd7777f5adc47320152ceea3e392fc0b8d257f2",
+          "timestamp": "2026-04-20T16:23:16.871Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4675,13 +4675,13 @@
           "id": "smoke_l02",
           "domain": "foundation",
           "path": "qa/l02-ura-publish-rollback-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/l02-ura-publish-rollback-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/l02-ura-publish-rollback-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "13a69e4f78cb526158e3118d10731a72d2346326f5a23471ddbe06fe0ff105e2",
-          "checksum": "13a69e4f78cb526158e3118d10731a72d2346326f5a23471ddbe06fe0ff105e2",
-          "timestamp": "2026-07-21T02:48:20.601Z",
+          "hash": "bc1b7c9bda1039d4c09add37735b7b225b9a1f7af6e9a8b4613533105a36e77b",
+          "checksum": "bc1b7c9bda1039d4c09add37735b7b225b9a1f7af6e9a8b4613533105a36e77b",
+          "timestamp": "2026-04-20T17:15:49.998Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4693,13 +4693,13 @@
           "id": "smoke_l03",
           "domain": "foundation",
           "path": "qa/l03-pbx-voice-tts-asr-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/l03-pbx-voice-tts-asr-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/l03-pbx-voice-tts-asr-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "7ac5b54cffa84c221188fb956091163974cb7a034c349ad38b9d47730538d37a",
-          "checksum": "7ac5b54cffa84c221188fb956091163974cb7a034c349ad38b9d47730538d37a",
-          "timestamp": "2026-07-21T02:48:05.939Z",
+          "hash": "1433bfc9b5de71125ae1b3ddc53c082b8590ed6263c68ec21385843cffa94551",
+          "checksum": "1433bfc9b5de71125ae1b3ddc53c082b8590ed6263c68ec21385843cffa94551",
+          "timestamp": "2026-04-20T17:15:17.660Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4711,13 +4711,13 @@
           "id": "smoke_l04",
           "domain": "foundation",
           "path": "qa/l04-pbx-call-events-runtime-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/l04-pbx-call-events-runtime-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/l04-pbx-call-events-runtime-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "673c90cd13bba38854b2d04bf6f677bb864961b4d9553e999f19485a5699a4b9",
-          "checksum": "673c90cd13bba38854b2d04bf6f677bb864961b4d9553e999f19485a5699a4b9",
-          "timestamp": "2026-07-21T02:47:58.545Z",
+          "hash": "d297aaa8962be1d785124e9efb4c15ba574f1e96accc2793a770161d51917629",
+          "checksum": "d297aaa8962be1d785124e9efb4c15ba574f1e96accc2793a770161d51917629",
+          "timestamp": "2026-04-20T16:23:07.138Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4729,13 +4729,13 @@
           "id": "smoke_l05",
           "domain": "foundation",
           "path": "qa/l05-chatpro-omnichannel-evidence.json",
-          "sourcePath": "/tmp/ragent2-runtime-dev/qa/l05-chatpro-omnichannel-evidence.json",
-          "resolvedPath": "/tmp/ragent2-runtime-dev/qa/l05-chatpro-omnichannel-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "6b9e0b008eca927b0fee53108a7486a2cee8b072f63bd62ae4db7730a430d6f1",
-          "checksum": "6b9e0b008eca927b0fee53108a7486a2cee8b072f63bd62ae4db7730a430d6f1",
-          "timestamp": "2026-07-21T02:46:28.350Z",
+          "hash": "49cf9e9fc92383d4213a4fe28b374bc60b8a2a39451d06cbc7e50abe17767c2c",
+          "checksum": "49cf9e9fc92383d4213a4fe28b374bc60b8a2a39451d06cbc7e50abe17767c2c",
+          "timestamp": "2026-04-20T17:15:01.000Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4981,9 +4981,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "68d8447afec07ee291f33e131eba4fe834de1d1f2567455e77e1fc887b9d3c71",
-          "checksum": "68d8447afec07ee291f33e131eba4fe834de1d1f2567455e77e1fc887b9d3c71",
-          "timestamp": "2026-07-21T09:10:46.318Z",
+          "hash": "7d0bacf442166e101b5a2fceb0de932adfa7d14f09f0ee23f7b7dbc1a114b696",
+          "checksum": "7d0bacf442166e101b5a2fceb0de932adfa7d14f09f0ee23f7b7dbc1a114b696",
+          "timestamp": "2026-07-21T09:55:40.292Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -4999,9 +4999,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "5e887129620596bd0bf848338927c54902f59e4304df262c246b582abfb8fd22",
-          "checksum": "5e887129620596bd0bf848338927c54902f59e4304df262c246b582abfb8fd22",
-          "timestamp": "2026-07-21T09:10:46.874Z",
+          "hash": "bfaf8ed783f90eeb3550dcba1f1fca94c9091d1afb8c91c8a558d363f21d09bb",
+          "checksum": "bfaf8ed783f90eeb3550dcba1f1fca94c9091d1afb8c91c8a558d363f21d09bb",
+          "timestamp": "2026-07-21T09:55:40.710Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5017,9 +5017,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ed69d812103b8e922cf53fbaa37fd0d2b7f13ba51b197a39fc5454ad8c61a8f7",
-          "checksum": "ed69d812103b8e922cf53fbaa37fd0d2b7f13ba51b197a39fc5454ad8c61a8f7",
-          "timestamp": "2026-07-21T09:10:21.489Z",
+          "hash": "d809e802b87b8c6706323e9ae8e63d3ade8b4a3a27cc81424c1b9c2549d20371",
+          "checksum": "d809e802b87b8c6706323e9ae8e63d3ade8b4a3a27cc81424c1b9c2549d20371",
+          "timestamp": "2026-07-21T09:53:31.344Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -5187,19 +5187,30 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 77,
-    "executableScenarioCount": 34,
+    "scenarioCount": 90,
+    "executableScenarioCount": 84,
     "executableJourneyIds": [
+      "agendamento",
       "beauty_booking",
       "beauty_new_customer",
+      "booking_flow",
+      "cancelamento",
+      "checkin",
+      "checkout",
       "clinic_default_journey",
       "fitness_active_customer",
+      "fitness_customer_checkin",
       "fitness_new_customer",
       "food_customer_journey",
       "food_order_flow",
       "leads",
       "market_default_journey",
-      "services_default_journey"
+      "omnichannel_engagement",
+      "onboarding",
+      "payment_charge_flow",
+      "renovacao",
+      "services_default_journey",
+      "support_ticket_flow"
     ],
     "orphanJourneys": [],
     "missingBackendAssertions": []

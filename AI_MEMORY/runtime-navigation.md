@@ -39,3 +39,10 @@ Authenticated as `systemadmin`, role `super_admin`, tenant `system`.
 - `/dev/rpa-replays` rendered but replay API fetches failed/aborted through `http://127.0.0.1:5173/api/test-executions/replays...`.
 - `/dev/qa-waves` rendered but QA Waves API fetches had aborted/failed requests through the frontend origin.
 
+## Browser validation 2026-07-22 (QA Waves cycle, driver `scripts/qa-waves/browser-run-cycle.js`)
+
+- Full cycle validated headless/headed on `http://localhost:5173`: login (`systemadmin`/`Admin123!`, tenant `system`) → `/dev/qa-waves` → jornada FITNESS/Leads → cenário `fitness-matricula-leads` → "▶ Executar cenário" (HTTP 202) → replay em `/dev/rpa-replays?source=qa-waves` → `/dev/qa-waves/operational-health` → `/dev/qa-waves/enterprise-governance`. Evidências em `AI_MEMORY/evidence/qa-waves/browser-run-*/`.
+- `QaWavesPage` não tem data-testids: título é `h1.qa-waves-title`; cenário selecionado clicando no botão que contém `<id>@<version>` na aba "Cenários". **O `selectedScenarioId` default é `items[0]` da lista global** — sem selecionar o cenário explicitamente, "Executar cenário" roda o primeiro da lista (hoje `beauty-campanha-lead-pagamento`, que exige pipeline e falha 500 em contexto local).
+- Replays de execução QA Waves aparecem na listagem com `data-replay-id` = replayId (`qa_wave_replay_*`, base do filename). **O filtro `?source=qa-waves` retorna 0** — a listagem (`/api/test-executions/replays`) não extrai `source`/`scenarioId` desses arquivos. Buscar por `?search=<replayId>`. Cuidado com falso positivo: `search=fitness-matricula-leads` casa o arquivo de **seed** (`rpa/seeds/fitness-matricula-leads.json`, source `seed`), não o replay da execução.
+- Em contexto local, só cenários com `platformScenarioIds` mapeados para mesh scenarios **sem** `requiresOfficialPipeline` executam; 28/47 mesh scenarios exigem pipeline oficial.
+
