@@ -1,0 +1,20 @@
+{
+  "/dev/rpa-seeds": {
+    "url": "http://localhost:5173/dev/rpa-seeds",
+    "title": "🌱 Seeds RPA",
+    "rendered": true,
+    "bodyLen": 1709
+  },
+  "/rpa-seeds": {
+    "url": "http://localhost:5173/rpa-seeds",
+    "title": "🌱 Seeds RPA",
+    "rendered": true,
+    "bodyLen": 1420
+  },
+  "menuDev": {
+    "hasQaRpaGroup": false,
+    "hasQaWaves": false,
+    "hasSeedsRpa": false
+  },
+  "consoleErrors": []
+}

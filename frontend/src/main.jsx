@@ -435,7 +435,7 @@ function AppWithAuth() {
   const isRpaTest = isRoute('/dev/rpa-test');
   const isRpaReplays = isRoute('/dev/rpa-replays');
   const isRpaReplaysAlias = isRoute('/rpa-replays');
-  const isRpaSeeds = isRoute('/rpa-seeds');
+  const isRpaSeeds = isRoute('/dev/rpa-seeds') || isRoute('/rpa-seeds'); // /rpa-seeds = alias legado
   const isChat = isRoute('/chat');
   const isQaStability = isRoute('/qa/stability');
   const isQa = isRoute('/qa');
@@ -616,6 +616,7 @@ function AppWithAuth() {
       '/web-scraping': '🕷️ Raspagem de Sites',
       '/dev/rpa-test': '🚀 Execução de Testes RPA',
       '/dev/rpa-replays': '📋 Replays RPA',
+      '/dev/rpa-seeds': '🌱 Seeds RPA',
       '/rpa-seeds': '🌱 Seeds RPA',
       '/chat': '💬 Chat de Teste',
       '/qa/stability': '📈 Estabilidade QA',

@@ -46,3 +46,13 @@ Authenticated as `systemadmin`, role `super_admin`, tenant `system`.
 - Replays de execução QA Waves aparecem na listagem com `data-replay-id` = replayId (`qa_wave_replay_*`, base do filename). **O filtro `?source=qa-waves` retorna 0** — a listagem (`/api/test-executions/replays`) não extrai `source`/`scenarioId` desses arquivos. Buscar por `?search=<replayId>`. Cuidado com falso positivo: `search=fitness-matricula-leads` casa o arquivo de **seed** (`rpa/seeds/fitness-matricula-leads.json`, source `seed`), não o replay da execução.
 - Em contexto local, só cenários com `platformScenarioIds` mapeados para mesh scenarios **sem** `requiresOfficialPipeline` executam; 28/47 mesh scenarios exigem pipeline oficial.
 
+## Reorganização QA & RPA (2026-07-23)
+
+Mapa canônico das rotas de QA após revisão completa de menus/rotas:
+
+- **Plataforma > Qualidade** (roles supervisor+): `/qa` (QaPage), `/qa/stability` (StabilityPage), `/qa-mesh` (QaMeshPage) — visão de negócio/qualidade. Mantidas fora de `/dev` de propósito: são páginas de acompanhamento para perfis não-dev.
+- **Plataforma > Super Admin > QA & RPA** (roles super_admin; novo subgrupo `dev-qa-rpa`): `/dev/qa-waves`, `/dev/qa-audit`, `/dev/qa-waves/operational-health`, `/dev/qa-waves/enterprise-governance`, `/dev/qa-gaps`, `/dev/rpa-test`, `/dev/rpa-replays`, `/dev/rpa-seeds` — ferramentas de engenharia. Antes estavam soltas no nível direto de Super Admin, misturadas com Gerar Sistema/Chat de Teste.
+- **Aliases preservados**: `/rpa-replays` → `/dev/rpa-replays`; `/rpa-seeds` → `/dev/rpa-seeds` (canonizado nesta data — era a única ferramenta RPA fora de `/dev/*`; o alias legado continua renderizando porque `main.jsx` aceita ambos e `DashboardPage.jsx:498` ainda linka para `/rpa-seeds`); `/system-status` → `/dev/system-status`; `/dev-dashboard` → `/dev`.
+- **Decisão consciente (não movido)**: `/dev/system-status` permanece exposto em Operação > Monitoramento (é monitoramento operacional, apesar do path `/dev`); área `operacoes` em `workspaceAreas.js` mantém o prefixo `/dev/system-status`.
+- **Colisões de path página×API resolvidas**: `/qa/stability` e `/qa/checkpoints` (1 segmento) eram capturados por `/qa/:id` do módulo qa (404 indevido) — guarda com `next()` em `api/modules/qa/routes.js`; proxy Vite `^/qa(/|$)` com bypass de navegação separa página (Accept text/html) de API (Accept application/json), mesmo padrão já usado por `/qa-mesh` e `/rag`.
+
