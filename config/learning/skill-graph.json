@@ -1,0 +1,611 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-23T17:10:33.405Z",
+  "skills": [
+    {
+      "key": "access_control",
+      "label": "access control",
+      "kind": "domain",
+      "routes": [],
+      "capabilities": [
+        "access_decision",
+        "membership_validation",
+        "turnstile_release"
+      ]
+    },
+    {
+      "key": "agents",
+      "label": "agents",
+      "kind": "resource",
+      "routes": [
+        "/agents",
+        "/rbac"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "audit",
+      "label": "audit",
+      "kind": "resource",
+      "routes": [
+        "/audit"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "bulk_messaging",
+      "label": "bulk messaging",
+      "kind": "resource",
+      "routes": [
+        "/bulk-messaging",
+        "/marketing"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "config",
+      "label": "config",
+      "kind": "resource",
+      "routes": [
+        "/access-control",
+        "/automations",
+        "/backup",
+        "/channel-accounts",
+        "/channel-health",
+        "/config",
+        "/dev/system-status",
+        "/developer-keys",
+        "/generate-system",
+        "/mfa",
+        "/node-marketplace",
+        "/pbx",
+        "/pbx/acls",
+        "/pbx/cc/callbacks",
+        "/pbx/cc/campaign-list",
+        "/pbx/cc/campaigns",
+        "/pbx/cc/click2call",
+        "/pbx/cc/contact-reasons",
+        "/pbx/cc/pause-reasons",
+        "/pbx/cdr",
+        "/pbx/dialplan",
+        "/pbx/dids",
+        "/pbx/extensions",
+        "/pbx/governance",
+        "/pbx/ivr",
+        "/pbx/media",
+        "/pbx/operator-panel",
+        "/pbx/queue-members",
+        "/pbx/queues",
+        "/pbx/recordings",
+        "/pbx/referencia/xml",
+        "/pbx/routes",
+        "/pbx/trunks",
+        "/plan-usage",
+        "/solutions",
+        "/sso-scim",
+        "/tasks",
+        "/whatsapp-connections",
+        "/whatsapp-ivr"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "crm",
+      "label": "crm",
+      "kind": "resource",
+      "routes": [
+        "/crm",
+        "/crm/accounts",
+        "/crm/activities",
+        "/crm/analytics",
+        "/crm/audit",
+        "/crm/campaigns",
+        "/crm/contacts",
+        "/crm/dashboard",
+        "/crm/leads",
+        "/crm/opportunities",
+        "/crm/pipelines",
+        "/crm/rbac",
+        "/crm/reports",
+        "/crm/webhooks"
+      ],
+      "capabilities": [
+        "crm_update"
+      ]
+    },
+    {
+      "key": "departments",
+      "label": "departments",
+      "kind": "resource",
+      "routes": [
+        "/departments"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "email",
+      "label": "email",
+      "kind": "channel",
+      "routes": [],
+      "capabilities": [
+        "omnichannel_email"
+      ]
+    },
+    {
+      "key": "flows",
+      "label": "flows",
+      "kind": "resource",
+      "routes": [
+        "/bpmn-editor",
+        "/dev/rpa-replays",
+        "/dev/rpa-seeds",
+        "/dev/rpa-test",
+        "/editor",
+        "/whatsapp-templates"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "pbx",
+      "label": "pbx",
+      "kind": "channel",
+      "routes": [],
+      "capabilities": [
+        "omnichannel_pbx"
+      ]
+    },
+    {
+      "key": "projects",
+      "label": "projects",
+      "kind": "resource",
+      "routes": [
+        "/projects"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "quick_replies",
+      "label": "quick replies",
+      "kind": "resource",
+      "routes": [
+        "/quick-replies"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "rag",
+      "label": "rag",
+      "kind": "resource",
+      "routes": [
+        "/faq",
+        "/knowledge-base",
+        "/product-docs",
+        "/rag-documents",
+        "/web-scraping"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "reports",
+      "label": "reports",
+      "kind": "resource",
+      "routes": [
+        "/agenda",
+        "/analytics",
+        "/beauty/bundles",
+        "/beauty/campaigns",
+        "/beauty/customers",
+        "/beauty/leads",
+        "/beauty/payments",
+        "/beauty/schedule",
+        "/beauty/services",
+        "/chat-humano",
+        "/dev/qa-audit",
+        "/dev/qa-gaps",
+        "/dev/qa-waves",
+        "/dev/qa-waves/enterprise-governance",
+        "/dev/qa-waves/operational-health",
+        "/dev/work-management",
+        "/dev/work-management/ai-suggestions",
+        "/dev/work-management/board",
+        "/dev/work-management/deliverables",
+        "/dev/work-management/documents",
+        "/dev/work-management/metrics",
+        "/dev/work-management/operations",
+        "/dev/work-management/projects",
+        "/dev/work-management/qa-validation",
+        "/dev/work-management/team",
+        "/dev/work-management/timeline",
+        "/dispatch",
+        "/export",
+        "/fila-fisica",
+        "/fitness/attendance",
+        "/fitness/memberships",
+        "/fitness/students",
+        "/kitchen",
+        "/operations-dashboard",
+        "/orders",
+        "/qa",
+        "/qa-mesh",
+        "/qa/stability",
+        "/sla-policies",
+        "/supervisor",
+        "/tenant-intelligence",
+        "/vertical/dashboard"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "tenant",
+      "label": "tenant",
+      "kind": "resource",
+      "routes": [
+        "/onboarding",
+        "/tenants"
+      ],
+      "capabilities": []
+    },
+    {
+      "key": "tickets",
+      "label": "tickets",
+      "kind": "resource",
+      "routes": [
+        "/ai-tools",
+        "/chat",
+        "/failed-messages",
+        "/inbox",
+        "/maintenance",
+        "/segmentation",
+        "/support"
+      ],
+      "capabilities": [
+        "support_ticket_flow",
+        "support_ticket_reply"
+      ]
+    },
+    {
+      "key": "webchat",
+      "label": "webchat",
+      "kind": "channel",
+      "routes": [],
+      "capabilities": [
+        "omnichannel_webchat"
+      ]
+    },
+    {
+      "key": "whatsapp",
+      "label": "whatsapp",
+      "kind": "channel",
+      "routes": [],
+      "capabilities": [
+        "omnichannel_whatsapp"
+      ]
+    },
+    {
+      "key": "workspace",
+      "label": "workspace",
+      "kind": "resource",
+      "routes": [
+        "/workspace"
+      ],
+      "capabilities": []
+    }
+  ],
+  "journeys": [
+    {
+      "key": "agendamento",
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "notifications",
+        "crm_update"
+      ]
+    },
+    {
+      "key": "beauty_booking",
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ]
+    },
+    {
+      "key": "beauty_new_customer",
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ]
+    },
+    {
+      "key": "booking_flow",
+      "requiredCapabilities": [
+        "support_ticket_flow"
+      ]
+    },
+    {
+      "key": "cancelamento",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "crm_update",
+        "notifications"
+      ]
+    },
+    {
+      "key": "checkin",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record"
+      ]
+    },
+    {
+      "key": "checkout",
+      "requiredCapabilities": [
+        "customer_identification",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ]
+    },
+    {
+      "key": "clinic_default_journey",
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "crm_updates",
+        "notifications"
+      ]
+    },
+    {
+      "key": "fitness_active_customer",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ]
+    },
+    {
+      "key": "fitness_customer_checkin",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record",
+        "crm_update"
+      ]
+    },
+    {
+      "key": "fitness_new_customer",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ]
+    },
+    {
+      "key": "food_customer_journey",
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ]
+    },
+    {
+      "key": "food_order_flow",
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ]
+    },
+    {
+      "key": "leads",
+      "requiredCapabilities": [
+        "lead_capture",
+        "customer_identification",
+        "crm_updates",
+        "notifications"
+      ]
+    },
+    {
+      "key": "market_default_journey",
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications",
+        "crm_updates"
+      ]
+    },
+    {
+      "key": "omnichannel_engagement",
+      "requiredCapabilities": [
+        "omnichannel_whatsapp",
+        "omnichannel_webchat",
+        "omnichannel_pbx",
+        "omnichannel_email"
+      ]
+    },
+    {
+      "key": "onboarding",
+      "requiredCapabilities": [
+        "customer_identification",
+        "crm_updates",
+        "notifications",
+        "onboarding"
+      ]
+    },
+    {
+      "key": "payment_charge_flow",
+      "requiredCapabilities": [
+        "billing_validation"
+      ]
+    },
+    {
+      "key": "renovacao",
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ]
+    },
+    {
+      "key": "services_default_journey",
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ]
+    },
+    {
+      "key": "support_ticket_flow",
+      "requiredCapabilities": [
+        "support_ticket_flow",
+        "support_ticket_reply"
+      ]
+    }
+  ],
+  "routeSkillMap": {
+    "/access-control": "config",
+    "/agenda": "reports",
+    "/agents": "agents",
+    "/ai-tools": "tickets",
+    "/analytics": "reports",
+    "/audit": "audit",
+    "/automations": "config",
+    "/backup": "config",
+    "/beauty/bundles": "reports",
+    "/beauty/campaigns": "reports",
+    "/beauty/customers": "reports",
+    "/beauty/leads": "reports",
+    "/beauty/payments": "reports",
+    "/beauty/schedule": "reports",
+    "/beauty/services": "reports",
+    "/bpmn-editor": "flows",
+    "/bulk-messaging": "bulk_messaging",
+    "/channel-accounts": "config",
+    "/channel-health": "config",
+    "/chat": "tickets",
+    "/chat-humano": "reports",
+    "/config": "config",
+    "/crm": "crm",
+    "/crm/accounts": "crm",
+    "/crm/activities": "crm",
+    "/crm/analytics": "crm",
+    "/crm/audit": "crm",
+    "/crm/campaigns": "crm",
+    "/crm/contacts": "crm",
+    "/crm/dashboard": "crm",
+    "/crm/leads": "crm",
+    "/crm/opportunities": "crm",
+    "/crm/pipelines": "crm",
+    "/crm/rbac": "crm",
+    "/crm/reports": "crm",
+    "/crm/webhooks": "crm",
+    "/departments": "departments",
+    "/dev/qa-audit": "reports",
+    "/dev/qa-gaps": "reports",
+    "/dev/qa-waves": "reports",
+    "/dev/qa-waves/enterprise-governance": "reports",
+    "/dev/qa-waves/operational-health": "reports",
+    "/dev/rpa-replays": "flows",
+    "/dev/rpa-seeds": "flows",
+    "/dev/rpa-test": "flows",
+    "/dev/system-status": "config",
+    "/dev/work-management": "reports",
+    "/dev/work-management/ai-suggestions": "reports",
+    "/dev/work-management/board": "reports",
+    "/dev/work-management/deliverables": "reports",
+    "/dev/work-management/documents": "reports",
+    "/dev/work-management/metrics": "reports",
+    "/dev/work-management/operations": "reports",
+    "/dev/work-management/projects": "reports",
+    "/dev/work-management/qa-validation": "reports",
+    "/dev/work-management/team": "reports",
+    "/dev/work-management/timeline": "reports",
+    "/developer-keys": "config",
+    "/dispatch": "reports",
+    "/editor": "flows",
+    "/export": "reports",
+    "/failed-messages": "tickets",
+    "/faq": "rag",
+    "/fila-fisica": "reports",
+    "/fitness/attendance": "reports",
+    "/fitness/memberships": "reports",
+    "/fitness/students": "reports",
+    "/generate-system": "config",
+    "/inbox": "tickets",
+    "/kitchen": "reports",
+    "/knowledge-base": "rag",
+    "/maintenance": "tickets",
+    "/marketing": "bulk_messaging",
+    "/mfa": "config",
+    "/node-marketplace": "config",
+    "/onboarding": "tenant",
+    "/operations-dashboard": "reports",
+    "/orders": "reports",
+    "/pbx": "config",
+    "/pbx/acls": "config",
+    "/pbx/cc/callbacks": "config",
+    "/pbx/cc/campaign-list": "config",
+    "/pbx/cc/campaigns": "config",
+    "/pbx/cc/click2call": "config",
+    "/pbx/cc/contact-reasons": "config",
+    "/pbx/cc/pause-reasons": "config",
+    "/pbx/cdr": "config",
+    "/pbx/dialplan": "config",
+    "/pbx/dids": "config",
+    "/pbx/extensions": "config",
+    "/pbx/governance": "config",
+    "/pbx/ivr": "config",
+    "/pbx/media": "config",
+    "/pbx/operator-panel": "config",
+    "/pbx/queue-members": "config",
+    "/pbx/queues": "config",
+    "/pbx/recordings": "config",
+    "/pbx/referencia/xml": "config",
+    "/pbx/routes": "config",
+    "/pbx/trunks": "config",
+    "/plan-usage": "config",
+    "/product-docs": "rag",
+    "/projects": "projects",
+    "/qa": "reports",
+    "/qa-mesh": "reports",
+    "/qa/stability": "reports",
+    "/quick-replies": "quick_replies",
+    "/rag-documents": "rag",
+    "/rbac": "agents",
+    "/segmentation": "tickets",
+    "/sla-policies": "reports",
+    "/solutions": "config",
+    "/sso-scim": "config",
+    "/supervisor": "reports",
+    "/support": "tickets",
+    "/tasks": "config",
+    "/tenant-intelligence": "reports",
+    "/tenants": "tenant",
+    "/vertical/dashboard": "reports",
+    "/web-scraping": "rag",
+    "/whatsapp-connections": "config",
+    "/whatsapp-ivr": "config",
+    "/whatsapp-templates": "flows",
+    "/workspace": "workspace"
+  }
+}

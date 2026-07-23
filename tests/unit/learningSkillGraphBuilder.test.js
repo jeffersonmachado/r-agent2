@@ -1,0 +1,102 @@
+'use strict';
+
+/**
+ * Testes unitários: montagem pura do Skill Graph (buildSkillGraphData).
+ */
+
+const { buildSkillGraphData } = require('../../scripts/learning/build-skill-graph');
+
+const NOW = new Date('2026-07-23T00:00:00.000Z');
+
+function buildInputs() {
+  return {
+    capabilities: [
+      { id: 'omnichannel_whatsapp' },
+      { id: 'omnichannel_pbx' },
+      { id: 'support_ticket_flow' },
+      { id: 'crm_update' },
+      { id: 'mystery_capability' },
+    ],
+    journeys: {
+      support_ticket_flow: { requiredCapabilities: ['support_ticket_flow', 'unknown_journey_cap'] },
+      omnichannel_engagement: { requiredCapabilities: ['omnichannel_whatsapp', 'omnichannel_pbx'] },
+    },
+    menuEntries: [
+      { path: '/inbox', permission: { resource: 'tickets', action: 'read' } },
+      { path: '/support', permission: { resource: 'tickets', action: 'read' } },
+      { path: '/crm', permission: { resource: 'crm', action: 'read' } },
+      { path: '/dev' },
+    ],
+    now: NOW,
+  };
+}
+
+describe('learning skill-graph builder (buildSkillGraphData)', () => {
+  test('deriva skills de recurso do menu com rotas agrupadas', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+
+    const tickets = artifact.skills.find((s) => s.key === 'tickets');
+    expect(tickets).toBeDefined();
+    expect(tickets.kind).toBe('resource');
+    expect(tickets.routes).toEqual(['/inbox', '/support']);
+
+    const crm = artifact.skills.find((s) => s.key === 'crm');
+    expect(crm.kind).toBe('resource');
+    expect(crm.routes).toEqual(['/crm']);
+  });
+
+  test('deriva skills de canal a partir de capabilities omnichannel_*', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+
+    const whatsapp = artifact.skills.find((s) => s.key === 'whatsapp');
+    expect(whatsapp).toBeDefined();
+    expect(whatsapp.kind).toBe('channel');
+    expect(whatsapp.capabilities).toEqual(['omnichannel_whatsapp']);
+
+    expect(artifact.skills.some((s) => s.key === 'pbx' && s.kind === 'channel')).toBe(true);
+  });
+
+  test('liga capabilities a skills via mapa estático explícito', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+
+    const tickets = artifact.skills.find((s) => s.key === 'tickets');
+    expect(tickets.capabilities).toContain('support_ticket_flow');
+
+    const crm = artifact.skills.find((s) => s.key === 'crm');
+    expect(crm.capabilities).toContain('crm_update');
+  });
+
+  test('routeSkillMap mapeia rotas do menu para o resource', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+    expect(artifact.routeSkillMap).toEqual({
+      '/crm': 'crm',
+      '/inbox': 'tickets',
+      '/support': 'tickets',
+    });
+  });
+
+  test('jornadas ligadas às requiredCapabilities', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+
+    const support = artifact.journeys.find((j) => j.key === 'support_ticket_flow');
+    expect(support.requiredCapabilities).toEqual(['support_ticket_flow', 'unknown_journey_cap']);
+    expect(artifact.journeys).toHaveLength(2);
+  });
+
+  test('reporta o que ficou fora do mapeamento explícito', () => {
+    const { report } = buildSkillGraphData(buildInputs());
+
+    expect(report.unmappedCapabilities).toEqual(['mystery_capability']);
+    expect(report.unregisteredCapabilities).toEqual(['unknown_journey_cap']);
+    expect(report.unmappedRoutes).toEqual(['/dev']);
+  });
+
+  test('artefato é determinístico e versionado', () => {
+    const { artifact } = buildSkillGraphData(buildInputs());
+    expect(artifact.version).toBe(1);
+    expect(artifact.generatedAt).toBe(NOW.toISOString());
+
+    const again = buildSkillGraphData(buildInputs()).artifact;
+    expect(again).toEqual(artifact);
+  });
+});

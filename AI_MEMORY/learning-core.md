@@ -46,16 +46,49 @@ Telemetria de interação de usuário, fundação de dados para as fases seguint
 - **Testes**: `tests/unit/learningCoreIngest.test.js` (9 testes),
   `frontend/src/core/interactionTracker.test.js` (7 testes).
 
+## Fase 1 — entregue (2026-07-23)
+
+Skill Graph + Competency Engine (núcleo).
+
+- **Skill graph builder**: `scripts/learning/build-skill-graph.js`
+  (`npm run learning:skill-graph:build`). Deriva skills de metadados —
+  resources do menu (`frontend/src/navigation/menu.js#getRouteCatalog`),
+  canais `omnichannel_*` e mapa estático `CAPABILITY_SKILL_MAP` — gera o
+  artefato `config/learning/skill-graph.json` (skills, journeys,
+  routeSkillMap) e faz upsert idempotente no knowledge-graph (tenant
+  `system`, nós `learning-skill`/`learning-journey`/`learning-capability`,
+  edges `requires_capability`/`belongs_to_skill`).
+- **Models**: `UserCompetency` (score + components + evidenceRefs por skill),
+  `UserLearningProfile` (perfil agregado), `LearningRouteSkillMap`
+  (classificações rota→skill, source static/ai). Migration
+  `20260723130000-create-learning-core-competencies.js`.
+- **Competency Engine**: núcleo puro em `src/core/learning/competency-engine/`
+  (zero I/O). Componentes 0..1: precision, coverage, tempo (mediana vs
+  baseline do próprio usuário), autonomia (flows), consistencia; score =
+  média ponderada renormalizada (0.35/0.25/0.2/0.1/0.1); evidenceRefs = ids
+  `evt-*` do ledger (erros primeiro, máx 20).
+- **Orquestração**: `api/modules/learning-core/competencyService.js` — lê 90
+  dias de eventos do ledger, resolve rota→skill (artefato + overrides do
+  tenant), classifica rotas desconhecidas **via IA** (`generateAiResponse`,
+  lote máx 20; IA indisponível → `unclassifiedRoutes` explícito, NUNCA
+  heurística), persiste upsert em competências/perfil.
+- **Rotas**: `GET /api/learning/competencies/me`,
+  `GET /api/learning/competencies/:userId` (owner/admin/super_admin),
+  `POST /api/learning/competencies/recompute`,
+  `GET /api/learning/skill-graph` (404 explícito se artefato não gerado).
+- **Testes**: `tests/unit/learningCompetencyEngine.test.js`,
+  `learningCompetencyRoutes.test.js`, `learningSkillGraphBuilder.test.js`
+  (25 testes).
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
 OBSERVAR NOVAMENTE. Nunca termina.
 
 Plano de fases aprovado: F0 telemetria (entregue) → F1 Competency Engine
-(perfil de competências por observação) → F2 Journey Trainer + Simulation
-Engine (replay → anonimização → dados sintéticos → treinamento) → F3 Tutor/
-Mentor Agents + RAP Academy (UX invisível, ajuda contextual em níveis 0–4) →
-F4 Assessment + Certification + Adaptive Learning.
+(entregue) → F2 RAP Academy (UI read-only) + Tutor nível 0-1 → F3 Journey
+Trainer + Simulation Engine (replay → anonimização → dados sintéticos →
+treinamento) → F4 Assessment + Certification + Mentor + Adaptive Learning.
 
 ## Invariantes
 

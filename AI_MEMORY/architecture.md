@@ -64,3 +64,4 @@ Dominio de aprendizado de USUARIO (distinto do RAP Learn, que e aprendizado de m
 
 - Memoria operacional canonica: `AI_MEMORY/learning-core.md`.
 - Fase 0 entregue: telemetria de interacao — tipos `learning.interaction.*` no event ledger, ingest `POST /api/learning/interactions` (`api/modules/learning-core/`), agregado `user_interaction_sessions`, tracker frontend `frontend/src/core/interactionTracker.js` (feature flag `learningCoreEnabled`, default OFF).
+- Fase 1 entregue: Skill Graph (`npm run learning:skill-graph:build` -> `config/learning/skill-graph.json` + knowledge-graph) e Competency Engine (nucleo puro `src/core/learning/competency-engine/` + `competencyService.js`; scores por skill com evidenceRefs do ledger; classificacao de rotas desconhecidas AI-first, sem heuristica). Rotas `GET /api/learning/competencies/me|/:userId`, `POST .../recompute`, `GET /api/learning/skill-graph`.
