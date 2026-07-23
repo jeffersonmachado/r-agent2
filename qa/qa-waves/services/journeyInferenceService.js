@@ -21,19 +21,6 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function normalizeText(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-function tokenize(value) {
-  return normalizeText(value)
-    .split(/[^a-z0-9]+/g)
-    .filter(Boolean);
-}
 
 function getBaseTemplate(registry, templateId = DEFAULT_TEMPLATE_ID) {
   const templates = Array.isArray(registry.baseJourneyTemplates) ? registry.baseJourneyTemplates : [];
@@ -76,15 +63,6 @@ function getJourneyDefinition(registry, { vertical, journeyId }) {
   return null;
 }
 
-function scoreJourneyCandidate(candidate, tokens) {
-  const haystack = new Set([
-    ...tokenize(candidate.journeyId),
-    ...tokenize(candidate.name),
-    ...tokenize((candidate.steps || []).join(' ')),
-  ]);
-  return tokens.reduce((score, token) => score + (haystack.has(token) ? 1 : 0), 0);
-}
-
 function buildCandidateJourneys(registry, vertical) {
   const verticalMap = getVerticalJourneyMap(registry, vertical);
   return Object.entries(verticalMap).map(([journeyId, definition]) => ({
@@ -94,73 +72,27 @@ function buildCandidateJourneys(registry, vertical) {
   }));
 }
 
-function inferJourneyHeuristically(input = {}, registry = readRegistry()) {
+// Lookup estrito no registry — NÃO é inferência. Retorna null quando o
+// journeyId não é informado ou não existe no registry: escolher uma jornada
+// "mais parecida" por tokens era o fallback heurístico, removido (princípio
+// AI-native: inferência de jornada é feita por inferJourneyWithAI).
+function resolveJourneyFromRegistry(input = {}, registry = readRegistry()) {
   const vertical = String(input.vertical || '').toLowerCase().trim() || 'core';
   const explicitJourneyId = String(input.journeyId || input.journey || '').trim();
-  const baseTemplate = getBaseTemplate(registry, input.baseTemplateId);
-  const logEnabled = input.log !== false;
-
-  if (explicitJourneyId) {
-    const explicit = getJourneyDefinition(registry, { vertical, journeyId: explicitJourneyId });
-    if (explicit) {
-      return {
-        journeyId: explicit.journeyId,
-        steps: explicit.steps,
-        journeySource: input.journeySource || 'manual',
-        baseTemplateId: baseTemplate.id,
-        vertical,
-      };
-    }
+  if (!explicitJourneyId) {
+    return null;
   }
 
-  const candidates = buildCandidateJourneys(registry, vertical);
-  const tokens = [
-    ...tokenize(input.scenarioName),
-    ...tokenize(input.description),
-  ];
-
-  let winner = null;
-  let winnerScore = 0;
-  for (const candidate of candidates) {
-    const score = scoreJourneyCandidate(candidate, tokens);
-    if (score > winnerScore) {
-      winner = candidate;
-      winnerScore = score;
-    }
-  }
-
-  if (!winner) {
-    const legacyRule = (registry.journeyInferenceRules || []).find((rule) => rule.domainId === vertical);
-    if (legacyRule?.defaultJourneyId) {
-      const definition = getJourneyDefinition(registry, { vertical, journeyId: legacyRule.defaultJourneyId });
-      if (definition) {
-        winner = definition;
-      }
-    }
-  }
-
-  if (!winner) {
-    winner = {
-      journeyId: explicitJourneyId || `${vertical}_default_journey`,
-      name: explicitJourneyId || `${vertical} default journey`,
-      steps: clone(baseTemplate.steps || []),
-    };
-  }
-
-  if (logEnabled) {
-    logger.info('[QA_JOURNEY_INFERRED] Jornada inferida por heuristica', {
-      vertical,
-      journeyId: winner.journeyId,
-      source: 'inferred',
-      stepCount: Array.isArray(winner.steps) ? winner.steps.length : 0,
-    });
+  const definition = getJourneyDefinition(registry, { vertical, journeyId: explicitJourneyId });
+  if (!definition) {
+    return null;
   }
 
   return {
-    journeyId: winner.journeyId,
-    steps: Array.isArray(winner.steps) && winner.steps.length > 0 ? clone(winner.steps) : clone(baseTemplate.steps || []),
-    journeySource: 'inferred',
-    baseTemplateId: baseTemplate.id,
+    journeyId: definition.journeyId,
+    steps: definition.steps,
+    journeySource: input.journeySource || 'manual',
+    baseTemplateId: getBaseTemplate(registry, input.baseTemplateId).id,
     vertical,
   };
 }
@@ -230,20 +162,26 @@ async function inferJourneyWithAI(input = {}) {
 
 async function inferJourney(input = {}) {
   if (input.journeyId || input.journey) {
-    return inferJourneyHeuristically({ ...input, journeySource: input.journeySource || 'manual' });
+    const resolved = resolveJourneyFromRegistry({ ...input, journeySource: input.journeySource || 'manual' });
+    if (!resolved) {
+      const notFound = new Error(
+        `[journeyInferenceService] Jornada explicita nao encontrada no registry: ${input.journeyId || input.journey}`,
+      );
+      notFound.code = 'JOURNEY_NOT_FOUND';
+      throw notFound;
+    }
+    return resolved;
   }
 
-  if (input.useAi !== false) {
-    return inferJourneyWithAI(input);
-  }
-
-  return inferJourneyHeuristically(input);
+  // Sem journeyId explicito a escolha da jornada e inferencia semantica:
+  // sempre via IA (sem fallback heuristico por tokens).
+  return inferJourneyWithAI(input);
 }
 
 module.exports = {
   inferJourney,
   inferJourneyWithAI,
-  inferJourneyHeuristically,
+  resolveJourneyFromRegistry,
   readRegistry,
   getJourneyDefinition,
   getBaseTemplate,

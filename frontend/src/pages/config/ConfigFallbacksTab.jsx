@@ -17,7 +17,6 @@ export function ConfigFallbacksTab({ editedConfig, updateValue, setEditedConfig,
           next.fallbacks = {
             aiProviderSecondary: false,
             ragFallbackToDirect: false,
-            ticketInsightHeuristic: false,
             rateLimitRedisToMemory: false,
             frontendAiMockOnError: false,
             frontendAiDisabledReturnFallback: false,
@@ -85,30 +84,6 @@ export function ConfigFallbacksTab({ editedConfig, updateValue, setEditedConfig,
         <div className="flex-1">
           <span className="text-text-primary font-medium">RAG: fallback para IA direta quando RAG falha/baixa confiança</span>
           <p className="text-text-secondary text-sm mt-1">`fallbacks.ragFallbackToDirect`</p>
-        </div>
-      </label>
-
-      <label className="flex items-center gap-3 p-4 bg-bg-primary rounded-lg border border-border-default hover:border-border-hover transition-colors">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={editedConfig.fallbacks?.ticketInsightHeuristic === true}
-          onClick={() => updateValue('fallbacks.ticketInsightHeuristic', !(editedConfig.fallbacks?.ticketInsightHeuristic === true))}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-secondary ${
-            editedConfig.fallbacks?.ticketInsightHeuristic === true
-              ? 'bg-accent-primary border-accent-primary'
-              : 'bg-bg-secondary border-border-default'
-          }`}
-        >
-          <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-              editedConfig.fallbacks?.ticketInsightHeuristic === true ? 'translate-x-5' : 'translate-x-0.5'
-            }`}
-          />
-        </button>
-        <div className="flex-1">
-          <span className="text-text-primary font-medium">Atendimento: resumo heurístico quando IA falhar (best-effort)</span>
-          <p className="text-text-secondary text-sm mt-1">`fallbacks.ticketInsightHeuristic`</p>
         </div>
       </label>
 

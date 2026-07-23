@@ -5,10 +5,21 @@
  *
  * Identifica a intenção de negócio de uma mensagem/evento.
  *
- * Ordem de decisão:
- *  1. Regras determinísticas (keywords/regex pt-BR) — sempre primeiro
- *  2. LLM opcional (aiProviderService) quando as regras não decidem
- *  3. Fallback seguro: baixa confiança → transferir_humano (handoff)
+ * Contrato (AI-native, prioridade: atendimento e cobertura das necessidades
+ * de negócio):
+ *  1. Intent explícito no payload do evento — dado declarado, confiança 1.
+ *  2. LLM (aiProviderService) — classificador único de intenção. O prompt
+ *     instrui a IA a priorizar atendimento ao cliente e cobertura das
+ *     necessidades de negócio dentro da taxonomia.
+ *  3. Degradação segura (regra de negócio, NÃO heurística):
+ *     - LLM indisponível/falha → `transferir_humano` (source 'ai_unavailable');
+ *     - confiança abaixo do limiar ou intent fora da taxonomia →
+ *       `transferir_humano` (source 'fallback').
+ *
+ * A classificação heurística por keywords/regex foi REMOVIDA: inferência de
+ * intenção é responsabilidade exclusiva da IA. Entidades (telefone, e-mail,
+ * data, hora) seguem com extração determinística — é parsing de dados
+ * estruturados, não inferência semântica.
  *
  * Saída: { intent, confidence, entities, source, rationale }
  * A justificativa (`rationale`) é sempre registrada.
@@ -30,68 +41,6 @@ const INTENTS = Object.freeze([
   'consultar_metricas',
 ]);
 
-/**
- * Regras determinísticas. Avaliadas em ordem; padrões mais específicos primeiro.
- * `strong` decide sozinho (confiança alta); `weak` soma evidência.
- */
-const RULES = [
-  {
-    intent: 'remarcar_agendamento',
-    strong: [/\b(remarcar|reagendar|mudar (o |a )?(hor[aá]rio|data)|trocar (o )?hor[aá]rio|adiar (a |o )?(consulta|agendamento|hor[aá]rio|reuni[aã]o))\b/i],
-    weak: [/\bagendamento\b/i, /\bhor[aá]rio\b/i],
-  },
-  {
-    intent: 'cancelar_agendamento',
-    strong: [/\b(cancelar|desmarcar)\b.*\b(consulta|agendamento|hor[aá]rio|reuni[aã]o|sess[aã]o)\b/i, /\bn[aã]o vou (poder )?(comparecer|ir)\b/i],
-    weak: [/\bcancelar\b/i, /\bdesmarcar\b/i],
-  },
-  {
-    intent: 'agendar',
-    strong: [/\b(agendar|marcar)\b.*\b(consulta|hor[aá]rio|avalia[cç][aã]o|reuni[aã]o|sess[aã]o|visita)\b/i, /\bquero (marcar|agendar)\b/i],
-    weak: [/\bagenda\b/i, /\bdispon[ií]vel\b/i, /\bvaga\b/i],
-  },
-  {
-    intent: 'transferir_humano',
-    strong: [/\b(falar|conversar) com (um |uma )?(humano|atendente|pessoa|gerente|respons[aá]vel)\b/i, /\batendimento humano\b/i],
-    weak: [/\bhumano\b/i, /\batendente\b/i],
-  },
-  {
-    intent: 'abrir_ticket',
-    strong: [/\b(abrir|registrar) (um |uma )?(chamado|ticket|reclama[cç][aã]o|ocorr[eê]ncia)\b/i, /\b(problema|defeito|erro|reclama[cç][aã]o)\b.*\b(produto|servi[cç]o|sistema|pedido)\b/i],
-    weak: [/\bproblema\b/i, /\bn[aã]o funciona\b/i, /\bsuporte\b/i],
-  },
-  {
-    intent: 'enviar_proposta',
-    strong: [/\b(enviar?|mandar?|quero|preciso de) (a |uma )?(proposta|or[cç]amento|cota[cç][aã]o)\b/i],
-    weak: [/\bproposta\b/i, /\bor[cç]amento\b/i, /\bpre[cç]o\b/i, /\bquanto custa\b/i],
-  },
-  {
-    intent: 'iniciar_campanha',
-    strong: [/\b(iniciar|lan[cç]ar|disparar|criar) (a |uma )?campanha\b/i],
-    weak: [/\bcampanha\b/i, /\bdisparo\b/i],
-  },
-  {
-    intent: 'consultar_metricas',
-    strong: [/\b(relat[oó]rio|m[eé]tricas|indicadores|kpis?|dashboard)\b/i, /\bcomo (est[aã]o|anda[m]?) (as vendas|os n[uú]meros|os resultados)\b/i],
-    weak: [/\bresultados\b/i, /\bn[uú]meros\b/i],
-  },
-  {
-    intent: 'consultar_status',
-    strong: [/\b(status|andamento|situa[cç][aã]o) (do |da |de )?(meu |minha )?(pedido|chamado|ticket|solicita[cç][aã]o|atendimento|proposta)\b/i, /\bcad[eê] (meu|minha)\b/i],
-    weak: [/\bstatus\b/i, /\bandamento\b/i],
-  },
-  {
-    intent: 'qualificar_lead',
-    strong: [/\b(qualificar|pontuar|score) (o |do )?lead\b/i],
-    weak: [/\bqualifica[cç][aã]o\b/i],
-  },
-  {
-    intent: 'criar_lead',
-    strong: [/\b(cadastrar|criar|registrar|adicionar) (um |uma |o |a )?(lead|prospecto|contato|cliente)\b/i, /\btenho interesse\b/i, /\bquero (saber )?mais informa[cç][oõ]es\b/i],
-    weak: [/\binteresse\b/i, /\bnovo cliente\b/i],
-  },
-];
-
 const ENTITY_EXTRACTORS = [
   { name: 'phone', pattern: /(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\s?)?\d{4}[-\s]?\d{4}/ },
   { name: 'email', pattern: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i },
@@ -110,44 +59,16 @@ function extractEntities(message) {
   return entities;
 }
 
-function classifyByRules(message) {
-  const text = String(message || '');
-  if (!text.trim()) return null;
-
-  let best = null;
-  for (const rule of RULES) {
-    const strongHit = rule.strong.find((p) => p.test(text));
-    if (strongHit) {
-      return {
-        intent: rule.intent,
-        confidence: 0.92,
-        source: 'rules',
-        rationale: `regra determinística forte: ${strongHit}`,
-      };
-    }
-    const weakHits = (rule.weak || []).filter((p) => p.test(text));
-    if (weakHits.length > 0) {
-      const confidence = Math.min(0.4 + weakHits.length * 0.12, 0.7);
-      if (!best || confidence > best.confidence) {
-        best = {
-          intent: rule.intent,
-          confidence,
-          source: 'rules',
-          rationale: `regras fracas (${weakHits.length}): ${weakHits.join(' | ')}`,
-        };
-      }
-    }
-  }
-  return best;
-}
-
 function buildLlmPrompt(message) {
   return [
+    'Você é o classificador de intenção do núcleo cognitivo de uma plataforma de atendimento e operações de negócio.',
+    'Prioridade máxima: atendimento ao cliente e cobertura das necessidades de negócio.',
     'Classifique a intenção da mensagem abaixo em UMA das categorias:',
     INTENTS.join(', '),
     '',
     'Responda APENAS com JSON: {"intent": "<categoria>", "confidence": <0..1>}',
     'Se nenhuma categoria couber com segurança, use "transferir_humano" com confidence baixa.',
+    'Em caso de dúvida entre uma ação de negócio e atendimento humano, prefira "transferir_humano".',
     '',
     `Mensagem: ${String(message || '').slice(0, 1000)}`,
   ].join('\n');
@@ -182,6 +103,18 @@ function defaultLogger() {
 function createIntentEngine({ generateAiResponse, llmEnabled = true, confidenceThreshold = CONFIDENCE_THRESHOLD, logger } = {}) {
   const log = logger || defaultLogger();
 
+  function buildHandoff({ entities, source, rationale, confidence = 0 }) {
+    return {
+      intent: 'transferir_humano',
+      confidence,
+      entities,
+      source,
+      rationale,
+      fallback: true,
+      humanHandoff: true,
+    };
+  }
+
   async function classify({ tenantId, message, eventType, payload } = {}) {
     const trimmedTenant = String(tenantId || '').trim();
     if (!trimmedTenant) throw new Error('cognitive_intent_tenant_required');
@@ -201,56 +134,63 @@ function createIntentEngine({ generateAiResponse, llmEnabled = true, confidenceT
       };
     }
 
-    // 1) Regras determinísticas
-    let result = classifyByRules(message);
-
-    // 2) LLM opcional quando regras não decidem com confiança suficiente
-    if ((!result || result.confidence < confidenceThreshold) && llmEnabled) {
-      try {
-        const generate = generateAiResponse
-          || require('../../../../api/services/aiProviderService').generateAiResponse;
-        const ai = await generate(buildLlmPrompt(message), trimmedTenant, { caller: 'cognitive-intent-engine' });
-        const parsed = parseLlmResponse(ai?.text);
-        if (parsed && (!result || parsed.confidence > result.confidence)) {
-          result = {
-            intent: parsed.intent,
-            confidence: parsed.confidence,
-            source: 'llm',
-            rationale: 'classificação LLM (regras determinísticas inconclusivas)',
-          };
-        }
-      } catch (error) {
-        log.warn('[CognitiveIntentEngine] LLM classification failed (fallback to rules)', {
-          tenantId: trimmedTenant,
-          error: error.message,
-        });
-      }
+    if (!llmEnabled) {
+      return buildHandoff({
+        entities,
+        source: 'ai_disabled',
+        rationale: 'classificação por IA desabilitada (llmEnabled=false) → handoff humano',
+      });
     }
 
-    // 3) Fallback seguro: baixa confiança → handoff humano
-    if (!result || result.confidence < confidenceThreshold) {
-      return {
-        intent: 'transferir_humano',
-        confidence: result ? result.confidence : 0,
+    // Classificação de intenção é inferência semântica: sempre via IA.
+    let parsed = null;
+    try {
+      const generate = generateAiResponse
+        || require('../../../../api/services/aiProviderService').generateAiResponse;
+      const ai = await generate(buildLlmPrompt(message), trimmedTenant, { caller: 'cognitive-intent-engine' });
+      parsed = parseLlmResponse(ai?.text);
+    } catch (error) {
+      log.error('[CognitiveIntentEngine] LLM classification failed → handoff humano (sem fallback heurístico)', {
+        tenantId: trimmedTenant,
+        error: error.message,
+      });
+      return buildHandoff({
+        entities,
+        source: 'ai_unavailable',
+        rationale: `falha na classificação por IA (${error.message}) → handoff humano`,
+      });
+    }
+
+    if (!parsed) {
+      return buildHandoff({
         entities,
         source: 'fallback',
-        rationale: result
-          ? `confiança ${result.confidence.toFixed(2)} abaixo do limiar ${confidenceThreshold} (melhor candidato: ${result.intent}) → handoff humano`
-          : 'nenhuma regra ou LLM classificou a mensagem → handoff humano',
-        fallback: true,
-        humanHandoff: true,
-      };
+        rationale: 'IA não retornou intent válida na taxonomia → handoff humano',
+      });
+    }
+
+    // Degradação segura: baixa confiança → handoff humano
+    if (parsed.confidence < confidenceThreshold) {
+      return buildHandoff({
+        entities,
+        source: 'fallback',
+        confidence: parsed.confidence,
+        rationale: `confiança ${parsed.confidence.toFixed(2)} abaixo do limiar ${confidenceThreshold} (melhor candidato: ${parsed.intent}) → handoff humano`,
+      });
     }
 
     return {
-      ...result,
+      intent: parsed.intent,
+      confidence: parsed.confidence,
       entities,
+      source: 'llm',
+      rationale: 'classificação LLM (IA-first, prioridade atendimento)',
       fallback: false,
-      humanHandoff: result.intent === 'transferir_humano',
+      humanHandoff: parsed.intent === 'transferir_humano',
     };
   }
 
   return { classify };
 }
 
-module.exports = { createIntentEngine, INTENTS, CONFIDENCE_THRESHOLD, _internal: { classifyByRules, extractEntities, parseLlmResponse } };
+module.exports = { createIntentEngine, INTENTS, CONFIDENCE_THRESHOLD, _internal: { extractEntities, parseLlmResponse } };

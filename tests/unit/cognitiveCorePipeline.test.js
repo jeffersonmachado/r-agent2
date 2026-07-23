@@ -62,6 +62,24 @@ function buildStubContextEngine() {
   };
 }
 
+// Double do provider de IA: classifica as mensagens fixas dos testes dentro
+// da taxonomia (o Intent Engine é AI-first; não há mais classificação por
+// regras/keywords no caminho de produção).
+const TEST_INTENT_BY_MESSAGE = [
+  [/remarcar/i, 'remarcar_agendamento'],
+  [/cancelar/i, 'cancelar_agendamento'],
+  [/abrir um chamado/i, 'abrir_ticket'],
+];
+
+function buildStubGenerateAiResponse() {
+  return jest.fn(async (prompt) => {
+    const message = String(prompt).split('Mensagem: ')[1] || '';
+    const match = TEST_INTENT_BY_MESSAGE.find(([pattern]) => pattern.test(message));
+    if (!match) return { text: '{"intent":"transferir_humano","confidence":0.2}' };
+    return { text: JSON.stringify({ intent: match[1], confidence: 0.9 }) };
+  });
+}
+
 function buildOrchestrator(overrides = {}) {
   const registry = overrides.toolRegistry || buildStubRegistry(overrides);
   const learningRecords = [];
@@ -71,7 +89,7 @@ function buildOrchestrator(overrides = {}) {
     learningEngine: overrides.learningEngine || {
       record: jest.fn(async (record) => { learningRecords.push(record); return { recorded: true }; }),
     },
-    llmEnabled: false,
+    generateAiResponse: overrides.generateAiResponse || buildStubGenerateAiResponse(),
     ...overrides.extra,
   });
   return { orchestrator, registry, learningRecords };

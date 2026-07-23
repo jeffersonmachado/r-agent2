@@ -56,3 +56,4 @@ RAP Cognitive Core e o nucleo obrigatorio de inteligencia da plataforma; agentes
 - Visibility PRODUCTION/SUPPORT/DEVELOPMENT reutiliza a politica de `api/modules/agent-os/experience-segregation.js`; QA Waves/Replay/Seeds/Mesh/RPA permanecem ocultos da operacao.
 - Aprendizado: event ledger (`cognitive.execution.*`) + RAP Learn em falhas. Nao altera regras criticas automaticamente.
 - Agentes opcionais: `src/core/agents/README.md`.
+- Intent Engine (2026-07-22): **AI-first**. A classificacao heuristica por keywords/regex foi removida; a intencao e classificada exclusivamente via LLM (`aiProviderService`) com prompt que prioriza atendimento ao cliente e cobertura das necessidades de negocio. Falha/indisponibilidade da IA -> handoff humano explicito (`source: 'ai_unavailable'`); confianca < 0.55 ou intent fora da taxonomia -> `transferir_humano`. Extracao de entidades (telefone, e-mail, data, hora) segue deterministica (parsing de dados, nao inferencia).

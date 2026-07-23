@@ -8,7 +8,6 @@ const { buildQaWavesEnterpriseGovernance } = require('./lib/qa-waves-enterprise-
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 const { main: materializeProofArtifacts } = require('../../governance/materialize-proof-artifacts');
 const { buildFinalProofReport } = require('../../governance/proof-engine');
-const { inferJourneyHeuristically } = require('../../qa/qa-waves/services/journeyInferenceService');
 
 const ROOT = path.join(__dirname, '..', '..');
 const NOW = new Date().toISOString();
@@ -463,28 +462,11 @@ function getMeshVerticalCoverage(meshSummary, vertical) {
 
 
 function resolveScenarioJourneyId(scenario) {
+  // Apenas journeyId declarado conta para cobertura. A inferencia heuristica
+  // anterior (scoring por tokens sobre nome/descricao) foi removida: cenario
+  // sem jornada declarada simplesmente nao conta como jornada coberta.
   const explicitJourneyId = String(scenario?.journey || scenario?.journeyId || '').trim();
-  if (explicitJourneyId) {
-    return explicitJourneyId;
-  }
-
-  const vertical = normalizeVerticalKey(scenario?.vertical);
-  if (!vertical || !REQUIRED_VERTICALS.includes(vertical)) {
-    return null;
-  }
-
-  try {
-    const inferred = inferJourneyHeuristically({
-      vertical,
-      scenarioName: scenario?.name || scenario?.id || '',
-      description: scenario?.description || '',
-      journeySource: 'scenario_store_inferred',
-      log: false,
-    });
-    return String(inferred?.journeyId || '').trim() || null;
-  } catch (_) {
-    return null;
-  }
+  return explicitJourneyId || null;
 }
 function buildScenarioCorpus(scenarioStore, meshRegistry) {
   const storedScenarios = Array.isArray(scenarioStore?.scenarios) ? scenarioStore.scenarios : [];
@@ -497,21 +479,16 @@ function buildScenarioCorpus(scenarioStore, meshRegistry) {
         return null;
       }
 
-      const inferred = inferJourneyHeuristically({
-        vertical,
-        scenarioName: item.flow || item.id,
-        description: [item.flow, ...(Array.isArray(item.assertions) ? item.assertions : [])].filter(Boolean).join(' '),
-        journeyId: item.journeyId || item.journey,
-        journeySource: item.journeyId || item.journey ? 'mesh_registry' : 'mesh_registry_inferred',
-        log: false,
-      });
+      // Sem journeyId declarado no mesh registry a jornada fica nula
+      // (journeySource 'unresolved') em vez de ser inventada por heuristica.
+      const declaredJourneyId = String(item.journeyId || item.journey || '').trim() || null;
 
       return {
         id: item.id,
         vertical,
-        journey: inferred.journeyId,
-        journeyId: inferred.journeyId,
-        journeySource: inferred.journeySource,
+        journey: declaredJourneyId,
+        journeyId: declaredJourneyId,
+        journeySource: declaredJourneyId ? 'mesh_registry' : 'unresolved',
         name: item.flow || item.id,
         description: Array.isArray(item.assertions) ? item.assertions.join('; ') : item.flow || '',
         status: 'approved',

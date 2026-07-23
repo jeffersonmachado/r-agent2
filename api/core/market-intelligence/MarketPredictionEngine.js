@@ -90,7 +90,7 @@ class MarketPredictionEngine {
       prediction_window: item.prediction_window,
       generated_at: item.generated_at,
       metadata: {
-        model: item?.metadata?.model || 'heuristic_market_regression_v1',
+        model: item?.metadata?.model || 'statistical_market_regression_v1',
         source: item?.metadata?.source || 'market_intelligence_layer',
       },
     };

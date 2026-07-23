@@ -13,7 +13,7 @@ Data: 2026-06-12
 ```
 src/core/cognitive/
   context-engine/          monta contexto operacional (tenant, cliente, conversa, CRM, agenda, tickets, campanhas, métricas)
-  intent-engine/           classificação de intenção (regras determinísticas → LLM opcional → fallback seguro)
+  intent-engine/           classificação de intenção (IA-first via LLM; handoff humano como degradação segura)
   action-planner/          intent → plano determinístico com permissões/confirmação
   tool-registry/           registro único de tools de negócio (nenhuma execução direta)
   execution-engine/        executa planos via Tool Registry, rollback, sanitização
@@ -59,7 +59,9 @@ Retorno operacional (apenas negócio): `{ executionId, tenantId, status, intent,
 
 | Situação | Comportamento |
 |---|---|
-| Confiança < 0.55 | Fallback seguro → `transferir_humano`. Com `ticketId`/`conversationId`: executa `transferConversation`. Sem referência: `human_handoff_requested` sem executar tools |
+| Classificação de intenção | **IA-first** (LLM via `aiProviderService`), com prompt que prioriza atendimento ao cliente e cobertura das necessidades de negócio. A classificação heurística por keywords/regex foi removida (2026-07-22) — inferência de intenção é responsabilidade exclusiva da IA |
+| Falha/indisponibilidade do LLM na classificação | Handoff humano explícito com `source: 'ai_unavailable'` + log de erro — nunca classifica por heurística |
+| Confiança < 0.55 ou intent fora da taxonomia | Fallback seguro → `transferir_humano`. Com `ticketId`/`conversationId`: executa `transferConversation`. Sem referência: `human_handoff_requested` sem executar tools |
 | Passo crítico (`cancelar_agendamento`, `enviar_proposta`, `iniciar_campanha`) sem `payload.confirmed === true` | `halted_awaiting_confirmation` — nada crítico executa |
 | Erro em passo obrigatório | `failed` + rollback best-effort dos passos já executados (quando a tool suporta) + registro em RAP Learn |
 | Erro em passo opcional | Loga e continua |

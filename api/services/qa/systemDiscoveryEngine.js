@@ -13,13 +13,6 @@ const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const CAPABILITIES_REGISTRY_PATH = path.join(ROOT_DIR, 'config', 'capabilities-registry.json');
 const CAPABILITY_DEPENDENCIES_PATH = path.join(ROOT_DIR, 'config', 'capability-dependencies.json');
 
-const DEPENDENCY_HEURISTICS = {
-  turnstile_release: ['customer_identification', 'membership_validation', 'access_decision'],
-  attendance_record: ['customer_identification', 'access_decision'],
-  crm_update: ['attendance_record'],
-  support_ticket_reply: ['support_ticket_flow'],
-};
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -143,21 +136,23 @@ function mergeWithExistingRegistry(capabilities) {
   return Array.from(byId.values()).sort((a, b) => String(a.id).localeCompare(String(b.id)));
 }
 
-function inferDependencies(capabilities) {
+// Dependencias vem do contrato mantido em config/capability-dependencies.json
+// (fonte de verdade). A inferencia heuristica anterior (mapa estatico +
+// substring de tags) foi removida: capability sem entrada no contrato fica
+// com dependsOn vazio em vez de receber dependencias inventadas.
+function inferDependencies(capabilities, options = {}) {
+  const registryPath = options.registryPath || CAPABILITY_DEPENDENCIES_PATH;
+  const registry = readJsonSafe(registryPath, { dependencies: {} });
+  const registryDeps = registry && typeof registry.dependencies === 'object'
+    ? registry.dependencies
+    : {};
+
   const dependencies = {};
   for (const capability of capabilities) {
-    const hintedDeps = DEPENDENCY_HEURISTICS[capability.id] || [];
-
-    // Lightweight semantic dependency inference from tags.
-    const semanticDeps = [];
-    const tags = (capability.tags || []).map((tag) => String(tag).toLowerCase());
-    if (tags.some((tag) => tag.includes('access'))) semanticDeps.push('access_decision');
-    if (tags.some((tag) => tag.includes('ticket')) && capability.id !== 'support_ticket_flow') {
-      semanticDeps.push('support_ticket_flow');
-    }
-    if (tags.some((tag) => tag.includes('checkin'))) semanticDeps.push('customer_identification');
-
-    const dependsOn = Array.from(new Set([...hintedDeps, ...semanticDeps].filter((id) => id !== capability.id)));
+    const entry = registryDeps[capability.id];
+    const dependsOn = Array.isArray(entry?.dependsOn)
+      ? Array.from(new Set(entry.dependsOn.filter(Boolean).filter((id) => id !== capability.id)))
+      : [];
     dependencies[capability.id] = { dependsOn };
   }
   return dependencies;

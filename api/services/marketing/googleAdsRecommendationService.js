@@ -63,7 +63,7 @@ function mapRecommendationToRow(recommendation, context = {}) {
     priority: normalizePriority(recommendation?.confidence),
     estimatedImpact: {
       confidence: Number(recommendation?.confidence || 0),
-      source: safeToString(recommendation?.source || 'heuristic'),
+      source: safeToString(recommendation?.source || 'ai'),
     },
     metadata: {
       domain: 'marketing_google_ads',

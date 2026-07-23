@@ -9,7 +9,7 @@ const { EXECUTABLE_SCENARIO_STATUS } = require('../modules/qa-waves/waveScenario
 const { isInPipeline } = require('../../pipeline/guard');
 const {
   inferJourney,
-  inferJourneyHeuristically,
+  resolveJourneyFromRegistry,
 } = require('../../qa/qa-waves/services/journeyInferenceService');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -188,25 +188,38 @@ function hydrateScenarioSeedsFromRpa(scenario, rpaSeedsIndex) {
 }
 
 async function resolveJourneyMetadata(input = {}) {
+  // journeyId explicito que nao existe no registry (ex.: placeholder do
+  // adapter) nao e uma jornada real: descarta e deixa a IA escolher entre
+  // as jornadas candidatas da vertical.
+  const explicitJourneyId = String(input.journeyId || input.journey || '').trim();
+  const resolvedInRegistry = explicitJourneyId
+    ? resolveJourneyFromRegistry({ ...input, journeyId: explicitJourneyId })
+    : null;
+  const journeyInput = resolvedInRegistry
+    ? input
+    : { ...input, journeyId: '', journey: '' };
+
   const journey = await inferJourney({
-    vertical: input.vertical,
-    journeyId: input.journeyId || input.journey,
-    journey: input.journey,
-    journeySource: input.journeySource,
-    scenarioName: input.name || input.title || input.goal,
-    description: input.description,
-    tenantId: input.tenantId,
-    baseTemplateId: input.baseTemplateId,
-    useAi: input.useAi,
+    vertical: journeyInput.vertical,
+    journeyId: journeyInput.journeyId || journeyInput.journey,
+    journey: journeyInput.journey,
+    journeySource: journeyInput.journeySource,
+    scenarioName: journeyInput.name || journeyInput.title || journeyInput.goal,
+    description: journeyInput.description,
+    tenantId: journeyInput.tenantId,
+    baseTemplateId: journeyInput.baseTemplateId,
   });
 
+  const inputSource = String(input.journeySource || '').trim();
   return {
     journeyId: journey.journeyId,
     journey: journey.journeyId,
     journeySteps: Array.isArray(input.journeySteps) && input.journeySteps.length > 0
       ? clone(input.journeySteps)
       : clone(journey.steps || []),
-    journeySource: input.journeySource || journey.journeySource || 'inferred',
+    journeySource: inputSource && inputSource !== 'unresolved'
+      ? inputSource
+      : (journey.journeySource || 'inferred'),
     baseTemplateId: input.baseTemplateId || journey.baseTemplateId || 'customer_lifecycle_v1',
   };
 }
@@ -218,28 +231,29 @@ function normalizeScenarioRecord(input = {}) {
   const platformScenarioIds = explicitPlatformScenarioIds.length > 0
     ? explicitPlatformScenarioIds
     : tryInferPlatformScenarioIds(input);
-  const inferredJourney = inferJourneyHeuristically({
+  // Lookup estrito no registry (sem scoring por tokens). Quando nao ha
+  // journeyId explicito, o cenario fica 'unresolved': a resolucao semantica
+  // via IA acontece no caminho async (generateScenarioWithAI).
+  const explicitJourneyId = String(input.journeyId || input.journey || '').trim();
+  const registryJourney = resolveJourneyFromRegistry({
     vertical: input.vertical,
-    journeyId: input.journeyId || input.journey,
-    journey: input.journey,
+    journeyId: explicitJourneyId,
     journeySource: input.journeySource,
-    scenarioName: input.name || input.title || input.goal,
-    description: input.description,
     baseTemplateId: input.baseTemplateId,
-    useAi: false,
   });
-  const resolvedJourneyId = String(input.journeyId || input.journey || inferredJourney.journeyId || '').trim();
+  const resolvedJourneyId = explicitJourneyId || (registryJourney ? registryJourney.journeyId : '');
   const resolvedJourneySteps = Array.isArray(input.journeySteps) && input.journeySteps.length > 0
     ? clone(input.journeySteps)
-    : clone(inferredJourney.steps || []);
+    : clone((registryJourney && registryJourney.steps) || []);
   const normalized = {
     ...clone(input),
     id: String(input.id || '').trim(),
     journeyId: resolvedJourneyId,
     journey: resolvedJourneyId,
     journeySteps: resolvedJourneySteps,
-    journeySource: String(input.journeySource || '').trim() || inferredJourney.journeySource || (resolvedJourneyId ? 'manual' : 'inferred'),
-    baseTemplateId: String(input.baseTemplateId || inferredJourney.baseTemplateId || 'customer_lifecycle_v1').trim(),
+    journeySource: String(input.journeySource || '').trim()
+      || (registryJourney ? registryJourney.journeySource : (resolvedJourneyId ? 'manual' : 'unresolved')),
+    baseTemplateId: String(input.baseTemplateId || (registryJourney && registryJourney.baseTemplateId) || 'customer_lifecycle_v1').trim(),
     waveId: String(input.waveId || '').trim(),
     platformScenarioIds,
     semanticSteps,
@@ -592,27 +606,40 @@ function inferScenario(input = {}) {
     }));
   }
 
-  const journeyMetadata = require('../../qa/qa-waves/services/journeyInferenceService').inferJourneyHeuristically({
+  // Lookup estrito no registry. O adapter pode preencher um placeholder
+  // ('default_journey') que nao existe no registry: nesse caso a jornada
+  // fica 'unresolved' e o caminho async (generateScenarioWithAI) resolve
+  // via IA. Sem fallback heuristico por tokens.
+  const registryJourney = resolveJourneyFromRegistry({
     vertical,
     journeyId: adapted.scenario.journeyId || adapted.scenario.journey || journey,
-    journey: adapted.scenario.journey,
-    scenarioName: adapted.scenario.name || adapted.scenario.title || input.goal,
-    description: adapted.scenario.description,
     journeySource: adapted.scenario.journeySource,
     baseTemplateId: adapted.scenario.baseTemplateId,
-    useAi: false,
   });
 
-  adapted.scenario = {
-    ...adapted.scenario,
-    journeyId: adapted.scenario.journeyId || journeyMetadata.journeyId,
-    journey: adapted.scenario.journey || journeyMetadata.journeyId,
-    journeySteps: Array.isArray(adapted.scenario.journeySteps) && adapted.scenario.journeySteps.length > 0
-      ? adapted.scenario.journeySteps
-      : journeyMetadata.steps,
-    journeySource: adapted.scenario.journeySource || journeyMetadata.journeySource,
-    baseTemplateId: adapted.scenario.baseTemplateId || journeyMetadata.baseTemplateId,
-  };
+  if (registryJourney) {
+    adapted.scenario = {
+      ...adapted.scenario,
+      journeyId: adapted.scenario.journeyId || registryJourney.journeyId,
+      journey: adapted.scenario.journey || registryJourney.journeyId,
+      journeySteps: Array.isArray(adapted.scenario.journeySteps) && adapted.scenario.journeySteps.length > 0
+        ? adapted.scenario.journeySteps
+        : registryJourney.steps,
+      journeySource: adapted.scenario.journeySource || registryJourney.journeySource,
+      baseTemplateId: adapted.scenario.baseTemplateId || registryJourney.baseTemplateId,
+    };
+  } else {
+    // Mantem o journeyId original (mesmo que seja placeholder do adapter):
+    // o store exige journeyId nao vazio. A marca 'unresolved' sinaliza que
+    // a jornada ainda nao foi confirmada no registry — o caminho async
+    // (generateScenarioWithAI) resolve via IA.
+    adapted.scenario = {
+      ...adapted.scenario,
+      journeySteps: Array.isArray(adapted.scenario.journeySteps) ? adapted.scenario.journeySteps : [],
+      journeySource: 'unresolved',
+      baseTemplateId: adapted.scenario.baseTemplateId || 'customer_lifecycle_v1',
+    };
+  }
 
   return adapted;
 }
@@ -629,7 +656,6 @@ async function generateScenarioWithAI(input = {}) {
   const journeyMetadata = await resolveJourneyMetadata({
     ...inferred.scenario,
     ...input,
-    useAi: input.useAi !== false,
   });
 
   const scenario = normalizeScenarioRecord({
