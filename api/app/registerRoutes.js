@@ -76,6 +76,7 @@ const { createWhatsAppIvrExpressRouter } = require('../composition/whatsapp-ivr'
 const { createWhatsAppQrWebhookExpressRouter } = require('../composition/whatsapp-qr-webhook');
 const { createFrontendFallbackExpressRouter } = require('../composition/frontend-fallback');
 const { createAgentOsExpressRouter } = require('../composition/agent-os');
+const { createLearningCoreExpressRouter } = require('../composition/learning-core');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
 const { createRouteRegistry } = require('./routeRegistry');
 
@@ -146,6 +147,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const frontendFallbackRouter = createFrontendFallbackExpressRouter();
   const agentOsRouter = createAgentOsExpressRouter({ buildCoreRoutingContext });
   const cognitiveRouter = createCognitiveExpressRouter({ buildCoreRoutingContext });
+  const learningCoreRouter = createLearningCoreExpressRouter({ buildCoreRoutingContext });
 
   // --- Routers de domínio (via composition) ---
   const ticketRouter = createTicketExpressRouter();
@@ -213,6 +215,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     frontendFallbackRouter,
     agentOsRouter,
     cognitiveRouter,
+    learningCoreRouter,
   });
 
   for (const entry of routeRegistry) {

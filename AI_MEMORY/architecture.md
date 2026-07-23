@@ -57,3 +57,10 @@ RAP Cognitive Core e o nucleo obrigatorio de inteligencia da plataforma; agentes
 - Aprendizado: event ledger (`cognitive.execution.*`) + RAP Learn em falhas. Nao altera regras criticas automaticamente.
 - Agentes opcionais: `src/core/agents/README.md`.
 - Intent Engine (2026-07-22): **AI-first**. A classificacao heuristica por keywords/regex foi removida; a intencao e classificada exclusivamente via LLM (`aiProviderService`) com prompt que prioriza atendimento ao cliente e cobertura das necessidades de negocio. Falha/indisponibilidade da IA -> handoff humano explicito (`source: 'ai_unavailable'`); confianca < 0.55 ou intent fora da taxonomia -> `transferir_humano`. Extracao de entidades (telefone, e-mail, data, hora) segue deterministica (parsing de dados, nao inferencia).
+
+## Learning Core (2026-07-23)
+
+Dominio de aprendizado de USUARIO (distinto do RAP Learn, que e aprendizado de maquina): observar interacoes na UI, descobrir competencias e, em fases futuras, ensinar/simular/avaliar/certificar sem interromper o trabalho.
+
+- Memoria operacional canonica: `AI_MEMORY/learning-core.md`.
+- Fase 0 entregue: telemetria de interacao — tipos `learning.interaction.*` no event ledger, ingest `POST /api/learning/interactions` (`api/modules/learning-core/`), agregado `user_interaction_sessions`, tracker frontend `frontend/src/core/interactionTracker.js` (feature flag `learningCoreEnabled`, default OFF).

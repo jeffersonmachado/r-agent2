@@ -123,6 +123,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { VerticalLayout } from './components/VerticalLayout';
 import { useRouter } from './hooks/useRouter';
 import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
+import { initInteractionTracker, stopInteractionTracker } from './core/interactionTracker';
 import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
 import { getFeature } from './utils/featuresConfig';
 import { DashboardV2 } from './pages/DashboardV2';
@@ -335,6 +336,18 @@ function AppWithAuth() {
   
   // Monitora falhas de autenticação do WebSocket e redireciona para login
   useWebSocketAuthGuard();
+
+  // Learning Core: telemetria de interação (feature flag learningCoreEnabled)
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let active = false;
+    initInteractionTracker().then((started) => {
+      active = started;
+    }).catch(() => {});
+    return () => {
+      if (active) stopInteractionTracker();
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !document?.documentElement) {

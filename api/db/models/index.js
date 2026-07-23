@@ -146,6 +146,7 @@ const getKnowledgeGraphNode = require('./KnowledgeGraphNode');
 const getKnowledgeGraphEdge = require('./KnowledgeGraphEdge');
 const getJourneyRegistry = require('./JourneyRegistry');
 const getLearningRecord = require('./LearningRecord');
+const getUserInteractionSession = require('./UserInteractionSession');
 const getAiGovernanceRecord = require('./AiGovernanceRecord');
 const getVerticalTemplate = require('./VerticalTemplate');
 
@@ -293,6 +294,7 @@ const KnowledgeGraphNode = () => getKnowledgeGraphNode();
 const KnowledgeGraphEdge = () => getKnowledgeGraphEdge();
 const JourneyRegistry = () => getJourneyRegistry();
 const LearningRecord = () => getLearningRecord();
+const UserInteractionSession = () => getUserInteractionSession();
 const AiGovernanceRecord = () => getAiGovernanceRecord();
 const VerticalTemplate = () => getVerticalTemplate();
 
@@ -898,6 +900,7 @@ module.exports = {
   KnowledgeGraphEdge,
   JourneyRegistry,
   LearningRecord,
+  UserInteractionSession,
   AiGovernanceRecord,
   VerticalTemplate,
   defineRelationships,
@@ -1045,6 +1048,7 @@ module.exports = {
   getKnowledgeGraphEdge,
   getJourneyRegistry,
   getLearningRecord,
+  getUserInteractionSession,
   getAiGovernanceRecord,
   getVerticalTemplate,
 };

@@ -30,6 +30,7 @@ function createRouteRegistry(routers) {
     { router: routers.workspaceRouter },
     { router: routers.agentOsRouter },
     { router: routers.cognitiveRouter },
+    { router: routers.learningCoreRouter },
     { router: routers.analyticsRouter },
     { router: routers.bulkCampaignsRouter },
     { router: routers.quickRepliesRouter },

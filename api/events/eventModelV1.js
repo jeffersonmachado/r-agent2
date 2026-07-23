@@ -83,6 +83,18 @@ const EVENT_TYPES_V1 = new Set([
 
   // Learning routine (RAP Learn)
   'LearningRoutineCompleted',
+
+  // Cognitive Core — execuções do pipeline cognitivo
+  'cognitive.execution.completed',
+  'cognitive.execution.failed',
+
+  // Learning Core — interação de usuário na UI (telemetria de aprendizado)
+  'learning.interaction.navigation',
+  'learning.interaction.click',
+  'learning.interaction.api_call',
+  'learning.interaction.flow_completed',
+  'learning.interaction.flow_abandoned',
+  'learning.interaction.error',
 ]);
 
 function makeId(prefix) {
