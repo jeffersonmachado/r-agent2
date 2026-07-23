@@ -80,7 +80,12 @@ function generateJourneyFlowchart(scenario, coverage) {
     for (let i = 0; i < sorted.length - 1; i++) {
       const from = safeId(sorted[i].id || `step_${sorted[i].order}`);
       const to = safeId(sorted[i + 1].id || `step_${sorted[i + 1].order}`);
-      const edgeLabel = sorted[i + 1].expected ? `| "${Object.keys(sorted[i + 1].expected).join(', ')}" |` : '';
+      const expected = sorted[i + 1].expected;
+      let edgeText = '';
+      if (typeof expected === 'string') edgeText = expected;
+      else if (expected && typeof expected === 'object') edgeText = Object.keys(expected).join(', ');
+      if (edgeText.length > 60) edgeText = `${edgeText.slice(0, 57)}...`;
+      const edgeLabel = edgeText ? `| "${escapeLabel(edgeText)}" |` : '';
       lines.push(`    ${from} -->${edgeLabel} ${to}`);
     }
   }

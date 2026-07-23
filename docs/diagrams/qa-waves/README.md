@@ -1,6 +1,6 @@
 # QA Waves — Diagramas de Jornada
 
-Gerado em: 2026-07-21T09:45:57.232Z
+Gerado em: 2026-07-23T20:53:18.318Z
 Total de cenários: 61
 
 ## Por Vertical
