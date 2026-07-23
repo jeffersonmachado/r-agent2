@@ -16,10 +16,10 @@ function createTaskRoutes({ buildDeps }) {
     });
   }
 
-  router.get('/tasks', (req, res) => controllerFor(req, res).list(req, res));
-  router.post('/tasks', (req, res) => controllerFor(req, res).create(req, res));
-  router.post('/tasks/:taskId/complete', (req, res) => controllerFor(req, res).complete(req, res));
-  router.post('/tasks/:taskId/reminder', (req, res) => controllerFor(req, res).reminder(req, res));
+  router.get('/api/tasks', (req, res) => controllerFor(req, res).list(req, res));
+  router.post('/api/tasks', (req, res) => controllerFor(req, res).create(req, res));
+  router.post('/api/tasks/:taskId/complete', (req, res) => controllerFor(req, res).complete(req, res));
+  router.post('/api/tasks/:taskId/reminder', (req, res) => controllerFor(req, res).reminder(req, res));
 
   return router;
 }

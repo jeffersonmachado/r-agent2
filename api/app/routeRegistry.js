@@ -14,6 +14,7 @@ function createRouteRegistry(routers) {
     { router: routers.pbxRouter },
     { router: routers.webhooksRouter },
     { router: routers.operationsDashboardRouter },
+    { router: routers.taskRouter },
     { router: routers.webScrapingRouter },
     { router: routers.qaRouter },
     { router: routers.qaWavesRouter },
