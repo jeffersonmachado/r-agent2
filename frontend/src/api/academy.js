@@ -15,3 +15,15 @@ export async function getSkillGraph() {
 export async function recomputeCompetencies() {
   return fetchJson('/api/learning/competencies/recompute', { method: 'POST' });
 }
+
+export async function getMyMissions() {
+  return fetchJson('/api/learning/missions/me');
+}
+
+export async function completeMission(missionId) {
+  return fetchJson(`/api/learning/missions/${encodeURIComponent(missionId)}/complete`, { method: 'POST' });
+}
+
+export async function getSimulations() {
+  return fetchJson('/api/learning/simulations');
+}

@@ -167,3 +167,62 @@
   color: var(--color-text-secondary, #9ca3af);
   font-size: 0.8rem;
 }
+
+.academy-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  padding-bottom: 0.5rem;
+}
+
+.academy-tab {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary, #9ca3af);
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.academy-tab:hover {
+  color: var(--color-text-primary, #e5e7eb);
+}
+
+.academy-tab-active {
+  background: var(--color-accent, #6366f1);
+  color: #fff;
+}
+
+.academy-missions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.academy-mission-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.academy-mission-body h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.academy-mission-body p {
+  margin: 0;
+}
+
+.academy-mission-done {
+  color: var(--color-success, #34d399);
+  font-weight: 600;
+  font-size: 0.9rem;
+}

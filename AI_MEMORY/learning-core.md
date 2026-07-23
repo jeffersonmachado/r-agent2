@@ -114,6 +114,47 @@ RAP Academy (UI read-only) + Tutor níveis 0-1.
   e2e do tutor validado com WS autenticado real (ingest de 2 erros →
   `tutor.hint` recebido via WebSocket, sem polling).
 
+## Fase 3 — entregue (2026-07-23)
+
+Journey Trainer + Simulation Engine (replay → anonimização → roteiro → RAG → missão).
+
+- **Anonymizer**: núcleo puro `src/core/learning/anonymizer/` (zero I/O).
+  `SENSITIVE_KEYS` (senha, token, cpf, email...) + `PATTERNS` ordenados do
+  mais específico ao mais genérico (cpf, cnpj, cartão, email, telefone, data,
+  número longo) para evitar sobreposição; `classifyFormField` determinístico
+  (nome/id/placeholder do campo → classe sensível) — fills de replay RPA são
+  SEMPRE mascarados, mesmo valores aparentemente inócuos.
+- **Journey Trainer**: `api/modules/learning-core/journeyTrainerService.js` —
+  carrega replay de `resolveRuntimePath('rpa','replay')` (regex anti-traversal
+  `^[\w.-]{1,120}$`), anonimiza, gera markdown (passo a passo das telas e
+  preenchimentos), indexa no RAG com id estável `training:<replayId>`
+  (re-geração sobrescreve) e faz findOrCreate da missão coletiva.
+- **Simulation Engine**: núcleo puro `src/core/learning/simulation-engine/` —
+  10 seed types (happy_path, edge_case, erro, exceção, stress, integração,
+  permissão, timeout, cliente VIP, inadimplente, falha externa) e 4 personas
+  sintéticas (docs `000.000.000-00`, emails `.invalid`); enriquecimento via IA
+  opcional — se IA falha, `aiEnrichment: null` + log explícito (nunca dados
+  reais).
+- **Missões**: `missionService.js` — lista missões coletivas + próprias;
+  completar missão coletiva cria cópia por usuário (auditoria individual).
+  Models `LearningMission`/`LearningSimulation`, migration
+  `20260723150000-create-learning-core-missions-simulations.js`.
+- **Rotas**: `GET /api/learning/replays` (admin),
+  `POST /api/learning/training/from-replay` (admin),
+  `GET /api/learning/missions/me`, `POST /api/learning/missions/:id/complete`,
+  `POST /api/learning/simulations/generate` (admin),
+  `GET /api/learning/simulations`.
+- **Academy**: 3 tabs (Competências / Missões / Simulações).
+- **Config**: `nodemon.json` passou a vigiar `src/` (além de `api/` e
+  `engine/`) — sem isso mudanças em `src/core/learning/*` não reiniciam a API
+  em dev.
+- **Testes**: `tests/unit/learningAnonymizer.test.js` (7),
+  `learningSimulation.test.js` (5), `learningJourneyTrainer.test.js` (5),
+  AcademyPage 6/6. Suíte unit completa 353 suites / 1760 testes verde.
+- **Validação e2e**: `from-replay` real (replay `login-flow-*` → doc RAG
+  `training:*` indexado, 538 campos mascarados); verificação SQL de PII
+  residual nos chunks `training:%` = 0.
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
@@ -121,8 +162,8 @@ OBSERVAR NOVAMENTE. Nunca termina.
 
 Plano de fases aprovado: F0 telemetria (entregue) → F1 Competency Engine
 (entregue) → F2 RAP Academy + Tutor 0-1 (entregue) → F3 Journey Trainer +
-Simulation Engine (replay → anonimização → dados sintéticos → treinamento)
-→ F4 Assessment + Certification + Mentor + Adaptive Learning.
+Simulation Engine (entregue) → F4 Assessment + Certification + Mentor +
+Adaptive Learning.
 
 ## Invariantes
 

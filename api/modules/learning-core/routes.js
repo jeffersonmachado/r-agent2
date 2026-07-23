@@ -2,6 +2,9 @@
 
 const learningCoreService = require('./service');
 const competencyService = require('./competencyService');
+const journeyTrainerService = require('./journeyTrainerService');
+const missionService = require('./missionService');
+const simulationService = require('./simulationService');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -128,6 +131,115 @@ async function handleLearningCoreRoutes(ctx) {
       profile: result.profile,
       computedAt: result.computedAt,
       tutor: { level: 1, channel: 'websocket', event: 'tutor.hint' },
+    });
+    return true;
+  }
+
+  // ── Fase 3: Journey Trainer + Simulation Engine ──────────────────────
+
+  if (method === 'GET' && pathname === '/api/learning/replays') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+
+    sendJson({ replays: journeyTrainerService.listReplays() });
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/training/from-replay') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await journeyTrainerService.generateTrainingFromReplay({
+        tenantId,
+        replayId: body.replayId,
+        journeyKey: body.journeyKey,
+      });
+      sendJson(result, 201);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/missions/me') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const missions = await missionService.listMissionsForUser({
+      tenantId,
+      agentId: req.agent?.id,
+    });
+    sendJson({ missions });
+    return true;
+  }
+
+  const missionCompleteMatch = method === 'POST'
+    ? pathname.match(/^\/api\/learning\/missions\/([^/]+)\/complete$/)
+    : null;
+  if (missionCompleteMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await missionService.completeMission({
+        tenantId,
+        agentId: req.agent?.id,
+        missionId: decodeURIComponent(missionCompleteMatch[1]),
+      });
+      sendJson(result);
+    } catch (error) {
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      if (error.code === 'FORBIDDEN') { sendJson({ error: 'forbidden', message: error.message }, 403); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/simulations/generate') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await simulationService.generateSimulation({
+        tenantId,
+        journeyKey: body.journeyKey,
+        seedType: body.seedType,
+        personaKey: body.personaKey,
+        stepsTemplate: body.stepsTemplate,
+        createdBy: req.agent?.id,
+      });
+      sendJson(result, 201);
+    } catch (error) {
+      if (/obrigatorio|invalido|invalida/.test(error.message)) { badRequest(error.message); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/simulations') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const simulations = await simulationService.listSimulations({ tenantId });
+    sendJson({
+      simulations,
+      seedTypes: simulationService.SEED_TYPES,
+      personas: Object.keys(simulationService.PERSONAS),
     });
     return true;
   }

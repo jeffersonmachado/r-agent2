@@ -47,23 +47,37 @@ export function AcademyPage() {
   const { isAuthenticated } = useAuth();
   const [data, setData] = useState(null);
   const [skillGraph, setSkillGraph] = useState(null);
+  const [missions, setMissions] = useState(null);
+  const [simulations, setSimulations] = useState(null);
+  const [activeTab, setActiveTab] = useState('competencias');
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
+  const [completingId, setCompletingId] = useState(null);
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [competencies, graph] = await Promise.all([
+      const [competencies, graph, missionData, simulationData] = await Promise.all([
         academyApi.getMyCompetencies(),
         academyApi.getSkillGraph().catch((graphError) => {
           logger.warn('[AcademyPage] skill-graph indisponível', graphError);
           return null;
         }),
+        academyApi.getMyMissions().catch((missionError) => {
+          logger.warn('[AcademyPage] missões indisponíveis', missionError);
+          return { missions: [] };
+        }),
+        academyApi.getSimulations().catch((simulationError) => {
+          logger.warn('[AcademyPage] simulações indisponíveis', simulationError);
+          return { simulations: [] };
+        }),
       ]);
       setData(competencies);
       setSkillGraph(graph);
+      setMissions(missionData.missions || []);
+      setSimulations(simulationData.simulations || []);
     } catch (loadError) {
       logger.error('[AcademyPage] falha ao carregar competências', loadError);
       setError(loadError);
@@ -88,6 +102,19 @@ export function AcademyPage() {
       setRecomputing(false);
     }
   }, [load]);
+
+  const handleCompleteMission = useCallback(async (missionId) => {
+    setCompletingId(missionId);
+    try {
+      await academyApi.completeMission(missionId);
+      const missionData = await academyApi.getMyMissions();
+      setMissions(missionData.missions || []);
+    } catch (completeError) {
+      logger.error('[AcademyPage] falha ao concluir missão', completeError);
+    } finally {
+      setCompletingId(null);
+    }
+  }, []);
 
   const skillLabels = React.useMemo(() => {
     const map = {};
@@ -126,6 +153,25 @@ export function AcademyPage() {
 
       {!loading && !error && (
         <>
+          <nav className="academy-tabs" aria-label="Seções da Academy">
+            {[
+              ['competencias', 'Competências'],
+              ['missoes', `Missões${missions ? ` (${missions.filter((m) => m.status !== 'completed').length})` : ''}`],
+              ['simulacoes', `Simulações${simulations ? ` (${simulations.length})` : ''}`],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`academy-tab${activeTab === key ? ' academy-tab-active' : ''}`}
+                onClick={() => setActiveTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {activeTab === 'competencias' && (
+          <>
           {profile && (
             <section className="academy-profile" aria-label="Perfil de aprendizado">
               <div className="academy-profile-card">
@@ -210,6 +256,75 @@ export function AcademyPage() {
               </div>
             )}
           </section>
+          </>
+          )}
+
+          {activeTab === 'missoes' && (
+            <section aria-label="Missões de treinamento">
+              <h2 className="academy-section-title">Missões de treinamento</h2>
+              {!missions || missions.length === 0 ? (
+                <p className="academy-state">
+                  Nenhuma missão disponível ainda. Missões são geradas a partir de replays
+                  operacionais reais (anonimizados) pela administração da plataforma.
+                </p>
+              ) : (
+                <div className="academy-missions-list">
+                  {missions.map((mission) => (
+                    <article key={mission.id} className="academy-mission-card" data-testid={`mission-${mission.id}`}>
+                      <div className="academy-mission-body">
+                        <h3>{mission.title}</h3>
+                        {mission.summary && <p className="academy-muted">{mission.summary}</p>}
+                        {mission.completedAt && (
+                          <p className="academy-muted">Concluída em {formatDate(mission.completedAt)}</p>
+                        )}
+                      </div>
+                      <div className="academy-mission-actions">
+                        {mission.status === 'completed' ? (
+                          <span className="academy-mission-done">Concluída ✓</span>
+                        ) : (
+                          <Button
+                            onClick={() => handleCompleteMission(mission.id)}
+                            disabled={completingId === mission.id}
+                          >
+                            {completingId === mission.id ? 'Concluindo…' : 'Marcar como concluída'}
+                          </Button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'simulacoes' && (
+            <section aria-label="Simulações">
+              <h2 className="academy-section-title">Simulações</h2>
+              {!simulations || simulations.length === 0 ? (
+                <p className="academy-state">
+                  Nenhuma simulação gerada ainda. Simulações são cenários sintéticos
+                  (persona × tipo de cenário × jornada) — nunca usam dados reais.
+                </p>
+              ) : (
+                <div className="academy-skills-grid">
+                  {simulations.map((simulation) => (
+                    <article key={simulation.id} className="academy-skill-card" data-testid={`simulation-${simulation.id}`}>
+                      <header>
+                        <h3>{simulation.journeyKey}</h3>
+                        <span className="academy-muted">{simulation.seedType}</span>
+                      </header>
+                      <p className="academy-muted">{simulation.descricao}</p>
+                      <footer className="academy-muted">
+                        persona {simulation.personaKey} · {simulation.steps} passos
+                        {simulation.aiEnriched ? ' · enriquecida por IA' : ''}
+                        {' '}· {formatDate(simulation.createdAt)}
+                      </footer>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>

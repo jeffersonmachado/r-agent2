@@ -1,7 +1,8 @@
 {
   "watch": [
     "api",
-    "engine"
+    "engine",
+    "src"
   ],
   "ext": "js,json",
   "ignore": [
@@ -29,4 +30,3 @@
   "verbose": true,
   "restartable": "rs"
 }
-

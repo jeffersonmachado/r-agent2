@@ -4,12 +4,18 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 const mockGetMyCompetencies = vi.fn();
 const mockGetSkillGraph = vi.fn();
 const mockRecompute = vi.fn();
+const mockGetMyMissions = vi.fn();
+const mockCompleteMission = vi.fn();
+const mockGetSimulations = vi.fn();
 
 vi.mock('../api/academy', () => ({
   getMyCompetencies: (...args) => mockGetMyCompetencies(...args),
   getMyLearningProfile: vi.fn(),
   getSkillGraph: (...args) => mockGetSkillGraph(...args),
   recomputeCompetencies: (...args) => mockRecompute(...args),
+  getMyMissions: (...args) => mockGetMyMissions(...args),
+  completeMission: (...args) => mockCompleteMission(...args),
+  getSimulations: (...args) => mockGetSimulations(...args),
 }));
 
 vi.mock('../context/authContext', () => ({
@@ -52,6 +58,8 @@ describe('AcademyPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMyCompetencies.mockResolvedValue(competenciesPayload);
+    mockGetMyMissions.mockResolvedValue({ missions: [] });
+    mockGetSimulations.mockResolvedValue({ simulations: [] });
     mockGetSkillGraph.mockResolvedValue({
       skills: [
         { key: 'tickets', label: 'tickets' },
@@ -101,5 +109,41 @@ describe('AcademyPage', () => {
     render(<AcademyPage />);
 
     await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+  });
+
+  it('tab Missões lista missões e conclui sob demanda', async () => {
+    mockGetMyMissions.mockResolvedValue({
+      missions: [
+        { id: 'm1', title: 'Treinamento: jornada X', summary: '10 passos', status: 'available', createdAt: '2026-07-23T10:00:00Z' },
+        { id: 'm2', title: 'Treinamento: jornada Y', summary: null, status: 'completed', completedAt: '2026-07-23T11:00:00Z', createdAt: '2026-07-22T10:00:00Z' },
+      ],
+    });
+    mockCompleteMission.mockResolvedValue({ id: 'm1', status: 'completed' });
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Missões \(1\)/ }));
+
+    await waitFor(() => expect(screen.getByTestId('mission-m1')).toBeTruthy());
+    expect(screen.getByTestId('mission-m2').textContent).toContain('Concluída ✓');
+
+    fireEvent.click(screen.getByRole('button', { name: /Marcar como concluída/i }));
+    await waitFor(() => expect(mockCompleteMission).toHaveBeenCalledWith('m1'));
+  });
+
+  it('tab Simulações lista cenários gerados', async () => {
+    mockGetSimulations.mockResolvedValue({
+      simulations: [
+        { id: 's1', journeyKey: 'booking_flow', seedType: 'happy_path', personaKey: 'cliente_vip', descricao: 'Simulacao...', steps: 5, aiEnriched: true, createdAt: '2026-07-23T10:00:00Z' },
+      ],
+    });
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Simulações \(1\)/ }));
+
+    await waitFor(() => expect(screen.getByTestId('simulation-s1')).toBeTruthy());
+    expect(screen.getByTestId('simulation-s1').textContent).toContain('happy_path');
+    expect(screen.getByTestId('simulation-s1').textContent).toContain('enriquecida por IA');
   });
 });
