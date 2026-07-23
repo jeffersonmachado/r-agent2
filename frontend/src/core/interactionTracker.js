@@ -79,16 +79,56 @@ function createEvent(type, data = {}) {
   }
 }
 
+function getAuthToken() {
+  try {
+    return window.localStorage.getItem('auth_token') || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Flush via sendBeacon: canal padrão da telemetria. O browser enfileira o
+ * POST e ele sobrevive a navegações/unload — fetch in-flight (mesmo com
+ * keepalive) é abortado nesse cenário, o que derruba gates de runtime
+ * (net::ERR_ABORTED) e perde eventos. Como o beacon não permite headers,
+ * o token vai no body (o endpoint aceita essa alternativa somente para
+ * telemetria). Trade-off assumido: beacon não expõe falha de servidor —
+ * telemetria é best-effort por desenho.
+ */
+function flushWithBeacon(state, events) {
+  if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') {
+    return false;
+  }
+  const payload = JSON.stringify({
+    sessionId: state.sessionId,
+    events,
+    token: getAuthToken(),
+  });
+  try {
+    const blob = new Blob([payload], { type: 'application/json' });
+    return navigator.sendBeacon(INGEST_PATH, blob);
+  } catch {
+    return false;
+  }
+}
+
 async function flushBuffer() {
   const state = trackerState;
   if (!state || state.buffer.length === 0 || state.flushing) return;
   const events = state.buffer.splice(0, state.buffer.length);
+
+  if (flushWithBeacon(state, events)) {
+    return;
+  }
+
   state.flushing = true;
   try {
     await fetchJson(INGEST_PATH, {
       method: 'POST',
       silent: true,
       suppressErrorLog: true,
+      keepalive: true,
       body: JSON.stringify({ sessionId: state.sessionId, events }),
     });
   } catch (error) {
@@ -185,6 +225,7 @@ export async function initInteractionTracker() {
 
   window.addEventListener(ROUTE_CHANGE_EVENT, handleRouteChange);
   window.addEventListener('popstate', handleRouteChange);
+  window.addEventListener('pagehide', handlePageHide);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('visibilitychange', handleVisibilityChange);
   installFetchObserver();
@@ -202,11 +243,16 @@ function handleVisibilityChange() {
   }
 }
 
+function handlePageHide() {
+  flushBuffer();
+}
+
 export function stopInteractionTracker() {
   const state = trackerState;
   if (!state) return;
   window.removeEventListener(ROUTE_CHANGE_EVENT, handleRouteChange);
   window.removeEventListener('popstate', handleRouteChange);
+  window.removeEventListener('pagehide', handlePageHide);
   document.removeEventListener('click', handleClick, true);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   if (state.originalFetch) window.fetch = state.originalFetch;

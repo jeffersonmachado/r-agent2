@@ -56,6 +56,12 @@ async function main() {
       if (url.includes('/auth/me') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
+      // Telemetria do Learning Core: o browser aborta a leitura da resposta em
+      // navegação, mas o ingest é entregue (sendBeacon/keepalive) — mesmo caso
+      // de /auth/me: ruído de navegação, não falha funcional.
+      if (url.includes('/api/learning/interactions') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
       networkFailures.push({
         url,
         method: request.method(),

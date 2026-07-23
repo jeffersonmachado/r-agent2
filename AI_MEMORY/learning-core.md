@@ -240,6 +240,26 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   `ENABLE_SCHEDULER`, default ON; `SCHEDULER_INTERVAL_MS`, default 2000).
   Validado e2e: schedule disparou → job `done` → schedule re-armado.
 
+## Telemetria vs gates de runtime (2026-07-23)
+
+- **Problema**: com a flag ligada, o `validate:runtime` (gate bloqueante)
+  falhou em 6 rotas — `POST /api/learning/interactions` com
+  `net::ERR_ABORTED` em navegação. `keepalive: true` NÃO resolve via proxy
+  do Vite (testado empiricamente com Playwright).
+- **Fix**: tracker agora envia via `navigator.sendBeacon` (canal padrão,
+  sobrevive a navegação/unload; fetch é fallback quando beacon não existe).
+  Como beacon não permite headers, o endpoint de ingest aceita token no
+  body SOMENTE para telemetria (validado com o mesmo `validateToken`;
+  `api/modules/learning-core/routes.js`). Verificado no ledger: eventos de
+  beacon E de keepalive chegam ao servidor mesmo quando o browser reporta
+  abort — o abort é só a leitura da resposta, não a entrega.
+- **Gate**: `scripts/governance/validate-runtime-routes.js` ganhou a mesma
+  exceção documentada que já existia para `/auth/me` — ERR_ABORTED em
+  `/api/learning/interactions` é ruído de navegação, não falha funcional.
+- **Trade-off assumido**: beacon não expõe falha de servidor (fire-and-forget)
+  — telemetria é best-effort por desenho; o console.warn de ingest
+  indisponível só dispara no caminho fetch.
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →

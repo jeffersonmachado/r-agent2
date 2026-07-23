@@ -19,15 +19,20 @@ import {
 } from './interactionTracker';
 
 describe('core/interactionTracker', () => {
+  const nativeSendBeacon = window.navigator.sendBeacon;
+
   beforeEach(() => {
     vi.clearAllMocks();
     window.sessionStorage.clear();
     mockFetchJson.mockResolvedValue({ accepted: 1, rejected: 0 });
     mockGetFeature.mockResolvedValue(true);
+    // Caminho fetch por padrão nos testes; os testes de beacon definem seu mock.
+    Object.defineProperty(window.navigator, 'sendBeacon', { value: undefined, configurable: true });
   });
 
   afterEach(() => {
     stopInteractionTracker();
+    Object.defineProperty(window.navigator, 'sendBeacon', { value: nativeSendBeacon, configurable: true });
   });
 
   it('nao inicia quando a feature flag esta desligada', async () => {
@@ -73,6 +78,7 @@ describe('core/interactionTracker', () => {
     await vi.waitFor(() => expect(mockFetchJson).toHaveBeenCalledTimes(1));
     const [path, options] = mockFetchJson.mock.calls[0];
     expect(path).toBe('/api/learning/interactions');
+    expect(options.keepalive).toBe(true);
     const body = JSON.parse(options.body);
     expect(body.sessionId).toBeTruthy();
     expect(body.events.length).toBe(20);
@@ -114,5 +120,56 @@ describe('core/interactionTracker', () => {
 
     expect(window.fetch).toBe(originalFetch);
     expect(isInteractionTrackerActive()).toBe(false);
+  });
+
+  it('usa sendBeacon com token no body quando a página fica oculta', async () => {
+    const sendBeacon = vi.fn(() => true);
+    Object.defineProperty(window.navigator, 'sendBeacon', {
+      value: sendBeacon,
+      configurable: true,
+    });
+    window.localStorage.setItem('auth_token', 'token-beacon');
+    await initInteractionTracker();
+
+    trackLearningEvent('flow_completed', { flowId: 'f-beacon' });
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    const [path, blob] = sendBeacon.mock.calls[0];
+    expect(path).toBe('/api/learning/interactions');
+    const payload = JSON.parse(await blob.text());
+    expect(payload.token).toBe('token-beacon');
+    expect(payload.events.some((e) => e.type === 'flow_completed')).toBe(true);
+    expect(mockFetchJson).not.toHaveBeenCalled();
+
+    window.localStorage.removeItem('auth_token');
+  });
+
+  it('pagehide também descarrega via beacon', async () => {
+    const sendBeacon = vi.fn(() => true);
+    Object.defineProperty(window.navigator, 'sendBeacon', {
+      value: sendBeacon,
+      configurable: true,
+    });
+    await initInteractionTracker();
+
+    trackLearningEvent('flow_completed', { flowId: 'f-pagehide' });
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+  });
+
+  it('sem sendBeacon disponível faz fallback para fetch', async () => {
+    await initInteractionTracker();
+    expect(typeof window.navigator.sendBeacon).not.toBe('function');
+
+    trackLearningEvent('flow_completed', { flowId: 'f-fallback' });
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+
+    await vi.waitFor(() => expect(mockFetchJson).toHaveBeenCalledTimes(1));
   });
 });

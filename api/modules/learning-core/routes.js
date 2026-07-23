@@ -1,5 +1,6 @@
 'use strict';
 
+const { validateToken } = require('../../services/authService');
 const learningCoreService = require('./service');
 const competencyService = require('./competencyService');
 const journeyTrainerService = require('./journeyTrainerService');
@@ -34,11 +35,23 @@ async function handleLearningCoreRoutes(ctx) {
   const badRequest = (m) => _b(res, m);
 
   if (method === 'POST' && pathname === '/api/learning/interactions') {
-    const authCheck = requireAuth(req);
-    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
-
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
     const body = await parseJsonBody(req);
+
+    // Auth: header Bearer (fetch normal) OU token no body (sendBeacon de
+    // saída de página — beacon não permite headers). O fallback é aceito
+    // somente neste endpoint de telemetria.
+    let authCheck = requireAuth(req);
+    if (!authCheck.valid && body && typeof body.token === 'string' && body.token) {
+      const validation = validateToken(body.token);
+      if (validation.valid) {
+        req.agent = validation.agent;
+        req.session = validation.session;
+        req.tenantId = validation.agent && (validation.agent.tenantId || validation.agent.tenant_id);
+        authCheck = { valid: true };
+      }
+    }
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
     const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
     try {
