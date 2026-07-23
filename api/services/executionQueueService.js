@@ -445,6 +445,12 @@ async function processJob(job) {
     await runSlaScan();
     return;
   }
+  if (kind === 'learning_adaptive_cycle') {
+    const { runScheduledCycle } = require('../modules/learning-core/adaptiveCycleService');
+    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key') || 'system';
+    await runScheduledCycle({ tenantId });
+    return;
+  }
   if (kind === 'scan_pbx_cdr_events') {
     const { scanPbxCdrAndEmitEvents } = require('./pbx/pbxCallEventsService');
     const consumer = job?.payload?.consumer || 'pbx_cdr_v0';

@@ -221,6 +221,25 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   `learning_mentor_plans`; certificações avaliadas a partir da UI (0
   emitidas — evidência ainda insuficiente, comportamento correto).
 
+## Automação do ciclo contínuo (2026-07-23)
+
+- **Job kind `learning_adaptive_cycle`**: registrado em
+  `processJob` (`api/services/executionQueueService.js`); orquestrado por
+  `api/modules/learning-core/adaptiveCycleService.js` — roda
+  `runAdaptiveCycle` (drift + revogação) e recomputa competências dos
+  usuários ativos nas últimas 24h (cap 50; falha individual logada, não
+  derruba o ciclo).
+- **Schedule seed**: migration `20260723170000-seed-learning-adaptive-schedule.js`
+  (`sch-learning-adaptive-cycle`, 6h). ATENÇÃO: `payload` JSONB em
+  `bulkInsert` de migration exige `JSON.stringify({})` — objeto literal
+  falha com `Invalid value {}` (foi o que silenciou o seed original de
+  `sch-sla-scan`/`sch-prune-event-ledger` neste ambiente).
+- **Gap de plataforma corrigido**: `schedulerService.startScheduler`
+  (pump tabela `schedules` → execution queue) existia mas nunca era
+  iniciado. Agora iniciado em `api/runtime/startWorkers.js` (env
+  `ENABLE_SCHEDULER`, default ON; `SCHEDULER_INTERVAL_MS`, default 2000).
+  Validado e2e: schedule disparou → job `done` → schedule re-armado.
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →

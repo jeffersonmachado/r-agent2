@@ -70,6 +70,17 @@ function startWorkers({
     }
   }
 
+  // Generic scheduler (tabela schedules -> execution queue) - best-effort.
+  if (processRef.env.ENABLE_SCHEDULER !== 'false') {
+    try {
+      const { startScheduler } = require('../services/schedulerService');
+      const schedulerIntervalMs = parseInt(processRef.env.SCHEDULER_INTERVAL_MS || '2000', 10);
+      startScheduler({ intervalMs: schedulerIntervalMs });
+    } catch (err) {
+      logger.warn('[Scheduler] Falha ao iniciar (ignorado)', { error: err.message });
+    }
+  }
+
   // Vertical journey scheduler (beauty + fitness automation) - best-effort.
   if (processRef.env.ENABLE_VERTICAL_SCHEDULER !== 'false') {
     try {
