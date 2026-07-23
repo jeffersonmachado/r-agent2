@@ -155,6 +155,57 @@ Journey Trainer + Simulation Engine (replay → anonimização → roteiro → R
   `training:*` indexado, 538 campos mascarados); verificação SQL de PII
   residual nos chunks `training:%` = 0.
 
+## Fase 4 — entregue (2026-07-23)
+
+Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
+
+- **Assessment Engine**: núcleo puro `src/core/learning/assessment-engine/`.
+  `computeRecovery` (erro → recuperado quando há sucesso posterior na mesma
+  skill dentro de 24h; exceções = api_call status ≥ 500) e `assessSkills`
+  (critérios precisão/tempo/autonomia/consistência/recuperação contra
+  `DEFAULT_THRESHOLDS`: minEvents 20, precisão 0.9, autonomia 0.8,
+  consistência 0.6, tempo 0.4, recuperação 0.5). Componente `null` bloqueia
+  (`sem_evidencia`); recuperação `null` (sem erros) é não-aplicável.
+- **Certification Engine**: `certificationService.js` + model
+  `UserCertification`. Emite quando todos os critérios aplicáveis ≥ threshold
+  (snapshot completo + evidenceRefs do ledger na certificação — auditável);
+  REVOGA por drift quando a skill deixa de ser certificável. Nunca por
+  tempo/presença.
+- **Mentor**: `mentorService.js` + model `LearningMentorPlan`. Agregados
+  determinísticos 7/30/90d (eventos, erros, taxa, fluxos) + competências
+  atuais → plano via IA (competências sugeridas, objetivos, indicadores).
+  IA indisponível/JSON inválido → erro `AI_UNAVAILABLE` (rota 503), sem
+  heurística.
+- **Adaptive**: `adaptiveService.js` — sinais: `certification_drift` (≥2
+  erros pós-emissão em rotas da skill), `unclassified_route`, `weak_skill`
+  (score médio < 0.5 sem missão). `runAdaptiveCycle` reavalia/revoga
+  certificações com drift (ação automática segura); geração de treinamento
+  permanece ação admin explícita.
+- **Analytics**: `analyticsService.js` — overview do tenant (usuários, score
+  médio, skills, missões, certificações, simulações, dicas do tutor 30d) +
+  proxy de ROI: taxa de erro e mediana de navegação 30d vs 30d anteriores
+  (event ledger).
+- **Tutor níveis 2-4**: `requestTutorHelp` no `tutorService.js` —
+  `POST /api/learning/tutor/help {route, level}`. Nível 2 explica (RAG +
+  erros recorrentes do usuário), nível 3 guia passo a passo (RAG sobre
+  material `training:*`), nível 4 demonstração (determinístico: últimas
+  simulações sintéticas, sem IA). Tudo persistido em `learning_tutor_hints`
+  com o nível. TutorDock com botões de escalação.
+- **Rotas**: `certifications/me` GET, `certifications/evaluate` POST,
+  `mentor/plan/me` GET, `mentor/plan/generate` POST (503 ai_unavailable),
+  `adaptive/signals` GET (admin), `adaptive/run` POST (admin),
+  `analytics/overview` GET (admin), `tutor/help` POST.
+- **Academy**: 6 tabs — Competências, Missões, Simulações, Certificações,
+  Plano de evolução e Analytics (somente admin).
+- **Migration**: `20260723160000-create-learning-certifications-mentor.js`
+  (`user_certifications`, `learning_mentor_plans`).
+- **Testes**: `learningAssessmentEngine.test.js` (10),
+  `learningCertification.test.js` (5), `learningMentor.test.js` (6),
+  `learningTutorHelp.test.js` (6); AcademyPage 10/10, TutorDock 7/7.
+- **Validação e2e**: todos os endpoints F4 exercitados em runtime real
+  (evaluate com assessment completo, adaptive signals, analytics overview,
+  tutor nível 4 com demonstração sintética).
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
@@ -163,7 +214,9 @@ OBSERVAR NOVAMENTE. Nunca termina.
 Plano de fases aprovado: F0 telemetria (entregue) → F1 Competency Engine
 (entregue) → F2 RAP Academy + Tutor 0-1 (entregue) → F3 Journey Trainer +
 Simulation Engine (entregue) → F4 Assessment + Certification + Mentor +
-Adaptive Learning.
+Adaptive Learning + Analytics + Tutor 2-4 (entregue). Ciclo completo
+OBSERVAR→ENTENDER→MEDIR→ENSINAR→SIMULAR→VALIDAR→CERTIFICAR operacional;
+a observação contínua (F0-F1) retroalimenta o ciclo.
 
 ## Invariantes
 

@@ -27,3 +27,30 @@ export async function completeMission(missionId) {
 export async function getSimulations() {
   return fetchJson('/api/learning/simulations');
 }
+
+export async function requestTutorHelp(route, level) {
+  return fetchJson('/api/learning/tutor/help', {
+    method: 'POST',
+    body: JSON.stringify({ route, level }),
+  });
+}
+
+export async function getMyCertifications() {
+  return fetchJson('/api/learning/certifications/me');
+}
+
+export async function evaluateCertifications() {
+  return fetchJson('/api/learning/certifications/evaluate', { method: 'POST' });
+}
+
+export async function getMentorPlan() {
+  return fetchJson('/api/learning/mentor/plan/me');
+}
+
+export async function generateMentorPlan() {
+  return fetchJson('/api/learning/mentor/plan/generate', { method: 'POST' });
+}
+
+export async function getAnalyticsOverview() {
+  return fetchJson('/api/learning/analytics/overview');
+}

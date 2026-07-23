@@ -24,6 +24,7 @@
 const { Op } = require('sequelize');
 
 const getLearningTutorHintModel = require('../../db/models/LearningTutorHint');
+const getLearningSimulationModel = require('../../db/models/LearningSimulation');
 const { queryRag } = require('../../services/ragService');
 const { emitEvent } = require('../../services/websocketService');
 const logger = require('../../utils/logger');
@@ -32,6 +33,9 @@ const MIN_ERROR_EVENTS = 2;
 const COOLDOWN_MINUTES = 15;
 const RAG_CACHE_HOURS = 24;
 const MAX_HINT_CHARS = 600;
+const MAX_EXPLAIN_CHARS = 1500;
+const MAX_GUIDE_CHARS = 2000;
+const TUTOR_LEVELS = Object.freeze([0, 1, 2, 3, 4]);
 
 function isErrorEvent(event) {
   const type = String(event && event.type || '');
@@ -212,10 +216,180 @@ async function evaluateAndMaybeHint({ tenantId, agentId, sessionId, events }) {
   return { hintEmitted: true };
 }
 
+// ── Níveis 2-4: ajuda explícita solicitada pelo usuário ──────────────────
+
+async function persistHelpRecord({ tenantId, agentId, route, level, content, source, extraTrigger }) {
+  const Model = getLearningTutorHintModel();
+  return Model.create({
+    tenant_id: String(tenantId),
+    agentId: String(agentId),
+    route,
+    level,
+    trigger: { explicit: true, requestedLevel: level, ...(extraTrigger || {}) },
+    hintText: typeof content === 'string' ? content : JSON.stringify(content),
+    source,
+    evidenceRefs: [],
+  });
+}
+
+async function findAgentRecentErrors({ tenantId, agentId, route }) {
+  const Model = getLearningTutorHintModel();
+  const rows = await Model.findAll({
+    where: { tenant_id: String(tenantId), agentId: String(agentId), route },
+    order: [['created_at', 'DESC']],
+    limit: 5,
+  });
+  return rows.map((row) => row.trigger || {});
+}
+
+/**
+ * Nível 2 (explica): explicação detalhada da tela/processo via RAG,
+ * contextualizada com os erros recorrentes do próprio usuário na rota.
+ */
+async function buildExplanation({ tenantId, agentId, route }) {
+  const recentTriggers = await findAgentRecentErrors({ tenantId, agentId, route });
+  const errorCodes = Array.from(new Set(
+    recentTriggers.flatMap((t) => (Array.isArray(t.errorCodes) ? t.errorCodes : [])),
+  )).slice(0, 5);
+
+  const query = [
+    `Explique em detalhes a tela "${route}" da plataforma: o que ela faz,`,
+    'quando usar, os campos/acoes principais e os erros mais comuns',
+    errorCodes.length > 0 ? ` (o usuario ja encontrou: ${errorCodes.join(', ')})` : '',
+    '. Responda em portugues, de forma pratica, sem introducao.',
+  ].join('');
+
+  const result = await queryRag(query, tenantId, { source: 'learning-core-tutor-l2' });
+  const text = result && result.success && typeof result.response === 'string'
+    ? result.response.trim().slice(0, MAX_EXPLAIN_CHARS)
+    : null;
+  return text ? { text } : null;
+}
+
+/**
+ * Nível 3 (guia passo a passo): usa o material de treinamento gerado pelo
+ * Journey Trainer (documentos RAG `training:*`, derivados de replays reais
+ * anonimizados) para orientar o preenchimento da tela passo a passo.
+ */
+async function buildStepGuide({ tenantId, route }) {
+  const query = [
+    'Com base no material de treinamento da plataforma (roteiros gerados de',
+    `replays operacionais), descreva o passo a passo para usar a tela "${route}":`,
+    'cada etapa em ordem, o que preencher em cada campo e o que esperar como',
+    'resultado. Responda em portugues, em lista numerada, sem introducao.',
+  ].join('');
+
+  const result = await queryRag(query, tenantId, { source: 'learning-core-tutor-l3' });
+  const text = result && result.success && typeof result.response === 'string'
+    ? result.response.trim().slice(0, MAX_GUIDE_CHARS)
+    : null;
+  return text ? { text } : null;
+}
+
+/**
+ * Nível 4 (demonstração): cenários sintéticos disponíveis (Simulation
+ * Engine) — determinístico, sem IA e nunca com dados reais.
+ */
+async function buildDemonstration({ tenantId }) {
+  const Model = getLearningSimulationModel();
+  const rows = await Model.findAll({
+    where: { tenant_id: String(tenantId) },
+    order: [['created_at', 'DESC']],
+    limit: 5,
+  });
+  if (rows.length === 0) return null;
+  return {
+    demonstrations: rows.map((row) => ({
+      id: row.id,
+      journeyKey: row.journeyKey,
+      seedType: row.seedType,
+      personaKey: row.personaKey,
+      scenario: row.scenario || {},
+      createdAt: row.createdAt,
+    })),
+  };
+}
+
+/**
+ * Ajuda explícita nos níveis 2-4 (o usuário pede; não é proativo como o
+ * nível 1). Persiste o registro para auditoria e retorna o conteúdo por HTTP.
+ *
+ * @returns {Promise<{level, route, available, content?, source?, reason?}>}
+ */
+async function requestTutorHelp({ tenantId, agentId, route, level }) {
+  const numericLevel = Number(level);
+  if (!route || typeof route !== 'string') {
+    const error = new Error('route obrigatorio');
+    error.code = 'BAD_REQUEST';
+    throw error;
+  }
+  if (![2, 3, 4].includes(numericLevel)) {
+    const error = new Error('level invalido: use 2 (explicar), 3 (guia passo a passo) ou 4 (demonstracao)');
+    error.code = 'BAD_REQUEST';
+    throw error;
+  }
+
+  if (numericLevel === 4) {
+    const demonstration = await buildDemonstration({ tenantId });
+    if (!demonstration) {
+      return { level: 4, route, available: false, reason: 'no_simulations' };
+    }
+    await persistHelpRecord({
+      tenantId,
+      agentId,
+      route,
+      level: 4,
+      content: demonstration,
+      source: 'simulation_engine',
+    });
+    return { level: 4, route, available: true, content: demonstration, source: 'simulation_engine' };
+  }
+
+  let built = null;
+  try {
+    built = numericLevel === 2
+      ? await buildExplanation({ tenantId, agentId, route })
+      : await buildStepGuide({ tenantId, route });
+  } catch (error) {
+    logger.warn('[learning-core] Tutor: RAG indisponivel na ajuda explicita (ai_unavailable)', {
+      tenantId,
+      route,
+      level: numericLevel,
+      error: error.message,
+    });
+    built = null;
+  }
+
+  if (!built) {
+    return { level: numericLevel, route, available: false, reason: 'ai_unavailable' };
+  }
+
+  const source = numericLevel === 2 ? 'rag_explain' : 'rag_guide';
+  await persistHelpRecord({
+    tenantId,
+    agentId,
+    route,
+    level: numericLevel,
+    content: built.text,
+    source,
+  });
+
+  logger.info('[learning-core] Tutor: ajuda explicita emitida', {
+    tenantId,
+    agentId: String(agentId),
+    route,
+    level: numericLevel,
+  });
+
+  return { level: numericLevel, route, available: true, content: { text: built.text }, source };
+}
+
 module.exports = {
   detectDifficulty,
   evaluateAndMaybeHint,
+  requestTutorHelp,
   MIN_ERROR_EVENTS,
   COOLDOWN_MINUTES,
   RAG_CACHE_HOURS,
+  TUTOR_LEVELS,
 };

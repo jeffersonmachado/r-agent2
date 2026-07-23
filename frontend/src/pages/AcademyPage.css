@@ -226,3 +226,23 @@
   font-weight: 600;
   font-size: 0.9rem;
 }
+
+.academy-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.academy-cert-active {
+  color: var(--color-success, #34d399);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.academy-cert-revoked {
+  color: var(--color-danger, #f87171);
+  font-weight: 600;
+  font-size: 0.85rem;
+}

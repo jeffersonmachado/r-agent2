@@ -77,3 +77,31 @@
 .tutor-dock-link:hover {
   text-decoration: underline;
 }
+
+.tutor-dock-escalated {
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  margin-bottom: 0.6rem;
+  padding-top: 0.6rem;
+}
+
+.tutor-dock-unavailable {
+  color: var(--color-text-secondary, #9ca3af);
+  font-style: italic;
+}
+
+.tutor-dock-demo-list {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.tutor-dock-footer {
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tutor-dock-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

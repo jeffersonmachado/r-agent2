@@ -44,22 +44,29 @@ function ScoreBar({ value }) {
 }
 
 export function AcademyPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, agent } = useAuth();
+  const isAdmin = ['owner', 'admin', 'super_admin'].includes(agent && agent.role);
   const [data, setData] = useState(null);
   const [skillGraph, setSkillGraph] = useState(null);
   const [missions, setMissions] = useState(null);
   const [simulations, setSimulations] = useState(null);
+  const [certifications, setCertifications] = useState(null);
+  const [mentorPlan, setMentorPlan] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [activeTab, setActiveTab] = useState('competencias');
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [completingId, setCompletingId] = useState(null);
+  const [evaluating, setEvaluating] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [planError, setPlanError] = useState(null);
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [competencies, graph, missionData, simulationData] = await Promise.all([
+      const [competencies, graph, missionData, simulationData, certificationData, mentorData] = await Promise.all([
         academyApi.getMyCompetencies(),
         academyApi.getSkillGraph().catch((graphError) => {
           logger.warn('[AcademyPage] skill-graph indisponível', graphError);
@@ -73,11 +80,21 @@ export function AcademyPage() {
           logger.warn('[AcademyPage] simulações indisponíveis', simulationError);
           return { simulations: [] };
         }),
+        academyApi.getMyCertifications().catch((certError) => {
+          logger.warn('[AcademyPage] certificações indisponíveis', certError);
+          return { certifications: [] };
+        }),
+        academyApi.getMentorPlan().catch((mentorError) => {
+          logger.warn('[AcademyPage] plano do mentor indisponível', mentorError);
+          return { plan: null };
+        }),
       ]);
       setData(competencies);
       setSkillGraph(graph);
       setMissions(missionData.missions || []);
       setSimulations(simulationData.simulations || []);
+      setCertifications(certificationData.certifications || []);
+      setMentorPlan(mentorData.plan || null);
     } catch (loadError) {
       logger.error('[AcademyPage] falha ao carregar competências', loadError);
       setError(loadError);
@@ -89,6 +106,15 @@ export function AcademyPage() {
   useEffect(() => {
     if (isAuthenticated) load();
   }, [isAuthenticated, load]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== 'analytics' || analytics) return;
+    academyApi.getAnalyticsOverview()
+      .then(setAnalytics)
+      .catch((analyticsError) => {
+        logger.warn('[AcademyPage] analytics indisponível', analyticsError);
+      });
+  }, [isAdmin, activeTab, analytics]);
 
   const handleRecompute = useCallback(async () => {
     setRecomputing(true);
@@ -113,6 +139,33 @@ export function AcademyPage() {
       logger.error('[AcademyPage] falha ao concluir missão', completeError);
     } finally {
       setCompletingId(null);
+    }
+  }, []);
+
+  const handleEvaluateCertifications = useCallback(async () => {
+    setEvaluating(true);
+    try {
+      await academyApi.evaluateCertifications();
+      const certificationData = await academyApi.getMyCertifications();
+      setCertifications(certificationData.certifications || []);
+    } catch (evalError) {
+      logger.error('[AcademyPage] falha ao avaliar certificações', evalError);
+    } finally {
+      setEvaluating(false);
+    }
+  }, []);
+
+  const handleGeneratePlan = useCallback(async () => {
+    setGeneratingPlan(true);
+    setPlanError(null);
+    try {
+      const plan = await academyApi.generateMentorPlan();
+      setMentorPlan(plan);
+    } catch (planErr) {
+      logger.error('[AcademyPage] falha ao gerar plano', planErr);
+      setPlanError(planErr);
+    } finally {
+      setGeneratingPlan(false);
     }
   }, []);
 
@@ -158,6 +211,9 @@ export function AcademyPage() {
               ['competencias', 'Competências'],
               ['missoes', `Missões${missions ? ` (${missions.filter((m) => m.status !== 'completed').length})` : ''}`],
               ['simulacoes', `Simulações${simulations ? ` (${simulations.length})` : ''}`],
+              ['certificacoes', `Certificações${certifications ? ` (${certifications.filter((c) => c.status === 'active').length})` : ''}`],
+              ['plano', 'Plano de evolução'],
+              ...(isAdmin ? [['analytics', 'Analytics']] : []),
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -322,6 +378,221 @@ export function AcademyPage() {
                     </article>
                   ))}
                 </div>
+              )}
+            </section>
+          )}
+          {activeTab === 'certificacoes' && (
+            <section aria-label="Certificações">
+              <div className="academy-section-header">
+                <h2 className="academy-section-title">Certificações por competência comprovada</h2>
+                <Button onClick={handleEvaluateCertifications} disabled={evaluating}>
+                  {evaluating ? 'Avaliando…' : 'Avaliar agora'}
+                </Button>
+              </div>
+              <p className="academy-muted">
+                Certificações são emitidas automaticamente quando todos os critérios de evidência
+                (precisão, ritmo, autonomia, consistência e recuperação) atingem o threshold — nunca
+                por tempo ou presença. Erros novos em uma skill certificada revogam a certificação (drift).
+              </p>
+              {!certifications || certifications.length === 0 ? (
+                <p className="academy-state">
+                  Nenhuma certificação ainda. Continue operando — quando houver evidência suficiente,
+                  a certificação aparece aqui automaticamente.
+                </p>
+              ) : (
+                <div className="academy-skills-grid">
+                  {certifications.map((certification) => (
+                    <article key={certification.id} className="academy-skill-card" data-testid={`certification-${certification.skillKey}`}>
+                      <header>
+                        <h3>{skillLabels[certification.skillKey] || certification.skillKey}</h3>
+                        <span className={certification.status === 'active' ? 'academy-cert-active' : 'academy-cert-revoked'}>
+                          {certification.status === 'active' ? 'Ativa' : 'Revogada'}
+                        </span>
+                      </header>
+                      <dl className="academy-components">
+                        <div><dt>Precisão</dt><dd>{formatPercent(certification.assessmentSnapshot?.criteria?.precisao)}</dd></div>
+                        <div><dt>Autonomia</dt><dd>{formatPercent(certification.assessmentSnapshot?.criteria?.autonomia)}</dd></div>
+                        <div><dt>Recuperação</dt><dd>{formatPercent(certification.assessmentSnapshot?.criteria?.recuperacao)}</dd></div>
+                      </dl>
+                      {certification.evidenceRefs?.length > 0 && (
+                        <details className="academy-evidence">
+                          <summary>{certification.evidenceRefs.length} evidência(s) no ledger</summary>
+                          <ul>
+                            {certification.evidenceRefs.map((ref) => (
+                              <li key={ref}><code>{ref}</code></li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      <footer className="academy-muted">
+                        Emitida em {formatDate(certification.issuedAt)}
+                        {certification.revokedAt ? ` · revogada em ${formatDate(certification.revokedAt)}` : ''}
+                      </footer>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'plano' && (
+            <section aria-label="Plano de evolução">
+              <div className="academy-section-header">
+                <h2 className="academy-section-title">Plano de evolução (Mentor)</h2>
+                <Button onClick={handleGeneratePlan} disabled={generatingPlan}>
+                  {generatingPlan ? 'Gerando…' : 'Gerar novo plano'}
+                </Button>
+              </div>
+              {planError && (
+                <p className="academy-state academy-state-error">
+                  Não foi possível gerar o plano agora (IA indisponível). Tente novamente mais tarde.
+                </p>
+              )}
+              {!mentorPlan ? (
+                <p className="academy-state">
+                  Nenhum plano gerado ainda. O Mentor analisa suas janelas de 7/30/90 dias
+                  e sugere competências, objetivos e indicadores.
+                </p>
+              ) : (
+                <>
+                  {mentorPlan.aggregates?.windows && (
+                    <section className="academy-profile" aria-label="Janelas de análise">
+                      {mentorPlan.aggregates.windows.map((window) => (
+                        <div key={window.days} className="academy-profile-card">
+                          <h2>Últimos {window.days} dias</h2>
+                          <p>
+                            {window.events} interações · {window.errors} erros
+                            {window.errorRate !== null ? ` (${formatPercent(window.errorRate)})` : ''}
+                            {' '}· {window.flowsCompleted} fluxos concluídos
+                          </p>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+                  <div className="academy-skills-grid">
+                    {mentorPlan.plan?.resumo && (
+                      <article className="academy-skill-card">
+                        <h3>Resumo</h3>
+                        <p className="academy-muted">{mentorPlan.plan.resumo}</p>
+                      </article>
+                    )}
+                    {Array.isArray(mentorPlan.plan?.competenciasSugeridas) && mentorPlan.plan.competenciasSugeridas.length > 0 && (
+                      <article className="academy-skill-card">
+                        <h3>Competências sugeridas</h3>
+                        <ul>
+                          {mentorPlan.plan.competenciasSugeridas.map((item, index) => (
+                            <li key={index}>
+                              {skillLabels[item.skill] || item.skill}
+                              {item.motivo ? ` — ${item.motivo}` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    )}
+                    {Array.isArray(mentorPlan.plan?.objetivos) && mentorPlan.plan.objetivos.length > 0 && (
+                      <article className="academy-skill-card">
+                        <h3>Objetivos</h3>
+                        <ul>
+                          {mentorPlan.plan.objetivos.map((item, index) => (
+                            <li key={index}>
+                              {item.descricao}
+                              {item.prazoDias ? ` (${item.prazoDias} dias)` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    )}
+                    {Array.isArray(mentorPlan.plan?.indicadores) && mentorPlan.plan.indicadores.length > 0 && (
+                      <article className="academy-skill-card">
+                        <h3>Indicadores</h3>
+                        <ul>
+                          {mentorPlan.plan.indicadores.map((item, index) => (
+                            <li key={index}>{item.nome}: {item.meta}</li>
+                          ))}
+                        </ul>
+                      </article>
+                    )}
+                  </div>
+                  <p className="academy-muted">Gerado em {formatDate(mentorPlan.generatedAt)}</p>
+                </>
+              )}
+            </section>
+          )}
+
+          {activeTab === 'analytics' && isAdmin && (
+            <section aria-label="Analytics de aprendizado">
+              <h2 className="academy-section-title">Analytics de aprendizado (tenant)</h2>
+              {!analytics ? (
+                <p className="academy-state">Carregando analytics…</p>
+              ) : (
+                <>
+                  <section className="academy-profile" aria-label="Visão geral">
+                    <div className="academy-profile-card">
+                      <h2>Usuários</h2>
+                      <p>{analytics.users} com competências · score médio {formatPercent(analytics.avgScore)}</p>
+                    </div>
+                    <div className="academy-profile-card">
+                      <h2>Certificações</h2>
+                      <p>{analytics.certifications?.active || 0} ativas · {analytics.certifications?.revoked || 0} revogadas</p>
+                    </div>
+                    <div className="academy-profile-card">
+                      <h2>Missões</h2>
+                      <p>{analytics.missions?.completed || 0} de {analytics.missions?.total || 0} concluídas</p>
+                    </div>
+                    <div className="academy-profile-card">
+                      <h2>Tutor (30d)</h2>
+                      <p>{analytics.tutorHints30d || 0} dicas emitidas</p>
+                    </div>
+                  </section>
+
+                  {analytics.roi && (
+                    <section aria-label="ROI">
+                      <h2 className="academy-section-title">ROI (últimos {analytics.roi.windowDays}d vs período anterior)</h2>
+                      <section className="academy-profile">
+                        <div className="academy-profile-card">
+                          <h2>Taxa de erro</h2>
+                          <p>
+                            {formatPercent(analytics.roi.previous?.errorRate)} → {formatPercent(analytics.roi.current?.errorRate)}
+                            {analytics.roi.errorRateDelta !== null && (
+                              <span className={analytics.roi.errorRateDelta < 0 ? 'academy-cert-active' : 'academy-cert-revoked'}>
+                                {' '}({analytics.roi.errorRateDelta < 0 ? '▼' : '▲'} {formatPercent(Math.abs(analytics.roi.errorRateDelta))})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="academy-profile-card">
+                          <h2>Tempo mediano por tela</h2>
+                          <p>
+                            {analytics.roi.previous?.medianNavigationMs ?? '—'}ms → {analytics.roi.current?.medianNavigationMs ?? '—'}ms
+                            {analytics.roi.navigationMsDelta !== null && (
+                              <span className={analytics.roi.navigationMsDelta < 0 ? 'academy-cert-active' : 'academy-cert-revoked'}>
+                                {' '}({analytics.roi.navigationMsDelta < 0 ? '▼' : '▲'} {Math.abs(analytics.roi.navigationMsDelta)}ms)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </section>
+                    </section>
+                  )}
+
+                  <section aria-label="Skills do tenant">
+                    <h2 className="academy-section-title">Skills do tenant</h2>
+                    <div className="academy-skills-grid">
+                      {(analytics.skills || []).map((skill) => (
+                        <article key={skill.skillKey} className="academy-skill-card">
+                          <header>
+                            <h3>{skillLabels[skill.skillKey] || skill.skillKey}</h3>
+                            <span className="academy-muted">{skill.users} usuário(s)</span>
+                          </header>
+                          <ScoreBar value={skill.avgScore} />
+                          <footer className="academy-muted">
+                            {skill.activeCertifications} certificação(ões) ativa(s)
+                          </footer>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                </>
               )}
             </section>
           )}

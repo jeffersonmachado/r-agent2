@@ -5,6 +5,11 @@ const competencyService = require('./competencyService');
 const journeyTrainerService = require('./journeyTrainerService');
 const missionService = require('./missionService');
 const simulationService = require('./simulationService');
+const tutorService = require('./tutorService');
+const certificationService = require('./certificationService');
+const mentorService = require('./mentorService');
+const adaptiveService = require('./adaptiveService');
+const analyticsService = require('./analyticsService');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -241,6 +246,123 @@ async function handleLearningCoreRoutes(ctx) {
       seedTypes: simulationService.SEED_TYPES,
       personas: Object.keys(simulationService.PERSONAS),
     });
+    return true;
+  }
+
+  // ── Fase 4: Tutor níveis 2-4, Certification, Mentor, Adaptive, Analytics ──
+
+  if (method === 'POST' && pathname === '/api/learning/tutor/help') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await tutorService.requestTutorHelp({
+        tenantId,
+        agentId: req.agent?.id,
+        route: body.route,
+        level: body.level,
+      });
+      sendJson(result);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/certifications/me') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const certifications = await certificationService.listCertifications({
+      tenantId,
+      agentId: req.agent?.id,
+    });
+    sendJson({ certifications });
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/certifications/evaluate') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const result = await certificationService.evaluateCertifications({
+      tenantId,
+      agentId: req.agent?.id,
+    });
+    sendJson(result);
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/mentor/plan/me') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const plan = await mentorService.getLatestMentorPlan({
+      tenantId,
+      agentId: req.agent?.id,
+    });
+    sendJson({ plan });
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/mentor/plan/generate') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await mentorService.generateMentorPlan({
+        tenantId,
+        agentId: req.agent?.id,
+      });
+      sendJson(result, 201);
+    } catch (error) {
+      if (error.code === 'AI_UNAVAILABLE') {
+        sendJson({ error: 'ai_unavailable', message: error.message }, 503);
+        return true;
+      }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/adaptive/signals') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const result = await adaptiveService.collectSignals({ tenantId });
+    sendJson(result);
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/adaptive/run') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const result = await adaptiveService.runAdaptiveCycle({ tenantId });
+    sendJson(result);
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/analytics/overview') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const result = await analyticsService.getOverview({ tenantId });
+    sendJson(result);
     return true;
   }
 

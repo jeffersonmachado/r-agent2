@@ -7,6 +7,11 @@ const mockRecompute = vi.fn();
 const mockGetMyMissions = vi.fn();
 const mockCompleteMission = vi.fn();
 const mockGetSimulations = vi.fn();
+const mockGetMyCertifications = vi.fn();
+const mockEvaluateCertifications = vi.fn();
+const mockGetMentorPlan = vi.fn();
+const mockGenerateMentorPlan = vi.fn();
+const mockGetAnalyticsOverview = vi.fn();
 
 vi.mock('../api/academy', () => ({
   getMyCompetencies: (...args) => mockGetMyCompetencies(...args),
@@ -16,10 +21,16 @@ vi.mock('../api/academy', () => ({
   getMyMissions: (...args) => mockGetMyMissions(...args),
   completeMission: (...args) => mockCompleteMission(...args),
   getSimulations: (...args) => mockGetSimulations(...args),
+  getMyCertifications: (...args) => mockGetMyCertifications(...args),
+  evaluateCertifications: (...args) => mockEvaluateCertifications(...args),
+  getMentorPlan: (...args) => mockGetMentorPlan(...args),
+  generateMentorPlan: (...args) => mockGenerateMentorPlan(...args),
+  getAnalyticsOverview: (...args) => mockGetAnalyticsOverview(...args),
+  requestTutorHelp: vi.fn(),
 }));
 
 vi.mock('../context/authContext', () => ({
-  useAuth: () => ({ isAuthenticated: true, agent: { id: 'a1', username: 'qa' } }),
+  useAuth: () => ({ isAuthenticated: true, agent: { id: 'a1', username: 'qa', role: 'super_admin' } }),
 }));
 
 import { AcademyPage } from './AcademyPage';
@@ -60,6 +71,8 @@ describe('AcademyPage', () => {
     mockGetMyCompetencies.mockResolvedValue(competenciesPayload);
     mockGetMyMissions.mockResolvedValue({ missions: [] });
     mockGetSimulations.mockResolvedValue({ simulations: [] });
+    mockGetMyCertifications.mockResolvedValue({ certifications: [] });
+    mockGetMentorPlan.mockResolvedValue({ plan: null });
     mockGetSkillGraph.mockResolvedValue({
       skills: [
         { key: 'tickets', label: 'tickets' },
@@ -145,5 +158,93 @@ describe('AcademyPage', () => {
     await waitFor(() => expect(screen.getByTestId('simulation-s1')).toBeTruthy());
     expect(screen.getByTestId('simulation-s1').textContent).toContain('happy_path');
     expect(screen.getByTestId('simulation-s1').textContent).toContain('enriquecida por IA');
+  });
+
+  it('tab Certificações lista certificações e avalia sob demanda', async () => {
+    mockGetMyCertifications.mockResolvedValue({
+      certifications: [
+        {
+          id: 'c1',
+          skillKey: 'tickets',
+          status: 'active',
+          assessmentSnapshot: { criteria: { precisao: 0.95, autonomia: 0.9, recuperacao: null } },
+          evidenceRefs: ['evt-9'],
+          issuedAt: '2026-07-23T10:00:00Z',
+        },
+      ],
+    });
+    mockEvaluateCertifications.mockResolvedValue({ issued: [], revoked: [], active: [] });
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Certificações \(1\)/ }));
+
+    await waitFor(() => expect(screen.getByTestId('certification-tickets')).toBeTruthy());
+    expect(screen.getByTestId('certification-tickets').textContent).toContain('Ativa');
+    expect(screen.getByTestId('certification-tickets').textContent).toContain('95%');
+
+    fireEvent.click(screen.getByRole('button', { name: /Avaliar agora/i }));
+    await waitFor(() => expect(mockEvaluateCertifications).toHaveBeenCalledTimes(1));
+  });
+
+  it('tab Plano de evolução exibe plano do mentor e gera novo', async () => {
+    mockGetMentorPlan.mockResolvedValue({
+      plan: {
+        id: 'p1',
+        generatedAt: '2026-07-23T12:00:00Z',
+        aggregates: {
+          windows: [
+            { days: 7, events: 40, errors: 2, errorRate: 0.05, flowsCompleted: 3 },
+            { days: 30, events: 150, errors: 10, errorRate: 0.0667, flowsCompleted: 12 },
+            { days: 90, events: 400, errors: 30, errorRate: 0.075, flowsCompleted: 33 },
+          ],
+        },
+        plan: {
+          resumo: 'Bom desempenho geral.',
+          competenciasSugeridas: [{ skill: 'crm', motivo: 'score baixo' }],
+          objetivos: [{ descricao: 'Reduzir erros no CRM', prazoDias: 14 }],
+          indicadores: [{ nome: 'taxa de erro', meta: '< 5%' }],
+        },
+      },
+    });
+    mockGenerateMentorPlan.mockResolvedValue({ id: 'p2', plan: {}, aggregates: {} });
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Plano de evolução/ }));
+
+    await waitFor(() => expect(screen.getByText('Bom desempenho geral.')).toBeTruthy());
+    expect(screen.getByText(/Últimos 7 dias/)).toBeTruthy();
+    expect(screen.getByText(/Reduzir erros no CRM/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Gerar novo plano/i }));
+    await waitFor(() => expect(mockGenerateMentorPlan).toHaveBeenCalledTimes(1));
+  });
+
+  it('tab Analytics (admin) carrega overview do tenant', async () => {
+    mockGetAnalyticsOverview.mockResolvedValue({
+      users: 4,
+      avgScore: 0.61,
+      skills: [{ skillKey: 'tickets', users: 3, avgScore: 0.7, activeCertifications: 2 }],
+      missions: { total: 5, completed: 2 },
+      certifications: { active: 3, revoked: 1 },
+      simulations: { total: 7 },
+      tutorHints30d: 9,
+      roi: {
+        windowDays: 30,
+        current: { events: 100, errors: 5, errorRate: 0.05, medianNavigationMs: 4000 },
+        previous: { events: 90, errors: 9, errorRate: 0.1, medianNavigationMs: 5200 },
+        errorRateDelta: -0.05,
+        navigationMsDelta: -1200,
+      },
+    });
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /^Analytics$/ }));
+
+    await waitFor(() => expect(screen.getByText(/4 com competências/)).toBeTruthy());
+    expect(screen.getByText(/3 ativas · 1 revogadas/)).toBeTruthy();
+    expect(screen.getByText(/10% → 5%/)).toBeTruthy();
   });
 });

@@ -344,6 +344,8 @@ module.exports = {
   recomputeCompetencies,
   getCompetencies,
   getSkillGraphArtifact,
+  loadLedgerEvents,
+  loadTenantRouteMap,
   LOOKBACK_DAYS,
   MAX_AI_ROUTES,
 };
