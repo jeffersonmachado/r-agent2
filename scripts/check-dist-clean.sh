@@ -103,7 +103,12 @@ done
 [[ -f "$DIST_DIR/verifier/verify-result.json" ]] && ok "dist/verifier/verify-result.json" || fail "dist/verifier/verify-result.json AUSENTE"
 
 step "5. Verificando dist/ raiz sem artefatos inesperados..."
-UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs)$' || true)"
+# Regra canônica (AGENTS.md): "dist/ deve permanecer limpo, EXCETO ZIPs e
+# manifestos de release aprovados". O caminho oficial `npm run zip:release`
+# (scripts/release-package.sh) escreve o ZIP auditado + manifesto sidecar em
+# dist/ por design — são artefatos aprovados, não sujeira. O fluxo de envelope
+# governado (two-pass-release) vive em dist/release/ e é verificado no passo 6.
+UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
 if [[ -n "$UNEXPECTED" ]]; then
   fail "Arquivos/dirs inesperados na raiz de dist/: $(echo "$UNEXPECTED" | tr '\n' ' ')"
 else
