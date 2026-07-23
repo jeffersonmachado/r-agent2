@@ -1,0 +1,10 @@
+{
+  "finalUrl": "http://localhost:5173/qa/stability",
+  "title": "📈 Estabilidade QA",
+  "h1": "Admin",
+  "hasErrorBoundary": false,
+  "isBlank": false,
+  "bodyLength": 3030,
+  "consoleErrors": [],
+  "failedRequests": []
+}

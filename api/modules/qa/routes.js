@@ -64,7 +64,9 @@ function createQaRoutes({ buildDeps }) {
 
   router.get('/qa/:id', (req, res, next) => {
     const deps = buildDeps(req, res);
-    if (req.params.id === 'latest' || req.params.id === 'history' || req.params.id === 'stats') {
+    // 'stability' e 'checkpoints' são rotas do módulo qa-mesh (mesmo prefixo /qa,
+    // 1 segmento); sem o next() o /qa/:id as captura e devolve 404 indevido.
+    if (['latest', 'history', 'stats', 'stability', 'checkpoints'].includes(req.params.id)) {
       next();
       return;
     }

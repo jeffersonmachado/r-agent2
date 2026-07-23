@@ -58,6 +58,10 @@ function frontendRoutesPlugin() {
                           (url.startsWith('/inbox/') || (url === '/inbox' && isApiRequest)) ||
                           (url.startsWith('/supervisor/') && url !== '/supervisor') ||
                           (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
+                          // /qa e /qa/stability são páginas SPA; endpoints /qa/* (stability,
+                          // checkpoints, latest, history, stats...) são API quando Accept JSON
+                          (url === '/qa' && isApiRequest) ||
+                          (url.startsWith('/qa/') && isApiRequest) ||
                           url.startsWith('/public') ||
                           (url === '/segmentation' && isApiRequest) ||
                           (url.startsWith('/segmentation/') && url !== '/segmentation') ||
@@ -553,6 +557,27 @@ const viteConfig = defineConfig(({ mode }) => {
           // /supervisor é rota de página do frontend quando navegação GET.
           // Subrotas (/supervisor/*) são API e devem ser proxyadas.
           if (req.method === 'GET' && req.url === '/supervisor') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+
+            if (isNavigation) {
+              return false;
+            }
+          }
+
+          return undefined;
+        },
+      },
+      '^/qa(/|$)': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req, res, options) {
+          // /qa e /qa/stability são páginas do frontend quando navegação GET
+          // (Accept: text/html). Chamadas de API (Accept: application/json)
+          // são proxyadas para o backend.
+          if (req.method === 'GET') {
             const acceptHeader = req.headers.accept || '';
             const isNavigation = acceptHeader.includes('text/html') &&
                                  !acceptHeader.includes('application/json');
