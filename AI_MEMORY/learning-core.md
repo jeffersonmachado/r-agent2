@@ -206,6 +206,21 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   (evaluate com assessment completo, adaptive signals, analytics overview,
   tutor nível 4 com demonstração sintética).
 
+## Ativação em runtime (2026-07-23)
+
+- **Feature flag ligada**: `learningCoreEnabled: true` em
+  `api/data/config.json#features` (arquivo de runtime, não commitado).
+  ATENÇÃO: `featuresConfig.js` dá precedência ao `localStorage`
+  (`app_features_config`) — browsers que já cachearam a config antiga só
+  recebem a flag após limpar o storage do site (ou `resetToFileConfig()`).
+- **Validação browser real (Playwright, tenant system)**: 6 tabs da Academy
+  renderizando sem erros; tracker ativo — 4 batches POST
+  `/api/learning/interactions` durante a navegação, eventos
+  `learning.interaction.click/navigation` confirmados no event ledger;
+  plano do Mentor gerado via IA real a partir da UI e persistido em
+  `learning_mentor_plans`; certificações avaliadas a partir da UI (0
+  emitidas — evidência ainda insuficiente, comportamento correto).
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
