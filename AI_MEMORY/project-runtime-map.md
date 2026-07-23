@@ -47,3 +47,9 @@ Menu source: `frontend/src/navigation/menu.js`.
 
 Store future screenshots/traces under governed evidence folders such as `AI_MEMORY/evidence/` or `qa/...`, never `dist/`. Prune transient artifacts and do not package them in release ZIPs.
 
+## Runtime env traps (2026-07-23)
+
+- `.env` changes are NOT picked up by `touch api/server.js`: `scripts/start-dev-nodemon.sh` loads `.env` when the wrapper starts and exports vars (e.g. `REDIS_URL`) into the nodemon environment; dotenv does not override an already-set env, so every respawned child keeps the stale value. Changing `.env` requires restarting the whole `npm run dev:api` wrapper, not just touching a watched file.
+- Redis local roda via systemd na porta **6379** (`redis-server.service`); apontar `REDIS_URL` para outra porta (ex.: 6380) derruba rate limit para "modo memória" após 10 tentativas e marca o serviço UNHEALTHY em `/system/status`.
+- Cuidado com `pkill -f "node api/server.js"`: o padrão casa com o próprio shell que executa o comando (self-match) e pode derrubar wrappers irmãos; matar por PID.
+
