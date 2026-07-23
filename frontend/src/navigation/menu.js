@@ -23,6 +23,14 @@ export const navigationMenu = [
         hiddenInSidebar: true,
         keywords: ['dashboard', 'inicio', 'início', 'home'],
       },
+      {
+        id: 'academy',
+        label: 'Minha Evolução',
+        path: '/academy',
+        description: 'Competências e evolução medidas por evidência enquanto você trabalha.',
+        permission: { resource: 'workspace', action: 'read' },
+        keywords: ['academy', 'evolução', 'competências', 'aprendizado', 'skills'],
+      },
     ],
   },
   {

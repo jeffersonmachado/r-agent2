@@ -80,15 +80,49 @@ Skill Graph + Competency Engine (núcleo).
   `learningCompetencyRoutes.test.js`, `learningSkillGraphBuilder.test.js`
   (25 testes).
 
+## Fase 2 — entregue (2026-07-23)
+
+RAP Academy (UI read-only) + Tutor níveis 0-1.
+
+- **RAP Academy**: `frontend/src/pages/AcademyPage.jsx` (+ `.css`), rota
+  `/academy`, item "Minha Evolução" no menu (Painel, permission
+  `workspace:read`), client `frontend/src/api/academy.js`. Read-only:
+  competências por skill (score, componentes, evidenceRefs do ledger),
+  perfil (domina/em desenvolvimento), recálculo sob demanda.
+  ATENÇÃO: rotas novas de página exigem 4 registros no `main.jsx` — import,
+  `isRoute`, branch do `pageContent`, array `allRoutes` do guard de redirect
+  (+ deps) — e entrada em `protectedRoutes`; sem isso a rota cai no redirect
+  para `/workspace`.
+- **Tutor nível 0-1**: `api/modules/learning-core/tutorService.js`.
+  Nível 0 (detector determinístico): ≥2 eventos de erro na mesma rota no
+  lote ingerido (api_call ≥400/errorCode, error, flow_abandoned).
+  Nível 1: dica via RAG (`queryRag`) emitida por WebSocket `tutor.hint`
+  somente para o agente (`emitEvent(..., { agentId })`). Cooldown 15min por
+  (tenant, agente, rota) consultado na tabela `learning_tutor_hints`
+  (nunca em memória); reuso de dica por rota em 24h (`rag_cache`);
+  RAG indisponível → nenhum hint, log explícito `ai_unavailable`
+  (sem heurística). Todo hint persistido (auditoria). Hook best-effort no
+  final do `ingestInteractionBatch` — falha do tutor nunca derruba ingest.
+- **TutorDock**: `frontend/src/components/TutorDock.jsx` montado na shell —
+  cartão discreto (não modal), auto-dismiss 60s, link para /academy.
+- **Perfil do ator**: `GET /api/learning/profile/me` (profile + metadados
+  do tutor para a UI adaptar a experiência).
+- **Testes**: `tests/unit/learningTutor.test.js` (9),
+  `frontend/src/pages/AcademyPage.test.jsx` (4),
+  `frontend/src/components/TutorDock.test.jsx` (5).
+- **Validação browser real**: /academy renderiza sem erros de console;
+  e2e do tutor validado com WS autenticado real (ingest de 2 erros →
+  `tutor.hint` recebido via WebSocket, sem polling).
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
 OBSERVAR NOVAMENTE. Nunca termina.
 
 Plano de fases aprovado: F0 telemetria (entregue) → F1 Competency Engine
-(entregue) → F2 RAP Academy (UI read-only) + Tutor nível 0-1 → F3 Journey
-Trainer + Simulation Engine (replay → anonimização → dados sintéticos →
-treinamento) → F4 Assessment + Certification + Mentor + Adaptive Learning.
+(entregue) → F2 RAP Academy + Tutor 0-1 (entregue) → F3 Journey Trainer +
+Simulation Engine (replay → anonimização → dados sintéticos → treinamento)
+→ F4 Assessment + Certification + Mentor + Adaptive Learning.
 
 ## Invariantes
 

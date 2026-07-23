@@ -150,6 +150,7 @@ const getUserInteractionSession = require('./UserInteractionSession');
 const getUserCompetency = require('./UserCompetency');
 const getUserLearningProfile = require('./UserLearningProfile');
 const getLearningRouteSkillMap = require('./LearningRouteSkillMap');
+const getLearningTutorHint = require('./LearningTutorHint');
 const getAiGovernanceRecord = require('./AiGovernanceRecord');
 const getVerticalTemplate = require('./VerticalTemplate');
 
@@ -301,6 +302,7 @@ const UserInteractionSession = () => getUserInteractionSession();
 const UserCompetency = () => getUserCompetency();
 const UserLearningProfile = () => getUserLearningProfile();
 const LearningRouteSkillMap = () => getLearningRouteSkillMap();
+const LearningTutorHint = () => getLearningTutorHint();
 const AiGovernanceRecord = () => getAiGovernanceRecord();
 const VerticalTemplate = () => getVerticalTemplate();
 
@@ -910,6 +912,7 @@ module.exports = {
   UserCompetency,
   UserLearningProfile,
   LearningRouteSkillMap,
+  LearningTutorHint,
   AiGovernanceRecord,
   VerticalTemplate,
   defineRelationships,
@@ -1061,6 +1064,7 @@ module.exports = {
   getUserCompetency,
   getUserLearningProfile,
   getLearningRouteSkillMap,
+  getLearningTutorHint,
   getAiGovernanceRecord,
   getVerticalTemplate,
 };

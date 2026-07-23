@@ -113,6 +113,25 @@ async function handleLearningCoreRoutes(ctx) {
     return true;
   }
 
+  // Perfil de aprendizado do ator logado (para a UI adaptar a experiência).
+  if (method === 'GET' && pathname === '/api/learning/profile/me') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const result = await competencyService.getCompetencies({
+      tenantId,
+      agentId: req.agent?.id,
+    });
+    sendJson({
+      agentId: result.agentId,
+      profile: result.profile,
+      computedAt: result.computedAt,
+      tutor: { level: 1, channel: 'websocket', event: 'tutor.hint' },
+    });
+    return true;
+  }
+
   return false;
 }
 

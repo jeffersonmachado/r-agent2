@@ -176,6 +176,24 @@ async function ingestInteractionBatch({ tenantId, agentId, username, sessionId, 
         error: error.message,
       });
     }
+
+    // Tutor (níveis 0-1): avalia dificuldade e emite hint contextual via WS.
+    // Best-effort: nunca derruba a ingestão; falhas são explícitas no log.
+    try {
+      const tutorService = require('./tutorService');
+      await tutorService.evaluateAndMaybeHint({
+        tenantId,
+        agentId,
+        sessionId: cleanSessionId,
+        events: sanitized,
+      });
+    } catch (error) {
+      logger.error('[learning-core] Falha ao avaliar hint do tutor (ingest íntegra)', {
+        tenantId,
+        sessionId: cleanSessionId,
+        error: error.message,
+      });
+    }
   }
 
   return { accepted, rejected };
