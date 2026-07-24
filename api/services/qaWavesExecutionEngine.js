@@ -94,13 +94,29 @@ function requiredEvidenceKeysByCategory(category) {
   }
 }
 
-function validateMandatoryEvidence(evidence, category) {
+/**
+ * Passo CLIENT_ACTION é dirigido por UI quando declara expectativa de
+ * interface (page/toast/modal) em vez de mensagem de canal. Nesse caso a
+ * evidência obrigatória é o rastro de UI (url/seletor/screenshot), não um
+ * payload de canal que a jornada nunca produziria.
+ */
+function isUiDrivenClientAction(expected) {
+  if (!expected || typeof expected !== 'object') return false;
+  return Boolean(expected.page || expected.toast || expected.modal);
+}
+
+function validateMandatoryEvidence(evidence, category, expected) {
   const missing = [];
   const required = requiredEvidenceKeysByCategory(category);
 
   if (required.includes('screenshotBefore') && !evidence.screenshotBefore) missing.push('screenshotBefore');
   if (required.includes('screenshotAfter') && !evidence.screenshotAfter) missing.push('screenshotAfter');
-  if (required.includes('payload') && evidence.payload == null) missing.push('payload');
+  if (required.includes('payload') && evidence.payload == null) {
+    const uiEvidencePresent = Boolean(evidence.url || evidence.selectorUsed || evidence.screenshotBefore);
+    if (!(isUiDrivenClientAction(expected) && uiEvidencePresent)) {
+      missing.push('payload');
+    }
+  }
   if (required.includes('apiResponse') && !evidence.apiResponse) missing.push('apiResponse');
   if (required.includes('domSnapshot') && !evidence.domSnapshot) missing.push('domSnapshot');
   if (
@@ -251,7 +267,7 @@ function normalizeReplayOperationalStep(scenarioStep = {}, runtimeStep = {}, ind
   });
 
   const evidence = ensureEvidence(scenarioStep, runtimeStep, scenarioStep);
-  const missingEvidence = validateMandatoryEvidence(evidence, category);
+  const missingEvidence = validateMandatoryEvidence(evidence, category, scenarioStep?.expected);
   const apiValidation = evaluateApiResponse(evidence);
   const criticalConsole = hasCriticalConsoleError(evidence.consoleErrors);
 
@@ -328,7 +344,7 @@ function executeScenario({ semanticSteps = [], runtimeSteps = [] } = {}) {
     const normalizedStep = normalizeReplayOperationalStep(scenarioStep, runtimeStep, index, runtimeSteps);
 
     // Derivar condições de erro a partir dos campos do step normalizado
-    const missingEvidence = validateMandatoryEvidence(normalizedStep.evidence, normalizedStep.category);
+    const missingEvidence = validateMandatoryEvidence(normalizedStep.evidence, normalizedStep.category, normalizedStep.expected);
     const apiValidation = evaluateApiResponse(normalizedStep.evidence);
     const criticalConsole = hasCriticalConsoleError(normalizedStep.evidence.consoleErrors);
 

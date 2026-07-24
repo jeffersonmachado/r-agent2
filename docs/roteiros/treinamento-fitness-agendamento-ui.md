@@ -1,7 +1,7 @@
-> Fonte: replay real `qa_wave_replay_1784863794036_b4on3c` (QA Waves, 2026-07-24, 18/18 passos com sucesso)
-> Missão Learning Core: `fdd9705d-ff5d-4b98-83d8-d82389a8e710` | RAG: `training:qa_wave_replay_1784863794036_b4on3c`
+> Fonte: replay real `qa_wave_replay_1784891878285_sj46gh` (QA Waves, 2026-07-24, 18/18 passos com sucesso)
+> Missão Learning Core: `62c04821-08e2-4b7d-92b0-524e0b617196` | RAG: `training:qa_wave_replay_1784891878285_sj46gh`
 > Uso: treinamento de usuários novos e base de conhecimento para dúvidas (Academy/RAG).
-# Treinamento: jornada qa_wave_replay_1784863794036_b4on3c
+# Treinamento: jornada qa_wave_replay_1784891878285_sj46gh
 
 Roteiro gerado automaticamente a partir de um replay operacional real,
 com todos os dados anonimizados (63 campos mascarados).
@@ -11,8 +11,8 @@ com todos os dados anonimizados (63 campos mascarados).
 - Contexto: operacao
 - Telas percorridas: 2
 - Ações: 18
-- Duração de referência: 127s
-- Erros no replay original: 3
+- Duração de referência: 119s
+- Erros no replay original: 0
 
 ## Telas
 
