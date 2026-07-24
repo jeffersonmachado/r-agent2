@@ -255,7 +255,7 @@ async function generateTrainingFromReplay({ tenantId, replayId, journeyKey }) {
   const Mission = getLearningMissionModel();
   const summary = `Treinamento da jornada ${replayId}: ${(safeReplay.actions || []).length} passos, `
     + `${(safeReplay.screens || []).length} telas (${stats.redactions} campos anonimizados).`;
-  const [mission] = await Mission.findOrCreate({
+  const [mission, created] = await Mission.findOrCreate({
     where: { tenant_id: String(tenantId), replayId },
     defaults: {
       tenant_id: String(tenantId),
@@ -269,6 +269,15 @@ async function generateTrainingFromReplay({ tenantId, replayId, journeyKey }) {
       metadata: { redactions: stats.redactions, byKind: stats.byKind },
     },
   });
+  // Regeneração (ex.: replay refeito ou documento enriquecido) atualiza o
+  // resumo da missão existente em vez de deixá-la com o snapshot antigo.
+  if (!created && mission.summary !== summary) {
+    await mission.update({
+      summary,
+      journeyKey: journeyKey || mission.journeyKey || null,
+      metadata: { redactions: stats.redactions, byKind: stats.byKind },
+    });
+  }
 
   logger.info('[learning-core] Treinamento gerado a partir de replay', {
     tenantId,
