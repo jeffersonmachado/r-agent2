@@ -12,6 +12,10 @@ const mockEvaluateCertifications = vi.fn();
 const mockGetMentorPlan = vi.fn();
 const mockGenerateMentorPlan = vi.fn();
 const mockGetAnalyticsOverview = vi.fn();
+const mockGetManuals = vi.fn();
+const mockGetReplays = vi.fn();
+const mockGenerateManual = vi.fn();
+const mockFetchManualImageBlob = vi.fn();
 
 vi.mock('../api/academy', () => ({
   getMyCompetencies: (...args) => mockGetMyCompetencies(...args),
@@ -27,6 +31,11 @@ vi.mock('../api/academy', () => ({
   generateMentorPlan: (...args) => mockGenerateMentorPlan(...args),
   getAnalyticsOverview: (...args) => mockGetAnalyticsOverview(...args),
   requestTutorHelp: vi.fn(),
+  getManuals: (...args) => mockGetManuals(...args),
+  getReplays: (...args) => mockGetReplays(...args),
+  generateManualFromReplay: (...args) => mockGenerateManual(...args),
+  fetchManualImageBlob: (...args) => mockFetchManualImageBlob(...args),
+  fetchManualMarkdownBlob: vi.fn(async () => new Blob(['# manual'])),
 }));
 
 vi.mock('../context/authContext', () => ({
@@ -73,6 +82,8 @@ describe('AcademyPage', () => {
     mockGetSimulations.mockResolvedValue({ simulations: [] });
     mockGetMyCertifications.mockResolvedValue({ certifications: [] });
     mockGetMentorPlan.mockResolvedValue({ plan: null });
+    mockGetManuals.mockResolvedValue({ manuals: [] });
+    mockGetReplays.mockResolvedValue({ replays: [] });
     mockGetSkillGraph.mockResolvedValue({
       skills: [
         { key: 'tickets', label: 'tickets' },
@@ -246,5 +257,51 @@ describe('AcademyPage', () => {
     await waitFor(() => expect(screen.getByText(/4 com competências/)).toBeTruthy());
     expect(screen.getByText(/3 ativas · 1 revogadas/)).toBeTruthy();
     expect(screen.getByText(/10% → 5%/)).toBeTruthy();
+  });
+
+  it('tab Manuais lista manuais e admin gera a partir de replay', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:mock');
+    URL.revokeObjectURL = vi.fn();
+
+    const manual = {
+      id: 'manual-1',
+      title: 'Manual — jornada core.support_ticket_flow',
+      tenantId: 'system',
+      replayId: 'wave-1',
+      journeyKey: 'core.support_ticket_flow',
+      createdAt: '2026-07-24T12:00:00.000Z',
+      stepCount: 2,
+      imageCount: 1,
+      steps: [
+        { order: 1, action: 'click', label: 'Clicar', name: 'Abrir Caixa de Entrada', success: true, image: 'img/01.png' },
+        { order: 2, action: 'fill', label: 'Preencher campo', name: 'Escrever nota', success: true, image: null },
+      ],
+    };
+    mockGetManuals.mockResolvedValue({ manuals: [manual] });
+    mockGetReplays.mockResolvedValue({
+      replays: [{ id: 'wave-1', actions: 12, screens: 2, errors: 0, startTime: '2026-07-24T12:00:00.000Z' }],
+    });
+    mockGenerateManual.mockResolvedValue({ ...manual, id: 'manual-2', title: 'Manual — jornada core.support_ticket_flow' });
+    mockFetchManualImageBlob.mockResolvedValue(new Blob(['png']));
+
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /^Manuais$/ }));
+
+    // manual existente listado
+    await waitFor(() => expect(screen.getByTestId('manual-manual-1')).toBeTruthy());
+    expect(screen.getByText(/2 passo\(s\) · 1 tela\(s\)/)).toBeTruthy();
+
+    // gerador (admin) com replay selecionado
+    await waitFor(() => expect(screen.getByTestId('manual-generator')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar manual' }));
+    await waitFor(() => expect(mockGenerateManual).toHaveBeenCalledWith('wave-1', undefined));
+    await waitFor(() => expect(screen.getByTestId('manual-manual-2')).toBeTruthy());
+
+    // expandir exibe passos e carrega imagem via blob autenticado
+    fireEvent.click(screen.getAllByRole('button', { name: 'Visualizar' })[0]);
+    await waitFor(() => expect(screen.getByText(/Passo 1 — Abrir Caixa de Entrada/)).toBeTruthy());
+    await waitFor(() => expect(mockFetchManualImageBlob).toHaveBeenCalledWith('manual-2', 'img/01.png'));
   });
 });

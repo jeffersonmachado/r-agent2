@@ -1,4 +1,4 @@
-import { fetchJson } from './client';
+import { fetchJson, fetchBlob } from './client';
 
 export async function getMyCompetencies() {
   return fetchJson('/api/learning/competencies/me');
@@ -53,4 +53,36 @@ export async function generateMentorPlan() {
 
 export async function getAnalyticsOverview() {
   return fetchJson('/api/learning/analytics/overview');
+}
+
+export async function getReplays() {
+  return fetchJson('/api/learning/replays');
+}
+
+export async function getManuals() {
+  return fetchJson('/api/learning/manuals');
+}
+
+export async function generateManualFromReplay(replayId, title) {
+  return fetchJson('/api/learning/manuals/from-replay', {
+    method: 'POST',
+    body: JSON.stringify({ replayId, title }),
+  });
+}
+
+export function manualMarkdownUrl(manualId) {
+  return `/api/learning/manuals/${encodeURIComponent(manualId)}/md`;
+}
+
+export function manualImageUrl(manualId, imagePath) {
+  const imageName = String(imagePath || '').replace(/^img\//, '');
+  return `/api/learning/manuals/${encodeURIComponent(manualId)}/img/${encodeURIComponent(imageName)}`;
+}
+
+export async function fetchManualMarkdownBlob(manualId) {
+  return fetchBlob(manualMarkdownUrl(manualId));
+}
+
+export async function fetchManualImageBlob(manualId, imagePath) {
+  return fetchBlob(manualImageUrl(manualId, imagePath));
 }

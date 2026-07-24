@@ -1,9 +1,12 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { validateToken } = require('../../services/authService');
 const learningCoreService = require('./service');
 const competencyService = require('./competencyService');
 const journeyTrainerService = require('./journeyTrainerService');
+const manualService = require('./manualService');
 const missionService = require('./missionService');
 const simulationService = require('./simulationService');
 const tutorService = require('./tutorService');
@@ -376,6 +379,94 @@ async function handleLearningCoreRoutes(ctx) {
     const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
     const result = await analyticsService.getOverview({ tenantId });
     sendJson(result);
+    return true;
+  }
+
+  // ── Manuais operacionais ilustrados (gerados de replays reais) ───────
+
+  if (method === 'POST' && pathname === '/api/learning/manuals/from-replay') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await manualService.generateManualFromReplay({
+        tenantId,
+        replayId: body.replayId,
+        title: body.title,
+        journeyKey: body.journeyKey,
+        createdBy: req.agent?.id,
+      });
+      sendJson(result, 201);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/manuals') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    sendJson({ manuals: manualService.listManuals({ tenantId }) });
+    return true;
+  }
+
+  const manualMdMatch = method === 'GET'
+    ? pathname.match(/^\/api\/learning\/manuals\/([^/]+)\/md$/)
+    : null;
+  if (manualMdMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const { filePath, contentType } = manualService.resolveManualFile({
+        tenantId,
+        manualId: decodeURIComponent(manualMdMatch[1]),
+        kind: 'md',
+      });
+      res.writeHead(200, {
+        'content-type': contentType,
+        'content-disposition': `attachment; filename="${path.basename(filePath)}"`,
+      });
+      fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  const manualImgMatch = method === 'GET'
+    ? pathname.match(/^\/api\/learning\/manuals\/([^/]+)\/img\/([^/]+)$/)
+    : null;
+  if (manualImgMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const { filePath, contentType } = manualService.resolveManualFile({
+        tenantId,
+        manualId: decodeURIComponent(manualImgMatch[1]),
+        kind: 'img',
+        name: decodeURIComponent(manualImgMatch[2]),
+      });
+      res.writeHead(200, { 'content-type': contentType, 'cache-control': 'private, max-age=300' });
+      fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
     return true;
   }
 

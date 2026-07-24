@@ -246,3 +246,85 @@
   font-weight: 600;
   font-size: 0.85rem;
 }
+
+/* ── Manuais operacionais ─────────────────────────────────────────────── */
+
+.academy-manual-generator {
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.academy-manual-generator h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.academy-manual-generator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 32rem;
+}
+
+.academy-manual-generator-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.academy-manual-generator-form select,
+.academy-manual-generator-form input {
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  border-radius: 0.5rem;
+  color: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.academy-manuals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.academy-manual-card {
+  background: var(--color-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.academy-manual-body h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.academy-manual-body p {
+  margin: 0;
+}
+
+.academy-manual-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.academy-manual-steps {
+  margin: 1rem 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.academy-manual-step-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  margin-top: 0.5rem;
+}

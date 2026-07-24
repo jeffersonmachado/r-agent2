@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import * as academyApi from '../api/academy';
+import { ManualsTab } from '../components/academy/ManualsTab';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 import './AcademyPage.css';
@@ -213,6 +214,7 @@ export function AcademyPage() {
               ['simulacoes', `Simulações${simulations ? ` (${simulations.length})` : ''}`],
               ['certificacoes', `Certificações${certifications ? ` (${certifications.filter((c) => c.status === 'active').length})` : ''}`],
               ['plano', 'Plano de evolução'],
+              ['manuais', 'Manuais'],
               ...(isAdmin ? [['analytics', 'Analytics']] : []),
             ].map(([key, label]) => (
               <button
@@ -517,6 +519,10 @@ export function AcademyPage() {
                 </>
               )}
             </section>
+          )}
+
+          {activeTab === 'manuais' && (
+            <ManualsTab isAdmin={isAdmin} />
           )}
 
           {activeTab === 'analytics' && isAdmin && (
