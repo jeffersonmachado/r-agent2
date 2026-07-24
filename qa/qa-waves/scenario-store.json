@@ -13977,6 +13977,263 @@
       ],
       "validators": [],
       "executionStatus": "queued"
+    },
+    {
+      "id": "support-inbox-nota-ui",
+      "waveId": "wave-support-inbox-nota",
+      "vertical": "core",
+      "journey": "support_ticket_flow",
+      "name": "Nota interna em atendimento via UI",
+      "description": "Jornada operacional dirigida pela UI real: menu Atendimento → Caixa de Entrada → selecionar ticket → escrever nota interna → salvar → confirmar toast. Matéria-prima do roteiro operacional de treinamento (Learning Core).",
+      "source": "manual",
+      "status": "approved",
+      "version": "v2",
+      "channels": [
+        "chat",
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "medium",
+      "preconditions": [],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "trigger_channel_event",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+          "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário seleciona um ticket da lista",
+          "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário escreve a nota interna",
+          "description": "Preenche o textarea de nota interna no painel do ticket",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_004",
+          "order": 4,
+          "type": "validate_backend",
+          "category": "SYSTEM_EVENT",
+          "actor": "system",
+          "name": "Sistema persiste a nota interna",
+          "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+          "adapter": "api",
+          "channel": "api",
+          "expected": {
+            "backendEntity": "ticket",
+            "created": true
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_005",
+          "order": 5,
+          "type": "validate_response",
+          "category": "VALIDATION",
+          "actor": "system",
+          "name": "UI confirma Nota adicionada",
+          "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "expected": {
+            "toast": "Nota adicionada"
+          },
+          "timeoutMs": 20000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        }
+      ],
+      "seeds": [
+        {
+          "id": "support-inbox-nota-ui",
+          "source": "manual",
+          "status": "approved"
+        }
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "tags": {
+        "vertical": "core",
+        "journey": "support_ticket_flow",
+        "source": "manual"
+      },
+      "platform": {
+        "platformScenarioIds": [
+          "support-inbox-nota-ui"
+        ]
+      },
+      "createdAt": "2026-07-24T12:25:40.000Z",
+      "updatedAt": "2026-07-24T12:25:40.000Z",
+      "journeyId": "support_ticket_flow",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [
+        "support-inbox-nota-ui"
+      ],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "trigger_channel_event",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+          "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário seleciona um ticket da lista",
+          "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário escreve a nota interna",
+          "description": "Preenche o textarea de nota interna no painel do ticket",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/inbox"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_004",
+          "order": 4,
+          "type": "validate_backend",
+          "category": "SYSTEM_EVENT",
+          "actor": "system",
+          "name": "Sistema persiste a nota interna",
+          "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+          "adapter": "api",
+          "channel": "api",
+          "expected": {
+            "backendEntity": "ticket",
+            "created": true
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_005",
+          "order": 5,
+          "type": "validate_response",
+          "category": "VALIDATION",
+          "actor": "system",
+          "name": "UI confirma Nota adicionada",
+          "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "expected": {
+            "toast": "Nota adicionada"
+          },
+          "timeoutMs": 20000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        }
+      ],
+      "validators": [],
+      "executionStatus": "queued"
     }
   ],
   "history": {

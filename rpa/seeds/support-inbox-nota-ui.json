@@ -1,0 +1,108 @@
+{
+  "id": "support-inbox-nota-ui",
+  "name": "Support — Nota Interna em Ticket da Caixa de Entrada via UI",
+  "version": "1.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "authOptions": {
+      "loginStrategy": "ui"
+    },
+    "vertical": "core",
+    "journey": "support_ticket_flow",
+    "purpose": "Jornada operacional de atendimento dirigida pela UI real de negócio (não telas de QA): login automático via UI → menu Atendimento (rail) → Caixa de Entrada (/inbox) → selecionar ticket da lista → escrever nota interna → Salvar nota → toast 'Nota adicionada'. O uiTrace deste seed é a matéria-prima do roteiro operacional de treinamento (Learning Core F3: replay → markdown → RAG → missão). Interações critical=false exceto a validação final, para não comprometer o gate. Espelha o piloto fitness-matricula-agendamento-ui."
+  },
+  "steps": [
+    {
+      "name": "Abrir workspace (login automático pousa aqui)",
+      "type": "navigate",
+      "url": "{{urls.frontend}}/workspace"
+    },
+    {
+      "name": "Aguardar shell autenticado",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-primary-rail",
+      "timeout": 20000
+    },
+    {
+      "name": "Abrir menu Atendimento (rail)",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": "a[aria-label=\"Atendimento\"]"
+    },
+    {
+      "name": "Aguardar item Caixa de Entrada no menu lateral",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-secondary-nav-item:has-text(\"Caixa de Entrada\")",
+      "timeout": 15000
+    },
+    {
+      "name": "Abrir Caixa de Entrada no menu lateral",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": ".rap-secondary-nav-item:has-text(\"Caixa de Entrada\")"
+    },
+    {
+      "name": "Aguardar lista de tickets da inbox",
+      "type": "wait",
+      "critical": false,
+      "selector": ".support-ticket-card",
+      "timeout": 30000
+    },
+    {
+      "name": "Selecionar primeiro ticket da lista",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": ".support-ticket-card"
+    },
+    {
+      "name": "Aguardar painel de notas internas",
+      "type": "wait",
+      "critical": false,
+      "selector": "textarea.support-form-textarea",
+      "timeout": 20000
+    },
+    {
+      "name": "Escrever nota interna",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "textarea.support-form-textarea",
+      "value": "Nota interna registrada via RPA QA — jornada de atendimento (support ticket flow)."
+    },
+    {
+      "name": "Salvar nota interna",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "button:has-text(\"Salvar nota\")"
+    },
+    {
+      "name": "Aguardar toast Nota adicionada",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-toast--success:has-text(\"Nota adicionada\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Validar criação da nota interna",
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": ".rap-toast--success",
+            "exists": true
+          }
+        ]
+      }
+    }
+  ],
+  "data": {
+    "journey": "support_ticket_flow",
+    "vertical": "core"
+  }
+}
