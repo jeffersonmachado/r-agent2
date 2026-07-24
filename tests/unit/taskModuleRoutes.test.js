@@ -28,10 +28,10 @@ describe('task module', () => {
       }));
 
     expect(paths).toEqual([
-      { path: '/tasks', methods: ['get'] },
-      { path: '/tasks', methods: ['post'] },
-      { path: '/tasks/:taskId/complete', methods: ['post'] },
-      { path: '/tasks/:taskId/reminder', methods: ['post'] },
+      { path: '/api/tasks', methods: ['get'] },
+      { path: '/api/tasks', methods: ['post'] },
+      { path: '/api/tasks/:taskId/complete', methods: ['post'] },
+      { path: '/api/tasks/:taskId/reminder', methods: ['post'] },
     ]);
   });
 
