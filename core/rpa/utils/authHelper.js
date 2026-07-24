@@ -143,6 +143,15 @@ async function performLogin(page, options = {}) {
     // Aguarda página carregar
     await page.waitForLoadState('domcontentloaded', { timeout });
 
+    // Aguarda o formulário de login renderizar: em dev (Vite) o bundle
+    // compila/hidrata depois do domcontentloaded, então o input pode ainda
+    // não existir quando a página "carrega". Sem esta espera o login UI
+    // falhava intermitentemente com "campo de username não encontrado".
+    await page.waitForSelector(
+      'input[type="password"], input[name="username"], input[autocomplete="username"]',
+      { timeout },
+    ).catch(() => null);
+
     // Seletores para campo de username
     const usernameSelectors = [
       'input[name="username"]',

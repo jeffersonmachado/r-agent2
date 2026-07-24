@@ -101,6 +101,11 @@ function isIgnorableOnboardingNoise(entry) {
   const url = safeToString(entry.url || entry.path || '');
   const message = safeToString(entry.message || entry.text || entry.error || '');
   const type = safeTrimLower(entry.type || '');
+  // Telemetria do Learning Core é best-effort por desenho (sendBeacon no
+  // pagehide/unload). Um request_failed do ingest — típico quando o browser
+  // fecha ou navega no meio do beacon — não é falha de produto.
+  const hasLearningTelemetryRef = /\/api\/learning\/interactions(?:\?|$)/i.test(url);
+  if (hasLearningTelemetryRef && type === 'request_failed') return true;
   const hasOnboardingRef = /\/onboarding\/(?:start|status|complete|complete-step)(?:\?|$)/i.test(url)
     || /\/onboarding\/(?:start|status|complete|complete-step)/i.test(message)
     || /Erro ao carregar status de onboarding/i.test(message)

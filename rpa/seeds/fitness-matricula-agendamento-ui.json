@@ -1,0 +1,154 @@
+{
+  "id": "fitness-matricula-agendamento-ui",
+  "name": "Fitness Matrícula — Agendamento de Aula Experimental via UI",
+  "version": "2.0.0",
+  "metadata": {
+    "autoLogin": true,
+    "authOptions": {
+      "loginStrategy": "ui"
+    },
+    "vertical": "fitness",
+    "journey": "agendamento",
+    "purpose": "Jornada operacional de agendamento dirigida pela UI real de negócio (não telas de QA): login automático via UI → menu Construtor → Tarefas → criar tarefa 'Aula experimental' → Agendar → preencher data/hora, finalidade e notas → confirmar → toast 'Agendamento criado'. O uiTrace deste seed é a matéria-prima do roteiro operacional de treinamento (Learning Core F3: replay → markdown → RAG → missão). Interações critical=false exceto a validação final, para não comprometer o gate."
+  },
+  "steps": [
+    {
+      "name": "Abrir workspace (login automático pousa aqui)",
+      "type": "navigate",
+      "url": "{{urls.frontend}}/workspace"
+    },
+    {
+      "name": "Aguardar shell autenticado",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-primary-rail",
+      "timeout": 20000
+    },
+    {
+      "name": "Abrir menu Construtor (rail)",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": "a[aria-label=\"Construtor\"]"
+    },
+    {
+      "name": "Expandir seção Execução no menu",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": ".rap-secondary-nav-section-header:has-text(\"Execução\")"
+    },
+    {
+      "name": "Abrir Tarefas no menu lateral",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": ".rap-secondary-nav-item:has-text(\"Tarefas\")"
+    },
+    {
+      "name": "Aguardar formulário de nova tarefa",
+      "type": "wait",
+      "critical": false,
+      "selector": ".support-details-title:has-text(\"Nova tarefa\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Preencher título da tarefa",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": ".support-details-panel:has-text(\"Nova tarefa\") input",
+      "value": "Aula experimental QA"
+    },
+    {
+      "name": "Preencher prazo da tarefa",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": ".support-details-panel:has-text(\"Nova tarefa\") input[type=\"datetime-local\"]",
+      "value": "2026-07-25T09:00"
+    },
+    {
+      "name": "Criar tarefa",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "button:has-text(\"Criar tarefa\")"
+    },
+    {
+      "name": "Aguardar confirmação de criação da tarefa",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-toast--success:has-text(\"Tarefa criada\")",
+      "timeout": 15000
+    },
+    {
+      "name": "Abrir agendamento da tarefa criada",
+      "type": "click",
+      "critical": false,
+      "timeout": 15000,
+      "selector": "div.p-3:has-text(\"Aula experimental QA\") button:has-text(\"Agendar\")"
+    },
+    {
+      "name": "Aguardar modal Novo Agendamento",
+      "type": "wait",
+      "critical": false,
+      "selector": ".support-modal-content",
+      "timeout": 15000
+    },
+    {
+      "name": "Preencher data/hora inicial do agendamento",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": ".support-modal-content input[type=\"datetime-local\"]",
+      "value": "2026-07-25T10:00"
+    },
+    {
+      "name": "Preencher finalidade",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": "input[placeholder=\"Buscar finalidade...\"]",
+      "value": "aula experimental"
+    },
+    {
+      "name": "Preencher notas do agendamento",
+      "type": "fill",
+      "critical": false,
+      "timeout": 10000,
+      "selector": ".support-modal-content textarea.support-form-textarea",
+      "value": "Cliente interessado em pilates; confirmar unidade Paulista."
+    },
+    {
+      "name": "Confirmar agendamento",
+      "type": "click",
+      "critical": false,
+      "timeout": 10000,
+      "selector": ".support-modal-content button[type=\"submit\"]"
+    },
+    {
+      "name": "Aguardar toast Agendamento criado",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-toast--success:has-text(\"Agendamento criado\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Validar criação do agendamento",
+      "type": "assert",
+      "page": {
+        "landmarks": [
+          {
+            "selector": ".rap-toast--success",
+            "exists": true
+          }
+        ]
+      }
+    }
+  ],
+  "data": {
+    "journey": "agendamento",
+    "vertical": "fitness"
+  }
+}
