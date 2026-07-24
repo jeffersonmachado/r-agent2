@@ -13720,6 +13720,263 @@
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
       "platformScenarioIds": []
+    },
+    {
+      "id": "fitness-matricula-agendamento-ui",
+      "waveId": "wave-fitness-matricula",
+      "vertical": "fitness",
+      "journey": "agendamento",
+      "name": "Agendamento de Aula Experimental via UI",
+      "description": "Jornada operacional dirigida pela UI real: menu Construtor → Tarefas → criar tarefa → Agendar → preencher formulário → confirmar. Matéria-prima do roteiro operacional de treinamento (Learning Core).",
+      "source": "manual",
+      "status": "approved",
+      "version": "v2",
+      "channels": [
+        "chat",
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "medium",
+      "preconditions": [],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "trigger_channel_event",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário abre menu Construtor → Tarefas",
+          "description": "Usuário autenticado navega pelo menu lateral até a página de Tarefas",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/tasks"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário preenche e cria a tarefa",
+          "description": "Preenche título 'Aula experimental QA' e prazo no painel Nova tarefa e clica em Criar tarefa",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "toast": "Tarefa criada"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário preenche o formulário de agendamento",
+          "description": "Abre o modal Agendar da tarefa e preenche data/hora, finalidade e notas",
+          "adapter": "schedulingService",
+          "channel": "chat",
+          "expected": {
+            "modal": "Novo Agendamento"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_004",
+          "order": 4,
+          "type": "create_booking",
+          "category": "SYSTEM_EVENT",
+          "actor": "system",
+          "name": "Sistema cria o agendamento",
+          "description": "Backend persiste o agendamento via POST /api/schedules",
+          "adapter": "schedulingService",
+          "channel": "api",
+          "expected": {
+            "backendEntity": "booking",
+            "created": true
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_005",
+          "order": 5,
+          "type": "validate_response",
+          "category": "VALIDATION",
+          "actor": "system",
+          "name": "UI confirma Agendamento criado",
+          "description": "Toast de sucesso 'Agendamento criado' é exibido ao usuário",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "expected": {
+            "toast": "Agendamento criado"
+          },
+          "timeoutMs": 20000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        }
+      ],
+      "seeds": [
+        {
+          "id": "fitness-matricula-agendamento-ui",
+          "source": "manual",
+          "status": "approved"
+        }
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "tags": {
+        "vertical": "fitness",
+        "journey": "agendamento",
+        "source": "manual"
+      },
+      "platform": {
+        "platformScenarioIds": [
+          "fitness-matricula-agendamento-ui"
+        ]
+      },
+      "createdAt": "2026-07-23T21:23:18.204Z",
+      "updatedAt": "2026-07-23T21:23:18.242Z",
+      "journeyId": "agendamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [
+        "fitness-matricula-agendamento-ui"
+      ],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "trigger_channel_event",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário abre menu Construtor → Tarefas",
+          "description": "Usuário autenticado navega pelo menu lateral até a página de Tarefas",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "page": "/tasks"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário preenche e cria a tarefa",
+          "description": "Preenche título 'Aula experimental QA' e prazo no painel Nova tarefa e clica em Criar tarefa",
+          "adapter": "chat",
+          "channel": "chat",
+          "expected": {
+            "toast": "Tarefa criada"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "provide_data",
+          "category": "CLIENT_ACTION",
+          "actor": "customer",
+          "name": "Usuário preenche o formulário de agendamento",
+          "description": "Abre o modal Agendar da tarefa e preenche data/hora, finalidade e notas",
+          "adapter": "schedulingService",
+          "channel": "chat",
+          "expected": {
+            "modal": "Novo Agendamento"
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_004",
+          "order": 4,
+          "type": "create_booking",
+          "category": "SYSTEM_EVENT",
+          "actor": "system",
+          "name": "Sistema cria o agendamento",
+          "description": "Backend persiste o agendamento via POST /api/schedules",
+          "adapter": "schedulingService",
+          "channel": "api",
+          "expected": {
+            "backendEntity": "booking",
+            "created": true
+          },
+          "timeoutMs": 15000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        },
+        {
+          "id": "step_005",
+          "order": 5,
+          "type": "validate_response",
+          "category": "VALIDATION",
+          "actor": "system",
+          "name": "UI confirma Agendamento criado",
+          "description": "Toast de sucesso 'Agendamento criado' é exibido ao usuário",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "expected": {
+            "toast": "Agendamento criado"
+          },
+          "timeoutMs": 20000,
+          "enabled": true,
+          "evidence": null,
+          "startedAt": null,
+          "finishedAt": null,
+          "durationMs": null
+        }
+      ],
+      "validators": [],
+      "executionStatus": "queued"
     }
   ],
   "history": {
@@ -14450,7 +14707,17 @@
           "scenario atualizado"
         ]
       }
+    ],
+    "fitness-matricula-agendamento-ui": [
+      {
+        "version": "v2",
+        "changedBy": "manual",
+        "changedAt": "2026-07-23T21:23:18.242Z",
+        "changes": [
+          "scenario atualizado"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-07-22T00:04:30.619620+00:00"
+  "updatedAt": "2026-07-23T21:23:18.244Z"
 }
