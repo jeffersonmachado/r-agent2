@@ -88,6 +88,33 @@ async function handleAgentCrudRoutes(ctx) {
     return true;
   }
 
+  // GET /auth/agents/:id/name — resolução leve de nome para exibição
+  // (Inbox/Central de Atendimento). Escopo por tenant; super_admin vê todos.
+  if (method === 'GET' && pathname.startsWith('/auth/agents/') && pathname.endsWith('/name')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+
+    const agentId = decodeURIComponent(
+      pathname.slice('/auth/agents/'.length, pathname.length - '/name'.length),
+    );
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      sendJson(res, 404, { error: 'agent_not_found' });
+      return true;
+    }
+
+    if (!isSuperAdmin(req.agent) && req.tenantId && agent.tenantId !== req.tenantId) {
+      sendJson(res, 403, { error: 'forbidden', message: 'Agente não pertence ao seu tenant' });
+      return true;
+    }
+
+    sendJson(res, 200, { id: agent.id, name: agent.name });
+    return true;
+  }
+
   // GET /auth/agents/:id
   if (method === 'GET' && pathname.startsWith('/auth/agents/')) {
     const authResult = requireAuth(req);
@@ -98,7 +125,7 @@ async function handleAgentCrudRoutes(ctx) {
 
     const agentId = decodeURIComponent(pathname.slice('/auth/agents/'.length));
 
-    if (req.agent.role !== 'admin' && req.agent.role !== 'supervisor' && req.agent.id !== agentId) {
+    if (!isSuperAdmin(req.agent) && req.agent.role !== 'admin' && req.agent.role !== 'supervisor' && req.agent.id !== agentId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Você só pode ver seu próprio perfil' });
       return true;
     }

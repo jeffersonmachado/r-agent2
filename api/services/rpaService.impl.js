@@ -406,10 +406,17 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       const activePage = runner.executor?.page;
       if (activePage) {
         activePage.on('console', (msg) => {
+          let locationUrl = '';
+          try {
+            locationUrl = (msg.location() && msg.location().url) || '';
+          } catch (_) {
+            locationUrl = '';
+          }
           pageConsoleEvents.push({
             timestamp: Date.now(),
             level: msg.type(),
             text: msg.text(),
+            url: locationUrl,
           });
           if (pageConsoleEvents.length > 1000) pageConsoleEvents.shift();
         });
