@@ -5,17 +5,28 @@
  *
  * Seed operacional para support_ticket_flow.
  * Antes da execução:
- *   - cria ticket real
+ *   - cria ticket real (nasce 'waiting' na fila)
  *   - cria conversa real
  *   - cria contato/CRM real
  *   - registra estado inicial completo
  *   - expõe ticketId / conversationId / contactId ao snapshot
  *
+ * O takeover/assign (waiting → in_progress) é executado pelo step canônico
+ * step_takeover_ticket no browser — nunca aqui, para preservar a prova de
+ * mutação incremental do step.
+ *
  * Depois da execução valida:
  *   - resposta criada (mensagem incrementada)
  *   - status alterado
- *   - CRM atualizado
  *   - audit log criado
+ *
+ * Nota de contrato (2026-07-24): a exigência `crm_updated`/`crm.activities.count`
+ * foi removida por evidência: esse contador é medido em `VerticalJourneyEvent`,
+ * tabela escrita exclusivamente pelas verticais (fitness/beauty via
+ * `customerJourneyEngine.emitJourneyEvent`); o fluxo de suporte persiste
+ * Ticket/ticket.messages/AuditEvent/ChannelMessage — não existe artefato
+ * "CRM activity" no domínio de tickets. Manter a exigência tornava a jornada
+ * estruturalmente NO_GO sem relação com o comportamento real do sistema.
  */
 
 const logger = require('../../../utils/logger');
@@ -59,8 +70,11 @@ function buildSupportOperationalSeedSpec(options = {}) {
         source: 'qa_seed',
         tags: ['qa-operational'],
       },
+      // takeover acontece no step canônico step_takeover_ticket (browser),
+      // não no provisioning — ver provisionSupportSeed.
       takeover: {
-        reason: 'qa_operational_seed',
+        reason: 'qa_waves_operational',
+        executedBy: 'browser_step',
       },
     },
 
@@ -69,7 +83,6 @@ function buildSupportOperationalSeedSpec(options = {}) {
       'db.ticket.exists',
       'db.ticket.status',
       'db.ticket.messages.count',
-      'crm.activities.count',
       'events.audit.count',
     ],
 
@@ -88,14 +101,12 @@ function buildSupportOperationalSeedSpec(options = {}) {
     // ── Estado final esperado (para snapshot after) ──
     afterStateKeys: [
       'db.ticket.messages.count:incremented',
-      'crm.activities.count:incremented',
       'events.audit.count:incremented',
     ],
 
     // ── Side effects obrigatórios ──
     requiredSideEffects: [
       'ticket_status_changed',
-      'crm_updated',
       'audit_log_created',
       'notification_sent',
     ],
@@ -104,7 +115,6 @@ function buildSupportOperationalSeedSpec(options = {}) {
     postValidation: {
       messageCreated: true,
       statusChanged: true,
-      crmUpdated: true,
       auditLogCreated: true,
     },
   };
@@ -186,15 +196,32 @@ async function provisionSupportSeed(seedSpec = {}, httpClient = null) {
     };
   }
 
-  // 3. Takeover do ticket (status => in_progress)
+  // 3. Verificação real da pré-condição: ticket AGUARDANDO atendimento.
+  // O takeover/assign NÃO acontecem mais no provisioning: eles são a mutação
+  // real do step canônico step_takeover_ticket (executado no browser, com
+  // network proof POST /tickets/:id/takeover e diff incremental de status).
+  // Fazer takeover aqui tornaria o step idempotente e quebraria a prova de
+  // mutação (ticket_status_changed) exigida pelo operationalStepRegistry.
+  let verifiedStatus = null;
   try {
-    await httpClient({
-      method: 'POST',
-      url: `/tickets/${encodeURIComponent(ticketId)}/takeover`,
-      body: provisioning.takeover,
+    const ticketState = await httpClient({
+      method: 'GET',
+      url: `/tickets/${encodeURIComponent(ticketId)}`,
     });
+    verifiedStatus = ticketState?.body?.ticket?.status || ticketState?.body?.status || null;
   } catch (err) {
-    logger.warn(`[SupportOperationalSeed] Takeover falhou: ${err.message}`);
+    logger.warn(`[SupportOperationalSeed] Falha ao verificar status do ticket: ${err.message}`);
+  }
+
+  if (verifiedStatus !== 'waiting') {
+    return {
+      ok: false,
+      reason: `ticket_not_waiting:${verifiedStatus || 'unknown'}`,
+      ticketId,
+      conversationId,
+      contactId,
+      beforeSnapshot: null,
+    };
   }
 
   // 4. Snapshot inicial do estado
@@ -206,7 +233,7 @@ async function provisionSupportSeed(seedSpec = {}, httpClient = null) {
     contactId,
     capturedAt: new Date().toISOString(),
     db: {
-      ticket: { exists: true, id: ticketId, status: 'in_progress' },
+      ticket: { exists: true, id: ticketId, status: verifiedStatus },
     },
     crm: { contactId, activities: { count: 0 } },
     events: { audit: { count: 0 } },
@@ -241,11 +268,9 @@ function validateSupportSeedPostExecution(beforeSnapshot = {}, afterSnapshot = {
     blockers.push({ reason: 'support_post_validation_status_not_changed', beforeStatus, afterStatus });
   }
 
-  const beforeCrmCount = Number(beforeSnapshot?.crm?.activities?.count || 0);
-  const afterCrmCount = Number(afterSnapshot?.crm?.activities?.count || 0);
-  if (afterCrmCount <= beforeCrmCount) {
-    blockers.push({ reason: 'support_post_validation_crm_not_updated', expected: 'incremented', actual: afterCrmCount });
-  }
+  // Sem probe de CRM aqui: ver nota de contrato no cabeçalho do arquivo —
+  // o domínio de suporte não escreve atividades CRM (VerticalJourneyEvent é
+  // exclusivo das verticais).
 
   const beforeAuditCount = Number(beforeSnapshot?.events?.audit?.count || 0);
   const afterAuditCount = Number(afterSnapshot?.events?.audit?.count || 0);

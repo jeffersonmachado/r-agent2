@@ -68,6 +68,17 @@ function buildMockPage(overrides = {}) {
     goto: overrides.goto || jest.fn(async () => {}),
     waitForSelector: overrides.waitForSelector || jest.fn(async () => ({ textContent: async () => 'resolved' })),
     waitForLoadState: overrides.waitForLoadState || jest.fn(async () => {}),
+    waitForFunction: overrides.waitForFunction || jest.fn(async () => {}),
+    waitForTimeout: overrides.waitForTimeout || jest.fn(async () => {}),
+    evaluate: overrides.evaluate || jest.fn(async () => ({ ok: true, status: 200, body: {} })),
+    locator: overrides.locator || jest.fn(() => ({
+      count: jest.fn(async () => 0),
+      first: jest.fn(() => ({ isVisible: jest.fn(async () => false), click: jest.fn(async () => {}) })),
+      locator: jest.fn(() => ({ waitFor: jest.fn(async () => {}), click: jest.fn(async () => {}) })),
+      isVisible: jest.fn(async () => false),
+      click: jest.fn(async () => {}),
+      waitFor: jest.fn(async () => {}),
+    })),
     fill: overrides.fill || jest.fn(async () => {}),
     click: overrides.click || jest.fn(async () => {}),
     selectOption: overrides.selectOption || jest.fn(async () => {}),
@@ -658,16 +669,19 @@ describe('Cenário 12 — executeStep com page mock: captura evidências reais',
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Cenário 13 — invariantes dos step definitions', () => {
-  test('support steps: 7 steps na sequência correta', () => {
+  test('support steps: 10 steps canônicos na sequência correta', () => {
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
-    expect(steps.length).toBe(7);
+    expect(steps.length).toBe(10);
     expect(steps[0].id).toBe('step_access_support_module');
     expect(steps[1].id).toBe('step_wait_ticket_list');
     expect(steps[2].id).toBe('step_open_ticket');
-    expect(steps[3].id).toBe('step_reply_ticket');
-    expect(steps[4].id).toBe('step_change_status');
-    expect(steps[5].id).toBe('step_assert_ticket_ui');
-    expect(steps[6].id).toBe('step_assert_ticket_backend');
+    expect(steps[3].id).toBe('step_takeover_ticket');
+    expect(steps[4].id).toBe('step_reply_ticket');
+    expect(steps[5].id).toBe('step_whatsapp_read_status');
+    expect(steps[6].id).toBe('step_assert_whatsapp_delivery');
+    expect(steps[7].id).toBe('step_change_status');
+    expect(steps[8].id).toBe('step_assert_ticket_ui');
+    expect(steps[9].id).toBe('step_assert_ticket_backend');
   });
 
   test('fitness steps: 5 steps na sequência correta', () => {
@@ -791,7 +805,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
 
   test('ticket não abriu => NO_GO', async () => {
     const page = buildMockPage({
-      waitForSelector: rejectSelector('[data-testid="ticket-detail"]'),
+      waitForSelector: rejectSelector('[data-testid="ticket-transfer-button"], [data-testid="ticket-message-list"]'),
     });
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
     const step = steps.find((s) => s.id === 'step_open_ticket');
@@ -808,7 +822,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
 
   test('reply não enviada => NO_GO', async () => {
     const page = buildMockPage({
-      waitForSelector: rejectSelector('[data-testid="message-sent-confirmation"]'),
+      waitForFunction: jest.fn(async () => { throw new Error('waitForFunction_timeout'); }),
     });
     const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
     const step = steps.find((s) => s.id === 'step_reply_ticket');
@@ -823,16 +837,16 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
     expect(result.step.error).toBe('support_reply_not_sent');
   });
 
-  test('status não alterado => NO_GO', async () => {
+  test('confirmação de fechamento ausente => NO_GO', async () => {
     const page = buildMockPage({
-      waitForSelector: jest.fn(async (selector) => {
-        if (selector === '[data-testid="ticket-status"]') {
-          return { textContent: async () => 'in_progress' };
-        }
-        return { textContent: async () => 'resolved' };
-      }),
+      locator: jest.fn(() => ({
+        locator: jest.fn(() => ({
+          waitFor: jest.fn(async () => { throw new Error('confirm_dialog_timeout'); }),
+          click: jest.fn(async () => {}),
+        })),
+      })),
     });
-    const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1', resolvedStatus: 'resolved' });
+    const steps = buildSupportTicketFlowSteps({ ticketId: 'ticket-1' });
     const step = steps.find((s) => s.id === 'step_change_status');
 
     const result = await executeStep(step, page, {
@@ -842,7 +856,7 @@ describe('Cenário 15 — strict assertions por step (blocking)', () => {
     });
 
     expect(result.goNoGo).toBe('NO_GO');
-    expect(result.step.error).toBe('support_status_not_changed_in_ui');
+    expect(result.step.error).toBe('support_close_confirm_missing');
   });
 
   test('membership inválida => NO_GO', async () => {

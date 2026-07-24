@@ -274,7 +274,60 @@ async function executeBlockingJourneyWithBrowser(journeyId, stepSpecs = [], opti
     }
   }
 
-  // ── Fase 2: navegar para URL inicial ─────────────────────────────────────
+  // ── Fase 2: auto-login (rotas operacionais são protegidas) ────────────────
+  // Reusa o mesmo fluxo de auto-login dos runners RPA (token RPA -> fallback UI).
+  // Em jornada blocking, falha de login gera blocker explícito (nunca finge sucesso).
+  if (options.autoLogin && page && typeof page.goto === 'function') {
+    let authResult = null;
+    try {
+      const { autoLoginBeforeSteps } = require('../../../core/rpa/utils/autoLoginFlow');
+      // Garante mesma origem do alvo mesmo se options.baseUrl não vier:
+      // localStorage é por origem — logar em outra origem perde a sessão.
+      const loginBaseUrl = options.baseUrl
+        || (() => {
+          try { return options.loginTargetUrl ? new URL(options.loginTargetUrl).origin : undefined; } catch (_) { return undefined; }
+        })();
+      authResult = await autoLoginBeforeSteps(page, {
+        firstStep: options.loginTargetUrl
+          ? { type: 'navigate', url: options.loginTargetUrl }
+          : undefined,
+        frontendBaseUrl: loginBaseUrl,
+        apiBaseUrl: options.apiBaseUrl,
+        authOptions: options.authOptions || {},
+      });
+    } catch (authErr) {
+      authResult = { success: false, loggedIn: false, error: authErr.message };
+    }
+
+    if (!authResult.success || (!authResult.loggedIn && !authResult.skipped)) {
+      const reason = !authResult.success ? 'auto_login_failed' : 'auto_login_not_authenticated';
+      logger.error(`[BrowserOperationalRunner] Auto-login falhou (${reason}): ${authResult.error || authResult.skipReason || 'sem detalhes'}`);
+      if (blocking) {
+        if (ownedBrowser && closeFn) {
+          await closeFn();
+        }
+        return {
+          steps: [],
+          stepResults: [],
+          blockers: [buildBlockerEntry(reason, {
+            journeyId,
+            error: authResult.error || null,
+            skipReason: authResult.skipReason || null,
+          })],
+          goNoGo: 'NO_GO',
+          browserUsed: true,
+          executorUsed: false,
+          stepsExecuted: 0,
+          stepsTotal: stepSpecs.length,
+        };
+      }
+      logger.warn(`[BrowserOperationalRunner] Auto-login não aplicado em jornada não-blocking (${reason})`);
+    } else if (authResult.loggedIn) {
+      logger.info('[BrowserOperationalRunner] Auto-login realizado com sucesso');
+    }
+  }
+
+  // ── Fase 3: navegar para URL inicial ─────────────────────────────────────
   if (options.initialUrl && typeof page.goto === 'function') {
     try {
       await page.goto(options.initialUrl, { waitUntil: 'domcontentloaded' });
@@ -298,7 +351,7 @@ async function executeBlockingJourneyWithBrowser(journeyId, stepSpecs = [], opti
     }
   }
 
-  // ── Fase 3: executar steps com evidências reais ───────────────────────────
+  // ── Fase 4: executar steps com evidências reais ───────────────────────────
   let finalResult;
   try {
     finalResult = await operationalStepExecutor.executeOperationalSteps(stepSpecs, page, {

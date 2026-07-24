@@ -6,6 +6,7 @@ const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const { clearExecutions, waitForQueuedExecution } = require('../../qa-mesh/executionQueue');
 const logger = require('../utils/logger');
+const config = require('../utils/config');
 const qaWavesLogger = require('../utils/qaWavesLogger');
 const { emitEvent } = require('./websocketService');
 const qaWavesReplayAdapter = require('./qaWavesReplayAdapter');
@@ -21,6 +22,7 @@ const {
 const {
   getOperationalStepContract,
   getExpectedMutationsForStep,
+  isMutationExpectedStep,
 } = require('../../qa/contracts/operationalStepRegistry');
 const { buildSupportTicketFlowSteps } = require('./qa/journeyStepDefinitions/supportTicketFlowSteps');
 const { buildFitnessCheckinFlowSteps } = require('./qa/journeyStepDefinitions/fitnessCheckinFlowSteps');
@@ -343,10 +345,10 @@ function createStepSnapshotCollector(replayArtifact) {
 }
 
 function assertSnapshotDomainScope(stepId, snapshot = {}) {
-  const serialized = JSON.stringify(snapshot || {}).toLowerCase();
   const supportSteps = new Set([
     'step_wait_ticket_list',
     'step_select_ticket',
+    'step_takeover_ticket',
     'step_reply_ticket',
     'step_change_status',
     'step_assert_ticket_ui',
@@ -358,17 +360,35 @@ function assertSnapshotDomainScope(stepId, snapshot = {}) {
     'step_confirm_attendance',
   ]);
 
+  // Buckets de domínio vazios (ex.: "devices":{} gerado por normalizeSnapshot)
+  // não são dados de domínio alheio — apenas conteúdo real conta.
+  const hasContent = (value) => {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
+  };
+
   if (supportSteps.has(stepId)) {
-    const forbidden = ['"attendance"', '"access"', '"devices"'];
-    const found = forbidden.find((token) => serialized.includes(token));
+    const found = [
+      hasContent(snapshot?.db?.attendance) && 'db.attendance',
+      hasContent(snapshot?.api?.access) && 'api.access',
+      hasContent(snapshot?.events?.access) && 'events.access',
+      hasContent(snapshot?.devices) && 'devices',
+    ].find(Boolean);
     if (found) {
       throw new Error(`entity_scope_unrelated_data:${stepId}`);
     }
   }
 
   if (fitnessSteps.has(stepId)) {
-    const forbidden = ['"ticket"', '"conversation"', '"messages"'];
-    const found = forbidden.find((token) => serialized.includes(token));
+    const found = [
+      hasContent(snapshot?.db?.ticket) && 'db.ticket',
+      hasContent(snapshot?.api?.support) && 'api.support',
+      hasContent(snapshot?.api?.support?.conversationId) && 'api.support.conversationId',
+      hasContent(snapshot?.db?.messages) && 'db.messages',
+      hasContent(snapshot?.events?.messages) && 'events.messages',
+    ].find(Boolean);
     if (found) {
       throw new Error(`entity_scope_unrelated_data:${stepId}`);
     }
@@ -386,15 +406,46 @@ function isBlockingOperationalJourney(journeyId = '') {
 function createInternalHttpClient() {
   if (typeof fetch !== 'function') return null;
 
+  const config = require('../utils/config');
   const baseUrl = process.env.INTERNAL_API_BASE_URL
     || process.env.API_BASE_URL
-    || `http://127.0.0.1:${process.env.PORT || 3000}`;
+    || `http://127.0.0.1:${Number(config.get('api.port', process.env.PORT || 3000))}`;
+
+  // Autenticação in-process: o provisioning operacional chama rotas que exigem
+  // auth + tenant (ex.: POST /tickets). Login é feito uma única vez por processo
+  // com as credenciais locais de QA (mesmas do bootstrap do systemadmin).
+  let authHeadersPromise = null;
+  const resolveAuthHeaders = () => {
+    if (!authHeadersPromise) {
+      authHeadersPromise = (async () => {
+        try {
+          const authService = require('./authService');
+          const username = process.env.QA_WAVES_INTERNAL_USERNAME || 'systemadmin';
+          const password = process.env.QA_WAVES_INTERNAL_PASSWORD
+            || process.env.SYSTEM_ADMIN_PASSWORD
+            || 'Admin123!';
+          const result = await authService.login(username, password, 'qa-waves-internal', 'qa-waves-internal-client');
+          if (!result?.success || !result?.token) return {};
+          const tenantId = process.env.QA_WAVES_INTERNAL_TENANT_ID
+            || process.env.DEFAULT_TENANT_ID
+            || 'system';
+          return { authorization: `Bearer ${result.token}`, 'x-tenant-id': tenantId };
+        } catch (err) {
+          logger.warn(`[QaWaves] Falha ao autenticar cliente interno: ${err.message}`);
+          return {};
+        }
+      })();
+    }
+    return authHeadersPromise;
+  };
 
   return async function httpClient(request = {}) {
     const method = request.method || 'GET';
     const target = new URL(request.url || '/', baseUrl).toString();
+    const authHeaders = await resolveAuthHeaders();
     const headers = {
       'content-type': 'application/json',
+      ...authHeaders,
       ...(request.headers || {}),
     };
     const response = await fetch(target, {
@@ -639,7 +690,9 @@ async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, pre
       deviceId: seedEvidence?.deviceId || null,
       deviceMode: seedEvidence?.deviceMode || null,
       agentReply: replayArtifact?.seed?.data?.agentReply || null,
-      baseUrl: process.env.QA_BROWSER_BASE_URL || process.env.INTERNAL_API_BASE_URL || '',
+      // URL do FRONTEND (não da API): os steps canônicos navegam na UI real.
+      baseUrl: process.env.QA_BROWSER_BASE_URL
+        || `http://127.0.0.1:${Number(config.get('frontend.port', 5173))}`,
     };
 
     const stepSpecs = resolveJourneyStepSpecs(journeyId, runtimeSteps, seedData);
@@ -656,6 +709,28 @@ async function normalizeOperationalRuntimeSteps({ replayArtifact, converted, pre
         headless: true,
         initialUrl: seedData.baseUrl ? `${seedData.baseUrl}` : undefined,
         extraHTTPHeaders: seedEvidence?.authHeaders || {},
+        // Auto-login obrigatório: as rotas operacionais (/support) são protegidas.
+        // baseUrl precisa ser a MESMA origem usada pelos steps (localStorage é
+        // por origem: logar em localhost e navegar em 127.0.0.1 perde a sessão).
+        baseUrl: seedData.baseUrl || undefined,
+        autoLogin: true,
+        loginTargetUrl: seedData.baseUrl ? `${seedData.baseUrl}/support` : undefined,
+        apiBaseUrl: process.env.QA_BROWSER_API_BASE_URL
+          || `http://127.0.0.1:${Number(config.get('api.port', 3001))}`,
+        authOptions: {
+          username: process.env.QA_BROWSER_USERNAME || 'systemadmin',
+          password: process.env.QA_BROWSER_PASSWORD
+            || process.env.SYSTEM_ADMIN_PASSWORD
+            || 'Admin123!',
+          tenantId: process.env.QA_BROWSER_TENANT_ID
+            || process.env.DEFAULT_TENANT_ID
+            || 'system',
+          // Rotas operacionais exigem perfil com permissões completas — mesma
+          // estratégia usada pelo rpaService para telas protegidas (/dev/qa-waves):
+          // login via UI com as credenciais reais de QA (o token RPA não carrega
+          // as permissões necessárias para /support).
+          loginStrategy: process.env.QA_BROWSER_LOGIN_STRATEGY || 'ui',
+        },
       }
     );
 
@@ -771,6 +846,49 @@ function validatePostExecutionProofs(replay = {}) {
     replay,
     journeyContext,
   });
+}
+
+/**
+ * Promove os runtime steps canônicos (rpaSteps) a steps principais do replay
+ * para jornadas blocking. O operationalReplayValidator exige os ids canônicos
+ * do operationalStepRegistry (journey_required_step_missing /
+ * operational_step_contract_missing); os steps semânticos do cenário
+ * permanecem em journeySteps. Steps sem snapshot próprio (não-mutacionais)
+ * recebem os snapshots da jornada — mesmo padrão do smoke operacional final —
+ * para que o postStateProof nunca seja avaliado sem afterSnapshot.
+ */
+function buildCanonicalOperationalSteps(replay = {}) {
+  const beforeSnapshot = replay.beforeSnapshot || null;
+  const afterSnapshot = replay.afterSnapshot || null;
+  const runtimeSteps = Array.isArray(replay.rpaSteps) ? replay.rpaSteps : [];
+  return runtimeSteps.map((step) => ({
+    ...step,
+    beforeStepSnapshot: step?.beforeStepSnapshot || beforeSnapshot,
+    afterStepSnapshot: step?.afterStepSnapshot || afterSnapshot,
+    mutationExpected: step?.mutationExpected === true
+      || isMutationExpectedStep(step?.id || step?.stepId),
+  }));
+}
+
+/**
+ * Monta replay.screenshots a partir dos screenshots reais capturados por step
+ * (inline base64 gravados pelo executor). O último screenshot é marcado como
+ * crítico de validação — requisito do validateScreenshots.
+ */
+function buildOperationalScreenshots(steps = []) {
+  const screenshots = (Array.isArray(steps) ? steps : [])
+    .map((step) => ({
+      id: `${step?.id || 'step'}-after`,
+      data: step?.screenshotAfter || step?.screenshotBefore || null,
+      description: `${step?.id || 'step'} — screenshot pós-execução`,
+      timestamp: step?.timestamp || step?.finishedAt || new Date().toISOString(),
+    }))
+    .filter((screenshot) => typeof screenshot.data === 'string' && screenshot.data.length > 0);
+  return screenshots.map((screenshot, index) => ({
+    ...screenshot,
+    critical: index === screenshots.length - 1,
+    type: index === screenshots.length - 1 ? 'validation' : 'step',
+  }));
 }
 
 function buildOperationalTimeline({ replay = {}, beforeSnapshot = {}, afterSnapshot = {}, stateMutation = {}, stateSnapshotContract = {} }) {
@@ -1201,6 +1319,23 @@ async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
           currentReplay.afterSnapshot || null,
         ),
       });
+
+      // PASSO 3.5: Jornadas blocking — promover os runtime steps canônicos
+      // (ids do operationalStepRegistry) a replay.steps e montar screenshots
+      // reais por step. DEVE rodar depois de collectAfterSnapshot (PASSO 2):
+      // steps não-mutacionais não têm snapshot próprio e recebem os snapshots
+      // da jornada — sem isso o validatePostStateProof (PASSO 5) é chamado sem
+      // afterStepSnapshot (post_state_proof_missing_after_snapshot). Os steps
+      // semânticos do cenário permanecem em journeySteps.
+      if (isBlockingOperationalJourney(currentReplay.journeyId)
+        && Array.isArray(currentReplay.rpaSteps)
+        && currentReplay.rpaSteps.length > 0) {
+        const canonicalSteps = buildCanonicalOperationalSteps(currentReplay);
+        currentReplay = updateReplayArtifact(replayArtifact, {
+          steps: canonicalSteps,
+          screenshots: buildOperationalScreenshots(canonicalSteps),
+        });
+      }
 
       // PASSO 4: Correlacionar mutações por step (step ↔ mutation correlation real).
       // Determina quais mutações do diff global são atribuíveis a cada step.

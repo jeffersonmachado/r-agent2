@@ -112,8 +112,10 @@ describe('qaWavesExecutionService operational integration', () => {
           body: { ticket: { id: 'ticket-1', conversationId: 'conv-1' } },
         };
       }
-      if (request.url === '/tickets/ticket-1/takeover') {
-        return { ok: true, body: { ok: true } };
+      // Ticket nasce 'waiting': takeover/assign acontecem no step canônico de
+      // browser (step_takeover_ticket), não no provisioning.
+      if (request.url === '/tickets/ticket-1') {
+        return { ok: true, body: { ticket: { id: 'ticket-1', status: 'waiting' } } };
       }
       return { ok: false, body: null };
     });

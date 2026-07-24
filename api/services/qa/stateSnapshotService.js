@@ -204,6 +204,12 @@ async function collectSupportTicketSnapshot(ctx, models) {
     ? buildWhere({ tenant_key: ctx.tenantId, conversation_id: conversationId }, {})
     : ticketWhere;
   const messageCount = await countModel(models, 'ChannelMessage', messageWhere);
+  // Fonte primária real para suporte: respostas do agente são persistidas no
+  // array JSON `messages` da própria linha do ticket (queueTicketPersistenceMapper),
+  // de forma síncrona. ChannelMessage só é gravada de forma assíncrona pela
+  // outbound queue (e pode nem existir quando não há conversa vinculada).
+  const ticketMessagesCount = Array.isArray(ticketRow.messages) ? ticketRow.messages.length : null;
+  const effectiveMessageCount = ticketMessagesCount != null ? ticketMessagesCount : messageCount.count;
   const auditEvents = await countModel(models, 'AuditEvent', buildWhere({ tenant_key: ctx.tenantId }, {
     resource_id: ticketId,
   }));
@@ -222,7 +228,9 @@ async function collectSupportTicketSnapshot(ctx, models) {
         id: ticketRow.id || null,
         status: ticketRow.status || null,
         messages: {
-          count: messageCount.count,
+          count: effectiveMessageCount,
+          source: ticketMessagesCount != null ? 'ticket.messages' : 'ChannelMessage',
+          channelMessages: messageCount.count,
         },
         updatedAt: ticketRow.updatedAt || ticketRow.updated_at || null,
       },
@@ -240,7 +248,7 @@ async function collectSupportTicketSnapshot(ctx, models) {
         auditEventsAvailable: auditEvents.ok,
         auditLogsAvailable: auditLogs.ok,
       },
-      messages: { count: messageCount.count, available: messageCount.ok },
+      messages: { count: effectiveMessageCount, available: ticketMessagesCount != null ? ticket.ok : messageCount.ok },
     },
     metadata: {
       sources: {
@@ -629,9 +637,20 @@ async function collectSupportStepScopedSnapshot(ctx, models, stepId) {
       ? buildWhere({ tenant_key: ctx.tenantId, conversation_id: conversationId }, {})
       : ticketWhere;
     const messageCount = await countModel(models, 'ChannelMessage', messageWhere);
-    snapshot.db.messages = { count: messageCount.count };
-    snapshot.events.messages = { count: messageCount.count, available: messageCount.ok };
-    snapshot.metadata.sources.messages = messageCount.ok;
+    // Mesma fonte primária do snapshot agregado: array `messages` da linha do
+    // ticket (persistido sincronamente no reply); ChannelMessage é assíncrona.
+    const ticketMessagesCount = Array.isArray(ticketRow.messages) ? ticketRow.messages.length : null;
+    const effectiveMessageCount = ticketMessagesCount != null ? ticketMessagesCount : messageCount.count;
+    snapshot.db.messages = {
+      count: effectiveMessageCount,
+      source: ticketMessagesCount != null ? 'ticket.messages' : 'ChannelMessage',
+      channelMessages: messageCount.count,
+    };
+    snapshot.events.messages = {
+      count: effectiveMessageCount,
+      available: ticketMessagesCount != null ? ticket.ok : messageCount.ok,
+    };
+    snapshot.metadata.sources.messages = ticketMessagesCount != null ? ticket.ok : messageCount.ok;
     snapshot.metadata.sourceErrors.push(messageCount.reason);
   }
 
