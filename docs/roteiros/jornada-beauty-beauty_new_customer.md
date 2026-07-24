@@ -1,10 +1,16 @@
 # Beleza & Estética — Beauty New Customer
 
-> Gerado: 2026-07-21T09:45:57.445Z | Vertical: beauty | Jornada: beauty_new_customer
+> Gerado: 2026-07-24T03:54:00.585Z | Vertical: beauty | Jornada: beauty_new_customer
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **beauty_new_customer** na vertical Beleza & Estética.
+Validar o fluxo operacional completo da jornada **beauty_new_customer** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 81%.
+
+**Capabilities requeridas:**
+- `scheduling`
+- `payment`
+- `crm_updates`
+- `notifications`
 
 ## 2. Pré-condições
 

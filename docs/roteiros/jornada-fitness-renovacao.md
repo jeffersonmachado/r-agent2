@@ -1,10 +1,18 @@
 # Fitness — Renovacao
 
-> Gerado: 2026-07-21T09:45:57.449Z | Vertical: fitness | Jornada: renovacao
+> Gerado: 2026-07-24T03:54:00.600Z | Vertical: fitness | Jornada: renovacao
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **renovacao** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **renovacao** com cobertura de 6 capabilities obrigatórias e confiança de contrato de 88%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `membership_validation`
+- `billing_validation`
+- `payment`
+- `crm_update`
+- `notifications`
 
 ## 2. Pré-condições
 
@@ -19,7 +27,7 @@ Validar o fluxo operacional completo da jornada **renovacao** na vertical Fitnes
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **3** cenários (0 aprovados, 3 drafts)
 
 ### ⬜ Renovação de Matrícula
 
@@ -30,6 +38,68 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ Renovação de plano via WhatsApp com falha de pagamento no cartão, recuperação com PIX e confirmação de renovação sem duplicidade
+
+- **ID**: `fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | validate_context | - | ragService | whatsapp | 15000ms |
+| 5 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 6 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 7 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 8 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 9 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 10 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 11 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 12 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 13 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 14 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 15 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 16 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 17 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 18 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ Renovação E2E via WhatsApp de plano anual com cartão expirado, oferta de atualização de pagamento e confirmação de renovação sem duplicidade de cobrança
+
+- **ID**: `fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: api, eventMesh, flowEngine, meshValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | whatsapp | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | validate_context | - | whatsapp | whatsapp | 15000ms |
+| 6 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 7 | create_payment | - | whatsapp | whatsapp | 15000ms |
+| 8 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 9 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 10 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 11 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 12 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 13 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 14 | validate_fallback | - | whatsapp | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

@@ -1,10 +1,16 @@
 # Fitness — Onboarding
 
-> Gerado: 2026-07-21T09:45:57.449Z | Vertical: fitness | Jornada: onboarding
+> Gerado: 2026-07-24T03:54:00.599Z | Vertical: fitness | Jornada: onboarding
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **onboarding** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **onboarding** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 75%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `crm_updates`
+- `notifications`
+- `onboarding`
 
 ## 2. Pré-condições
 
@@ -19,7 +25,7 @@ Validar o fluxo operacional completo da jornada **onboarding** na vertical Fitne
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **2** cenários (0 aprovados, 2 drafts)
 
 ### ⬜ Onboarding do Novo Aluno
 
@@ -30,6 +36,39 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ [Manual] Onboarding de novo aluno via WhatsApp — primeiro acesso completo
+
+- **ID**: `fitness_full_onboarding_whatsapp_primeiro_acesso_e2e`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, flowEngine, meshValidator, ragService, schedulingService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 6 | validate_context | - | ragService | whatsapp | 15000ms |
+| 7 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 8 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 9 | check_availability | - | schedulingService | whatsapp | 15000ms |
+| 10 | select_slot | - | schedulingService | whatsapp | 15000ms |
+| 11 | create_booking | - | schedulingService | whatsapp | 15000ms |
+| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 13 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 14 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 15 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 16 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 17 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 18 | validate_fallback | - | api | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

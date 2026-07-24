@@ -11,6 +11,29 @@
       "qaSupport": true,
       "scenarios": [
         {
+          "scenarioId": "fitness-matricula-agendamento-ui",
+          "scenario": "Agendamento de Aula Experimental via UI",
+          "status": "active",
+          "channels": [
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "schedulingService",
+            "semanticValidator",
+            "rpa"
+          ],
+          "steps": [
+            "trigger_channel_event",
+            "provide_data",
+            "provide_data",
+            "create_booking",
+            "validate_response"
+          ],
+          "operationalAssertions": []
+        },
+        {
           "scenarioId": "fitness-matricula-agendamento",
           "scenario": "Agendamento de Aula Experimental",
           "status": "deprecated",

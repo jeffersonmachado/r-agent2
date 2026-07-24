@@ -1,10 +1,17 @@
 # Fitness — Checkin
 
-> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: checkin
+> Gerado: 2026-07-24T03:54:00.596Z | Vertical: fitness | Jornada: checkin
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **checkin** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **checkin** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 85%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `membership_validation`
+- `access_decision`
+- `turnstile_release`
+- `attendance_record`
 
 ## 2. Pré-condições
 
@@ -19,7 +26,7 @@ Validar o fluxo operacional completo da jornada **checkin** na vertical Fitness.
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **3** cenários (0 aprovados, 3 drafts)
 
 ### ⬜ Check-in Diário na Academia
 
@@ -30,6 +37,65 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ Check-in via WhatsApp sem reserva ativa e com pagamento pendente: orientar, bloquear entrada e oferecer regularização
+
+- **ID**: `fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 6 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 7 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 8 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 9 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 10 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 11 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 12 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 13 | validate_context | - | ragService | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ Check-in completo via WhatsApp com QR dinâmico, validação de biometria na catraca e liberação de acesso (alto risco)
+
+- **ID**: `fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, meshValidator, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 2 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 3 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 4 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 5 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 6 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 7 | validate_context | - | ragService | whatsapp | 15000ms |
+| 8 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 9 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 10 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 11 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 12 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 13 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 14 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 15 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 16 | validate_fallback | - | api | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

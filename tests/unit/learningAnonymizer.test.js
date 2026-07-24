@@ -38,6 +38,19 @@ describe('learning-core anonymizer', () => {
     expect(value.auth).toBe('[credencial]');
   });
 
+  test('nao mascara digitos embutidos em identificadores tecnicos (falso positivo de telefone)', () => {
+    const { value } = anonymize({
+      replayId: 'qa_wave_replay_1784863794036_b4on3c',
+      iso: '2026-07-24T03:29:54.036Z',
+      executionId: 'meshq-1784863794036-29uua8',
+      telefoneSolto: 'ligue para (11) 98765-4321 amanha',
+    });
+    expect(value.replayId).toBe('qa_wave_replay_1784863794036_b4on3c');
+    expect(value.iso).toBe('2026-07-24T03:29:54.036Z');
+    expect(value.executionId).toBe('meshq-1784863794036-29uua8');
+    expect(value.telefoneSolto).toBe('ligue para [telefone] amanha');
+  });
+
   test('adversarial: estruturas aninhadas, arrays e casing misto de chaves', () => {
     const input = {
       customer: {

@@ -1,10 +1,17 @@
 # Fitness — Cancelamento
 
-> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: cancelamento
+> Gerado: 2026-07-24T03:54:00.595Z | Vertical: fitness | Jornada: cancelamento
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **cancelamento** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **cancelamento** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 85%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `membership_validation`
+- `billing_validation`
+- `crm_update`
+- `notifications`
 
 ## 2. Pré-condições
 
@@ -19,7 +26,7 @@ Validar o fluxo operacional completo da jornada **cancelamento** na vertical Fit
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **3** cenários (0 aprovados, 3 drafts)
 
 ### ⬜ Cancelamento de Matrícula
 
@@ -30,6 +37,67 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ Cancelamento E2E via WhatsApp com retenção, confirmação de identidade, efetivação imediata e liberação de acesso (alto risco)
+
+- **ID**: `fitness_full_cancelamento_assinatura_whatsapp_retentativa`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, flowEngine, meshValidator, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 6 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 7 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 8 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 9 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 10 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 11 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 12 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 13 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 14 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 15 | validate_context | - | ragService | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ WhatsApp: cancelamento E2E de plano anual com cobrança recente, confirmação de identidade, cálculo de reembolso e bloqueio de acesso
+
+- **ID**: `fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 6 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 7 | validate_context | - | ragService | whatsapp | 15000ms |
+| 8 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 9 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 10 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 11 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 13 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 14 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 15 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 16 | validate_fallback | - | api | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

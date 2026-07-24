@@ -1,10 +1,15 @@
 # Alimentação — Food Customer Journey
 
-> Gerado: 2026-07-21T09:45:57.449Z | Vertical: food | Jornada: food_customer_journey
+> Gerado: 2026-07-24T03:54:00.600Z | Vertical: food | Jornada: food_customer_journey
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **food_customer_journey** na vertical Alimentação.
+Validar o fluxo operacional completo da jornada **food_customer_journey** com cobertura de 3 capabilities obrigatórias e confiança de contrato de 66%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `payment`
+- `notifications`
 
 ## 2. Pré-condições
 

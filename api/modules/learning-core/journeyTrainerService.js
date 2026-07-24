@@ -84,6 +84,81 @@ const ACTION_LABELS = {
   assert: 'Validar',
 };
 
+/**
+ * Normaliza o replay para o formato canonico do treinamento
+ * (`actions` + `screens`). Replays de QA Waves carregam `uiTrace`
+ * (name/action/selector/input/success/durationMs + screenshots base64);
+ * replays legados ja trazem `actions`. Screenshots sao descartados aqui:
+ * nao entram no roteiro e evitam anonimizar MBs de base64.
+ */
+function normalizeReplay(replay) {
+  const normalized = { ...replay };
+  const uiTrace = Array.isArray(replay.uiTrace) ? replay.uiTrace : [];
+
+  if ((!Array.isArray(normalized.actions) || normalized.actions.length === 0) && uiTrace.length > 0) {
+    normalized.actions = uiTrace.map((entry) => ({
+      type: entry.action || entry.type || null,
+      step: entry.name || null,
+      selector: entry.selector || null,
+      value: entry.input !== undefined ? entry.input : entry.value,
+      url: entry.url || null,
+      success: entry.success !== false && entry.status !== 'failed',
+      error: entry.error || null,
+      durationMs: entry.durationMs || null,
+    }));
+  }
+
+  if (!Array.isArray(normalized.screens) || normalized.screens.length === 0) {
+    const screens = [];
+    for (const action of normalized.actions || []) {
+      if (action.type !== 'navigate') continue;
+      const target = String(action.url || action.selector || '');
+      const route = target.includes('{{urls.frontend}}')
+        ? target.replace('{{urls.frontend}}', '')
+        : target;
+      if (route && !screens.includes(route)) screens.push(route);
+    }
+    // Replays de wave: telas esperadas declaradas nos passos semanticos
+    // (expected.page) complementam as rotas capturadas nos navigates.
+    for (const step of Array.isArray(replay.journeySteps) ? replay.journeySteps : []) {
+      const page = step && step.expected && typeof step.expected.page === 'string'
+        ? step.expected.page
+        : null;
+      if (page && !screens.includes(page)) screens.push(page);
+    }
+    normalized.screens = screens;
+  }
+
+  if (uiTrace.length > 0) {
+    normalized.uiTrace = uiTrace.map((entry) => {
+      const { screenshotBefore, screenshotAfter, ...rest } = entry;
+      return rest;
+    });
+  }
+
+  return normalized;
+}
+
+/**
+ * Exemplos sintéticos determinísticos para o roteiro. O anonymizer mascara
+ * todo valor preenchido (privacidade por desenho); o treinamento, porém,
+ * precisa mostrar COMO preencher. Estes exemplos são dados sintéticos fixos
+ * (nunca valores do replay), classificados por sinais estruturais do campo
+ * (selector/step) — mesma abordagem declarativa do classifyFormField.
+ */
+function syntheticExampleFor(action) {
+  const signal = `${action.selector || ''} ${action.step || ''}`.toLowerCase();
+  if (/datetime|data|prazo|hora|date/.test(signal)) return '2026-07-25T09:00';
+  if (/t[íi]tulo|title|assunto|subject/.test(signal)) return 'Aula experimental (exemplo sintético)';
+  if (/finalidade|purpose|buscar|search/.test(signal)) return 'aula experimental';
+  if (/nota|notes|observ|descri|description|mensagem|textarea/.test(signal)) return 'Observações de exemplo (dado sintético)';
+  if (/email|e-mail/.test(signal)) return 'cliente.exemplo@mailinator.com';
+  if (/phone|telefone|celular|whatsapp/.test(signal)) return '+55 11 90000-0000';
+  if (/cpf|cnpj|document/.test(signal)) return '000.000.000-00';
+  if (/nome|name|cliente|customer/.test(signal)) return 'Cliente Exemplo';
+  return 'texto de exemplo';
+}
+
 function describeAction(action, index) {
   const label = ACTION_LABELS[action.type] || action.type || 'Ação';
   const parts = [`${index + 1}. **${label}**`];
@@ -92,7 +167,14 @@ function describeAction(action, index) {
   if (action.selector) details.push(`alvo \`${action.selector}\``);
   if (action.value !== null && action.value !== undefined) {
     const rendered = typeof action.value === 'object' ? JSON.stringify(action.value) : String(action.value);
-    if (rendered) details.push(`valor: \`${rendered.slice(0, 120)}\``);
+    if (rendered) {
+      const isMasked = /^\[[\w]+\]$/.test(rendered);
+      if (isMasked && action.type === 'fill') {
+        details.push(`valor: ${rendered} — exemplo sintético: \`${syntheticExampleFor(action)}\``);
+      } else {
+        details.push(`valor: \`${rendered.slice(0, 120)}\``);
+      }
+    }
   }
   if (action.url || (action.value && action.value.url)) details.push(`URL \`${action.url || action.value.url}\``);
   if (details.length > 0) parts.push(` (${details.join('; ')})`);
@@ -125,7 +207,13 @@ function buildTrainingDocument({ replay, stats }) {
     durationMs !== null ? `- Duração de referência: ${Math.round(durationMs / 1000)}s` : null,
     `- Erros no replay original: ${errors.length}`,
     '',
+    ...(screens.length > 0
+      ? ['## Telas', '', ...screens.map((screen) => `- \`${screen}\``), '']
+      : []),
     '## Passo a passo',
+    '',
+    'Valores de campos aparecem mascarados (`[valor]`, `[telefone]`, etc.) por privacidade;',
+    'cada passo de preenchimento indica um **exemplo sintético** seguro para prática.',
     '',
     ...actions.map((action, index) => describeAction(action, index)),
     '',
@@ -145,7 +233,7 @@ function buildTrainingDocument({ replay, stats }) {
  * @returns {Promise<{trainingId, ragDocumentId, missionId, steps, redactions, summary}>}
  */
 async function generateTrainingFromReplay({ tenantId, replayId, journeyKey }) {
-  const replay = loadReplay(replayId);
+  const replay = normalizeReplay(loadReplay(replayId));
 
   const { value: safeReplay, stats } = anonymize(replay);
   const document = buildTrainingDocument({ replay: safeReplay, stats });
@@ -203,4 +291,5 @@ module.exports = {
   generateTrainingFromReplay,
   listReplays,
   buildTrainingDocument,
+  normalizeReplay,
 };

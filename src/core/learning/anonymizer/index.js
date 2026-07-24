@@ -46,7 +46,7 @@ const PATTERNS = [
   { kind: 'documento', regex: /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, placeholder: '[documento]' },
   { kind: 'documento', regex: /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, placeholder: '[documento]' },
   { kind: 'email', regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, placeholder: '[email]' },
-  { kind: 'telefone', regex: /(?:\+?55[-.\s]?)?(?:\(?\d{2}\)?[-.\s]?)?9?\d{4}[-.\s]?\d{4}/g, placeholder: '[telefone]' },
+  { kind: 'telefone', regex: /(?<![\w])(?:\+?55[-.\s]?)?(?:\(?\d{2}\)?[-.\s]?)?9?\d{4}[-.\s]?\d{4}(?![\w])/g, placeholder: '[telefone]' },
 ];
 
 /**

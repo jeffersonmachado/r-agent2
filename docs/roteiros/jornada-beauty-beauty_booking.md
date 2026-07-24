@@ -1,10 +1,16 @@
 # Beleza & Estética — Beauty Booking
 
-> Gerado: 2026-07-21T09:45:57.444Z | Vertical: beauty | Jornada: beauty_booking
+> Gerado: 2026-07-24T03:54:00.582Z | Vertical: beauty | Jornada: beauty_booking
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **beauty_booking** na vertical Beleza & Estética.
+Validar o fluxo operacional completo da jornada **beauty_booking** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 93%.
+
+**Capabilities requeridas:**
+- `scheduling`
+- `payment`
+- `crm_updates`
+- `notifications`
 
 ## 2. Pré-condições
 

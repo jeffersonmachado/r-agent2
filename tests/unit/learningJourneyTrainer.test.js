@@ -40,12 +40,43 @@ const REPLAY_WITH_PII = {
   metadata: { usuario: 'Maria Silva' },
 };
 
+// Formato de replay gerado por QA Waves: sem `actions`, com `uiTrace`
+// (inclui screenshots base64 que devem ser descartados antes da anonimização).
+const REPLAY_WAVE_UITRACE = {
+  id: 'wave-replay-1',
+  replayId: 'wave-replay-1',
+  startTime: '2026-07-24T03:29:54.037Z',
+  endTime: '2026-07-24T03:32:01.215Z',
+  uiTrace: [
+    {
+      id: 'step-1', index: 1, name: 'Abrir workspace (login automático pousa aqui)',
+      action: 'navigate', selector: '{{urls.frontend}}/workspace', input: null,
+      success: true, durationMs: 4557, screenshotBefore: 'data:image/png;base64,iVBORw0KGgo=',
+    },
+    {
+      id: 'step-7', index: 7, name: 'Preencher título da tarefa',
+      action: 'fill', selector: '.support-details-panel input', input: 'Aula experimental QA',
+      success: true, durationMs: 2119, screenshotBefore: 'data:image/png;base64,iVBORw0KGgo=',
+    },
+    {
+      id: 'step-9', index: 9, name: 'Criar tarefa',
+      action: 'click', selector: 'button:has-text("Criar tarefa")', input: null,
+      success: true, durationMs: 1502,
+    },
+  ],
+  journeySteps: [
+    { id: 'step_001', name: 'Usuário abre menu Construtor → Tarefas', expected: { page: '/tasks' } },
+  ],
+  errors: [],
+};
+
 beforeAll(() => {
   runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'learning-trainer-test-'));
   process.env.RUNTIME_ROOT = runtimeRoot;
   const replayDir = path.join(runtimeRoot, 'rpa', 'replay');
   fs.mkdirSync(replayDir, { recursive: true });
   fs.writeFileSync(path.join(replayDir, 'jornada-teste-1.json'), JSON.stringify(REPLAY_WITH_PII));
+  fs.writeFileSync(path.join(replayDir, 'wave-replay-1.json'), JSON.stringify(REPLAY_WAVE_UITRACE));
 });
 
 afterAll(() => {
@@ -67,8 +98,8 @@ describe('learning-core journeyTrainerService', () => {
 
   test('lista replays disponiveis no runtime', () => {
     const replays = listReplays();
-    expect(replays).toHaveLength(1);
-    expect(replays[0]).toMatchObject({ id: 'jornada-teste-1', actions: 4, screens: 2 });
+    expect(replays).toHaveLength(2);
+    expect(replays.find((r) => r.id === 'jornada-teste-1')).toMatchObject({ actions: 4, screens: 2 });
   });
 
   test('rejeita replayId com path traversal', async () => {
@@ -133,5 +164,27 @@ describe('learning-core journeyTrainerService', () => {
     expect(doc).toContain('## Passo a passo');
     expect(doc).toContain('## Checklist de validação');
     expect(doc).toContain('Duração de referência: 60s');
+  });
+
+  test('pipeline: replay de QA Waves (uiTrace) vira roteiro detalhado sem screenshots', async () => {
+    const result = await generateTrainingFromReplay({
+      tenantId: 'system',
+      replayId: 'wave-replay-1',
+      journeyKey: 'fitness.agendamento',
+    });
+
+    expect(result.steps).toBe(3);
+
+    const [doc] = mockIndexDocument.mock.calls[0];
+    // uiTrace normalizado em passos nomeados
+    expect(doc.content).toContain('Preencher título da tarefa');
+    // valor real do fill mascarado, com exemplo sintético no lugar
+    expect(doc.content).not.toContain('Aula experimental QA');
+    expect(doc.content).toContain('exemplo sintético');
+    // telas derivadas do navigate + expected.page dos passos semanticos
+    expect(doc.content).toContain('`/workspace`');
+    expect(doc.content).toContain('`/tasks`');
+    // screenshots base64 do uiTrace nao entram no roteiro
+    expect(doc.content).not.toContain('base64');
   });
 });

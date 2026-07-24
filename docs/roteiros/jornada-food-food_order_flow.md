@@ -1,10 +1,15 @@
 # Alimentação — Food Order Flow
 
-> Gerado: 2026-07-21T09:45:57.449Z | Vertical: food | Jornada: food_order_flow
+> Gerado: 2026-07-24T03:54:00.601Z | Vertical: food | Jornada: food_order_flow
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **food_order_flow** na vertical Alimentação.
+Validar o fluxo operacional completo da jornada **food_order_flow** com cobertura de 3 capabilities obrigatórias e confiança de contrato de 72%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `payment`
+- `notifications`
 
 ## 2. Pré-condições
 

@@ -1,10 +1,16 @@
 # Fitness — Agendamento
 
-> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: agendamento
+> Gerado: 2026-07-24T03:54:00.593Z | Vertical: fitness | Jornada: agendamento
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **agendamento** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **agendamento** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 81%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `scheduling`
+- `notifications`
+- `crm_update`
 
 ## 2. Pré-condições
 
@@ -19,7 +25,27 @@ Validar o fluxo operacional completo da jornada **agendamento** na vertical Fitn
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **4** cenários (1 aprovados, 3 drafts)
+
+### ✅ Agendamento de Aula Experimental via UI
+
+- **ID**: `fitness-matricula-agendamento-ui`
+- **Status**: approved
+- **Canais**: chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: schedulingService, semanticValidator, rpa
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | Usuário abre menu Construtor → Tarefas | chat | chat | 15000ms |
+| 2 | provide_data | Usuário preenche e cria a tarefa | chat | chat | 15000ms |
+| 3 | provide_data | Usuário preenche o formulário de agendamento | schedulingService | chat | 15000ms |
+| 4 | create_booking | Sistema cria o agendamento | schedulingService | api | 15000ms |
+| 5 | validate_response | UI confirma Agendamento criado | semanticValidator | chat | 20000ms |
+
+**Validações**: replay=true, backend=true
 
 ### ⬜ Agendamento de Aula Experimental
 
@@ -30,6 +56,70 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ E2E no WhatsApp: agendar aula (pilates) com escolha de unidade, checagem de elegibilidade, pagamento e confirmação com política de cancelamento
+
+- **ID**: `fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, schedulingService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | validate_context | - | ragService | whatsapp | 15000ms |
+| 6 | check_availability | - | schedulingService | whatsapp | 15000ms |
+| 7 | select_slot | - | schedulingService | whatsapp | 15000ms |
+| 8 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 9 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 10 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 11 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 12 | create_booking | - | schedulingService | whatsapp | 15000ms |
+| 13 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 14 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 15 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 16 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ WhatsApp: agendar avaliação física com personal, validar disponibilidade, pagamento antecipado e confirmação com política de cancelamento
+
+- **ID**: `fitness_full_agendamento_avaliacao_e_pagamento_whatsapp`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, schedulingService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | check_availability | - | schedulingService | whatsapp | 15000ms |
+| 6 | select_slot | - | schedulingService | whatsapp | 15000ms |
+| 7 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 8 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 9 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 10 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 11 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+| 12 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 13 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 14 | create_booking | - | schedulingService | whatsapp | 15000ms |
+| 15 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 16 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 17 | validate_context | - | ragService | whatsapp | 15000ms |
+| 18 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

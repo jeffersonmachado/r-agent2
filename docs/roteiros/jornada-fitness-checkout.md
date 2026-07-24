@@ -1,10 +1,17 @@
 # Fitness — Checkout
 
-> Gerado: 2026-07-21T09:45:57.447Z | Vertical: fitness | Jornada: checkout
+> Gerado: 2026-07-24T03:54:00.596Z | Vertical: fitness | Jornada: checkout
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **checkout** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **checkout** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 91%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `billing_validation`
+- `payment`
+- `crm_update`
+- `notifications`
 
 ## 2. Pré-condições
 
@@ -19,7 +26,7 @@ Validar o fluxo operacional completo da jornada **checkout** na vertical Fitness
 
 ## 3. Cenários
 
-Total: **1** cenários (0 aprovados, 1 drafts)
+Total: **4** cenários (0 aprovados, 4 drafts)
 
 ### ⬜ Checkout e Pagamento de Matrícula
 
@@ -30,6 +37,97 @@ Total: **1** cenários (0 aprovados, 1 drafts)
 - **Integrações**: não definidas
 
 ⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+
+### ⬜ WhatsApp: checkout completo de plano mensal com PIX e confirmação de matrícula (E2E) para academia
+
+- **ID**: `fitness_full_whatsapp_checkout_pix_confirmacao_e2e`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, schedulingService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 5 | check_availability | - | schedulingService | whatsapp | 15000ms |
+| 6 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 7 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 8 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 9 | validate_context | - | ragService | whatsapp | 15000ms |
+| 10 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 11 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 13 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 14 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 15 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 16 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ Checkout end-to-end no WhatsApp: compra de plano mensal + matrícula, pagamento via Pix, aprovação e liberação imediata de acesso
+
+- **ID**: `fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, semanticValidator, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
+| 4 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 6 | validate_context | - | ragService | whatsapp | 15000ms |
+| 7 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 8 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 9 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 10 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 11 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 12 | validate_response | - | semanticValidator | whatsapp | 15000ms |
+| 13 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
+| 14 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
+
+### ⬜ WhatsApp checkout completo: compra de plano mensal com cupom, PIX, aprovação e liberação imediata de acesso no app
+
+- **ID**: `fitness_full_whatsapp_checkout_pix_aprovacao_e2e`
+- **Status**: active
+- **Canais**: whatsapp, chat, api
+- **Pré-condições**: nenhuma
+- **Integrações**: accessControlService, api, eventMesh, meshValidator, paymentService, whatsapp
+
+**Passos:**
+
+| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
+|---|---|---|---|---|
+| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
+| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 3 | Validação de Intenção (IA) | - | whatsapp | whatsapp | 15000ms |
+| 4 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
+| 6 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 7 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
+| 8 | Validação de Intenção (IA) | - | whatsapp | whatsapp | 15000ms |
+| 9 | create_payment | - | paymentService | whatsapp | 15000ms |
+| 10 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 11 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
+| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
+| 13 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
+| 14 | validate_response | - | whatsapp | whatsapp | 15000ms |
+| 15 | validate_context | - | whatsapp | whatsapp | 15000ms |
+| 16 | validate_sla | - | meshValidator | whatsapp | 15000ms |
+
+**Validações**: replay=true, backend=true
 
 ## 4. Evidência Esperada
 

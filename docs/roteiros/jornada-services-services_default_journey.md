@@ -1,10 +1,17 @@
 # Serviços — Services Default Journey
 
-> Gerado: 2026-07-21T09:45:57.450Z | Vertical: services | Jornada: services_default_journey
+> Gerado: 2026-07-24T03:54:00.603Z | Vertical: services | Jornada: services_default_journey
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **services_default_journey** na vertical Serviços.
+Validar o fluxo operacional completo da jornada **services_default_journey** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 85%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `scheduling`
+- `payment`
+- `crm_updates`
+- `notifications`
 
 ## 2. Pré-condições
 

@@ -1,10 +1,16 @@
 # Clínica & Saúde — Clinic Default Journey
 
-> Gerado: 2026-07-21T09:45:57.446Z | Vertical: clinic | Jornada: clinic_default_journey
+> Gerado: 2026-07-24T03:54:00.586Z | Vertical: clinic | Jornada: clinic_default_journey
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **clinic_default_journey** na vertical Clínica & Saúde.
+Validar o fluxo operacional completo da jornada **clinic_default_journey** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 81%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `scheduling`
+- `crm_updates`
+- `notifications`
 
 ## 2. Pré-condições
 
@@ -33,8 +39,8 @@ Total: **3** cenários (1 aprovados, 2 drafts)
 
 | Ordem | Tipo | Nome | Adapter | Canal | Timeout |
 |---|---|---|---|---|
-| 1 | Evento de Canal | Ticket de manutenção criado | api | ticket | 15000ms |
-| 2 | Validação de Backend | Ticket resolvido com SLA | api | - | 30000ms |
+| 1 | Evento de Canal | Ticket de manutenção criado | api | chat | 15000ms |
+| 2 | Validação de Backend | Ticket resolvido com SLA | api | chat | 30000ms |
 
 **Validações**: replay=true, backend=true
 

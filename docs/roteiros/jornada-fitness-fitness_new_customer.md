@@ -1,10 +1,17 @@
 # Fitness — Fitness New Customer
 
-> Gerado: 2026-07-21T09:45:57.448Z | Vertical: fitness | Jornada: fitness_new_customer
+> Gerado: 2026-07-24T03:54:00.598Z | Vertical: fitness | Jornada: fitness_new_customer
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **fitness_new_customer** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **fitness_new_customer** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 97%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `membership_validation`
+- `access_decision`
+- `attendance_record`
+- `crm_update`
 
 ## 2. Pré-condições
 

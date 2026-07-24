@@ -1,6 +1,6 @@
 # Fitness — Fitness Customer Checkin
 
-> Gerado: 2026-07-21T09:45:57.448Z | Vertical: fitness | Jornada: fitness_customer_checkin
+> Gerado: 2026-07-24T03:54:00.597Z | Vertical: fitness | Jornada: fitness_customer_checkin
 
 ## 1. Objetivo
 
@@ -33,7 +33,7 @@ Total: **12** cenários (12 aprovados, 0 drafts)
 
 - **ID**: `business-e2e-fitness_customer_checkin`
 - **Status**: approved
-- **Canais**: whatsapp, app
+- **Canais**: whatsapp
 - **Pré-condições**: nenhuma
 - **Integrações**: api
 

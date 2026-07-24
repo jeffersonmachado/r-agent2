@@ -1,10 +1,16 @@
 # Marketplace — Market Default Journey
 
-> Gerado: 2026-07-21T09:45:57.450Z | Vertical: market | Jornada: market_default_journey
+> Gerado: 2026-07-24T03:54:00.603Z | Vertical: market | Jornada: market_default_journey
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **market_default_journey** na vertical Marketplace.
+Validar o fluxo operacional completo da jornada **market_default_journey** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 81%.
+
+**Capabilities requeridas:**
+- `customer_identification`
+- `payment`
+- `notifications`
+- `crm_updates`
 
 ## 2. Pré-condições
 

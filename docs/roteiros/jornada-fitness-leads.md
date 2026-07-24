@@ -1,10 +1,16 @@
 # Fitness — Leads
 
-> Gerado: 2026-07-21T09:45:57.448Z | Vertical: fitness | Jornada: leads
+> Gerado: 2026-07-24T03:54:00.599Z | Vertical: fitness | Jornada: leads
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **leads** na vertical Fitness.
+Validar o fluxo operacional completo da jornada **leads** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 69%.
+
+**Capabilities requeridas:**
+- `lead_capture`
+- `customer_identification`
+- `crm_updates`
+- `notifications`
 
 ## 2. Pré-condições
 
