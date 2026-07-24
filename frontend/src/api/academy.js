@@ -86,3 +86,11 @@ export async function fetchManualMarkdownBlob(manualId) {
 export async function fetchManualImageBlob(manualId, imagePath) {
   return fetchBlob(manualImageUrl(manualId, imagePath));
 }
+
+export function manualPdfUrl(manualId) {
+  return `/api/learning/manuals/${encodeURIComponent(manualId)}/pdf`;
+}
+
+export async function fetchManualPdfBlob(manualId) {
+  return fetchBlob(manualPdfUrl(manualId));
+}

@@ -418,6 +418,33 @@ async function handleLearningCoreRoutes(ctx) {
     return true;
   }
 
+  const manualPdfMatch = method === 'GET'
+    ? pathname.match(/^\/api\/learning\/manuals\/([^/]+)\/pdf$/)
+    : null;
+  if (manualPdfMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const { filePath } = await manualService.ensureManualPdf({
+        tenantId,
+        manualId: decodeURIComponent(manualPdfMatch[1]),
+      });
+      res.writeHead(200, {
+        'content-type': 'application/pdf',
+        'content-disposition': `attachment; filename="${decodeURIComponent(manualPdfMatch[1])}.pdf"`,
+      });
+      fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      if (error.code === 'PDF_UNAVAILABLE') { sendJson({ error: 'pdf_unavailable', message: error.message }, 503); return true; }
+      throw error;
+    }
+    return true;
+  }
+
   const manualMdMatch = method === 'GET'
     ? pathname.match(/^\/api\/learning\/manuals\/([^/]+)\/md$/)
     : null;

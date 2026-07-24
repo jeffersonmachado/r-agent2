@@ -56,6 +56,8 @@ const {
   generateManualFromReplay,
   listManuals,
   resolveManualFile,
+  buildManualHtml,
+  ensureManualPdf,
 } = require('../../api/modules/learning-core/manualService');
 
 describe('learning-core manualService', () => {
@@ -140,5 +142,43 @@ describe('learning-core manualService', () => {
       .rejects.toThrow('replayId invalido');
     await expect(generateManualFromReplay({ tenantId: 'system', replayId: 'nao-existe' }))
       .rejects.toThrow('Replay nao encontrado');
+  });
+
+  test('buildManualHtml renderiza HTML A4 com telas embutidas e dados anonimizados', async () => {
+    const metadata = await generateManualFromReplay({
+      tenantId: 'system',
+      replayId: 'wave-manual-1',
+      title: 'Manual <HTML>',
+    });
+    const manualDir = path.join(runtimeRoot, 'learning', 'manuals', metadata.id);
+
+    const html = buildManualHtml(metadata, manualDir);
+    expect(html).toContain('<html lang="pt-BR">');
+    expect(html).toContain('Manual &lt;HTML&gt;');
+    expect(html).not.toContain('Manual <HTML>');
+    expect(html).toContain('Passo 2 — Escrever nota interna');
+    expect(html).toContain('data:image/png;base64,');
+    expect(html).toContain('@page');
+    expect(html).not.toContain('5511999999999');
+  });
+
+  test('ensureManualPdf reutiliza PDF em cache sem lançar browser', async () => {
+    const metadata = await generateManualFromReplay({ tenantId: 'system', replayId: 'wave-manual-1' });
+    const manualDir = path.join(runtimeRoot, 'learning', 'manuals', metadata.id);
+    const pdfPath = path.join(manualDir, 'manual.pdf');
+    fs.writeFileSync(pdfPath, '%PDF-1.4 fake-cache');
+
+    const result = await ensureManualPdf({ tenantId: 'system', manualId: metadata.id });
+    expect(result.filePath).toBe(pdfPath);
+    expect(fs.readFileSync(pdfPath, 'utf8')).toBe('%PDF-1.4 fake-cache');
+  });
+
+  test('ensureManualPdf valida manualId e escopo de tenant', async () => {
+    const [metadata] = listManuals({ tenantId: 'system' });
+
+    await expect(ensureManualPdf({ tenantId: 'system', manualId: '../etc' }))
+      .rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(ensureManualPdf({ tenantId: 'outro-tenant-sem-manual', manualId: metadata.id }))
+      .rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

@@ -36,6 +36,7 @@ vi.mock('../api/academy', () => ({
   generateManualFromReplay: (...args) => mockGenerateManual(...args),
   fetchManualImageBlob: (...args) => mockFetchManualImageBlob(...args),
   fetchManualMarkdownBlob: vi.fn(async () => new Blob(['# manual'])),
+  fetchManualPdfBlob: vi.fn(async () => new Blob(['%PDF'])),
 }));
 
 vi.mock('../context/authContext', () => ({

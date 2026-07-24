@@ -45,26 +45,47 @@ function ManualStepImage({ manualId, imagePath, alt }) {
   return <img className="academy-manual-step-image" src={url} alt={alt} loading="lazy" />;
 }
 
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function manualBaseName(manual) {
+  return manual.title.replace(/[^\w.-]+/g, '-').slice(0, 80) || manual.id;
+}
+
 function ManualCard({ manual }) {
   const [expanded, setExpanded] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleDownload = useCallback(async () => {
     setDownloading(true);
     try {
       const blob = await academyApi.fetchManualMarkdownBlob(manual.id);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${manual.title.replace(/[^\w.-]+/g, '-').slice(0, 80) || manual.id}.md`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${manualBaseName(manual)}.md`);
     } catch (downloadError) {
       logger.error('[ManualsTab] falha ao baixar manual', downloadError);
     } finally {
       setDownloading(false);
+    }
+  }, [manual]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    setDownloadingPdf(true);
+    try {
+      const blob = await academyApi.fetchManualPdfBlob(manual.id);
+      downloadBlob(blob, `${manualBaseName(manual)}.pdf`);
+    } catch (downloadError) {
+      logger.error('[ManualsTab] falha ao gerar/baixar PDF do manual', downloadError);
+    } finally {
+      setDownloadingPdf(false);
     }
   }, [manual]);
 
@@ -84,6 +105,9 @@ function ManualCard({ manual }) {
         </Button>
         <Button onClick={handleDownload} disabled={downloading}>
           {downloading ? 'Baixando…' : 'Baixar .md'}
+        </Button>
+        <Button onClick={handleDownloadPdf} disabled={downloadingPdf}>
+          {downloadingPdf ? 'Gerando PDF…' : 'Baixar PDF'}
         </Button>
       </div>
       {expanded && (
