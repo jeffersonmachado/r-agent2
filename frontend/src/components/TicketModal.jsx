@@ -356,7 +356,7 @@ export function TicketModal({ isOpen, onClose, ticket, onTicketUpdate }) {
           {/* Controles superiores */}
           <div className="ticket-modal-controls">
             {wsStatus.phase === 'ready' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <span 
                   style={{
                     display: 'inline-block',

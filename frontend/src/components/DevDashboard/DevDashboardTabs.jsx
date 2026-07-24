@@ -9,7 +9,7 @@ export function DevDashboardTabs({ activeTab, setActiveTab }) {
   const { theme } = useTheme();
 
   return (
-    <div className="mb-4 md:mb-6" style={{ borderBottom: `1px solid ${theme.colors.border.default}` }}>
+    <div className="mb-4 md:mb-6 border-b border-border-default">
       <div className="flex gap-1 md:gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {TABS.map((tab) => (
           <button

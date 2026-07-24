@@ -50,7 +50,7 @@ export function SupportHistoryCard({ timeline = [], loading, formatDate, onOpenI
       title="Histórico consolidado"
       subtitle="Linha do tempo consolidada por entidade e contexto"
       badge={(
-        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+        <div className="text-xs text-text-tertiary">
           {loading ? 'Carregando…' : `${filteredTimeline.length}/${timeline.length} item(ns)`}
         </div>
       )}

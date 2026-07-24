@@ -34,7 +34,7 @@ export function PbxRoutingTabs({
     <>
       {tab === 'trunks' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Troncos (PJSIP mínimo)</h3>
+          <h3 className="mt-0">Troncos (PJSIP mínimo)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 160px 180px 1fr 1fr auto', gap: 8, marginBottom: 12 }}>
             <input placeholder="Nome" value={formTrunk.name} onChange={(e) => setFormTrunk((s) => ({ ...s, name: e.target.value }))} />
             <select value={formTrunk.type} onChange={(e) => setFormTrunk((s) => ({ ...s, type: e.target.value }))}>
@@ -44,33 +44,33 @@ export function PbxRoutingTabs({
             <input placeholder="Transport" value={formTrunk.transport} onChange={(e) => setFormTrunk((s) => ({ ...s, transport: e.target.value }))} />
             <input placeholder="Auth username" value={formTrunk.authUsername} onChange={(e) => setFormTrunk((s) => ({ ...s, authUsername: e.target.value }))} />
             <input placeholder="Auth password" value={formTrunk.authPassword} onChange={(e) => setFormTrunk((s) => ({ ...s, authPassword: e.target.value }))} />
-            <button onClick={handleSaveTrunk} disabled={!canSaveTrunk || loading} style={{ padding: '8px 12px' }}>Salvar</button>
+            <button onClick={handleSaveTrunk} disabled={!canSaveTrunk || loading} className="px-3 py-2">Salvar</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 8, marginBottom: 12 }}>
             <input placeholder="AOR contact (ex: sip:provider.com)" value={formTrunk.aorContact} onChange={(e) => setFormTrunk((s) => ({ ...s, aorContact: e.target.value }))} />
             <input placeholder="Allow codecs" value={formTrunk.endpointAllow} onChange={(e) => setFormTrunk((s) => ({ ...s, endpointAllow: e.target.value }))} />
           </div>
 
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Tipo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Transport</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
+                  <th className="pbx-th">Nome</th>
+                  <th className="pbx-th">Tipo</th>
+                  <th className="pbx-th">Transport</th>
+                  <th className="pbx-th">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTrunks.map((t) => (
                   <tr key={t.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.type}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.transport || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{t.status}</td>
+                    <td className="pbx-td">{t.name}</td>
+                    <td className="pbx-td">{t.type}</td>
+                    <td className="pbx-td">{t.transport || '—'}</td>
+                    <td className="pbx-td">{t.status}</td>
                   </tr>
                 ))}
-                {!filteredTrunks.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum tronco encontrado.</td></tr> : null}
+                {!filteredTrunks.length ? <tr><td colSpan={4} className="pbx-td opacity-75">Nenhum tronco encontrado.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -214,10 +214,10 @@ export function PbxRoutingTabs({
 
       {tab === 'dids' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>DIDs (entrada)</h3>
+          <h3 className="mt-0">DIDs (entrada)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 120px 220px 1fr auto', gap: 8, marginBottom: 12 }}>
             <input placeholder="DID (ex: 551199999999)" value={formDid.did} onChange={(e) => setFormDid((s) => ({ ...s, did: e.target.value }))} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={!!formDid.enabled} onChange={(e) => setFormDid((s) => ({ ...s, enabled: e.target.checked }))} />
               ativo
             </label>
@@ -245,28 +245,28 @@ export function PbxRoutingTabs({
             ) : (
               <input placeholder="Ex: 1001" value={formDid.destinationRef} onChange={(e) => setFormDid((s) => ({ ...s, destinationRef: e.target.value }))} />
             )}
-            <button onClick={handleSaveDid} disabled={!canSaveDid || loading} style={{ padding: '8px 12px' }}>Salvar</button>
+            <button onClick={handleSaveDid} disabled={!canSaveDid || loading} className="px-3 py-2">Salvar</button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>DID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Destino</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Enabled</th>
+                  <th className="pbx-th">DID</th>
+                  <th className="pbx-th">Destino</th>
+                  <th className="pbx-th">Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDids.map((d) => (
                   <tr key={d.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{d.did}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{d.did}</td>
+                    <td className="pbx-td">
                       {d?.actions?.[0]?.type ? `${d.actions[0].type}${d.actions[0].ref ? `: ${d.actions[0].ref}` : ''}` : '—'}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{d.enabled ? 'sim' : 'não'}</td>
+                    <td className="pbx-td">{d.enabled ? 'sim' : 'não'}</td>
                   </tr>
                 ))}
-                {!filteredDids.length ? <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum DID encontrado.</td></tr> : null}
+                {!filteredDids.length ? <tr><td colSpan={3} className="pbx-td opacity-75">Nenhum DID encontrado.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -275,15 +275,15 @@ export function PbxRoutingTabs({
 
       {tab === 'ivr' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>IVR (dialplan raw)</h3>
+          <h3 className="mt-0">IVR (dialplan raw)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 120px auto', gap: 8, marginBottom: 12 }}>
             <input placeholder="Nome" value={formIvr.name} onChange={(e) => setFormIvr((s) => ({ ...s, name: e.target.value }))} />
             <input placeholder="Context suffix (opcional)" value={formIvr.contextSuffix} onChange={(e) => setFormIvr((s) => ({ ...s, contextSuffix: e.target.value }))} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={!!formIvr.enabled} onChange={(e) => setFormIvr((s) => ({ ...s, enabled: e.target.checked }))} />
               ativo
             </label>
-            <button onClick={handleSaveIvr} disabled={!canSaveIvr || loading} style={{ padding: '8px 12px' }}>Salvar</button>
+            <button onClick={handleSaveIvr} disabled={!canSaveIvr || loading} className="px-3 py-2">Salvar</button>
           </div>
           <textarea
             value={formIvr.dialplanText}
@@ -292,21 +292,21 @@ export function PbxRoutingTabs({
             style={{ width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}
           />
           <div style={{ marginTop: 12, overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Enabled</th>
+                  <th className="pbx-th">Nome</th>
+                  <th className="pbx-th">Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredIvrRules.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(r.enabled)}</td>
+                    <td className="pbx-td">{r.name}</td>
+                    <td className="pbx-td">{String(r.enabled)}</td>
                   </tr>
                 ))}
-                {!filteredIvrRules.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhuma regra IVR encontrada.</td></tr> : null}
+                {!filteredIvrRules.length ? <tr><td colSpan={2} className="pbx-td opacity-75">Nenhuma regra IVR encontrada.</td></tr> : null}
               </tbody>
             </table>
           </div>

@@ -125,7 +125,7 @@ export function WhatsAppIvrPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>

@@ -36,32 +36,6 @@ import { Button } from '../styles/Button';
 import { CrudPageBase } from '../modules/crud-base';
 
 const STAGE_ORDER = ['visitor', 'lead', 'mql', 'sql', 'customer'];
-const SURFACE_STYLE = {
-  background: 'var(--color-bg-elevated)',
-  border: '1px solid var(--color-border-default)',
-  borderRadius: '12px',
-  padding: '16px',
-  boxShadow: '0 10px 24px rgba(0, 0, 0, 0.12)',
-};
-const CARD_STYLE = {
-  padding: '8px 12px',
-  border: '1px solid var(--color-border-default)',
-  borderRadius: '8px',
-  background: 'var(--color-bg-primary)',
-};
-const MUTED_TEXT_STYLE = {
-  color: 'var(--color-text-secondary)',
-};
-const TABLE_STYLE = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  fontSize: '13px',
-};
-const TABLE_CELL_STYLE = {
-  padding: '6px',
-  borderBottom: '1px solid var(--color-border-default)',
-  color: 'var(--color-text-primary)',
-};
 
 function toSafeString(value) {
   return value == null ? '' : String(value).trim();
@@ -855,7 +829,7 @@ export function MarketingPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -868,7 +842,7 @@ export function MarketingPage() {
     <CrudPageBase>
       <ToastContainer />
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>🧲 Marketing v1</h1>
         </div>
         <div className="support-controls">
@@ -879,15 +853,10 @@ export function MarketingPage() {
       </div>
 
       {googleAdsSettings.enabled === true && googleAdsAttributionExceptions?.alert?.triggered === true && (
-        <div style={{
-          marginBottom: '16px',
-          padding: '14px 16px',
-          borderRadius: '12px',
-          ...attributionAlertUi,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="mb-4 px-4 py-3.5 rounded-xl" style={{ ...attributionAlertUi }}>
+          <div className="flex flex-wrap justify-between items-center gap-3">
             <div>
-              <strong style={{ display: 'block', marginBottom: '4px' }}>
+              <strong className="block mb-1">
                 Google Ads: {attributionAlertUi.label} de atribuição ausente
               </strong>
               <span>
@@ -945,27 +914,27 @@ export function MarketingPage() {
         </div>
       </div>
 
-      <div style={{ padding: '24px', paddingTop: 0 }}>
-        <p style={{ ...MUTED_TEXT_STYLE, marginBottom: '20px' }}>
+      <div className="px-6 pb-6">
+        <p className="text-muted mb-5">
           Gestão de forms, leads, scoring, campanhas e jornada/funil operacional.
         </p>
 
-        <div style={{ display: 'grid', gap: '16px' }}>
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Google Ads</h2>
-            <p style={{ ...MUTED_TEXT_STYLE, marginBottom: '12px' }}>
+        <div className="form-grid">
+          <section className="marketing-surface">
+            <h2 className="mb-2">Google Ads</h2>
+            <p className="text-muted mb-3">
               Configure credenciais, crie conversões offline e dispare upload manual.
             </p>
-            <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="form-grid form-grid-2col">
+              <label className="flex items-center gap-2">
                 <input type="checkbox" checked={googleAdsSettings.enabled === true} onChange={(e) => setGoogleAdsSettings((s) => ({ ...s, enabled: e.target.checked }))} />
                 Integração habilitada
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label className="flex items-center gap-2">
                 <input type="checkbox" checked={googleAdsSettings.dryRun !== false} onChange={(e) => setGoogleAdsSettings((s) => ({ ...s, dryRun: e.target.checked }))} />
                 Validate only (dry-run)
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label className="flex items-center gap-2">
                 <input type="checkbox" checked={googleAdsSettings.autoUpload === true} onChange={(e) => setGoogleAdsSettings((s) => ({ ...s, autoUpload: e.target.checked }))} />
                 Auto upload
               </label>
@@ -979,20 +948,20 @@ export function MarketingPage() {
               <input type="password" value={googleAdsSettings.clientSecret || ''} onChange={(e) => setGoogleAdsSettings((s) => ({ ...s, clientSecret: e.target.value }))} placeholder={googleAdsSettings.hasClientSecret ? 'Client Secret salvo' : 'Client Secret'} />
               <input type="password" value={googleAdsSettings.refreshToken || ''} onChange={(e) => setGoogleAdsSettings((s) => ({ ...s, refreshToken: e.target.value }))} placeholder={googleAdsSettings.hasRefreshToken ? 'Refresh Token salvo' : 'Refresh Token'} />
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div className="flex gap-2 mt-3 flex-wrap">
               <button onClick={handleSaveGoogleAdsSettings} disabled={loading} className="btn-primary px-4 py-2 text-sm">Salvar Google Ads</button>
               <button onClick={handleUploadGoogleAdsConversions} disabled={loading} className="btn-default px-4 py-2 text-sm">Enviar pendências</button>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-border-default)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="mt-5 pt-4 border-t border-border-default">
+              <div className="flex flex-wrap justify-between items-center gap-3">
                 <div>
-                  <h3 style={{ margin: 0, marginBottom: '6px' }}>Performance e recomendações</h3>
-                  <p style={{ ...MUTED_TEXT_STYLE, margin: 0 }}>
+                  <h3 className="m-0 mb-1.5">Performance e recomendações</h3>
+                  <p className="text-muted m-0">
                     Sincronize keywords e termos pesquisados, analise o portfólio e aplique recomendações direto daqui.
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="flex gap-2 flex-wrap">
                   <input type="date" value={googleAdsInsightFilters.startDate} onChange={(e) => setGoogleAdsInsightFilters((s) => ({ ...s, startDate: e.target.value }))} />
                   <input type="date" value={googleAdsInsightFilters.endDate} onChange={(e) => setGoogleAdsInsightFilters((s) => ({ ...s, endDate: e.target.value }))} />
                   <button onClick={handleSyncGoogleAdsInsights} disabled={loading || googleAdsSettings.enabled !== true} className="btn-default px-4 py-2 text-sm">Sincronizar</button>
@@ -1002,47 +971,47 @@ export function MarketingPage() {
               </div>
 
               {googleAdsSyncResult?.ok && (
-                <div style={{ ...CARD_STYLE, marginTop: '12px' }}>
+                <div className="marketing-card mt-3">
                   Último sync: {formatMetricNumber(googleAdsSyncResult.keywordSynced)} keywords e {formatMetricNumber(googleAdsSyncResult.searchTermSynced)} termos entre {googleAdsSyncResult.startDate} e {googleAdsSyncResult.endDate}.
                 </div>
               )}
 
               {googleAdsKeywordAnalysis?.ai?.summary && (
-                <div style={{ ...CARD_STYLE, marginTop: '12px' }}>
+                <div className="marketing-card mt-3">
                   <strong>Resumo IA</strong>
-                  <div style={{ marginTop: '6px', color: 'var(--color-text-secondary)' }}>{googleAdsKeywordAnalysis.ai.summary}</div>
+                  <div className="mt-1.5 text-muted">{googleAdsKeywordAnalysis.ai.summary}</div>
                 </div>
               )}
 
-              <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '12px' }}>
-                <div style={CARD_STYLE}>
-                  <div style={MUTED_TEXT_STYLE}>Keywords analisadas</div>
-                  <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywords || 0)}</strong>
+              <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                <div className="marketing-card">
+                  <div className="text-muted">Keywords analisadas</div>
+                  <strong className="text-2xl">{formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywords || 0)}</strong>
                 </div>
-                <div style={CARD_STYLE}>
-                  <div style={MUTED_TEXT_STYLE}>Search terms analisados</div>
-                  <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsKeywordAnalysis?.totals?.searchTerms || 0)}</strong>
+                <div className="marketing-card">
+                  <div className="text-muted">Search terms analisados</div>
+                  <strong className="text-2xl">{formatMetricNumber(googleAdsKeywordAnalysis?.totals?.searchTerms || 0)}</strong>
                 </div>
-                <div style={CARD_STYLE}>
-                  <div style={MUTED_TEXT_STYLE}>Custo de keywords</div>
-                  <strong style={{ fontSize: '22px' }}>R$ {formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywordCost || 0, 2)}</strong>
+                <div className="marketing-card">
+                  <div className="text-muted">Custo de keywords</div>
+                  <strong className="text-2xl">R$ {formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywordCost || 0, 2)}</strong>
                 </div>
-                <div style={CARD_STYLE}>
-                  <div style={MUTED_TEXT_STYLE}>Valor de conversão</div>
-                  <strong style={{ fontSize: '22px' }}>R$ {formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywordConversionValue || 0, 2)}</strong>
+                <div className="marketing-card">
+                  <div className="text-muted">Valor de conversão</div>
+                  <strong className="text-2xl">R$ {formatMetricNumber(googleAdsKeywordAnalysis?.totals?.keywordConversionValue || 0, 2)}</strong>
                 </div>
               </div>
 
-              <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-                <h3 style={{ marginBottom: '8px' }}>Recomendações</h3>
-                <table style={TABLE_STYLE}>
+              <div className="mt-4 overflow-x-auto">
+                <h3 className="mb-2">Recomendações</h3>
+                <table className="marketing-table">
                   <thead>
                     <tr>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Ação</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Termo / keyword</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Confiança</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Justificativa</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Operação</th>
+                      <th className="marketing-td text-left">Ação</th>
+                      <th className="marketing-td text-left">Termo / keyword</th>
+                      <th className="marketing-td text-left">Confiança</th>
+                      <th className="marketing-td text-left">Justificativa</th>
+                      <th className="marketing-td text-left">Operação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1051,11 +1020,11 @@ export function MarketingPage() {
                       const actionKey = [actionPayload.action, actionPayload.campaignId, actionPayload.adGroupId, actionPayload.keywordId || actionPayload.keywordText || index].join(':');
                       return (
                         <tr key={actionKey}>
-                          <td style={TABLE_CELL_STYLE}>{normalizeActionLabel(item.action)}</td>
-                          <td style={TABLE_CELL_STYLE}>{item.term || item.keywordText || item.keywordId || '-'}</td>
-                          <td style={TABLE_CELL_STYLE}>{formatMetricNumber(Number(item.confidence || 0) * 100, 0)}%</td>
-                          <td style={TABLE_CELL_STYLE}>{item.rationale || '-'}</td>
-                          <td style={TABLE_CELL_STYLE}>
+                          <td className="marketing-td">{normalizeActionLabel(item.action)}</td>
+                          <td className="marketing-td">{item.term || item.keywordText || item.keywordId || '-'}</td>
+                          <td className="marketing-td">{formatMetricNumber(Number(item.confidence || 0) * 100, 0)}%</td>
+                          <td className="marketing-td">{item.rationale || '-'}</td>
+                          <td className="marketing-td">
                             <button
                               onClick={() => handleApplyGoogleAdsRecommendation(item)}
                               disabled={loading || applyingRecommendationKey === actionKey || !canApplyRecommendation(item)}
@@ -1069,22 +1038,22 @@ export function MarketingPage() {
                     })}
                     {(!googleAdsKeywordAnalysis?.recommendations || googleAdsKeywordAnalysis.recommendations.length === 0) && (
                       <tr>
-                        <td colSpan={5} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhuma recomendação disponível para a janela informada</td>
+                        <td colSpan={5} className="marketing-td text-muted">Nenhuma recomendação disponível para a janela informada</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
 
-              <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-                <h3 style={{ marginBottom: '8px' }}>Fila persistida</h3>
-                <table style={TABLE_STYLE}>
+              <div className="mt-4 overflow-x-auto">
+                <h3 className="mb-2">Fila persistida</h3>
+                <table className="marketing-table">
                   <thead>
                     <tr>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Título</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Status</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Prioridade</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Ação</th>
+                      <th className="marketing-td text-left">Título</th>
+                      <th className="marketing-td text-left">Status</th>
+                      <th className="marketing-td text-left">Prioridade</th>
+                      <th className="marketing-td text-left">Ação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1092,14 +1061,14 @@ export function MarketingPage() {
                       const canApply = item.status === 'approved' || item.status === 'open';
                       return (
                         <tr key={item.id}>
-                          <td style={TABLE_CELL_STYLE}>
+                          <td className="marketing-td">
                             <div>{item.title || 'Recomendação'}</div>
-                            <div style={{ ...MUTED_TEXT_STYLE, fontSize: '12px' }}>{item.description || '-'}</div>
+                            <div className="text-muted text-xs">{item.description || '-'}</div>
                           </td>
-                          <td style={TABLE_CELL_STYLE}>{item.status || '-'}</td>
-                          <td style={TABLE_CELL_STYLE}>{item.priority || '-'}</td>
-                          <td style={TABLE_CELL_STYLE}>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <td className="marketing-td">{item.status || '-'}</td>
+                          <td className="marketing-td">{item.priority || '-'}</td>
+                          <td className="marketing-td">
+                            <div className="flex gap-1.5 flex-wrap">
                               <button
                                 onClick={() => handleDecisionPersistedRecommendation(item.id, 'approved')}
                                 disabled={loading || item.status === 'approved' || applyingRecommendationKey === `decision:${item.id}:approved`}
@@ -1128,38 +1097,38 @@ export function MarketingPage() {
                     })}
                     {(!googleAdsPersistedRecommendations || googleAdsPersistedRecommendations.length === 0) && (
                       <tr>
-                        <td colSpan={4} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhuma recomendação persistida ainda</td>
+                        <td colSpan={4} className="marketing-td text-muted">Nenhuma recomendação persistida ainda</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
 
-              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: '16px' }}>
+              <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
                 <div>
-                  <h3 style={{ marginBottom: '8px' }}>Top keywords por custo</h3>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={TABLE_STYLE}>
+                  <h3 className="mb-2">Top keywords por custo</h3>
+                  <div className="overflow-x-auto">
+                    <table className="marketing-table">
                       <thead>
                         <tr>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Keyword</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Cliques</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Custo</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Conv.</th>
+                          <th className="marketing-td text-left">Keyword</th>
+                          <th className="marketing-td text-left">Cliques</th>
+                          <th className="marketing-td text-left">Custo</th>
+                          <th className="marketing-td text-left">Conv.</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(googleAdsKeywordPerformance || []).slice(0, 8).map((item) => (
                           <tr key={`${item.keywordId}-${item.matchType}`}> 
-                            <td style={TABLE_CELL_STYLE}>{item.keywordText || '-'}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.clicks || 0)}</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.cost || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.conversions || 0, 2)}</td>
+                            <td className="marketing-td">{item.keywordText || '-'}</td>
+                            <td className="marketing-td">{formatMetricNumber(item.clicks || 0)}</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.cost || 0, 2)}</td>
+                            <td className="marketing-td">{formatMetricNumber(item.conversions || 0, 2)}</td>
                           </tr>
                         ))}
                         {(!googleAdsKeywordPerformance || googleAdsKeywordPerformance.length === 0) && (
                           <tr>
-                            <td colSpan={4} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Sem dados de keywords sincronizados</td>
+                            <td colSpan={4} className="marketing-td text-muted">Sem dados de keywords sincronizados</td>
                           </tr>
                         )}
                       </tbody>
@@ -1168,29 +1137,29 @@ export function MarketingPage() {
                 </div>
 
                 <div>
-                  <h3 style={{ marginBottom: '8px' }}>Top search terms por custo</h3>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={TABLE_STYLE}>
+                  <h3 className="mb-2">Top search terms por custo</h3>
+                  <div className="overflow-x-auto">
+                    <table className="marketing-table">
                       <thead>
                         <tr>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Search term</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Cliques</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Custo</th>
-                          <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Conv.</th>
+                          <th className="marketing-td text-left">Search term</th>
+                          <th className="marketing-td text-left">Cliques</th>
+                          <th className="marketing-td text-left">Custo</th>
+                          <th className="marketing-td text-left">Conv.</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(googleAdsSearchTermPerformance || []).slice(0, 8).map((item, index) => (
                           <tr key={`${item.searchTerm || 'term'}-${index}`}> 
-                            <td style={TABLE_CELL_STYLE}>{item.searchTerm || '-'}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.clicks || 0)}</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.cost || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.conversions || 0, 2)}</td>
+                            <td className="marketing-td">{item.searchTerm || '-'}</td>
+                            <td className="marketing-td">{formatMetricNumber(item.clicks || 0)}</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.cost || 0, 2)}</td>
+                            <td className="marketing-td">{formatMetricNumber(item.conversions || 0, 2)}</td>
                           </tr>
                         ))}
                         {(!googleAdsSearchTermPerformance || googleAdsSearchTermPerformance.length === 0) && (
                           <tr>
-                            <td colSpan={4} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Sem dados de search terms sincronizados</td>
+                            <td colSpan={4} className="marketing-td text-muted">Sem dados de search terms sincronizados</td>
                           </tr>
                         )}
                       </tbody>
@@ -1199,15 +1168,15 @@ export function MarketingPage() {
                 </div>
               </div>
 
-              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-border-default)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="mt-5 pt-4 border-t border-border-default">
+                <div className="flex flex-wrap justify-between items-center gap-3">
                   <div>
-                    <h3 style={{ margin: 0, marginBottom: '6px' }}>ROI e ROAS</h3>
-                    <p style={{ ...MUTED_TEXT_STYLE, margin: 0 }}>
+                    <h3 className="m-0 mb-1.5">ROI e ROAS</h3>
+                    <p className="text-muted m-0">
                       Breakdown financeiro do Google Ads por campanha, grupo, keyword ou search term com base no custo sincronizado e no valor de conversão.
                     </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div className="flex gap-2 flex-wrap">
                     <select value={googleAdsRoiEntity} onChange={(e) => setGoogleAdsRoiEntity(e.target.value)}>
                       <option value="campaign">Campanha</option>
                       <option value="ad_group">Ad group</option>
@@ -1224,53 +1193,53 @@ export function MarketingPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: '12px' }}>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>ROAS keywords</div>
-                    <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsRoiData?.summary?.keywords?.roas || 0, 2)}</strong>
+                <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                  <div className="marketing-card">
+                    <div className="text-muted">ROAS keywords</div>
+                    <strong className="text-2xl">{formatMetricNumber(googleAdsRoiData?.summary?.keywords?.roas || 0, 2)}</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>ROI keywords</div>
-                    <strong style={{ fontSize: '22px' }}>{formatMetricNumber((googleAdsRoiData?.summary?.keywords?.roi || 0) * 100, 0)}%</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">ROI keywords</div>
+                    <strong className="text-2xl">{formatMetricNumber((googleAdsRoiData?.summary?.keywords?.roi || 0) * 100, 0)}%</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>Custo keywords</div>
-                    <strong style={{ fontSize: '22px' }}>R$ {formatMetricNumber(googleAdsRoiData?.summary?.keywords?.cost || 0, 2)}</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">Custo keywords</div>
+                    <strong className="text-2xl">R$ {formatMetricNumber(googleAdsRoiData?.summary?.keywords?.cost || 0, 2)}</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>Valor keywords</div>
-                    <strong style={{ fontSize: '22px' }}>R$ {formatMetricNumber(googleAdsRoiData?.summary?.keywords?.conversionValue || 0, 2)}</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">Valor keywords</div>
+                    <strong className="text-2xl">R$ {formatMetricNumber(googleAdsRoiData?.summary?.keywords?.conversionValue || 0, 2)}</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>Receita real reconciliada</div>
-                    <strong style={{ fontSize: '22px' }}>R$ {formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.internalRevenue || 0, 2)}</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">Receita real reconciliada</div>
+                    <strong className="text-2xl">R$ {formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.internalRevenue || 0, 2)}</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>ROAS reconciliado</div>
-                    <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.reconciledRoas || 0, 2)}</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">ROAS reconciliado</div>
+                    <strong className="text-2xl">{formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.reconciledRoas || 0, 2)}</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>ROI reconciliado</div>
-                    <strong style={{ fontSize: '22px' }}>{formatMetricNumber((googleAdsRoiData?.summary?.reconciled?.reconciledRoi || 0) * 100, 0)}%</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">ROI reconciliado</div>
+                    <strong className="text-2xl">{formatMetricNumber((googleAdsRoiData?.summary?.reconciled?.reconciledRoi || 0) * 100, 0)}%</strong>
                   </div>
-                  <div style={CARD_STYLE}>
-                    <div style={MUTED_TEXT_STYLE}>Pedidos atribuídos</div>
-                    <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.attributedOrders || 0)}</strong>
+                  <div className="marketing-card">
+                    <div className="text-muted">Pedidos atribuídos</div>
+                    <strong className="text-2xl">{formatMetricNumber(googleAdsRoiData?.summary?.reconciled?.attributedOrders || 0)}</strong>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-                  <table style={TABLE_STYLE}>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="marketing-table">
                     <thead>
                       <tr>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Entidade</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Custo</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Valor</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Margem</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>ROAS</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>ROI</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Receita real</th>
-                        <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>ROAS real</th>
+                        <th className="marketing-td text-left">Entidade</th>
+                        <th className="marketing-td text-left">Custo</th>
+                        <th className="marketing-td text-left">Valor</th>
+                        <th className="marketing-td text-left">Margem</th>
+                        <th className="marketing-td text-left">ROAS</th>
+                        <th className="marketing-td text-left">ROI</th>
+                        <th className="marketing-td text-left">Receita real</th>
+                        <th className="marketing-td text-left">ROAS real</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1278,72 +1247,73 @@ export function MarketingPage() {
                         const label = item.searchTerm || item.keywordText || item.adGroupName || item.campaignName || item.campaignId || `item-${index}`;
                         return (
                           <tr key={`${googleAdsRoiEntity}-${label}-${index}`}>
-                            <td style={TABLE_CELL_STYLE}>{label}</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.cost || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.conversionValue || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.margin || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.roas || 0, 2)}</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber((item.roi || 0) * 100, 0)}%</td>
-                            <td style={TABLE_CELL_STYLE}>R$ {formatMetricNumber(item.internalRevenue || 0, 2)} ({formatMetricNumber(item.attributedOrders || 0)})</td>
-                            <td style={TABLE_CELL_STYLE}>{formatMetricNumber(item.reconciledRoas || 0, 2)}</td>
+                            <td className="marketing-td">{label}</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.cost || 0, 2)}</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.conversionValue || 0, 2)}</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.margin || 0, 2)}</td>
+                            <td className="marketing-td">{formatMetricNumber(item.roas || 0, 2)}</td>
+                            <td className="marketing-td">{formatMetricNumber((item.roi || 0) * 100, 0)}%</td>
+                            <td className="marketing-td">R$ {formatMetricNumber(item.internalRevenue || 0, 2)} ({formatMetricNumber(item.attributedOrders || 0)})</td>
+                            <td className="marketing-td">{formatMetricNumber(item.reconciledRoas || 0, 2)}</td>
                           </tr>
                         );
                       })}
                       {(!googleAdsRoiData?.items || googleAdsRoiData.items.length === 0) && (
                         <tr>
-                          <td colSpan={8} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Sem dados de ROI para a entidade selecionada</td>
+                          <td colSpan={8} className="marketing-td text-muted">Sem dados de ROI para a entidade selecionada</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
 
-                <div style={{ ...SURFACE_STYLE, marginTop: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="marketing-surface mt-4">
+                  <div className="flex flex-wrap justify-between items-center gap-3">
                     <div>
-                      <h3 style={{ margin: 0, marginBottom: '6px' }}>Exceções de atribuição</h3>
-                      <p style={{ ...MUTED_TEXT_STYLE, margin: 0 }}>
+                      <h3 className="m-0 mb-1.5">Exceções de atribuição</h3>
+                      <p className="text-muted m-0">
                         Pedidos sem `marketingAttribution` detectados no event ledger nos últimos {googleAdsAttributionExceptions?.windowDays || googleAdsAttributionWindowDays} dias.
                       </p>
                     </div>
-                    <div style={{
+                    <div className="mb-4 px-4 py-3.5 rounded-xl" style={{
                       padding: '8px 12px',
                       borderRadius: '999px',
                       fontSize: '12px',
                       fontWeight: 700,
+            
                       ...attributionAlertUi,
-                    }}>
+        }}>
                       {attributionAlertUi.label}
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginTop: '12px' }}>
-                    <div style={CARD_STYLE}>
-                      <div style={MUTED_TEXT_STYLE}>Sem atribuição no período</div>
-                      <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsAttributionExceptions?.summary?.recentMissing || 0)}</strong>
+                  <div className="grid gap-3 mt-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                    <div className="marketing-card">
+                      <div className="text-muted">Sem atribuição no período</div>
+                      <strong className="text-2xl">{formatMetricNumber(googleAdsAttributionExceptions?.summary?.recentMissing || 0)}</strong>
                     </div>
-                    <div style={CARD_STYLE}>
-                      <div style={MUTED_TEXT_STYLE}>Pedidos distintos</div>
-                      <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsAttributionExceptions?.summary?.distinctOrdersRecent || 0)}</strong>
+                    <div className="marketing-card">
+                      <div className="text-muted">Pedidos distintos</div>
+                      <strong className="text-2xl">{formatMetricNumber(googleAdsAttributionExceptions?.summary?.distinctOrdersRecent || 0)}</strong>
                     </div>
-                    <div style={CARD_STYLE}>
-                      <div style={MUTED_TEXT_STYLE}>Acumulado histórico</div>
-                      <strong style={{ fontSize: '22px' }}>{formatMetricNumber(googleAdsAttributionExceptions?.summary?.totalMissing || 0)}</strong>
+                    <div className="marketing-card">
+                      <div className="text-muted">Acumulado histórico</div>
+                      <strong className="text-2xl">{formatMetricNumber(googleAdsAttributionExceptions?.summary?.totalMissing || 0)}</strong>
                     </div>
-                    <div style={CARD_STYLE}>
-                      <div style={MUTED_TEXT_STYLE}>Última ocorrência</div>
-                      <strong style={{ fontSize: '14px' }}>{formatDateTime(googleAdsAttributionExceptions?.summary?.lastOccurredAt)}</strong>
+                    <div className="marketing-card">
+                      <div className="text-muted">Última ocorrência</div>
+                      <strong className="text-sm">{formatDateTime(googleAdsAttributionExceptions?.summary?.lastOccurredAt)}</strong>
                     </div>
                   </div>
 
-                  <div style={{ ...CARD_STYLE, marginTop: '12px' }}>
-                    <div style={{ ...MUTED_TEXT_STYLE, marginBottom: '4px' }}>Status do alerta automático</div>
+                  <div className="marketing-card mt-3">
+                    <div className="text-muted mb-1">Status do alerta automático</div>
                     <strong>
                       {googleAdsAttributionExceptions?.alert?.triggered
                         ? `${attributionAlertUi.label}: crescimento ${formatMetricNumber(googleAdsAttributionExceptions?.alert?.growthFactor || 0, 2)}x`
                         : 'Sem crescimento anormal no momento'}
                     </strong>
-                    <div style={{ ...MUTED_TEXT_STYLE, marginTop: '4px' }}>
+                    <div className="text-muted mt-1">
                       Janela: {formatMetricNumber(googleAdsAttributionExceptions?.alert?.windowDays || 0)} dia(s)
                       {' '}| Atual: {formatMetricNumber(googleAdsAttributionExceptions?.alert?.currentCount || 0)}
                       {' '}| Anterior: {formatMetricNumber(googleAdsAttributionExceptions?.alert?.previousCount || 0)}
@@ -1351,46 +1321,46 @@ export function MarketingPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)', marginTop: '16px' }}>
+                  <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)' }}>
                     <div>
-                      <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Por origem</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h4 className="mt-0 mb-2">Por origem</h4>
+                      <div className="flex flex-col gap-2">
                         {(googleAdsAttributionExceptions?.bySource || []).map((item) => (
-                          <div key={item.source} style={CARD_STYLE}>
+                          <div key={item.source} className="marketing-card">
                             <strong>{item.source}</strong>
-                            <div style={MUTED_TEXT_STYLE}>Período: {formatMetricNumber(item.recent)} | Histórico: {formatMetricNumber(item.total)}</div>
+                            <div className="text-muted">Período: {formatMetricNumber(item.recent)} | Histórico: {formatMetricNumber(item.total)}</div>
                           </div>
                         ))}
                         {(!googleAdsAttributionExceptions?.bySource || googleAdsAttributionExceptions.bySource.length === 0) && (
-                          <div style={CARD_STYLE}>Nenhuma origem com exceção registrada.</div>
+                          <div className="marketing-card">Nenhuma origem com exceção registrada.</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Últimos pedidos afetados</h4>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={TABLE_STYLE}>
+                      <h4 className="mt-0 mb-2">Últimos pedidos afetados</h4>
+                      <div className="overflow-x-auto">
+                        <table className="marketing-table">
                           <thead>
                             <tr>
-                              <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Quando</th>
-                              <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Pedido</th>
-                              <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Origem</th>
-                              <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Correlation</th>
+                              <th className="marketing-td text-left">Quando</th>
+                              <th className="marketing-td text-left">Pedido</th>
+                              <th className="marketing-td text-left">Origem</th>
+                              <th className="marketing-td text-left">Correlation</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(googleAdsAttributionExceptions?.items || []).map((item) => (
                               <tr key={item.id}>
-                                <td style={TABLE_CELL_STYLE}>{formatDateTime(item.occurredAt)}</td>
-                                <td style={TABLE_CELL_STYLE}>{item.payload?.orderNumber || item.orderId || '-'}</td>
-                                <td style={TABLE_CELL_STYLE}>{item.source || '-'}</td>
-                                <td style={TABLE_CELL_STYLE}>{item.correlationId || '-'}</td>
+                                <td className="marketing-td">{formatDateTime(item.occurredAt)}</td>
+                                <td className="marketing-td">{item.payload?.orderNumber || item.orderId || '-'}</td>
+                                <td className="marketing-td">{item.source || '-'}</td>
+                                <td className="marketing-td">{item.correlationId || '-'}</td>
                               </tr>
                             ))}
                             {(!googleAdsAttributionExceptions?.items || googleAdsAttributionExceptions.items.length === 0) && (
                               <tr>
-                                <td colSpan={4} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhuma exceção recente.</td>
+                                <td colSpan={4} className="marketing-td text-muted">Nenhuma exceção recente.</td>
                               </tr>
                             )}
                           </tbody>
@@ -1402,7 +1372,7 @@ export function MarketingPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: '16px' }}>
+            <div className="grid gap-2.5 mt-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
               <input value={googleAdsConversionData.leadId} onChange={(e) => setGoogleAdsConversionData((s) => ({ ...s, leadId: e.target.value }))} placeholder="Lead ID" />
               <select value={googleAdsConversionData.clickIdType} onChange={(e) => setGoogleAdsConversionData((s) => ({ ...s, clickIdType: e.target.value }))}>
                 <option value="gclid">gclid</option>
@@ -1415,34 +1385,34 @@ export function MarketingPage() {
               <input value={googleAdsConversionData.conversionValue} onChange={(e) => setGoogleAdsConversionData((s) => ({ ...s, conversionValue: e.target.value }))} placeholder="Valor" />
               <input value={googleAdsConversionData.currencyCode} onChange={(e) => setGoogleAdsConversionData((s) => ({ ...s, currencyCode: e.target.value }))} placeholder="Moeda" />
             </div>
-            <button onClick={handleCreateGoogleAdsConversion} disabled={loading} className="btn-primary px-4 py-2 text-sm" style={{ marginTop: '12px' }}>
+            <button onClick={handleCreateGoogleAdsConversion} disabled={loading} className="btn-primary px-4 py-2 text-sm mt-3">
               Criar conversão offline
             </button>
 
-            <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-              <table style={TABLE_STYLE}>
+            <div className="mt-4 overflow-x-auto">
+              <table className="marketing-table">
                 <thead>
                   <tr>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Lead</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Tipo</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Click ID</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Conversão</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Status</th>
+                    <th className="marketing-td text-left">Lead</th>
+                    <th className="marketing-td text-left">Tipo</th>
+                    <th className="marketing-td text-left">Click ID</th>
+                    <th className="marketing-td text-left">Conversão</th>
+                    <th className="marketing-td text-left">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(googleAdsConversions || []).map((item) => (
                     <tr key={item.id}>
-                      <td style={TABLE_CELL_STYLE}>{item.lead_id || '-'}</td>
-                      <td style={TABLE_CELL_STYLE}>{item.click_id_type}</td>
-                      <td style={TABLE_CELL_STYLE}>{item.click_id}</td>
-                      <td style={TABLE_CELL_STYLE}>{item.conversion_name}</td>
-                      <td style={TABLE_CELL_STYLE}>{item.status}</td>
+                      <td className="marketing-td">{item.lead_id || '-'}</td>
+                      <td className="marketing-td">{item.click_id_type}</td>
+                      <td className="marketing-td">{item.click_id}</td>
+                      <td className="marketing-td">{item.conversion_name}</td>
+                      <td className="marketing-td">{item.status}</td>
                     </tr>
                   ))}
                   {(!googleAdsConversions || googleAdsConversions.length === 0) && (
                     <tr>
-                      <td colSpan={5} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhuma conversão offline cadastrada</td>
+                      <td colSpan={5} className="marketing-td text-muted">Nenhuma conversão offline cadastrada</td>
                     </tr>
                   )}
                 </tbody>
@@ -1450,12 +1420,12 @@ export function MarketingPage() {
             </div>
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Links rastreáveis</h2>
-            <p style={{ ...MUTED_TEXT_STYLE, marginBottom: '12px' }}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Links rastreáveis</h2>
+            <p className="text-muted mb-3">
               Gere links com UTM e acompanhe cliques.
             </p>
-            <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div className="form-grid form-grid-2col">
               <input
                 value={linkData.name}
                 onChange={(e) => setLinkData({ ...linkData, name: e.target.value })}
@@ -1497,19 +1467,19 @@ export function MarketingPage() {
                 placeholder="Código (opcional)"
               />
             </div>
-            <button onClick={handleCreateLink} disabled={loading} className="btn-primary px-4 py-2 text-sm" style={{ marginTop: '12px' }}>
+            <button onClick={handleCreateLink} disabled={loading} className="btn-primary px-4 py-2 text-sm mt-3">
               Criar link
             </button>
 
-            <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-              <table style={TABLE_STYLE}>
+            <div className="mt-4 overflow-x-auto">
+              <table className="marketing-table">
                 <thead>
                   <tr>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Nome</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Código</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Destino</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Cliques</th>
-                    <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Short URL</th>
+                    <th className="marketing-td text-left">Nome</th>
+                    <th className="marketing-td text-left">Código</th>
+                    <th className="marketing-td text-left">Destino</th>
+                    <th className="marketing-td text-left">Cliques</th>
+                    <th className="marketing-td text-left">Short URL</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1517,11 +1487,11 @@ export function MarketingPage() {
                     const shortUrl = buildApiUrl(`/mkt/l/${encodeURIComponent(link.code)}`);
                     return (
                       <tr key={link.id}>
-                        <td style={TABLE_CELL_STYLE}>{link.name}</td>
-                        <td style={TABLE_CELL_STYLE}>{link.code}</td>
-                        <td style={TABLE_CELL_STYLE}>{link.target_url || link.targetUrl}</td>
-                        <td style={TABLE_CELL_STYLE}>{link.click_count ?? 0}</td>
-                        <td style={TABLE_CELL_STYLE}>
+                        <td className="marketing-td">{link.name}</td>
+                        <td className="marketing-td">{link.code}</td>
+                        <td className="marketing-td">{link.target_url || link.targetUrl}</td>
+                        <td className="marketing-td">{link.click_count ?? 0}</td>
+                        <td className="marketing-td">
                           <a href={shortUrl} target="_blank" rel="noreferrer">{shortUrl}</a>
                         </td>
                       </tr>
@@ -1529,21 +1499,21 @@ export function MarketingPage() {
                   })}
                   {(!links || links.length === 0) && (
                     <tr>
-                      <td colSpan={5} style={{ ...TABLE_CELL_STYLE, ...MUTED_TEXT_STYLE }}>Nenhum link cadastrado</td>
+                      <td colSpan={5} className="marketing-td text-muted">Nenhum link cadastrado</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </section>
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Funil de Leads</h2>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Funil de Leads</h2>
+            <div className="flex gap-3 flex-wrap">
               {Object.keys(leadStatsMap).length === 0 ? (
-                <span style={MUTED_TEXT_STYLE}>Sem dados</span>
+                <span className="text-muted">Sem dados</span>
               ) : (
                 Object.values(leadStatsMap).map((row) => (
-                  <div key={row.stage || Math.random()} style={CARD_STYLE}>
+                  <div key={row.stage || Math.random()} className="marketing-card">
                     <strong>{row.stage || 'unknown'}</strong>
                     <div>Leads: {row.count}</div>
                     <div>Score médio: {Number(row.avg_score || 0).toFixed(1)}</div>
@@ -1553,16 +1523,16 @@ export function MarketingPage() {
             </div>
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Funil visual avançado</h2>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Funil visual avançado</h2>
             {funnelRows.length === 0 ? (
-              <span style={MUTED_TEXT_STYLE}>Sem dados para o funil.</span>
+              <span className="text-muted">Sem dados para o funil.</span>
             ) : (
-              <div style={{ display: 'grid', gap: '10px' }}>
+              <div className="grid gap-2.5">
                 {funnelRows.map((row) => (
                   <div key={row.stage} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 220px', gap: '10px', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 600, textTransform: 'uppercase', fontSize: '12px' }}>{row.stage}</div>
-                    <div style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border-default)', borderRadius: '999px', overflow: 'hidden', height: '18px' }}>
+                    <div className="font-semibold uppercase text-xs">{row.stage}</div>
+                    <div className="bg-bg-primary border border-border-default rounded-full overflow-hidden h-4.5">
                       <div
                         style={{
                           width: `${row.widthPct}%`,
@@ -1571,7 +1541,7 @@ export function MarketingPage() {
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                    <div className="text-xs text-muted">
                       {row.count} lead(s)
                       {row.conversionRate != null && ` | ${row.conversionRate.toFixed(1)}% do estágio anterior`}
                     </div>
@@ -1581,30 +1551,30 @@ export function MarketingPage() {
             )}
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Jornada por origem/campanha</h2>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Jornada por origem/campanha</h2>
             {journeyRows.length === 0 ? (
-              <span style={MUTED_TEXT_STYLE}>Sem leads com metadados de jornada.</span>
+              <span className="text-muted">Sem leads com metadados de jornada.</span>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={TABLE_STYLE}>
+              <div className="overflow-x-auto">
+                <table className="marketing-table">
                   <thead>
                     <tr>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Origem</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Campanha</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Leads</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Score médio</th>
-                      <th style={{ ...TABLE_CELL_STYLE, textAlign: 'left' }}>Conversão cliente</th>
+                      <th className="marketing-td text-left">Origem</th>
+                      <th className="marketing-td text-left">Campanha</th>
+                      <th className="marketing-td text-left">Leads</th>
+                      <th className="marketing-td text-left">Score médio</th>
+                      <th className="marketing-td text-left">Conversão cliente</th>
                     </tr>
                   </thead>
                   <tbody>
                     {journeyRows.slice(0, 20).map((row) => (
                       <tr key={`${row.source}-${row.campaign}`}>
-                        <td style={TABLE_CELL_STYLE}>{row.source}</td>
-                        <td style={TABLE_CELL_STYLE}>{row.campaign}</td>
-                        <td style={TABLE_CELL_STYLE}>{row.leads}</td>
-                        <td style={TABLE_CELL_STYLE}>{row.avgScore.toFixed(1)}</td>
-                        <td style={TABLE_CELL_STYLE}>{row.conversionToCustomer.toFixed(1)}%</td>
+                        <td className="marketing-td">{row.source}</td>
+                        <td className="marketing-td">{row.campaign}</td>
+                        <td className="marketing-td">{row.leads}</td>
+                        <td className="marketing-td">{row.avgScore.toFixed(1)}</td>
+                        <td className="marketing-td">{row.conversionToCustomer.toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1613,12 +1583,12 @@ export function MarketingPage() {
             )}
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Alertas de jornada/campanha</h2>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Alertas de jornada/campanha</h2>
             {journeyAlerts.length === 0 ? (
-              <span style={MUTED_TEXT_STYLE}>Sem alertas críticos no momento.</span>
+              <span className="text-muted">Sem alertas críticos no momento.</span>
             ) : (
-              <div style={{ display: 'grid', gap: '8px' }}>
+              <div className="grid gap-2">
                 {journeyAlerts.map((alert, idx) => (
                   <div
                     key={`${alert.title}-${idx}`}
@@ -1630,17 +1600,17 @@ export function MarketingPage() {
                       background: 'var(--color-bg-primary)',
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{alert.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{alert.detail}</div>
+                    <div className="font-semibold">{alert.title}</div>
+                    <div className="text-xs text-muted">{alert.detail}</div>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Forms</h2>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Forms</h2>
+            <div className="flex gap-2 mb-3">
               <input placeholder="slug" value={formData.slug} onChange={(e) => setFormData((s) => ({ ...s, slug: e.target.value }))} />
               <input placeholder="nome" value={formData.name} onChange={(e) => setFormData((s) => ({ ...s, name: e.target.value }))} />
               <select value={formData.status} onChange={(e) => setFormData((s) => ({ ...s, status: e.target.value }))}>
@@ -1649,83 +1619,83 @@ export function MarketingPage() {
               </select>
               <button onClick={handleCreateForm} disabled={loading} className="btn-primary px-4 py-2 text-sm">Salvar</button>
             </div>
-            <table style={TABLE_STYLE}>
+            <table className="marketing-table">
               <thead>
                 <tr>
-                  <th align="left" style={TABLE_CELL_STYLE}>Slug</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Status</th>
+                  <th align="left" className="marketing-td">Slug</th>
+                  <th align="left" className="marketing-td">Nome</th>
+                  <th align="left" className="marketing-td">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {forms.map((f) => (
                   <tr key={f.id || f.slug}>
-                    <td style={TABLE_CELL_STYLE}>{f.slug}</td>
-                    <td style={TABLE_CELL_STYLE}>{f.name}</td>
-                    <td style={TABLE_CELL_STYLE}>{f.status}</td>
+                    <td className="marketing-td">{f.slug}</td>
+                    <td className="marketing-td">{f.name}</td>
+                    <td className="marketing-td">{f.status}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Leads</h2>
-            <table style={TABLE_STYLE}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Leads</h2>
+            <table className="marketing-table">
               <thead>
                 <tr>
-                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Email</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Score</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Stage</th>
+                  <th align="left" className="marketing-td">Nome</th>
+                  <th align="left" className="marketing-td">Email</th>
+                  <th align="left" className="marketing-td">Score</th>
+                  <th align="left" className="marketing-td">Stage</th>
                 </tr>
               </thead>
               <tbody>
                 {leads.map((l) => (
                   <tr key={l.id}>
-                    <td style={TABLE_CELL_STYLE}>{l.name || '-'}</td>
-                    <td style={TABLE_CELL_STYLE}>{l.email || '-'}</td>
-                    <td style={TABLE_CELL_STYLE}>{l.score}</td>
-                    <td style={TABLE_CELL_STYLE}>{l.stage}</td>
+                    <td className="marketing-td">{l.name || '-'}</td>
+                    <td className="marketing-td">{l.email || '-'}</td>
+                    <td className="marketing-td">{l.score}</td>
+                    <td className="marketing-td">{l.stage}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Scoring Rules</h2>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Scoring Rules</h2>
+            <div className="flex gap-2 mb-3">
               <input placeholder="nome" value={ruleData.name} onChange={(e) => setRuleData((s) => ({ ...s, name: e.target.value }))} />
               <input placeholder="eventType" value={ruleData.eventType} onChange={(e) => setRuleData((s) => ({ ...s, eventType: e.target.value }))} />
               <input placeholder="delta" type="number" value={ruleData.delta} onChange={(e) => setRuleData((s) => ({ ...s, delta: e.target.value }))} />
               <button onClick={handleCreateRule} disabled={loading} className="btn-primary px-4 py-2 text-sm">Salvar</button>
             </div>
-            <table style={TABLE_STYLE}>
+            <table className="marketing-table">
               <thead>
                 <tr>
-                  <th align="left" style={TABLE_CELL_STYLE}>Nome</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>EventType</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Delta</th>
-                  <th align="left" style={TABLE_CELL_STYLE}>Enabled</th>
+                  <th align="left" className="marketing-td">Nome</th>
+                  <th align="left" className="marketing-td">EventType</th>
+                  <th align="left" className="marketing-td">Delta</th>
+                  <th align="left" className="marketing-td">Enabled</th>
                 </tr>
               </thead>
               <tbody>
                 {scoringRules.map((r) => (
                   <tr key={r.id}>
-                    <td style={TABLE_CELL_STYLE}>{r.name}</td>
-                    <td style={TABLE_CELL_STYLE}>{r.event_type || r.eventType}</td>
-                    <td style={TABLE_CELL_STYLE}>{r.delta}</td>
-                    <td style={TABLE_CELL_STYLE}>{r.enabled ? 'sim' : 'nao'}</td>
+                    <td className="marketing-td">{r.name}</td>
+                    <td className="marketing-td">{r.event_type || r.eventType}</td>
+                    <td className="marketing-td">{r.delta}</td>
+                    <td className="marketing-td">{r.enabled ? 'sim' : 'nao'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </section>
 
-          <section style={SURFACE_STYLE}>
-            <h2 style={{ marginBottom: '8px' }}>Campanhas de Email</h2>
-            <div style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
+          <section className="marketing-surface">
+            <h2 className="mb-2">Campanhas de Email</h2>
+            <div className="grid gap-2 mb-3">
               <input placeholder="nome" value={campaignData.name} onChange={(e) => setCampaignData((s) => ({ ...s, name: e.target.value }))} />
               <input placeholder="assunto" value={campaignData.subject} onChange={(e) => setCampaignData((s) => ({ ...s, subject: e.target.value }))} />
               <textarea placeholder="corpo texto" rows={4} value={campaignData.bodyText} onChange={(e) => setCampaignData((s) => ({ ...s, bodyText: e.target.value }))} />
@@ -1733,7 +1703,7 @@ export function MarketingPage() {
               <button onClick={handleCreateCampaign} disabled={loading} className="btn-primary px-4 py-2 text-sm">Criar campanha (draft)</button>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="flex gap-2">
               <input placeholder="ID da campanha" value={sendCampaignId} onChange={(e) => setSendCampaignId(e.target.value)} />
               <button onClick={handleSendCampaign} disabled={loading} className="btn-default px-4 py-2 text-sm">Enviar</button>
             </div>

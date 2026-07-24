@@ -209,7 +209,7 @@ export function SupervisorPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -309,7 +309,7 @@ export function SupervisorPage() {
               Exportar CSV (Métricas)
             </Button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table className="support-table">
               <thead>
                 <tr>
@@ -359,7 +359,7 @@ export function SupervisorPage() {
               Exportar CSV (Agentes)
             </Button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table className="support-table">
               <thead>
                 <tr>
@@ -401,7 +401,7 @@ export function SupervisorPage() {
               Exportar CSV (Filas)
             </Button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table className="support-table">
               <thead>
                 <tr>
@@ -444,7 +444,7 @@ export function SupervisorPage() {
               {queueLoad.length === 0 ? (
                 <div style={{ color: 'var(--color-text-tertiary)' }}>Sem dados</div>
               ) : queueLoad.map((item, i) => (
-                <div key={`queue-${i}-${item.label}`} style={{ marginBottom: '8px' }}>
+                <div key={`queue-${i}-${item.label}`} className="mb-2">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
@@ -467,7 +467,7 @@ export function SupervisorPage() {
               {agentLoad.length === 0 ? (
                 <div style={{ color: 'var(--color-text-tertiary)' }}>Sem dados</div>
               ) : agentLoad.map((item, i) => (
-                <div key={`agent-${i}-${item.label}`} style={{ marginBottom: '8px' }}>
+                <div key={`agent-${i}-${item.label}`} className="mb-2">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>

@@ -103,7 +103,7 @@ export function MfaPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -145,7 +145,7 @@ export function MfaPage() {
           <div className="support-details-title">Setup</div>
           <Button onClick={handleSetup} disabled={loading} className="support-button">Gerar segredo</Button>
           {setupData && (
-            <div style={{ marginTop: '12px' }}>
+            <div className="mt-3">
               <div
                 style={{
                   marginBottom: '10px',
@@ -210,7 +210,7 @@ export function MfaPage() {
               </ul>
             </div>
           )}
-          <div className="support-form-group" style={{ marginTop: '12px' }}>
+          <div className="support-form-group mt-3">
             <label className="support-form-label">Token do app autenticador</label>
             <input
               className="support-form-input"

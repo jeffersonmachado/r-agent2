@@ -190,9 +190,9 @@ export function SupportConversationPane({
     || selectedTicket.status === 'paused';
 
   return (
-    <div style={{ flex: '1 1 0%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: '1 1 0%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flexShrink: 0 }}>
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        <div className="shrink-0">
           <h3 className="support-details-title">
             {isMobile ? (
               <button
@@ -266,7 +266,7 @@ export function SupportConversationPane({
           </div>
         ) : null}
 
-        <div className="support-ticket-actions" style={{ flexShrink: 0 }}>
+        <div className="support-ticket-actions shrink-0">
           {isWaitingTicket ? (
             <Button onClick={handleAssign} className="support-ticket-action-btn" data-testid="ticket-transfer-button">Atribuir Chamado</Button>
           ) : null}

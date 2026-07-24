@@ -368,7 +368,7 @@ export function AutomationsPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -416,7 +416,7 @@ export function AutomationsPage() {
             >
               <div style={{ border: '1px solid var(--border-default)', borderRadius: '8px', padding: '10px' }}>
                 <div className="text-xs text-text-secondary" style={{ marginBottom: '8px', fontWeight: 600 }}>Blocos</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {STEP_TEMPLATES.map((template) => (
                     <button
                       key={template.key}
@@ -425,7 +425,7 @@ export function AutomationsPage() {
                       className="support-button"
                       style={{ width: '100%', textAlign: 'left', padding: '8px' }}
                     >
-                      <div style={{ fontWeight: 600 }}>{template.label}</div>
+                      <div className="font-semibold">{template.label}</div>
                       <div className="text-xs text-text-tertiary">{template.description}</div>
                     </button>
                   ))}
@@ -473,7 +473,7 @@ export function AutomationsPage() {
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ fontWeight: 600 }}>{formatStepTitle(step, index)}</div>
+                          <div className="font-semibold">{formatStepTitle(step, index)}</div>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -499,7 +499,7 @@ export function AutomationsPage() {
                 {!selectedStep ? (
                   <div className="text-xs text-text-tertiary">Selecione um passo para editar seus campos.</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex flex-col gap-2">
                     <div className="support-form-group">
                       <label className="support-form-label">Nome</label>
                       <Input
@@ -642,7 +642,7 @@ export function AutomationsPage() {
                 </div>
               )}
 
-              <div style={{ marginBottom: '8px' }}>
+              <div className="mb-2">
                 <div style={{ fontWeight: 600, marginBottom: '8px' }}>Filtrar histórico</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                   <Input
@@ -673,7 +673,7 @@ export function AutomationsPage() {
               </div>
 
               {instanceHistory.length > 0 && (
-                <div style={{ overflowX: 'auto' }}>
+                <div className="overflow-x-auto">
                   <table className="support-table">
                     <thead>
                       <tr>
@@ -702,7 +702,7 @@ export function AutomationsPage() {
 
         <div className="support-details-panel">
           <div className="support-details-title">Insights de processo</div>
-          <div className="text-xs text-text-tertiary" style={{ marginBottom: '8px' }}>
+          <div className="text-xs text-text-tertiary mb-2">
             Carrega análises, simulação e inteligência para um processId.
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -757,7 +757,7 @@ export function AutomationsPage() {
           {automations.length === 0 ? (
             <div className="text-text-tertiary">Nenhuma automação cadastrada.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>

@@ -51,7 +51,7 @@ export function FaqManagementPage() {
   if (authLoading) {
     return (
       <CrudPageBase title="❓ FAQ">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>

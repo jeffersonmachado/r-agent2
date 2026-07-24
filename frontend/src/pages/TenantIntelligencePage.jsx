@@ -436,7 +436,7 @@ export function TenantIntelligencePage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -598,7 +598,7 @@ export function TenantIntelligencePage() {
                       ) : (
                         <>
                           {getEvidenceSourceOptions(item.id).length > 0 ? (
-                            <div style={{ marginBottom: '8px' }}>
+                            <div className="mb-2">
                               <label>
                                 Filtrar fonte:
                                 <select

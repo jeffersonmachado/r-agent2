@@ -291,298 +291,120 @@ export function Login() {
   const isDark = themeName === 'dark';
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      background: theme.colors.bg.primary,
-      padding: '72px 16px 20px',
-      position: 'relative',
-      overflowX: 'hidden',
-      overflowY: 'auto',
-      boxSizing: 'border-box',
-    }}>
+    <div className="shell-centered">
       {/* Background decorativo */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: isDark
-          ? 'radial-gradient(circle at 20% 50%, rgba(94, 106, 210, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)'
-          : 'radial-gradient(circle at 20% 50%, rgba(94, 106, 210, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%)',
-        pointerEvents: 'none',
-      }} />
+      <div
+        className="decorative-bg"
+        style={{
+          background: isDark
+            ? 'radial-gradient(circle at 20% 50%, rgba(94, 106, 210, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%)'
+            : 'radial-gradient(circle at 20% 50%, rgba(94, 106, 210, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%)',
+        }}
+      />
 
       {/* Seletor de tema no canto superior direito */}
       <button
         onClick={toggleTheme}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          padding: '10px 16px',
-          background: theme.colors.bg.secondary,
-          border: `1px solid ${theme.colors.border.default}`,
-          borderRadius: '8px',
-          color: theme.colors.text.secondary,
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          transition: 'all 0.2s ease',
-          zIndex: 10,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = theme.colors.bg.hover;
-          e.currentTarget.style.borderColor = theme.colors.border.hover;
-          e.currentTarget.style.color = theme.colors.text.primary;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = theme.colors.bg.secondary;
-          e.currentTarget.style.borderColor = theme.colors.border.default;
-          e.currentTarget.style.color = theme.colors.text.secondary;
-        }}
+        className="login-theme-toggle"
       >
         <span>{isDark ? '☀️' : '🌙'}</span>
         <span>{isDark ? 'Claro' : 'Escuro'}</span>
       </button>
 
-      <div style={{
-        background: theme.colors.bg.secondary,
-        padding: 'clamp(24px, 7vw, 48px)',
-        borderRadius: '16px',
-        boxShadow: isDark
-          ? '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)'
-          : '0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-        width: '100%',
-        maxWidth: 'min(420px, calc(100vw - 32px))',
-        boxSizing: 'border-box',
-        position: 'relative',
-        zIndex: 1,
-        border: `1px solid ${theme.colors.border.default}`,
-      }}>
+      <div
+        className="shell-card"
+        style={{
+          boxShadow: isDark
+            ? '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)'
+            : '0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+        }}
+      >
         {/* Logo/Ícone */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '32px',
-        }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            margin: '0 auto 16px',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            boxShadow: `0 8px 16px ${theme.colors.accent.light}`,
-          }}>
+        <div className="login-branding">
+          <div className="login-logo-wrapper">
             <img 
               src={getStaticUrl("/images/home_results_29.png")} 
-              alt="Results Logo" 
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
+              alt="Results Logo"
+              className="login-logo-img"
             />
           </div>
-          <h1 style={{
-            margin: 0,
-            marginBottom: '8px',
-            fontSize: '28px',
-            fontWeight: 600,
-            color: theme.colors.text.primary,
-            letterSpacing: '-0.5px',
-          }}>
-            Login de Agente
-          </h1>
-          <p style={{
-            margin: 0,
-            fontSize: '14px',
-            color: theme.colors.text.secondary,
-          }}>
-            Acesse o sistema de atendimento
-          </p>
+          <h1 className="login-title">Login de Agente</h1>
+          <p className="login-subtitle">Acesse o sistema de atendimento</p>
         </div>
 
         {error && (
-          <div style={{
-            padding: '12px 16px',
-            marginBottom: '24px',
-            background: `${theme.colors.status.error}15`,
-            border: `1px solid ${theme.colors.status.error}40`,
-            borderRadius: '8px',
-            color: theme.colors.status.error,
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
+          <div className="login-error-box">
             <span>⚠️</span>
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: 500,
-              fontSize: '14px',
-              color: theme.colors.text.primary,
-            }}>
-              Username
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onFocus={() => setFocusedField('username')}
-                onBlur={() => setFocusedField(null)}
-                required
-                autoFocus
-                autoComplete="username"
-                placeholder="Digite seu username"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: theme.colors.bg.primary,
-                  border: `1px solid ${focusedField === 'username' ? theme.colors.accent.primary : theme.colors.border.default}`,
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  color: theme.colors.text.primary,
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  boxShadow: focusedField === 'username' ? `0 0 0 3px ${theme.colors.accent.light}` : 'none',
-                }}
-              />
-            </div>
+          <div className="login-field">
+            <label className="form-label">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onFocus={() => setFocusedField('username')}
+              onBlur={() => setFocusedField(null)}
+              required
+              autoFocus
+              autoComplete="username"
+              placeholder="Digite seu username"
+              className={`login-input ${focusedField === 'username' ? 'login-input--focused' : ''}`}
+            />
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: 500,
-              fontSize: '14px',
-              color: theme.colors.text.primary,
-            }}>
-              Senha
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                required
-                autoComplete="current-password"
-                placeholder="Digite sua senha"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: theme.colors.bg.primary,
-                  border: `1px solid ${focusedField === 'password' ? theme.colors.accent.primary : theme.colors.border.default}`,
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  color: theme.colors.text.primary,
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  boxShadow: focusedField === 'password' ? `0 0 0 3px ${theme.colors.accent.light}` : 'none',
-                }}
-              />
-            </div>
+          <div className="login-field">
+            <label className="form-label">Senha</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
+              required
+              autoComplete="current-password"
+              placeholder="Digite sua senha"
+              className={`login-input ${focusedField === 'password' ? 'login-input--focused' : ''}`}
+            />
           </div>
 
           <Button
             type="submit"
             disabled={loading || !username || !password}
-            style={{
-              width: '100%',
-              padding: '14px',
-              fontSize: '15px',
-              fontWeight: 500,
-              marginBottom: '24px',
-            }}
+            className="login-submit-btn"
           >
             {loading ? (
               <>
-                <span style={{ marginRight: '8px' }}>⏳</span>
+                <span className="mr-2">⏳</span>
                 Entrando...
               </>
             ) : (
               <>
-                <span style={{ marginRight: '8px' }}>→</span>
+                <span className="mr-2">→</span>
                 Entrar
               </>
             )}
           </Button>
         </form>
 
-        <div style={{
-          padding: '16px',
-          background: theme.colors.bg.tertiary,
-          borderRadius: '8px',
-          fontSize: '13px',
-          color: theme.colors.text.secondary,
-          border: `1px solid ${theme.colors.border.default}`,
-        }}>
-          <div style={{
-            fontWeight: 600,
-            marginBottom: '8px',
-            color: theme.colors.text.primary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}>
+        <div className="login-info-box">
+          <div className="login-info-header">
             <span>ℹ️</span>
             <span>Primeiro acesso?</span>
           </div>
-          <div style={{
-            lineHeight: 1.5,
-          }}>
+          <p className="login-info-text">
             Crie sua conta para configurar seu ambiente.
-          </div>
+          </p>
 
-          <div style={{
-            marginTop: '12px',
-            paddingTop: '10px',
-            borderTop: `1px solid ${theme.colors.border.default}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            flexWrap: 'wrap',
-          }}>
-            <span style={{ color: theme.colors.text.tertiary }}>Ainda nao tem conta?</span>
+          <div className="login-register-row">
+            <span className="text-muted">Ainda nao tem conta?</span>
             <button
               type="button"
               onClick={() => navigate('/saas/signup')}
-              style={{
-                flex: '0 1 auto',
-                maxWidth: '100%',
-                border: `1px solid ${theme.colors.accent.primary}`,
-                background: theme.colors.bg.primary,
-                color: theme.colors.accent.primary,
-                borderRadius: '6px',
-                padding: '6px 10px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'normal',
-                textAlign: 'center',
-              }}
+              className="login-register-btn"
             >
               Criar conta SaaS
             </button>

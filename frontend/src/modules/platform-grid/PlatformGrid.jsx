@@ -72,7 +72,7 @@ export function PlatformGrid({
           <thead>
             <tr>
               {selectable ? (
-                <th className="pg-th" style={{ width: '40px' }}>
+                <th className="pg-th w-10">
                   <input
                     type="checkbox"
                     className="pg-select"

@@ -105,7 +105,7 @@ export function AIToolsPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -119,7 +119,7 @@ export function AIToolsPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>🤖 Ferramentas de IA</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>

@@ -1972,7 +1972,7 @@ export function PbxPage() {
       id: 'name',
       header: 'Nome',
       sortValue: (a) => a.name,
-      render: (a) => (<div><div style={{ fontWeight: 600 }}>{a.name}</div><div style={{ opacity: 0.75, fontSize: 12 }}>{a.description || `id: ${a.id}`}</div></div>),
+      render: (a) => (<div><div className="font-semibold">{a.name}</div><div style={{ opacity: 0.75, fontSize: 12 }}>{a.description || `id: ${a.id}`}</div></div>),
     },
     { id: 'enabled', header: 'Ativo', accessor: (a) => (a.enabled === false ? 'não' : 'sim'), sortValue: (a) => (a.enabled === false ? 0 : 1) },
     { id: 'permit', header: 'Permit', render: (a) => <code>{String(a.permit || '').slice(0, 200) || '—'}</code> },

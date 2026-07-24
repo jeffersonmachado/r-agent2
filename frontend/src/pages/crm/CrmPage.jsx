@@ -94,11 +94,11 @@ function DashboardSection() {
     return (
       <CrudPageBase>
         <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
              <h1>📊 Painel CRM</h1>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="flex-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
             <p className="text-text-secondary">Carregando painel...</p>
@@ -125,7 +125,7 @@ function DashboardSection() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>📊 Painel CRM</h1>
         </div>
       </div>

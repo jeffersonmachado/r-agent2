@@ -38,7 +38,7 @@ export function SupportEvidenceCard({
       title="Evidências relacionadas"
       subtitle="Melhor prova disponível para apoiar a resposta atual"
       badge={(
-        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+        <div className="text-xs text-text-tertiary">
           {loading ? 'Carregando…' : `${items.length} item(ns)`}
         </div>
       )}

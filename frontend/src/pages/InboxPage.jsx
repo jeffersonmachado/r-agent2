@@ -202,7 +202,7 @@ export function InboxPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -615,7 +615,7 @@ export function InboxPage() {
                     <div style={{ color: 'var(--color-text-tertiary)' }}>Sem mensagens</div>
                   )}
                   {messages.map((msg) => (
-                    <div key={msg.id || msg.timestamp} style={{ marginBottom: '8px' }}>
+                    <div key={msg.id || msg.timestamp} className="mb-2">
                       <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
                         {msg.sender === 'note' ? `Nota • ${msg.authorName || agent?.username || 'system'}` : msg.sender}
                         {' · '}{formatDate(msg.timestamp)}

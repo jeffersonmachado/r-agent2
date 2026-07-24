@@ -10,7 +10,7 @@ export function StatusTab({ systemStatus }) {
 
   if (!systemStatus) {
     return (
-      <div className="text-center py-8" style={{ color: theme.colors.text.tertiary }}>
+      <div className="text-center py-8 text-text-tertiary">
         Carregando status dos serviços...
       </div>
     );
@@ -18,7 +18,7 @@ export function StatusTab({ systemStatus }) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>Status dos Serviços</h2>
+      <h2 className="text-2xl font-bold mb-4 text-text-primary">Status dos Serviços</h2>
       
       {/* Status Geral */}
       <div className={`mb-6 p-6 rounded-lg border-2 ${getStatusColor(systemStatus.overall.status, theme)}`}>
@@ -53,9 +53,9 @@ export function StatusTab({ systemStatus }) {
                   <span className="text-xl font-bold">
                     {getStatusIcon(service.status)}
                   </span>
-                  <h3 className="text-lg font-bold" style={{ color: theme.colors.text.primary }}>{service.name}</h3>
+                  <h3 className="text-lg font-bold text-text-primary">{service.name}</h3>
                 </div>
-                <p className="text-sm mb-2" style={{ color: theme.colors.text.secondary }}>{service.description}</p>
+                <p className="text-sm mb-2 text-text-secondary">{service.description}</p>
                 <div className="inline-block px-2 py-1 rounded-full text-xs font-medium border" style={{ 
                   backgroundColor: theme.colors.bg.secondary,
                   borderColor: theme.colors.border.default,
@@ -71,8 +71,8 @@ export function StatusTab({ systemStatus }) {
               <div className="mt-3 text-sm space-y-1">
                 {Object.entries(service.details).map(([key, value]) => (
                   <div key={key}>
-                    <span className="font-medium" style={{ color: theme.colors.text.primary }}>{key}:</span>{' '}
-                    <span style={{ color: theme.colors.text.secondary }}>
+                    <span className="font-medium text-text-primary">{key}:</span>{' '}
+                    <span className="text-text-secondary">
                       {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </span>
                   </div>

@@ -117,7 +117,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
 
   if (loading) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
+      <div className="p-5 text-center">
         <p>Analisando dependências...</p>
       </div>
     );
@@ -125,7 +125,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
 
   if (!dependencyResolution) {
     return (
-      <div style={{ padding: '20px' }}>
+      <div className="p-5">
         <p>Nenhuma informação de dependências disponível.</p>
       </div>
     );
@@ -134,7 +134,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
   const { dependencies, missingDependencies, requiredSeeds, allSatisfied } = dependencyResolution;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div className="p-5 max-w-[800px] mx-auto">
       <h2 style={{ marginBottom: '20px' }}>Resolução de Dependências RPA</h2>
 
       {/* Status Geral */}
@@ -227,7 +227,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
                 <strong>Primeiros passos:</strong>
                 <ul style={{ paddingLeft: '20px', marginTop: '5px' }}>
                   {preview.recordingPreview.steps.slice(0, 5).map((step, index) => (
-                    <li key={index} style={{ fontSize: '12px' }}>
+                    <li key={index} className="text-xs">
                       {step.description || step.type}
                     </li>
                   ))}

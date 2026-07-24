@@ -5,7 +5,7 @@ export function DevDashboardLayout({ header, tabs, children }) {
   const { theme } = useTheme();
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden" style={{ backgroundColor: theme.colors.bg.primary }}>
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-bg-primary">
       <div className="flex-1 overflow-y-auto dev-dashboard-scroll">
         <div className="p-4 md:p-6 lg:p-8">
           <div className="w-full">

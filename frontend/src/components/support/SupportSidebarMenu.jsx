@@ -5,7 +5,7 @@ export function SupportSidebarMenu({ items = [] }) {
 
   return (
     <div className="bg-bg-elevated rounded-xl border border-border-default p-3 shadow-lg">
-      <div style={{ fontWeight: 700, marginBottom: '8px' }}>Workspace</div>
+      <div className="font-bold mb-2">Workspace</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         {items.map((item) => (
           <button

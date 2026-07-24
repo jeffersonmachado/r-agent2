@@ -12,7 +12,7 @@ function CoverageBar({ value }) {
   const pctNum = Math.round((value || 0) * 100);
   const color = pctNum >= 80 ? 'var(--color-status-success)' : pctNum >= 50 ? 'var(--color-status-warning)' : 'var(--color-status-error)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="flex items-center gap-2">
       <div
         style={{
           flex: 1,
@@ -31,7 +31,7 @@ function CoverageBar({ value }) {
           }}
         />
       </div>
-      <span style={{ fontSize: 12, fontWeight: 600, color, minWidth: 36 }}>{pctNum}%</span>
+      <span className="text-xs font-semibold min-w-[36px]" style={{ color }}>{pctNum}%</span>
     </div>
   );
 }
@@ -262,11 +262,11 @@ export function CoverageGapsTab() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* ── Cobertura por vertical ── */}
       <section className="qa-waves-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 className="qa-waves-section-title" style={{ marginBottom: 0 }}>Cobertura por Vertical e Jornada</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="qa-waves-section-title mb-0">Cobertura por Vertical e Jornada</h2>
           <button type="button" onClick={loadCoverage} disabled={loadingCoverage} className="qa-btn-primary">
             {loadingCoverage ? 'Carregando…' : '↻ Atualizar'}
           </button>
@@ -274,16 +274,16 @@ export function CoverageGapsTab() {
 
         {coverage && (coverage.verticals || []).map((vert) => (
           <details key={vert.vertical} open style={{ marginBottom: 12, border: '1px solid var(--color-border-default)', borderRadius: 8, padding: 12 }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 15, display: 'flex', justifyContent: 'space-between' }}>
+            <summary className="cursor-pointer font-bold text-[15px] flex justify-between">
               <span>{vert.vertical}</span>
               <CoverageBar value={vert.coverage} />
             </summary>
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="mt-3 flex flex-col gap-2">
               {(vert.journeys || []).map((j) => (
-                <div key={j.journeyId} style={{ paddingLeft: 12 }}>
+                <div key={j.journeyId} className="pl-3">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13, flex: 1 }}>{j.journeyName || j.journeyId}</span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                    <span className="text-[13px] flex-1">{j.journeyName || j.journeyId}</span>
+                    <span className="text-xs text-muted">
                       {j.totalCovered}/{j.totalRequired} cenários
                     </span>
                     <div style={{ width: 160 }}>
@@ -446,8 +446,8 @@ export function CoverageGapsTab() {
 
       {/* ── Business Gaps (contratos x cobertura) ── */}
       <section className="qa-waves-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 className="qa-waves-section-title" style={{ marginBottom: 0 }}>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="qa-waves-section-title mb-0">
             📋 Gaps de Negócio (Contratos × Cobertura)
           </h2>
           <button type="button" onClick={loadBusinessGaps} disabled={loadingBusinessGaps} className="qa-btn-primary" style={{ fontSize: 12 }}>
@@ -513,8 +513,8 @@ export function CoverageGapsTab() {
 
       {/* ── Revisão de drafts de IA ── */}
       <section className="qa-waves-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 className="qa-waves-section-title" style={{ marginBottom: 0 }}>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="qa-waves-section-title mb-0">
             Revisão de Cenários Gerados por IA
           </h2>
           <button type="button" onClick={loadDrafts} style={{ fontSize: 12 }}>↻</button>
@@ -590,8 +590,8 @@ export function CoverageGapsTab() {
 
       {/* ── Governança ── */}
       <section className="qa-waves-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 className="qa-waves-section-title" style={{ marginBottom: 0 }}>Governança de Waves</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="qa-waves-section-title mb-0">Governança de Waves</h2>
           <button type="button" onClick={loadGovernance} style={{ fontSize: 12 }}>↻</button>
         </div>
 

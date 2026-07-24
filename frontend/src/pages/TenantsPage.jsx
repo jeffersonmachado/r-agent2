@@ -276,7 +276,7 @@ export function TenantsPage() {
   if (loading) {
     return (
       <CrudPageBase title="🏢 Gerenciamento de Organizações">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="flex-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
             <p className="text-text-secondary">Carregando tenants...</p>

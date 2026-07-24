@@ -126,7 +126,7 @@ function TabAtendidas() {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Chamadas Atendidas por Fila</h3>
+      <h3 className="mt-0">CC: Chamadas Atendidas por Fila</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -138,8 +138,8 @@ function TabAtendidas() {
             style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
             Exportar CSV
           </button>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Fila', 'Atendidas', 'Dur.Méd.', 'Billsec Méd.', 'Dur.Mín.', 'Dur.Máx.'].map((h) => <th key={h} style={TH}>{h}</th>)}
@@ -192,7 +192,7 @@ function TabAbandonadas() {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Chamadas Abandonadas por Fila</h3>
+      <h3 className="mt-0">CC: Chamadas Abandonadas por Fila</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -204,8 +204,8 @@ function TabAbandonadas() {
             style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
             Exportar CSV
           </button>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Fila', 'Total', 'Atendidas', 'Abandonadas', 'Taxa Abandono'].map((h) => <th key={h} style={TH}>{h}</th>)}
@@ -257,7 +257,7 @@ function TabAgentes() {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Desempenho por Agente</h3>
+      <h3 className="mt-0">CC: Desempenho por Agente</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -269,8 +269,8 @@ function TabAgentes() {
             style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
             Exportar CSV
           </button>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Agente (ramal)', 'Atendidas', 'Não atend.', 'Total', 'Billsec Méd.', 'Billsec Máx.'].map((h) => <th key={h} style={TH}>{h}</th>)}
@@ -324,7 +324,7 @@ function TabPorHora() {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Volume de Chamadas por Hora</h3>
+      <h3 className="mt-0">CC: Volume de Chamadas por Hora</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -336,8 +336,8 @@ function TabPorHora() {
             style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
             Exportar CSV
           </button>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Hora', 'Total', 'Atendidas', 'Abandonadas', 'Distribuição'].map((h) => <th key={h} style={TH}>{h}</th>)}
@@ -393,7 +393,7 @@ function TabResumoCampanha() {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Resumo por Campanha</h3>
+      <h3 className="mt-0">CC: Resumo por Campanha</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -405,8 +405,8 @@ function TabResumoCampanha() {
             style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
             Exportar CSV
           </button>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Campanha', 'Total', 'Atendidas', 'Abandonadas', 'Taxa Abandono', 'Billsec Méd.'].map((h) => <th key={h} style={TH}>{h}</th>)}
@@ -459,7 +459,7 @@ function TabPesquisa({ formatDateTime }) {
 
   return (
     <>
-      <h3 style={{ marginTop: 0 }}>CC: Pesquisa Pós-Atendimento</h3>
+      <h3 className="mt-0">CC: Pesquisa Pós-Atendimento</h3>
       <ReportFilters filters={filters} setFilters={setFilters} onLoad={load} loading={loading} errorMsg={err} />
       {data && (
         <>
@@ -480,8 +480,8 @@ function TabPesquisa({ formatDateTime }) {
                 style={{ marginBottom: 10, padding: '5px 10px', fontSize: 12 }}>
                 Exportar CSV
               </button>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
                       {['Data', 'Fila', 'Agente', 'Origem', 'Nota', 'Comentário'].map((h) => <th key={h} style={TH}>{h}</th>)}

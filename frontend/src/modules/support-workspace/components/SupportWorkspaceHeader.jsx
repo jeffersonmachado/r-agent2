@@ -16,7 +16,7 @@ export function SupportWorkspaceHeader({
 }) {
   return (
     <div className="support-header">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <div className="page-header">
         <h1>💬 Atendimento</h1>
       </div>
       <div className="support-controls">

@@ -577,7 +577,7 @@ export function DashboardPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>📊 Painel</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>

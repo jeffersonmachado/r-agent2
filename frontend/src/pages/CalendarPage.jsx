@@ -265,7 +265,7 @@ export function CalendarPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{item?.title || (isBlock ? 'Indisponível' : 'Agendamento')}</div>
+                        <div className="font-semibold">{item?.title || (isBlock ? 'Indisponível' : 'Agendamento')}</div>
                         <div className="text-xs text-text-tertiary">{startAt} - {endAt}</div>
                         {isBlock ? (
                           <div className="text-xs text-text-tertiary">Motivo: {item?.reason || 'não informado'}</div>

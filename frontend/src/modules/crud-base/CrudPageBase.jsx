@@ -15,7 +15,7 @@ export function CrudPageBase({
     <div className={`support-page ${className}`.trim()} style={style}>
       {shouldRenderHeader ? (
         <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
             <h1>{title}</h1>
           </div>
           {actions ? (

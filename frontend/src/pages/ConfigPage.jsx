@@ -47,7 +47,7 @@ export function ConfigPage() {
   if (authLoading) {
     return (
       <CrudPageBase title="⚙️ Configuração do Sistema">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>

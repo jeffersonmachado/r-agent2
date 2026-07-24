@@ -61,7 +61,7 @@ export function BackupPage() {
   if (authLoading) {
     return (
       <CrudPageBase title="🗄️ Backup / Recuperação">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -90,7 +90,7 @@ export function BackupPage() {
           Exportação e importação de flows e settings do tenant.
         </p>
 
-        <div style={{ display: 'grid', gap: '16px' }}>
+        <div className="form-grid">
           <section className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-text-primary mb-3">Exportar</h2>
             <Button onClick={handleExport} disabled={loading}>Gerar backup</Button>

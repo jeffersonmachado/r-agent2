@@ -477,7 +477,7 @@ export function AnalyticsPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -492,7 +492,7 @@ export function AnalyticsPage() {
     return (
       <CrudPageBase>
         <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
             <h1>📈 Analises e Metricas</h1>
           </div>
         
@@ -603,7 +603,7 @@ export function AnalyticsPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>📈 Analises e Metricas</h1>
         </div>
         <p className="text-text-secondary" style={{ marginBottom: '20px' }}>

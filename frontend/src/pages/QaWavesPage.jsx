@@ -1302,7 +1302,7 @@ export function QaWavesPage() {
                             background: selected ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
                           }}
                         >
-                          <div style={{ fontWeight: 600 }}>{item.name}</div>
+                          <div className="font-semibold">{item.name}</div>
                           <div style={{ fontSize: 12 }}>{item.id}@{item.version}</div>
                           <div style={{ fontSize: 12 }}>Status: {item.status} | Origem: {sourceBadge}</div>
                         </button>
@@ -1564,7 +1564,7 @@ export function QaWavesPage() {
                             background: selected ? 'var(--color-accent-light)' : 'var(--color-bg-elevated)',
                           }}
                         >
-                          <div style={{ fontWeight: 600 }}>{item.name}</div>
+                          <div className="font-semibold">{item.name}</div>
                           <div style={{ fontSize: 12 }}>{item.id}@{item.version}</div>
                           <div style={{ fontSize: 12 }}>Status: {item.status} | Origem: {sourceBadge}</div>
                         </button>

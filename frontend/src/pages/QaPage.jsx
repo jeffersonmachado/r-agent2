@@ -177,7 +177,7 @@ export function QaPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>✅ Painel de Qualidade (QA)</h1>
           <div className="flex gap-2">
             <Button onClick={() => navigate('/qa/stability')}>Abrir Estabilidade</Button>

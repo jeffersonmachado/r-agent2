@@ -227,11 +227,11 @@ export function WhatsAppTemplatesPage() {
     return (
       <CrudPageBase>
         <div className="support-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
             <h1>💬 Templates WhatsApp Business API</h1>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="flex-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-primary mx-auto mb-4"></div>
             <p className="text-text-secondary">Carregando...</p>
@@ -250,7 +250,7 @@ export function WhatsAppTemplatesPage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>💬 Templates WhatsApp Business API</h1>
         </div>
         <div className="support-controls">

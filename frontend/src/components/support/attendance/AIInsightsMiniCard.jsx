@@ -20,7 +20,7 @@ export function AIInsightsMiniCard({ ai, execution, onReplay, onTestFlow }) {
             <span>Próxima ação:</span>{' '}
             <strong
               title={ai.nextBestAction}
-              style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
+              className="text-truncate block max-w-full"
             >
               {ai.nextBestAction}
             </strong>

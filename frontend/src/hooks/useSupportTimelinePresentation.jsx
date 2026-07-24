@@ -58,7 +58,7 @@ export function useSupportTimelinePresentation({ safeGetBodyText, phoneMaskingEn
 
       return (
         <div>
-          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>Interativo</div>
+          <div className="font-semibold text-[13px] mb-1">Interativo</div>
           {chosen ? <div style={{ marginBottom: '6px' }}>Resposta: <strong>{String(chosen)}</strong></div> : null}
           <details style={{ marginTop: '6px' }}>
             <summary style={{ cursor: 'pointer', color: '#555' }}>Ver payload</summary>
@@ -81,7 +81,7 @@ export function useSupportTimelinePresentation({ safeGetBodyText, phoneMaskingEn
       const url = commonMeta.url || body?.[type]?.link || null;
       return (
         <div>
-          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>{labels[type] || 'Midia'}</div>
+          <div className="font-semibold text-[13px] mb-1">{labels[type] || 'Midia'}</div>
           {text ? <div style={{ marginBottom: '6px' }}>{text}</div> : null}
           {url ? <a href={url} target="_blank" rel="noreferrer">Abrir midia</a> : <div style={{ fontSize: '12px', color: '#666' }}>Midia sem URL publica</div>}
         </div>

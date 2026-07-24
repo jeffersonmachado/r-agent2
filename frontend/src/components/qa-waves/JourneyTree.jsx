@@ -16,7 +16,7 @@ export function JourneyTree({ domains, selectedDomainId, selectedJourneyId, onSe
               {journeys.map((journey) => {
                 const active = journey.journeyId === selectedJourneyId;
                 return (
-                  <div key={journey.journeyId} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div key={journey.journeyId} className="relative flex items-center">
                     <button
                       type="button"
                       className={`qa-journey-tree-journey ${active ? 'active' : ''}`}

@@ -59,7 +59,7 @@ export function QuickRepliesPage() {
   if (authLoading) {
     return (
       <CrudPageBase title="⚡ Respostas Rápidas">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>

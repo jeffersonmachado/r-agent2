@@ -226,7 +226,7 @@ export function SlaPoliciesPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -333,7 +333,7 @@ export function SlaPoliciesPage() {
           {policies.length === 0 ? (
             <div className="text-text-tertiary">Nenhuma policy cadastrada.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>
@@ -377,7 +377,7 @@ export function SlaPoliciesPage() {
           {filteredCustomerRows.length === 0 ? (
             <div className="text-text-tertiary">Sem dados de cliente para o filtro atual.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>
@@ -409,7 +409,7 @@ export function SlaPoliciesPage() {
           {breaches.length === 0 ? (
             <div className="text-text-tertiary">Nenhuma violação registrada.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>

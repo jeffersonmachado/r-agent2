@@ -125,7 +125,7 @@ function PermChip({ label }) {
 
 function SectionTitle({ children }) {
   return (
-    <h3 style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)', marginBottom: '0.75rem' }}>
+    <h3 className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-3">
       {children}
     </h3>
   );
@@ -133,7 +133,7 @@ function SectionTitle({ children }) {
 
 function TabBar({ tabs, active, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--color-border-default)', marginBottom: '1.5rem' }}>
+    <div className="tab-bar">
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -153,7 +153,7 @@ function TabBar({ tabs, active, onChange }) {
         >
           {t.label}
           {t.count != null && (
-            <span style={{ marginLeft: '0.4rem', padding: '1px 6px', borderRadius: 99, background: 'var(--color-bg-primary)', fontSize: '0.7rem', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-default)' }}>
+            <span className="badge badge-sm">
               {t.count}
             </span>
           )}
@@ -201,13 +201,12 @@ function TabUsuarios({ agents, roles, loading, onAssign }) {
   const roleOptions = useMemo(() => Array.from(new Set(roles.map(r => r.role))), [roles]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 360px' : '1fr', gap: '1.25rem' }}>
+    <div className="grid gap-5" style={{ gridTemplateColumns: selected ? '1fr 360px' : '1fr' }}>
       {/* Lista de agentes */}
       <div>
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div className="flex gap-3 mb-4 flex-wrap">
           <input
-            className="support-form-input"
-            style={{ flex: 1, minWidth: 200 }}
+            className="support-form-input flex-1 min-w-[200px]"
             placeholder="Buscar por nome ou e-mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -216,7 +215,7 @@ function TabUsuarios({ agents, roles, loading, onAssign }) {
             className="support-form-select"
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            style={{ minWidth: 160 }}
+            className="min-w-[160px]"
           >
             <option value="">Todos os roles</option>
             {roleOptions.map(r => (
@@ -232,11 +231,11 @@ function TabUsuarios({ agents, roles, loading, onAssign }) {
           <p className="text-text-secondary text-sm">Carregando agentes...</p>
         ) : (
           <>
-            <p className="text-text-secondary text-sm" style={{ marginBottom: '0.75rem' }}>
+            <p className="text-text-secondary text-sm mb-3">
               {filtered.length} {filtered.length === 1 ? 'agente' : 'agentes'}
               {search || filterRole ? ' encontrados' : ' no total'}
             </p>
-            <div style={{ display: 'grid', gap: '0.5rem' }}>
+            <div className="grid gap-2">
               {filtered.map((agent) => (
                 <button
                   key={agent.id}
@@ -308,7 +307,7 @@ function TabUsuarios({ agents, roles, loading, onAssign }) {
             </button>
           </div>
 
-          <div style={{ marginBottom: '0.75rem' }}>
+          <div className="mb-3">
             <SectionTitle>Role atual</SectionTitle>
             <RoleBadge role={selected.role || 'operator'} size="md" />
           </div>
@@ -549,7 +548,7 @@ function TabMatriz({ roles, allPermissions }) {
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="overflow-x-auto">
       <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: '0.78rem' }}>
         <thead>
           <tr>
@@ -686,7 +685,7 @@ export function RbacPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>

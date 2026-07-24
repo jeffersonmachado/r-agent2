@@ -7,8 +7,8 @@ import { useTheme } from '../../styles/themeContext';
 function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
   if (data === null || data === undefined) {
     return (
-      <div key={path} className="p-3 rounded" style={{ backgroundColor: theme.colors.bg.secondary }}>
-        <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text.secondary }}>
+      <div key={path} className="p-3 rounded bg-bg-secondary">
+        <label className="block text-sm font-medium mb-1 text-text-secondary">
           {path || 'Valor'}
         </label>
         <input
@@ -31,7 +31,7 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
       <div key={path} className="space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-lg">📋</span>
-          <label className="font-semibold" style={{ color: theme.colors.text.primary }}>
+          <label className="font-semibold text-text-primary">
             {path || 'Array'}
           </label>
           <span className="text-xs px-2 py-1 rounded" style={{ 
@@ -46,7 +46,7 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
             borderColor: theme.colors.border.default,
             backgroundColor: theme.colors.bg.secondary
           }}>
-            <div className="text-xs mb-2 font-medium" style={{ color: theme.colors.text.secondary }}>
+            <div className="text-xs mb-2 font-medium text-text-secondary">
               Item {index + 1}
             </div>
             <JsonFormField 
@@ -72,7 +72,7 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
         {path && (
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">📦</span>
-            <label className="font-semibold text-base" style={{ color: theme.colors.text.primary }}>
+            <label className="font-semibold text-base text-text-primary">
               {path}
             </label>
           </div>
@@ -118,10 +118,10 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
           } else {
             return (
               <div key={key} className="mb-3">
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.text.primary }}>
+                <label className="block text-sm font-medium mb-2 text-text-primary">
                   {key}
                   {typeof value === 'string' && value.length > 100 && (
-                    <span className="ml-2 text-xs" style={{ color: theme.colors.text.tertiary }}>
+                    <span className="ml-2 text-xs text-text-tertiary">
                       ({value.length} caracteres)
                     </span>
                   )}
@@ -139,7 +139,7 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
                       className="w-5 h-5"
                       style={{ accentColor: theme.colors.accent.primary }}
                     />
-                    <span className="text-sm" style={{ color: theme.colors.text.secondary }}>
+                    <span className="text-sm text-text-secondary">
                       {value ? '✅ Ativado' : '❌ Desativado'}
                     </span>
                   </label>
@@ -187,8 +187,8 @@ function JsonFormField({ data, path = '', onUpdate, rootPath = '', theme }) {
 
   // Valores primitivos
   return (
-    <div key={path} className="p-3 rounded" style={{ backgroundColor: theme.colors.bg.secondary }}>
-      <label className="block text-sm font-medium mb-1" style={{ color: theme.colors.text.secondary }}>
+    <div key={path} className="p-3 rounded bg-bg-secondary">
+      <label className="block text-sm font-medium mb-1 text-text-secondary">
         {path || 'Valor'}
       </label>
       <input
@@ -234,10 +234,10 @@ export function FileEditor({
         justifyContent: 'center'
       }}>
         <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-2xl font-bold mb-3" style={{ color: theme.colors.text.primary }}>
+        <h3 className="text-2xl font-bold mb-3 text-text-primary">
           Nenhum arquivo selecionado
         </h3>
-        <p className="text-base mb-2" style={{ color: theme.colors.text.secondary }}>
+        <p className="text-base mb-2 text-text-secondary">
           Selecione um arquivo da lista ao lado para visualizar e editar
         </p>
       </div>
@@ -268,7 +268,7 @@ export function FileEditor({
                 {selectedFile.type === 'contracts' ? '📋' : selectedFile.type === 'documents' ? '📚' : '🔧'}
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-xl mb-1" style={{ color: theme.colors.text.primary }}>
+                <h3 className="font-bold text-xl mb-1 text-text-primary">
                   {selectedFile.path.split('/').pop()}
                 </h3>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -280,18 +280,18 @@ export function FileEditor({
                     {selectedFile.type === 'contracts' ? '📄 Contrato' : selectedFile.type === 'documents' ? '📚 Documento' : '🔧 Nó'}
                   </span>
                   {selectedFile.modified && (
-                    <span className="text-xs" style={{ color: theme.colors.text.secondary }}>
+                    <span className="text-xs text-text-secondary">
                       📅 Modificado: {new Date(selectedFile.modified).toLocaleString('pt-BR')}
                     </span>
                   )}
-                  <span className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+                  <span className="text-xs text-text-tertiary">
                     📊 {(selectedFile.size / 1024).toFixed(2)} KB
                   </span>
                 </div>
               </div>
             </div>
             {selectedFile.path.includes('/') && (
-              <div className="text-xs mt-2" style={{ color: theme.colors.text.secondary }}>
+              <div className="text-xs mt-2 text-text-secondary">
                 📁 {selectedFile.path}
               </div>
             )}
@@ -351,7 +351,7 @@ export function FileEditor({
         maxHeight: 'calc(800px - 200px)'
       }}>
         {fileLoading ? (
-          <div className="text-center py-12" style={{ color: theme.colors.text.tertiary }}>
+          <div className="text-center py-12 text-text-tertiary">
             <div className="text-4xl mb-4">⏳</div>
             <p className="text-lg">Carregando arquivo...</p>
           </div>
@@ -396,7 +396,7 @@ export function FileEditor({
         backgroundColor: theme.colors.bg.primary
       }}>
         <div className="flex items-center gap-4 flex-wrap">
-          <span style={{ color: theme.colors.text.secondary }}>
+          <span className="text-text-secondary">
             💡 <strong>Dica:</strong> {selectedFile.type === 'contracts' 
               ? 'Contratos definem a estrutura de dados. Alterações podem afetar a compatibilidade do sistema.'
               : selectedFile.type === 'documents' 

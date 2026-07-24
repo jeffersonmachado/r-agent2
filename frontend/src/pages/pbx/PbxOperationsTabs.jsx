@@ -53,7 +53,7 @@ export function PbxOperationsTabs({
     <>
       {tab === 'queues' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Filas</h3>
+          <h3 className="mt-0">Filas</h3>
           <div className="bg-bg-elevated rounded-xl border border-border-default p-4 mb-4 shadow-lg">
             <div style={{ display: 'grid', gridTemplateColumns: '140px 220px 160px 110px 110px 110px 110px auto', gap: 8, marginBottom: 8 }}>
               <input className={AGENTS_FIELD_CLASS} placeholder="Ramal da fila" value={formQueue.queueNumber} onChange={(e) => setFormQueue((s) => ({ ...s, queueNumber: e.target.value }))} />
@@ -77,44 +77,44 @@ export function PbxOperationsTabs({
               <input className={AGENTS_FIELD_CLASS} placeholder="Retornar" value={formQueue.retornar} onChange={(e) => setFormQueue((s) => ({ ...s, retornar: e.target.value }))} />
               <input className={AGENTS_FIELD_CLASS} placeholder="Transferir" value={formQueue.transferir} onChange={(e) => setFormQueue((s) => ({ ...s, transferir: e.target.value }))} />
               <input className={AGENTS_FIELD_CLASS} placeholder="URL de atendimento" value={formQueue.url} onChange={(e) => setFormQueue((s) => ({ ...s, url: e.target.value }))} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={!!formQueue.tocar} onChange={(e) => setFormQueue((s) => ({ ...s, tocar: e.target.checked }))} />
                 Tocar
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={!!formQueue.anunciar} onChange={(e) => setFormQueue((s) => ({ ...s, anunciar: e.target.checked }))} />
                 Anunciar
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={!!formQueue.autoatendimento} onChange={(e) => setFormQueue((s) => ({ ...s, autoatendimento: e.target.checked }))} />
                 Auto Atend.
               </label>
             </div>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ramal</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Display</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Strategy</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ações</th>
+                  <th className="pbx-th">Ramal</th>
+                  <th className="pbx-th">Nome</th>
+                  <th className="pbx-th">Display</th>
+                  <th className="pbx-th">Strategy</th>
+                  <th className="pbx-th">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredQueues.map((q) => (
                   <tr key={q.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q?.options?.queueNumber || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.displayName || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{q.strategy || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{q?.options?.queueNumber || '—'}</td>
+                    <td className="pbx-td">{q.name}</td>
+                    <td className="pbx-td">{q.displayName || '—'}</td>
+                    <td className="pbx-td">{q.strategy || '—'}</td>
+                    <td className="pbx-td">
                       <Button onClick={() => handleEditQueue(q)} disabled={loading} size="sm" variant="ghost">Editar</Button>
                     </td>
                   </tr>
                 ))}
-                {!filteredQueues.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhuma fila encontrada.</td></tr> : null}
+                {!filteredQueues.length ? <tr><td colSpan={5} className="pbx-td opacity-75">Nenhuma fila encontrada.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -123,7 +123,7 @@ export function PbxOperationsTabs({
 
       {tab === 'queueMembers' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Membros de fila (realtime)</h3>
+          <h3 className="mt-0">Membros de fila (realtime)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 1fr 120px 120px auto', gap: 8, marginBottom: 12 }}>
             <select value={selectedQueueId} onChange={(e) => setSelectedQueueId(e.target.value)}>
               <option value="">Selecione uma fila…</option>
@@ -137,38 +137,38 @@ export function PbxOperationsTabs({
             </select>
             <input placeholder="memberRef (ex: 1001 ou PJSIP/x)" value={formQm.memberRef} onChange={(e) => setFormQm((s) => ({ ...s, memberRef: e.target.value }))} />
             <input placeholder="penalty" value={formQm.penalty} onChange={(e) => setFormQm((s) => ({ ...s, penalty: e.target.value }))} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={!!formQm.paused} onChange={(e) => setFormQm((s) => ({ ...s, paused: e.target.checked }))} />
               paused
             </label>
-            <button onClick={handleSaveQueueMember} disabled={!canSaveQm || loading} style={{ padding: '8px 12px' }}>Adicionar</button>
+            <button onClick={handleSaveQueueMember} disabled={!canSaveQm || loading} className="px-3 py-2">Adicionar</button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Tipo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ref</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Penalty</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Paused</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
+                  <th className="pbx-th">Tipo</th>
+                  <th className="pbx-th">Ref</th>
+                  <th className="pbx-th">Penalty</th>
+                  <th className="pbx-th">Paused</th>
+                  <th className="pbx-th" />
                 </tr>
               </thead>
               <tbody>
                 {filteredQueueMembers.map((m) => (
                   <tr key={m.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.memberType}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.memberRef}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{m.penalty ?? '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!m.paused)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{m.memberType}</td>
+                    <td className="pbx-td">{m.memberRef}</td>
+                    <td className="pbx-td">{m.penalty ?? '—'}</td>
+                    <td className="pbx-td">{String(!!m.paused)}</td>
+                    <td className="pbx-td">
                       <button onClick={() => handleDeleteQueueMember(m.id)} disabled={loading} style={{ padding: '6px 10px' }}>
                         Remover
                       </button>
                     </td>
                   </tr>
                 ))}
-                {!filteredQueueMembers.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum membro encontrado.</td></tr> : null}
+                {!filteredQueueMembers.length ? <tr><td colSpan={5} className="pbx-td opacity-75">Nenhum membro encontrado.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -177,10 +177,10 @@ export function PbxOperationsTabs({
 
       {tab === 'dialplan' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Dialplan (realtime)</h3>
+          <h3 className="mt-0">Dialplan (realtime)</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            <button onClick={handleDialplanPreview} disabled={loading} style={{ padding: '8px 12px' }}>Preview</button>
-            <button onClick={handleDialplanApply} disabled={loading} style={{ padding: '8px 12px' }}>Aplicar</button>
+            <button onClick={handleDialplanPreview} disabled={loading} className="px-3 py-2">Preview</button>
+            <button onClick={handleDialplanApply} disabled={loading} className="px-3 py-2">Aplicar</button>
           </div>
           <div style={{ opacity: 0.85, marginBottom: 8 }}>
             {Array.isArray(dialplanRows) ? `Linhas: ${dialplanRows.length}` : 'Clique em Preview para ver o dialplan.'}
@@ -197,27 +197,27 @@ export function PbxOperationsTabs({
             </pre>
           ) : null}
           <h4 style={{ marginTop: 16 }}>Histórico de versões</h4>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Versão</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Assinatura</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Data</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
+                  <th className="pbx-th">Versão</th>
+                  <th className="pbx-th">Status</th>
+                  <th className="pbx-th">Assinatura</th>
+                  <th className="pbx-th">Data</th>
+                  <th className="pbx-th" />
                 </tr>
               </thead>
               <tbody>
                 {configVersions.map((v) => (
                   <tr key={v.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v.version}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{v?.summary?.dialplan?.signature || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{v.version}</td>
+                    <td className="pbx-td">{v.status || '—'}</td>
+                    <td className="pbx-td">{v?.summary?.dialplan?.signature || '—'}</td>
+                    <td className="pbx-td">
                       {formatDateTime(v.createdAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       <button
                         onClick={() => handleRollbackVersion(v.version)}
                         disabled={loading || !Array.isArray(v?.summary?.dialplan?.rows) || v.summary.dialplan.rows.length === 0}
@@ -228,7 +228,7 @@ export function PbxOperationsTabs({
                     </td>
                   </tr>
                 ))}
-                {!configVersions.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem versões registradas.</td></tr> : null}
+                {!configVersions.length ? <tr><td colSpan={5} className="pbx-td opacity-75">Sem versões registradas.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -237,7 +237,7 @@ export function PbxOperationsTabs({
 
       {tab === 'media' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Mídia (áudios)</h3>
+          <h3 className="mt-0">Mídia (áudios)</h3>
           {audioAssetsError ? (
             <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
               <strong>Não foi possível carregar os áudios.</strong>
@@ -249,30 +249,30 @@ export function PbxOperationsTabs({
               kind:
               <input value={audioKind} onChange={(e) => setAudioKind(e.target.value)} style={{ width: 140 }} />
             </label>
-            <button onClick={handleAudioRefresh} disabled={loading} style={{ padding: '8px 12px' }}>Atualizar</button>
+            <button onClick={handleAudioRefresh} disabled={loading} className="px-3 py-2">Atualizar</button>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
             <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
-            <button onClick={handleAudioUpload} disabled={loading || !audioFile} style={{ padding: '8px 12px' }}>Upload</button>
+            <button onClick={handleAudioUpload} disabled={loading || !audioFile} className="px-3 py-2">Upload</button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Download</th>
+                  <th className="pbx-th">Nome</th>
+                  <th className="pbx-th">Download</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAudioAssets.map((a) => (
                   <tr key={a.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{a.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{a.name}</td>
+                    <td className="pbx-td">
                       <a href={buildApiUrl(`/api/pbx/audio-assets/file?id=${encodeURIComponent(a.id)}`)}>baixar</a>
                     </td>
                   </tr>
                 ))}
-                {!filteredAudioAssets.length ? <tr><td colSpan={2} style={{ padding: 8, opacity: 0.75 }}>Nenhum áudio encontrado.</td></tr> : null}
+                {!filteredAudioAssets.length ? <tr><td colSpan={2} className="pbx-td opacity-75">Nenhum áudio encontrado.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -281,7 +281,7 @@ export function PbxOperationsTabs({
 
       {tab === 'recordings' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Gravações</h3>
+          <h3 className="mt-0">Gravações</h3>
           {recordingsError || recordingPolicyError ? (
             <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
               <strong>Gravações indisponíveis neste ambiente.</strong>
@@ -297,7 +297,7 @@ export function PbxOperationsTabs({
           <div style={{ marginBottom: 12, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8 }}>
             <strong>Política de gravação (tenant)</strong>
             <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 220px 220px auto', gap: 8, marginTop: 8, alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input
                   type="checkbox"
                   checked={!!recordingPolicy.enabled}
@@ -310,7 +310,7 @@ export function PbxOperationsTabs({
                 value={recordingPolicy.retentionDays}
                 onChange={(e) => setRecordingPolicy((s) => ({ ...s, retentionDays: e.target.value }))}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input
                   type="checkbox"
                   checked={!!recordingPolicy.maskPhoneNumbers}
@@ -318,7 +318,7 @@ export function PbxOperationsTabs({
                 />
                 Mascarar números
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="flex items-center gap-1.5">
                 <input
                   type="checkbox"
                   checked={!!recordingPolicy.requireConsent}
@@ -326,35 +326,35 @@ export function PbxOperationsTabs({
                 />
                 Exigir consentimento
               </label>
-              <button onClick={handleSaveRecordingPolicy} disabled={loading} style={{ padding: '8px 12px' }}>Salvar política</button>
+              <button onClick={handleSaveRecordingPolicy} disabled={loading} className="px-3 py-2">Salvar política</button>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            <button onClick={handleRecordingsRefresh} disabled={loading} style={{ padding: '8px 12px' }}>Atualizar</button>
-            <button onClick={handleRecordingsScan} disabled={loading} style={{ padding: '8px 12px' }}>Scan volume</button>
+            <button onClick={handleRecordingsRefresh} disabled={loading} className="px-3 py-2">Atualizar</button>
+            <button onClick={handleRecordingsScan} disabled={loading} className="px-3 py-2">Scan volume</button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Uniqueid</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Origem</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Destino</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Download</th>
+                  <th className="pbx-th">Uniqueid</th>
+                  <th className="pbx-th">Origem</th>
+                  <th className="pbx-th">Destino</th>
+                  <th className="pbx-th">Download</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecordings.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.uniqueid || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.src || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.dst || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{r.uniqueid || '—'}</td>
+                    <td className="pbx-td">{r.src || '—'}</td>
+                    <td className="pbx-td">{r.dst || '—'}</td>
+                    <td className="pbx-td">
                       <a href={buildApiUrl(`/api/pbx/recordings/file?id=${encodeURIComponent(r.id)}`)}>baixar</a>
                     </td>
                   </tr>
                 ))}
-                {!filteredRecordings.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhuma gravação encontrada.</td></tr> : null}
+                {!filteredRecordings.length ? <tr><td colSpan={4} className="pbx-td opacity-75">Nenhuma gravação encontrada.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -363,7 +363,7 @@ export function PbxOperationsTabs({
 
       {tab === 'cdr' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>CDR</h3>
+          <h3 className="mt-0">CDR</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr 1fr 1fr auto', gap: 8, marginBottom: 12 }}>
             <input placeholder="limit" value={cdrFilters.limit} onChange={(e) => setCdrFilters((s) => ({ ...s, limit: e.target.value }))} />
             <input placeholder="from (ISO)" value={cdrFilters.from} onChange={(e) => setCdrFilters((s) => ({ ...s, from: e.target.value }))} />
@@ -371,32 +371,32 @@ export function PbxOperationsTabs({
             <input placeholder="src" value={cdrFilters.src} onChange={(e) => setCdrFilters((s) => ({ ...s, src: e.target.value }))} />
             <input placeholder="dst" value={cdrFilters.dst} onChange={(e) => setCdrFilters((s) => ({ ...s, dst: e.target.value }))} />
             <input placeholder="uniqueid" value={cdrFilters.uniqueid} onChange={(e) => setCdrFilters((s) => ({ ...s, uniqueid: e.target.value }))} />
-            <button onClick={handleCdrSearch} disabled={loading} style={{ padding: '8px 12px' }}>Buscar</button>
+            <button onClick={handleCdrSearch} disabled={loading} className="px-3 py-2">Buscar</button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Calldate</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Src</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Dst</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Disposition</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Duration</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Uniqueid</th>
+                  <th className="pbx-th">Calldate</th>
+                  <th className="pbx-th">Src</th>
+                  <th className="pbx-th">Dst</th>
+                  <th className="pbx-th">Disposition</th>
+                  <th className="pbx-th">Duration</th>
+                  <th className="pbx-th">Uniqueid</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCdrItems.map((c) => (
                   <tr key={c.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.calldate ? new Date(c.calldate).toISOString() : '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.src || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.dst || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.disposition || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.duration ?? '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.uniqueid}</td>
+                    <td className="pbx-td">{c.calldate ? new Date(c.calldate).toISOString() : '—'}</td>
+                    <td className="pbx-td">{c.src || '—'}</td>
+                    <td className="pbx-td">{c.dst || '—'}</td>
+                    <td className="pbx-td">{c.disposition || '—'}</td>
+                    <td className="pbx-td">{c.duration ?? '—'}</td>
+                    <td className="pbx-td">{c.uniqueid}</td>
                   </tr>
                 ))}
-                {!filteredCdrItems.length ? <tr><td colSpan={6} style={{ padding: 8, opacity: 0.75 }}>Nenhum CDR encontrado (ainda).</td></tr> : null}
+                {!filteredCdrItems.length ? <tr><td colSpan={6} className="pbx-td opacity-75">Nenhum CDR encontrado (ainda).</td></tr> : null}
               </tbody>
             </table>
           </div>

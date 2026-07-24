@@ -14,7 +14,7 @@ export function JourneyMiniCard({ journey, execution }) {
 
   return (
     <section className="attendance-mini-card">
-      <h3 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+      <h3 className="flex items-center justify-between gap-1.5">
         Jornada
         {allDefault ? (
           <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--color-text-tertiary)', fontStyle: 'italic' }}>

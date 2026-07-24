@@ -76,7 +76,7 @@ export function QaWavesDocsTab() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* ── Tabs ── */}
       <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--color-border-default)', paddingBottom: 8 }}>
         {['roteiros', 'diagrams'].map(type => (
@@ -99,7 +99,7 @@ export function QaWavesDocsTab() {
         ))}
       </div>
 
-      {loading && <p style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Carregando...</p>}
+      {loading && <p className="text-xs text-muted">Carregando...</p>}
 
       {/* ── File list ── */}
       {!selectedDoc && !loading && (
@@ -131,7 +131,7 @@ export function QaWavesDocsTab() {
             <button onClick={() => setSelectedDoc(null)} style={{ fontSize: 12 }}>
               ← Voltar
             </button>
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{selectedDoc.name}</span>
+            <span className="text-xs text-muted">{selectedDoc.name}</span>
           </div>
           <div
             className="qa-waves-docs-content"

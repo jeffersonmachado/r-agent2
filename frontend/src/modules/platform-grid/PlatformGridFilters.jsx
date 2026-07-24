@@ -77,7 +77,7 @@ export function PlatformGridFilters({
         );
       })}
       {onClearFilters ? (
-        <div style={{ display: 'flex', alignItems: 'end' }}>
+        <div className="flex items-end">
           <button type="button" onClick={onClearFilters} className="pg-row-action">Limpar filtros</button>
         </div>
       ) : null}

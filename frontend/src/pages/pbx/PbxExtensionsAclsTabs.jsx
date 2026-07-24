@@ -240,7 +240,7 @@ export function PbxExtensionsAclsTabs({
 
       {tab === 'acls' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>ACLs (permit/deny)</h3>
+          <h3 className="mt-0">ACLs (permit/deny)</h3>
           <div style={{ opacity: 0.8, marginBottom: 10 }}>
             Cadastre listas de IP/rede para reutilizar nos ramais. O Asterisk referencia por ID (estável), então renomear não quebra os ramais.
           </div>
@@ -258,7 +258,7 @@ export function PbxExtensionsAclsTabs({
               onChange={(e) => setFormAcl((s) => ({ ...s, description: e.target.value }))}
               disabled={loading}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 checked={formAcl.enabled !== false}
@@ -267,7 +267,7 @@ export function PbxExtensionsAclsTabs({
               />
               ativo
             </label>
-            <button onClick={handleSaveAcl} disabled={!canSaveAcl || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleSaveAcl} disabled={!canSaveAcl || loading} className="px-3 py-2">
               Salvar
             </button>
           </div>

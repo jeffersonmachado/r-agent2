@@ -24,7 +24,7 @@ export function KnowledgeBasePage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -222,7 +222,7 @@ export function KnowledgeBasePage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>🧠 Base de Conhecimento</h1>
         </div>
         <div className="support-controls">

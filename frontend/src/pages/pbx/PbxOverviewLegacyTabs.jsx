@@ -13,7 +13,7 @@ export function PbxOverviewLegacyTabs({
     <>
       {tab === 'overview' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Visão geral</h3>
+          <h3 className="mt-0">Visão geral</h3>
           <div style={{ opacity: 0.8, marginTop: 6 }}>
             Os cards de Visão Geral ficam no topo da página e redirecionam para a tela correspondente.
           </div>
@@ -30,7 +30,7 @@ export function PbxOverviewLegacyTabs({
 
       {legacyTabMeta ? (
         <>
-          <h3 style={{ marginTop: 0 }}>{normalizeLegacyLabel(legacyTabMeta.label)}</h3>
+          <h3 className="mt-0">{normalizeLegacyLabel(legacyTabMeta.label)}</h3>
           <div style={{ opacity: 0.9, lineHeight: 1.6 }}>
             <div><strong>Seção referência:</strong> {legacyTabMeta.section}</div>
             <div><strong>Tela de referência:</strong> <code>{legacyTabMeta.href}</code></div>

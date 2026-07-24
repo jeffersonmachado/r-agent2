@@ -7,7 +7,7 @@ import React from 'react';
 export function GenerateSystemHeader({ isTenantMode, onReload }) {
   return (
     <div className="support-header">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <div className="page-header">
         <h1>{isTenantMode ? '🤖 Criar Tenant por IA' : '🎯 Gerar Sistema / Fluxo / RPA / Seed'}</h1>
       </div>
       <p className="text-text-secondary" style={{ marginBottom: '20px' }}>

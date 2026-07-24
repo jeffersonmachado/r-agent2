@@ -614,7 +614,7 @@ export function PbxModulePage() {
   return (
     <CrudPageBase>
       <div className="support-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div className="page-header">
           <h1>{moduleConfig.emoji} PBX • {moduleConfig.title}</h1>
         </div>
         <div className="support-controls">

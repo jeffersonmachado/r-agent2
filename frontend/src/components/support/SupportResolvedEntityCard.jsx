@@ -13,13 +13,13 @@ export function SupportResolvedEntityCard({ identity, loading }) {
       title="Entidade resolvida"
       subtitle="Correlação principal do atendimento atual"
       badge={(
-        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+        <div className="text-xs text-text-tertiary">
           {loading ? 'Carregando…' : (identity ? `${Math.round((identity.confidence || 0) * 100)}%` : 'sem match')}
         </div>
       )}
     >
       {identity ? (
-        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+        <div className="text-xs text-muted">
           <div>Tipo: <strong>{formatEvidenceLabel(identity.entityType)}</strong></div>
           <div>ID: <code>{identity.entityId}</code></div>
           <div style={{ marginTop: '8px' }}>

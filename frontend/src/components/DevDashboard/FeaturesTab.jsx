@@ -11,10 +11,10 @@ export function FeaturesTab() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4" style={{ color: theme.colors.text.primary }}>
+      <h2 className="text-2xl font-bold mb-4 text-text-primary">
         Funcionalidades de Desenvolvimento
       </h2>
-      <p className="mb-6" style={{ color: theme.colors.text.secondary }}>
+      <p className="mb-6 text-text-secondary">
         Acesse ferramentas de desenvolvimento, testes e geração de código.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -50,10 +50,10 @@ export function FeaturesTab() {
                   {feature.category}
                 </span>
               </div>
-              <h3 className="text-base font-semibold mb-1" style={{ color: theme.colors.text.primary }}>
+              <h3 className="text-base font-semibold mb-1 text-text-primary">
                 {feature.title}
               </h3>
-              <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
+              <p className="text-sm text-text-secondary">
                 {feature.description}
               </p>
             </div>

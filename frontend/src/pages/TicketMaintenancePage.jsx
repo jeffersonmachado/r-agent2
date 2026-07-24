@@ -417,7 +417,7 @@ export function TicketMaintenancePage() {
         {/* Painel de Métricas */}
         {maintenanceReady && metrics && (
           <div className="maintenance-metrics">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
             <h2>📊 Estatísticas do Sistema</h2>
             {(filters.status || filters.queue || filters.search) && (
               <span style={{ 
@@ -465,7 +465,7 @@ export function TicketMaintenancePage() {
 
           <div className="metrics-details">
             <div className="metrics-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="page-header">
                 <h3>Tickets por Fila</h3>
                 <Button
                   onClick={() => {

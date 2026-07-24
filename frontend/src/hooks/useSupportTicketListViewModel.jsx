@@ -155,8 +155,8 @@ export function useSupportTicketListViewModel({
       header: 'Contato',
       render: (ticket) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{highlightText(getContactName(ticket), uiSearchDebounced)}</div>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{ticket?.phoneNumber || '-'}</div>
+          <div className="font-semibold">{highlightText(getContactName(ticket), uiSearchDebounced)}</div>
+          <div className="text-xs text-muted">{ticket?.phoneNumber || '-'}</div>
         </div>
       ),
       sortValue: (ticket) => getContactName(ticket),

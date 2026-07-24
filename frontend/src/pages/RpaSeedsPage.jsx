@@ -271,7 +271,7 @@ export function RpaSeedsPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -339,7 +339,7 @@ export function RpaSeedsPage() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="flex items-center gap-2">
                         <h3 className="text-text-primary font-semibold">{seed.name || seed.id}</h3>
                         {seed.source && (
                           <span className={`text-xs px-2 py-0.5 rounded ${
@@ -719,7 +719,7 @@ export function RpaSeedsPage() {
       {/* Indicador de Gravação em Andamento */}
       {recording && recordingStatus && (
         <div className="fixed bottom-4 right-4 bg-bg-secondary border-2 border-accent-default rounded-lg p-4 shadow-lg" style={{ zIndex: 1000, maxWidth: '400px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div className="page-header">
             <h3 className="text-text-primary font-semibold">🎬 Gravando Seed</h3>
             <Button
               onClick={handleStopRecording}

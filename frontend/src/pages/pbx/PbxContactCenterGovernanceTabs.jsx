@@ -77,7 +77,7 @@ export function PbxContactCenterGovernanceTabs({
     <>
       {tab === 'ccPauseReasons' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Motivos de pausa</h3>
+          <h3 className="mt-0">Contact Center: Motivos de pausa</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 140px auto', gap: 8, marginBottom: 12 }}>
             <input
               placeholder="code (ex: ALMOCO)"
@@ -89,7 +89,7 @@ export function PbxContactCenterGovernanceTabs({
               value={formPauseReason.description}
               onChange={(e) => setFormPauseReason((s) => ({ ...s, description: e.target.value }))}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 checked={!!formPauseReason.active}
@@ -97,29 +97,29 @@ export function PbxContactCenterGovernanceTabs({
               />
               ativo
             </label>
-            <button onClick={handleSavePauseReason} disabled={!canSavePauseReason || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleSavePauseReason} disabled={!canSavePauseReason || loading} className="px-3 py-2">
               Salvar
             </button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Code</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ativo</th>
+                  <th className="pbx-th">Code</th>
+                  <th className="pbx-th">Descricao</th>
+                  <th className="pbx-th">Ativo</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPauseReasons.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.code}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.description}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!r.active)}</td>
+                    <td className="pbx-td">{r.code}</td>
+                    <td className="pbx-td">{r.description}</td>
+                    <td className="pbx-td">{String(!!r.active)}</td>
                   </tr>
                 ))}
                 {!filteredPauseReasons.length ? (
-                  <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum motivo.</td></tr>
+                  <tr><td colSpan={3} className="pbx-td opacity-75">Nenhum motivo.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -129,7 +129,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'ccContactReasons' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Motivos de contato</h3>
+          <h3 className="mt-0">Contact Center: Motivos de contato</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 140px auto', gap: 8, marginBottom: 12 }}>
             <input
               placeholder="code (ex: INFO)"
@@ -141,7 +141,7 @@ export function PbxContactCenterGovernanceTabs({
               value={formContactReason.description}
               onChange={(e) => setFormContactReason((s) => ({ ...s, description: e.target.value }))}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 checked={!!formContactReason.active}
@@ -149,29 +149,29 @@ export function PbxContactCenterGovernanceTabs({
               />
               ativo
             </label>
-            <button onClick={handleSaveContactReason} disabled={!canSaveContactReason || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleSaveContactReason} disabled={!canSaveContactReason || loading} className="px-3 py-2">
               Salvar
             </button>
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Code</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ativo</th>
+                  <th className="pbx-th">Code</th>
+                  <th className="pbx-th">Descricao</th>
+                  <th className="pbx-th">Ativo</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredContactReasons.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.code}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{r.description}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!r.active)}</td>
+                    <td className="pbx-td">{r.code}</td>
+                    <td className="pbx-td">{r.description}</td>
+                    <td className="pbx-td">{String(!!r.active)}</td>
                   </tr>
                 ))}
                 {!filteredContactReasons.length ? (
-                  <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Nenhum motivo.</td></tr>
+                  <tr><td colSpan={3} className="pbx-td opacity-75">Nenhum motivo.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -181,7 +181,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'ccCampaigns' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Campanhas</h3>
+          <h3 className="mt-0">Contact Center: Campanhas</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 160px 220px 220px 160px 160px auto', gap: 8, marginBottom: 12 }}>
             <input
               placeholder="id (opcional)"
@@ -210,7 +210,7 @@ export function PbxContactCenterGovernanceTabs({
               onChange={(e) => setFormCampaign((s) => ({ ...s, endAt: e.target.value }))}
               title="fim (opcional)"
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 checked={!!formCampaign.click2callEnabled}
@@ -218,7 +218,7 @@ export function PbxContactCenterGovernanceTabs({
               />
               click2call
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 checked={!!formCampaign.recordEnabled}
@@ -226,34 +226,34 @@ export function PbxContactCenterGovernanceTabs({
               />
               gravar
             </label>
-            <button onClick={handleSaveCampaign} disabled={!canSaveCampaign || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleSaveCampaign} disabled={!canSaveCampaign || loading} className="px-3 py-2">
               Salvar
             </button>
           </div>
-          <div style={{ marginBottom: 10, opacity: 0.8 }}>
+          <div className="mb-2.5 opacity-80">
             Configurações avançadas ocultas (sem JSON).
           </div>
-          <div style={{ overflow: 'auto', marginTop: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto mt-3">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>ID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Nome</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Click2Call</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Gravar</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
+                  <th className="pbx-th">ID</th>
+                  <th className="pbx-th">Nome</th>
+                  <th className="pbx-th">Status</th>
+                  <th className="pbx-th">Click2Call</th>
+                  <th className="pbx-th">Gravar</th>
+                  <th className="pbx-th" />
                 </tr>
               </thead>
               <tbody>
                 {filteredCampaigns.map((c) => (
                   <tr key={c.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.id}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.name}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{c.status}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!c.click2callEnabled)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{String(!!c.recordEnabled)}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{c.id}</td>
+                    <td className="pbx-td">{c.name}</td>
+                    <td className="pbx-td">{c.status}</td>
+                    <td className="pbx-td">{String(!!c.click2callEnabled)}</td>
+                    <td className="pbx-td">{String(!!c.recordEnabled)}</td>
+                    <td className="pbx-td">
                       <button
                         onClick={() => setCcSelectedCampaignId(String(c.id))}
                         disabled={loading}
@@ -264,7 +264,7 @@ export function PbxContactCenterGovernanceTabs({
                     </td>
                   </tr>
                 ))}
-                {!filteredCampaigns.length ? <tr><td colSpan={6} style={{ padding: 8, opacity: 0.75 }}>Nenhuma campanha.</td></tr> : null}
+                {!filteredCampaigns.length ? <tr><td colSpan={6} className="pbx-td opacity-75">Nenhuma campanha.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -276,7 +276,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'ccCampaignList' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Lista da campanha</h3>
+          <h3 className="mt-0">Contact Center: Lista da campanha</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
             <select value={ccSelectedCampaignId} onChange={(e) => setCcSelectedCampaignId(e.target.value)}>
               <option value="">Selecione uma campanha…</option>
@@ -284,11 +284,11 @@ export function PbxContactCenterGovernanceTabs({
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <button onClick={() => refreshCampaignList(ccSelectedCampaignId)} disabled={loading || !ccSelectedCampaignId} style={{ padding: '8px 12px' }}>
+            <button onClick={() => refreshCampaignList(ccSelectedCampaignId)} disabled={loading || !ccSelectedCampaignId} className="px-3 py-2">
               Atualizar lista
             </button>
           </div>
-          <div style={{ marginBottom: 10, opacity: 0.8 }}>
+          <div className="mb-2.5 opacity-80">
             Adicionar itens (sem JSON):
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '120px 240px 1fr auto', gap: 8 }}>
@@ -307,7 +307,7 @@ export function PbxContactCenterGovernanceTabs({
               value={campaignListDraftRow.key}
               onChange={(e) => setCampaignListDraftRow((s) => ({ ...s, key: e.target.value }))}
             />
-            <button onClick={handleCampaignListDraftAdd} disabled={loading || !ccSelectedCampaignId} style={{ padding: '8px 12px' }}>
+            <button onClick={handleCampaignListDraftAdd} disabled={loading || !ccSelectedCampaignId} className="px-3 py-2">
               Adicionar
             </button>
           </div>
@@ -322,35 +322,35 @@ export function PbxContactCenterGovernanceTabs({
             />
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button onClick={handleAddCampaignListItems} disabled={loading || !ccSelectedCampaignId || campaignListDraftItems.length === 0} style={{ padding: '8px 12px' }}>
+            <button onClick={handleAddCampaignListItems} disabled={loading || !ccSelectedCampaignId || campaignListDraftItems.length === 0} className="px-3 py-2">
               Adicionar na campanha
             </button>
-            <button onClick={() => setCampaignListDraftItems([])} disabled={loading || campaignListDraftItems.length === 0} style={{ padding: '8px 12px' }}>
+            <button onClick={() => setCampaignListDraftItems([])} disabled={loading || campaignListDraftItems.length === 0} className="px-3 py-2">
               Limpar lista
             </button>
           </div>
-          <div style={{ overflow: 'auto', marginTop: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto mt-3">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>DDD</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Key</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Attempts</th>
+                  <th className="pbx-th">Phone</th>
+                  <th className="pbx-th">DDD</th>
+                  <th className="pbx-th">Key</th>
+                  <th className="pbx-th">Status</th>
+                  <th className="pbx-th">Attempts</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCampaignList.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.phone}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.ddd || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.key || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.attempts ?? 0}</td>
+                    <td className="pbx-td">{it.phone}</td>
+                    <td className="pbx-td">{it.ddd || '—'}</td>
+                    <td className="pbx-td">{it.key || '—'}</td>
+                    <td className="pbx-td">{it.status || '—'}</td>
+                    <td className="pbx-td">{it.attempts ?? 0}</td>
                   </tr>
                 ))}
-                {!filteredCampaignList.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Sem itens.</td></tr> : null}
+                {!filteredCampaignList.length ? <tr><td colSpan={5} className="pbx-td opacity-75">Sem itens.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -359,7 +359,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'ccScheduled' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Callbacks agendados</h3>
+          <h3 className="mt-0">Contact Center: Callbacks agendados</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '160px 220px 120px 1fr 140px 1fr auto', gap: 8, marginBottom: 12 }}>
             <input
               placeholder="id (opcional)"
@@ -391,37 +391,37 @@ export function PbxContactCenterGovernanceTabs({
               value={formScheduled.description}
               onChange={(e) => setFormScheduled((s) => ({ ...s, description: e.target.value }))}
             />
-            <button onClick={handleSaveScheduledCallback} disabled={!canSaveScheduled || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleSaveScheduledCallback} disabled={!canSaveScheduled || loading} className="px-3 py-2">
               Salvar
             </button>
           </div>
-          <div style={{ marginBottom: 10, opacity: 0.8 }}>
+          <div className="mb-2.5 opacity-80">
             Configurações avançadas ocultas (sem JSON).
           </div>
-          <div style={{ overflow: 'auto', marginTop: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto mt-3">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Quando</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Descricao</th>
+                  <th className="pbx-th">Quando</th>
+                  <th className="pbx-th">Phone</th>
+                  <th className="pbx-th">Status</th>
+                  <th className="pbx-th">Descricao</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredScheduled.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       {formatDateTime(it.scheduledAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       {it.ddd ? `${it.ddd} ` : ''}{it.phone}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.description || '—'}</td>
+                    <td className="pbx-td">{it.status || '—'}</td>
+                    <td className="pbx-td">{it.description || '—'}</td>
                   </tr>
                 ))}
-                {!filteredScheduled.length ? <tr><td colSpan={4} style={{ padding: 8, opacity: 0.75 }}>Nenhum agendado.</td></tr> : null}
+                {!filteredScheduled.length ? <tr><td colSpan={4} className="pbx-td opacity-75">Nenhum agendado.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -430,7 +430,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'ccClick2Call' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Contact Center: Click2Call</h3>
+          <h3 className="mt-0">Contact Center: Click2Call</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '220px 220px 120px 1fr auto', gap: 8, marginBottom: 12 }}>
             <select value={formClick2Call.campaignId} onChange={(e) => setFormClick2Call((s) => ({ ...s, campaignId: e.target.value }))}>
               <option value="">(sem campanha)</option>
@@ -453,7 +453,7 @@ export function PbxContactCenterGovernanceTabs({
               value={formClick2Call.phone}
               onChange={(e) => setFormClick2Call((s) => ({ ...s, phone: e.target.value }))}
             />
-            <button onClick={handleCreateClick2Call} disabled={!canCreateClick2Call || loading} style={{ padding: '8px 12px' }}>
+            <button onClick={handleCreateClick2Call} disabled={!canCreateClick2Call || loading} className="px-3 py-2">
               Criar
             </button>
           </div>
@@ -514,30 +514,30 @@ export function PbxContactCenterGovernanceTabs({
               Adicionar variável
             </button>
           </div>
-          <div style={{ overflow: 'auto', marginTop: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto mt-3">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Quando</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Target</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Phone</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Campanha</th>
+                  <th className="pbx-th">Quando</th>
+                  <th className="pbx-th">Target</th>
+                  <th className="pbx-th">Phone</th>
+                  <th className="pbx-th">Status</th>
+                  <th className="pbx-th">Campanha</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredC2c.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       {formatDateTime(it.createdAt)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.target}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.status}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{it.campaignId || '—'}</td>
+                    <td className="pbx-td">{it.target}</td>
+                    <td className="pbx-td">{it.ddd ? `${it.ddd} ` : ''}{it.phone}</td>
+                    <td className="pbx-td">{it.status}</td>
+                    <td className="pbx-td">{it.campaignId || '—'}</td>
                   </tr>
                 ))}
-                {!filteredC2c.length ? <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhuma solicitacao.</td></tr> : null}
+                {!filteredC2c.length ? <tr><td colSpan={5} className="pbx-td opacity-75">Nenhuma solicitacao.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -546,7 +546,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'legacyXml' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Legado: cadastros XML</h3>
+          <h3 className="mt-0">Legado: cadastros XML</h3>
           <div style={{ opacity: 0.8, marginBottom: 10 }}>
             Tela para manter compatibilidade com cadastros do RIPABX.
           </div>
@@ -569,7 +569,7 @@ export function PbxContactCenterGovernanceTabs({
                 ))}
               </select>
             </label>
-            <button onClick={() => refreshLegacyXml()} disabled={loading} style={{ padding: '8px 12px' }}>
+            <button onClick={() => refreshLegacyXml()} disabled={loading} className="px-3 py-2">
               Atualizar
             </button>
             <span style={{ opacity: 0.8 }}>
@@ -586,7 +586,7 @@ export function PbxContactCenterGovernanceTabs({
                 disabled={loading}
               />
               <div style={{ opacity: 0.8 }}>Campos do item:</div>
-              <button onClick={handleLegacyXmlUpsert} disabled={loading} style={{ padding: '8px 12px' }}>
+              <button onClick={handleLegacyXmlUpsert} disabled={loading} className="px-3 py-2">
                 Salvar
               </button>
             </div>
@@ -622,21 +622,21 @@ export function PbxContactCenterGovernanceTabs({
             Itens: <strong>{legacyXmlItems.length}</strong>
           </div>
           <div style={{ overflow: 'auto', marginTop: 8 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>ID</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Resumo</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }} />
+                  <th className="pbx-th">ID</th>
+                  <th className="pbx-th">Resumo</th>
+                  <th className="pbx-th" />
                 </tr>
               </thead>
               <tbody>
                 {filteredLegacyXmlItems.map((it) => (
                   <tr key={it.id}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       {it.id}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       <span style={{ opacity: 0.9 }}>
                         {(Object.keys(it || {})
                           .filter((k) => k !== 'id' && k !== '_attrs')
@@ -645,7 +645,7 @@ export function PbxContactCenterGovernanceTabs({
                           .join(' | ')) || '—'}
                       </span>
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       <button
                         onClick={() => handleLegacyXmlEdit(it)}
                         disabled={loading}
@@ -664,7 +664,7 @@ export function PbxContactCenterGovernanceTabs({
                   </tr>
                 ))}
                 {!filteredLegacyXmlItems.length ? (
-                  <tr><td colSpan={3} style={{ padding: 8, opacity: 0.75 }}>Sem itens (ou entidade vazia).</td></tr>
+                  <tr><td colSpan={3} className="pbx-td opacity-75">Sem itens (ou entidade vazia).</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -674,7 +674,7 @@ export function PbxContactCenterGovernanceTabs({
 
       {tab === 'governance' ? (
         <>
-          <h3 style={{ marginTop: 0 }}>Governança PBX</h3>
+          <h3 className="mt-0">Governança PBX</h3>
           <div style={{ marginBottom: 12, padding: 12, border: '1px dashed var(--color-border-default)', borderRadius: 8 }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div><strong>Token:</strong> {provisioningToken || '—'}</div>
@@ -684,7 +684,7 @@ export function PbxContactCenterGovernanceTabs({
             </div>
           </div>
 
-          <h4 style={{ marginTop: 0 }}>Auditoria PBX (ações `pbx.*`)</h4>
+          <h4 className="mt-0">Auditoria PBX (ações `pbx.*`)</h4>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
             <input
               placeholder="janela em horas"
@@ -692,7 +692,7 @@ export function PbxContactCenterGovernanceTabs({
               onChange={(e) => setPbxAuditHours(e.target.value)}
               style={{ maxWidth: 180 }}
             />
-            <button onClick={refreshPbxAudit} disabled={loading} style={{ padding: '8px 12px' }}>
+            <button onClick={refreshPbxAudit} disabled={loading} className="px-3 py-2">
               Atualizar auditoria
             </button>
           </div>
@@ -702,27 +702,27 @@ export function PbxContactCenterGovernanceTabs({
             ))}
             {!Object.keys(pbxAuditByAction).length ? 'Sem eventos na janela selecionada.' : null}
           </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Timestamp</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Ação</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Usuário</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Recurso</th>
-                  <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>Detalhes</th>
+                  <th className="pbx-th">Timestamp</th>
+                  <th className="pbx-th">Ação</th>
+                  <th className="pbx-th">Usuário</th>
+                  <th className="pbx-th">Recurso</th>
+                  <th className="pbx-th">Detalhes</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAuditItems.map((item, idx) => (
                   <tr key={`${item.timestamp || 't'}-${item.action || 'a'}-${idx}`}>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">
                       {formatDateTime(item.timestamp)}
                     </td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.action || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.username || item.agentId || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>{item.resource || '—'}</td>
-                    <td style={{ padding: 8, borderBottom: '1px solid var(--color-border-default)' }}>
+                    <td className="pbx-td">{item.action || '—'}</td>
+                    <td className="pbx-td">{item.username || item.agentId || '—'}</td>
+                    <td className="pbx-td">{item.resource || '—'}</td>
+                    <td className="pbx-td">
                       <span style={{ opacity: 0.9 }}>
                         {(item.details && typeof item.details === 'object'
                           ? Object.entries(item.details).slice(0, 6).map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(' | ')
@@ -732,7 +732,7 @@ export function PbxContactCenterGovernanceTabs({
                   </tr>
                 ))}
                 {!filteredAuditItems.length ? (
-                  <tr><td colSpan={5} style={{ padding: 8, opacity: 0.75 }}>Nenhum evento PBX encontrado.</td></tr>
+                  <tr><td colSpan={5} className="pbx-td opacity-75">Nenhum evento PBX encontrado.</td></tr>
                 ) : null}
               </tbody>
             </table>

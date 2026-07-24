@@ -12,8 +12,7 @@ export function SupportCard({
   return (
     <section
       id={id}
-      className="bg-bg-elevated rounded-xl border border-border-default shadow-lg"
-      style={{ padding: compact ? '14px' : '16px' }}
+      className="bg-bg-elevated rounded-xl border border-border-default shadow-lg p-3.5 md:p-4"
     >
       {(title || badge || actions || subtitle) ? (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>

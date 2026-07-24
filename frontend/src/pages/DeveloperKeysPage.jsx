@@ -117,7 +117,7 @@ export function DeveloperKeysPage() {
   if (authLoading) {
     return (
       <CrudPageBase>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="page-loading">
           <p>Carregando...</p>
         </div>
       </CrudPageBase>
@@ -224,7 +224,7 @@ export function DeveloperKeysPage() {
           {usageRoutes.length === 0 ? (
             <div className="text-text-tertiary">Sem dados de rota ainda. Gere tráfego via `/public/*` para popular.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>
@@ -256,7 +256,7 @@ export function DeveloperKeysPage() {
           {keys.length === 0 ? (
             <div className="text-text-tertiary">Nenhuma chave cadastrada.</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table className="support-table">
                 <thead>
                   <tr>
