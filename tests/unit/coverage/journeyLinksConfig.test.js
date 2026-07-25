@@ -1,0 +1,102 @@
+'use strict';
+
+/**
+ * Regressão: o coverage gate NÃO pode depender de qa-waves/journey-coverage/*.json.
+ *
+ * Falha observada no CI (run 30174722502, Node 22): o step `npm run
+ * zip:release` executa tools/system/platform-readiness.js, que REESCREVE
+ * qa-waves/journey-coverage/*.json a partir do corpus de cenários disponível.
+ * Num checkout limpo (sem qa-mesh/meshRegistry.json) o corpus é degradado e os
+ * arquivos regenerados perdem todos os cenários business-*; o gate então
+ * perdia 9 links diretos, journeyCoverage caía de 85.7 para 81 e o release
+ * gate ia a NO_GO — com código e configs idênticos ao ambiente local.
+ *
+ * Correção: a ligação jornada → cenário passou a vir de
+ * config/journey-scenario-links.json, declaração versionada que nenhum
+ * pipeline reescreve. Estes testes provam que (1) o gate lê somente o config
+ * declarado, (2) o config real versionado produz os links esperados contra o
+ * snapshot real e (3) config ausente degrada para zero links de forma
+ * explícita, nunca silenciosa.
+ */
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const {
+  loadJourneyLinkInputs,
+  SNAPSHOT_PATH,
+  ROOT_DIR,
+} = require('../../../scripts/governance/validate-coverage-gate');
+
+const REAL_LINKS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'journey-scenario-links.json');
+
+function writeFixture(data) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'journey-links-'));
+  const filePath = path.join(dir, 'links.json');
+  fs.writeFileSync(filePath, JSON.stringify(data));
+  return filePath;
+}
+
+describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () => {
+  test('lê SOMENTE o config declarado — qa-waves/journey-coverage não é consultado', () => {
+    // A fixture declara uma única jornada inexistente nos arquivos verticais
+    // reais. Se a implementação ainda varresse qa-waves/journey-coverage/,
+    // jornadas reais (beauty_booking, market_default_journey, ...) vazariam
+    // para o resultado.
+    const fixture = writeFixture({
+      version: 1,
+      verticals: [
+        {
+          vertical: 'fixture',
+          journeys: [
+            { journey: 'fixture_journey', scenarios: [{ scenarioId: 'fixture-scenario', status: 'approved' }] },
+          ],
+        },
+      ],
+    });
+
+    const { links, summary } = loadJourneyLinkInputs(
+      [{ id: 'fixture-scenario', domain: 'fixture' }, { id: 'business-market-flow-node', domain: 'mercado' }],
+      { linksConfigPath: fixture },
+    );
+
+    expect(Object.keys(links)).toEqual(['fixture_journey']);
+    expect(links.fixture_journey.scenarioIds).toEqual(['fixture-scenario']);
+    expect(links.fixture_journey.source).toBe('journey-coverage');
+    expect(summary.verticals).toBe(1);
+  });
+
+  test('config ausente/inválido → zero links com origem explícita (nunca silencioso)', () => {
+    const fixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'journey-links-')), 'missing.json');
+    const { links, summary } = loadJourneyLinkInputs(
+      [{ id: 'business-market-flow-node', domain: 'mercado' }],
+      { linksConfigPath: fixture },
+    );
+    expect(links).toEqual({});
+    expect(summary.total).toBe(0);
+    expect(summary.linksSource).toMatch(/ausente\/inválido/);
+  });
+
+  test('config real versionado produz os 16 links esperados contra o snapshot real (modo CI)', () => {
+    // Reproduz exatamente o modo snapshot do CI: cenários do baseline
+    // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
+    // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
+    // degradados pelo platform-readiness.
+    const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8'));
+    const { links, summary } = loadJourneyLinkInputs(snapshot.scenarios, {
+      linksConfigPath: REAL_LINKS_CONFIG_PATH,
+    });
+
+    expect(summary.total).toBe(16);
+    expect(summary.bySource['journey-coverage']).toBe(11);
+    expect(summary.bySource['scenario-name']).toBe(5);
+
+    // Links diretos críticos que sumiram no CI antes da correção:
+    expect(links.market_default_journey.scenarioIds).toContain('business-market-flow-node');
+    expect(links.beauty_booking.scenarioIds).toContain('business-beauty-flow-appointment');
+    expect(links.clinic_default_journey.scenarioIds).toContain('business-clinic-flow-ticket');
+    expect(links.food_customer_journey.scenarioIds).toContain('business-food-flow-order');
+    expect(links.services_default_journey.scenarioIds).toContain('business-serv-flow-solution');
+  });
+});

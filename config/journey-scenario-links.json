@@ -1,0 +1,383 @@
+{
+  "version": 1,
+  "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links.",
+  "generatedAt": "2026-07-25T21:19:46.238Z",
+  "source": "qa-waves/journey-coverage/*.json",
+  "verticals": [
+    {
+      "vertical": "beauty",
+      "journeys": [
+        {
+          "journey": "beauty_booking",
+          "scenarios": [
+            {
+              "scenarioId": "business-b2",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-flow-appointment",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-flow-campaign",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-flow-payment",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-01",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-02",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-03",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-04",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-05",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-scr-06",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "beauty_new_customer",
+          "scenarios": [
+            {
+              "scenarioId": "beauty-campanha-lead-pagamento",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-b1",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-beauty-flow-lead",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "clinic",
+      "journeys": [
+        {
+          "journey": "clinic_default_journey",
+          "scenarios": [
+            {
+              "scenarioId": "clinic-ticket-manutencao",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-clinic-flow-ticket",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-clinic-scr-01",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "fitness",
+      "journeys": [
+        {
+          "journey": "agendamento",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-agendamento-ui",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness-matricula-agendamento",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "cancelamento",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-cancelamento",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "checkin",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-checkin",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "checkout",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-checkout",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_whatsapp_checkout_pix_confirmacao_e2e",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "fitness_active_customer",
+          "scenarios": [
+            {
+              "scenarioId": "business-f1",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-f2",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-flow-charge",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "fitness_customer_checkin",
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-fitness_customer_checkin",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-customer_identification",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-membership_validation",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-access_decision",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-turnstile_release",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-attendance_record",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-crm_update",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-membership_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-credential_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-device_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "fitness_new_customer",
+          "scenarios": [
+            {
+              "scenarioId": "business-fit-flow-checkin",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-flow-student",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-scr-01",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-scr-02",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-scr-03",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "leads",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-leads",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "onboarding",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-onboarding",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "renovacao",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-renovacao",
+              "status": "deprecated"
+            },
+            {
+              "scenarioId": "fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao",
+              "status": "active"
+            },
+            {
+              "scenarioId": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
+              "status": "active"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "food",
+      "journeys": [
+        {
+          "journey": "food_customer_journey",
+          "scenarios": [
+            {
+              "scenarioId": "business-food-flow-order",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "food_order_flow",
+          "scenarios": [
+            {
+              "scenarioId": "food-pedido-whatsapp",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-food-scr-01",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "market",
+      "journeys": [
+        {
+          "journey": "market_default_journey",
+          "scenarios": [
+            {
+              "scenarioId": "market-publicacao-no",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-market-flow-node",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-market-scr-01",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "services",
+      "journeys": [
+        {
+          "journey": "services_default_journey",
+          "scenarios": [
+            {
+              "scenarioId": "services-ativacao-solucao",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-serv-flow-solution",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-serv-scr-01",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

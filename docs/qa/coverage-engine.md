@@ -95,11 +95,18 @@ Fontes dos links (todas versionadas):
   `services_default_journey`, `clinic_default_journey`). O domínio é
   normalizado para o canônico antes do `includes`
   (`canon('clinica')='clinic'` → `'clinic_default_journey'` casa).
-- **(a) Arquivos verticais** (`qa-waves/journey-coverage/*.json`, source
+- **(a) Declaração versionada** (`config/journey-scenario-links.json`, source
   `journey-coverage`): cenários com status ligável (`active` ou `approved` —
   `deprecated` nunca liga) cujo id EXISTE no meshRegistry. Ex.:
   `market_default_journey` → `business-market-flow-node`,
-  `business-market-scr-01`.
+  `business-market-scr-01`. O arquivo é sincronizado a partir de
+  `qa-waves/journey-coverage/*.json` com `npm run coverage-gate:links`
+  (`scripts/governance/sync-journey-scenario-links.js`). O gate NÃO lê os
+  arquivos verticais diretamente: eles são artefatos gerados por
+  `tools/system/platform-readiness.js` (executado no `zip:release`) e eram
+  reescritos com conteúdo degradado num checkout limpo sem meshRegistry,
+  derrubando a journeyCoverage no CI (regressão coberta por
+  `tests/unit/coverage/journeyLinksConfig.test.js`).
 - **(b) Convenção de nome** (source `scenario-name`): para jornada presente
   num arquivo vertical de vertical V, cenários do mesh cujo id contém o id da
   jornada como TOKEN delimitado por `-`/`_` (ex.: `fitness-matricula-checkin`
@@ -113,8 +120,9 @@ Fontes dos links (todas versionadas):
 Precedência: quando (a) existe para a jornada, o link é a UNIÃO de (a)+(b)
 com source `journey-coverage`; senão, usa-se (b). A CLI
 (`validate-coverage-gate.js`) registra o resumo em `inputs.journeyLinks`
-(total de jornadas ligadas por fonte). Os arquivos verticais são versionados,
-então o modo snapshot (CI) funciona igual.
+(total de jornadas ligadas por fonte). A declaração e os aliases são
+versionados e nunca reescritos em runtime, então o modo snapshot (CI)
+funciona igual.
 
 Jornadas ainda UNCOVERED (sem cenário executado ligado — sem link
 artificial): `support_ticket_flow`, `booking_flow` e `payment_charge_flow`

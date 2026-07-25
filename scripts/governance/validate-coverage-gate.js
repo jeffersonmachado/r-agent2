@@ -19,9 +19,9 @@
  *   estados VALIDATED/VISITED/FAILED por model, aplicados aos itens
  *   model:/table:/field: sem domínio ligado como technicalExecutions.
  * - Ligação jornada ↔ execução (qa/coverage/journeyLinks.js): aliases de
- *   domínio de config/qa-waves-registry.json + mapas verticais
- *   qa-waves/journey-coverage/*.json (versionados; funcionam também no modo
- *   snapshot). Resumo registrado em inputs.journeyLinks.
+ *   domínio de config/qa-waves-registry.json + declaração versionada
+ *   config/journey-scenario-links.json (estável no checkout; funciona igual
+ *   no modo snapshot). Resumo registrado em inputs.journeyLinks.
  *
  * Violações de visibilidade: lê reports/visibility-policy-report.json
  * (executa scripts/governance/validate-visibility-policy.js se o relatório
@@ -77,10 +77,19 @@ const DB_INTEGRITY_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'db-integrity-re
 // scripts/governance/coverage-gate-snapshot.js a partir dos dados vivos.
 const SNAPSHOT_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-baseline.json');
 // Ligação jornada ↔ execução (qa/coverage/journeyLinks.js): aliases de
-// domínio e mapas verticais jornada → cenários. Ambos versionados, então
-// funcionam igual no modo snapshot (CI).
+// domínio (config/qa-waves-registry.json) e a declaração versionada
+// jornada → cenários (config/journey-scenario-links.json). Ambos estáveis no
+// checkout, então funcionam igual no modo snapshot (CI).
+//
+// IMPORTANTE: o gate NÃO lê qa-waves/journey-coverage/*.json diretamente.
+// Esses arquivos são artefatos GERADOS por tools/system/platform-readiness.js
+// (executado em `npm run zip:release`) e são reescritos com conteúdo degradado
+// num checkout limpo sem o meshRegistry — foi o que derrubou a journeyCoverage
+// no CI (regressão coberta por tests/unit/coverage/journeyLinksConfig.test.js).
+// A declaração estável é sincronizada manualmente a partir deles com
+// `npm run coverage-gate:links`.
 const QA_WAVES_REGISTRY_PATH = path.join(ROOT_DIR, 'config', 'qa-waves-registry.json');
-const JOURNEY_COVERAGE_DIR = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
+const JOURNEY_LINKS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'journey-scenario-links.json');
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -204,19 +213,23 @@ function loadDbIntegrityTechnicalExecutions(inventoryItems) {
 
 /**
  * Carrega as entradas da ligação jornada ↔ cenários: aliases de domínio
- * (config/qa-waves-registry.json) e os arquivos verticais
- * qa-waves/journey-coverage/*.json. Ausentes → aliases {} e lista vazia
- * (comportamento do motor inalterado).
+ * (config/qa-waves-registry.json) e a declaração versionada
+ * config/journey-scenario-links.json ({ verticals: [{ vertical, journeys:
+ * [{ journey, scenarios: [{ scenarioId, status }] }] }] }). Config ausente/
+ * inválido → aliases resolvidos normalmente e lista de links vazia (o gate
+ * reporta as jornadas como UNCOVERED em vez de falhar silencioso).
+ *
+ * `options.linksConfigPath` / `options.registryConfigPath` existem para os
+ * testes de regressão apontarem fixtures sem tocar nos configs reais.
  */
-function loadJourneyLinkInputs(scenarios) {
-  const aliases = resolveDomainAliases(loadJsonIfExists(QA_WAVES_REGISTRY_PATH));
-  let journeyCoverageFiles = [];
-  if (fs.existsSync(JOURNEY_COVERAGE_DIR)) {
-    journeyCoverageFiles = fs.readdirSync(JOURNEY_COVERAGE_DIR)
-      .filter((name) => name.endsWith('.json'))
-      .map((name) => loadJsonIfExists(path.join(JOURNEY_COVERAGE_DIR, name)))
-      .filter(Boolean);
-  }
+function loadJourneyLinkInputs(scenarios, options = {}) {
+  const linksConfigPath = options.linksConfigPath || JOURNEY_LINKS_CONFIG_PATH;
+  const registryConfigPath = options.registryConfigPath || QA_WAVES_REGISTRY_PATH;
+  const aliases = resolveDomainAliases(loadJsonIfExists(registryConfigPath));
+  const linksConfig = loadJsonIfExists(linksConfigPath);
+  const journeyCoverageFiles = linksConfig && Array.isArray(linksConfig.verticals)
+    ? linksConfig.verticals
+    : [];
   const meshScenarioIds = (scenarios || [])
     .filter((scenario) => scenario && scenario.id)
     .map((scenario) => ({ id: scenario.id, domain: scenario.domain }));
@@ -231,8 +244,11 @@ function loadJourneyLinkInputs(scenarios) {
     summary: {
       total: Object.keys(links).length,
       bySource,
-      verticalFiles: journeyCoverageFiles.length,
+      verticals: journeyCoverageFiles.length,
       aliases: Object.keys(aliases).length,
+      linksSource: linksConfig
+        ? path.relative(ROOT_DIR, linksConfigPath)
+        : `${path.relative(ROOT_DIR, linksConfigPath)} (ausente/inválido)`,
     },
   };
 }

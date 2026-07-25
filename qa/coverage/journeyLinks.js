@@ -9,10 +9,14 @@
  *
  * Fontes de ligação (todas versionadas no repositório):
  *
- * a) `qa-waves/journey-coverage/*.json` (source 'journey-coverage'):
- *    cenários com status ligável (`active` ou `approved` — `deprecated`
+ * a) `config/journey-scenario-links.json` (source 'journey-coverage'):
+ *    declaração versionada jornada → cenários (sincronizada a partir de
+ *    qa-waves/journey-coverage/*.json via `npm run coverage-gate:links` —
+ *    os arquivos verticais são artefatos do platform-readiness, reescritos
+ *    em runtime, e por isso não são lidos diretamente pelo gate). Cenários
+ *    com status ligável (`active` ou `approved` — `deprecated`
  *    nunca liga) cujo id EXISTE no meshRegistry. O id da jornada é o campo
- *    `journey` de cada entrada do arquivo vertical.
+ *    `journey` de cada entrada da vertical.
  *
  * b) Convenção de nome (source 'scenario-name'): para uma jornada presente
  *    num arquivo vertical de vertical V, cenários do mesh cujo id contém o

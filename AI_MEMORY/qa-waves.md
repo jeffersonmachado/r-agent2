@@ -12,7 +12,7 @@ QA Waves are governed journeys and scenario waves. They connect seeds, business 
 - `qa-mesh/meshRegistry.json`
 - `qa-mesh/go-no-go-report.json`
 - `qa-mesh/release-gate-report.json`
-- `qa-waves/journey-coverage/*.json`
+- `qa-waves/journey-coverage/*.json` (artefatos gerados pelo platform-readiness; o coverage gate NÃO os lê — usa `config/journey-scenario-links.json`, sincronizado via `npm run coverage-gate:links`)
 
 ## Operational rules
 

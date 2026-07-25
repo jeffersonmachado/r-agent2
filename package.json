@@ -122,6 +122,7 @@
     "validate:visibility-policy": "node scripts/governance/validate-visibility-policy.js",
     "validate:coverage-gate": "node scripts/governance/validate-coverage-gate.js",
     "coverage-gate:snapshot": "node scripts/governance/coverage-gate-snapshot.js",
+    "coverage-gate:links": "node scripts/governance/sync-journey-scenario-links.js",
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
     "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",
     "analyze:impact": "node scripts/analyze-impact.js",
