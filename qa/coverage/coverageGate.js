@@ -29,6 +29,17 @@
  * UNCOVERED (rebaixa o grupo para VISITED quando há execuções parciais, ou
  * UNCOVERED quando nada executou) > VALIDATED. Grupo sem cenários → UNCOVERED.
  *
+ * Ligação jornada ↔ execução (parâmetros opcionais `aliases` e
+ * `journeyScenarioLinks`, ver qa/coverage/journeyLinks.js):
+ *   (i) jornada com cenários ligados e pelo menos um com execução conhecida
+ *       → estado agregado dos cenários ligados (ligado sem execução conta
+ *       como UNCOVERED na agregação);
+ *   (ii) senão, fallback ao matching por domínio (id da jornada contém o
+ *       domínio ou seu canônico via aliases);
+ *   (iii) senão, UNCOVERED.
+ * Invariante: uma jornada NUNCA fica VALIDATED sem pelo menos um cenário
+ * executado e passando (nem por link nem por domínio).
+ *
  * successRate: execuções concluídas (passed/failed/fallback/flaky); apenas
  * 'passed' conta como sucesso — fallback NÃO é sucesso pleno.
  */
@@ -44,6 +55,7 @@ const {
 } = require('./coverageCalculator');
 const { CRITICALITY_WEIGHTS } = require('./traceabilityGraph');
 const { DEFAULT_THRESHOLDS } = require('./gateThresholds');
+const { journeyMatchesDomain } = require('./journeyLinks');
 
 /** Criticidade do mesh → criticidade formal. */
 const MESH_CRITICALITY_MAP = Object.freeze({
@@ -118,17 +130,15 @@ function aggregateGroupState(states) {
   return COVERAGE_STATES.VISITED;
 }
 
-/** Jornada está ligada a um domínio quando o id contém o domínio. */
-function journeyMatchesDomain(journeyId, domain) {
-  return typeof journeyId === 'string' && typeof domain === 'string'
-    && domain.length > 0 && journeyId.includes(domain);
-}
-
 /**
  * Monta a lista de itens avaliáveis do gate a partir das entradas brutas.
  * Exportada para inspeção/testes.
+ *
+ * `aliases` (alias → canônico) e `journeyScenarioLinks` (jornada → cenários
+ * do mesh, ver qa/coverage/journeyLinks.js) são opcionais: sem eles o
+ * comportamento é o original (matching por domínio via `includes`).
  */
-function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], journeys, staleItemIds = [], technicalExecutions = [] } = {}) {
+function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], journeys, staleItemIds = [], technicalExecutions = [], aliases, journeyScenarioLinks } = {}) {
   const execByScenario = normalizeExecutions(executions);
   const stale = new Set(staleItemIds);
 
@@ -168,9 +178,15 @@ function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], 
     );
   }
 
-  // Domínios ligados a uma jornada (id da jornada contém o domínio).
+  // Domínios ligados a uma jornada (id da jornada contém o domínio ou seu
+  // canônico via aliases — ver journeyLinks.journeyMatchesDomain).
   function domainsForJourney(journeyId) {
-    return [...domainScenarios.keys()].filter((domain) => journeyMatchesDomain(journeyId, domain));
+    return [...domainScenarios.keys()].filter((domain) => journeyMatchesDomain(journeyId, domain, aliases));
+  }
+
+  const scenarioById = new Map();
+  for (const scenario of scenarios) {
+    if (scenario && scenario.id) scenarioById.set(scenario.id, scenario);
   }
 
   const journeyIds = Array.isArray(journeys)
@@ -179,8 +195,31 @@ function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], 
 
   const items = [];
 
-  // 1. Jornadas de negócio.
+  // 1. Jornadas de negócio. Cascata: (i) cenários ligados com execução
+  // conhecida (journeyScenarioLinks; ligado sem execução conta UNCOVERED na
+  // agregação) → (ii) matching por domínio (com aliases) → (iii) UNCOVERED.
+  // Uma jornada nunca fica VALIDATED sem cenário executado e passando.
   for (const journeyId of journeyIds) {
+    const link = journeyScenarioLinks && journeyScenarioLinks[journeyId];
+    const linkedIds = link && Array.isArray(link.scenarioIds) ? link.scenarioIds : [];
+    if (linkedIds.length > 0 && linkedIds.some((id) => execByScenario.has(id))) {
+      items.push({
+        id: `journey:${journeyId}`,
+        dimension: 'journey',
+        criticality: linkedIds.reduce(
+          (acc, id) => {
+            const linked = scenarioById.get(id);
+            return linked ? maxCriticality(acc, mapScenarioCriticality(linked.criticality)) : acc;
+          },
+          'NORMAL',
+        ),
+        state: aggregateGroupState(linkedIds.map((id) => stateForStatus(execByScenario.get(id)))),
+        linkedScenarios: linkedIds,
+        linkSource: link.source,
+      });
+      continue;
+    }
+
     const domains = domainsForJourney(journeyId);
     items.push({
       id: `journey:${journeyId}`,
@@ -288,6 +327,10 @@ function formatReason(check, threshold, actual, items) {
  * @param {Array<{itemId:string,state:string}>} [input.technicalExecutions]
  *   estados resolvidos por ondas técnicas fora do mesh (ex.: Database
  *   Integrity Wave) para itens de inventário sem domínio ligado.
+ * @param {object} [input.aliases] mapa alias → canônico de domínios
+ *   (qa/coverage/journeyLinks.js#resolveDomainAliases).
+ * @param {object} [input.journeyScenarioLinks] ligações jornada → cenários
+ *   do mesh (qa/coverage/journeyLinks.js#buildJourneyScenarioLinks).
  * @param {object} [input.thresholds] overrides de DEFAULT_THRESHOLDS.
  * @param {string} [input.waveId]
  */
@@ -299,12 +342,14 @@ function evaluateCoverageGate(input = {}) {
     journeys,
     staleItemIds = [],
     technicalExecutions = [],
+    aliases,
+    journeyScenarioLinks,
     thresholds = {},
     waveId = 'coverage-gate',
   } = input;
 
   const effectiveThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
-  const items = buildGateItems({ inventoryItems, scenarios, executions, journeys, staleItemIds, technicalExecutions });
+  const items = buildGateItems({ inventoryItems, scenarios, executions, journeys, staleItemIds, technicalExecutions, aliases, journeyScenarioLinks });
 
   const visibility = normalizeViolations(input.visibilityViolations);
   const tenantIsolation = normalizeViolations(input.tenantIsolationViolations);

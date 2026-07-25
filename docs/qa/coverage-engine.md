@@ -30,6 +30,7 @@ reports/visibility-policy-report.json ─┘
 | `evidenceStore.js` | Evidence store append-only JSONL com hash chain SHA-256 (`append`/`markStale`/`verify`) e redaction de chaves sensíveis |
 | `gateThresholds.js` | Thresholds default + resolução de overrides (arquivo JSON + env) |
 | `coverageGate.js` | Motor puro do gate (sem I/O): `evaluateCoverageGate`, `buildGateItems` |
+| `journeyLinks.js` | Ligação jornada ↔ cenários do mesh (sem I/O): `resolveDomainAliases`, `journeyMatchesDomain`, `buildJourneyScenarioLinks` (aliases de domínio + arquivos verticais + convenção de nome) |
 | `impactAnalysis.js` | `buildInventoryGraph` + `computeImpact` (grafo inventário↔jornadas/ondas e propagação de impacto) |
 
 ## Inventário
@@ -70,6 +71,56 @@ Criticidade do mesh: `blocking` → CRITICAL, `high` → HIGH, `medium`/`standar
 Agregação de um grupo (jornada/domínio): FAILED > BLOCKED > UNCOVERED
 (parcialmente executado → VISITED; nada executado → UNCOVERED) > VALIDATED.
 
+## Ligação jornada ↔ execução (journeyLinkage)
+
+A jornada só é VALIDATED quando há cenário executado e passando ligado a ela.
+A ligação usa somente dados versionados, em cascata (`buildGateItems`,
+parâmetros opcionais `aliases` e `journeyScenarioLinks` — sem eles o
+comportamento é o original de `includes` por domínio):
+
+1. **Cenários ligados com execução conhecida** (`journeyScenarioLinks`,
+   montado por `journeyLinks.buildJourneyScenarioLinks`): estado = agregação
+   dos estados dos cenários ligados; cenário ligado sem execução conta como
+   UNCOVERED na agregação (um passed + um não executado → VISITED, nunca
+   VALIDATED; um failed → FAILED).
+2. **Fallback por domínio**: id da jornada contém o domínio do mesh OU seu
+   canônico via aliases (`journeyLinks.journeyMatchesDomain`).
+3. **UNCOVERED** caso contrário.
+
+Fontes dos links (todas versionadas):
+
+- **Aliases de domínio** (`config/qa-waves-registry.json` → `domainAliases`,
+  alias → canônico): o mesh usa domínios PT (`mercado`, `servicos`,
+  `clinica`) e as jornadas canônicas usam EN (`market_default_journey`,
+  `services_default_journey`, `clinic_default_journey`). O domínio é
+  normalizado para o canônico antes do `includes`
+  (`canon('clinica')='clinic'` → `'clinic_default_journey'` casa).
+- **(a) Arquivos verticais** (`qa-waves/journey-coverage/*.json`, source
+  `journey-coverage`): cenários com status ligável (`active` ou `approved` —
+  `deprecated` nunca liga) cujo id EXISTE no meshRegistry. Ex.:
+  `market_default_journey` → `business-market-flow-node`,
+  `business-market-scr-01`.
+- **(b) Convenção de nome** (source `scenario-name`): para jornada presente
+  num arquivo vertical de vertical V, cenários do mesh cujo id contém o id da
+  jornada como TOKEN delimitado por `-`/`_` (ex.: `fitness-matricula-checkin`
+  → jornada `checkin`; `fitness-matricula-agendamento-ui` → `agendamento`).
+  Regra anti-falso-positivo: o token nunca casa dentro de palavra maior
+  (`checkin` não casa em `academia-checkins`). O domínio correspondente à
+  vertical (via aliases: clinic→clinica) é PREFERÊNCIA, não requisito —
+  quando há candidato no domínio preferido só ele liga; exceção documentada:
+  `fitness-matricula-leads` vive no domínio `omnichannel` e liga mesmo assim.
+
+Precedência: quando (a) existe para a jornada, o link é a UNIÃO de (a)+(b)
+com source `journey-coverage`; senão, usa-se (b). A CLI
+(`validate-coverage-gate.js`) registra o resumo em `inputs.journeyLinks`
+(total de jornadas ligadas por fonte). Os arquivos verticais são versionados,
+então o modo snapshot (CI) funciona igual.
+
+Jornadas ainda UNCOVERED (sem cenário executado ligado — sem link
+artificial): `support_ticket_flow`, `booking_flow` e `payment_charge_flow`
+(nenhuma entrada em arquivo vertical, nenhum cenário do mesh com o token e
+nenhum domínio correspondente).
+
 ## Métricas
 
 - **visitedCoverage / validatedCoverage**: % de itens elegíveis (exceto
@@ -98,12 +149,12 @@ minimumWeightedCoverage=85
 
 `config/coverage-gate-thresholds.json` aplica a política **ratchet** sobre os
 3 pisos não críticos: baseline medido em 2026-07-25
-(`minimumJourneyCoverage=38`, `minimumTechnicalCoverage=15`,
-`minimumWeightedCoverage=49` — folga mínima sobre 38.1/15.6/49.3). Esses
-pisos **só podem subir, nunca descer**: qualquer regressão abaixo do baseline
-bloqueia o gate. As regras críticas permanecem 100/0, intocáveis. O campo
-`_ratchet` no JSON documenta a política (chaves `_` são ignoradas pelo
-resolvedor).
+(`minimumJourneyCoverage=85.2`, `minimumTechnicalCoverage=73.3`,
+`minimumWeightedCoverage=83.8` — medido 85.7/73.8/84.3 menos 0.5 de folga).
+Esses pisos **só podem subir, nunca descer**: qualquer regressão abaixo do
+baseline bloqueia o gate. As regras críticas permanecem 100/0, intocáveis.
+O campo `_ratchet` no JSON documenta a política (chaves `_` são ignoradas
+pelo resolvedor).
 
 Overrides por env (prefixo `COVERAGE_GATE_`, SCREAMING_SNAKE_CASE;
 precedência env > arquivo > defaults). Ex.:
@@ -281,21 +332,24 @@ registro original nunca é editado). `verify()` valida a cadeia inteira.
 ## Resultado real atual (2026-07-25)
 
 Sobre o inventário real do repositório, o gate reporta **GO** com o baseline
-ratchet pós-Database Integrity Wave: visitedCoverage 73.9%,
-validatedCoverage 67%, weightedCoverage 79.8%, journeyCoverage 38.1%,
-technicalCoverage 66.7%, successRate 100%, críticos
+ratchet pós-journeyLinkage: visitedCoverage 74.3%, validatedCoverage 74.3%,
+weightedCoverage 84.3%, journeyCoverage **85.7%** (18/21 jornadas VALIDATED),
+technicalCoverage 73.8%, successRate 100%, waveScore 67.5, críticos
 uncovered/failed/stale/orphaned = 0, órfãos totais = 521 (nenhum CRITICAL),
 visibilityViolations=0, tenantIsolationViolations=0 (8 suítes, 60/60 testes).
-Os pisos não críticos do baseline (38/66.2/79.3) só podem subir; com os
+Os pisos não críticos do baseline (85.2/73.3/83.8) só podem subir; com os
 defaults nominais (85/80/85) o gate permanece NO_GO em
-`minimumJourneyCoverage`, `minimumTechnicalCoverage` e
-`minimumWeightedCoverage`.
+`minimumTechnicalCoverage` e `minimumWeightedCoverage`.
 
 ## Testes
 
 `tests/unit/coverage/` — `coverageGate.test.js` (GO/NO_GO, fallback,
 thresholds via env, modo informative, órfão crítico, peso de falha CRITICAL,
-technicalExecutions da Database Integrity Wave), `dbIntegrityWave.test.js`
+technicalExecutions da Database Integrity Wave, journeyLinkage:
+aliases/links no motor), `journeyLinks.test.js` (aliases mercado↔market,
+token delimitado anti-falso-positivo, link por arquivo vertical,
+preferência de domínio, precedência, jornada sem link),
+`dbIntegrityWave.test.js`
 (fixtures em tmp: VALIDATED, FAILED por migration ausente, warning de tenant
 scope, dbAvailable=false → VISITED, assertivas live) e
 `impactAnalysis.test.js` (grafo + propagação), além das suítes dos

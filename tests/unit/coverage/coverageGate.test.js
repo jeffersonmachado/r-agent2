@@ -274,4 +274,121 @@ describe('coverage/coverageGate', () => {
       expect(items.find((i) => i.id === 'model:Widget').state).toBe(COVERAGE_STATES.REVALIDATION_REQUIRED);
     });
   });
+
+  describe('journeyLinkage (aliases + journeyScenarioLinks)', () => {
+    const ALIASES = { mercado: 'market', clinica: 'clinic' };
+
+    test('alias resolve market↔mercado no matching por domínio', () => {
+      const fixture = {
+        scenarios: [scenario('sc-market-1', 'mercado', 'medium')],
+        journeys: ['market_default_journey'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'sc-market-1', status: 'passed' }],
+      };
+      const withoutAlias = buildGateItems(fixture).find((i) => i.id === 'journey:market_default_journey');
+      expect(withoutAlias.state).toBe(COVERAGE_STATES.UNCOVERED);
+
+      const withAlias = buildGateItems({ ...fixture, aliases: ALIASES })
+        .find((i) => i.id === 'journey:market_default_journey');
+      expect(withAlias.state).toBe(COVERAGE_STATES.VALIDATED);
+      expect(withAlias.linkedDomains).toEqual(['mercado']);
+    });
+
+    test('link por arquivo vertical valida jornada sem domínio correspondente', () => {
+      const fixture = {
+        scenarios: [scenario('fitness-matricula-agendamento-ui', 'fitness', 'medium')],
+        journeys: ['agendamento'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'fitness-matricula-agendamento-ui', status: 'passed' }],
+        journeyScenarioLinks: {
+          agendamento: { scenarioIds: ['fitness-matricula-agendamento-ui'], source: 'journey-coverage' },
+        },
+      };
+      const item = buildGateItems(fixture).find((i) => i.id === 'journey:agendamento');
+      expect(item.state).toBe(COVERAGE_STATES.VALIDATED);
+      expect(item.linkSource).toBe('journey-coverage');
+      expect(item.linkedScenarios).toEqual(['fitness-matricula-agendamento-ui']);
+    });
+
+    test('cenário ligado não executado → jornada NÃO valida', () => {
+      const fixture = {
+        scenarios: [scenario('fitness-matricula-checkin', 'fitness', 'medium'), scenario('business-fit-flow-checkin', 'fitness', 'medium')],
+        journeys: ['checkin'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'fitness-matricula-checkin', status: 'passed' }],
+        journeyScenarioLinks: {
+          checkin: { scenarioIds: ['fitness-matricula-checkin', 'business-fit-flow-checkin'], source: 'scenario-name' },
+        },
+      };
+      // um ligado passed + um ligado sem execução (UNCOVERED) → VISITED
+      const item = buildGateItems(fixture).find((i) => i.id === 'journey:checkin');
+      expect(item.state).toBe(COVERAGE_STATES.VISITED);
+
+      // nenhum ligado executado e sem domínio correspondente → UNCOVERED
+      const noneExecuted = buildGateItems({ ...fixture, executions: [] })
+        .find((i) => i.id === 'journey:checkin');
+      expect(noneExecuted.state).toBe(COVERAGE_STATES.UNCOVERED);
+    });
+
+    test('cenário ligado failed → jornada FAILED (link tem precedência sobre domínio)', () => {
+      const fixture = {
+        scenarios: [scenario('fitness-matricula-checkin', 'fitness', 'medium'), scenario('fitness-outro', 'fitness', 'medium')],
+        journeys: ['fitness_checkin'],
+        inventoryItems: [],
+        executions: [
+          { scenarioId: 'fitness-matricula-checkin', status: 'failed' },
+          { scenarioId: 'fitness-outro', status: 'passed' },
+        ],
+        journeyScenarioLinks: {
+          fitness_checkin: { scenarioIds: ['fitness-matricula-checkin'], source: 'scenario-name' },
+        },
+      };
+      // sem link: domínio fitness heterogêneo → VISITED; com link executado: FAILED
+      const item = buildGateItems(fixture).find((i) => i.id === 'journey:fitness_checkin');
+      expect(item.state).toBe(COVERAGE_STATES.FAILED);
+    });
+
+    test('jornada sem link e sem domínio → UNCOVERED', () => {
+      const fixture = {
+        scenarios: [scenario('sc-market-1', 'mercado', 'medium')],
+        journeys: ['support_ticket_flow'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'sc-market-1', status: 'passed' }],
+        aliases: ALIASES,
+        journeyScenarioLinks: {},
+      };
+      const item = buildGateItems(fixture).find((i) => i.id === 'journey:support_ticket_flow');
+      expect(item.state).toBe(COVERAGE_STATES.UNCOVERED);
+    });
+
+    test('links sem execução conhecida caem no fallback por domínio (com aliases)', () => {
+      const fixture = {
+        scenarios: [scenario('business-clinic-flow-ticket', 'clinica', 'high')],
+        journeys: ['clinic_default_journey'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'business-clinic-flow-ticket', status: 'passed' }],
+        aliases: ALIASES,
+        journeyScenarioLinks: {
+          clinic_default_journey: { scenarioIds: ['cenario-inexistente'], source: 'journey-coverage' },
+        },
+      };
+      const item = buildGateItems(fixture).find((i) => i.id === 'journey:clinic_default_journey');
+      expect(item.state).toBe(COVERAGE_STATES.VALIDATED);
+      expect(item.linkedDomains).toEqual(['clinica']);
+    });
+
+    test('evaluateCoverageGate repassa aliases/links (journeyCoverage sobe)', () => {
+      const fixture = {
+        scenarios: [scenario('sc-market-1', 'mercado', 'medium')],
+        journeys: ['market_default_journey'],
+        inventoryItems: [],
+        executions: [{ scenarioId: 'sc-market-1', status: 'passed' }],
+        aliases: ALIASES,
+        thresholds: { minimumJourneyCoverage: 100, minimumTechnicalCoverage: 100, minimumWeightedCoverage: 100 },
+      };
+      const result = evaluateCoverageGate(fixture);
+      expect(result.journeyCoverage).toBe(100);
+      expect(result.releaseGate.reasons.find((r) => r.check === 'minimumJourneyCoverage')).toBeUndefined();
+    });
+  });
 });

@@ -18,6 +18,10 @@
  * - reports/db-integrity-report.json (Database Integrity Wave, opcional):
  *   estados VALIDATED/VISITED/FAILED por model, aplicados aos itens
  *   model:/table:/field: sem domínio ligado como technicalExecutions.
+ * - Ligação jornada ↔ execução (qa/coverage/journeyLinks.js): aliases de
+ *   domínio de config/qa-waves-registry.json + mapas verticais
+ *   qa-waves/journey-coverage/*.json (versionados; funcionam também no modo
+ *   snapshot). Resumo registrado em inputs.journeyLinks.
  *
  * Violações de visibilidade: lê reports/visibility-policy-report.json
  * (executa scripts/governance/validate-visibility-policy.js se o relatório
@@ -48,6 +52,7 @@ const { execFileSync } = require('child_process');
 
 const { evaluateCoverageGate } = require('../../qa/coverage/coverageGate');
 const { resolveThresholds } = require('../../qa/coverage/gateThresholds');
+const { resolveDomainAliases, buildJourneyScenarioLinks } = require('../../qa/coverage/journeyLinks');
 const { buildInventory, diffInventories } = require('../../api/services/qa/inventory/inventoryEngine');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -71,6 +76,11 @@ const DB_INTEGRITY_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'db-integrity-re
 // checkout (arquivo de runtime, gitignored) — ex.: CI. Gerado por
 // scripts/governance/coverage-gate-snapshot.js a partir dos dados vivos.
 const SNAPSHOT_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-baseline.json');
+// Ligação jornada ↔ execução (qa/coverage/journeyLinks.js): aliases de
+// domínio e mapas verticais jornada → cenários. Ambos versionados, então
+// funcionam igual no modo snapshot (CI).
+const QA_WAVES_REGISTRY_PATH = path.join(ROOT_DIR, 'config', 'qa-waves-registry.json');
+const JOURNEY_COVERAGE_DIR = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -192,6 +202,41 @@ function loadDbIntegrityTechnicalExecutions(inventoryItems) {
   };
 }
 
+/**
+ * Carrega as entradas da ligação jornada ↔ cenários: aliases de domínio
+ * (config/qa-waves-registry.json) e os arquivos verticais
+ * qa-waves/journey-coverage/*.json. Ausentes → aliases {} e lista vazia
+ * (comportamento do motor inalterado).
+ */
+function loadJourneyLinkInputs(scenarios) {
+  const aliases = resolveDomainAliases(loadJsonIfExists(QA_WAVES_REGISTRY_PATH));
+  let journeyCoverageFiles = [];
+  if (fs.existsSync(JOURNEY_COVERAGE_DIR)) {
+    journeyCoverageFiles = fs.readdirSync(JOURNEY_COVERAGE_DIR)
+      .filter((name) => name.endsWith('.json'))
+      .map((name) => loadJsonIfExists(path.join(JOURNEY_COVERAGE_DIR, name)))
+      .filter(Boolean);
+  }
+  const meshScenarioIds = (scenarios || [])
+    .filter((scenario) => scenario && scenario.id)
+    .map((scenario) => ({ id: scenario.id, domain: scenario.domain }));
+  const links = buildJourneyScenarioLinks({ journeyCoverageFiles, meshScenarioIds, aliases });
+  const bySource = {};
+  for (const link of Object.values(links)) {
+    bySource[link.source] = (bySource[link.source] || 0) + 1;
+  }
+  return {
+    aliases,
+    links,
+    summary: {
+      total: Object.keys(links).length,
+      bySource,
+      verticalFiles: journeyCoverageFiles.length,
+      aliases: Object.keys(aliases).length,
+    },
+  };
+}
+
 function loadVisibilityViolations() {  let report = loadJsonIfExists(VISIBILITY_REPORT_PATH);
   let source = 'reports/visibility-policy-report.json';
   if (!report) {
@@ -269,6 +314,7 @@ function main() {
   const visibility = loadVisibilityViolations();
   const tenantIsolation = loadTenantIsolationViolations();
   const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
+  const journeyLinks = loadJourneyLinkInputs(scenarios);
 
   let staleItemIds = [];
   if (checkFingerprints) {
@@ -287,6 +333,8 @@ function main() {
     journeys,
     staleItemIds,
     technicalExecutions: dbIntegrity.executions,
+    aliases: journeyLinks.aliases,
+    journeyScenarioLinks: journeyLinks.links,
     visibilityViolations: visibility,
     tenantIsolationViolations: tenantIsolation,
     thresholds,
@@ -305,6 +353,7 @@ function main() {
       fingerprintCheck: checkFingerprints,
       tenantIsolationSource: tenantIsolation.source,
       dbIntegritySource: dbIntegrity.source,
+      journeyLinks: journeyLinks.summary,
       ...(dbIntegrity.dbAvailable === false
         ? { dbIntegrityNote: 'dbAvailable=false: itens técnicos da Database Integrity Wave ficaram no máximo VISITED (sem tier live)' }
         : {}),
@@ -339,4 +388,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, loadJourneyLinkInputs, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
