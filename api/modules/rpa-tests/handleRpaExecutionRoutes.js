@@ -1,5 +1,5 @@
 const {
-  ensureAuthenticated,
+  ensureSupportAccess,
   getPathSuffix,
   getExecutionIdFromActionPath,
 } = require('./rpaRouteUtils');
@@ -21,7 +21,7 @@ async function handleRpaExecutionRoutes(ctx) {
   } = deps;
 
   if (method === 'POST' && pathname.startsWith('/rpa/execute/')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -53,7 +53,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'GET' && pathname.startsWith('/rpa/execution/')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const executionId = getPathSuffix(pathname, '/rpa/execution/');
@@ -77,7 +77,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/cancel')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -101,7 +101,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/continue')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -125,7 +125,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/next')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -149,7 +149,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'GET' && pathname.includes('/rpa/execution/') && pathname.endsWith('/report')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);

@@ -14,6 +14,41 @@
  */
 const logger = require('../../utils/logger');
 
+/**
+ * Classificações de experiência e hierarquia (fonte única da política).
+ * Mesma regra do Cognitive Core (api/modules/cognitive/routes.js):
+ * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
+ */
+const CLASSIFICATIONS = Object.freeze({
+  PRODUCTION: 'PRODUCTION',
+  SUPPORT: 'SUPPORT',
+  DEVELOPMENT: 'DEVELOPMENT',
+});
+
+const CLASSIFICATION_RANK = Object.freeze({
+  PRODUCTION: 1,
+  SUPPORT: 2,
+  DEVELOPMENT: 3,
+});
+
+function getClassificationForAgent(agent) {
+  const role = String(agent?.role || '').trim().toLowerCase();
+  if (role === 'super_admin') return CLASSIFICATIONS.DEVELOPMENT;
+  if (role === 'auditor') return CLASSIFICATIONS.SUPPORT;
+  return CLASSIFICATIONS.PRODUCTION;
+}
+
+/**
+ * Hierarquia: DEVELOPMENT > SUPPORT > PRODUCTION.
+ * Retorna true apenas quando a classificação do ator atinge o mínimo exigido
+ * (mínimo inválido/desconhecido falha fechado).
+ */
+function classificationMeets(classification, min) {
+  const current = CLASSIFICATION_RANK[String(classification || '').toUpperCase()] || 0;
+  const required = CLASSIFICATION_RANK[String(min || '').toUpperCase()] || 0;
+  return required > 0 && current >= required;
+}
+
 const PRODUCTION_VISIBLE_ROUTES = [
   '/workspace', '/dashboard', '/support', '/inbox', '/crm',
   '/agenda', '/pbx', '/campaigns', '/analytics', '/ai-tools',
@@ -116,6 +151,10 @@ module.exports = {
   validateRouteVisibility,
   validateAgentVisibility,
   generateSegregationReport,
+  getClassificationForAgent,
+  classificationMeets,
+  CLASSIFICATIONS,
+  CLASSIFICATION_RANK,
   PRODUCTION_VISIBLE_ROUTES,
   PRODUCTION_HIDDEN_ROUTES,
   SUPPORT_VISIBLE_ROUTES,

@@ -107,6 +107,20 @@ jobs:
       - name: Tornar scripts executáveis
         run: chmod +x scripts/*.sh
 
+      # Coverage Gate bloqueante: política de visibilidade + isolamento de
+      # tenant + pisos de cobertura (ratchet). O relatório de tenant é gerado
+      # fresco no CI (npm run report:tenant-isolation) — as suítes de
+      # integração de tests/tenant se auto-pulam sem PostgreSQL (contam como
+      # pending, nunca como falha); o relatório versionado
+      # reports/tenant-isolation-report.json (gerado localmente com DB, 60/60)
+      # permanece como evidência baseline. COVERAGE_GATE_SKIP_TENANT_RUN=1
+      # garante que o gate consome o relatório em disco sem re-executar o Jest.
+      - name: "Coverage gate (visibility policy + tenant isolation + ratchet)"
+        run: |
+          npm run report:tenant-isolation
+          npm run validate:visibility-policy
+          COVERAGE_GATE_SKIP_TENANT_RUN=1 npm run validate:coverage-gate
+
       - name: "[1/6] check-dist-clean"
         run: bash scripts/check-dist-clean.sh
 

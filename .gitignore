@@ -59,7 +59,8 @@ remote-dumps/
 remote-dumps2/
 
 # Coverage (gerado)
-coverage/
+/coverage/
+frontend/coverage/
 
 # Python virtualenvs locais
 venv/
@@ -116,7 +117,10 @@ qa-mesh/scheduler-activity.log
 # Artefatos locais de QA / release (auto-gerados, não versionar)
 governance/*.json
 governance/locks/
-reports/
+reports/*
+# Exceção: evidência baseline de isolamento de tenant, consumida pelo
+# Coverage Gate no CI (gerada localmente com DB por report:tenant-isolation).
+!reports/tenant-isolation-report.json
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

@@ -5,6 +5,15 @@ const path = require('path');
 const qaMeshService = require('./qaMeshService');
 const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const operationalStepExecutor = require('./qa/operationalStepExecutor');
+const {
+  visitedCoverage: calcVisitedCoverage,
+  validatedCoverage: calcValidatedCoverage,
+  successRate: calcSuccessRate,
+  weightedCoverage: calcWeightedCoverage,
+  dimensionCoverage: calcDimensionCoverage,
+  criticalSummary: calcCriticalSummary,
+} = require('../../qa/coverage/coverageCalculator');
+const { COVERAGE_STATES } = require('../../qa/coverage/coverageStates');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const HISTORY_DIR_CANDIDATES = [
@@ -764,9 +773,148 @@ function listStepStatus(options = {}) {
   };
 }
 
+/**
+ * Mapeia o status bruto do mesh (última execução do cenário) para o estado
+ * formal de cobertura:
+ * - passed → VALIDATED; passed_via_fallback → VISITED;
+ * - failed/flaky → FAILED; skipped/infra_error/environment_missing → BLOCKED;
+ * - ausente (nunca executado) → UNCOVERED.
+ * Status desconhecidos com execução registrada contam como VISITED.
+ */
+const MESH_BLOCKED_STATUSES = Object.freeze([
+  'skipped', 'infra_error', 'environment_missing', 'blocked', 'queued', 'pending',
+]);
+
+function mapMeshStatusToCoverageState(rawStatus) {
+  const status = String(rawStatus || '').trim().toLowerCase();
+  if (!status) return COVERAGE_STATES.UNCOVERED;
+  if (status === 'passed' || status === 'pass' || status === 'success') return COVERAGE_STATES.VALIDATED;
+  if (status === 'passed_via_fallback') return COVERAGE_STATES.VISITED;
+  if (status === 'failed' || status === 'failure' || status === 'error' || status === 'flaky') {
+    return COVERAGE_STATES.FAILED;
+  }
+  if (MESH_BLOCKED_STATUSES.includes(status)) return COVERAGE_STATES.BLOCKED;
+  return COVERAGE_STATES.VISITED;
+}
+
+/** Criticidade do registry → tier de peso (CRITICALITY_WEIGHTS do grafo). */
+function mapCriticalityToWeightTier(criticality) {
+  const normalized = String(criticality || '').trim().toLowerCase();
+  if (normalized === 'blocking') return 'CRITICAL';
+  if (normalized === 'high') return 'HIGH';
+  return 'NORMAL';
+}
+
+/**
+ * Último status bruto por cenário, mesma fonte de collectScenarioLatestStats
+ * (histórico do mesh + evidências meshq-* disparadas pela UI), porém sem a
+ * normalização com perda (normalizeStatus colapsa skipped → success).
+ * @returns {Map<string, {status: string, at: string|null}>}
+ */
+function collectScenarioLatestRawStatus(maxExecutions = 250) {
+  const latest = new Map();
+
+  const consider = (scenarioId, rawStatus, at) => {
+    const id = String(scenarioId || '').trim();
+    if (!id) return;
+    const candidateTs = at ? new Date(at).getTime() : -1;
+    const current = latest.get(id);
+    const currentTs = current && current.at ? new Date(current.at).getTime() : -1;
+    if (!current || candidateTs >= currentTs) {
+      latest.set(id, { status: String(rawStatus || ''), at: at || null });
+    }
+  };
+
+  const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
+  for (const execution of history) {
+    const results = Array.isArray(execution.results) ? execution.results : [];
+    for (const result of results) {
+      consider(result.id || result.scenarioId, result.status, result.startedAt || execution.startedAt || null);
+    }
+  }
+
+  // Complemento: execuções disparadas pela UI (meshEvidence/waveId/meshq-*.json)
+  const evidenceBaseDir = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
+  if (fs.existsSync(evidenceBaseDir)) {
+    let waveDirs = [];
+    try {
+      waveDirs = fs.readdirSync(evidenceBaseDir).filter((entry) => {
+        try {
+          return fs.statSync(path.join(evidenceBaseDir, entry)).isDirectory();
+        } catch (_) {
+          return false;
+        }
+      });
+    } catch (_) {
+      waveDirs = [];
+    }
+
+    for (const waveDir of waveDirs) {
+      let files;
+      try {
+        files = fs.readdirSync(path.join(evidenceBaseDir, waveDir))
+          .filter((f) => f.startsWith('meshq-') && f.endsWith('.json'));
+      } catch (_) {
+        continue;
+      }
+      for (const file of files) {
+        try {
+          const evidence = JSON.parse(fs.readFileSync(path.join(evidenceBaseDir, waveDir, file), 'utf8'));
+          consider(evidence.scenarioId, evidence.status, evidence.generatedAt || evidence.startedAt || null);
+        } catch (_) {
+          // Ignora arquivos de evidência malformados
+        }
+      }
+    }
+  }
+
+  return latest;
+}
+
+/**
+ * Itens de cobertura por cenário do registry, resolvidos pelo último status
+ * bruto (aceitando aliases de platformScenarioIds como resolveScenarioStat).
+ */
+function buildCoverageItems(registry = [], latestRawStatus = new Map()) {
+  return registry.map((scenario, index) => {
+    const candidateIds = getScenarioCandidateIds(scenario);
+    let latest = null;
+    for (const id of candidateIds) {
+      const entry = latestRawStatus.get(id);
+      if (!entry) continue;
+      const candidateTs = entry.at ? new Date(entry.at).getTime() : -1;
+      const latestTs = latest && latest.at ? new Date(latest.at).getTime() : -1;
+      if (!latest || candidateTs >= latestTs) latest = entry;
+    }
+
+    return {
+      id: scenario.id || `scenario-${index + 1}`,
+      state: mapMeshStatusToCoverageState(latest ? latest.status : null),
+      criticality: mapCriticalityToWeightTier(scenario.criticality),
+      dimension: scenario.domain || 'core',
+    };
+  });
+}
+
+/** Métricas de cobertura de execução (0–100) via qa/coverage/coverageCalculator. */
+function computeCoverageMetrics(coverageItems) {
+  const executions = coverageItems
+    .filter((item) => item.state === COVERAGE_STATES.VALIDATED || item.state === COVERAGE_STATES.FAILED)
+    .map((item) => ({ status: item.state === COVERAGE_STATES.VALIDATED ? 'passed' : 'failed' }));
+
+  return {
+    visitedCoverage: calcVisitedCoverage(coverageItems),
+    validatedCoverage: calcValidatedCoverage(coverageItems),
+    successRate: calcSuccessRate(executions),
+    weightedCoverage: calcWeightedCoverage(coverageItems),
+  };
+}
+
 function listWaves() {
   const registry = qaMeshService.getRegistry() || [];
   const items = buildWaveItems(registry);
+  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus());
+  const coverageById = new Map(coverageItems.map((item) => [item.id, item]));
   const byDomain = new Map();
 
   for (const item of items) {
@@ -778,7 +926,6 @@ function listWaves() {
         name: `Wave ${key}`,
         totalItems: 0,
         criticalItems: 0,
-        coverage: 0,
         items: [],
       });
     }
@@ -795,10 +942,29 @@ function listWaves() {
     });
   }
 
-  return Array.from(byDomain.values()).map((wave) => ({
-    ...wave,
-    coverage: Math.min(100, Math.round((wave.totalItems / Math.max(1, items.length)) * 100)),
-  }));
+  return Array.from(byDomain.values()).map((wave) => {
+    const waveCoverageItems = wave.items
+      .map((waveItem) => coverageById.get(waveItem.id))
+      .filter(Boolean);
+    return {
+      ...wave,
+      ...computeCoverageMetrics(waveCoverageItems),
+    };
+  });
+}
+
+/** Consolidado global de cobertura sobre meshRegistry + última execução. */
+function getGlobalCoverageSummary() {
+  const registry = qaMeshService.getRegistry() || [];
+  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus());
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totalItems: coverageItems.length,
+    ...computeCoverageMetrics(coverageItems),
+    dimensionCoverage: calcDimensionCoverage(coverageItems),
+    criticalSummary: calcCriticalSummary(coverageItems),
+  };
 }
 
 function flattenReplays(maxExecutions = 150) {
@@ -1323,6 +1489,7 @@ function getExecutionStatus(executionId) {
 
 module.exports = {
   listWaves,
+  getGlobalCoverageSummary,
   listJourneys,
   saveJourney,
   deleteJourney,

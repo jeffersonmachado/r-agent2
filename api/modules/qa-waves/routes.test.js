@@ -54,7 +54,12 @@ function request(port, method, path, body, extraHeaders) {
 
 function createDefaultDeps() {
   return {
-    requireAuth: jest.fn(() => ({ valid: true })),
+    // Autentica como super_admin (classificação DEVELOPMENT): QA Waves é ferramenta
+    // de engenharia restrita a DEVELOPMENT após a política de segregação.
+    requireAuth: jest.fn((req) => {
+      req.agent = { id: 'agent-root', username: 'systemadmin', role: 'super_admin', tenantId: 'system' };
+      return { valid: true, agent: req.agent };
+    }),
     requirePermission: jest.fn(() => ({ allowed: true })),
     sendJson: (res, status, payload) => res.status(status).json(payload),
     badRequest: (res, message) => res.status(400).json({ error: 'bad_request', message }),
@@ -62,6 +67,16 @@ function createDefaultDeps() {
     parseJsonBody: jest.fn(async () => ({})),
     logger: { error: jest.fn() },
     listWaves: jest.fn(() => []),
+    getWaveCoverageSummary: jest.fn(() => ({
+      generatedAt: '2026-07-25T00:00:00.000Z',
+      totalItems: 6,
+      visitedCoverage: 33.3,
+      validatedCoverage: 16.7,
+      successRate: 100,
+      weightedCoverage: 38.5,
+      dimensionCoverage: { alpha: { total: 1, eligible: 1, visited: 100, validated: 100, weighted: 100 } },
+      criticalSummary: { uncovered: 1, failed: 0, stale: 0, orphaned: 0 },
+    })),
     listJourneys: jest.fn(() => ({ domains: [{ id: 'fitness', name: 'Fitness', journeys: [] }] })),
     listJourneyStatus: jest.fn(() => ({ items: [{ journeyId: 'fitness_new_customer', status: 'GO' }] })),
     listStepStatus: jest.fn(() => ({ items: [{ stepId: 'step_01_discovery', status: 'GO' }] })),
@@ -224,6 +239,71 @@ describe('qa-waves routes', () => {
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ error: 'unauthorized', message: 'token_missing' });
+  });
+
+  test('GET /api/qa-waves/waves deve retornar 403 classification_required para operator', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockImplementation((req) => {
+        req.agent = { id: 'agent-op', username: 'operador', role: 'operator', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/waves');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'PRODUCTION',
+    });
+    expect(deps.listWaves).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/waves deve retornar 403 classification_required para auditor (SUPPORT < DEVELOPMENT)', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockImplementation((req) => {
+        req.agent = { id: 'agent-aud', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/waves');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'SUPPORT',
+    });
+    expect(deps.listWaves).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/coverage/summary deve retornar consolidado de cobertura para super_admin', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/coverage/summary');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('visitedCoverage');
+    expect(res.body).toHaveProperty('validatedCoverage');
+    expect(res.body).toHaveProperty('successRate');
+    expect(res.body).toHaveProperty('weightedCoverage');
+    expect(res.body).toHaveProperty('dimensionCoverage');
+    expect(res.body).toHaveProperty('criticalSummary');
+    expect(deps.getWaveCoverageSummary).toHaveBeenCalledTimes(1);
+  });
+
+  test('GET /api/qa-waves/coverage/summary deve retornar 401 sem autenticacao', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockReturnValue({ valid: false, error: 'token_missing' });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/coverage/summary');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: 'unauthorized', message: 'token_missing' });
+    expect(deps.getWaveCoverageSummary).not.toHaveBeenCalled();
   });
 
   test('GET /api/qa-waves/journeys deve retornar payload de jornadas', async () => {

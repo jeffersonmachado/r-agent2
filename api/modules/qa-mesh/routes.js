@@ -1,9 +1,24 @@
 'use strict';
 
 const express = require('express');
+const { checkClassification } = require('../../middleware/requireClassification');
 
 function createQaMeshRoutes({ buildDeps }) {
   const router = express.Router();
+
+  // QA Mesh / estabilidade são ferramentas de engenharia (PRODUCTION_HIDDEN): exigem DEVELOPMENT.
+  function enforceDevelopmentClassification(deps, req, res) {
+    const check = checkClassification(req, 'DEVELOPMENT');
+    if (!check.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'classification_required',
+        required: check.required,
+        classification: check.classification,
+      });
+      return false;
+    }
+    return true;
+  }
 
   function ensureOperator(deps, req, res) {
     const perm = deps.requirePermission ? deps.requirePermission(req, 'qa', 'execute') : { allowed: false };
@@ -22,6 +37,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, { scenarios: deps.getRegistry() });
   });
 
@@ -32,6 +48,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, { scenarios: deps.refreshMeshRegistry() });
   });
 
@@ -42,6 +59,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const latest = deps.getLatestExecution();
     if (!latest) {
       deps.sendJson(res, 404, { error: 'not_found', message: 'Nenhuma execução disponível' });
@@ -57,6 +75,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const limit = Number.parseInt(req.query.limit || '20', 10);
     const domain = req.query.domain || undefined;
     const officialOnly = ['1', 'true', 'yes'].includes(String(req.query.officialOnly || '').toLowerCase());
@@ -71,6 +90,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const reference = deps.getOfficialReference();
     if (!reference) {
       deps.sendJson(res, 404, { error: 'not_found', message: 'Nenhuma referência oficial disponível' });
@@ -86,6 +106,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getMeshSchedulerStatus());
   });
 
@@ -96,6 +117,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getStabilitySnapshot());
   });
 
@@ -106,6 +128,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getStabilityHistory());
   });
 
@@ -116,6 +139,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getStabilityFailures());
   });
 
@@ -126,6 +150,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getCheckpointsOverview());
   });
 
@@ -136,6 +161,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const data = deps.getCheckpointByWaveId(req.params.wave);
     if (!data) {
       deps.sendJson(res, 404, { error: 'not_found', message: 'Checkpoint nao encontrado' });
@@ -151,6 +177,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getLearnSummary());
   });
 
@@ -161,6 +188,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getLearnFailures());
   });
 
@@ -171,6 +199,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getLearnSuggestions());
   });
 
@@ -181,6 +210,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getLearnPlans());
   });
 
@@ -191,6 +221,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     deps.sendJson(res, 200, deps.getLearnMemory());
   });
 
@@ -201,6 +232,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const execution = deps.getExecutionById(req.params.id);
     if (!execution) {
       deps.sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
@@ -216,6 +248,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     const execution = deps.getQueuedExecutionStatus(req.params.id);
     if (!execution) {
       deps.sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
@@ -231,6 +264,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     if (!ensureOperator(deps, req, res)) {
       return;
     }
@@ -259,6 +293,7 @@ function createQaMeshRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     if (!ensureOperator(deps, req, res)) {
       return;
     }

@@ -20,8 +20,13 @@
 - docs/O_QUE_FALTA_DIVERGENCIAS.md
 - docs/O_QUE_FALTA_UI_CHECKLIST.md
 
+## Coverage engine
+- docs/qa/coverage-engine.md
+
 ## Generated artifacts
 - governance/final-readiness-report.json
 - dev/platform-readiness/latest.json
 - qa-mesh/gap-engine/latest.json
 - qa-waves/journey-coverage/*.json
+- reports/coverage-gate-report.json
+- reports/impact-analysis.json

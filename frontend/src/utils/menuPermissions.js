@@ -343,6 +343,19 @@ export function filterNavigationTree(agent, nodes = []) {
 }
 
 /**
+ * Prefixos de rotas de engenharia (PRODUCTION_HIDDEN na política de segregação):
+ * exigem super_admin, inclusive para paths sem mapeamento explícito no menu
+ * (allowUnknown não se aplica a esses prefixos).
+ */
+const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa'];
+
+function isProtectedPath(targetPath) {
+  return PROTECTED_PATH_PREFIXES.some(
+    (prefix) => targetPath === prefix || targetPath.startsWith(`${prefix}/`)
+  );
+}
+
+/**
  * Verifica se um agente pode acessar uma rota do frontend com base nas regras do menu/RBAC.
  *
  * @param {Object} agent - Agente autenticado
@@ -357,6 +370,10 @@ export function canAccessPath(agent, path, options = {}) {
 
   if (!agent) {
     return false;
+  }
+
+  if (isProtectedPath(targetPath)) {
+    return isSuperAdmin(agent);
   }
 
   const item = menuItems.find((menuItem) => {

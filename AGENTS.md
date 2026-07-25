@@ -48,6 +48,7 @@ Outros diretórios relevantes:
 
 - `core/rpa/` → CLI, recorder, player, replay determinístico e recuperação de RPA.
 - `qa/`, `qa-mesh/`, `qa-waves/` → runner de QA, malha de cenários (registry, runner, scheduler, go/no-go) e cobertura por ondas. São insumos de governança de release, não extras opcionais.
+- `qa/coverage/` → Coverage Engine: fingerprints SHA-256 canônicos, estados de cobertura (UNCOVERED→VALIDATED/STALE/ORPHANED etc.), grafo de rastreabilidade, calculadora (visitada/validada/sucesso/ponderada), Evidence Store append-only com hash chain + redaction, motor do coverage gate e análise de impacto. Inventário automático versionado em `api/services/qa/inventory/` (saída: `config/system-inventory.json`). Doc canônica: `docs/qa/coverage-engine.md`.
 - `governance/` → engines e relatórios de prova: self-proving, integridade de replay, validação de pacote, tamper detection, readiness.
 - `pipeline/` → validação completa, release gate e autocorreção (`pipeline/runFullValidation.js`, `pipeline/entrypoints/`).
 - `tools/system/` → comandos oficiais do ciclo de vida do sistema (bootstrap, validate, release, deploy, release-gate, go-no-go etc.).
@@ -103,8 +104,9 @@ npm run system:deploy        # dry-run por padrão; deploy real exige SYSTEM_DEP
 
 Documentação não é suficiente. Use os validadores bloqueantes em `scripts/governance/`:
 
-- `npm run validate:ai-memory`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:cleanup`, `validate:operational-rules`, `validate:coverage-completeness`, `validate:business-needs`, `validate:governance-summary`.
+- `npm run validate:ai-memory`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:cleanup`, `validate:operational-rules`, `validate:coverage-completeness`, `validate:business-needs`, `validate:governance-summary`, `validate:visibility-policy`, `validate:coverage-gate` (os dois últimos, nesta ordem, fecham o gate agregado).
 - Validadores adicionais: `validate:ai-memory-consistency`, `validate:layer-conventions`, `validate:invariants`.
+- Coverage e visibilidade: `npm run validate:coverage-gate` (gate bloqueante de cobertura — visitada/validada/ponderada + thresholds de críticos; pisos não críticos seguem política ratchet: baseline 2026-07-25, só sobem; `--informative` para modo não bloqueante; relatório em `reports/coverage-gate-report.json`), `npm run report:tenant-isolation` (fonte real de `tenantIsolationViolations`: suítes Jest de tenant → `reports/tenant-isolation-report.json`, versionado como exceção do `.gitignore`), `npm run validate:visibility-policy` (separação PRODUCTION/SUPPORT/DEVELOPMENT no menu e nas APIs de QA/RPA), `npm run inventory:build` (regenera `config/system-inventory.json` com diff), `npm run analyze:impact` (impacto de mudanças do inventário no grafo), `npm run demo:coverage` (6 cenários executáveis do Coverage Engine).
 - `npm run validate:governance-enforcement` é o **gate agregado**. Se qualquer validador falhar, a tarefa não está release-green; reporte a falha com a evidência gerada em `reports/*.json`.
 - `npm run qa:mesh` → malha canônica de cenários (go/no-go em `qa-mesh/go-no-go-report.json`).
 - Relatórios oficiais ficam em `reports/*.json`; `reports/governance-score.json` é a única fonte para `overallGovernance`.
@@ -153,6 +155,7 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 - `.env` exige `ENCRYPTION_KEY` válida; `.env` e `api/data/config.json` são criados pelo `system:bootstrap` a partir dos exemplos do repositório.
 - Caminhos de runtime/evidência devem usar raízes externas quando possível (`RUNTIME_ROOT`, padrão `/var/lib/ragent2` em containers); ver `docs/runtime-paths.md`.
 - Docker é o modelo oficial de runtime/deploy em produção; nunca introduzir PM2.
+- APIs de engenharia (QA Waves, QA Mesh) exigem `requireClassification('DEVELOPMENT')` e APIs de replay/RPA `requireClassification('SUPPORT')` (`api/middleware/requireClassification.js`; mapeamento role→classificação: super_admin→DEVELOPMENT, auditor→SUPPORT, demais→PRODUCTION). A política canônica de rotas é `api/modules/agent-os/experience-segregation.js`, verificada por `validate:visibility-policy`.
 
 ## Estado de governança observado
 

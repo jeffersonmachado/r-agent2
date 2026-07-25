@@ -54,4 +54,30 @@ describe('menuPermissions', () => {
     expect(isSuperAdmin(variantRoleAgent)).toBe(true);
     expect(canAccessPath(variantRoleAgent, '/qa')).toBe(true);
   });
+
+  it('nega /qa, /qa/stability e /qa-mesh para operator e manager (ferramentas de engenharia)', () => {
+    const operatorAgent = { id: 'agent-op', username: 'op', role: 'operator', tenantId: 'demo-tenant' };
+    const managerAgent = { id: 'agent-mg', username: 'mg', role: 'manager', tenantId: 'demo-tenant' };
+
+    for (const agent of [operatorAgent, managerAgent]) {
+      expect(canAccessPath(agent, '/qa')).toBe(false);
+      expect(canAccessPath(agent, '/qa/stability')).toBe(false);
+      expect(canAccessPath(agent, '/qa-mesh')).toBe(false);
+      expect(canAccessPath(agent, '/dev/qa-waves')).toBe(false);
+      expect(canAccessPath(agent, '/dev/rpa-replays')).toBe(false);
+    }
+  });
+
+  it('nega path desconhecido sob prefixo protegido para não-super_admin mesmo com allowUnknown', () => {
+    const managerAgent = { id: 'agent-mg', username: 'mg', role: 'manager', tenantId: 'demo-tenant' };
+
+    expect(canAccessPath(managerAgent, '/dev/qualquer-coisa', { allowUnknown: true })).toBe(false);
+    expect(canAccessPath(managerAgent, '/qa/qualquer-coisa', { allowUnknown: true })).toBe(false);
+    expect(canAccessPath(managerAgent, '/rpa/qualquer-coisa', { allowUnknown: true })).toBe(false);
+    expect(canAccessPath(superAdminAgent, '/dev/qualquer-coisa', { allowUnknown: true })).toBe(true);
+  });
+
+  it('mantém allowUnknown para paths fora dos prefixos protegidos', () => {
+    expect(canAccessPath(adminAgent, '/alguma-rota-nova', { allowUnknown: true })).toBe(true);
+  });
 });

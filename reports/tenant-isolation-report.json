@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-07-25T14:42:59.718Z",
+  "command": "jest tests/tenant api/middleware/__tests__/tenantValidation.test.js tests/unit/exportServiceTenantIsolation.test.js tests/unit/departmentsServiceTenantIsolation.test.js --ci --json",
+  "suites": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "testsTotal": 60,
+  "testsPassed": 60,
+  "testsFailed": 0,
+  "testsPending": 0,
+  "violations": 0,
+  "failingSuites": []
+}

@@ -64,10 +64,10 @@ function buildDepsFactory(overrides = {}) {
 }
 
 describe('qa-mesh routes', () => {
-  test('bloqueia POST /qa-mesh/run para perfis sem autorização', async () => {
+  test('bloqueia POST /qa-mesh/run para super_admin sem permissão qa:execute', async () => {
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'analyst' },
+        agent: { role: 'super_admin' },
         permission: { allowed: false, error: 'sem permissão' },
       }),
     });
@@ -81,10 +81,31 @@ describe('qa-mesh routes', () => {
     expect(res.body.error).toBe('forbidden');
   });
 
-  test('aceita POST /qa-mesh/run de admin e responde 202 com executionId', async () => {
+  test('bloqueia POST /qa-mesh/run com 403 classification_required para perfil operacional', async () => {
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'admin' },
+        agent: { role: 'operator' },
+        permission: { allowed: true },
+      }),
+    });
+    const handler = findRouteHandler(router, 'POST', '/qa-mesh/run');
+    const req = { headers: { 'content-type': 'application/json' }, body: {} };
+    const res = createResponse();
+
+    await handler(req, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'PRODUCTION',
+    });
+  });
+
+  test('aceita POST /qa-mesh/run de super_admin e responde 202 com executionId', async () => {
+    const router = createQaMeshRoutes({
+      buildDeps: buildDepsFactory({
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
       }),
     });
@@ -102,7 +123,7 @@ describe('qa-mesh routes', () => {
   test('retorna status assíncrono por executionId', async () => {
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'supervisor' },
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
       }),
     });
@@ -122,7 +143,7 @@ describe('qa-mesh routes', () => {
     const getMeshHistory = jest.fn(() => []);
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'supervisor' },
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
         extra: { getMeshHistory },
       }),
@@ -141,7 +162,7 @@ describe('qa-mesh routes', () => {
     const getOfficialReference = jest.fn(() => ({ executionId: 'mesh-pipeline-1', historyPath: '/tmp/mesh-pipeline-1.json' }));
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'supervisor' },
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
         extra: { getOfficialReference },
       }),
@@ -157,10 +178,10 @@ describe('qa-mesh routes', () => {
     expect(getOfficialReference).toHaveBeenCalled();
   });
 
-  test('aceita replay universal para supervisor', async () => {
+  test('aceita replay universal para super_admin', async () => {
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'supervisor' },
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
       }),
     });
@@ -180,7 +201,7 @@ describe('qa-mesh routes', () => {
     error.code = 'PIPELINE_REQUIRED';
     const router = createQaMeshRoutes({
       buildDeps: buildDepsFactory({
-        agent: { role: 'supervisor' },
+        agent: { role: 'super_admin' },
         permission: { allowed: true },
         extra: {
           queueScenarioReplay: jest.fn(() => {

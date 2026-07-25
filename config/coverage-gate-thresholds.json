@@ -1,0 +1,16 @@
+{
+  "_comment": "Overrides opcionais dos thresholds do Coverage Gate (qa/coverage/gateThresholds.js). Apenas chaves presentes em DEFAULT_THRESHOLDS são aceitas; env COVERAGE_GATE_* tem precedência sobre este arquivo.",
+  "_ratchet": "Baseline medido em 2026-07-25 (journeyCoverage=38.1, technicalCoverage=15.6, weightedCoverage=49.3; críticos 0/0/0/0). Os 3 pisos não críticos abaixo são esse baseline com folga mínima e seguem a política ratchet: só podem SUBIR, nunca descer — qualquer regressão abaixo do baseline bloqueia o gate. As regras críticas permanecem 100/0, intocáveis.",
+  "criticalJourneysValidated": 100,
+  "criticalOutcomesValidated": 100,
+  "criticalApiContractsValidated": 100,
+  "uncoveredCriticalItems": 0,
+  "failedCriticalItems": 0,
+  "orphanedCriticalItems": 0,
+  "staleCriticalEvidence": 0,
+  "visibilityViolations": 0,
+  "tenantIsolationViolations": 0,
+  "minimumJourneyCoverage": 38,
+  "minimumTechnicalCoverage": 15,
+  "minimumWeightedCoverage": 49
+}

@@ -11,6 +11,7 @@ const logger = require('../../utils/logger');
 const { emitEvent } = require('../../services/websocketService');
 const {
   listWaves,
+  getGlobalCoverageSummary,
   listJourneys,
   saveJourney,
   deleteJourney,
@@ -81,6 +82,7 @@ function buildQaWavesRouteDeps() {
     parseJsonBody,
     logger,
     listWaves,
+    getWaveCoverageSummary: getGlobalCoverageSummary,
     listJourneys,
     listJourneyStatus,
     saveWaveJourney: saveJourney,

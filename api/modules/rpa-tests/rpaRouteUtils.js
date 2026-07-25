@@ -1,7 +1,27 @@
+const { checkClassification } = require('../../middleware/requireClassification');
+
 const ensureAuthenticated = (req, res, requireAuth, sendJson) => {
   const authResult = requireAuth(req);
   if (!authResult.valid) {
     sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+    return false;
+  }
+
+  return true;
+};
+
+// Replay e gravações RPA são ferramentas de SUPPORT/DEVELOPMENT: operadores de
+// produção não têm acesso. Deve ser usado no lugar de ensureAuthenticated.
+const ensureSupportAccess = (req, res, requireAuth, sendJson) => {
+  if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return false;
+
+  const check = checkClassification(req, 'SUPPORT');
+  if (!check.allowed) {
+    sendJson(res, 403, {
+      error: 'classification_required',
+      required: check.required,
+      classification: check.classification,
+    });
     return false;
   }
 
@@ -29,6 +49,7 @@ const isSafeJsonFilename = (filename) => {
 
 module.exports = {
   ensureAuthenticated,
+  ensureSupportAccess,
   getPathSuffix,
   getExecutionIdFromActionPath,
   isSafeJsonFilename,

@@ -6,6 +6,7 @@ const path = require('path');
 const {
   buildQaWavesEnterpriseGovernance,
 } = require('../../../tools/system/lib/qa-waves-enterprise-governance-bridge');
+const { checkClassification } = require('../../middleware/requireClassification');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || path.join(ROOT_DIR, 'qa', 'runtime-governance-report.json');
@@ -23,6 +24,20 @@ function readJsonIfExists(filePath) {
 function createQaWavesRoutes({ buildDeps }) {
   const router = express.Router();
 
+  // QA Waves é ferramenta de engenharia (PRODUCTION_HIDDEN): exige DEVELOPMENT.
+  function enforceDevelopmentClassification(deps, req, res) {
+    const check = checkClassification(req, 'DEVELOPMENT');
+    if (!check.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'classification_required',
+        required: check.required,
+        classification: check.classification,
+      });
+      return false;
+    }
+    return true;
+  }
+
   function registerJsonPost(pathname, handler) {
     router.post(pathname, async (req, res) => {
       const deps = buildDeps(req, res);
@@ -31,6 +46,7 @@ function createQaWavesRoutes({ buildDeps }) {
         deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
         return;
       }
+      if (!enforceDevelopmentClassification(deps, req, res)) return;
 
       if (!deps.hasJsonContentType(req)) {
         deps.badRequest(res, 'Content-Type deve ser application/json');
@@ -73,12 +89,30 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, { items: deps.listWaves() });
     } catch (error) {
       deps.logger.error('Erro ao listar waves:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar waves' });
+    }
+  });
+
+  router.get('/api/qa-waves/coverage/summary', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
+
+    try {
+      deps.sendJson(res, 200, deps.getWaveCoverageSummary());
+    } catch (error) {
+      deps.logger.error('Erro ao obter resumo de cobertura:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao calcular resumo de cobertura' });
     }
   });
 
@@ -89,6 +123,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, deps.listWaveScenarios(req.query || {}));
@@ -105,6 +140,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const result = deps.deleteWaveScenario(req.params.scenarioId);
@@ -130,6 +166,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, deps.listJourneys());
@@ -146,6 +183,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
@@ -171,6 +209,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const result = deps.deleteWaveJourney(req.params.journeyId, req.query.vertical);
       deps.sendJson(res, 200, result);
@@ -195,6 +234,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, deps.listJourneyStatus());
@@ -211,6 +251,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, deps.listStepStatus(req.query || {}));
@@ -227,6 +268,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const data = deps.listReplays(req.query || {});
@@ -244,6 +286,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const replay = deps.getReplayById(req.params.id);
@@ -265,6 +308,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const result = deps.clearWaveExecutions();
@@ -282,6 +326,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const limit = Number.parseInt(String(req.query?.limit || '20'), 10);
@@ -300,6 +345,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const pollLog = {
@@ -338,6 +384,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     const perm = deps.requirePermission(req, 'qa', 'execute');
     if (!perm.allowed) {
@@ -377,6 +424,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     const perm = deps.requirePermission(req, 'qa', 'execute');
     if (!perm.allowed) {
@@ -478,6 +526,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { vertical, journey } = req.query || {};
       const result = deps.getCoverageSummary({ vertical: vertical || null, journey: journey || null });
@@ -508,6 +557,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { vertical, journey } = req.query || {};
       const result = deps.getBusinessGaps({ vertical: vertical || null, journey: journey || null });
@@ -526,6 +576,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const docType = req.params.type;
       const docName = req.query.name || null;
@@ -610,6 +661,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { status, vertical, journey } = req.query || {};
       const drafts = deps.listWaveDrafts({ status: status || null, vertical: vertical || null, journey: journey || null });
@@ -629,6 +681,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const report = deps.getOperationalSnapshot();
       deps.sendJson(res, 200, report);
@@ -653,6 +706,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const report = deps.getOperationalSnapshot();
       deps.sendJson(res, 200, {
@@ -675,6 +729,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const enterpriseGovernance = buildQaWavesEnterpriseGovernance({ root: ROOT_DIR });
       const runtimeGovernance = readJsonIfExists(RUNTIME_GOVERNANCE_REPORT_PATH);
@@ -701,6 +756,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const reports = deps.listWaveGovernanceReports();
       deps.sendJson(res, 200, { items: reports, count: reports.length });
@@ -743,6 +799,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const analysis = await deps.analyzeGapsForAutoClosure({});
@@ -760,6 +817,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const report = await deps.generateGapClosureReport({});
@@ -817,6 +875,7 @@ function createQaWavesRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
       return;
     }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
       const payload = deps.buildStagingAutonomousLoopPayload({

@@ -60,6 +60,7 @@ Este repositório já contém documentação detalhada por área. Alguns pontos 
 - **Templates/marketplace de flows**: `ARCHITECTURE_TEMPLATE_MARKETPLACE_PHASE5.md`
 - **Replay**: `COMO_USAR_REPLAY.md`
 - **Multi-tenant (arquitetura e contexto cognitivo)**: `TENANT_MULTI_TENANT_ARCHITECTURE.md`
+- **Motor de cobertura (inventário, grafo de rastreabilidade, evidências, gate GO/NO_GO, impacto)**: `qa/coverage-engine.md`
 - **RAG**:
   - `RAG_POR_TENANT.md`
   - `COMO_TESTAR_RAG.md`

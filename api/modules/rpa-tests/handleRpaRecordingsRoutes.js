@@ -1,5 +1,5 @@
 const {
-  ensureAuthenticated,
+  ensureSupportAccess,
   getPathSuffix,
 } = require('./rpaRouteUtils');
 
@@ -20,7 +20,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   } = deps;
 
   if (method === 'GET' && pathname === '/rpa/recordings') {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const recordings = listRecordings();
@@ -33,7 +33,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'DELETE' && pathname.startsWith('/rpa/recordings/')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       let recordingId = decodeURIComponent(pathname.slice('/rpa/recordings/'.length));
@@ -73,7 +73,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/rpa/record/start') {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -108,7 +108,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.startsWith('/rpa/record/stop/')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const recordingId = getPathSuffix(pathname, '/rpa/record/stop/');
@@ -135,7 +135,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'GET' && pathname.startsWith('/rpa/record/status/')) {
-    if (!ensureAuthenticated(req, res, requireAuth, sendJson)) return true;
+    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
 
     try {
       const recordingId = getPathSuffix(pathname, '/rpa/record/status/');

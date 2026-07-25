@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { fetchJson } from '../../api/client';
 import { useToast } from '../Toast';
+import { CoverageSummaryStrip } from './CoverageSummaryStrip';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -263,6 +264,9 @@ export function CoverageGapsTab() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ── Cobertura de execução consolidada (mesh) ── */}
+      <CoverageSummaryStrip />
+
       {/* ── Cobertura por vertical ── */}
       <section className="qa-waves-panel">
         <div className="flex justify-between items-center mb-3">
