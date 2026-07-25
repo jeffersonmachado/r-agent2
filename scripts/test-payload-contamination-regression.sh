@@ -180,7 +180,18 @@ rm -f "$MALFORMED_ZIP"
 TIMEOUT_ZIP="$(mktemp -t r-agent2-timeout-payload.XXXXXX.zip)"
 rm -f "$TIMEOUT_ZIP"
 make_payload_with_nested_zip "$TIMEOUT_ZIP"
-if RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS=0.001 timeout 8s bash -c 'source "$1"; release_payload_validate_zip "$2" timeout-fixture' _ "$SCRIPT_DIR/release-payload-blocklist.sh" "$TIMEOUT_ZIP" >/tmp/r-agent2-payload-regression.log 2>&1; then
+# Fixture determinística: um stub de `unzip` no PATH atrasa além do orçamento
+# defensivo (sleep 2s >> 0.2s), eliminando a corrida de wall-clock que tornava
+# este check flaky em runners rápidos/lentos. O validador governado não muda.
+STUB_BIN="$(mktemp -d -t r-agent2-timeout-stub.XXXXXX)"
+REAL_UNZIP="$(command -v unzip)"
+cat > "$STUB_BIN/unzip" <<EOF
+#!/usr/bin/env bash
+sleep 2
+exec "$REAL_UNZIP" "\$@"
+EOF
+chmod +x "$STUB_BIN/unzip"
+if PATH="$STUB_BIN:$PATH" RELEASE_PAYLOAD_ZIP_TIMEOUT_SECONDS=0.2 timeout 8s bash -c 'source "$1"; release_payload_validate_zip "$2" timeout-fixture' _ "$SCRIPT_DIR/release-payload-blocklist.sh" "$TIMEOUT_ZIP" >/tmp/r-agent2-payload-regression.log 2>&1; then
   fail "timeout defensivo aceitou indevidamente"
 else
   rc=$?
@@ -190,6 +201,7 @@ else
     ok "timeout defensivo não vira PASS"
   fi
 fi
+rm -rf "$STUB_BIN"
 rm -f "$TIMEOUT_ZIP"
 
 STALE_TMP="$(mktemp -t r-agent2-payload-list.XXXXXX)"
