@@ -35,6 +35,8 @@ const { COVERAGE_STATES } = require('../../qa/coverage/coverageStates');
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const INVENTORY_PATH = path.join(ROOT_DIR, 'config', 'system-inventory.json');
 const MIGRATIONS_DIR = path.join(ROOT_DIR, 'api', 'db', 'migrations');
+const DDL_DIR = path.join(ROOT_DIR, 'migrations');
+const EXEMPTIONS_PATH = path.join(ROOT_DIR, 'config', 'db-integrity-exemptions.json');
 const EVIDENCE_PATH = path.join(ROOT_DIR, 'qa', 'evidence', 'db-integrity-wave.jsonl');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'db-integrity-report.json');
 const DB_CONNECT_TIMEOUT_MS = 5000;
@@ -53,29 +55,52 @@ function currentCommit() {
   }
 }
 
-/** Lê todas as migrations uma única vez. */
-function loadMigrationSources(migrationsDir = MIGRATIONS_DIR, rootDir = ROOT_DIR) {
-  if (!fs.existsSync(migrationsDir)) return [];
-  return fs.readdirSync(migrationsDir)
-    .filter((name) => name.endsWith('.js'))
-    .sort()
-    .map((name) => ({
-      file: path.relative(rootDir, path.join(migrationsDir, name)),
-      content: fs.readFileSync(path.join(migrationsDir, name), 'utf8'),
-    }));
+/** Lê todas as migrations (Umzug .js) e o DDL versionado (.sql) uma única vez. */
+function loadMigrationSources(migrationsDir = MIGRATIONS_DIR, rootDir = ROOT_DIR, ddlDir = null) {
+  const effectiveDdlDir = ddlDir || path.join(rootDir, 'migrations');
+  const sources = [];
+  if (fs.existsSync(migrationsDir)) {
+    for (const name of fs.readdirSync(migrationsDir).filter((n) => n.endsWith('.js')).sort()) {
+      sources.push({
+        file: path.relative(rootDir, path.join(migrationsDir, name)),
+        content: fs.readFileSync(path.join(migrationsDir, name), 'utf8'),
+      });
+    }
+  }
+  // DDL versionado solto (ex.: migrations/agent-os-2026-06-11.sql) também é
+  // migration legítima: tabelas criadas via CREATE TABLE em SQL bruto.
+  if (fs.existsSync(effectiveDdlDir)) {
+    for (const name of fs.readdirSync(effectiveDdlDir).filter((n) => n.endsWith('.sql')).sort()) {
+      sources.push({
+        file: path.relative(rootDir, path.join(effectiveDdlDir, name)),
+        content: fs.readFileSync(path.join(effectiveDdlDir, name), 'utf8'),
+      });
+    }
+  }
+  return sources;
+}
+
+/** CREATE TABLE [IF NOT EXISTS] <table> em SQL bruto (aspas opcionais). */
+function createTableRegex(tableName) {
+  const escaped = String(tableName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?["'\`]?${escaped}["'\`]?(?!\\w)`, 'i');
 }
 
 /**
  * Migrations que referenciam a tabela: `createTable('<table>'` (aspas simples
- * ou duplas) ou qualquer ocorrência quotada do tableName.
+ * ou duplas), qualquer ocorrência quotada do tableName, ou
+ * `CREATE TABLE [IF NOT EXISTS] <table>` em SQL bruto (migrations Umzug com
+ * sequelize.query ou DDL versionado em migrations/*.sql).
  */
 function findMigrationMatches(tableName, migrationSources) {
   if (!tableName) return [];
   const createTableNeedles = [`createTable('${tableName}'`, `createTable("${tableName}"`];
   const quotedNeedles = [`'${tableName}'`, `"${tableName}"`];
+  const rawCreateTable = createTableRegex(tableName);
   return migrationSources
     .filter(({ content }) => createTableNeedles.some((n) => content.includes(n))
-      || quotedNeedles.some((n) => content.includes(n)))
+      || quotedNeedles.some((n) => content.includes(n))
+      || rawCreateTable.test(content))
     .map(({ file }) => file);
 }
 
@@ -172,9 +197,22 @@ async function tryConnect() {
   }
 }
 
+/** Carrega isenções justificadas (config/db-integrity-exemptions.json), se existir. */
+function loadExemptions(exemptionsPath = EXEMPTIONS_PATH) {
+  if (!fs.existsSync(exemptionsPath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(exemptionsPath, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    console.warn(`[db-integrity-wave] isenções ignoradas (JSON inválido): ${error.message}`);
+    return {};
+  }
+}
+
 async function main() {
   const inventory = JSON.parse(fs.readFileSync(INVENTORY_PATH, 'utf8'));
   const models = collectModelStaticData({ inventoryItems: inventory.items });
+  const exemptions = loadExemptions();
   console.log(`[db-integrity-wave] models no inventário: ${models.length}`);
 
   const connection = await tryConnect();
@@ -200,7 +238,7 @@ async function main() {
     }
   }
 
-  const result = evaluateDbIntegrityWave({ models, dbAvailable, dbUnavailableReason });
+  const result = evaluateDbIntegrityWave({ models, dbAvailable, dbUnavailableReason, exemptions });
   const commit = currentCommit();
   const runId = `${WAVE_ID}-${Date.now()}`;
   const environment = process.env.CI ? 'ci' : 'local';
@@ -242,11 +280,15 @@ async function main() {
     dbAvailable,
     ...(dbUnavailableReason ? { dbUnavailableReason } : {}),
     totals: result.totals,
+    exemptions: result.exemptions,
     perModel: result.perModel.map((entry) => ({
       id: entry.id,
       table: entry.table,
       state: entry.state,
-      assertions: entry.assertions.map((a) => ({ name: a.name, passed: a.passed, detail: a.detail })),
+      assertions: entry.assertions.map((a) => ({
+        name: a.name, passed: a.passed, detail: a.detail,
+        ...(a.notApplicable ? { notApplicable: true } : {}),
+      })),
     })),
   };
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
@@ -261,6 +303,13 @@ async function main() {
       + `${entry.failedAssertions.join(', ')}`);
   }
   if (failed.length > 5) console.log(`[db-integrity-wave] … e mais ${failed.length - 5} FAILED`);
+  if (result.exemptions.applied.length > 0) {
+    console.log(`[db-integrity-wave] isenções NOT_APPLICABLE aplicadas: ${result.exemptions.applied.length} `
+      + `(${result.exemptions.applied.map((e) => `${e.model}:${e.assertion}`).join(', ')})`);
+  }
+  for (const ignored of result.exemptions.ignored) {
+    console.warn(`[db-integrity-wave] isenção IGNORADA ${ignored.model}:${ignored.exemption.assertion || '?'} — ${ignored.reason}`);
+  }
   console.log(`[db-integrity-wave] evidências: ${path.relative(ROOT_DIR, EVIDENCE_PATH)} `
     + `(${result.perModel.length} appends, cadeia íntegra)`);
   console.log(`[db-integrity-wave] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
@@ -277,10 +326,13 @@ module.exports = {
   collectModelStaticData,
   findMigrationMatches,
   loadMigrationSources,
+  loadExemptions,
   fetchLiveData,
   ROOT_DIR,
   INVENTORY_PATH,
   MIGRATIONS_DIR,
+  DDL_DIR,
+  EXEMPTIONS_PATH,
   EVIDENCE_PATH,
   REPORT_PATH,
 };

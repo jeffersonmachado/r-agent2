@@ -1,0 +1,45 @@
+{
+  "_description": "Isenções justificadas da Database Integrity Wave. Cada entrada marca uma assertiva como NOT_APPLICABLE (não conta contra VALIDATED) e aparece no relatório reports/db-integrity-report.json (auditável). Campos obrigatórios: assertion, reason, approvedBy, date. Isenção sem campos obrigatórios é IGNORADA (a assertiva continua falhando).",
+  "ProjectActivity": {
+    "assertion": "timestampsDefined",
+    "reason": "Log de auditoria append-only (event_type + before/after_json). A tabela tem created_at com DEFAULT CURRENT_TIMESTAMP na migration 20260423000001-create-project-management.js e o service ordena por created_at; o model declara explicitamente updatedAt:false. Registros nunca são atualizados.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "ProjectAttachment": {
+    "assertion": "timestampsDefined",
+    "reason": "Tabela auxiliar de anexos. created_at existe no banco com DEFAULT CURRENT_TIMESTAMP (migration 20260423000001) e o model declara updatedAt:false explicitamente — sem semântica de atualização.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "ProjectComment": {
+    "assertion": "timestampsDefined",
+    "reason": "Comentários com created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001, com índice por created_at); o model declara updatedAt:false explicitamente.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "ProjectDependency": {
+    "assertion": "timestampsDefined",
+    "reason": "Tabela de junção predecessor/successor com unicidade por par. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "ProjectMember": {
+    "assertion": "timestampsDefined",
+    "reason": "Tabela de junção projeto/usuário. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "ProjectTemplate": {
+    "assertion": "timestampsDefined",
+    "reason": "Catálogo de templates. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  },
+  "TicketTag": {
+    "assertion": "timestampsDefined",
+    "reason": "Log de auditoria append-only de ações de tag (add/remove) em ticketTagService. A migration 20260119000009-create-ticket-tags.js cria created_at com DEFAULT CURRENT_TIMESTAMP e índice por created_at; registros nunca são atualizados.",
+    "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+    "date": "2026-07-25"
+  }
+}

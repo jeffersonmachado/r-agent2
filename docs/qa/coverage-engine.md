@@ -156,8 +156,10 @@ Tiers por model:
 - **TIER ESTÁTICO (sempre):** `modelFileParses` (arquivo parseia via
   modelScanner, sem require/DB), `tableNameDefined`, `primaryKeyDefined`
   (PK explícita, campo `id` ou PK implícita do Sequelize), `migrationFound`
-  (grep de `createTable('<table>'` ou ocorrência quotada do tableName em
-  `api/db/migrations/*.js`, com os matches listados), `tenantScope`
+  (referência à tabela em `api/db/migrations/*.js` — `createTable('<table>'`,
+  ocorrência quotada do tableName ou `CREATE TABLE [IF NOT EXISTS] <table>`
+  em SQL bruto — ou no DDL versionado `migrations/*.sql`; matches listados),
+  `tenantScope`
   (OBSERVAÇÃO: ausência de tenant_id/tenant_key vira warning `absent`, nunca
   falha — models globais legítimos existem) e `timestampsDefined` (falha só
   se `timestamps: false` sem campos created/updated).
@@ -166,6 +168,15 @@ Tiers por model:
   agregadas no information_schema: `tableExistsInDb`,
   `modelColumnsExistInDb` (field→column com conversão camelCase→snake_case) e
   `primaryKeyExistsInDb`.
+
+Isenções justificadas: `config/db-integrity-exemptions.json` (versionado) pode
+marcar uma assertiva de um model como NOT_APPLICABLE —
+`{ "<ModelName>": { "assertion", "reason", "approvedBy", "date" } }`. Com os 4
+campos obrigatórios preenchidos e a assertiva existente, ela passa a contar
+como `passed` (não derruba VALIDATED) e a isenção aparece no relatório
+(`exemptions.applied`, auditável). Isenção sem campos obrigatórios ou para
+assertiva inexistente é IGNORADA (`exemptions.ignored`) e a assertiva continua
+falhando — isenção nunca esconde lacuna.
 
 Estado final por model (precedência FAILED > VISITED > VALIDATED): qualquer
 assertiva falha → FAILED (com a lista de assertivas falhas); estático passa
@@ -178,7 +189,7 @@ Saídas:
   `qa/evidence/db-integrity-wave.jsonl` via `createEvidenceStore` (hash chain
   verificada ao final; diretório gitignored);
 - relatório versionado `reports/db-integrity-report.json`
-  (`{generatedAt, dbAvailable, totals, perModel}`) — exceção no `.gitignore`
+  (`{generatedAt, dbAvailable, totals, exemptions, perModel}`) — exceção no `.gitignore`
   (`!reports/db-integrity-report.json`), mesmo padrão do tenant report.
 
 Integração ao gate: `validate-coverage-gate.js` lê o relatório (se existir;
@@ -191,16 +202,36 @@ ligado (itens ligados a jornadas continuam governados pelo mesh; stale ainda
 sobrepõe). A fonte fica registrada em `inputs.dbIntegritySource`; com
 `dbAvailable=false` o relatório do gate anota `inputs.dbIntegrityNote`.
 
-Resultado real (2026-07-25, Postgres local, dbAvailable=true): 155 models →
-139 VALIDATED, 0 VISITED, 16 FAILED, 15 warnings (tenant scope ausente). Os
-16 FAILED são legítimos e entram no baseline: 8 sem migration
-(`migrationFound`: AiGovernanceRecord, CorporateAgent, JourneyRegistry,
-KnowledgeGraphEdge, KnowledgeGraphNode, LearningRecord, TicketMedia,
-VerticalTemplate), 7 com `timestamps:false` (`timestampsDefined`: models
-Project* e TicketTag) e 1 sem PK no banco (`primaryKeyExistsInDb`:
-TenantExclusion). Com a wave, o gate subiu de technicalCoverage 15.6→66.7 e
-weightedCoverage 49.3→79.8 (journeyCoverage 38.1 inalterado) e os pisos
-ratchet foram fixados em 66.2/79.3 (folga de 0.5).
+Resultado real (2026-07-25, primeira execução): 155 models → 139 VALIDATED,
+16 FAILED legítimos. Diagnóstico e resolução dos 16 (mesma data):
+
+- **8 `migrationFound`:** 7 tabelas eram criadas pelo DDL versionado solto
+  `migrations/agent-os-2026-06-11.sql` (AiGovernanceRecord, CorporateAgent,
+  JourneyRegistry, KnowledgeGraphEdge, KnowledgeGraphNode, LearningRecord,
+  VerticalTemplate) e 1 por `TicketMedia.sync()` em runtime
+  (api/services/ticketMediaService.js). Correção: detecção ampliada no runner
+  (SQL bruto `CREATE TABLE` em migrations Umzug + DDL `migrations/*.sql`) e a
+  migration aditiva `20260725000002-create-ticket-media-files.js`
+  (createTableIfNotExists, alinhada ao model).
+- **7 `timestampsDefined` (ProjectActivity, ProjectAttachment, ProjectComment,
+  ProjectDependency, ProjectMember, ProjectTemplate, TicketTag):** design
+  intencional — tabelas de junção/auditoria append-only com `created_at` via
+  `DEFAULT CURRENT_TIMESTAMP` no banco e models com `updatedAt:false`
+  explícito. Correção: isenções justificadas NOT_APPLICABLE em
+  `config/db-integrity-exemptions.json` (auditáveis no relatório).
+- **1 `primaryKeyExistsInDb` (TenantExclusion):** a migration original criou
+  apenas o índice único `tenant_exclusions_unique (tenant_id, term)`; o model
+  declara PK composta. Verificado no banco: 78 linhas, zero duplicatas.
+  Correção: migration aditiva `20260725000001-add-tenant-exclusions-primary-key.js`
+  (promove o índice único a PK via `PRIMARY KEY USING INDEX`; idempotente;
+  aborta se houver duplicatas).
+
+Resultado real pós-correções (2026-07-25, Postgres local, dbAvailable=true):
+155 models → **155 VALIDATED, 0 VISITED, 0 FAILED**, 15 warnings (tenant
+scope ausente) e 7 isenções NOT_APPLICABLE aplicadas. O gate subiu para
+technicalCoverage 73.8 e weightedCoverage 84.0 (journeyCoverage 38.1
+inalterado) e os pisos ratchet foram atualizados para 73.3/83.5 (medido − 0.5;
+journey mantido em 38 porque 38.1 − 0.5 < 38 e o ratchet nunca desce).
 
 ## Comandos
 

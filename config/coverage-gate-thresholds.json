@@ -1,6 +1,6 @@
 {
   "_comment": "Overrides opcionais dos thresholds do Coverage Gate (qa/coverage/gateThresholds.js). Apenas chaves presentes em DEFAULT_THRESHOLDS são aceitas; env COVERAGE_GATE_* tem precedência sobre este arquivo.",
-  "_ratchet": "Baseline medido em 2026-07-25 (journeyCoverage=38.1, technicalCoverage=66.7, weightedCoverage=79.8; críticos 0/0/0/0) após a Database Integrity Wave (wave:db-integrity): 155 models validados contra o Postgres real — 139 VALIDATED, 16 FAILED legítimos (8 sem migration, 7 com timestamps:false, 1 sem PK no banco) já incluídos no baseline. Os 3 pisos não críticos abaixo são esse baseline com folga de 0.5 e seguem a política ratchet: só podem SUBIR, nunca descer — qualquer regressão abaixo do baseline bloqueia o gate. As regras críticas permanecem 100/0, intocáveis.",
+  "_ratchet": "Baseline medido em 2026-07-25 (journeyCoverage=38.1, technicalCoverage=73.8, weightedCoverage=84.0; críticos 0/0/0/0) após a re-execução da Database Integrity Wave (wave:db-integrity) com detecção ampliada de migrations (SQL bruto em migrations Umzug + DDL versionado em migrations/*.sql), isenções justificadas NOT_APPLICABLE (config/db-integrity-exemptions.json) e 2 migrations aditivas (PK de tenant_exclusions, create ticket_media_files): 155 models → 155 VALIDATED, 0 FAILED (7 isenções timestampsDefined auditáveis no relatório). Pisos = medido − 0.5, política ratchet: só podem SUBIR, nunca descer — qualquer regressão abaixo do baseline bloqueia o gate. journeyCoverage já estava no teto do medido (38.1 − 0.5 = 37.6 < 38), mantido em 38. As regras críticas permanecem 100/0, intocáveis.",
   "criticalJourneysValidated": 100,
   "criticalOutcomesValidated": 100,
   "criticalApiContractsValidated": 100,
@@ -11,6 +11,6 @@
   "visibilityViolations": 0,
   "tenantIsolationViolations": 0,
   "minimumJourneyCoverage": 38,
-  "minimumTechnicalCoverage": 66.2,
-  "minimumWeightedCoverage": 79.3
+  "minimumTechnicalCoverage": 73.3,
+  "minimumWeightedCoverage": 83.5
 }

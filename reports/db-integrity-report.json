@@ -1,13 +1,67 @@
 {
-  "generatedAt": "2026-07-25T19:08:43.207Z",
-  "commit": "7a807c074050ddb6c858e50b136859a009a2ec84",
+  "generatedAt": "2026-07-25T19:56:08.227Z",
+  "commit": "20ec2bb9108eb55427423e6817a46a5a7ca59b66",
   "dbAvailable": true,
   "totals": {
     "models": 155,
-    "validated": 139,
+    "validated": 155,
     "visited": 0,
-    "failed": 16,
+    "failed": 0,
     "warnings": 15
+  },
+  "exemptions": {
+    "applied": [
+      {
+        "model": "ProjectActivity",
+        "assertion": "timestampsDefined",
+        "reason": "Log de auditoria append-only (event_type + before/after_json). A tabela tem created_at com DEFAULT CURRENT_TIMESTAMP na migration 20260423000001-create-project-management.js e o service ordena por created_at; o model declara explicitamente updatedAt:false. Registros nunca são atualizados.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "ProjectAttachment",
+        "assertion": "timestampsDefined",
+        "reason": "Tabela auxiliar de anexos. created_at existe no banco com DEFAULT CURRENT_TIMESTAMP (migration 20260423000001) e o model declara updatedAt:false explicitamente — sem semântica de atualização.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "ProjectComment",
+        "assertion": "timestampsDefined",
+        "reason": "Comentários com created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001, com índice por created_at); o model declara updatedAt:false explicitamente.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "ProjectDependency",
+        "assertion": "timestampsDefined",
+        "reason": "Tabela de junção predecessor/successor com unicidade por par. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "ProjectMember",
+        "assertion": "timestampsDefined",
+        "reason": "Tabela de junção projeto/usuário. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "ProjectTemplate",
+        "assertion": "timestampsDefined",
+        "reason": "Catálogo de templates. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      },
+      {
+        "model": "TicketTag",
+        "assertion": "timestampsDefined",
+        "reason": "Log de auditoria append-only de ações de tag (add/remove) em ticketTagService. A migration 20260119000009-create-ticket-tags.js cria created_at com DEFAULT CURRENT_TIMESTAMP e índice por created_at; registros nunca são atualizados.",
+        "approvedBy": "senior-engineer (db-integrity-wave 2026-07-25)",
+        "date": "2026-07-25"
+      }
+    ],
+    "ignored": []
   },
   "perModel": [
     {
@@ -377,7 +431,7 @@
     {
       "id": "model:AiGovernanceRecord",
       "table": "ai_governance_records",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -396,8 +450,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'ai_governance_records'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -408,6 +462,21 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'ai_governance_records' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "14 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -1298,7 +1367,7 @@
     {
       "id": "model:CorporateAgent",
       "table": "corporate_agents",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -1317,8 +1386,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'corporate_agents'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1329,6 +1398,21 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'corporate_agents' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "21 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -1563,7 +1647,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20250111000012-create-executions.js"
+          "detail": "migrations: api/db/migrations/20250111000012-create-executions.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1855,7 +1939,7 @@
     {
       "id": "model:JourneyRegistry",
       "table": "journey_registry",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -1874,8 +1958,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'journey_registry'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1886,13 +1970,28 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'journey_registry' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "16 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:KnowledgeGraphEdge",
       "table": "kg_edges",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -1911,8 +2010,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'kg_edges'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1923,13 +2022,28 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'kg_edges' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:KnowledgeGraphNode",
       "table": "kg_nodes",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -1948,8 +2062,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'kg_nodes'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1960,6 +2074,21 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'kg_nodes' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -2070,7 +2199,7 @@
     {
       "id": "model:LearningRecord",
       "table": "learning_records",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -2089,8 +2218,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'learning_records'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -2101,6 +2230,21 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'learning_records' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "17 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -5175,7 +5319,7 @@
     {
       "id": "model:ProjectActivity",
       "table": "project_activities",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5204,15 +5348,31 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Log de auditoria append-only (event_type + before/after_json). A tabela tem created_at com DEFAULT CURRENT_TIMESTAMP na migration 20260423000001-create-project-management.js e o service ordena por created_at; o model declara explicitamente updatedAt:false. Registros nunca são atualizados. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_activities' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "8 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:ProjectAttachment",
       "table": "project_attachments",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5241,15 +5401,31 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Tabela auxiliar de anexos. created_at existe no banco com DEFAULT CURRENT_TIMESTAMP (migration 20260423000001) e o model declara updatedAt:false explicitamente — sem semântica de atualização. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_attachments' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:ProjectComment",
       "table": "project_comments",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5278,15 +5454,31 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Comentários com created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001, com índice por created_at); o model declara updatedAt:false explicitamente. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_comments' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "5 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:ProjectDependency",
       "table": "project_dependencies",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5315,8 +5507,24 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Tabela de junção predecessor/successor com unicidade por par. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_dependencies' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -5427,7 +5635,7 @@
     {
       "id": "model:ProjectMember",
       "table": "project_members",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5456,8 +5664,24 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Tabela de junção projeto/usuário. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_members' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "5 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -5516,7 +5740,7 @@
     {
       "id": "model:ProjectTemplate",
       "table": "project_templates",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -5545,8 +5769,24 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Catálogo de templates. created_at via DEFAULT CURRENT_TIMESTAMP no banco (migration 20260423000001); sem semântica de updated_at. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'project_templates' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -6385,7 +6625,7 @@
     {
       "id": "model:TenantExclusion",
       "table": "tenant_exclusions",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -6405,7 +6645,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260129000001-create-tenant-exclusions.js"
+          "detail": "migrations: api/db/migrations/20260129000001-create-tenant-exclusions.js, api/db/migrations/20260725000001-add-tenant-exclusions-primary-key.js"
         },
         {
           "name": "tenantScope",
@@ -6429,8 +6669,8 @@
         },
         {
           "name": "primaryKeyExistsInDb",
-          "passed": false,
-          "detail": "tabela sem PRIMARY KEY no banco"
+          "passed": true,
+          "detail": "PK no banco: tenant_id, term"
         }
       ]
     },
@@ -6905,7 +7145,7 @@
     {
       "id": "model:TicketMedia",
       "table": "ticket_media_files",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -6924,8 +7164,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'ticket_media_files'"
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260725000002-create-ticket-media-files.js"
         },
         {
           "name": "tenantScope",
@@ -6936,13 +7176,28 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'ticket_media_files' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "8 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
     {
       "id": "model:TicketTag",
       "table": "ticket_tags",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -6971,8 +7226,24 @@
         },
         {
           "name": "timestampsDefined",
-          "passed": false,
-          "detail": "timestamps:false sem campos created/updated"
+          "passed": true,
+          "detail": "timestamps:false sem campos created/updated | NOT_APPLICABLE — isenção justificada: Log de auditoria append-only de ações de tag (add/remove) em ticketTagService. A migration 20260119000009-create-ticket-tags.js cria created_at com DEFAULT CURRENT_TIMESTAMP e índice por created_at; registros nunca são atualizados. (aprovada por senior-engineer (db-integrity-wave 2026-07-25) em 2026-07-25)",
+          "notApplicable": true
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'ticket_tags' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -7499,7 +7770,7 @@
     {
       "id": "model:VerticalTemplate",
       "table": "vertical_templates",
-      "state": "FAILED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "modelFileParses",
@@ -7518,8 +7789,8 @@
         },
         {
           "name": "migrationFound",
-          "passed": false,
-          "detail": "nenhuma migration referencia 'vertical_templates'"
+          "passed": true,
+          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -7530,6 +7801,21 @@
           "name": "timestampsDefined",
           "passed": true,
           "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'vertical_templates' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "18 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },

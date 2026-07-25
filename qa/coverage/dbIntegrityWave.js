@@ -34,6 +34,14 @@
  *   - qualquer assertiva falha (estática ou live)        → FAILED
  *   - estático passa + live indisponível                 → VISITED
  *   - estático passa + live passa                        → VALIDATED
+ *
+ * Isenções justificadas (config/db-integrity-exemptions.json):
+ *   { "<ModelName>": { "assertion", "reason", "approvedBy", "date" } } — quando
+ *   todos os campos obrigatórios estão presentes e a assertiva existe para o
+ *   model, ela é marcada NOT_APPLICABLE (passed=true, não conta contra
+ *   VALIDATED) e a isenção é registrada no resultado (auditável). Isenção sem
+ *   campos obrigatórios ou para assertiva inexistente é IGNORADA: a assertiva
+ *   continua valendo (e falhando) normalmente.
  */
 
 const { COVERAGE_STATES } = require('./coverageStates');
@@ -41,6 +49,44 @@ const { COVERAGE_STATES } = require('./coverageStates');
 const WAVE_ID = 'db-integrity-wave';
 
 const TIMESTAMP_FIELD_NAMES = new Set(['createdAt', 'created_at', 'updatedAt', 'updated_at']);
+
+const EXEMPTION_REQUIRED_FIELDS = ['assertion', 'reason', 'approvedBy', 'date'];
+
+/** Isenção válida: todos os campos obrigatórios presentes e não vazios. */
+function isValidExemption(exemption) {
+  return Boolean(exemption) && typeof exemption === 'object'
+    && EXEMPTION_REQUIRED_FIELDS.every((field) => typeof exemption[field] === 'string' && exemption[field].trim() !== '');
+}
+
+/**
+ * Aplica isenção justificada às assertivas de um model: a assertiva citada vira
+ * NOT_APPLICABLE (passed=true, sem warning, não conta contra VALIDATED).
+ * Retorna { assertions, applied } — applied=null quando a assertiva não existe.
+ */
+function applyExemption(assertions, exemption, modelName) {
+  if (!exemption) return { assertions, applied: null };
+  const index = assertions.findIndex((a) => a.name === exemption.assertion);
+  if (index === -1) return { assertions, applied: null };
+  const updated = [...assertions];
+  updated[index] = {
+    ...updated[index],
+    passed: true,
+    warning: false,
+    notApplicable: true,
+    detail: `${updated[index].detail} | NOT_APPLICABLE — isenção justificada: `
+      + `${exemption.reason} (aprovada por ${exemption.approvedBy} em ${exemption.date})`,
+  };
+  return {
+    assertions: updated,
+    applied: {
+      model: modelName,
+      assertion: exemption.assertion,
+      reason: exemption.reason,
+      approvedBy: exemption.approvedBy,
+      date: exemption.date,
+    },
+  };
+}
 
 /** camelCase/PascalCase → snake_case (tolerante a nomes já snake). */
 function toSnakeCase(name) {
@@ -188,9 +234,12 @@ function evaluateLiveAssertions(modelData, live) {
  *   quando dbAvailable=true; se ausente, o model fica VISITED com razão)
  * @returns {{ id, model, table, state, assertions, failedAssertions, warnings }}
  */
-function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = null } = {}) {
+function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = null, exemption = null } = {}) {
   const parsed = modelData.parsed || null;
-  const staticAssertions = evaluateStaticAssertions(modelData);
+  let exemptionApplied = null;
+  const staticResult = applyExemption(evaluateStaticAssertions(modelData), exemption, modelData.model);
+  const staticAssertions = staticResult.assertions;
+  if (staticResult.applied) exemptionApplied = staticResult.applied;
   const staticFailures = staticAssertions.filter((a) => !a.passed);
 
   let assertions = staticAssertions;
@@ -214,7 +263,9 @@ function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = n
       { informational: true },
     )];
   } else {
-    const liveAssertions = evaluateLiveAssertions(modelData, modelData.live);
+    const liveResult = applyExemption(evaluateLiveAssertions(modelData, modelData.live), exemption, modelData.model);
+    const liveAssertions = liveResult.assertions;
+    if (liveResult.applied) exemptionApplied = liveResult.applied;
     assertions = [...assertions, ...liveAssertions];
     state = liveAssertions.some((a) => !a.passed) ? COVERAGE_STATES.FAILED : COVERAGE_STATES.VALIDATED;
   }
@@ -230,6 +281,7 @@ function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = n
     assertions,
     failedAssertions,
     warnings,
+    ...(exemptionApplied ? { exemptionApplied } : {}),
   };
 }
 
@@ -240,10 +292,40 @@ function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = n
  * @param {object[]} input.models dados estáticos (+live) por model
  * @param {boolean} input.dbAvailable
  * @param {string|null} [input.dbUnavailableReason]
- * @returns {{ waveId, dbAvailable, totals, perModel }}
+ * @param {object} [input.exemptions] isenções justificadas por nome de model
+ *   ({ "<Model>": { assertion, reason, approvedBy, date } })
+ * @returns {{ waveId, dbAvailable, totals, perModel, exemptions }}
  */
-function evaluateDbIntegrityWave({ models = [], dbAvailable = false, dbUnavailableReason = null } = {}) {
-  const perModel = models.map((modelData) => evaluateModel(modelData, { dbAvailable, dbUnavailableReason }));
+function evaluateDbIntegrityWave({ models = [], dbAvailable = false, dbUnavailableReason = null, exemptions = {} } = {}) {
+  const applied = [];
+  const ignored = [];
+  const perModel = models.map((modelData) => {
+    const rawExemption = exemptions[modelData.model];
+    let exemption = null;
+    if (rawExemption != null) {
+      if (isValidExemption(rawExemption)) {
+        exemption = rawExemption;
+      } else {
+        ignored.push({
+          model: modelData.model,
+          exemption: rawExemption && typeof rawExemption === 'object' ? rawExemption : {},
+          reason: `campos obrigatórios ausentes ou vazios (${EXEMPTION_REQUIRED_FIELDS.join(', ')})`,
+        });
+      }
+    }
+    const entry = evaluateModel(modelData, { dbAvailable, dbUnavailableReason, exemption });
+    if (exemption) {
+      if (entry.exemptionApplied) applied.push(entry.exemptionApplied);
+      else {
+        ignored.push({
+          model: modelData.model,
+          exemption,
+          reason: `assertiva '${exemption.assertion}' não existe para este model`,
+        });
+      }
+    }
+    return entry;
+  });
 
   const totals = {
     models: perModel.length,
@@ -253,7 +335,7 @@ function evaluateDbIntegrityWave({ models = [], dbAvailable = false, dbUnavailab
     warnings: perModel.filter((m) => m.warnings.length > 0).length,
   };
 
-  return { waveId: WAVE_ID, dbAvailable: Boolean(dbAvailable), totals, perModel };
+  return { waveId: WAVE_ID, dbAvailable: Boolean(dbAvailable), totals, perModel, exemptions: { applied, ignored } };
 }
 
 module.exports = {
@@ -262,6 +344,8 @@ module.exports = {
   evaluateModel,
   evaluateStaticAssertions,
   evaluateLiveAssertions,
+  isValidExemption,
+  applyExemption,
   toSnakeCase,
   expectedColumnName,
 };

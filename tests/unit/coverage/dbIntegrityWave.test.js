@@ -85,6 +85,73 @@ module.exports = {
   };
 }
 
+/**
+ * Fixture para detecção ampliada de migrations: SQL bruto dentro de migration
+ * Umzug (.js) e DDL versionado solto (migrations/*.sql).
+ */
+function makeRawSqlFixture() {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dbi-wave-rawsql-'));
+  const modelsDir = path.join(rootDir, 'api', 'db', 'models');
+  const migrationsDir = path.join(rootDir, 'api', 'db', 'migrations');
+  const ddlDir = path.join(rootDir, 'migrations');
+  fs.mkdirSync(modelsDir, { recursive: true });
+  fs.mkdirSync(migrationsDir, { recursive: true });
+  fs.mkdirSync(ddlDir, { recursive: true });
+
+  fs.writeFileSync(path.join(modelsDir, 'RawSql.js'), `'use strict';
+const { DataTypes } = require('sequelize');
+module.exports = (sequelize) => sequelize.define('RawSql', {
+  id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
+  tenant_key: { type: DataTypes.STRING, allowNull: false },
+}, { tableName: 'raw_sql_widgets', timestamps: true });
+`);
+  fs.writeFileSync(path.join(modelsDir, 'DdlOnly.js'), `'use strict';
+const { DataTypes } = require('sequelize');
+module.exports = (sequelize) => sequelize.define('DdlOnly', {
+  id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
+  tenant_key: { type: DataTypes.STRING, allowNull: false },
+}, { tableName: 'ddl_widgets', timestamps: true });
+`);
+  fs.writeFileSync(path.join(modelsDir, 'TrulyOrphan.js'), `'use strict';
+const { DataTypes } = require('sequelize');
+module.exports = (sequelize) => sequelize.define('TrulyOrphan', {
+  id: { type: DataTypes.STRING, primaryKey: true, allowNull: false },
+  tenant_key: { type: DataTypes.STRING, allowNull: false },
+}, { tableName: 'truly_orphans', timestamps: true });
+`);
+
+  // Migration Umzug com CREATE TABLE em SQL bruto (sem ocorrência quotada do tableName).
+  fs.writeFileSync(path.join(migrationsDir, '20250101000003-create-raw-sql-widgets.js'), `'use strict';
+module.exports = {
+  up: (queryInterface) => queryInterface.sequelize.query(
+    'CREATE TABLE IF NOT EXISTS raw_sql_widgets (id text PRIMARY KEY, tenant_key text NOT NULL)'
+  ),
+  down: (queryInterface) => queryInterface.sequelize.query('DROP TABLE IF EXISTS raw_sql_widgets'),
+};
+`);
+
+  // DDL versionado solto (fora de api/db/migrations).
+  fs.writeFileSync(path.join(ddlDir, 'legacy-2025-01-01.sql'), `CREATE TABLE IF NOT EXISTS ddl_widgets (
+  id text PRIMARY KEY,
+  tenant_key text NOT NULL
+);
+`);
+
+  const inventoryItems = [
+    { id: 'model:RawSql', kind: 'model', model: 'RawSql', tableName: 'raw_sql_widgets', source: 'api/db/models/RawSql.js' },
+    { id: 'model:DdlOnly', kind: 'model', model: 'DdlOnly', tableName: 'ddl_widgets', source: 'api/db/models/DdlOnly.js' },
+    { id: 'model:TrulyOrphan', kind: 'model', model: 'TrulyOrphan', tableName: 'truly_orphans', source: 'api/db/models/TrulyOrphan.js' },
+  ];
+
+  return {
+    rootDir,
+    inventoryItems,
+    collect: () => collectModelStaticData({ inventoryItems, rootDir }),
+    cleanup: () => fs.rmSync(rootDir, { recursive: true, force: true }),
+  };
+}
+
+
 describe('coverage/dbIntegrityWave', () => {
   let fixture;
   beforeEach(() => { fixture = makeFixture(); });
@@ -228,5 +295,129 @@ describe('coverage/dbIntegrityWave', () => {
     const entry = result.perModel[0];
     expect(entry.state).toBe(COVERAGE_STATES.FAILED);
     expect(entry.failedAssertions).toContain('timestampsDefined');
+  });
+
+  test('detecção ampliada: migration por SQL bruto (CREATE TABLE em .js) e DDL solto (.sql)', () => {
+    const rawFixture = makeRawSqlFixture();
+    try {
+      const models = rawFixture.collect();
+      const rawSql = models.find((m) => m.model === 'RawSql');
+      expect(rawSql.migrationMatches).toEqual(['api/db/migrations/20250101000003-create-raw-sql-widgets.js']);
+      const ddlOnly = models.find((m) => m.model === 'DdlOnly');
+      expect(ddlOnly.migrationMatches).toEqual(['migrations/legacy-2025-01-01.sql']);
+      // model sem NENHUMA fonte continua sem match (não enfraquecemos a assertiva)
+      const orphan = models.find((m) => m.model === 'TrulyOrphan');
+      expect(orphan.migrationMatches).toEqual([]);
+
+      const result = evaluateDbIntegrityWave({
+        models: models.map((m) => ({
+          ...m,
+          live: { tableExists: true, columns: ['id', 'tenant_key', 'created_at', 'updated_at'], primaryKeyColumns: ['id'] },
+        })),
+        dbAvailable: true,
+      });
+      expect(result.perModel.find((m) => m.model === 'RawSql').state).toBe(COVERAGE_STATES.VALIDATED);
+      expect(result.perModel.find((m) => m.model === 'DdlOnly').state).toBe(COVERAGE_STATES.VALIDATED);
+      const orphanEntry = result.perModel.find((m) => m.model === 'TrulyOrphan');
+      expect(orphanEntry.state).toBe(COVERAGE_STATES.FAILED);
+      expect(orphanEntry.failedAssertions).toContain('migrationFound');
+    } finally {
+      rawFixture.cleanup();
+    }
+  });
+
+  test('findMigrationMatches: CREATE TABLE em SQL bruto (variações de caso/espaço)', () => {
+    const sources = [
+      { file: 'raw.js', content: 'await queryInterface.sequelize.query(`CREATE TABLE IF NOT EXISTS audit_log (id text)`);' },
+      { file: 'upper.sql', content: 'create  table\n  AUDIT_LOG (id text);' },
+      { file: 'quoted.sql', content: 'CREATE TABLE "audit_log" (id text);' },
+      { file: 'other.sql', content: 'CREATE TABLE audit_log_archive (id text);' },
+    ];
+    expect(findMigrationMatches('audit_log', sources)).toEqual(['raw.js', 'upper.sql', 'quoted.sql']);
+  });
+
+  function noTsModelData(model = 'NoTsAux') {
+    return {
+      id: `model:${model}`,
+      model,
+      source: `api/db/models/${model}.js`,
+      parsed: {
+        parseError: false,
+        tableName: 'no_ts_aux',
+        hasTenantId: true,
+        fields: { id: { primaryKey: true, type: 'STRING' } },
+      },
+      timestampsDisabled: true,
+      migrationMatches: ['m.js'],
+      live: { tableExists: true, columns: ['id'], primaryKeyColumns: ['id'] },
+    };
+  }
+
+  test('isenção justificada vira NOT_APPLICABLE e não derruba VALIDATED', () => {
+    const result = evaluateDbIntegrityWave({
+      models: [noTsModelData()],
+      dbAvailable: true,
+      exemptions: {
+        NoTsAux: {
+          assertion: 'timestampsDefined',
+          reason: 'log append-only com created_at via DEFAULT no banco',
+          approvedBy: 'senior-engineer',
+          date: '2026-07-25',
+        },
+      },
+    });
+    const entry = result.perModel[0];
+    expect(entry.state).toBe(COVERAGE_STATES.VALIDATED);
+    expect(entry.failedAssertions).toEqual([]);
+    const exempted = entry.assertions.find((a) => a.name === 'timestampsDefined');
+    expect(exempted.passed).toBe(true);
+    expect(exempted.notApplicable).toBe(true);
+    expect(exempted.detail).toContain('NOT_APPLICABLE');
+    expect(exempted.detail).toContain('log append-only');
+    expect(result.exemptions.applied).toEqual([{
+      model: 'NoTsAux',
+      assertion: 'timestampsDefined',
+      reason: 'log append-only com created_at via DEFAULT no banco',
+      approvedBy: 'senior-engineer',
+      date: '2026-07-25',
+    }]);
+    expect(result.exemptions.ignored).toEqual([]);
+  });
+
+  test('isenção sem campos obrigatórios é ignorada e a assertiva continua falhando', () => {
+    const result = evaluateDbIntegrityWave({
+      models: [noTsModelData()],
+      dbAvailable: true,
+      exemptions: {
+        NoTsAux: { assertion: 'timestampsDefined', reason: 'sem approvedBy nem date' },
+      },
+    });
+    const entry = result.perModel[0];
+    expect(entry.state).toBe(COVERAGE_STATES.FAILED);
+    expect(entry.failedAssertions).toContain('timestampsDefined');
+    const notExempted = entry.assertions.find((a) => a.name === 'timestampsDefined');
+    expect(notExempted.notApplicable).toBeUndefined();
+    expect(result.exemptions.applied).toEqual([]);
+    expect(result.exemptions.ignored).toHaveLength(1);
+    expect(result.exemptions.ignored[0].model).toBe('NoTsAux');
+  });
+
+  test('isenção para assertiva inexistente é ignorada', () => {
+    const result = evaluateDbIntegrityWave({
+      models: [noTsModelData()],
+      dbAvailable: true,
+      exemptions: {
+        NoTsAux: {
+          assertion: 'assertivaQueNaoExiste',
+          reason: 'alvo inválido',
+          approvedBy: 'senior-engineer',
+          date: '2026-07-25',
+        },
+      },
+    });
+    expect(result.perModel[0].state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.exemptions.applied).toEqual([]);
+    expect(result.exemptions.ignored).toHaveLength(1);
+    expect(result.exemptions.ignored[0].reason).toContain('não existe');
   });
 });
