@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-25T21:50:16.429Z",
+  "generatedAt": "2026-07-25T22:06:20.813Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -94,15 +94,43 @@
       ]
     },
     {
+      "vertical": "core",
+      "journeys": [
+        {
+          "journey": "booking_flow",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-flow-booking",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "payment_charge_flow",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-flow-payment-charge",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "support_ticket_flow",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-flow-support-ticket",
+              "status": "active"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "vertical": "fitness",
       "journeys": [
         {
           "journey": "agendamento",
           "scenarios": [
-            {
-              "scenarioId": "fitness-matricula-agendamento-ui",
-              "status": "active"
-            },
             {
               "scenarioId": "fitness-matricula-agendamento",
               "status": "deprecated"
@@ -114,6 +142,10 @@
             {
               "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
               "status": "active"
+            },
+            {
+              "scenarioId": "fitness-matricula-agendamento-ui",
+              "status": "approved"
             }
           ]
         },
@@ -374,40 +406,6 @@
             {
               "scenarioId": "business-serv-scr-01",
               "status": "approved"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "vertical": "core",
-      "manual": true,
-      "note": "Jornadas core fora das 6 verticais geradas pelo platform-readiness. Declaração mantida à mão; preservada pelo sync.",
-      "journeys": [
-        {
-          "journey": "support_ticket_flow",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-flow-support-ticket",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "booking_flow",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-flow-booking",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "payment_charge_flow",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-flow-payment-charge",
-              "status": "active"
             }
           ]
         }

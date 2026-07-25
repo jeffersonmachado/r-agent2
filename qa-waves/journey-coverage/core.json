@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-07-25T22:05:54.216Z",
+  "vertical": "core",
+  "kind": "system",
+  "maturity": "system",
+  "replaySupported": false,
+  "journeys": [
+    {
+      "vertical": "core",
+      "journey": "booking_flow",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-core-flow-booking",
+          "scenario": "Core agendamento criado, confirmado e concluído",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado"
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
+      "journey": "payment_charge_flow",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-core-flow-payment-charge",
+          "scenario": "Core cobrança avulsa criada e pagamento confirmado",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Billing sandbox habilitado"
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
+      "journey": "support_ticket_flow",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-core-flow-support-ticket",
+          "scenario": "Core abertura, resposta e encerramento de ticket de suporte",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Fila de suporte disponível"
+          ]
+        }
+      ]
+    }
+  ]
+}

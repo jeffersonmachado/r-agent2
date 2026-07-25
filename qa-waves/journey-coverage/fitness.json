@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T09:55:40.291Z",
+  "generatedAt": "2026-07-25T22:05:54.216Z",
   "vertical": "fitness",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,29 +10,6 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
-        {
-          "scenarioId": "fitness-matricula-agendamento-ui",
-          "scenario": "Agendamento de Aula Experimental via UI",
-          "status": "active",
-          "channels": [
-            "chat",
-            "api"
-          ],
-          "preconditions": [],
-          "integrations": [
-            "schedulingService",
-            "semanticValidator",
-            "rpa"
-          ],
-          "steps": [
-            "trigger_channel_event",
-            "provide_data",
-            "provide_data",
-            "create_booking",
-            "validate_response"
-          ],
-          "operationalAssertions": []
-        },
         {
           "scenarioId": "fitness-matricula-agendamento",
           "scenario": "Agendamento de Aula Experimental",
@@ -264,6 +241,61 @@
             {
               "stepId": "step_018",
               "expected": "Encerrar o fluxo de agendamento oferecendo próximos passos: adicionar ao calendário, remarcar/cancelar e tirar dúvidas, sem solicitar novamente dados já coletados."
+            }
+          ]
+        },
+        {
+          "scenarioId": "fitness-matricula-agendamento-ui",
+          "scenario": "Agendamento de Aula Experimental via UI",
+          "status": "approved",
+          "channels": [
+            "chat",
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "chat",
+            "schedulingService",
+            "semanticValidator"
+          ],
+          "steps": [
+            "Usuário abre menu Construtor → Tarefas",
+            "Usuário preenche e cria a tarefa",
+            "Usuário preenche o formulário de agendamento",
+            "Sistema cria o agendamento",
+            "UI confirma Agendamento criado"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_001",
+              "expected": {
+                "page": "/tasks"
+              }
+            },
+            {
+              "stepId": "step_002",
+              "expected": {
+                "toast": "Tarefa criada"
+              }
+            },
+            {
+              "stepId": "step_003",
+              "expected": {
+                "modal": "Novo Agendamento"
+              }
+            },
+            {
+              "stepId": "step_004",
+              "expected": {
+                "backendEntity": "booking",
+                "created": true
+              }
+            },
+            {
+              "stepId": "step_005",
+              "expected": {
+                "toast": "Agendamento criado"
+              }
             }
           ]
         }

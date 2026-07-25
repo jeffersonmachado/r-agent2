@@ -630,8 +630,52 @@ function buildJourneyCoverage(scenarioStore, verticalSummaries, prodLikeSummary)
   return coverage;
 }
 
-function summarizeScenarioQuality(scenarioStore) {
-  const scenarios = Array.isArray(scenarioStore?.scenarios) ? scenarioStore.scenarios : [];
+/**
+ * Jornadas de sistema (core): cenários do mesh com journeyId declarado cujo
+ * domínio NÃO pertence às verticais de negócio (ex.: support_ticket_flow,
+ * booking_flow, payment_charge_flow). Diferente das verticais, não entra em
+ * summarizeVerticals/maturidade comercial — é cobertura de plataforma.
+ * Emite qa-waves/journey-coverage/core.json (via persistReport), consumido
+ * pelo coverage gate através de config/journey-scenario-links.json.
+ * Retorna null quando não há jornada de sistema declarada (arquivo não gerado).
+ */
+function buildSystemJourneyCoverage(meshRegistry) {
+  const scenarios = (Array.isArray(meshRegistry) ? meshRegistry : [])
+    .filter((item) => item && !REQUIRED_VERTICALS.includes(normalizeVerticalKey(item.domain)))
+    .filter((item) => String(item.journeyId || item.journey || '').trim().length > 0);
+  if (scenarios.length === 0) return null;
+
+  const journeyIds = Array.from(new Set(
+    scenarios.map((item) => String(item.journeyId || item.journey).trim()),
+  )).sort();
+
+  return {
+    generatedAt: NOW,
+    vertical: 'core',
+    kind: 'system',
+    maturity: 'system',
+    replaySupported: false,
+    journeys: journeyIds.map((journeyId) => ({
+      vertical: 'core',
+      journey: journeyId,
+      replaySupport: false,
+      qaSupport: true,
+      scenarios: scenarios
+        .filter((item) => String(item.journeyId || item.journey).trim() === journeyId)
+        .map((item) => ({
+          scenarioId: item.id,
+          scenario: item.flow || item.id,
+          status: 'active',
+          channels: [],
+          preconditions: [],
+          integrations: [],
+          steps: Array.isArray(item.steps) ? item.steps : [],
+        })),
+    })),
+  };
+}
+
+function summarizeScenarioQuality(scenarioStore) {  const scenarios = Array.isArray(scenarioStore?.scenarios) ? scenarioStore.scenarios : [];
   const executableScenarios = scenarios.filter((scenario) => EXECUTABLE_SCENARIO_STATUS.has(String(scenario.status || '').toLowerCase()));
   const orphanJourneys = [];
   const missingBackendAssertions = [];
@@ -1237,6 +1281,10 @@ function buildReport() {
   const productionValidation = summarizeProductionValidation(scenarioCorpus, smokeEvidence, prodLikeSummary, meshSummary, enterpriseEvidence);
   const scenarioQuality = summarizeScenarioQuality(scenarioCorpus);
   const journeyCoverage = buildJourneyCoverage(scenarioCorpus, verticalSummaries, prodLikeSummary);
+  const systemJourneyCoverage = buildSystemJourneyCoverage(meshRegistry);
+  if (systemJourneyCoverage) {
+    journeyCoverage.core = systemJourneyCoverage;
+  }
 
   const observedFailureFreePercent = round((meshSummary.registryDeclaredTotal > 0
     ? (meshSummary.registryDeclaredTotal - meshSummary.intelligenceFailures.length) / meshSummary.registryDeclaredTotal

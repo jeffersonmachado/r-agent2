@@ -129,9 +129,14 @@ antes UNCOVERED (`support_ticket_flow`, `booking_flow`,
 `payment_charge_flow`) passaram a ser cobertas pelos cenários executáveis
 `CORE-FLOW-SUPPORT-TICKET`, `CORE-FLOW-BOOKING` e
 `CORE-FLOW-PAYMENT-CHARGE` (`tests/rpa/business/`, ids de mesh
-`business-core-flow-*`), declarados na vertical `core` (manual) de
-`config/journey-scenario-links.json` — declarações `manual: true` são
-preservadas pelo `coverage-gate:links`.
+`business-core-flow-*`). Jornadas de sistema são cidadãs de primeira classe:
+o cenário declara `journey` no catálogo business, o mesh propaga como
+`journeyId` (`meshRunner.normalizeBusinessScenario`) e o platform-readiness
+gera `qa-waves/journey-coverage/core.json`
+(`buildSystemJourneyCoverage`) — a declaração flui para
+`config/journey-scenario-links.json` via `coverage-gate:links` sem edição
+manual. Verticais `manual: true` continuam suportadas pelo sync como válvula
+de escape documentada.
 
 ## Métricas
 

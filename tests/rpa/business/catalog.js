@@ -1,6 +1,7 @@
 const SCREEN_SCENARIOS = [
   {
     code: 'FIT-SCR-01',
+    journey: 'fitness_new_customer',
     name: 'Fitness Students screen smoke',
     vertical: 'fitness',
     type: 'screen',
@@ -17,6 +18,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'FIT-SCR-02',
+    journey: 'fitness_new_customer',
     name: 'Fitness Memberships screen smoke',
     vertical: 'fitness',
     type: 'screen',
@@ -33,6 +35,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'FIT-SCR-03',
+    journey: 'fitness_new_customer',
     name: 'Fitness Attendance screen smoke',
     vertical: 'fitness',
     type: 'screen',
@@ -48,6 +51,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-01',
+    journey: 'beauty_booking',
     name: 'Beauty Campaigns screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -64,6 +68,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-02',
+    journey: 'beauty_booking',
     name: 'Beauty Leads screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -81,6 +86,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-03',
+    journey: 'beauty_booking',
     name: 'Beauty Customers screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -97,6 +103,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-04',
+    journey: 'beauty_booking',
     name: 'Beauty Schedule screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -112,6 +119,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-05',
+    journey: 'beauty_booking',
     name: 'Beauty Services screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -127,6 +135,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'BEAUTY-SCR-06',
+    journey: 'beauty_booking',
     name: 'Beauty Payments screen smoke',
     vertical: 'beauty',
     type: 'screen',
@@ -142,6 +151,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'FOOD-SCR-01',
+    journey: 'food_order_flow',
     name: 'Food Orders screen smoke',
     vertical: 'food',
     type: 'screen',
@@ -154,6 +164,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'CLINIC-SCR-01',
+    journey: 'clinic_default_journey',
     name: 'Clinic maintenance screen smoke',
     vertical: 'clinica',
     type: 'screen',
@@ -166,6 +177,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'SERV-SCR-01',
+    journey: 'services_default_journey',
     name: 'Services solutions screen smoke',
     vertical: 'servicos',
     type: 'screen',
@@ -178,6 +190,7 @@ const SCREEN_SCENARIOS = [
   },
   {
     code: 'MARKET-SCR-01',
+    journey: 'market_default_journey',
     name: 'Market node marketplace screen smoke',
     vertical: 'mercado',
     type: 'screen',
@@ -193,6 +206,7 @@ const SCREEN_SCENARIOS = [
 const FLOW_SCENARIOS = [
   {
     code: 'FOOD-FLOW-ORDER',
+    journey: 'food_customer_journey',
     name: 'Food pedido via WhatsApp até confirmação',
     vertical: 'food',
     type: 'flow',
@@ -204,6 +218,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'CLINIC-FLOW-TICKET',
+    journey: 'clinic_default_journey',
     name: 'Clinic abertura e resolução de ticket de manutenção',
     vertical: 'clinica',
     type: 'flow',
@@ -215,6 +230,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'SERV-FLOW-SOLUTION',
+    journey: 'services_default_journey',
     name: 'Services ativação de pacote de soluções',
     vertical: 'servicos',
     type: 'flow',
@@ -226,6 +242,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'MARKET-FLOW-NODE',
+    journey: 'market_default_journey',
     name: 'Market publicação de nó no marketplace',
     vertical: 'mercado',
     type: 'flow',
@@ -237,6 +254,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'FIT-FLOW-STUDENT',
+    journey: 'fitness_new_customer',
     name: 'Fitness cadastro de aluno e salvamento',
     vertical: 'fitness',
     type: 'flow',
@@ -246,6 +264,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'FIT-FLOW-CHARGE',
+    journey: 'fitness_active_customer',
     name: 'Fitness geração de cobrança e pagamento isolado',
     vertical: 'fitness',
     type: 'flow',
@@ -255,6 +274,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'FIT-FLOW-CHECKIN',
+    journey: 'fitness_new_customer',
     name: 'Fitness check-in e controle de acesso',
     vertical: 'fitness',
     type: 'flow',
@@ -264,6 +284,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'BEAUTY-FLOW-CAMPAIGN',
+    journey: 'beauty_booking',
     name: 'Beauty criação de campanha',
     vertical: 'beauty',
     type: 'flow',
@@ -273,6 +294,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'BEAUTY-FLOW-LEAD',
+    journey: 'beauty_new_customer',
     name: 'Beauty lead para cliente',
     vertical: 'beauty',
     type: 'flow',
@@ -282,6 +304,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'BEAUTY-FLOW-APPOINTMENT',
+    journey: 'beauty_booking',
     name: 'Beauty agendamento simples',
     vertical: 'beauty',
     type: 'flow',
@@ -291,6 +314,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'BEAUTY-FLOW-PAYMENT',
+    journey: 'beauty_booking',
     name: 'Beauty pagamento isolado',
     vertical: 'beauty',
     type: 'flow',
@@ -300,6 +324,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'CORE-FLOW-SUPPORT-TICKET',
+    journey: 'support_ticket_flow',
     name: 'Core abertura, resposta e encerramento de ticket de suporte',
     vertical: 'core',
     type: 'flow',
@@ -311,6 +336,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'CORE-FLOW-BOOKING',
+    journey: 'booking_flow',
     name: 'Core agendamento criado, confirmado e concluído',
     vertical: 'core',
     type: 'flow',
@@ -322,6 +348,7 @@ const FLOW_SCENARIOS = [
   },
   {
     code: 'CORE-FLOW-PAYMENT-CHARGE',
+    journey: 'payment_charge_flow',
     name: 'Core cobrança avulsa criada e pagamento confirmado',
     vertical: 'core',
     type: 'flow',
@@ -336,6 +363,7 @@ const FLOW_SCENARIOS = [
 const JOURNEY_SCENARIOS = [
   {
     code: 'F1',
+    journey: 'fitness_active_customer',
     name: 'Fitness novo aluno até pagamento e ativação',
     vertical: 'fitness',
     type: 'journey',
@@ -345,6 +373,7 @@ const JOURNEY_SCENARIOS = [
   },
   {
     code: 'F2',
+    journey: 'fitness_active_customer',
     name: 'Fitness renovação/rematrícula',
     vertical: 'fitness',
     type: 'journey',
@@ -354,6 +383,7 @@ const JOURNEY_SCENARIOS = [
   },
   {
     code: 'B1',
+    journey: 'beauty_new_customer',
     name: 'Beauty campanha de unhas até pagamento',
     vertical: 'beauty',
     type: 'journey',
@@ -363,6 +393,7 @@ const JOURNEY_SCENARIOS = [
   },
   {
     code: 'B2',
+    journey: 'beauty_booking',
     name: 'Beauty reagendamento',
     vertical: 'beauty',
     type: 'journey',

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T21:50:24.775Z",
+  "generatedAt": "2026-07-25T22:06:21.440Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -27,6 +27,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -62,6 +63,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -96,6 +98,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -130,6 +133,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -165,6 +169,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -200,6 +205,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -231,6 +237,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -262,6 +269,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -293,6 +301,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -324,6 +333,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -355,6 +365,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -386,6 +397,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "beauty_booking",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -422,6 +434,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "clinic_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -453,6 +466,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "clinic_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -488,6 +502,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "booking_flow",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -524,6 +539,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "payment_charge_flow",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -561,6 +577,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "support_ticket_flow",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -599,6 +616,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_active_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -635,6 +653,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_active_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -670,6 +689,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_active_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -705,6 +725,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -740,6 +761,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -772,6 +794,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -803,6 +826,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -834,6 +858,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "fitness_new_customer",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -870,6 +895,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "food_customer_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -901,6 +927,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "food_order_flow",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -937,6 +964,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "market_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -968,6 +996,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "market_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -1004,6 +1033,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "services_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",
@@ -1035,6 +1065,7 @@
         "telemetry"
       ],
       "requiresOfficialPipeline": true,
+      "journeyId": "services_default_journey",
       "command": "node",
       "commandArgs": [
         "core/rpa/cli.js",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T09:55:40.291Z",
+  "generatedAt": "2026-07-25T22:05:54.216Z",
   "vertical": "clinic",
   "maturity": "production-like",
   "replaySupported": true,
@@ -15,7 +15,7 @@
           "scenario": "Clinic abertura e resolução de ticket de manutenção",
           "status": "approved",
           "channels": [
-            "ticket"
+            "chat"
           ],
           "preconditions": [
             "Operação autenticada",

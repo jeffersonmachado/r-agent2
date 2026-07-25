@@ -314,6 +314,10 @@ function normalizeBusinessScenario(item) {
   return toScenarioBase({
     id: `business-${item.code.toLowerCase()}`,
     domain: item.vertical,
+    // Jornada de sistema declarada (ex.: support_ticket_flow) — propaga para o
+    // registry e permite ao platform-readiness gerar a cobertura de jornadas
+    // core (qa-waves/journey-coverage/core.json) sem heurística.
+    journeyId: item.journey || null,
     type: item.type === 'journey' ? 'business' : item.type === 'screen' ? 'smoke' : 'regression',
     source: item.type === 'screen' ? 'hybrid' : 'qa',
     flow: item.name,
