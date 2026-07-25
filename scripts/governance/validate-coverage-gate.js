@@ -60,6 +60,10 @@ const TENANT_REPORT_SCRIPT_PATH = path.join(ROOT_DIR, 'scripts', 'governance', '
 const TENANT_REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THRESHOLDS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-thresholds.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'coverage-gate-report.json');
+// Snapshot versionado usado quando qa-mesh/meshRegistry.json não existe no
+// checkout (arquivo de runtime, gitignored) — ex.: CI. Gerado por
+// scripts/governance/coverage-gate-snapshot.js a partir dos dados vivos.
+const SNAPSHOT_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-baseline.json');
 
 function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -203,11 +207,27 @@ function main() {
   const checkFingerprints = args.includes('--check-fingerprints');
 
   const inventory = loadJson(INVENTORY_PATH);
-  const scenarios = loadJson(MESH_REGISTRY_PATH);
   const journeyContracts = loadJsonIfExists(JOURNEY_CONTRACTS_PATH);
   const journeys = Object.keys((journeyContracts && journeyContracts.journeys) || {});
 
-  const executions = buildExecutions(scenarios);
+  let scenarios;
+  let executions;
+  let registrySource = path.relative(ROOT_DIR, MESH_REGISTRY_PATH);
+  if (fs.existsSync(MESH_REGISTRY_PATH)) {
+    scenarios = loadJson(MESH_REGISTRY_PATH);
+    executions = buildExecutions(scenarios);
+  } else {
+    const snapshot = loadJsonIfExists(SNAPSHOT_PATH);
+    if (!snapshot || !Array.isArray(snapshot.scenarios) || !Array.isArray(snapshot.executions)) {
+      console.error('[coverage-gate] qa-mesh/meshRegistry.json ausente e snapshot '
+        + `${path.relative(ROOT_DIR, SNAPSHOT_PATH)} inválido. `
+        + 'Gere com: npm run coverage-gate:snapshot');
+      process.exit(1);
+    }
+    scenarios = snapshot.scenarios;
+    executions = snapshot.executions;
+    registrySource = `${path.relative(ROOT_DIR, SNAPSHOT_PATH)} (snapshot ${snapshot.generatedAt || 'sem data'})`;
+  }
   const visibility = loadVisibilityViolations();
   const tenantIsolation = loadTenantIsolationViolations();
 
@@ -239,7 +259,7 @@ function main() {
     generatedAt: new Date().toISOString(),
     inputs: {
       inventory: path.relative(ROOT_DIR, INVENTORY_PATH),
-      meshRegistry: path.relative(ROOT_DIR, MESH_REGISTRY_PATH),
+      meshRegistry: registrySource,
       executionsSources: ['qa-mesh/go-no-go-report.json', 'qa-mesh/meshHistory/'],
       visibilitySource: visibility.source,
       fingerprintCheck: checkFingerprints,
@@ -271,4 +291,8 @@ function main() {
   process.exit(0);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { buildExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };

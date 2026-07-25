@@ -113,6 +113,17 @@ Decisão: GO se nenhum check falhar; NO_GO com `reasons[]` listando
 `{check, threshold, actual, items}` (ids dos responsáveis, até 20 + contador
 de omitidos).
 
+### Snapshot para CI
+
+`qa-mesh/meshRegistry.json` e `qa-mesh/meshHistory/` são arquivos de runtime
+(gitignored) e não existem num checkout limpo. Para o CI, o gate usa o
+snapshot versionado `config/coverage-gate-baseline.json` (cenários + último
+status por cenário), gerado por `npm run coverage-gate:snapshot` a partir dos
+dados vivos. Com o registry vivo presente, o comportamento é inalterado;
+sem ele e sem snapshot válido, o gate falha explicitamente (exit 1). Regere o
+snapshot a cada release ou mudança da execução canônica do mesh — ele é o
+baseline de cobertura do pipeline.
+
 ## Isolamento de tenant (fonte real)
 
 `scripts/governance/tenant-isolation-report.js` (npm
