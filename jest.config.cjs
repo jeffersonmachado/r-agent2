@@ -1,3 +1,14 @@
+const fs = require('fs');
+
+// Pacote irmão @results/auth (fora do repo em /opt/results/ria/): incluído nos
+// roots apenas quando existe, para que clones/CI sem o diretório não falhem
+// (o CI usa vendor/auth copiado para ../../packages/auth antes do npm ci).
+const EXTERNAL_PACKAGES_ROOT = '/opt/results/packages';
+const roots = ['<rootDir>/engine', '<rootDir>/api', '<rootDir>/tests', '<rootDir>/qa', '<rootDir>/qa-mesh', '<rootDir>/lib'];
+if (fs.existsSync(EXTERNAL_PACKAGES_ROOT)) {
+  roots.push(EXTERNAL_PACKAGES_ROOT);
+}
+
 /** @type {import('jest').Config} */
 module.exports = {
   // Timeout global para todos os testes (10 segundos)
@@ -15,7 +26,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
   
   testEnvironment: 'node',
-  roots: ['<rootDir>/engine', '<rootDir>/api', '<rootDir>/tests', '<rootDir>/qa', '<rootDir>/qa-mesh', '<rootDir>/lib', '/opt/results/packages'],
+  roots,
   testMatch: ['**/__tests__/**/*.test.js', '**/*.test.js'],
   testPathIgnorePatterns: [
     '/node_modules/',
