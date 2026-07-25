@@ -121,6 +121,14 @@ jobs:
           npm run validate:visibility-policy
           COVERAGE_GATE_SKIP_TENANT_RUN=1 npm run validate:coverage-gate
 
+      - name: "Upload coverage gate report (diagnóstico)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gate-report-node${{ matrix.node-version }}
+          path: reports/coverage-gate-report.json
+          if-no-files-found: ignore
+
       - name: "[1/6] check-dist-clean"
         run: bash scripts/check-dist-clean.sh
 

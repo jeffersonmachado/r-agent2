@@ -50,7 +50,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { evaluateCoverageGate } = require('../../qa/coverage/coverageGate');
+const { evaluateCoverageGate, buildGateItems } = require('../../qa/coverage/coverageGate');
 const { resolveThresholds } = require('../../qa/coverage/gateThresholds');
 const { resolveDomainAliases, buildJourneyScenarioLinks } = require('../../qa/coverage/journeyLinks');
 const { buildInventory, diffInventories } = require('../../api/services/qa/inventory/inventoryEngine');
@@ -341,13 +341,34 @@ function main() {
     waveId: 'system-coverage',
   });
 
+  const gateItems = buildGateItems({
+    inventoryItems: inventory.items,
+    scenarios,
+    executions,
+    journeys,
+    staleItemIds,
+    technicalExecutions: dbIntegrity.executions,
+    aliases: journeyLinks.aliases,
+    journeyScenarioLinks: journeyLinks.links,
+  });
+  const journeyStates = gateItems
+    .filter((item) => item.dimension === 'journey')
+    .map((item) => ({
+      id: item.id,
+      state: item.state,
+      linkedScenarios: item.linkedScenarios || [],
+      linkedDomains: item.linkedDomains || [],
+    }));
+
   const report = {
     ...result,
     mode: informative ? 'informative' : 'blocking',
     generatedAt: new Date().toISOString(),
+    journeyStates,
     inputs: {
       inventory: path.relative(ROOT_DIR, INVENTORY_PATH),
       meshRegistry: registrySource,
+      executionsMode: fs.existsSync(MESH_REGISTRY_PATH) ? 'live' : 'snapshot',
       executionsSources: ['qa-mesh/go-no-go-report.json', 'qa-mesh/meshHistory/'],
       visibilitySource: visibility.source,
       fingerprintCheck: checkFingerprints,
@@ -377,6 +398,13 @@ function main() {
     console.log(`[coverage-gate] REASON ${reason.check}: actual=${reason.actual} threshold=${reason.threshold}${items}`);
   }
   console.log(`[coverage-gate] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
+  const notValidated = journeyStates.filter((j) => j.state !== 'VALIDATED');
+  if (notValidated.length > 0) {
+    console.log(`[coverage-gate] jornadas não validadas (${notValidated.length}):`);
+    for (const j of notValidated) {
+      console.log(`  - ${j.id}: ${j.state} (scenarios=[${j.linkedScenarios.join(',')}] domains=[${j.linkedDomains.join(',')}])`);
+    }
+  }
 
   if (!informative && result.releaseGate.decision === 'NO_GO') {
     process.exit(1);
