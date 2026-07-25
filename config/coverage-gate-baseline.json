@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T15:19:09.041Z",
+  "generatedAt": "2026-07-25T21:50:24.775Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -464,6 +464,114 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CLINIC-SCR-01"
+    },
+    {
+      "id": "business-core-flow-booking",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agendamento criado, confirmado e concluído",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Agendamento criado",
+        "Confirmação registrada",
+        "Agendamento concluído"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-BOOKING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-BOOKING"
+    },
+    {
+      "id": "business-core-flow-payment-charge",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core cobrança avulsa criada e pagamento confirmado",
+      "steps": [
+        "Tenant autenticado",
+        "Billing sandbox habilitado"
+      ],
+      "assertions": [
+        "Cobrança criada",
+        "Pagamento confirmado via webhook",
+        "Transação persistida como confirmed"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-PAYMENT-CHARGE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-PAYMENT-CHARGE"
+    },
+    {
+      "id": "business-core-flow-support-ticket",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core abertura, resposta e encerramento de ticket de suporte",
+      "steps": [
+        "Tenant autenticado",
+        "Fila de suporte disponível"
+      ],
+      "assertions": [
+        "Ticket criado",
+        "Atendente assumiu o ticket",
+        "Resposta do agente registrada",
+        "Ticket encerrado com status closed"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-SUPPORT-TICKET"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-SUPPORT-TICKET"
     },
     {
       "id": "business-f1",
@@ -2302,6 +2410,18 @@
     },
     {
       "scenarioId": "business-clinic-scr-01",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-booking",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-payment-charge",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-support-ticket",
       "status": "passed"
     },
     {

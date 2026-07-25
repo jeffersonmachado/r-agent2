@@ -1,6 +1,6 @@
 {
   "_comment": "Overrides opcionais dos thresholds do Coverage Gate (qa/coverage/gateThresholds.js). Apenas chaves presentes em DEFAULT_THRESHOLDS são aceitas; env COVERAGE_GATE_* tem precedência sobre este arquivo.",
-  "_ratchet": "Baseline medido em 2026-07-25 (journeyCoverage=85.7, technicalCoverage=73.8, weightedCoverage=84.3; críticos 0/0/0/0) após a ligação precisa jornada↔execução (qa/coverage/journeyLinks.js): aliases de domínio de config/qa-waves-registry.json (mercado→market, servicos→services, clinica→clinic) + links dos arquivos verticais qa-waves/journey-coverage/*.json (cenários active/approved presentes no meshRegistry) + convenção de nome por token delimitado (ex.: fitness-matricula-checkin → jornada checkin). 18/21 jornadas VALIDATED; support_ticket_flow, booking_flow e payment_charge_flow permanecem UNCOVERED (sem cenário executado ligado — sem link artificial). Pisos = medido − 0.5, política ratchet: só podem SUBIR, nunca descer — qualquer regressão abaixo do baseline bloqueia o gate. As regras críticas permanecem 100/0, intocáveis.",
+  "_ratchet": "Baseline medido em 2026-07-25 (journeyCoverage=100, technicalCoverage=73.8, weightedCoverage=84.4; críticos 0/0/0/0) após cobertura real das 3 jornadas core antes UNCOVERED: cenários executáveis CORE-FLOW-SUPPORT-TICKET, CORE-FLOW-BOOKING e CORE-FLOW-PAYMENT-CHARGE (tests/rpa/business), executados no QA mesh com evidência em qa-mesh/meshHistory/mesh-2026-07-25T21-48-50-172Z.json (3/3 passed) e declarados em config/journey-scenario-links.json (vertical core, manual). 21/21 jornadas VALIDATED. Pisos = medido − 0.5, política ratchet: só podem SUBIR, nunca descer — qualquer regressão abaixo do baseline bloqueia o gate. As regras críticas permanecem 100/0, intocáveis.",
   "criticalJourneysValidated": 100,
   "criticalOutcomesValidated": 100,
   "criticalApiContractsValidated": 100,
@@ -10,7 +10,7 @@
   "staleCriticalEvidence": 0,
   "visibilityViolations": 0,
   "tenantIsolationViolations": 0,
-  "minimumJourneyCoverage": 85.2,
+  "minimumJourneyCoverage": 99.5,
   "minimumTechnicalCoverage": 73.3,
-  "minimumWeightedCoverage": 83.8
+  "minimumWeightedCoverage": 83.9
 }

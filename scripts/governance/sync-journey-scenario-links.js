@@ -53,6 +53,19 @@ function main() {
   let journeyCount = 0;
   let scenarioRefCount = 0;
 
+  // Verticais marcadas como "manual": true no config existente são declarações
+  // mantidas à mão (ex.: jornadas core fora das 6 verticais geradas pelo
+  // platform-readiness) e precisam sobreviver à regeneração.
+  let existing = null;
+  try {
+    existing = loadJson(OUTPUT_PATH);
+  } catch {
+    existing = null;
+  }
+  const manualVerticals = existing && Array.isArray(existing.verticals)
+    ? existing.verticals.filter((v) => v && v.manual === true && Array.isArray(v.journeys))
+    : [];
+
   for (const name of files) {
     const data = loadJson(path.join(JOURNEY_COVERAGE_DIR, name));
     if (!data || !Array.isArray(data.journeys)) continue;
@@ -73,12 +86,20 @@ function main() {
     verticals.push({ vertical, journeys });
   }
 
+  for (const manual of manualVerticals) {
+    if (verticals.some((v) => v.vertical === manual.vertical)) continue;
+    verticals.push(manual);
+    journeyCount += manual.journeys.length;
+    scenarioRefCount += manual.journeys.reduce((sum, j) => sum + ((j && j.scenarios) || []).length, 0);
+  }
+
   const output = {
     version: 1,
     description: 'Declaração versionada jornada → cenários para o coverage gate. '
       + 'Gerada por scripts/governance/sync-journey-scenario-links.js a partir de '
       + 'qa-waves/journey-coverage/*.json (artefatos do platform-readiness). '
-      + 'Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links.',
+      + 'Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. '
+      + 'Verticais com "manual": true são mantidas à mão e preservadas pelo sync.',
     generatedAt: new Date().toISOString(),
     source: 'qa-waves/journey-coverage/*.json',
     verticals,

@@ -124,10 +124,14 @@ com source `journey-coverage`; senão, usa-se (b). A CLI
 versionados e nunca reescritos em runtime, então o modo snapshot (CI)
 funciona igual.
 
-Jornadas ainda UNCOVERED (sem cenário executado ligado — sem link
-artificial): `support_ticket_flow`, `booking_flow` e `payment_charge_flow`
-(nenhuma entrada em arquivo vertical, nenhum cenário do mesh com o token e
-nenhum domínio correspondente).
+Todas as 21 jornadas dos contratos estão VALIDATED. As três jornadas core
+antes UNCOVERED (`support_ticket_flow`, `booking_flow`,
+`payment_charge_flow`) passaram a ser cobertas pelos cenários executáveis
+`CORE-FLOW-SUPPORT-TICKET`, `CORE-FLOW-BOOKING` e
+`CORE-FLOW-PAYMENT-CHARGE` (`tests/rpa/business/`, ids de mesh
+`business-core-flow-*`), declarados na vertical `core` (manual) de
+`config/journey-scenario-links.json` — declarações `manual: true` são
+preservadas pelo `coverage-gate:links`.
 
 ## Métricas
 

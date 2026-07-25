@@ -764,6 +764,112 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-FLOW-SUPPORT-TICKET') {
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const ticket = await api.post('/tickets', {
+      phoneNumber: `+55118${phoneSuffix}`,
+      queue: 'support',
+      initialMessage: 'Cliente QA solicita ajuda com pedido (support_ticket_flow)',
+    });
+    const ticketId = ticket?.id || ticket?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Ticket de suporte nao retornou ID');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {});
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/message`, {
+      message: 'Resposta do agente QA: seu pedido esta em transito, previsao para amanha.',
+    });
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {});
+
+    const closed = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    const status = String(closed?.status || '').toLowerCase();
+    if (status !== 'closed') {
+      throw new Error('Ticket de suporte nao foi encerrado');
+    }
+
+    return {
+      detail: 'Ticket criado, assumido, respondido pelo agente e encerrado',
+      ids: { ticketId },
+      evidence: { finalStatus: status },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-BOOKING') {
+    const contextId = `qa-booking-${runId}`;
+    const created = await api.post('/api/schedules', {
+      contextType: 'booking',
+      contextId,
+      startAt: new Date(Date.now() + 4 * 3600000).toISOString(),
+      endAt: new Date(Date.now() + 5 * 3600000).toISOString(),
+      purpose: 'atendimento',
+      requiresConfirmation: true,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const scheduleId = created?.schedule?.id;
+    if (!scheduleId) {
+      throw new Error('Agendamento nao retornou ID');
+    }
+    if (created.schedule.status !== 'scheduled') {
+      throw new Error(`Agendamento criado com status inesperado: ${created.schedule.status}`);
+    }
+
+    const confirmed = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/confirm`, {});
+    if (confirmed?.schedule?.confirmationStatus !== 'confirmed') {
+      throw new Error('Agendamento nao registrou confirmacao');
+    }
+
+    const done = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/done`, {});
+    if (done?.schedule?.status !== 'done') {
+      throw new Error('Agendamento nao foi concluido');
+    }
+
+    const listed = await api.get(`/api/schedules?contextType=booking&contextId=${encodeURIComponent(contextId)}&limit=10`);
+    const found = (listed?.items || []).find((item) => item.id === scheduleId);
+    if (!found || found.status !== 'done') {
+      throw new Error('Agendamento nao apareceu na listagem com status final');
+    }
+
+    return {
+      detail: 'Agendamento criado, confirmado e concluido',
+      ids: { scheduleId },
+      evidence: { finalStatus: found.status, confirmationStatus: found.confirmationStatus },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-PAYMENT-CHARGE') {
+    const charge = await api.post('/billing/create-charge', {
+      type: 'one_time',
+      amount: 89.9,
+      currency: 'BRL',
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      provider: 'sandbox',
+      description: `Cobranca avulsa QA ${definition.code}`,
+      customerName: 'Cliente QA Core',
+      customerEmail: `core-charge-${runId}@qa.example.com`,
+      idempotencyKey: `business-qa:${definition.code}:${runId}`,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const transaction = charge?.transaction;
+    if (!transaction?.id) {
+      throw new Error('Cobrança nao retornou transacao');
+    }
+
+    await confirmTransaction(api, transaction);
+
+    const payments = await api.get('/billing/transactions?limit=50');
+    const tx = (payments?.items || []).find((item) => item.id === transaction.id);
+    if (!tx || tx.status !== 'confirmed') {
+      throw new Error('Pagamento nao ficou confirmado na listagem de transacoes');
+    }
+
+    return {
+      detail: 'Cobranca avulsa criada e pagamento confirmado',
+      ids: { transactionId: transaction.id },
+      evidence: { finalStatus: tx.status },
+    };
+  }
+
   throw new Error(`Flow nao implementado: ${definition.code}`);
 }
 
