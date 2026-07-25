@@ -123,6 +123,7 @@
     "validate:coverage-gate": "node scripts/governance/validate-coverage-gate.js",
     "coverage-gate:snapshot": "node scripts/governance/coverage-gate-snapshot.js",
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
+    "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",
     "analyze:impact": "node scripts/analyze-impact.js",
     "demo:coverage": "node scripts/demo-coverage-scenarios.js",
     "validate:coverage-auto-fix": "node scripts/governance/validate-coverage-completeness.js && node scripts/governance/auto-cover-gaps.js --apply",

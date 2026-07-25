@@ -128,9 +128,21 @@ function journeyMatchesDomain(journeyId, domain) {
  * Monta a lista de itens avaliáveis do gate a partir das entradas brutas.
  * Exportada para inspeção/testes.
  */
-function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], journeys, staleItemIds = [] } = {}) {
+function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], journeys, staleItemIds = [], technicalExecutions = [] } = {}) {
   const execByScenario = normalizeExecutions(executions);
   const stale = new Set(staleItemIds);
+
+  // Execuções de ondas técnicas fora do mesh (ex.: Database Integrity Wave):
+  // itemId → estado já resolvido (VALIDATED/VISITED/FAILED/...). Estados
+  // desconhecidos são ignorados. Aplicados apenas a itens de inventário sem
+  // domínio ligado — itens ligados a jornadas continuam governados pelo mesh.
+  const validStates = new Set(Object.values(COVERAGE_STATES));
+  const technicalByItem = new Map();
+  for (const execution of technicalExecutions || []) {
+    if (execution && execution.itemId && validStates.has(execution.state)) {
+      technicalByItem.set(execution.itemId, execution.state);
+    }
+  }
 
   const domainScenarios = new Map();
   for (const scenario of scenarios) {
@@ -217,8 +229,11 @@ function buildGateItems({ inventoryItems = [], scenarios = [], executions = [], 
         base.criticality,
       );
       base.state = aggregateGroupState(uniqueDomains.map(domainState));
+    } else if (technicalByItem.has(item.id)) {
+      // Onda técnica com execução própria (ex.: Database Integrity Wave).
+      base.state = technicalByItem.get(item.id);
     }
-    // Sem domínio ligado (onda técnica sem cenário): permanece UNCOVERED.
+    // Sem domínio ligado e sem execução técnica: permanece UNCOVERED.
 
     if (stale.has(item.id) && base.state !== COVERAGE_STATES.ORPHANED) {
       base.state = COVERAGE_STATES.REVALIDATION_REQUIRED;
@@ -270,6 +285,9 @@ function formatReason(check, threshold, actual, items) {
  *   a evidência (→ REVALIDATION_REQUIRED + evidência STALE).
  * @param {number|Array|object} [input.visibilityViolations]
  * @param {number|Array|object} [input.tenantIsolationViolations]
+ * @param {Array<{itemId:string,state:string}>} [input.technicalExecutions]
+ *   estados resolvidos por ondas técnicas fora do mesh (ex.: Database
+ *   Integrity Wave) para itens de inventário sem domínio ligado.
  * @param {object} [input.thresholds] overrides de DEFAULT_THRESHOLDS.
  * @param {string} [input.waveId]
  */
@@ -280,12 +298,13 @@ function evaluateCoverageGate(input = {}) {
     executions = [],
     journeys,
     staleItemIds = [],
+    technicalExecutions = [],
     thresholds = {},
     waveId = 'coverage-gate',
   } = input;
 
   const effectiveThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
-  const items = buildGateItems({ inventoryItems, scenarios, executions, journeys, staleItemIds });
+  const items = buildGateItems({ inventoryItems, scenarios, executions, journeys, staleItemIds, technicalExecutions });
 
   const visibility = normalizeViolations(input.visibilityViolations);
   const tenantIsolation = normalizeViolations(input.tenantIsolationViolations);

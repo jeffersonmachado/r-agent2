@@ -82,6 +82,7 @@ rag-service/data/adaptive_learning/*_learning.json
 # Evidências locais de QA / release
 qa/release-evidence/
 qa/workspace-core/evidence/
+qa/evidence/
 qa/*-report.json
 qa/*-evidence.json
 qa/smoke/
@@ -121,6 +122,9 @@ reports/*
 # Exceção: evidência baseline de isolamento de tenant, consumida pelo
 # Coverage Gate no CI (gerada localmente com DB por report:tenant-isolation).
 !reports/tenant-isolation-report.json
+# Exceção: baseline versionado da Database Integrity Wave, consumido pelo
+# Coverage Gate como fonte de execução técnica (gerado por wave:db-integrity).
+!reports/db-integrity-report.json
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

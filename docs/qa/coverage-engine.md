@@ -145,12 +145,70 @@ para não quebrar ambientes sem DB). Relatório com `violations > 0` alimenta
 localmente com DB) é versionado — exceção no `.gitignore`
 (`!reports/tenant-isolation-report.json`).
 
+## Database Integrity Wave
+
+`scripts/governance/db-integrity-wave.js` (npm `wave:db-integrity`) executa a
+validação real dos 155 itens `model:` do inventário, com motor puro em
+`qa/coverage/dbIntegrityWave.js` (sem I/O — recebe dados e resolve estados).
+
+Tiers por model:
+
+- **TIER ESTÁTICO (sempre):** `modelFileParses` (arquivo parseia via
+  modelScanner, sem require/DB), `tableNameDefined`, `primaryKeyDefined`
+  (PK explícita, campo `id` ou PK implícita do Sequelize), `migrationFound`
+  (grep de `createTable('<table>'` ou ocorrência quotada do tableName em
+  `api/db/migrations/*.js`, com os matches listados), `tenantScope`
+  (OBSERVAÇÃO: ausência de tenant_id/tenant_key vira warning `absent`, nunca
+  falha — models globais legítimos existem) e `timestampsDefined` (falha só
+  se `timestamps: false` sem campos created/updated).
+- **TIER LIVE (somente com DB):** conexão via `api/db/sequelize.js` (config do
+  projeto; nunca credenciais hardcoded; timeout curto de 5s) e 3 queries
+  agregadas no information_schema: `tableExistsInDb`,
+  `modelColumnsExistInDb` (field→column com conversão camelCase→snake_case) e
+  `primaryKeyExistsInDb`.
+
+Estado final por model (precedência FAILED > VISITED > VALIDATED): qualquer
+assertiva falha → FAILED (com a lista de assertivas falhas); estático passa
+sem DB → VISITED (`dbAvailable=false`, razão registrada — nunca VALIDATED sem
+live); estático + live passam → VALIDATED.
+
+Saídas:
+
+- evidências append-only (uma por model) em
+  `qa/evidence/db-integrity-wave.jsonl` via `createEvidenceStore` (hash chain
+  verificada ao final; diretório gitignored);
+- relatório versionado `reports/db-integrity-report.json`
+  (`{generatedAt, dbAvailable, totals, perModel}`) — exceção no `.gitignore`
+  (`!reports/db-integrity-report.json`), mesmo padrão do tenant report.
+
+Integração ao gate: `validate-coverage-gate.js` lê o relatório (se existir;
+ausente → comportamento inalterado) e aplica o estado de cada model a TODOS
+os itens do inventário daquele model (`model:`, `table:` e `field:` com
+`item.model === <nome>`, mesma grafia do scanner; `relation:` fica fora) como
+`technicalExecutions` do `evaluateCoverageGate` — parâmetro opcional e
+retrocompatível de `buildGateItems`, aplicado apenas a itens sem domínio
+ligado (itens ligados a jornadas continuam governados pelo mesh; stale ainda
+sobrepõe). A fonte fica registrada em `inputs.dbIntegritySource`; com
+`dbAvailable=false` o relatório do gate anota `inputs.dbIntegrityNote`.
+
+Resultado real (2026-07-25, Postgres local, dbAvailable=true): 155 models →
+139 VALIDATED, 0 VISITED, 16 FAILED, 15 warnings (tenant scope ausente). Os
+16 FAILED são legítimos e entram no baseline: 8 sem migration
+(`migrationFound`: AiGovernanceRecord, CorporateAgent, JourneyRegistry,
+KnowledgeGraphEdge, KnowledgeGraphNode, LearningRecord, TicketMedia,
+VerticalTemplate), 7 com `timestamps:false` (`timestampsDefined`: models
+Project* e TicketTag) e 1 sem PK no banco (`primaryKeyExistsInDb`:
+TenantExclusion). Com a wave, o gate subiu de technicalCoverage 15.6→66.7 e
+weightedCoverage 49.3→79.8 (journeyCoverage 38.1 inalterado) e os pisos
+ratchet foram fixados em 66.2/79.3 (folga de 0.5).
+
 ## Comandos
 
 ```bash
 npm run inventory:build        # regenera config/system-inventory.json (+ diff)
 npm run validate:coverage-gate # gate bloqueante (exit 1 em NO_GO)
 npm run report:tenant-isolation # relatório de isolamento de tenant (exit 1 se violações)
+npm run wave:db-integrity      # Database Integrity Wave (estático + live no Postgres)
 node scripts/governance/validate-coverage-gate.js --informative   # exit 0 sempre
 node scripts/governance/validate-coverage-gate.js --check-fingerprints  # marca stale
 npm run analyze:impact         # diff de inventário + propagação de impacto
@@ -192,18 +250,22 @@ registro original nunca é editado). `verify()` valida a cadeia inteira.
 ## Resultado real atual (2026-07-25)
 
 Sobre o inventário real do repositório, o gate reporta **GO** com o baseline
-ratchet: visitedCoverage 17.3%, validatedCoverage 17.3%,
-weightedCoverage 49.3%, journeyCoverage 38.1%, technicalCoverage 15.6%,
-successRate 100%, críticos uncovered/failed/stale/orphaned = 0, órfãos
-totais = 521 (nenhum CRITICAL), visibilityViolations=0,
-tenantIsolationViolations=0 (8 suítes, 60/60 testes). Os pisos não críticos
-do baseline (38/15/49) só podem subir; com os defaults nominais (85/80/85) o
-gate permanece NO_GO em `minimumJourneyCoverage`,
-`minimumTechnicalCoverage` e `minimumWeightedCoverage`.
+ratchet pós-Database Integrity Wave: visitedCoverage 73.9%,
+validatedCoverage 67%, weightedCoverage 79.8%, journeyCoverage 38.1%,
+technicalCoverage 66.7%, successRate 100%, críticos
+uncovered/failed/stale/orphaned = 0, órfãos totais = 521 (nenhum CRITICAL),
+visibilityViolations=0, tenantIsolationViolations=0 (8 suítes, 60/60 testes).
+Os pisos não críticos do baseline (38/66.2/79.3) só podem subir; com os
+defaults nominais (85/80/85) o gate permanece NO_GO em
+`minimumJourneyCoverage`, `minimumTechnicalCoverage` e
+`minimumWeightedCoverage`.
 
 ## Testes
 
 `tests/unit/coverage/` — `coverageGate.test.js` (GO/NO_GO, fallback,
-thresholds via env, modo informative, órfão crítico, peso de falha CRITICAL)
-e `impactAnalysis.test.js` (grafo + propagação), além das suítes dos
+thresholds via env, modo informative, órfão crítico, peso de falha CRITICAL,
+technicalExecutions da Database Integrity Wave), `dbIntegrityWave.test.js`
+(fixtures em tmp: VALIDATED, FAILED por migration ausente, warning de tenant
+scope, dbAvailable=false → VISITED, assertivas live) e
+`impactAnalysis.test.js` (grafo + propagação), além das suítes dos
 componentes base. Rodar: `npx jest tests/unit/coverage --ci`.

@@ -193,4 +193,85 @@ describe('coverage/coverageGate', () => {
     expect(items.find((i) => i.id === 'outcome:sc-fitness-medium').state).toBe(COVERAGE_STATES.BLOCKED);
     expect(items.find((i) => i.id === 'journey:fitness_checkin').state).toBe(COVERAGE_STATES.BLOCKED);
   });
+
+  describe('technicalExecutions (Database Integrity Wave)', () => {
+    function dbItems() {
+      return [
+        { id: 'model:Widget', kind: 'model', model: 'Widget', linkStatus: 'LINKED', linkedJourneys: [], linkedDomains: [] },
+        { id: 'table:widgets', kind: 'table', model: 'Widget', linkStatus: 'LINKED', linkedJourneys: [], linkedDomains: [] },
+        { id: 'field:Widget.id', kind: 'field', model: 'Widget', linkStatus: 'LINKED', linkedJourneys: [], linkedDomains: [] },
+        { id: 'model:Ghost', kind: 'model', model: 'Ghost', linkStatus: 'LINKED', linkedJourneys: [], linkedDomains: [] },
+      ];
+    }
+
+    test('itens técnicos executados sobem technicalCoverage', () => {
+      const fixture = baseFixture();
+      fixture.inventoryItems.push(...dbItems());
+
+      const without = evaluateCoverageGate(fixture);
+      const withoutStates = buildGateItems(fixture).filter((i) => i.id.startsWith('model:') || i.id.startsWith('table:'));
+      expect(withoutStates.every((i) => i.state === COVERAGE_STATES.UNCOVERED)).toBe(true);
+
+      fixture.technicalExecutions = [
+        { itemId: 'model:Widget', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'table:widgets', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'field:Widget.id', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'model:Ghost', state: COVERAGE_STATES.VISITED },
+      ];
+      const withTech = evaluateCoverageGate(fixture);
+      expect(withTech.technicalCoverage).toBeGreaterThan(without.technicalCoverage);
+      expect(withTech.weightedCoverage).toBeGreaterThan(without.weightedCoverage);
+      // journeyCoverage não é afetada por execuções técnicas
+      expect(withTech.journeyCoverage).toBe(without.journeyCoverage);
+
+      const items = buildGateItems(fixture);
+      expect(items.find((i) => i.id === 'model:Widget').state).toBe(COVERAGE_STATES.VALIDATED);
+      expect(items.find((i) => i.id === 'model:Ghost').state).toBe(COVERAGE_STATES.VISITED);
+    });
+
+    test('FAILED técnico em model NORMAL aparece em dimensions sem violar regras críticas', () => {
+      const fixture = baseFixture();
+      fixture.inventoryItems.push(...dbItems());
+      fixture.technicalExecutions = [
+        { itemId: 'model:Widget', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'table:widgets', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'field:Widget.id', state: COVERAGE_STATES.VALIDATED },
+        { itemId: 'model:Ghost', state: COVERAGE_STATES.FAILED },
+      ];
+
+      const result = evaluateCoverageGate(fixture);
+      const items = buildGateItems(fixture);
+      expect(items.find((i) => i.id === 'model:Ghost').state).toBe(COVERAGE_STATES.FAILED);
+      // dimensão model reflete a falha (validated < 100)
+      expect(result.dimensions.model.validated).toBeLessThan(100);
+      expect(result.dimensions.model.visited).toBe(100); // FAILED conta como visitado
+      // models são NORMAL: nenhuma regra crítica violada
+      expect(result.releaseGate.reasons.find((r) => r.check === 'failedCriticalItems')).toBeUndefined();
+      expect(result.critical.failed).toBe(0);
+    });
+
+    test('execução técnica não se aplica a item com domínio ligado nem a estado inválido', () => {
+      const fixture = baseFixture();
+      fixture.inventoryItems.push({
+        id: 'model:Linked', kind: 'model', model: 'Linked',
+        linkStatus: 'LINKED', linkedJourneys: ['beauty_booking'], linkedDomains: ['beauty'],
+      });
+      fixture.technicalExecutions = [
+        { itemId: 'model:Linked', state: COVERAGE_STATES.FAILED }, // ignorado: tem domínio
+        { itemId: 'model:Widget', state: 'NOT_A_STATE' }, // ignorado: estado inválido
+      ];
+      const items = buildGateItems(fixture);
+      // com todos os cenários passed, o item ligado segue o mesh (VALIDATED)
+      expect(items.find((i) => i.id === 'model:Linked').state).toBe(COVERAGE_STATES.VALIDATED);
+    });
+
+    test('stale sobrepõe execução técnica (REVALIDATION_REQUIRED)', () => {
+      const fixture = baseFixture();
+      fixture.inventoryItems.push(...dbItems());
+      fixture.technicalExecutions = [{ itemId: 'model:Widget', state: COVERAGE_STATES.VALIDATED }];
+      fixture.staleItemIds = ['model:Widget'];
+      const items = buildGateItems(fixture);
+      expect(items.find((i) => i.id === 'model:Widget').state).toBe(COVERAGE_STATES.REVALIDATION_REQUIRED);
+    });
+  });
 });

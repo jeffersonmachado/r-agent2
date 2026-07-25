@@ -15,6 +15,9 @@
  * - go-no-go-report.json (execução canônica): atribui status por domínio
  *   apenas quando o domínio é homogêneo (ex.: todos passed).
  * - meshHistory/*.json: resultados por cenário; o mais recente vence.
+ * - reports/db-integrity-report.json (Database Integrity Wave, opcional):
+ *   estados VALIDATED/VISITED/FAILED por model, aplicados aos itens
+ *   model:/table:/field: sem domínio ligado como technicalExecutions.
  *
  * Violações de visibilidade: lê reports/visibility-policy-report.json
  * (executa scripts/governance/validate-visibility-policy.js se o relatório
@@ -60,6 +63,10 @@ const TENANT_REPORT_SCRIPT_PATH = path.join(ROOT_DIR, 'scripts', 'governance', '
 const TENANT_REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const THRESHOLDS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-thresholds.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'coverage-gate-report.json');
+// Relatório da Database Integrity Wave (scripts/governance/db-integrity-wave.js):
+// fonte adicional de execução técnica para itens model:/table:/field: sem
+// domínio ligado. Ausente → comportamento inalterado (itens ficam UNCOVERED).
+const DB_INTEGRITY_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'db-integrity-report.json');
 // Snapshot versionado usado quando qa-mesh/meshRegistry.json não existe no
 // checkout (arquivo de runtime, gitignored) — ex.: CI. Gerado por
 // scripts/governance/coverage-gate-snapshot.js a partir dos dados vivos.
@@ -153,8 +160,39 @@ function buildExecutions(scenarios) {
   return [...byScenario.entries()].map(([scenarioId, status]) => ({ scenarioId, status }));
 }
 
-function loadVisibilityViolations() {
-  let report = loadJsonIfExists(VISIBILITY_REPORT_PATH);
+/**
+ * Lê reports/db-integrity-report.json e mapeia cada entrada perModel para
+ * TODOS os itens do inventário pertencentes àquele model — correspondência
+ * por `item.model === <nome do model>` (mesma grafia do scanner) restrita aos
+ * kinds model/table/field; itens relation: ficam fora por ora. Sem relatório:
+ * fonte 'missing', nenhuma execução técnica (comportamento inalterado).
+ */
+function loadDbIntegrityTechnicalExecutions(inventoryItems) {
+  const report = loadJsonIfExists(DB_INTEGRITY_REPORT_PATH);
+  if (!report || !Array.isArray(report.perModel)) {
+    return { executions: [], source: 'missing', dbAvailable: null };
+  }
+  const stateByModel = new Map();
+  for (const entry of report.perModel) {
+    if (entry && typeof entry.id === 'string' && entry.id.startsWith('model:') && entry.state) {
+      stateByModel.set(entry.id.slice('model:'.length), entry.state);
+    }
+  }
+  const kinds = new Set(['model', 'table', 'field']);
+  const executions = [];
+  for (const item of inventoryItems || []) {
+    if (item && kinds.has(item.kind) && item.model && stateByModel.has(item.model)) {
+      executions.push({ itemId: item.id, state: stateByModel.get(item.model) });
+    }
+  }
+  return {
+    executions,
+    source: `reports/db-integrity-report.json (${report.generatedAt || 'sem data'})`,
+    dbAvailable: report.dbAvailable === true,
+  };
+}
+
+function loadVisibilityViolations() {  let report = loadJsonIfExists(VISIBILITY_REPORT_PATH);
   let source = 'reports/visibility-policy-report.json';
   if (!report) {
     execFileSync(process.execPath, [VISIBILITY_VALIDATOR_PATH], { stdio: 'inherit' });
@@ -230,6 +268,7 @@ function main() {
   }
   const visibility = loadVisibilityViolations();
   const tenantIsolation = loadTenantIsolationViolations();
+  const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
 
   let staleItemIds = [];
   if (checkFingerprints) {
@@ -247,6 +286,7 @@ function main() {
     executions,
     journeys,
     staleItemIds,
+    technicalExecutions: dbIntegrity.executions,
     visibilityViolations: visibility,
     tenantIsolationViolations: tenantIsolation,
     thresholds,
@@ -264,6 +304,10 @@ function main() {
       visibilitySource: visibility.source,
       fingerprintCheck: checkFingerprints,
       tenantIsolationSource: tenantIsolation.source,
+      dbIntegritySource: dbIntegrity.source,
+      ...(dbIntegrity.dbAvailable === false
+        ? { dbIntegrityNote: 'dbAvailable=false: itens técnicos da Database Integrity Wave ficaram no máximo VISITED (sem tier live)' }
+        : {}),
     },
   };
 
