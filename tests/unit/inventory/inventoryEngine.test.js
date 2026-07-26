@@ -172,4 +172,55 @@ describe('inventoryEngine', () => {
       .toBe(fingerprintObject({ b: { d: 3, c: 2 }, a: 1 }));
     expect(fingerprintObject({ a: 1 })).not.toBe(fingerprintObject({ a: 2 }));
   });
+
+  it('item PRODUCTION de módulo declarado no technical-wave-map recebe a wave declarada', () => {
+    const map = {
+      version: 1,
+      waves: { security: { modules: ['auth'] }, platform: { modules: ['tenant'] } },
+    };
+    const items = findOrphanedItems([
+      {
+        id: 'api:GET:/api/auth/me', kind: 'api', method: 'GET', path: '/api/auth/me',
+        module: 'auth', classification: 'PRODUCTION',
+      },
+      {
+        id: 'api:GET:/tenants', kind: 'api', method: 'GET', path: '/tenants',
+        module: 'tenant', classification: 'PRODUCTION',
+      },
+    ], { journeyContracts: { journeys: {} }, meshRegistry: [], technicalWaveMap: map });
+    expect(items[0].linkStatus).toBe('LINKED');
+    expect(items[0].linkKind).toBe('technical-wave');
+    expect(items[0].technicalWave).toBe('security');
+    expect(items[1].linkStatus).toBe('LINKED');
+    expect(items[1].technicalWave).toBe('platform');
+  });
+
+  it('item PRODUCTION de módulo NÃO declarado continua ORPHANED (declaração é explícita)', () => {
+    const map = { version: 1, waves: { security: { modules: ['auth'] } } };
+    const items = findOrphanedItems([
+      {
+        id: 'api:GET:/api/marketing/forms', kind: 'api', method: 'GET', path: '/api/marketing/forms',
+        module: 'domain-business', classification: 'PRODUCTION',
+      },
+    ], { journeyContracts: { journeys: {} }, meshRegistry: [], technicalWaveMap: map });
+    expect(items[0].linkStatus).toBe('ORPHANED');
+  });
+
+  it('mapa real versionado liga módulos de plataforma às waves declaradas', () => {
+    const map = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../../../config/technical-wave-map.json'), 'utf8'),
+    );
+    const declared = Object.values(map.waves).flatMap((wave) => wave.modules);
+    // Módulos declarados existem de fato no inventário real (sem declaração fantasma).
+    const inventory = buildInventory({ rootDir: path.join(__dirname, '../../..') });
+    const realModules = new Set(inventory.items.map((item) => item.module));
+    for (const moduleName of declared) {
+      expect(realModules.has(moduleName)).toBe(true);
+    }
+    // E todo item desses módulos ficou LINKED à wave declarada (não ORPHANED).
+    const orphans = inventory.items.filter(
+      (item) => item.linkStatus === 'ORPHANED' && declared.includes(item.module),
+    );
+    expect(orphans).toEqual([]);
+  });
 });

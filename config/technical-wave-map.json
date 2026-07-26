@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "description": "Mapa declarado e auditável de módulos de plataforma → waves técnicas. Itens PRODUCTION desses módulos não pertencem a jornadas de negócio: são capacidades transversais da plataforma e recebem linkKind 'technical-wave' no inventário (em vez de ORPHANED). A inclusão de um módulo aqui é uma decisão explícita e versionada — nunca inferência por tokens. Cada wave declarada é respaldada por execução real (ver 'backing').",
+  "waves": {
+    "security": {
+      "modules": ["auth", "access-control"],
+      "rationale": "Autenticação, emissão de tokens, credenciais e decisões de acesso são superfície de segurança da plataforma, não jornada de negócio.",
+      "backing": [
+        "suítes Jest de tenant isolation (reports/tenant-isolation-report.json)",
+        "testes de RBAC/permissões (tests/unit/*rbac*, tests/unit/accessControlRoutes.test.js)",
+        "gates de visibilidade (validate:visibility-policy)"
+      ]
+    },
+    "observability": {
+      "modules": ["public-system"],
+      "rationale": "Health checks e probes públicas (/health, /health/db, /health/live) sustentam monitoramento e balanceadores; não são jornada de negócio.",
+      "backing": [
+        "smokes de runtime (scripts/test-*-smoke.js)",
+        "health checks consumidos por Docker/Compose e probes operacionais"
+      ]
+    },
+    "support-diagnostics": {
+      "modules": ["domain-identity", "evidence"],
+      "rationale": "Auditoria (/audit/*) e Evidence Store (/api/evidence/*) são superfícies de diagnóstico e investigação (SUPPORT), não jornada de negócio.",
+      "backing": [
+        "Evidence Store append-only com hash chain (qa/coverage)",
+        "testes de auditoria (tests/unit/auditRoutes.test.js)"
+      ]
+    },
+    "platform": {
+      "modules": ["tenant", "domain-admin"],
+      "rationale": "Ciclo de vida de tenants e administração da plataforma (super-admin, channel-health, rate-limit) são capacidades transversais, não jornada de negócio de uma vertical.",
+      "backing": [
+        "Database Integrity Wave (reports/db-integrity-report.json)",
+        "suítes de tenant isolation e migrations (npm run wave:db-integrity)"
+      ]
+    }
+  }
+}

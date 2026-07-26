@@ -26,6 +26,11 @@
  *        TECHNICAL_WAVE_RULES e ficam LINKED com linkKind 'technical-wave';
  *      - itens de dados (model/table/field/relation) recebem
  *        technicalWave 'database-integrity' pelo mesmo mecanismo;
+ *      - itens PRODUCTION cujo módulo está declarado no mapa versionado
+ *        `config/technical-wave-map.json` (capacidades transversais de
+ *        plataforma: segurança, observabilidade, diagnóstico, plataforma)
+ *        recebem a wave técnica declarada e ficam LINKED com linkKind
+ *        'technical-wave';
  *      - demais (páginas/rotas PRODUCTION) ficam `linkStatus: 'ORPHANED'`.
  *
  * TECHNICAL_WAVE_RULES (primeira regra que casa vence, sobre o texto
@@ -110,6 +115,22 @@ function buildJourneyIndex(journeyContracts, meshRegistry) {
   return { journeys, journeyTokens, domains };
 }
 
+/**
+ * Índice módulo → wave técnica a partir do mapa versionado
+ * (`config/technical-wave-map.json`). Declaração explícita e auditável;
+ * nunca inferência por tokens.
+ */
+function buildTechnicalWaveIndex(technicalWaveMap) {
+  const byModule = new Map();
+  const waves = (technicalWaveMap && technicalWaveMap.waves) || {};
+  for (const [wave, entry] of Object.entries(waves)) {
+    for (const moduleName of (entry && entry.modules) || []) {
+      byModule.set(moduleName, wave);
+    }
+  }
+  return byModule;
+}
+
 function assignTechnicalWave(item) {
   if (DATA_KINDS.has(item.kind)) return 'database-integrity';
   const text = `${item.module || ''} ${item.path || ''} ${item.model || ''} ${item.section || ''}`.toLowerCase();
@@ -123,8 +144,9 @@ function assignTechnicalWave(item) {
  * Vincula itens a jornadas de negócio ou waves técnicas (in place).
  * @returns {object[]} o mesmo array de itens, anotado.
  */
-function findOrphanedItems(items, { journeyContracts, meshRegistry } = {}) {
+function findOrphanedItems(items, { journeyContracts, meshRegistry, technicalWaveMap } = {}) {
   const { journeys, journeyTokens, domains } = buildJourneyIndex(journeyContracts, meshRegistry);
+  const technicalWaveByModule = buildTechnicalWaveIndex(technicalWaveMap);
 
   for (const item of items) {
     const tokens = itemTokens(item);
@@ -155,6 +177,17 @@ function findOrphanedItems(items, { journeyContracts, meshRegistry } = {}) {
       item.linkStatus = 'LINKED';
       item.linkKind = 'technical-wave';
       item.technicalWave = assignTechnicalWave(item);
+      item.linkedJourneys = [];
+      continue;
+    }
+
+    // Capacidade transversal de plataforma declarada no mapa versionado
+    // (PRODUCTION, mas não é jornada de negócio): recebe a wave declarada.
+    const declaredWave = technicalWaveByModule.get(item.module);
+    if (declaredWave) {
+      item.linkStatus = 'LINKED';
+      item.linkKind = 'technical-wave';
+      item.technicalWave = declaredWave;
       item.linkedJourneys = [];
       continue;
     }
@@ -211,9 +244,9 @@ function computeCounts(items) {
  * documento `config/system-inventory.json`.
  *
  * @param {{ rootDir: string, journeyContractsPath?: string,
- *   meshRegistryPath?: string, now?: Date }} options
+ *   meshRegistryPath?: string, technicalWaveMapPath?: string, now?: Date }} options
  */
-function buildInventory({ rootDir, journeyContractsPath, meshRegistryPath, now } = {}) {
+function buildInventory({ rootDir, journeyContractsPath, meshRegistryPath, technicalWaveMapPath, now } = {}) {
   if (!rootDir) throw new Error('buildInventory: rootDir é obrigatório');
 
   const api = scanApiRoutes({ rootDir });
@@ -224,9 +257,11 @@ function buildInventory({ rootDir, journeyContractsPath, meshRegistryPath, now }
     : loadJsonIfExists(journeyContractsPath || path.join(rootDir, 'config', 'journey-contracts.json'));
   const meshRegistry = meshRegistryPath === null ? null
     : loadJsonIfExists(meshRegistryPath || path.join(rootDir, 'qa-mesh', 'meshRegistry.json'));
+  const technicalWaveMap = technicalWaveMapPath === null ? null
+    : loadJsonIfExists(technicalWaveMapPath || path.join(rootDir, 'config', 'technical-wave-map.json'));
 
   const items = [...api.items, ...frontend.items, ...models.items];
-  findOrphanedItems(items, { journeyContracts, meshRegistry });
+  findOrphanedItems(items, { journeyContracts, meshRegistry, technicalWaveMap });
 
   for (const item of items) {
     item.fingerprint = fingerprintObject(structuralFields(item));
@@ -245,6 +280,7 @@ module.exports = {
   buildInventory,
   diffInventories,
   findOrphanedItems,
+  buildTechnicalWaveIndex,
   structuralFields,
   INVENTORY_VERSION,
 };

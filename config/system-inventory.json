@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-26T23:33:57.571Z",
+  "generatedAt": "2026-07-26T23:49:53.007Z",
   "counts": {
     "total": 2636,
     "byKind": {
@@ -16,7 +16,7 @@
       "DEVELOPMENT": 129,
       "SUPPORT": 90
     },
-    "orphaned": 450
+    "orphaned": 364
   },
   "items": [
     {
@@ -356,7 +356,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "e1101fe093c9c20db3d2cde32746d2c39917dd77ac1dad7f780fe00d56dbe437"
     },
     {
@@ -521,7 +524,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "7d0192d57a5b37cbe2df933e3966a9046644916cc816ba23ac0b7d044e95b946"
     },
     {
@@ -537,7 +543,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "358639e3dc634682b1d925a524cd286af6e4eac660cfb16db9d5c7479068be78"
     },
     {
@@ -553,7 +562,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "df7fb346d9070e26a99543f72110e6123352da09238c8971d846824936afd0b7"
     },
     {
@@ -569,7 +581,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "f95b86dbbff3459284f497ddd1e7b7d55ab2d65ebc89f73db8b8192fc25172d6"
     },
     {
@@ -585,7 +600,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "6d607f5a1239c27a9c6c2cf49fa3b014c94318fe3f135889af26f04b4bdd6389"
     },
     {
@@ -601,7 +619,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "27f71f093bcc8235178baa59adca2fcf02a02578f477566ac6987c3667dacd83"
     },
     {
@@ -617,7 +638,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "c5fe34aed87559356ecaec805a25c99088bd51ffcb9606bf2684ed53a24eefd9"
     },
     {
@@ -744,7 +768,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "581ce2478a97ee9fd62d475ef5bd7be94a94e56b3a74ae480920c4ef90ba75db"
     },
     {
@@ -757,7 +784,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "ebc4ba8d2fe6953afa14a501bee30ea2243ff82e8798471e6f068b15c5ff9d64"
     },
     {
@@ -1397,7 +1427,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "3ebdda2f304a1b700b46baeedd16ca55c69d36427736527c50a73c9e7c1c53ee"
     },
     {
@@ -1412,7 +1445,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "cce9d3bfb0c0162fbbbeb219ee378e09513b03979282a6133d818f7a13f6fb17"
     },
     {
@@ -1427,7 +1463,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "75bd4116eb54f2af4e290f44a27421d325135ff5ba71de3ac36d5c18c0ad273d"
     },
     {
@@ -3898,7 +3937,10 @@
         "requirePermission:audit:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "a9c3c0e4b36687082199da402b9d266a94409d1dfa3c88148768196ee3e0655c"
     },
     {
@@ -3914,7 +3956,10 @@
         "requirePermission:audit:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "b99907b4ab4570d26fe671cc289ff42542beed453d57b6ec675a00c6184be90e"
     },
     {
@@ -3931,7 +3976,10 @@
         "requirePermission:agents:list_all"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "364ace8062f15ab978c59141785460a12a66b3c94567437752174f376c3bb777"
     },
     {
@@ -3944,7 +3992,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "8d3d9b00868c1210f509aaf2a0a3c6c1af2a535820ee89d1d4817b789e16a327"
     },
     {
@@ -3957,7 +4008,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "db1fc7b0fb7e789a8427493867ade38a6a22729c8c14486586e0d729e2cd1166"
     },
     {
@@ -4269,7 +4323,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "ed0b18041a5f0918a271a4214532ffa5a203a41a0acd32374580c45f74459c3b"
     },
     {
@@ -4282,7 +4339,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "69f94abe09ad8059e2ef8d164bf0e41bceea13befca3d8b46917a76e1a522463"
     },
     {
@@ -4295,7 +4355,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "c02edf95dddd747b929b4d0b4db5096f6a8817cf80d07babedc5fb60113a8502"
     },
     {
@@ -4352,7 +4415,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "b262d4d41079b8b307fdf90296279bcb1e59c6d0c84ac7a400b8b601f40ad957"
     },
     {
@@ -5361,7 +5427,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "be444d8e9a12a8b166985cadef3945e9e9e3cb6271d710f98b6041560b635464"
     },
     {
@@ -5376,7 +5445,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "3dfa3303503e621c5ef79f181cba7ba38a27c12554d929c63a012d3c22f6a528"
     },
     {
@@ -5431,7 +5503,10 @@
         "requirePermission:config:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "5200b6f818a35b7f880e4ec60633569d04e20a210f6dfb2d3efd04da8711cafe"
     },
     {
@@ -5446,7 +5521,10 @@
         "handlePublicRuntimeRoutes"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "f01359cd304f4ec6f43b0d1a45cbcaacc50a5c7db030ab9baa2ebcf4b632c4c1"
     },
     {
@@ -5459,7 +5537,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "b36c05c63134ea0381d0342932b645061790b8b9168eec46fd0f443542ca5801"
     },
     {
@@ -5485,7 +5566,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "34361691d1c152e1ef1ae3629fea60c022e96a2f155eb91f33ea40ecdb05f23c"
     },
     {
@@ -5498,7 +5582,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "662f36a2106c95b07647b01e9a7cd3716dd5899ce859d1b0af2e7d147f0b3d3d"
     },
     {
@@ -5511,7 +5598,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "1a1e60f70e8ba6e7dc12eae3457a0ef64a527c1f4179e01cb73fafe9ac1334cd"
     },
     {
@@ -5524,7 +5614,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "eb06c28359a21da1c8288c4aedbe449b55581b60e12944f8acd853d8f3b60baa"
     },
     {
@@ -5537,7 +5630,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "de737db1c00d0ae54ac0d1d11a342c9101a54b6bd68abc15528b788e93c56fe6"
     },
     {
@@ -5550,7 +5646,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "40d6c3f6e252c834583ff58a73badc5119961af5dbbd48d0339a7071fd39ac28"
     },
     {
@@ -5563,7 +5662,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "bb8dd696cede1596befc2e09c25182b6b050d7c0b06bff06fe2c897ad6825251"
     },
     {
@@ -5625,7 +5727,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "95a578ea41f365bc2ed552e030d6e84c3ab16de51ef0d23f735948387ad47234"
     },
     {
@@ -5897,7 +6002,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "dde150e8dd3ebfb631fdba62b994c8455b52795477b503533055c3172c4072db"
     },
     {
@@ -5913,7 +6021,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "d0b4a73d930368ca663b9bd66ee27ce1aac5c573036672cc553475ec362e92fb"
     },
     {
@@ -5929,7 +6040,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "5f0f6101e2e4a4325ca63525c1e1ede3eb6a3e344f2f86ff9f414963b1bf6e81"
     },
     {
@@ -5999,7 +6113,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "6258b22640f1bac24ee112205c2291b5a316845d5cef7a2341a199912f767f63"
     },
     {
@@ -6014,7 +6131,10 @@
         "handleSystemAdminRoutes"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "5490f51873dc8a2f0a40a829e47e731b152bb66a051c537d375748f8b1b88797"
     },
     {
@@ -6107,7 +6227,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "0b4d6c0682c3f045c9a6b1ef0ca9780df016c77a89cd65465efa70b9d4a27f33"
     },
     {
@@ -6123,7 +6246,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "a9e77535129ceae4d19abb281def1c5f5cf38cd549e2a394f9b3cb9a1c85b19f"
     },
     {
@@ -6139,7 +6265,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "2c744f09196fe79ee322079afd98d17ba8257c3b40bbd5ccdc17ef50e4437313"
     },
     {
@@ -6155,7 +6284,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "7f2c72ac264bd7e49460f69f1f6fddaa1f9ec632b8d127cda0f618a024b9b7ed"
     },
     {
@@ -6171,7 +6303,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "fee43a0193e8f0a2ec7839a275beed14a10823f2d602279d454dd031728abb24"
     },
     {
@@ -6187,7 +6322,10 @@
         "ensureAuthAndPermission:read"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "3bf7248fdf7d34a7122de79edf7068d1ee96f7bfbce634533ac4c4585dd897c8"
     },
     {
@@ -6203,7 +6341,10 @@
         "ensureAuthAndPermission:update"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "0e648e3bce7e89c93b84ff1fb726a60952bf81363f8acf24b7f7965563dbc3a7"
     },
     {
@@ -6362,7 +6503,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "8bc9405596427d84269fe7a652661e7dc3b11144355b50c8e4ceeef271e1b391"
     },
     {
@@ -6375,7 +6519,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "49e7d7ab76c9617f79bceb98d1b86267c2180ca76f8f59ecb777e91dadf61027"
     },
     {
@@ -6388,7 +6535,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "f15046e883e6d79109899bac387b367e6d3fc49e497bcd0cdc2d646e8abd23a6"
     },
     {
@@ -6401,7 +6551,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "57e6dddc3f3de35505b413f4c8fcaaa02aed624cedcf05b49ebbf4aa48bd2736"
     },
     {
@@ -6414,7 +6567,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "33c3ec318aeab21164a32e4192f802238ca559800def90fc3321926fffb9e114"
     },
     {
@@ -6978,7 +7134,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "038ef95649932fce1876c2cf9e73c817729c0646993a523dc5a4cf859afacaf8"
     },
     {
@@ -6993,7 +7152,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "f5159565a268672306426ec0ab4cd475560e17ba4c205e328795960816e1dcc6"
     },
     {
@@ -7008,7 +7170,10 @@
         "requireAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "1ff194aedaedb8d0fef3024edcc2372a629d39640015e135854d45d967e4ded1"
     },
     {
@@ -9000,7 +9165,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "6e1217ba0afdb89ff31fafaaf5da69a7dee7bd102f64290e69928fe169d17362"
     },
     {
@@ -9017,7 +9185,10 @@
         "requirePermission:agents:list_all"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "36cbfc169e2bac980e0707660ed230ce696a4c93c2d17472ab729e099a0e6d97"
     },
     {
@@ -9034,7 +9205,10 @@
         "requirePermission:agents:invite"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "3b5a12936f08a93094275fc1f0f9552699666e5ea5c294eba0a7cfef0d8a24f7"
     },
     {
@@ -9047,7 +9221,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "8e364901a6bb0d16d8d1d07655df2a7b6d2af04b8db46ca0fc6a05f9651415c3"
     },
     {
@@ -9060,7 +9237,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "640e3eb24cf753e5f40bb686c9a3f40258bc08f1b038cf7718ce6f8527601585"
     },
     {
@@ -9073,7 +9253,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "c525559dd6661dc960c088a92506a57f45322f1efadc574d0c16186096624a06"
     },
     {
@@ -9088,7 +9271,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "6f5d667adf2592f806c23f0af2f3e56bfe7ca659170958827b8a959f667cb08b"
     },
     {
@@ -9103,7 +9289,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "d59179911883c7df908ffeef2d0d1b01e7792da74d4e7335b7a660434657b9b2"
     },
     {
@@ -9119,7 +9308,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "8d38dd6aee1d590a70cbebac3d78727c1e5d8bdfc1b30d60dca04dbddb973c1c"
     },
     {
@@ -9134,7 +9326,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "410dc5ce1a4ce247d303da6800e6a4d34f72121cc1dffd5a51e7cb9a7f4bbba6"
     },
     {
@@ -9147,7 +9342,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "42993663f2389605dffe89135493e9d3930bf0352ec01b7b9fcf986ee71e203b"
     },
     {
@@ -9160,7 +9358,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
       "fingerprint": "bcee99eabc4d86f52125dd19d0802c2e8f816e5ced0d95c0fca380fda617e78c"
     },
     {
@@ -9173,7 +9374,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "feedd79250c3d351ba9c7858b093b41c93e466907b4c7ac9977d8175bd029d19"
     },
     {
@@ -9186,7 +9390,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "security",
+      "linkedJourneys": [],
       "fingerprint": "a94f6b79e28090490adf8a77bfc736664baddbd3ba5880e3c2419d4913e03e37"
     },
     {
@@ -9662,7 +9869,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
       "fingerprint": "1b4e8c03743062c604e6548bfcf2d08a42bc23074c8363ab6735ef7d99b13a2a"
     },
     {
@@ -10408,7 +10618,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0c6f0ddf4f9878681954c7dfe6d380d1526e4dbd29e6e8c002fc8a09d7e60b11"
     },
     {
@@ -10424,7 +10637,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "8b46a44e00e6ac17a4c5b605eda36f8ee29eb3bfe4810f97d57fb9759e7e080f"
     },
     {
@@ -10439,7 +10655,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "579aeb05c860a19acf73feeda6fbbc05cb7a203277ba55c8d56180d75b24292e"
     },
     {
@@ -10454,7 +10673,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "d37ec59e0305602c35b3298e7304e6908499466e52d5cad91a6a2a2d990dcde5"
     },
     {
@@ -10470,7 +10692,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "5db283f58f9cfbf25b59e96c9f356051ab7e1f091a040289234e9d0deb470e0a"
     },
     {
@@ -10486,7 +10711,10 @@
         "requireAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "2af2407a76700347a544ef6ca9207e6462695e23f5e2cee3ee1074309a637416"
     },
     {
@@ -10512,7 +10740,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "912d0bcd3dea5318f370f958b769cd0900d5492b233fec4f15833159b62575e7"
     },
     {
@@ -10525,7 +10756,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "2bfe358ff8d4dac84ddb6af771a671fb652174d72b8982f80ccbb16da858e93c"
     },
     {
@@ -10538,7 +10772,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "662bced3d27912f9d169b975ccead62fa93b866e0b0a20c0f73959ca2e48eb55"
     },
     {
@@ -10551,7 +10788,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "589af0a5e04a437321147f438f3a86e4ef4e45d7f240d41c69509fdbcbf8aa09"
     },
     {
@@ -10564,7 +10804,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "3643841dcb9c50403296b43986976a1e912999fe84fe5e084b286445db0279b5"
     },
     {
@@ -10590,7 +10833,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "220ddf0162d4bda559556aae3a0790a9f91fd6f7fdfb8a92ec2faefbf3fd5d06"
     },
     {
@@ -11060,7 +11306,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "8872cbbdfe29b7c0eab1453c676d5d2ecdc5ab8ec418932174b403b3f928baa9"
     },
     {
@@ -11073,7 +11322,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "2ca09f85d2197475dad2023b82eaf453efd1d428deaafba5316b0b720520fa8c"
     },
     {
@@ -11086,7 +11338,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "5245497ca832661c5c649cc728de90d00e1f0fc547be9bf5e5391b89da0de534"
     },
     {
@@ -11099,7 +11354,10 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "ff9974c5e074d9afb5e86fac2651365d2db3649eeb642a324b2e908e6acf5a31"
     },
     {
