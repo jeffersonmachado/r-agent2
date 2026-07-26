@@ -2,7 +2,8 @@
   "watch": [
     "api",
     "engine",
-    "src"
+    "src",
+    "qa-mesh"
   ],
   "ext": "js,json",
   "ignore": [
@@ -19,6 +20,22 @@
     "tests/rpa/screenshots/**",
     "tests/rpa/.cache",
     "tests/rpa/.cache/**",
+    "qa-mesh/meshHistory",
+    "qa-mesh/meshHistory/**",
+    "qa-mesh/meshEvidence",
+    "qa-mesh/meshEvidence/**",
+    "qa-mesh/intelligence",
+    "qa-mesh/intelligence/**",
+    "qa-mesh/meshRegistry*.json",
+    "qa-mesh/baseline.json",
+    "qa-mesh/canonical-promotion.json",
+    "qa-mesh/go-no-go-report.json",
+    "qa-mesh/meshReport.json",
+    "qa-mesh/metrics.json",
+    "qa-mesh/repairPlan.json",
+    "qa-mesh/release-gate-report.json",
+    "qa-mesh/scheduler-state.json",
+    "qa-mesh/scheduler-activity.log",
     "*.test.js",
     "*.spec.js"
   ],

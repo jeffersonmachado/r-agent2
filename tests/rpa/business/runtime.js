@@ -117,6 +117,7 @@ async function createApiClient() {
     post: (pathname, payload, headers = {}) => request('POST', pathname, payload, headers),
     put: (pathname, payload, headers = {}) => request('PUT', pathname, payload, headers),
     patch: (pathname, payload, headers = {}) => request('PATCH', pathname, payload, headers),
+    del: (pathname) => request('DELETE', pathname),
   };
 }
 
@@ -867,6 +868,191 @@ async function runFlowScenario(definition, ctx) {
       detail: 'Cobranca avulsa criada e pagamento confirmado',
       ids: { transactionId: transaction.id },
       evidence: { finalStatus: tx.status },
+    };
+  }
+
+  if (definition.code === 'CORE-CAP-SCHEDULING') {
+    const purposes = await api.get('/api/schedule-purposes');
+    const purposeItems = Array.isArray(purposes?.items) ? purposes.items : [];
+    const hasPurpose = purposeItems.some((item) => String(item?.value || item || '').toLowerCase() === 'atendimento');
+    if (!hasPurpose) {
+      throw new Error('Catalogo de purposes sem "atendimento" (scheduling)');
+    }
+
+    const calendar = await api.get('/api/calendar/me');
+    const resourceId = calendar?.resourceId;
+    if (!resourceId) {
+      throw new Error('Calendario do agente indisponivel (resourceId ausente)');
+    }
+
+    const contextId = `qa-scheduling-${runId}`;
+    const created = await api.post('/api/schedules', {
+      contextType: 'booking',
+      contextId,
+      ownerId: resourceId,
+      startAt: new Date(Date.now() + 4 * 3600000).toISOString(),
+      endAt: new Date(Date.now() + 5 * 3600000).toISOString(),
+      purpose: 'atendimento',
+      requiresConfirmation: true,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const scheduleId = created?.schedule?.id;
+    if (!scheduleId) {
+      throw new Error('Agendamento (scheduling) nao retornou ID');
+    }
+
+    const calendarAfter = await api.get('/api/calendar/me');
+    const visibleInCalendar = (calendarAfter?.items || [])
+      .some((item) => item.id === scheduleId && item.type === 'schedule');
+    if (!visibleInCalendar) {
+      throw new Error('Agendamento nao apareceu no calendario do recurso');
+    }
+
+    const block = await api.post(`/api/calendar/resource/${encodeURIComponent(resourceId)}/blocks`, {
+      startAt: new Date(Date.now() + 6 * 3600000).toISOString(),
+      endAt: new Date(Date.now() + 7 * 3600000).toISOString(),
+      metadata: { reason: 'bloqueio_qa_scheduling' },
+    });
+    const blockId = block?.id || block?.item?.id || block?.block?.id || block?.schedule?.id;
+    if (!blockId) {
+      throw new Error('Bloco de calendario nao retornou ID');
+    }
+
+    const resourceCalendar = await api.get(`/api/calendar/resource/${encodeURIComponent(resourceId)}`);
+    const blockVisible = (resourceCalendar?.items || [])
+      .some((item) => item.id === blockId && item.type === 'block');
+    if (!blockVisible) {
+      throw new Error('Bloco nao refletido no calendario do recurso');
+    }
+
+    await api.del(`/api/calendar/resource/${encodeURIComponent(resourceId)}/blocks/${encodeURIComponent(blockId)}`);
+    const calendarAfterDelete = await api.get(`/api/calendar/resource/${encodeURIComponent(resourceId)}`);
+    const blockRemoved = !(calendarAfterDelete?.items || []).some((item) => item.id === blockId);
+    if (!blockRemoved) {
+      throw new Error('Bloco nao foi removido do calendario');
+    }
+
+    const confirmed = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/confirm`, {});
+    if (confirmed?.schedule?.confirmationStatus !== 'confirmed') {
+      throw new Error('Agendamento (scheduling) nao registrou confirmacao');
+    }
+    const done = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/done`, {});
+    if (done?.schedule?.status !== 'done') {
+      throw new Error('Agendamento (scheduling) nao foi concluido');
+    }
+
+    return {
+      detail: 'Capability scheduling: catalogo, agenda do recurso, bloco criado/removido e agendamento concluido',
+      ids: { scheduleId, blockId, resourceId },
+      evidence: { finalStatus: done.schedule.status, confirmationStatus: confirmed.schedule.confirmationStatus, blockRemoved },
+    };
+  }
+
+  if (definition.code === 'CORE-CAP-CRM-UPDATES') {
+    const account = await api.post('/api/crm/accounts', {
+      name: `QA Cap CRM Updates ${runId}`,
+      industry: 'qa',
+      tags: ['business_qa'],
+    });
+    const accountId = account?.id;
+    if (!accountId) {
+      throw new Error('Conta CRM nao retornou ID');
+    }
+
+    const contact = await api.post('/api/crm/contacts', {
+      name: 'Contato QA CRM Updates',
+      phone: `+55119${String(Date.now()).slice(-8)}`,
+      accountId,
+      tags: ['business_qa'],
+    });
+    const contactId = contact?.id;
+    if (!contactId) {
+      throw new Error('Contato CRM nao retornou ID');
+    }
+
+    const opportunity = await api.post('/api/crm/opportunities', {
+      name: `Oportunidade QA CRM Updates ${runId}`,
+      accountId,
+      contactId,
+      value: 199.9,
+      stageId: 'stage-novo',
+    });
+    const opportunityId = opportunity?.id;
+    if (!opportunityId) {
+      throw new Error('Oportunidade CRM nao retornou ID');
+    }
+
+    const moved = await api.post(`/api/crm/opportunities/${encodeURIComponent(opportunityId)}/move`, {
+      toStageId: 'stage-negociacao',
+    });
+    if (moved?.stageId !== 'stage-negociacao') {
+      throw new Error('Oportunidade nao mudou de estagio (crm_updates)');
+    }
+
+    const activity = await api.post('/api/crm/activities', {
+      type: 'note',
+      subjectType: 'contact',
+      subjectId: contactId,
+      description: 'Atualizacao CRM registrada pelo cenario de capability (business QA).',
+    });
+    const activityId = activity?.id;
+    if (!activityId) {
+      throw new Error('Atividade CRM nao retornou ID');
+    }
+
+    const timeline = await api.get(`/api/crm/timeline?subjectType=contact&subjectId=${encodeURIComponent(contactId)}`);
+    const inTimeline = (timeline?.items || []).some((item) => item.id === activityId);
+    if (!inTimeline) {
+      throw new Error('Atualizacao nao apareceu na timeline do contato');
+    }
+
+    const reloaded = await api.get(`/api/crm/opportunities/${encodeURIComponent(opportunityId)}`);
+    if (reloaded?.stageId !== 'stage-negociacao') {
+      throw new Error('Estagio atualizado nao persistiu');
+    }
+
+    return {
+      detail: 'Capability crm_updates: conta, contato, oportunidade movida e atualizacao visivel na timeline',
+      ids: { accountId, contactId, opportunityId, activityId },
+      evidence: { stageId: reloaded.stageId, timelineTotal: timeline.total },
+    };
+  }
+
+  if (definition.code === 'CORE-CAP-LEAD-CAPTURE') {
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const created = await api.post('/api/crm/leads', {
+      name: `Lead QA Capture ${runId}`,
+      phone: `+55119${phoneSuffix}`,
+      source: 'whatsapp',
+      tags: ['business_qa'],
+      attributes: { scenarioCode: definition.code },
+    });
+    const leadId = created?.id;
+    if (!leadId) {
+      throw new Error('Lead nao retornou ID');
+    }
+    if (created.source !== 'whatsapp') {
+      throw new Error(`Lead capturado sem origem registrada: ${created.source}`);
+    }
+
+    const reloaded = await api.get(`/api/crm/leads/${encodeURIComponent(leadId)}`);
+    if (!reloaded || reloaded.id !== leadId) {
+      throw new Error('Lead nao persistiu (lead_capture)');
+    }
+    if (reloaded.stage !== 'novo') {
+      throw new Error(`Lead persistiu com estagio inesperado: ${reloaded.stage}`);
+    }
+
+    const listed = await api.get('/api/crm/leads?limit=100');
+    const found = (listed?.items || []).find((item) => item.id === leadId);
+    if (!found) {
+      throw new Error('Lead nao apareceu na listagem de leads');
+    }
+
+    return {
+      detail: 'Capability lead_capture: lead capturado com origem, persistido e listado',
+      ids: { leadId },
+      evidence: { stage: reloaded.stage, source: reloaded.source },
     };
   }
 
