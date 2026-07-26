@@ -1200,19 +1200,41 @@ async function runFlowScenario(definition, ctx) {
 
   if (definition.code === 'FOOD-FLOW-ORDER-LIFECYCLE') {
     await ensureDbConnection();
-    const orderService = require('../../../api/services/orderService');
-    const created = await orderService.createOrder({
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const storefront = await createPublicToken({
       tenantId: TEST_TENANT_ID,
-      source: 'business_qa',
+      kind: 'storefront',
+      meta: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (!storefront?.token) {
+      throw new Error('Token publico de storefront nao foi criado');
+    }
+
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const orderPayload = {
       customerName: `Cliente QA Food ${runId}`,
       customerPhone: '+5511999997000',
       items: [{ name: 'Prato QA Lifecycle', qty: 1, price: 32.9 }],
-      totalAmount: 32.9,
-      context: { idempotencyKey: `business-qa:${definition.code}:${runId}` },
-    });
-    const orderId = created?.id;
+      deliveryType: 'delivery',
+      deliveryAddress: { street: 'Rua QA', number: '100', city: 'Sao Paulo' },
+      idempotencyKey,
+    };
+
+    const created = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, orderPayload);
+    const orderId = created?.order?.id;
     if (!orderId) {
-      throw new Error('Pedido food nao retornou ID');
+      throw new Error('Pedido food nao retornou ID via storefront');
+    }
+    if (created?.order?.status !== 'created') {
+      throw new Error(`Pedido criado com status inesperado: ${created?.order?.status}`);
+    }
+    if (!created?.delivery?.id) {
+      throw new Error('Pedido delivery nao gerou entrega associada');
+    }
+
+    const retryCreate = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, orderPayload);
+    if (retryCreate?.order?.id !== orderId) {
+      throw new Error('Retry publico com mesma idempotencyKey duplicou pedido');
     }
 
     const chain = ['confirmed', 'preparing', 'ready', 'dispatched', 'delivered'];
@@ -1254,9 +1276,9 @@ async function runFlowScenario(definition, ctx) {
     }
 
     return {
-      detail: 'Pedido percorreu o ciclo completo, transicao invalida rejeitada e incidente idempotente',
+      detail: 'Pedido criado via storefront publico (com entrega e idempotencia), ciclo completo, transicao invalida rejeitada e incidente idempotente',
       ids: { orderId, ticketId },
-      evidence: { finalStatus: 'delivered', invalidTransitionRejected: true },
+      evidence: { finalStatus: 'delivered', invalidTransitionRejected: true, channel: 'storefront' },
     };
   }
 

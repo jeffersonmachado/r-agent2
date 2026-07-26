@@ -527,13 +527,14 @@ const FLOW_SCENARIOS = [
   {
     code: 'FOOD-FLOW-ORDER-LIFECYCLE',
     journey: 'food_customer_journey',
-    name: 'Food ciclo completo do pedido, transição inválida rejeitada e incidente idempotente',
+    name: 'Food pedido via storefront público, ciclo completo, transição inválida rejeitada e incidente idempotente',
     vertical: 'food',
     type: 'flow',
     criticality: 'high',
     preconditions: ['Módulo de pedidos ativo', 'Tenant autenticado'],
     assertions: [
-      'Pedido criado e visível via API',
+      'Pedido criado via POST /storefront/orders com entrega associada',
+      'Retry público com mesma idempotencyKey não duplica pedido',
       'Ciclo completo confirmed→preparing→ready→dispatched→delivered persistido',
       'Transição inválida rejeitada com 400',
       'Incidente registrado e retry idempotente',
