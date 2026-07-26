@@ -17348,6 +17348,402 @@
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
       ]
+    },
+    {
+      "id": "business-e2e-capability_scheduling",
+      "waveId": "wave-business-capability_scheduling",
+      "vertical": "core",
+      "journey": "capability_scheduling",
+      "name": "E2E: capability_scheduling",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_capability_scheduling_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_scheduling",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "scheduling: validado"
+      ],
+      "requiredCapabilities": [
+        "scheduling"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar scheduling"
+      ]
+    },
+    {
+      "id": "precond-capability_scheduling-schedule_service_available",
+      "waveId": "wave-precond-capability_scheduling",
+      "vertical": "core",
+      "journey": "capability_scheduling",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "precond-capability_scheduling-calendar_writable",
+      "waveId": "wave-precond-capability_scheduling",
+      "vertical": "core",
+      "journey": "capability_scheduling",
+      "name": "Precondição: Calendar Writable",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Calendar Writable atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Calendar Writable"
+      ]
+    },
+    {
+      "id": "business-e2e-capability_crm_updates",
+      "waveId": "wave-business-capability_crm_updates",
+      "vertical": "core",
+      "journey": "capability_crm_updates",
+      "name": "E2E: capability_crm_updates",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_capability_crm_updates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_crm_updates",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "crm_updates: validado"
+      ],
+      "requiredCapabilities": [
+        "crm_updates"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar crm updates"
+      ]
+    },
+    {
+      "id": "precond-capability_crm_updates-crm_service_available",
+      "waveId": "wave-precond-capability_crm_updates",
+      "vertical": "core",
+      "journey": "capability_crm_updates",
+      "name": "Precondição: Crm Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Crm Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Crm Service Available"
+      ]
+    },
+    {
+      "id": "precond-capability_crm_updates-database_writable",
+      "waveId": "wave-precond-capability_crm_updates",
+      "vertical": "core",
+      "journey": "capability_crm_updates",
+      "name": "Precondição: Database Writable",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_database_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Database Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Database Writable atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Database Writable"
+      ]
+    },
+    {
+      "id": "business-e2e-capability_lead_capture",
+      "waveId": "wave-business-capability_lead_capture",
+      "vertical": "core",
+      "journey": "capability_lead_capture",
+      "name": "E2E: capability_lead_capture",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_capability_lead_capture_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_lead_capture",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "lead_capture: validado"
+      ],
+      "requiredCapabilities": [
+        "lead_capture"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar lead capture"
+      ]
+    },
+    {
+      "id": "precond-capability_lead_capture-lead_capture_active",
+      "waveId": "wave-precond-capability_lead_capture",
+      "vertical": "core",
+      "journey": "capability_lead_capture",
+      "name": "Precondição: Lead Capture Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Lead Capture Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Lead Capture Active"
+      ]
+    },
+    {
+      "id": "precond-capability_lead_capture-crm_service_available",
+      "waveId": "wave-precond-capability_lead_capture",
+      "vertical": "core",
+      "journey": "capability_lead_capture",
+      "name": "Precondição: Crm Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Crm Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Crm Service Available"
+      ]
     }
   ],
   "history": {

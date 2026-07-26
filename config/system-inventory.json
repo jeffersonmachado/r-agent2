@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-25T12:23:42.089Z",
+  "generatedAt": "2026-07-26T23:07:24.923Z",
   "counts": {
-    "total": 2633,
+    "total": 2634,
     "byKind": {
-      "api": 672,
+      "api": 673,
       "field": 1492,
       "model": 155,
       "page": 150,
@@ -12,11 +12,11 @@
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2453,
+      "PRODUCTION": 2454,
       "DEVELOPMENT": 107,
       "SUPPORT": 73
     },
-    "orphaned": 521
+    "orphaned": 487
   },
   "items": [
     {
@@ -45,7 +45,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "c06676e3228139f61b08c5958b2db7aa7d7a8e5eb600b9791b57c110e3a23234"
     },
     {
@@ -61,7 +66,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "957fdcf875dab7ae172927bf82c22712d2e9627ac71af87137c018eab88cfc54"
     },
     {
@@ -80,6 +90,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_crm_updates",
         "leads"
       ],
       "linkedDomains": [],
@@ -98,7 +109,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "a4d4b0c34cb68201dd6d4e6932a6b1c57e8fb6c9fc6f71109025e7332ba98839"
     },
     {
@@ -114,7 +130,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "953001fe013d6ff8a628c8d4cefee651521e839e7e2c58e39b0a2664437abade"
     },
     {
@@ -1055,7 +1076,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "25cd45d14fd3af96a30b36fe982d9546a653fb0cc88fcd06ab040d5d42f5900d"
     },
     {
@@ -1071,7 +1097,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "fb29cfc31fc30936e60b009fd510435f2f7771893d31d2cd70294c4492052c71"
     },
     {
@@ -1087,7 +1118,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "66549df7c7e3930537f7396b5a0c26347c2afb4eba33019a9e24790a54c3f025"
     },
     {
@@ -1103,7 +1139,12 @@
         "resolveAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "a951ce38991eef4a26af3a3a405e65f3f4c4d6bd8c2ff2986c8fc2222b2302d8"
     },
     {
@@ -1116,7 +1157,12 @@
       "authRequired": false,
       "authorization": [],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "5ac668d234f63bc4555937ad90e10ded8dbee5eeeec0982c1c22deb7661be2c5"
     },
     {
@@ -1132,7 +1178,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "6f11a92bd65e28f4367b9600a43b133dea4f016dd56337594dfb965b9d239255"
     },
     {
@@ -1151,6 +1202,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_crm_updates",
         "leads"
       ],
       "linkedDomains": [],
@@ -1172,6 +1224,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_crm_updates",
         "leads"
       ],
       "linkedDomains": [],
@@ -1190,7 +1243,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "ffb98ce5089658677cebee7e6bf926841a5be788b6e38a0917a9ff93204c5d24"
     },
     {
@@ -1206,7 +1264,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "12ce4a1e58a61b02682ea48ad5c15a9e76e037ec49adb2faeae4fd277ab368ce"
     },
     {
@@ -1222,7 +1285,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "a2574fe9afaa24bd961d1864f84cb2952b34646bdff1ea966e68457eb84ce66a"
     },
     {
@@ -1238,7 +1306,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "270bbdff116d96b597622828afd64c699c77b1c2ad7bf5018cf130d6df573e0b"
     },
     {
@@ -1254,7 +1327,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "61d9483f0052d0a0b6d5d02f9e8f4bfde11d743e85acc506f075e69b086f7db8"
     },
     {
@@ -1794,7 +1872,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "9b3a477a494d22ccfcc7ebbed3a1f6dda787eff286609830eb10caf96d271e1d"
     },
     {
@@ -1812,7 +1892,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "4b776e6a9ce3584e44951886ff764f0c83aaddba90df085412c90b84ae32f544"
     },
     {
@@ -1830,7 +1912,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "37929f0203d85e44ad5fe80df4cd6ae012deeac09ce9d6cdac44e88b7afebb67"
     },
     {
@@ -1848,7 +1932,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "0aa13907dcd9f938da9a2b997c31b108dfb86a148c3f265eaf9861dcbdc6eea2"
     },
     {
@@ -6369,7 +6455,8 @@
       "linkKind": "journey",
       "linkedJourneys": [
         "beauty_booking",
-        "beauty_new_customer"
+        "beauty_new_customer",
+        "capability_lead_capture"
       ],
       "linkedDomains": [
         "beauty"
@@ -6607,7 +6694,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "89e328b11a1d588e8d7d43c6135c27762315dc043e9d318366672ee64a829b18"
     },
     {
@@ -6623,7 +6715,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "8ee2b5af0b53105e7887bc05485a57db70d24da81fd652ce65c3eee73b62ab7f"
     },
     {
@@ -6639,7 +6736,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "ee45998d0927081803643e7e6b797dc033773e510886e3bd67f3f850bfff9b07"
     },
     {
@@ -6658,6 +6760,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_crm_updates",
         "leads"
       ],
       "linkedDomains": [],
@@ -6676,7 +6779,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "9c8745c2ded67ed3f1bc66556a9ee94785c1d6f58181a9e6a724dcbbf991fbe7"
     },
     {
@@ -6692,7 +6800,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "e393b8f10287de7214b524f9a5ba4045bf39b3efd8b73dd0a17e002ae217bd47"
     },
     {
@@ -6708,7 +6821,12 @@
         "resolveAuth"
       ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "ec68cea0b73309f2ff758f0db5b2f38897bfaade6f7e6a40208bad50f532bbb5"
     },
     {
@@ -9506,6 +9624,24 @@
       ],
       "linkedDomains": [],
       "fingerprint": "aadd8f87330a7ad132d06d100832cd8d8c663b169e1d4d6c358946ca8d58e998"
+    },
+    {
+      "id": "api:POST:/orders/:orderId/charge",
+      "kind": "api",
+      "method": "POST",
+      "path": "/orders/:orderId/charge",
+      "module": "domain-business",
+      "source": "api/modules/order/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "payment_charge_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ef808770536b99bb1a90964a93a024cc4d5ffe2a41e1ff8f392cc75b24f6d89c"
     },
     {
       "id": "api:POST:/orders/:orderId/incidents",
@@ -20134,7 +20270,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "fae3206c5ee2df1609cc88f0a22f11429d4b31b09b10f32b2e55f78b23b0043e"
     },
     {
@@ -20154,7 +20292,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "693b42b85dada8bd2bf0a8b072409cf3902ae5a9fc20b6f1c304bd2dcf36c54d"
     },
     {
@@ -20174,7 +20314,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "5be58f4f6fee9dea86f38003f247ad5bba3c4f015676b7c4238d6ca1fd7edb3c"
     },
     {
@@ -20194,7 +20336,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "130e1f5af6270eb4c9ec29d5f630b093caf325ce734eaf048e82e0da3b187d47"
     },
     {
@@ -20214,7 +20358,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "4d655cb351ebf7e4418f5eb50fc642a386c198a6af6c18ca45ad84eeff33b2a8"
     },
     {
@@ -20234,7 +20380,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "1022902aeba7bfc881ab9086b30d1ddd78445db04aed76621d6c31abb519d0a3"
     },
     {
@@ -20254,7 +20402,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "11eb292908d650b912b66e3c6e3f3e0efc0c159527db7588a3f869f33ffdbf60"
     },
     {
@@ -20274,7 +20424,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "be59326dc3f54ba933caf0f1b174cb73c29a49f94e0a099e8f831e626f9b188c"
     },
     {
@@ -20294,7 +20446,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "7e926f4de36656da6f94d5e3a2434ec3ca87489b94c124ed3b7fdc17334dd6a7"
     },
     {
@@ -22038,9 +22192,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "822177e5178e2d928f593bcd9862e913c9ec3b047feacae178a8738d438b66e5"
     },
     {
@@ -22056,9 +22212,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "d969a933631f4ac6d6095c7be4b45fae77e81d39b53b49ba532f5fa68b85b99f"
     },
     {
@@ -22074,9 +22232,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "97a5193ab3fb6af991c9c4a1a5fc5dc8fc7f362b8b06cd011da78e0b9956de7b"
     },
     {
@@ -22092,9 +22252,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "d857dca16a838bf653285ad7a2258be0539057393c6413745ab22549b0af25ab"
     },
     {
@@ -22110,9 +22272,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "b92d773e54293db8b283b9a406bc7397b99475452611c44e5a996059237642a1"
     },
     {
@@ -22128,9 +22292,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "9a01ed0cbe157552d859374ef68f0b0c4e3173f0c6b463143925ad459b8d3c8c"
     },
     {
@@ -22146,9 +22312,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "3b818d1a25e195fa3bc1eec14456566d1c1fe2aab565e917b08d3408240e2339"
     },
     {
@@ -22164,9 +22332,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "c4f6d9825c1cff4307e4d7a851c591e5bba57402e43ebb5067082473d821f573"
     },
     {
@@ -22182,9 +22352,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "f847aaac3c745801214b0031f99ee6bcfae1d1dc285135a6cd7b3aaeb6900bf9"
     },
     {
@@ -22200,9 +22372,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "0d1acc819dd0a41e425053c27edc784aad39e71aac48cd64cc701065536ca710"
     },
     {
@@ -22218,9 +22392,11 @@
       "classification": "PRODUCTION",
       "source": "api/db/models/MarketingLead.js",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "database-integrity",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_lead_capture"
+      ],
+      "linkedDomains": [],
       "fingerprint": "ccd6281264418db06b590f1bf6d34d9af746e24a2bb67b04d6d7adb4ddaf539f"
     },
     {
@@ -22834,7 +23010,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "cbdab59fb46b359f84e6d859120ae16d829043b6fe1ac50715a82a2cc0932107"
     },
     {
@@ -22854,7 +23032,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "2dd45b41f89d85c00580539045973767be6eba27a5a9868d54d460fd60d87741"
     },
     {
@@ -22874,7 +23054,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "2d84e9f9f64e4a973bbb8fb269f7da6b8b8621d32f12d03cd14817de09ecddf8"
     },
     {
@@ -22894,7 +23076,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "b686bcb3c26452f6613e0c5c7ec9b49af109efd38bb3f6db91817dd1646d6dca"
     },
     {
@@ -22914,7 +23098,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "b9f6075e0dcb27471c2e7b5d49d2c448b58c300f3d6245118b059fd5f72feb16"
     },
     {
@@ -22934,7 +23120,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "f823e46c75e72338dc959392127bf7471cbdb1512239a8015c7a9f18c6c0fbe4"
     },
     {
@@ -22954,7 +23142,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "6516d2b8363041f4e05f0524d0756c3c5e6d8cb3e04f3c45523305b11fc0a804"
     },
     {
@@ -22974,7 +23164,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "0c5f0ee60b51daa7bbff3d2e86f26b7e57da9e3957bae991736bcb244ae2badc"
     },
     {
@@ -22994,7 +23186,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "3890053cc8baa2b2d2d399291c703135aeccec8ebc64bb2e5fc2456bbf2234e5"
     },
     {
@@ -23014,7 +23208,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "737ad4dfc131f98b9f98b7cc1e46bb741cf6fad0f01a8327f44b3c965e6ee455"
     },
     {
@@ -23034,7 +23230,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "93b0735ee77c56f991d554e5f65ad91fc02cf3749c66010656747e7a85e5f6f4"
     },
     {
@@ -23054,7 +23252,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "3a7ab4745fadaf4a3a673b8f1f71f86f338f182208262909f6d6a9862c99fb3e"
     },
     {
@@ -23074,7 +23274,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "ac9e75c776bc3ab4b7b83a8f838c1d48690b3e60a98ec229a116f12ef67919c5"
     },
     {
@@ -23094,7 +23296,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "fc4786d9ddeafd87e73eddd8f36984a796ff5cf992e6a9d0da7f1f0b2679d339"
     },
     {
@@ -23114,7 +23318,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "7715d514f0884757c77df19748bcb86eee49b5efc8d34b2e4fe79759da7a044d"
     },
     {
@@ -23134,7 +23340,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "419441b3699cfe5e93c8f293e4817051d20732337956144bccffd80c36832881"
     },
     {
@@ -23154,7 +23362,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "2850e1bc9f048fa02bd82c77f32d5d69b78a69258a4e705d49b89e7c2afdaaf3"
     },
     {
@@ -23174,7 +23384,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "c7aa9a7e917637b5080322744ee73d66630a3a72a7b72cd0168eb0b7860550dd"
     },
     {
@@ -23194,7 +23406,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "5a5ee4ef8d43ed4a190cea4166c3fcc595ddf7f5542d63985bc7664fe693fa6d"
     },
     {
@@ -23214,7 +23428,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "dfb728c02f4b8eea3ebf2735f6164142e6cb279b8b1ee07abd465b61f955e04d"
     },
     {
@@ -23234,7 +23450,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "d41bb790922f64e4d6f8c1ae3bbd6eccd0c5017bb2f0d7fa9d146b0fc10fd890"
     },
     {
@@ -23254,7 +23472,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "5c163c572de3b2e22cd3b5fdcd773fd9490cf7fe6a37e9a5014a8b71b25d9f77"
     },
     {
@@ -23274,7 +23494,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "4eb2c3167e25183240a4c3a579ada9213c06e01bb30c3caa873918a0d25b4961"
     },
     {
@@ -23294,7 +23516,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "c227123b54dfdb1a6520a864bf0d52d80808f51cc71df1d0bdb233a48814fe3d"
     },
     {
@@ -23314,7 +23538,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "16e70d958fab2f159da418789e7968cffb24fd281b06a90240ce56d6fab9a4f4"
     },
     {
@@ -23334,7 +23560,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "9d33eed6dfbcaeb58323936acc1f836187b1a30b8cec6c93083635036bc623c5"
     },
     {
@@ -23354,7 +23582,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "7569482e643e4b02bbc936837049852c73a6104afb2947379eb22926aea26569"
     },
     {
@@ -23374,7 +23604,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "6ed111a16a86ff8d706fbf44c03dfc32791103517a0918d0b401b0490d100f42"
     },
     {
@@ -23394,7 +23626,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "206f2f0e998525b53099986f3f563e71e7c8a2311ac4828c4b581252b1e6d478"
     },
     {
@@ -23414,7 +23648,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "4736b5dff3efc791d763ac0f78fc76332f57f10e7af5995f4cda09d44f1334de"
     },
     {
@@ -23434,7 +23670,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "d27508bd6ddc6c654c175e7f723fe06a115bc072e8ec0c1d7f95964926accba6"
     },
     {
@@ -23454,7 +23692,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "a21e0d2c1c2c14aa86b0689470ba79601f25722457e6e24b69aa2bb8b26f7570"
     },
     {
@@ -23474,7 +23714,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "9715d4f274249e8508dbdf9364e3c0e1d1583be2f1cd553b4cb7c5110acd4433"
     },
     {
@@ -23494,7 +23736,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "eafdffecb19659e1f35984056a325f4f0ae0181cd4955e30b0ca819b6826bebd"
     },
     {
@@ -23514,7 +23758,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "bbcfbea9d94db61c1fbbaf71f033dfde7a0ff034362cd3c1cf89fe9e55fd6326"
     },
     {
@@ -23534,7 +23780,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "89657868c2218952773cb9348525b98c7426c74c7763dda9b1cf7806f0ee651e"
     },
     {
@@ -23554,7 +23802,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "3bc7ac988be734bda4d31be08840d2ef2a209418acbfc0b772395179c21a1fa6"
     },
     {
@@ -39366,7 +39616,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "6c3dfdb867581dd8ac4c472fd76bacd76ea416e35267314f785c78777f935fe2"
     },
     {
@@ -39486,6 +39738,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_lead_capture",
         "leads"
       ],
       "linkedDomains": [],
@@ -39550,7 +39803,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "999f3be80b8985c4ab8216441f17f3d9e2dcfae5758c4777e8107c61b24d6314"
     },
     {
@@ -39567,7 +39822,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "450d26818fd3677b394eb1f112aa0c2d8c3a92183c55e6ca0c3287a00017febf"
     },
     {
@@ -39584,7 +39841,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "40c6e807a013bfcf494a4e8d253a0e76457815f5a7364566a0ba373b597efeef"
     },
     {
@@ -39601,7 +39860,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "1f1976f757d907b02b793dfc4ac8a18736f0e81fdea27275b12ddd4e37aa0776"
     },
     {
@@ -41490,7 +41751,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "d04f11604dbd0fe37707b3033d317192b9c4a97f4ba0c2eaafd17523aa30323f"
     },
     {
@@ -41509,7 +41775,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "9e7e6bf7c8d9bcc45aefe9ec83ed37932f65c1a8fb77798f707991ee7c191266"
     },
     {
@@ -41528,7 +41799,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "0f3a5a589dabc595702c25e7f2a1706c468614c92cb9bbf174ff83e3e12bfdff"
     },
     {
@@ -41547,7 +41823,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "2371a2a5142ad7015615386e46f374bd565b32ec59bb7f3279f1931d8c631271"
     },
     {
@@ -41567,9 +41848,11 @@
       "classification": "SUPPORT",
       "source": "frontend/src/main.jsx",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "e26640747109774df11f116aa1c71639292111032d2120082c8fabb937bed756"
     },
     {
@@ -41588,7 +41871,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "dd59bbfdd5c7d5e09503f1dcddb0f1fe930ecf29872079dbb940fc224d5d197b"
     },
     {
@@ -41607,7 +41895,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "fff23e9e71ea6e25ffb7a80f6122f072b056f9db5fb4db281d4402d3655944da"
     },
     {
@@ -41626,7 +41919,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "81af775b8de38faf38298701eb0875c526a5dcd54c58db11e29bef2802882585"
     },
     {
@@ -41648,6 +41946,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_crm_updates",
         "leads"
       ],
       "linkedDomains": [],
@@ -41669,7 +41968,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "5c988204425c97b9b7bdf859613632b48d2dfecbf9b8c9efc635282eff6ec2e4"
     },
     {
@@ -41688,7 +41992,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "9c1a690f7c16685741f9a5294395ef9c0f91b13365796b44cb6ccfd60fe677fc"
     },
     {
@@ -41707,7 +42016,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "c584895fedb5572ab6deb0ad799ea2543aa8f9bb2ae486900a4224b4295f564a"
     },
     {
@@ -41726,7 +42040,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "c1dd347053c5ce035dbef37c008669f2b39d37137e36099b2fa78e62b2840c67"
     },
     {
@@ -41745,7 +42064,12 @@
       "guarded": true,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "2078b67ae66062fd5018c4cbd1ac5e14536c5e5cc1f190c5efe477360a70bdae"
     },
     {
@@ -43293,7 +43617,12 @@
       "guarded": false,
       "classification": "PRODUCTION",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
       "fingerprint": "76d1b55a7b9bbffeed34c60c49f1aa22bff9ab2be07b9f9e1535b36c7da8bb95"
     },
     {
@@ -45672,7 +46001,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "2c0b3158635874fb0bfb68fd7aef7745061ecd0847fc5ff08db29f05ff1caf13"
     },
     {
@@ -45714,7 +46045,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "c291c511a37e0cfa0684a47736f9b5827339e06d2cacf99914dc897f6f517e13"
     },
     {
@@ -45754,7 +46087,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "2c325129e07837a2fda816c23505609da4d1d79aeec649864a518b5ae586f6fe"
     },
     {
@@ -45787,7 +46122,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "e685db019b483cb472f98954ed65d97775dec985f69f084b8199e81c169c556f"
     },
     {
@@ -45828,7 +46165,9 @@
       "linkedJourneys": [
         "market_default_journey"
       ],
-      "linkedDomains": [],
+      "linkedDomains": [
+        "market"
+      ],
       "fingerprint": "292639e89d14600258c4149700aeb27680f9030fce38818314345f23df13ee70"
     },
     {
@@ -46121,6 +46460,7 @@
       "linkStatus": "LINKED",
       "linkKind": "journey",
       "linkedJourneys": [
+        "capability_lead_capture",
         "leads"
       ],
       "linkedDomains": [],

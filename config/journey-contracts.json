@@ -39,6 +39,27 @@
       "missingCapabilities": [],
       "confidence": 0.71
     },
+    "capability_scheduling": {
+      "requiredCapabilities": [
+        "scheduling"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "capability_crm_updates": {
+      "requiredCapabilities": [
+        "crm_updates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "capability_lead_capture": {
+      "requiredCapabilities": [
+        "lead_capture"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
     "payment_charge_flow": {
       "requiredCapabilities": [
         "billing_validation"

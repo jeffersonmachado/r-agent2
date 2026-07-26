@@ -138,5 +138,20 @@
         "required": ["customer_identification_active", "schedule_service_available", "payment_gateway_available"],
         "optional": ["crm_service_available", "notification_service_active"],
         "timeout": 25000
+      },
+      "capability_scheduling": {
+        "required": ["schedule_service_available", "calendar_writable"],
+        "optional": ["notification_service_active"],
+        "timeout": 15000
+      },
+      "capability_crm_updates": {
+        "required": ["crm_service_available", "database_writable"],
+        "optional": [],
+        "timeout": 15000
+      },
+      "capability_lead_capture": {
+        "required": ["lead_capture_active", "crm_service_available"],
+        "optional": ["notification_service_active"],
+        "timeout": 15000
       }
     }
