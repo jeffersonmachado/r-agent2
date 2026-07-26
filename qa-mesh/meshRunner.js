@@ -15,6 +15,7 @@ const { runGenerateSummary } = require('../qa/checkpoints/generateSummary');
 const { generateStabilitySnapshot } = require('../qa/mesh/intelligence/stabilityEngine');
 const { persistStabilitySnapshot } = require('../qa/mesh/intelligence/stabilityHistory');
 const { runLearningPipeline } = require('../qa/mesh/intelligence/learning');
+const { loadBlockingJourneyEvidence } = require('./blockingJourneyEvidence');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const REGISTRY_PATH = path.join(__dirname, 'meshRegistry.json');
@@ -1749,6 +1750,31 @@ async function executeScenarioWithFallback(scenario, context) {
 
     if (blockingJourney && executionMode !== 'diagnostic') {
       const decision = resolveBlockingPageNullDecision(executionMode);
+      // O mesh não tem browser; a prova operacional das jornadas blocking é
+      // produzida pelo smoke prod-like das QA Waves (Playwright real).
+      // Evidência fresca e GO comprova a jornada; ausente/stale/not_go
+      // mantém a falha — nunca mascara.
+      const blockingEvidence = loadBlockingJourneyEvidence(journeyId, {
+        evidencePath: context?.blockingJourneyEvidencePath,
+      });
+
+      if (blockingEvidence.status === 'valid') {
+        return {
+          ...adapterResult,
+          status: classifyScenarioStatus(adapterResult),
+          steps: sourceSteps,
+          errors: normalizeErrorList(adapterResult?.errors),
+          operationalExecution: {
+            executorUsed: false,
+            executionMode,
+            decision,
+            evidenceSource: 'qa-waves-operational-smoke',
+            blockingJourneyEvidence: blockingEvidence,
+            blockers: [],
+          },
+        };
+      }
+
       return {
         ...adapterResult,
         status: 'failed',
@@ -1759,12 +1785,16 @@ async function executeScenarioWithFallback(scenario, context) {
             message: 'blocking_journey_requires_browser_operational_runner',
             reason: 'page_null_blocking_journey',
             journeyId,
+            evidenceStatus: blockingEvidence.status,
+            evidenceDetail: blockingEvidence.detail || null,
+            evidencePath: blockingEvidence.evidencePath || null,
           },
         ],
         operationalExecution: {
           executorUsed: false,
           executionMode,
           decision,
+          blockingJourneyEvidence: blockingEvidence,
           blockers: [
             {
               reason: 'page_null_blocking_journey',

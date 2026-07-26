@@ -329,6 +329,37 @@ a cadeia `validate:governance-enforcement`. No CI
 auto-pula sem DB), `validate:visibility-policy` e o gate com
 `COVERAGE_GATE_SKIP_TENANT_RUN=1`.
 
+### Jornadas blocking no mesh: evidência operacional do smoke
+
+O mesh não possui browser. Cenários ligados a jornadas blocking
+(`support_ticket_flow`, `fitness_customer_checkin` — ver
+`BLOCKING_JOURNEYS` em `api/services/qa/operationalStepExecutor.js`) nunca
+podem ser dados como válidos com `page` nula: sem prova de browser, o
+`meshRunner` falha o cenário com
+`blocking_journey_requires_browser_operational_runner`
+(`page_null_blocking_journey`) em vez de mascarar a ausência de evidência.
+
+Quem produz essa prova é o smoke prod-like das QA Waves
+(`scripts/smoke/qa-waves-operational-final-smoke.js`), que executa as
+jornadas com Playwright real e grava
+`qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`. O mesh
+CONSOME essa evidência via `qa-mesh/blockingJourneyEvidence.js`: com
+evidência válida o cenário passa (adapter + prova de browser); sem ela, a
+falha é mantida e o erro registra `evidenceStatus`
+(`missing`/`invalid`/`stale`/`not_go`). Evidência válida exige:
+
+- `generatedAt` dentro do frescor máximo (default 168h, mesma convenção de
+  `requireFreshReplayDays: 7`; configurável por
+  `MESH_BLOCKING_EVIDENCE_MAX_AGE_HOURS`);
+- a jornada presente em `flows[]` com `replay.status === 'GO'`,
+  `audit.valid === true`, `strictGovernance.status === 'GO'` e ao menos um
+  screenshot (prova de browser real, obrigatória em jornada blocking);
+- caminho configurável por `MESH_BLOCKING_EVIDENCE_PATH`.
+
+Consequência prática: para manter o gate GO em ambiente local, rode o smoke
+prod-like periodicamente; evidência expirada volta a falhar o cenário até
+nova execução com browser.
+
 ## Análise de impacto
 
 `scripts/analyze-impact.js` reconstrói o inventário via scanners (ou aceita
