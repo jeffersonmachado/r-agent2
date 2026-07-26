@@ -336,6 +336,43 @@ async function applyBillingRules({ tenantId, transaction, status }) {
     return;
   }
 
+  // Pedidos (food/market): transação vinculada via metadata.orderId reflete
+  // o pagamento no pedido (context.payment) — confirmed vira 'paid',
+  // overdue vira 'overdue', estorno/cancelamento volta para o pedido.
+  const orderId = transaction?.metadata && typeof transaction.metadata === 'object'
+    ? transaction.metadata.orderId
+    : null;
+  if (orderId) {
+    try {
+      const { markOrderPaymentStatus } = require('./orderService');
+      const statusMap = {
+        confirmed: 'paid',
+        overdue: 'overdue',
+        cancelled: 'cancelled',
+        refunded: 'refunded',
+        chargeback: 'chargeback',
+      };
+      const orderPaymentStatus = statusMap[status] || null;
+      if (orderPaymentStatus) {
+        await markOrderPaymentStatus({
+          tenantId,
+          orderId: String(orderId),
+          status: orderPaymentStatus,
+          transactionId: transaction.id,
+          amount: transaction.amount != null ? Number(transaction.amount) : null,
+        });
+      }
+    } catch (err) {
+      logger.warn('[Billing] falha ao refletir pagamento no pedido', {
+        tenantId,
+        orderId: String(orderId),
+        transactionId: transaction.id,
+        status,
+        error: err?.message,
+      });
+    }
+  }
+
   if (vertical === 'beauty' && transaction?.bundle_id) {
     const Bundle = VerticalSessionBundle();
     const row = await Bundle.findOne({ where: { tenant_key: tenantId, id: String(transaction.bundle_id) } }).catch(() => null);
@@ -674,8 +711,18 @@ async function reconcileSubscriptions({ tenantId = null, limit = 100 } = {}) {
   };
 }
 
+async function findTransactionById({ tenantId, transactionId }) {
+  if (!dbAvailable()) return null;
+  const Tx = BillingTransaction();
+  const row = await Tx.findOne({
+    where: { tenant_key: String(tenantId || ''), id: String(transactionId || '') },
+  }).catch(() => null);
+  return row ? (row.toJSON ? row.toJSON() : row) : null;
+}
+
 module.exports = {
   createCharge,
+  findTransactionById,
   listTransactions,
   processWebhook,
   reconcileTransactions,

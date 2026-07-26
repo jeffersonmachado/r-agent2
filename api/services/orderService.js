@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { Order } = require('../db/models');
 const { appendEventV1 } = require('./eventLedgerService');
+const logger = require('../utils/logger');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -101,6 +102,7 @@ async function createOrder({
   notes = null,
   deliveryType = 'delivery',
   deliveryAddress = {},
+  vertical = null,
   context = {},
 }) {
   const Model = Order();
@@ -117,6 +119,35 @@ async function createOrder({
     err.code = 'order_items_required';
     throw err;
   }
+
+  // customer_identification: pedido com telefone resolve/cria o cliente
+  // (AccessSubject) — sem vínculo, o pedido é órfão de CRM/retenção.
+  const orderVertical = safeTrim(vertical) || null;
+  let customerResolution = null;
+  if (customerPhone) {
+    const { ensureOrderCustomer } = require('./orderCustomerService');
+    customerResolution = await ensureOrderCustomer({
+      tenantId,
+      vertical: orderVertical || 'food',
+      customerName,
+      customerPhone,
+      source,
+    });
+  }
+
+  const orderContext = { ...normalizedContext, correlationId };
+  if (orderVertical) orderContext.vertical = orderVertical;
+  if (customerResolution) {
+    orderContext.customerId = customerResolution.customerId;
+    orderContext.customerSubjectId = customerResolution.subjectId;
+  }
+
+  // Total do pedido: usa o informado; se ausente, soma os itens com preço.
+  // Pedido sem total não pode gerar cobrança (regra de negócio).
+  const itemsTotal = cleanItems.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+  const computedTotal = totalAmount != null
+    ? Number(totalAmount)
+    : (itemsTotal > 0 ? Number(itemsTotal.toFixed(2)) : null);
 
   // Idempotência (v1): se o caller fornecer context.idempotencyKey, evita duplicar pedidos
   // em retries HTTP (ex.: storefront) no mesmo dia.
@@ -150,15 +181,38 @@ async function createOrder({
     customer_name: customerName,
     customer_phone: customerPhone,
     items: cleanItems,
-    total_amount: totalAmount,
+    total_amount: computedTotal,
     notes,
     delivery_type: deliveryType,
     delivery_address: deliveryAddress || {},
-    context: { ...normalizedContext, correlationId },
+    context: orderContext,
   });
 
   const json = row.toJSON ? row.toJSON() : row;
   const marketingAttributionPresent = hasMarketingAttribution(json?.context?.marketingAttribution);
+
+  // Timeline do cliente (crm_updates): pedido registrado na jornada.
+  if (customerResolution) {
+    try {
+      const { emitJourneyEvent } = require('./vertical/customerJourneyEngine');
+      await emitJourneyEvent({
+        tenantId,
+        vertical: orderVertical || 'food',
+        eventType: 'order_placed',
+        subjectId: customerResolution.subjectId,
+        customerId: customerResolution.customerId,
+        channel: source || null,
+        triggeredBy: 'order_service',
+        correlationId,
+        idempotencyKey: `order_placed:${id}`,
+        payload: { orderId: id, orderNumber, status: 'created' },
+      });
+    } catch (err) {
+      logger.warn('[Orders] falha ao registrar order_placed na jornada do cliente', {
+        tenantId, orderId: id, error: err?.message,
+      });
+    }
+  }
 
   // best-effort: emit canonical event
   try {
@@ -258,6 +312,16 @@ async function updateOrderStatus({ tenantId, orderId, status }) {
     ...patchTimestampsForStatus(next),
   });
 
+  // Cancelamento com pagamento confirmado exige estorno — registra a
+  // obrigação de forma explícita (a execução do refund é do provider).
+  if (next === 'cancelled') {
+    const ctx = (row.context && typeof row.context === 'object') ? { ...row.context } : {};
+    if (ctx.payment && ctx.payment.status === 'paid' && ctx.payment.refundStatus !== 'required') {
+      ctx.payment = { ...ctx.payment, refundStatus: 'required', refundRequestedAt: new Date().toISOString() };
+      await row.update({ context: ctx });
+    }
+  }
+
   const json = row.toJSON ? row.toJSON() : row;
   const correlationId = json?.context?.correlationId || null;
 
@@ -280,7 +344,148 @@ async function updateOrderStatus({ tenantId, orderId, status }) {
     });
   } catch (_) {}
 
+  // notifications: cliente é avisado de cada transição no canal de origem.
+  await notifyOrderTransition({ tenantId, order: json, toStatus: next });
+
+  // crm_updates: entrega registrada na timeline do cliente.
+  if (next === 'delivered' && json?.context?.customerId) {
+    try {
+      const { emitJourneyEvent } = require('./vertical/customerJourneyEngine');
+      await emitJourneyEvent({
+        tenantId,
+        vertical: safeTrim(json.context.vertical) || 'food',
+        eventType: 'order_delivered',
+        subjectId: json.context.customerSubjectId || null,
+        customerId: json.context.customerId,
+        channel: json.source || null,
+        triggeredBy: 'order_service',
+        correlationId,
+        idempotencyKey: `order_delivered:${orderId}`,
+        payload: { orderId, orderNumber: json.order_number, status: 'delivered' },
+      });
+    } catch (err) {
+      logger.warn('[Orders] falha ao registrar order_delivered na jornada do cliente', {
+        tenantId, orderId, error: err?.message,
+      });
+    }
+  }
+
   return json;
+}
+
+const ORDER_STATUS_NOTIFICATIONS = {
+  confirmed: (order) => `Seu pedido #${order.order_number} foi confirmado!`,
+  preparing: (order) => `Seu pedido #${order.order_number} está em preparo.`,
+  ready: (order) => `Seu pedido #${order.order_number} está pronto!`,
+  dispatched: (order) => `Seu pedido #${order.order_number} saiu para entrega.`,
+  delivered: (order) => `Seu pedido #${order.order_number} foi entregue. Obrigado!`,
+  cancelled: (order) => `Seu pedido #${order.order_number} foi cancelado. Em caso de dúvida, fale com a loja.`,
+};
+
+/**
+ * Notifica o cliente sobre a transição do pedido (canal WhatsApp, pelo
+ * telefone informado no pedido). Idempotente por (pedido, status) via
+ * idempotencyKey — retry da transição não reenvia. Falha no enfileiramento
+ * não derruba a transição, mas é logada (nunca silenciosa).
+ */
+async function notifyOrderTransition({ tenantId, order, toStatus }) {
+  const buildMessage = ORDER_STATUS_NOTIFICATIONS[toStatus];
+  if (!buildMessage || !order) return { skipped: 'no_template' };
+
+  const recipient = safeTrim(order.customer_phone);
+  if (!recipient) return { skipped: 'no_recipient' };
+
+  try {
+    const { enqueueNotification } = require('./notificationService');
+    const result = await enqueueNotification({
+      tenantId,
+      vertical: safeTrim(order.context?.vertical) || 'food',
+      channel: 'whatsapp',
+      eventType: `order_${toStatus}`,
+      recipient,
+      customerId: order.context?.customerId || null,
+      subjectId: order.context?.customerSubjectId || null,
+      message: buildMessage(order),
+      idempotencyKey: `order_status:${order.id}:${toStatus}`,
+      metadata: {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        toStatus,
+      },
+    });
+    return { queued: true, notificationId: result?.item?.id || null };
+  } catch (err) {
+    logger.warn('[Orders] falha ao enfileirar notificação de transição', {
+      tenantId, orderId: order.id, toStatus, error: err?.message,
+    });
+    return { queued: false, error: err?.message };
+  }
+}
+
+async function getOrderPayment({ tenantId, orderId }) {
+  const order = await getOrderById({ tenantId, orderId });
+  if (!order) return null;
+  const ctx = order.context && typeof order.context === 'object' ? order.context : {};
+  return ctx.payment && typeof ctx.payment === 'object' ? ctx.payment : null;
+}
+
+/**
+ * Vincula/atualiza o pagamento do pedido (context.payment). Usado pela rota
+ * POST /orders/:id/charge (registro da cobrança) e pelo webhook de billing
+ * (confirmação/atraso). Idempotente por (transactionId, status).
+ */
+async function setOrderPayment({ tenantId, orderId, payment }) {
+  const Model = Order();
+  const row = await Model.findOne({ where: { tenant_key: tenantId, id: orderId } });
+  if (!row) {
+    const err = new Error('order_not_found');
+    // @ts-ignore
+    err.code = 'order_not_found';
+    throw err;
+  }
+  const ctx = (row.context && typeof row.context === 'object') ? { ...row.context } : {};
+  ctx.payment = payment && typeof payment === 'object' ? payment : null;
+  await row.update({ context: ctx });
+  return row.toJSON ? row.toJSON() : row;
+}
+
+async function markOrderPaymentStatus({ tenantId, orderId, status, transactionId = null, amount = null }) {
+  const current = await getOrderPayment({ tenantId, orderId });
+  if (!current) {
+    const err = new Error('order_payment_not_found');
+    // @ts-ignore
+    err.code = 'order_payment_not_found';
+    throw err;
+  }
+  if (current.status === status && (!transactionId || current.transactionId === transactionId)) {
+    return { idempotent: true, payment: current };
+  }
+
+  const next = {
+    ...current,
+    status,
+    ...(transactionId ? { transactionId } : {}),
+    ...(amount != null ? { amount } : {}),
+    ...(status === 'paid' ? { paidAt: new Date().toISOString() } : {}),
+  };
+  await setOrderPayment({ tenantId, orderId, payment: next });
+
+  if (status === 'paid') {
+    try {
+      await appendEventV1({
+        tenantId,
+        type: 'OrderPaymentConfirmed',
+        source: 'orders.billing',
+        occurredAt: new Date(),
+        subject: { type: 'order', id: orderId },
+        actor: { type: 'system', id: 'billing_webhook' },
+        idempotencyKey: `order_payment_confirmed:${tenantId}:${orderId}:${transactionId || 'na'}`,
+        payload: { orderId, transactionId: transactionId || null, amount: amount != null ? amount : null },
+      });
+    } catch (_) {}
+  }
+
+  return { idempotent: false, payment: next };
 }
 
 async function listOrders({ tenantId, status = null, limit = 50, offset = 0 }) {
@@ -422,4 +627,9 @@ module.exports = {
   getOrderIncident,
   setOrderIncident,
   getOrderMetrics,
+  getOrderPayment,
+  setOrderPayment,
+  markOrderPaymentStatus,
+  notifyOrderTransition,
+  ORDER_STATUS_NOTIFICATIONS,
 };

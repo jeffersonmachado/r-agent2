@@ -29,6 +29,7 @@ function createOrderRoutes({ buildDeps }) {
   router.get('/deliveries/:deliveryId', (req, res) => controllerFor(req, res).getDelivery(req, res));
   router.put('/deliveries/:deliveryId/status', (req, res) => controllerFor(req, res).updateDeliveryStatus(req, res));
   router.put('/orders/:orderId/status', (req, res) => controllerFor(req, res).updateOrderStatus(req, res));
+  router.post('/orders/:orderId/charge', (req, res) => controllerFor(req, res).createCharge(req, res));
   router.post('/orders/:orderId/incidents', (req, res) => controllerFor(req, res).createIncident(req, res));
 
   return router;

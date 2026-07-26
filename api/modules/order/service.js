@@ -80,6 +80,73 @@ function createOrderService({ orderService, deliveryService, dbModels, eventLedg
       return orderService.getOrderIncident({ tenantId, orderId });
     },
 
+    async createOrderCharge({ tenantId, orderId, amount, currency = 'BRL', provider = 'sandbox', idempotencyKey = null }) {
+      const order = await orderService.getOrderById({ tenantId, orderId });
+      if (!order) {
+        const err = new Error('order_not_found');
+        err.code = 'order_not_found';
+        throw err;
+      }
+
+      // Idempotência de negócio: pedido já possui cobrança vinculada e não
+      // liquidada — retorna a mesma transação em vez de duplicar.
+      const existingPayment = order.context && typeof order.context === 'object' ? order.context.payment : null;
+      if (existingPayment && existingPayment.transactionId && ['pending', 'paid'].includes(existingPayment.status)) {
+        const billingService = require('../../services/billingService');
+        const found = await billingService.findTransactionById({
+          tenantId,
+          transactionId: existingPayment.transactionId,
+        });
+        if (found) {
+          return { idempotent: true, transaction: found, payment: existingPayment };
+        }
+      }
+
+      const chargeAmount = amount != null ? Number(amount) : Number(order.total_amount);
+      if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) {
+        const err = new Error('amount must be > 0');
+        err.code = 'validation_error';
+        throw err;
+      }
+
+      const billingService = require('../../services/billingService');
+      const charge = await billingService.createCharge({
+        tenantId,
+        vertical: (order.context && order.context.vertical) || 'food',
+        type: 'one_time',
+        amount: chargeAmount,
+        currency,
+        dueDate: new Date(Date.now() + 86400000).toISOString(),
+        provider,
+        description: `Pedido ${order.order_number}`,
+        customerName: order.customer_name || null,
+        customerPhone: order.customer_phone || null,
+        customerId: (order.context && order.context.customerId) || null,
+        subjectId: (order.context && order.context.customerSubjectId) || null,
+        idempotencyKey: idempotencyKey || `order_charge:${tenantId}:${orderId}:${chargeAmount}`,
+        metadata: {
+          orderId: order.id,
+          orderNumber: order.order_number,
+          source: 'order_charge',
+          // vertical real do pedido (billing.vertical é restrito a fitness/beauty)
+          businessVertical: (order.context && order.context.vertical) || null,
+        },
+      });
+
+      const payment = {
+        transactionId: charge.transaction.id,
+        status: 'pending',
+        method: 'online',
+        amount: chargeAmount,
+        currency,
+        provider,
+        createdAt: new Date().toISOString(),
+      };
+      await orderService.setOrderPayment({ tenantId, orderId: order.id, payment });
+
+      return { idempotent: Boolean(charge.idempotent), transaction: charge.transaction, payment };
+    },
+
     setOrderIncident({ tenantId, orderId, incident }) {
       return orderService.setOrderIncident({ tenantId, orderId, incident });
     },

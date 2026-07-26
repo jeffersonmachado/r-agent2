@@ -41,6 +41,8 @@ const JOURNEY_EVENT_TYPES = [
   'return_campaign_sent',
   'checkin_recorded',
   'checkout_recorded',
+  'order_placed',
+  'order_delivered',
 ];
 
 // ── helpers ──────────────────────────────────────────────────────────────────

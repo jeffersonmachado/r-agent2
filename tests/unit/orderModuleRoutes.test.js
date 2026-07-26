@@ -29,6 +29,7 @@ describe('order module', () => {
       '/deliveries/:deliveryId',
       '/deliveries/:deliveryId/status',
       '/orders/:orderId/status',
+      '/orders/:orderId/charge',
       '/orders/:orderId/incidents',
     ]);
   });

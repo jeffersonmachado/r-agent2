@@ -1214,6 +1214,7 @@ async function runFlowScenario(definition, ctx) {
     const orderPayload = {
       customerName: `Cliente QA Food ${runId}`,
       customerPhone: '+5511999997000',
+      vertical: 'food',
       items: [{ name: 'Prato QA Lifecycle', qty: 1, price: 32.9 }],
       deliveryType: 'delivery',
       deliveryAddress: { street: 'Rua QA', number: '100', city: 'Sao Paulo' },
@@ -1231,6 +1232,17 @@ async function runFlowScenario(definition, ctx) {
     if (!created?.delivery?.id) {
       throw new Error('Pedido delivery nao gerou entrega associada');
     }
+    if (Number(created?.order?.total_amount) !== 32.9) {
+      throw new Error(`Total do pedido nao foi calculado pelos itens: ${created?.order?.total_amount}`);
+    }
+    const customerId = created?.order?.context?.customerId;
+    const customerSubjectId = created?.order?.context?.customerSubjectId;
+    if (!customerId || !customerSubjectId) {
+      throw new Error('Pedido com telefone nao vinculou cliente (customerId/customerSubjectId ausentes)');
+    }
+    if (created?.order?.context?.vertical !== 'food') {
+      throw new Error(`Vertical do pedido nao persistida: ${created?.order?.context?.vertical}`);
+    }
 
     const retryCreate = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, orderPayload);
     if (retryCreate?.order?.id !== orderId) {
@@ -1245,6 +1257,39 @@ async function runFlowScenario(definition, ctx) {
       if (observed !== next) {
         throw new Error(`Pedido nao transicionou para ${next} (observado: ${observed})`);
       }
+    }
+
+    // Jornada do cliente: order_placed (criação) e order_delivered (entrega).
+    const sequelize = require('../../../api/db/sequelize').getSequelize();
+    const [journeyEvents] = await sequelize.query(
+      `SELECT event_type FROM vertical_journey_events
+       WHERE tenant_key = :tenantId AND subject_id = :subjectId
+         AND event_type IN ('order_placed', 'order_delivered')`,
+      { replacements: { tenantId: TEST_TENANT_ID, subjectId: customerSubjectId } },
+    );
+    const journeyTypes = new Set(journeyEvents.map((row) => row.event_type));
+    for (const expected of ['order_placed', 'order_delivered']) {
+      if (!journeyTypes.has(expected)) {
+        throw new Error(`Evento de jornada ${expected} nao registrado para o cliente do pedido`);
+      }
+    }
+
+    // Notificações das transições: registro com idempotência por (pedido, status).
+    // O envio pode falhar por config de ambiente (ex.: WhatsApp ausente) — o que
+    // se exige aqui é o registro observável da tentativa, nunca silêncio.
+    const [notifications] = await sequelize.query(
+      `SELECT template_key, status, recipient_masked FROM notification_deliveries
+       WHERE tenant_key = :tenantId AND idempotency_key LIKE :pattern`,
+      { replacements: { tenantId: TEST_TENANT_ID, pattern: `order_status:${orderId}:%` } },
+    );
+    const notifiedTemplates = new Set(notifications.map((row) => row.template_key));
+    for (const expected of ['order_confirmed', 'order_delivered']) {
+      if (!notifiedTemplates.has(expected)) {
+        throw new Error(`Notificacao ${expected} nao registrada para o pedido`);
+      }
+    }
+    if (notifications.some((row) => !row.recipient_masked || !String(row.recipient_masked).includes('*'))) {
+      throw new Error('Notificacao de pedido sem recipient mascarado (privacidade)');
     }
 
     let invalidRejection = null;
@@ -1276,9 +1321,184 @@ async function runFlowScenario(definition, ctx) {
     }
 
     return {
-      detail: 'Pedido criado via storefront publico (com entrega e idempotencia), ciclo completo, transicao invalida rejeitada e incidente idempotente',
-      ids: { orderId, ticketId },
-      evidence: { finalStatus: 'delivered', invalidTransitionRejected: true, channel: 'storefront' },
+      detail: 'Pedido criado via storefront publico (cliente identificado, total calculado, jornada e notificacoes), ciclo completo, transicao invalida rejeitada e incidente idempotente',
+      ids: { orderId, ticketId, customerId },
+      evidence: {
+        finalStatus: 'delivered',
+        invalidTransitionRejected: true,
+        channel: 'storefront',
+        journeyEvents: [...journeyTypes],
+        notifiedTemplates: [...notifiedTemplates],
+      },
+    };
+  }
+
+  if (definition.code === 'FOOD-FLOW-ORDER-PAYMENT') {
+    await ensureDbConnection();
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const storefront = await createPublicToken({
+      tenantId: TEST_TENANT_ID,
+      kind: 'storefront',
+      meta: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (!storefront?.token) {
+      throw new Error('Token publico de storefront nao foi criado');
+    }
+
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const created = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      customerName: `Cliente QA Pagamento ${runId}`,
+      customerPhone: '+5511999997001',
+      vertical: 'food',
+      items: [
+        { name: 'Pizza QA', qty: 2, price: 35.5 },
+        { name: 'Refri QA', qty: 1, price: 8 },
+      ],
+      deliveryType: 'delivery',
+      idempotencyKey,
+    });
+    const orderId = created?.order?.id;
+    if (!orderId) {
+      throw new Error('Pedido food (pagamento) nao retornou ID via storefront');
+    }
+    if (Number(created?.order?.total_amount) !== 79) {
+      throw new Error(`Total calculado incorreto: ${created?.order?.total_amount} (esperado 79)`);
+    }
+
+    // Cobrança vinculada ao pedido.
+    const charge = await api.post(`/orders/${encodeURIComponent(orderId)}/charge`, {
+      idempotencyKey: `${idempotencyKey}:charge`,
+    });
+    const transactionId = charge?.transaction?.id;
+    const externalTransactionId = charge?.transaction?.external_transaction_id;
+    if (!transactionId || charge?.transaction?.status !== 'pending') {
+      throw new Error(`Cobranca nao criada como pending: ${JSON.stringify(charge?.transaction?.status)}`);
+    }
+    if (Number(charge?.transaction?.amount) !== 79) {
+      throw new Error(`Valor da cobranca divergente do pedido: ${charge?.transaction?.amount}`);
+    }
+    if (charge?.transaction?.metadata?.orderId !== orderId) {
+      throw new Error('Cobranca sem metadata.orderId — webhook nao conseguiria vincular ao pedido');
+    }
+    if (charge?.payment?.status !== 'pending' || charge?.payment?.transactionId !== transactionId) {
+      throw new Error('Pedido nao registrou payment pending vinculado a transacao');
+    }
+
+    // Retry de cobrança: mesma transação, sem duplicar.
+    const retryCharge = await api.post(`/orders/${encodeURIComponent(orderId)}/charge`, {
+      idempotencyKey: `${idempotencyKey}:charge`,
+    });
+    if (retryCharge?.idempotent !== true || retryCharge?.transaction?.id !== transactionId) {
+      throw new Error('Retry de cobranca nao foi idempotente');
+    }
+
+    // Pedido sem total não pode gerar cobrança (422 validation_error).
+    const noTotal = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      customerName: `Cliente QA Sem Total ${runId}`,
+      items: [{ name: 'Item sem preco QA', qty: 1 }],
+      deliveryType: 'pickup',
+      idempotencyKey: `${idempotencyKey}:sem-total`,
+    });
+    const noTotalOrderId = noTotal?.order?.id;
+    if (!noTotalOrderId) {
+      throw new Error('Pedido sem total nao retornou ID');
+    }
+    let chargeRejected = null;
+    try {
+      await api.post(`/orders/${encodeURIComponent(noTotalOrderId)}/charge`, {});
+    } catch (err) {
+      chargeRejected = err;
+    }
+    if (!chargeRejected || chargeRejected.status !== 422) {
+      throw new Error(`Cobranca de pedido sem total nao rejeitada com 422: ${chargeRejected?.status}`);
+    }
+
+    // Webhook do provedor confirma o pagamento → pedido payment.paid.
+    await api.post('/billing/webhook', {
+      provider: 'sandbox',
+      eventId: `${idempotencyKey}:webhook`,
+      payment: { id: externalTransactionId, status: 'CONFIRMED' },
+    });
+    const afterPayment = await api.get(`/orders/${encodeURIComponent(orderId)}`);
+    const payment = afterPayment?.order?.context?.payment;
+    if (payment?.status !== 'paid' || !payment?.paidAt) {
+      throw new Error(`Pagamento nao confirmado no pedido: ${JSON.stringify(payment)}`);
+    }
+
+    return {
+      detail: 'Pedido pago ponta a ponta: total calculado, cobranca vinculada e idempotente, pedido sem total rejeitado (422), webhook confirmou payment.paid',
+      ids: { orderId, transactionId },
+      evidence: {
+        totalAmount: 79,
+        paymentStatus: payment.status,
+        idempotentRetry: true,
+        noTotalRejected: true,
+        provider: 'sandbox',
+      },
+    };
+  }
+
+  if (definition.code === 'MARKET-FLOW-ORDER-CUSTOMER') {
+    await ensureDbConnection();
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const storefront = await createPublicToken({
+      tenantId: TEST_TENANT_ID,
+      kind: 'storefront',
+      meta: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (!storefront?.token) {
+      throw new Error('Token publico de storefront nao foi criado');
+    }
+
+    const phone = '+5511999997002';
+    const basePayload = {
+      customerName: `Cliente QA Market ${runId}`,
+      customerPhone: phone,
+      vertical: 'market',
+      items: [{ name: 'Cesta QA Market', qty: 1, price: 59.9 }],
+      deliveryType: 'pickup',
+    };
+
+    const first = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      ...basePayload,
+      idempotencyKey: `business-qa:${definition.code}:${runId}:1`,
+    });
+    const firstOrderId = first?.order?.id;
+    if (!firstOrderId) {
+      throw new Error('Pedido market nao retornou ID via storefront');
+    }
+    if (first?.order?.context?.vertical !== 'market') {
+      throw new Error(`Vertical market nao persistida: ${first?.order?.context?.vertical}`);
+    }
+    const customerId = first?.order?.context?.customerId;
+    const customerSubjectId = first?.order?.context?.customerSubjectId;
+    if (!customerId || !customerSubjectId) {
+      throw new Error('Pedido market nao vinculou cliente');
+    }
+
+    // CustomerId determinístico: segundo pedido do mesmo telefone reutiliza o cliente.
+    const second = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      ...basePayload,
+      idempotencyKey: `business-qa:${definition.code}:${runId}:2`,
+    });
+    if (second?.order?.context?.customerId !== customerId) {
+      throw new Error('Segundo pedido do mesmo telefone gerou customerId diferente');
+    }
+
+    const sequelize = require('../../../api/db/sequelize').getSequelize();
+    const [journeyEvents] = await sequelize.query(
+      `SELECT event_type, vertical FROM vertical_journey_events
+       WHERE tenant_key = :tenantId AND subject_id = :subjectId AND event_type = 'order_placed'`,
+      { replacements: { tenantId: TEST_TENANT_ID, subjectId: customerSubjectId } },
+    );
+    if (!journeyEvents.some((row) => row.vertical === 'market')) {
+      throw new Error('Jornada market nao registrou order_placed para o cliente do pedido');
+    }
+
+    return {
+      detail: 'Pedido market com vertical propria, cliente identificado (customerId deterministico) e jornada market alimentada',
+      ids: { orderId: firstOrderId, customerId },
+      evidence: { vertical: 'market', deterministicCustomerId: true, journeyEvent: 'order_placed' },
     };
   }
 

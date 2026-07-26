@@ -79,6 +79,7 @@ async function handleStorefrontRoutes(ctx) {
       const rawAttribution = body && typeof body.attribution === 'object' && body.attribution ? body.attribution : null;
 
       const { createOrder } = require('../../services/orderService');
+      const vertical = body && body.vertical ? String(body.vertical).trim() : null;
       const order = await createOrder({
         tenantId: resolved.tenantId,
         source: 'storefront',
@@ -89,6 +90,8 @@ async function handleStorefrontRoutes(ctx) {
         notes,
         deliveryType,
         deliveryAddress,
+        // só repassa vertical quando o canal a informa — ausente, o serviço aplica seu default
+        ...(vertical ? { vertical } : {}),
         context: { publicTokenId: resolved.tokenId, idempotencyKey: idempotencyKey || null, ...(rawAttribution ? { marketingAttribution: rawAttribution } : {}) },
       });
 

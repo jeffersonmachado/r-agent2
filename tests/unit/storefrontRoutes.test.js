@@ -170,6 +170,42 @@ describe('storefrontRoutes handler', () => {
     });
   });
 
+  test('POST /storefront/orders repassa vertical somente quando informada', async () => {
+    const resolvePublicToken = jest.fn(async () => ({ ok: true, tokenId: 'pt-2', tenantId: 'tenant-1', locationId: null }));
+    const createOrder = jest.fn(async () => ({ id: 'ord-9', context: {} }));
+
+    jest.doMock('../../api/services/publicAccessTokenService', () => ({ resolvePublicToken }));
+    jest.doMock('../../api/services/orderService', () => ({ createOrder }));
+    const { handleStorefrontRoutes } = require('../../api/modules/platform-public/handleStorefrontRoutes');
+
+    const res = { setHeader: jest.fn() };
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({
+        customerName: 'Maria',
+        items: [{ name: 'Cesta', qty: 1, price: 59.9 }],
+        deliveryType: 'pickup',
+        vertical: 'market',
+      })),
+    });
+
+    const req = makeReq({ url: '/storefront/orders?token=abc' });
+    await handleStorefrontRoutes({ req, res, method: 'POST', pathname: '/storefront/orders', deps });
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({ vertical: 'market' }));
+
+    // sem vertical no body: parâmetro omitido (default do serviço prevalece)
+    createOrder.mockClear();
+    deps.parseJsonBody = jest.fn(async () => ({
+      customerName: 'Maria',
+      items: [{ name: 'Cesta', qty: 1, price: 59.9 }],
+      deliveryType: 'pickup',
+    }));
+    await handleStorefrontRoutes({ req, res, method: 'POST', pathname: '/storefront/orders', deps });
+
+    const callArgs = createOrder.mock.calls[0][0];
+    expect(Object.prototype.hasOwnProperty.call(callArgs, 'vertical')).toBe(false);
+  });
+
   test('POST /storefront/orders mapeia order_items_required para 400', async () => {
     const resolvePublicToken = jest.fn(async () => ({ ok: true, tokenId: 'pt-2', tenantId: 'tenant-1', locationId: 'loc-1' }));
     const createOrder = jest.fn(async () => {

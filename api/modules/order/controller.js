@@ -118,6 +118,44 @@ function createOrderController({ service, deps }) {
       }
     },
 
+    async createCharge(req, res) {
+      if (!ensureTicketPermission(req, res, 'update')) return;
+      if (!deps.hasJsonContentType(req)) {
+        deps.badRequest(res, 'Content-Type deve ser application/json');
+        return;
+      }
+      try {
+        const orderId = decodeURIComponent(String(req.params.orderId));
+        const body = await deps.parseJsonBody(req);
+        const result = await service.createOrderCharge({
+          tenantId: req.tenantId,
+          orderId,
+          amount: body && body.amount != null ? body.amount : null,
+          currency: body && body.currency ? String(body.currency) : 'BRL',
+          provider: body && body.provider ? String(body.provider) : 'sandbox',
+          idempotencyKey: body && body.idempotencyKey ? String(body.idempotencyKey) : null,
+        });
+        deps.sendJson(res, result.idempotent ? 200 : 201, {
+          ok: true,
+          idempotent: result.idempotent,
+          transaction: result.transaction,
+          payment: result.payment,
+        });
+      } catch (err) {
+        const code = err && err.code ? String(err.code) : null;
+        if (code === 'order_not_found') {
+          deps.sendJson(res, 404, { error: 'order_not_found', message: 'Pedido não encontrado' });
+          return;
+        }
+        if (code === 'validation_error') {
+          deps.sendJson(res, 422, { error: 'validation_error', message: err.message });
+          return;
+        }
+        deps.logger.error('[Orders] Erro ao criar cobrança do pedido:', err);
+        deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao criar cobrança do pedido' });
+      }
+    },
+
     async createIncident(req, res) {
       if (!ensureTicketPermission(req, res, 'update')) return;
       if (!deps.hasJsonContentType(req)) {
