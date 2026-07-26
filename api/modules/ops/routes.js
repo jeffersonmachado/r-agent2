@@ -1,14 +1,27 @@
 'use strict';
 
 const express = require('express');
+const { checkClassification } = require('../../middleware/requireClassification');
 
 function createOpsRoutes({ buildDeps }) {
   const router = express.Router();
 
+  // /api/ops/* é observabilidade interna de engenharia: além de auth +
+  // permissão, exige classificação DEVELOPMENT (política de segregação —
+  // ferramentas internas de observabilidade não são superfície operacional).
   function requirePermissionGuard(req, res, deps, resource, action) {
     const authResult = deps.requireAuth(req);
     if (!authResult.valid) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return false;
+    }
+    const check = checkClassification(req, 'DEVELOPMENT');
+    if (!check.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'classification_required',
+        required: check.required,
+        classification: check.classification,
+      });
       return false;
     }
     const permResult = deps.requirePermission(req, resource, action);

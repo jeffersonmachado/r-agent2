@@ -1,17 +1,34 @@
 'use strict';
 
 const express = require('express');
+const { checkClassification } = require('../../middleware/requireClassification');
 
 function createQaRoutes({ buildDeps }) {
   const router = express.Router();
 
-  router.get('/qa/latest', (req, res) => {
-    const deps = buildDeps(req, res);
+  // Resultados e execução de QA são ferramentas de engenharia: exigem
+  // autenticação + classificação DEVELOPMENT (política de segregação).
+  function ensureEngineeringAccess(deps, req, res) {
     const authResult = deps.requireAuth(req);
     if (!authResult.valid) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
+      return null;
     }
+    const check = checkClassification(req, 'DEVELOPMENT');
+    if (!check.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'classification_required',
+        required: check.required,
+        classification: check.classification,
+      });
+      return null;
+    }
+    return authResult;
+  }
+
+  router.get('/qa/latest', (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureEngineeringAccess(deps, req, res)) return;
 
     try {
       const result = deps.getLatestQaResult();
@@ -28,11 +45,7 @@ function createQaRoutes({ buildDeps }) {
 
   router.get('/qa/history', (req, res) => {
     const deps = buildDeps(req, res);
-    const authResult = deps.requireAuth(req);
-    if (!authResult.valid) {
-      deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
+    if (!ensureEngineeringAccess(deps, req, res)) return;
 
     try {
       const url = new URL(req.originalUrl || req.url || '/', 'http://localhost');
@@ -48,11 +61,7 @@ function createQaRoutes({ buildDeps }) {
 
   router.get('/qa/stats', (req, res) => {
     const deps = buildDeps(req, res);
-    const authResult = deps.requireAuth(req);
-    if (!authResult.valid) {
-      deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
+    if (!ensureEngineeringAccess(deps, req, res)) return;
 
     try {
       deps.sendJson(res, 200, deps.getQaStatistics());
@@ -65,17 +74,14 @@ function createQaRoutes({ buildDeps }) {
   router.get('/qa/:id', (req, res, next) => {
     const deps = buildDeps(req, res);
     // 'stability' e 'checkpoints' são rotas do módulo qa-mesh (mesmo prefixo /qa,
-    // 1 segmento); sem o next() o /qa/:id as captura e devolve 404 indevido.
-    if (['latest', 'history', 'stats', 'stability', 'checkpoints'].includes(req.params.id)) {
+    // 1 segmento) e 'operational-status' é do operationalStatusRouter; sem o
+    // next() o /qa/:id as captura e devolve 404 indevido.
+    if (['latest', 'history', 'stats', 'stability', 'checkpoints', 'operational-status'].includes(req.params.id)) {
       next();
       return;
     }
 
-    const authResult = deps.requireAuth(req);
-    if (!authResult.valid) {
-      deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
+    if (!ensureEngineeringAccess(deps, req, res)) return;
 
     try {
       const id = req.params.id;
@@ -97,11 +103,7 @@ function createQaRoutes({ buildDeps }) {
 
   router.post('/qa/run', async (req, res) => {
     const deps = buildDeps(req, res);
-    const authResult = deps.requireAuth(req);
-    if (!authResult.valid) {
-      deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return;
-    }
+    if (!ensureEngineeringAccess(deps, req, res)) return;
 
     const permResult = deps.requirePermission(req, 'qa', 'execute');
     if (!permResult.allowed) {

@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const { checkClassification } = require('../../middleware/requireClassification');
 
 function createTestExecutionsRoutes({ buildDeps }) {
   const router = express.Router();
@@ -14,10 +15,21 @@ function createTestExecutionsRoutes({ buildDeps }) {
     return 500;
   }
 
+  // Replay/recordings/execuções de QA são ferramentas de suporte e engenharia:
+  // exigem classificação SUPPORT ou superior (AGENTS.md: replay/RPA → SUPPORT).
   function ensureAuth(deps, req, res) {
     const auth = deps.requireAuth(req);
     if (!auth.valid) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return null;
+    }
+    const check = checkClassification(req, 'SUPPORT');
+    if (!check.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'classification_required',
+        required: check.required,
+        classification: check.classification,
+      });
       return null;
     }
     return auth;

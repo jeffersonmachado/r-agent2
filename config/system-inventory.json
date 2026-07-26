@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-26T23:07:24.923Z",
+  "generatedAt": "2026-07-26T23:33:57.571Z",
   "counts": {
-    "total": 2634,
+    "total": 2636,
     "byKind": {
-      "api": 673,
+      "api": 675,
       "field": 1492,
       "model": 155,
       "page": 150,
@@ -12,11 +12,11 @@
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2454,
-      "DEVELOPMENT": 107,
-      "SUPPORT": 73
+      "PRODUCTION": 2417,
+      "DEVELOPMENT": 129,
+      "SUPPORT": 90
     },
-    "orphaned": 487
+    "orphaned": 450
   },
   "items": [
     {
@@ -224,9 +224,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "15474bf45190397071848ef267b209e4531ed5a6b1397b12aee16e4250764af7"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "eefa3e8376ab186f7d6b00f08e12acf47e18c7d8cb8b381dd92f99e5c89c92f7"
     },
     {
       "id": "api:DELETE:/api/test-executions/replays/:filename",
@@ -239,9 +242,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "fedcb5097fbe8ee1f90d614625e1d6dc8599b6ee1658d56e23a33fc13bc8026e"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "70477489919b76ae5609aeabdbc296453c741d49f2a49d9c93344e8e271e2238"
     },
     {
       "id": "api:DELETE:/api/voice/runtime/session/:callId",
@@ -2242,9 +2248,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "26110af654cb929aa4117ae507a15524061cf1a7f5c6d5016dcb6bd8910620c7"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "79d83b178cdfbbcff24e14bb11c7a0122fc437a0c54d8ec972308ac6ef50d752"
     },
     {
       "id": "api:GET:/api/ops/billing/health",
@@ -2258,9 +2267,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "9a1b12c6f049ef7fc8ec10ec06dec9b22dd2b6c5d92530e624bc0b3aabb441d6"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "dacd8add6b5d0db086d612112bcc294169300dc4ed75ed55aaae0082a27b2437"
     },
     {
       "id": "api:GET:/api/ops/billing/metrics",
@@ -2274,9 +2286,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "2c8f50b0ed023948d16f1d7349bd16f83c1f4cfa1d02242984d369056928ee49"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "f80da0d0a84cbb4bdd389419474679650692cc39693edcd64cf42654aaed00ca"
     },
     {
       "id": "api:GET:/api/ops/event-ledger/metrics",
@@ -2290,9 +2305,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "c67751226359d47a0b7a2f4f69762fb12610c0399b91f4a8ba37079a30a7be8c"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "757e3156d0aa278dae318a2d2f4509ab7340d7b035b647f31caa9261af1f576b"
     },
     {
       "id": "api:GET:/api/ops/execution-jobs/dead",
@@ -2306,9 +2324,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "5c1fc6439de409b9b606cc5b8c7b238b47b81cb32f6aa4f7f2d8ebc6dc02708b"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "48f581da68a7a1d796df7f03f3e4b43be64b2899ddb86330b372def974e56841"
     },
     {
       "id": "api:GET:/api/ops/execution-jobs/metrics",
@@ -2322,9 +2343,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "a6e5a92e95c724a12daf475fcd5b759a3ec998aea7180096d51ff83e69dcb57a"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "a0536c7eba948567e6480196a53d2972e74bf410d18c848f0476ead9e22d33b0"
     },
     {
       "id": "api:GET:/api/ops/execution-jobs/metrics-by-kind",
@@ -2338,9 +2362,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "c17ed3a799e82c83538a2bba0f12fb22e75478f1377b4d9223cd68701d56a8c6"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "3b2d93d00fc938f16f5f33bfff113b182570ef6a30ec394dec713fa9c9f36c06"
     },
     {
       "id": "api:GET:/api/ops/execution-queue/metrics",
@@ -2354,9 +2381,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "f6c7445238c441928d102db1b4823a98b3f163ae3350091bb5df3cb524b8c670"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "ad602b8dc20c7305c8e751ef08d4d1b80cfa3d45f102bae7d33af1a994ea8636"
     },
     {
       "id": "api:GET:/api/ops/flow-executions/metrics",
@@ -2370,9 +2400,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "3f765005aad1ef4fc344b6d1ea7aa7a98821f8e57e9ef362c37bb82c75051650"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "80aa2f3bf7a9b9b7444f58699ab5b0955c94456aae6d5bbf4478d5532bde1bb1"
     },
     {
       "id": "api:GET:/api/ops/notifications/history",
@@ -2386,9 +2419,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:analytics:read"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "793acd4a1b229bcfc666befe036609eef9602dcf84ccccd19a60529115fa9656"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "52864d46f9a4a0f5f963726d04dccfe311baca2bcd7403b78fd3db9b6ed827c5"
     },
     {
       "id": "api:GET:/api/orders/metrics",
@@ -3584,9 +3620,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "b9596bc4f28d6eebfb8efe353320000ae05455b4355fd7223c3e383fd236c815"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "b49daab425aeff06d2fed1a1fcea201e042ba31349b8b610b16099980bf47f82"
     },
     {
       "id": "api:GET:/api/test-executions/:executionId/artifacts",
@@ -3599,9 +3638,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "66031028f4770c9c7f28c18b68e135df4bf23a1888fd90278da95bf842550430"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "b994db39b6a4b52183275150308a13673339365db7c79f91185197a26e511987"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/journey-status",
@@ -3614,9 +3656,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "0aee21bb3bf38fa87f6eebfa93be2f0dd14196faf6851dfc7f8c8c25dd5c9a9a"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "f845b46d40fae211cda6ea2ddb103f2b314fa1b82ec57e31b802fcfbab20278e"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/journeys",
@@ -3629,9 +3674,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "e691af0d6ee161475f1ac4fc79508f7087b5e810dae8570c2052cec25d1525b2"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "28c709c9adfc467d9c002cc08c3b5b42afcefe9336f9f004ba1c8d7a8e9ec561"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/scenarios",
@@ -3644,9 +3692,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "eb01049d38b90b55eaf4fb1915e9c535e25076ad0efb956cc76616428e2bf91d"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "dbc3d8b5d921ada42bc3f4463d62a9ba3bbc19310c5591e63eee746eb1d01c0c"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/step-status",
@@ -3659,9 +3710,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "db970599680a23b866119dfe5eeef35b6e7cc55c1390ce7185d75c1142958037"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "e05bb5c5f5c3c0416f0a3e2c9b0f47e74ab094c7427192f32ab6da4134b7f3b0"
     },
     {
       "id": "api:GET:/api/test-executions/recordings",
@@ -3674,9 +3728,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "710a0bb63eb073c02773c0daccb62ef86ecab478366685799a420d70a7dcf0f9"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "c1b249d20041b47bc5d66d098a84aa84b55a8babff909dc065052848a69d387e"
     },
     {
       "id": "api:GET:/api/test-executions/recordings/:recordingId/status",
@@ -3689,9 +3746,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "2eb44d50ebdac26bae5070f646c099b8b699f804473828a68080a7f1d1005da9"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "2192ca27c7949b38aea42263cfed9505c64e561dc6b777eec0e7d1a056d82cd0"
     },
     {
       "id": "api:GET:/api/test-executions/replays",
@@ -3704,9 +3764,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "f4a29282c2ac91ba516b354f4b53c2a5b627895952a6e2fe47f94b37205d6b4f"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "9aa3644762d81a1d63dcc0985ca65559bcaa4b64102af619b068907d2e6d135f"
     },
     {
       "id": "api:GET:/api/test-executions/replays/:filename",
@@ -3719,9 +3782,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "94c6ade86ff46dd07a511beb4c381f68b7e752f3ea1740430370d599a50c282e"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "8058cf144875899539466c29a8b167db62895e8c0b35c7c2f152595bf641cdbf"
     },
     {
       "id": "api:GET:/api/test-executions/reports/:filename",
@@ -3734,9 +3800,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "c9b734a82c13221d4e9a37ccdac57759a8c99497e3ba81a756f9b6bbc89ac4c7"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "e4d8c84167f3eb237463926e8e8d4f6930ec28e4a71e631a675cdc07f7244bb1"
     },
     {
       "id": "api:GET:/api/users/search",
@@ -4702,11 +4771,14 @@
       "source": "api/modules/qa/routes.js",
       "authRequired": true,
       "authorization": [
-        "requireAuth"
+        "ensureEngineeringAccess"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "ef08e9fb343ad3157b5dc32c87298035f587d1250ac52b5e60de2f2cf1ab98d1"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "6efa76837a8f8e249442d85a70f7279883a552da88f05128ed4e9aba205ebf15"
     },
     {
       "id": "api:GET:/qa/checkpoints",
@@ -4753,11 +4825,14 @@
       "source": "api/modules/qa/routes.js",
       "authRequired": true,
       "authorization": [
-        "requireAuth"
+        "ensureEngineeringAccess"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "644601cb716cdf8f917b2129b00d432616a2906751e54af98bb36e3bc31b3548"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "b0939cd7b9d0b1f24d4ff42331c1982252f04181c0bd323666e480d7a367236f"
     },
     {
       "id": "api:GET:/qa/latest",
@@ -4768,11 +4843,14 @@
       "source": "api/modules/qa/routes.js",
       "authRequired": true,
       "authorization": [
-        "requireAuth"
+        "ensureEngineeringAccess"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "b64bb2637d88468b15e5faf30dfa6623af09ecb2f69507ed9f4096a406376111"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "c843eae80279c15dde34271b20587e0158bb310201985905a831515190e85a6a"
     },
     {
       "id": "api:GET:/qa/learn/failures",
@@ -4873,9 +4951,30 @@
       "source": "api/routes/operationalStatusRoutes.js",
       "authRequired": false,
       "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "cfaea6dc0b47cf5c534aa91f5df30c3295770fc96797f2c5345eedee2f64ecc8"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "fd5f71dc5c1cfef20de7860a9b7d7ec35c6e1738cecf1331d86b98d495f690c8"
+    },
+    {
+      "id": "api:GET:/qa/rota",
+      "kind": "api",
+      "method": "GET",
+      "path": "/qa/rota",
+      "module": "operationalStatus",
+      "source": "api/middleware/requireClassification.js",
+      "authRequired": false,
+      "authorization": [
+        "requireClassification"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "6bc5e57f40714b0a5369b151ff59d14f73dedafa9cdd62f7295facd3cc4227c8"
     },
     {
       "id": "api:GET:/qa/stability",
@@ -4940,11 +5039,14 @@
       "source": "api/modules/qa/routes.js",
       "authRequired": true,
       "authorization": [
-        "requireAuth"
+        "ensureEngineeringAccess"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "61509610c32eaff9521a3f0962f0191c893b7ed324697d904b849e010e071701"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "ab7890c427d7f79b531a96a4cd24de60114ec0a8477416bceba8cb7973f316bc"
     },
     {
       "id": "api:GET:/queues",
@@ -5112,7 +5214,7 @@
       "kind": "api",
       "method": "GET",
       "path": "/rota",
-      "module": "qa-waves",
+      "module": "qa",
       "source": "api/middleware/requireClassification.js",
       "authRequired": false,
       "authorization": [
@@ -5123,7 +5225,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "b82432c2002722eb65b1fc5771bd3762ae76e559dbe28a66a94496d5cc6446ce"
+      "fingerprint": "cf08757308d58c25c1595ef371fb516f4817b94b7022061bcd02091c8c99cb2b"
     },
     {
       "id": "api:GET:/rpa/recordings",
@@ -7495,9 +7597,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:config:update"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "e1940c72cc0aeff5307df7ea16258ce3e0c28001a0a5f41055b3df3e5804585f"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "c4643a4d82693fe1793eee002c85cff76a18bae8e3da456e0a2c4e14f45ea061"
     },
     {
       "id": "api:POST:/api/ops/notifications/reprocess",
@@ -7511,9 +7616,12 @@
         "requirePermissionGuard",
         "requirePermissionGuard:config:update"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "85673794b99f290c4e420ab466eb0a6e89dca0e4d5a46579971ec6d6f1385c1b"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "084157182c2e7973d2f1f577b7ec2b9b2072edc3c2efa1fed468a312fe7a87c0"
     },
     {
       "id": "api:POST:/api/pbx-legacy/ramais",
@@ -8724,9 +8832,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "b816be80720730404068822e4c0a125c3cde997a0e1f11d2d6473de37c3518fa"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "c5931c00bac165c7563cc802f88def58951d865d5ccdf76caaaa4cfb4f3cf760"
     },
     {
       "id": "api:POST:/api/test-executions/:executionId/cancel",
@@ -8739,9 +8850,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "efe3a25e88bf3c9701e652feffe81e79dfb6943820a29649e48d2b757feb7a55"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "1cc33581a607a00953435885c2c2a9884aba67f71dd582736cee9a4b1001bc07"
     },
     {
       "id": "api:POST:/api/test-executions/recordings/:recordingId/stop",
@@ -8754,9 +8868,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "6bb23c81d5a53a4372839e3ac9b2decc21db7135d882a3f815388e268f86c491"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "495833ad84b394fc0fb3756dd2d5c70d8bb997de841494cba38e16a7920d1b15"
     },
     {
       "id": "api:POST:/api/test-executions/recordings/start",
@@ -8769,9 +8886,12 @@
       "authorization": [
         "ensureAuth"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "87dace2f9c7da8995185d096f1f938188487969418bd5703f6a205a553b5733a"
+      "classification": "SUPPORT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "31cd90850239405cb33a4759e79bc8c1c33a17c0f5c8918529312982e0730338"
     },
     {
       "id": "api:POST:/api/vertical-templates",
@@ -9988,9 +10108,12 @@
       "source": "api/routes/operationalStatusRoutes.js",
       "authRequired": false,
       "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "4dd49d714f4d86009aecf26e26c163eb4f353f384aa6f2cda1ee7996fe065801"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "ee37b43745e1a7fc243661c4088baad4c6b19fbbc2f1d381f6dfcdc4daef5735"
     },
     {
       "id": "api:POST:/qa/operational-status/update-governance",
@@ -10001,9 +10124,12 @@
       "source": "api/routes/operationalStatusRoutes.js",
       "authRequired": false,
       "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "ece5dbec58357f0d9c255526367b544b041c93f268444e909705a40222f374f0"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "cd1f027f64cd98828d85735441287aafd5f6763a0b4cf1e79cf4e387655655b3"
     },
     {
       "id": "api:POST:/qa/run",
@@ -10014,12 +10140,34 @@
       "source": "api/modules/qa/routes.js",
       "authRequired": true,
       "authorization": [
-        "requireAuth",
+        "ensureEngineeringAccess",
         "requirePermission:qa:execute"
       ],
-      "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "d88f650f3e96442ac7afbe46c9748934816c8c5daf926805a134fc1fd702f91e"
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "f5657b644ded19568f0e8bb9546e5a9284b72bae27b172a6d6c01b4f9900af99"
+    },
+    {
+      "id": "api:POST:/qa/tickets",
+      "kind": "api",
+      "method": "POST",
+      "path": "/qa/tickets",
+      "module": "operationalStatus",
+      "source": "api/middleware/auth.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:tickets:create"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "6816d3729d8fe1db74a5c7d0b7719c8838a9de3c8403b296c7b7b98b64cb61ae"
     },
     {
       "id": "api:POST:/queues",

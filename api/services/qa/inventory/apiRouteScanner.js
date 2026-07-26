@@ -27,8 +27,10 @@
  *    `checkPermission` que internamente chamam requireAuth/requirePermission).
  *
  * Classification (regra documentada):
- *   - módulo qa-waves|qa-mesh|rpa-tests|dev|engineering|seeds → DEVELOPMENT
- *   - módulo support|diagnostics|audit|execution-ledger       → SUPPORT
+ *   - módulo qa-waves|qa-mesh|rpa-tests|qa|operationalStatus|ops
+ *     ou token dev|engineering|seeds                          → DEVELOPMENT
+ *   - módulo execution-ledger|test-executions
+ *     ou token support|diagnostics|audit                      → SUPPORT
  *   - demais                                                  → PRODUCTION
  *
  * Limitações conhecidas: rotas registradas dinamicamente (path não literal)
@@ -57,8 +59,9 @@ const AUTHORIZATION_MIDDLEWARE_NAMES = new Set([
   'requireSuperAdmin',
 ]);
 
-const DEVELOPMENT_MODULES = new Set(['qa-waves', 'qa-mesh', 'rpa-tests']);
+const DEVELOPMENT_MODULES = new Set(['qa-waves', 'qa-mesh', 'rpa-tests', 'qa', 'operationalStatus', 'ops']);
 const DEVELOPMENT_MODULE_TOKENS = new Set(['dev', 'engineering', 'seeds']);
+const SUPPORT_MODULES = new Set(['execution-ledger', 'test-executions']);
 const SUPPORT_MODULE_TOKENS = new Set(['support', 'diagnostics', 'audit']);
 
 function classifyModule(moduleName) {
@@ -67,7 +70,7 @@ function classifyModule(moduleName) {
   if (DEVELOPMENT_MODULES.has(name) || tokens.some((t) => DEVELOPMENT_MODULE_TOKENS.has(t))) {
     return 'DEVELOPMENT';
   }
-  if (name === 'execution-ledger' || tokens.some((t) => SUPPORT_MODULE_TOKENS.has(t))) {
+  if (SUPPORT_MODULES.has(name) || tokens.some((t) => SUPPORT_MODULE_TOKENS.has(t))) {
     return 'SUPPORT';
   }
   return 'PRODUCTION';

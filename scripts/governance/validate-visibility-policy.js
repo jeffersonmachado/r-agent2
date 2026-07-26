@@ -38,6 +38,10 @@ const SUPER_ADMIN_ONLY = ['super_admin'];
 const API_SURFACES = [
   { label: 'api/modules/qa-waves/routes.js', files: ['api/modules/qa-waves/routes.js'] },
   { label: 'api/modules/qa-mesh/routes.js', files: ['api/modules/qa-mesh/routes.js'] },
+  { label: 'api/modules/qa/routes.js', files: ['api/modules/qa/routes.js'] },
+  { label: 'api/routes/operationalStatusRoutes.js', files: ['api/routes/operationalStatusRoutes.js'] },
+  { label: 'api/modules/ops/routes.js', files: ['api/modules/ops/routes.js'] },
+  { label: 'api/modules/test-executions/routes.js', files: ['api/modules/test-executions/routes.js'] },
   {
     label: 'api/modules/rpa-tests',
     files: [

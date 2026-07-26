@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 19 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 22 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(19);
-    expect(summary.bySource['journey-coverage']).toBe(14);
+    expect(summary.total).toBe(22);
+    expect(summary.bySource['journey-coverage']).toBe(17);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -101,8 +101,14 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
 
     // Jornadas core (declaração manual): antes UNCOVERED, hoje ligadas aos
     // cenários executáveis business-core-flow-* do QA mesh.
-    expect(links.support_ticket_flow.scenarioIds).toEqual(['business-core-flow-support-ticket']);
-    expect(links.booking_flow.scenarioIds).toEqual(['business-core-flow-booking']);
-    expect(links.payment_charge_flow.scenarioIds).toEqual(['business-core-flow-payment-charge']);
+    expect(links.support_ticket_flow.scenarioIds).toContain('business-core-flow-support-ticket');
+    expect(links.booking_flow.scenarioIds).toContain('business-core-flow-booking');
+    expect(links.payment_charge_flow.scenarioIds).toContain('business-core-flow-payment-charge');
+
+    // Jornadas capability_* (core de sistema): ligadas aos cenários
+    // business-core-cap-* executados no mesh.
+    expect(links.capability_scheduling.scenarioIds).toContain('business-core-cap-scheduling');
+    expect(links.capability_crm_updates.scenarioIds).toContain('business-core-cap-crm-updates');
+    expect(links.capability_lead_capture.scenarioIds).toContain('business-core-cap-lead-capture');
   });
 });

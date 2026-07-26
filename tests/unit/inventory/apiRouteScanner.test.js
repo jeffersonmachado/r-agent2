@@ -121,4 +121,14 @@ describe('apiRouteScanner', () => {
     expect(classifyModule('execution-ledger')).toBe('SUPPORT');
     expect(classifyModule('crm')).toBe('PRODUCTION');
   });
+
+  it('classifica superfícies internas de engenharia/suporte verificadas na política', () => {
+    // QA operacional e status do gate: ferramentas de engenharia → DEVELOPMENT.
+    expect(classifyModule('qa')).toBe('DEVELOPMENT');
+    expect(classifyModule('operationalStatus')).toBe('DEVELOPMENT');
+    // Observabilidade interna (/api/ops/*) → DEVELOPMENT.
+    expect(classifyModule('ops')).toBe('DEVELOPMENT');
+    // Replay/execuções de teste unificados → SUPPORT (replay é SUPPORT ou superior).
+    expect(classifyModule('test-executions')).toBe('SUPPORT');
+  });
 });

@@ -15,7 +15,12 @@ function getRouteHandler(router, method, routePath) {
 describe('test-executions replay routes', () => {
   test('GET /api/test-executions/qa-waves/journeys retorna jornadas pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       listQaWaveJourneys: jest.fn(() => ({ domains: [{ id: 'fitness', journeys: [] }] })),
@@ -36,7 +41,12 @@ describe('test-executions replay routes', () => {
 
   test('GET /api/test-executions/qa-waves/journey-status retorna status agregado pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       listQaWaveJourneyStatus: jest.fn(() => ({ items: [{ journeyId: 'leads', status: 'OK' }] })),
@@ -57,7 +67,12 @@ describe('test-executions replay routes', () => {
 
   test('GET /api/test-executions/qa-waves/scenarios repassa filtros e retorna cenários pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       listQaWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1' }] })),
@@ -81,7 +96,12 @@ describe('test-executions replay routes', () => {
 
   test('GET /api/test-executions/qa-waves/step-status repassa filtros e retorna status de passos pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       listQaWaveStepStatus: jest.fn(() => ({ items: [{ journeyId: 'leads', totalScenarios: 3 }] })),
@@ -105,7 +125,12 @@ describe('test-executions replay routes', () => {
 
   test('GET /api/test-executions/replays repassa filtros para listReplayFiles e responde com pagination', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       listReplayFiles: jest.fn(() => ({
@@ -188,7 +213,12 @@ describe('test-executions replay routes', () => {
 
   test('DELETE /api/test-executions/replays/:filename remove replay pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       deleteReplayFile: jest.fn(() => ({
@@ -219,7 +249,12 @@ describe('test-executions replay routes', () => {
 
   test('DELETE /api/test-executions/replays remove todos os replays pelo endpoint unificado', async () => {
     const deps = {
-      requireAuth: jest.fn(() => ({ valid: true })),
+      // Stub espelha o requireAuth real: em sucesso popula req.agent
+      // (auditor → SUPPORT, mínimo exigido pelas rotas de replay).
+      requireAuth: jest.fn((req) => {
+        req.agent = { id: 'a1', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      }),
       sendJson: jest.fn(),
       logger: { error: jest.fn() },
       deleteAllReplayFiles: jest.fn(() => ({
