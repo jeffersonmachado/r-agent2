@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T22:06:21.440Z",
+  "generatedAt": "2026-07-26T23:14:28.267Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -480,6 +480,116 @@
       "scenarioCode": "CLINIC-SCR-01"
     },
     {
+      "id": "business-core-cap-crm-updates",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core capability crm_updates: conta, contato, oportunidade movida de estágio e atualização na timeline",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Conta e contato CRM criados",
+        "Oportunidade criada e movida de estágio (crm_updates)",
+        "Atualização registrada como atividade",
+        "Timeline do contato reflete a atualização"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "capability_crm_updates",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-CAP-CRM-UPDATES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-CAP-CRM-UPDATES"
+    },
+    {
+      "id": "business-core-cap-lead-capture",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core capability lead_capture: lead capturado com origem, persistido e visível na listagem",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Lead capturado com origem registrada",
+        "Lead persistido com estágio inicial (lead_capture)",
+        "Lead visível na listagem de leads"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "capability_lead_capture",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-CAP-LEAD-CAPTURE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-CAP-LEAD-CAPTURE"
+    },
+    {
+      "id": "business-core-cap-scheduling",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core capability scheduling: catálogo, agenda do recurso, bloco de calendário e ciclo do agendamento",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Catálogo de purposes disponível (scheduling)",
+        "Agendamento criado e visível no calendário do recurso",
+        "Bloco de calendário criado, refletido e removido",
+        "Agendamento confirmado e concluído"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "capability_scheduling",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-CAP-SCHEDULING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-CAP-SCHEDULING"
+    },
+    {
       "id": "business-core-flow-booking",
       "domain": "core",
       "type": "regression",
@@ -514,6 +624,80 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-FLOW-BOOKING"
+    },
+    {
+      "id": "business-core-flow-booking-reschedule",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agendamento remarcado, confirmado e concluído",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Agendamento criado com confirmação pendente",
+        "Remarcação persiste novo horário",
+        "Agendamento confirmado após remarcação",
+        "Agendamento concluído no horário remarcado"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "booking_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-BOOKING-RESCHEDULE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-BOOKING-RESCHEDULE"
+    },
+    {
+      "id": "business-core-flow-booking-terminal-states",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agendamento: no-show, recusa, ação inválida e agendamento inexistente",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "No-show registrado como estado terminal",
+        "Recusa cancela agendamento e marca confirmationStatus declined",
+        "Ação inválida rejeitada com 404 action_not_found",
+        "Agendamento inexistente rejeitado com 404 schedule_not_found"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "booking_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-BOOKING-TERMINAL-STATES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-BOOKING-TERMINAL-STATES"
     },
     {
       "id": "business-core-flow-payment-charge",
@@ -553,6 +737,80 @@
       "scenarioCode": "CORE-FLOW-PAYMENT-CHARGE"
     },
     {
+      "id": "business-core-flow-payment-idempotent",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core cobrança com idempotencyKey não duplica transação",
+      "steps": [
+        "Tenant autenticado",
+        "Billing sandbox habilitado"
+      ],
+      "assertions": [
+        "Cobrança criada com idempotencyKey",
+        "Retry com a mesma chave retorna a mesma transação",
+        "Listagem contém exatamente uma transação para a chave",
+        "Pagamento confirmado na transação única"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "payment_charge_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-PAYMENT-IDEMPOTENT"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-PAYMENT-IDEMPOTENT"
+    },
+    {
+      "id": "business-core-flow-payment-invalid",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core cobrança com valor inválido é rejeitada sem persistir transação",
+      "steps": [
+        "Tenant autenticado",
+        "Billing sandbox habilitado"
+      ],
+      "assertions": [
+        "Cobrança com amount inválido rejeitada com 422 validation_error",
+        "Nenhuma transação persistida para a chave inválida"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "payment_charge_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-PAYMENT-INVALID"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-PAYMENT-INVALID"
+    },
+    {
       "id": "business-core-flow-support-ticket",
       "domain": "core",
       "type": "regression",
@@ -589,6 +847,79 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-FLOW-SUPPORT-TICKET"
+    },
+    {
+      "id": "business-core-flow-support-ticket-lifecycle",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core ticket: takeover, pausa, retomada e encerramento com estados persistidos",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Takeover coloca ticket em modo humano com takeoverAt",
+        "Pausa registra motivo de pausa",
+        "Retomada mantém modo humano",
+        "Encerramento persiste status closed"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "support_ticket_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-SUPPORT-TICKET-LIFECYCLE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-SUPPORT-TICKET-LIFECYCLE"
+    },
+    {
+      "id": "business-core-flow-support-ticket-notfound",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core operações em ticket inexistente rejeitadas com 404 sem efeito colateral",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Takeover em ticket inexistente rejeitado",
+        "Mensagem em ticket inexistente rejeitada",
+        "Close em ticket inexistente rejeitado com 404 ticket_not_found"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "support_ticket_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-FLOW-SUPPORT-TICKET-NOTFOUND"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-FLOW-SUPPORT-TICKET-NOTFOUND"
     },
     {
       "id": "business-f1",
@@ -737,6 +1068,43 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "FIT-FLOW-CHECKIN"
+    },
+    {
+      "id": "business-fit-flow-lead-funnel",
+      "domain": "fitness",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Fitness funil de lead: captado, qualificado e convertido em cliente",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Lead captado com origem registrada",
+        "Lead qualificado (stage qualified)",
+        "Lead convertido em cliente (stage customer)",
+        "Funil persistido com atributos preservados"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "fitness",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "leads",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=FIT-FLOW-LEAD-FUNNEL"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "FIT-FLOW-LEAD-FUNNEL"
     },
     {
       "id": "business-fit-flow-student",
@@ -909,6 +1277,87 @@
       "scenarioCode": "FOOD-FLOW-ORDER"
     },
     {
+      "id": "business-food-flow-order-lifecycle",
+      "domain": "food",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Food pedido via storefront público com cliente identificado, ciclo completo notificado, transição inválida rejeitada e incidente idempotente",
+      "steps": [
+        "Módulo de pedidos ativo",
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Pedido criado via POST /storefront/orders com entrega associada e total calculado pelos itens",
+        "Cliente identificado (customerId) e registrado na jornada (order_placed/order_delivered)",
+        "Transições de status geram notificações ao cliente com idempotência",
+        "Retry público com mesma idempotencyKey não duplica pedido",
+        "Ciclo completo confirmed→preparing→ready→dispatched→delivered persistido",
+        "Transição inválida rejeitada com 400",
+        "Incidente registrado e retry idempotente"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "food",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "food_customer_journey",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=FOOD-FLOW-ORDER-LIFECYCLE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "FOOD-FLOW-ORDER-LIFECYCLE"
+    },
+    {
+      "id": "business-food-flow-order-payment",
+      "domain": "food",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Food pedido pago ponta a ponta: cobrança vinculada, idempotência e confirmação via webhook",
+      "steps": [
+        "Módulo de pedidos ativo",
+        "Sandbox billing habilitado",
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Pedido com itens precificados tem total calculado automaticamente",
+        "POST /orders/:id/charge cria cobrança com metadata.orderId e payment pending",
+        "Retry de cobrança é idempotente (mesma transação)",
+        "Pedido sem total rejeita cobrança com 422",
+        "Webhook sandbox CONFIRMED marca payment paid com paidAt"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "food",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "food_customer_journey",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=FOOD-FLOW-ORDER-PAYMENT"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "FOOD-FLOW-ORDER-PAYMENT"
+    },
+    {
       "id": "business-food-scr-01",
       "domain": "food",
       "type": "smoke",
@@ -976,6 +1425,43 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "MARKET-FLOW-NODE"
+    },
+    {
+      "id": "business-market-flow-order-customer",
+      "domain": "market",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Market pedido com vertical própria e cliente identificado na jornada market",
+      "steps": [
+        "Módulo de pedidos ativo",
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Pedido market via storefront registra context.vertical=market",
+        "Cliente identificado (customerId) e jornada market recebe order_placed",
+        "CustomerId determinístico: segundo pedido do mesmo telefone reutiliza o cliente"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "market",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "market_default_journey",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=MARKET-FLOW-ORDER-CUSTOMER"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "MARKET-FLOW-ORDER-CUSTOMER"
     },
     {
       "id": "business-market-scr-01",
@@ -2444,7 +2930,27 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-cap-crm-updates",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-cap-lead-capture",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-cap-scheduling",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-flow-booking",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-booking-reschedule",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-booking-terminal-states",
       "status": "passed"
     },
     {
@@ -2452,7 +2958,23 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-flow-payment-idempotent",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-payment-invalid",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-flow-support-ticket",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-support-ticket-lifecycle",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-flow-support-ticket-notfound",
       "status": "passed"
     },
     {
@@ -2469,6 +2991,10 @@
     },
     {
       "scenarioId": "business-fit-flow-checkin",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-fit-flow-lead-funnel",
       "status": "passed"
     },
     {
@@ -2492,11 +3018,23 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-food-flow-order-lifecycle",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-food-flow-order-payment",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-food-scr-01",
       "status": "passed"
     },
     {
       "scenarioId": "business-market-flow-node",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-market-flow-order-customer",
       "status": "passed"
     },
     {
