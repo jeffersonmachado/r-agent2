@@ -1660,12 +1660,54 @@ function writeSummary(baseDir, summary) {
   return target;
 }
 
+/**
+ * Extrai o timestamp real embutido no nome de um artefato de histórico/
+ * evidência do mesh. Dois esquemas coexistem em produção:
+ * - `meshq-<epochMs>-<rand>` (executionQueue)
+ * - `mesh-<ISO com hífens no horário>` (runMesh direto)
+ * Ordenar lexicograficamente coloca QUALQUER meshq- à frente de QUALQUER
+ * mesh- independentemente da data — a retenção já apagou execuções do dia
+ * preservando arquivos de dias atrás. Aqui a recência é a data real;
+ * nomes fora dos padrões caem no mtime (fallback do chamador).
+ */
+function meshArtifactTimestamp(name) {
+  const queued = /^meshq-(\d+)-/.exec(name);
+  if (queued) {
+    const epoch = Number(queued[1]);
+    if (Number.isFinite(epoch) && epoch > 0) return epoch;
+  }
+  const iso = /^mesh-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/.exec(name);
+  if (iso) {
+    const parsed = Date.parse(`${iso[1]}T${iso[2]}:${iso[3]}:${iso[4]}.${iso[5]}Z`);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+/**
+ * Lista entradas de um diretório (arquivos .json ou subdiretórios) ordenadas
+ * da MAIS RECENTE para a mais antiga pela data real (nome), com fallback
+ * para mtime quando o nome não carrega timestamp.
+ */
+function listEntriesNewestFirst(dir, { directories = false, jsonOnly = false } = {}) {
+  ensureDir(dir);
+  return fs.readdirSync(dir)
+    .filter((name) => {
+      if (jsonOnly && !name.endsWith('.json')) return false;
+      const isDir = fs.statSync(path.join(dir, name)).isDirectory();
+      return directories ? isDir : true;
+    })
+    .map((name) => {
+      const embedded = meshArtifactTimestamp(name);
+      const mtimeMs = fs.statSync(path.join(dir, name)).mtimeMs;
+      return { name, recency: embedded !== null ? embedded : mtimeMs };
+    })
+    .sort((a, b) => b.recency - a.recency)
+    .map((entry) => entry.name);
+}
+
 function pruneOldHistory() {
-  ensureDir(HISTORY_DIR);
-  const files = fs.readdirSync(HISTORY_DIR)
-    .filter((f) => f.endsWith('.json'))
-    .sort()
-    .reverse();
+  const files = listEntriesNewestFirst(HISTORY_DIR, { jsonOnly: true });
   if (files.length <= MAX_HISTORY_FILES) return;
   const toRemove = files.slice(MAX_HISTORY_FILES);
   for (const file of toRemove) {
@@ -1677,11 +1719,7 @@ function pruneOldHistory() {
 }
 
 function pruneOldEvidence() {
-  ensureDir(EVIDENCE_DIR);
-  const dirs = fs.readdirSync(EVIDENCE_DIR)
-    .filter((f) => fs.statSync(path.join(EVIDENCE_DIR, f)).isDirectory())
-    .sort()
-    .reverse();
+  const dirs = listEntriesNewestFirst(EVIDENCE_DIR, { directories: true });
   if (dirs.length <= MAX_EVIDENCE_DIRS) return;
   const toRemove = dirs.slice(MAX_EVIDENCE_DIRS);
   for (const dir of toRemove) {
@@ -1712,11 +1750,7 @@ function cleanStaleLocks() {
 
 function loadHistory(limit = MAX_HISTORY_FILES) {
   pruneOldHistory();
-  ensureDir(HISTORY_DIR);
-  return fs.readdirSync(HISTORY_DIR)
-    .filter((file) => file.endsWith('.json'))
-    .sort()
-    .reverse()
+  return listEntriesNewestFirst(HISTORY_DIR, { jsonOnly: true })
     .slice(0, Math.min(limit, MAX_HISTORY_FILES))
     .map((file) => normalizeExecutionRecord(safeReadJson(path.join(HISTORY_DIR, file), null)))
     .filter(Boolean);
