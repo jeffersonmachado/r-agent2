@@ -62,41 +62,66 @@ function getCapabilities(vertical, journey) {
   return vCaps[journey] || vCaps.base || [];
 }
 
-function computeConfidence(vertical, journey, requiredCaps) {
-  // Confidence based on: has scenario coverage, has replay support, has preconditions
-  const covDir = path.join(ROOT, 'qa-waves', 'journey-coverage');
-  const covFile = path.join(covDir, `${vertical}.json`);
-  let scenarioCount = 0;
-  let approvedCount = 0;
-
-  if (fs.existsSync(covFile)) {
-    const covData = readJson(covFile);
-    if (covData) {
-      for (const j of (covData.journeys || [])) {
-        if (j.journey === journey) {
-          scenarioCount = (j.scenarios || []).length;
-          break;
-        }
-      }
-    }
-  }
-
-  // Check scenario store for approved scenarios
-  const store = readJson(path.join(ROOT, 'qa', 'qa-waves', 'scenario-store.json'));
-  if (store) {
-    for (const s of (store.scenarios || [])) {
-      if (s.vertical === vertical && s.journey === journey && s.status === 'approved') {
-        approvedCount++;
-      }
-    }
-  }
-
-  // Confidence formula: base 0.5 + scenario coverage (up to 0.3) + required caps (up to 0.2)
+/**
+ * Fórmula canônica de confidence: base 0.5 + cobertura de cenários (até
+ * 0.3, saturando em 5 cenários) + capabilities requeridas (até 0.2,
+ * saturando em 6). Função pura — testável sem tocar o disco.
+ */
+function computeConfidenceFromCounts(scenarioCount, requiredCaps) {
   const scenarioScore = Math.min(scenarioCount / 5, 1) * 0.3;
   const capScore = Math.min(requiredCaps.length / 6, 1) * 0.2;
-  const baseConfidence = 0.5 + scenarioScore + capScore;
+  return Number(Math.min(1, 0.5 + scenarioScore + capScore).toFixed(2));
+}
 
-  return Number(Math.min(1, baseConfidence).toFixed(2));
+/**
+ * Recalcula a confidence de jornadas que JÁ possuem contrato, a partir do
+ * journey-coverage atual. Não destrutivo: preserva requiredCapabilities,
+ * missingCapabilities e qualquer campo declarado — apenas `confidence` é
+ * atualizada. Não cria contratos novos (responsabilidade do fluxo de
+ * geração de novas jornadas).
+ *
+ * @param {object} contracts mapa journeyId → contrato existente
+ * @param {object} coverageByJourney mapa journeyId → { vertical, scenarioCount }
+ * @returns {{ contracts: object, refreshed: string[] }}
+ */
+function refreshJourneyContracts(contracts, coverageByJourney) {
+  const refreshed = [];
+  const output = { ...contracts };
+
+  for (const [journeyId, coverage] of Object.entries(coverageByJourney || {})) {
+    const existing = output[journeyId];
+    if (!existing) continue;
+
+    output[journeyId] = {
+      ...existing,
+      confidence: computeConfidenceFromCounts(
+        coverage.scenarioCount,
+        existing.requiredCapabilities || [],
+      ),
+    };
+    refreshed.push(journeyId);
+  }
+
+  return { contracts: output, refreshed };
+}
+
+function countJourneyScenarios(vertical, journey) {
+  const covFile = path.join(ROOT, 'qa-waves', 'journey-coverage', `${vertical}.json`);
+  if (!fs.existsSync(covFile)) return 0;
+
+  const covData = readJson(covFile);
+  if (!covData) return 0;
+
+  for (const j of (covData.journeys || [])) {
+    if (j.journey === journey) {
+      return (j.scenarios || []).length;
+    }
+  }
+  return 0;
+}
+
+function computeConfidence(vertical, journey, requiredCaps) {
+  return computeConfidenceFromCounts(countJourneyScenarios(vertical, journey), requiredCaps);
 }
 
 function main() {
@@ -111,6 +136,8 @@ function main() {
     process.exit(1);
   }
 
+  const coverageByJourney = {};
+
   for (const file of fs.readdirSync(covDir)) {
     if (!file.endsWith('.json')) continue;
     const data = readJson(path.join(covDir, file));
@@ -119,6 +146,10 @@ function main() {
     const vertical = data.vertical || file.replace('.json', '');
     for (const journey of data.journeys) {
       const journeyId = journey.journey;
+      coverageByJourney[journeyId] = {
+        vertical,
+        scenarioCount: (journey.scenarios || []).length,
+      };
       if (newContracts[journeyId]) continue; // already exists
 
       const requiredCaps = getCapabilities(vertical, journeyId);
@@ -138,6 +169,18 @@ function main() {
     }
   }
 
+  // Jornadas com contrato existente: recalcula confidence a partir do
+  // journey-coverage atual (não destrutivo — preserva campos declarados).
+  const refresh = refreshJourneyContracts(newContracts, coverageByJourney);
+  for (const journeyId of refresh.refreshed) {
+    const before = newContracts[journeyId].confidence;
+    const after = refresh.contracts[journeyId].confidence;
+    if (before !== after) {
+      console.log(`🔄 ${journeyId}: confidence ${(before*100).toFixed(0)}% → ${(after*100).toFixed(0)}%`);
+    }
+  }
+  Object.assign(newContracts, refresh.contracts);
+
   // Generate the updated contracts file
   const output = {
     version: (existingContracts.version || 1) + 1,
@@ -155,4 +198,12 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main, VERTICAL_CAPABILITIES, getCapabilities, computeConfidence };
+module.exports = {
+  main,
+  VERTICAL_CAPABILITIES,
+  getCapabilities,
+  computeConfidence,
+  computeConfidenceFromCounts,
+  refreshJourneyContracts,
+  countJourneyScenarios,
+};

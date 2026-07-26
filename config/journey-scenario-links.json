@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-25T22:06:20.813Z",
+  "generatedAt": "2026-07-26T16:58:15.348Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -102,6 +102,41 @@
             {
               "scenarioId": "business-core-flow-booking",
               "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-booking-reschedule",
+              "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-booking-terminal-states",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "capability_crm_updates",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-cap-crm-updates",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "capability_lead_capture",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-cap-lead-capture",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "capability_scheduling",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-cap-scheduling",
+              "status": "active"
             }
           ]
         },
@@ -111,6 +146,14 @@
             {
               "scenarioId": "business-core-flow-payment-charge",
               "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-payment-idempotent",
+              "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-payment-invalid",
+              "status": "active"
             }
           ]
         },
@@ -119,6 +162,14 @@
           "scenarios": [
             {
               "scenarioId": "business-core-flow-support-ticket",
+              "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-support-ticket-lifecycle",
+              "status": "active"
+            },
+            {
+              "scenarioId": "business-core-flow-support-ticket-notfound",
               "status": "active"
             }
           ]
@@ -305,6 +356,10 @@
             {
               "scenarioId": "fitness-matricula-leads",
               "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-flow-lead-funnel",
+              "status": "approved"
             }
           ]
         },
@@ -348,6 +403,10 @@
           "scenarios": [
             {
               "scenarioId": "business-food-flow-order",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-food-flow-order-lifecycle",
               "status": "approved"
             }
           ]

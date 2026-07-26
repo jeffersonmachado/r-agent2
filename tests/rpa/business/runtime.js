@@ -1056,6 +1056,385 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-FLOW-PAYMENT-IDEMPOTENT') {
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const payload = {
+      type: 'one_time',
+      amount: 49.9,
+      currency: 'BRL',
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      provider: 'sandbox',
+      description: `Cobranca idempotente QA ${definition.code}`,
+      customerName: 'Cliente QA Core Idempotente',
+      customerEmail: `core-idem-${runId}@qa.example.com`,
+      idempotencyKey,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    };
+
+    const first = await api.post('/billing/create-charge', payload);
+    const second = await api.post('/billing/create-charge', payload);
+    const firstId = first?.transaction?.id;
+    const secondId = second?.transaction?.id;
+    if (!firstId || !secondId) {
+      throw new Error('Cobranca idempotente nao retornou transacao');
+    }
+    if (firstId !== secondId) {
+      throw new Error(`Idempotencia violada: mesma chave gerou ${firstId} e ${secondId}`);
+    }
+
+    const payments = await api.get('/billing/transactions?limit=100');
+    const matches = (payments?.items || []).filter((item) => item.idempotency_key === idempotencyKey);
+    if (matches.length !== 1) {
+      throw new Error(`Listagem deveria ter exatamente 1 transacao para a chave, encontrou ${matches.length}`);
+    }
+
+    await confirmTransaction(api, first.transaction);
+    const confirmed = await api.get('/billing/transactions?limit=100');
+    const tx = (confirmed?.items || []).find((item) => item.id === firstId);
+    if (!tx || tx.status !== 'confirmed') {
+      throw new Error('Transacao unica nao ficou confirmada apos webhook');
+    }
+
+    return {
+      detail: 'Retry com mesma idempotencyKey nao duplicou transacao; pagamento confirmado',
+      ids: { transactionId: firstId },
+      evidence: { idempotencyKey, finalStatus: tx.status },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-PAYMENT-INVALID') {
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    let rejection = null;
+    try {
+      await api.post('/billing/create-charge', {
+        type: 'one_time',
+        amount: -50,
+        currency: 'BRL',
+        dueDate: new Date(Date.now() + 86400000).toISOString(),
+        provider: 'sandbox',
+        description: `Cobranca invalida QA ${definition.code}`,
+        customerName: 'Cliente QA Core Invalido',
+        customerEmail: `core-invalid-${runId}@qa.example.com`,
+        idempotencyKey,
+        metadata: { source: 'business_qa', scenarioCode: definition.code },
+      });
+    } catch (err) {
+      rejection = err;
+    }
+
+    if (!rejection) {
+      throw new Error('Cobranca com amount invalido foi aceita');
+    }
+    if (rejection.status !== 422 || rejection.body?.error !== 'validation_error') {
+      throw new Error(`Esperava 422 validation_error, veio ${rejection.status} ${rejection.body?.error}`);
+    }
+
+    const payments = await api.get('/billing/transactions?limit=100');
+    const leaked = (payments?.items || []).filter((item) => item.idempotency_key === idempotencyKey);
+    if (leaked.length > 0) {
+      throw new Error('Transacao persistida apesar da rejeicao por validacao');
+    }
+
+    return {
+      detail: 'Cobranca com amount invalido rejeitada com 422 e sem persistencia',
+      ids: {},
+      evidence: { status: rejection.status, error: rejection.body?.error },
+    };
+  }
+
+  if (definition.code === 'FIT-FLOW-LEAD-FUNNEL') {
+    await ensureDbConnection();
+    const marketingService = require('../../../api/services/marketing/marketingService');
+    const suffix = `${runId}-lead-funnel`;
+
+    const created = await marketingService.upsertLead({
+      tenantId: TEST_TENANT_ID,
+      externalId: `qa-fit-lead-${suffix}`,
+      name: `Lead Fitness ${suffix}`,
+      phone: '+5511999996000',
+      attributesPatch: {
+        source: 'business_qa',
+        vertical: 'fitness',
+        scenarioCode: definition.code,
+      },
+    });
+    const lead = created?.lead || created?.item || created;
+    if (!lead?.id) {
+      throw new Error('Lead fitness nao retornou ID');
+    }
+
+    await marketingService.updateLead({
+      tenantId: TEST_TENANT_ID,
+      leadId: lead.id,
+      stage: 'qualified',
+      attributesPatch: { qualifiedBy: 'business_qa' },
+    });
+
+    await marketingService.updateLead({
+      tenantId: TEST_TENANT_ID,
+      leadId: lead.id,
+      stage: 'customer',
+      attributesPatch: { convertedBy: 'business_qa' },
+    });
+
+    const { MarketingLead } = require('../../../api/db/models');
+    const Model = MarketingLead();
+    const row = await Model.findOne({ where: { tenant_key: TEST_TENANT_ID, id: lead.id } });
+    const persisted = row?.toJSON ? row.toJSON() : row;
+    if (!persisted) {
+      throw new Error('Lead fitness nao persistiu');
+    }
+    if (persisted.stage !== 'customer') {
+      throw new Error(`Funil incompleto: stage final ${persisted.stage}`);
+    }
+    if (persisted.attributes?.source !== 'business_qa' || persisted.attributes?.convertedBy !== 'business_qa') {
+      throw new Error('Atributos do funil nao foram preservados');
+    }
+
+    return {
+      detail: 'Lead fitness captado, qualificado e convertido em cliente',
+      ids: { leadId: lead.id },
+      evidence: { finalStage: persisted.stage },
+    };
+  }
+
+  if (definition.code === 'FOOD-FLOW-ORDER-LIFECYCLE') {
+    await ensureDbConnection();
+    const orderService = require('../../../api/services/orderService');
+    const created = await orderService.createOrder({
+      tenantId: TEST_TENANT_ID,
+      source: 'business_qa',
+      customerName: `Cliente QA Food ${runId}`,
+      customerPhone: '+5511999997000',
+      items: [{ name: 'Prato QA Lifecycle', qty: 1, price: 32.9 }],
+      totalAmount: 32.9,
+      context: { idempotencyKey: `business-qa:${definition.code}:${runId}` },
+    });
+    const orderId = created?.id;
+    if (!orderId) {
+      throw new Error('Pedido food nao retornou ID');
+    }
+
+    const chain = ['confirmed', 'preparing', 'ready', 'dispatched', 'delivered'];
+    for (const next of chain) {
+      await api.put(`/orders/${encodeURIComponent(orderId)}/status`, { status: next });
+      const after = await api.get(`/orders/${encodeURIComponent(orderId)}`);
+      const observed = String(after?.order?.status || '').toLowerCase();
+      if (observed !== next) {
+        throw new Error(`Pedido nao transicionou para ${next} (observado: ${observed})`);
+      }
+    }
+
+    let invalidRejection = null;
+    try {
+      await api.put(`/orders/${encodeURIComponent(orderId)}/status`, { status: 'preparing' });
+    } catch (err) {
+      invalidRejection = err;
+    }
+    if (!invalidRejection || invalidRejection.status !== 400) {
+      throw new Error('Transicao invalida a partir de delivered nao foi rejeitada com 400');
+    }
+
+    const incidentPayload = {
+      type: 'late_delivery',
+      queue: 'Delivery',
+      message: `Entrega atrasada QA ${runId}`,
+      idempotencyKey: `business-qa:${definition.code}:${runId}`,
+    };
+    const incident = await api.post(`/orders/${encodeURIComponent(orderId)}/incidents`, incidentPayload);
+    const ticketId = incident?.ticket?.id || incident?.ticketId;
+    if (!ticketId) {
+      throw new Error('Incidente nao retornou ticket');
+    }
+
+    const retry = await api.post(`/orders/${encodeURIComponent(orderId)}/incidents`, incidentPayload);
+    const retryTicketId = retry?.ticket?.id || retry?.ticketId;
+    if (retry?.idempotent !== true || retryTicketId !== ticketId) {
+      throw new Error('Retry de incidente nao foi idempotente');
+    }
+
+    return {
+      detail: 'Pedido percorreu o ciclo completo, transicao invalida rejeitada e incidente idempotente',
+      ids: { orderId, ticketId },
+      evidence: { finalStatus: 'delivered', invalidTransitionRejected: true },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-BOOKING-RESCHEDULE') {
+    const contextId = `qa-booking-reschedule-${runId}`;
+    const startAt = new Date(Date.now() + 4 * 3600000).toISOString();
+    const endAt = new Date(Date.now() + 5 * 3600000).toISOString();
+    const created = await api.post('/api/schedules', {
+      contextType: 'booking',
+      contextId,
+      startAt,
+      endAt,
+      purpose: 'atendimento',
+      requiresConfirmation: true,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const scheduleId = created?.schedule?.id;
+    if (!scheduleId) {
+      throw new Error('Agendamento nao retornou ID');
+    }
+    if (created.schedule.confirmationStatus !== 'pending') {
+      throw new Error(`Agendamento criado sem confirmacao pendente: ${created.schedule.confirmationStatus}`);
+    }
+
+    const newStart = new Date(Date.now() + 8 * 3600000).toISOString();
+    const newEnd = new Date(Date.now() + 9 * 3600000).toISOString();
+    const rescheduled = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/reschedule`, {
+      startAt: newStart,
+      endAt: newEnd,
+    });
+    if (rescheduled?.schedule?.startAt !== newStart || rescheduled?.schedule?.endAt !== newEnd) {
+      throw new Error('Remarcacao nao persistiu o novo horario');
+    }
+    if (rescheduled.schedule.status !== 'scheduled') {
+      throw new Error(`Remarcacao mudou status indevidamente: ${rescheduled.schedule.status}`);
+    }
+
+    const confirmed = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/confirm`, {});
+    if (confirmed?.schedule?.confirmationStatus !== 'confirmed') {
+      throw new Error('Agendamento remarcado nao registrou confirmacao');
+    }
+
+    const done = await api.post(`/api/schedules/${encodeURIComponent(scheduleId)}/done`, {});
+    if (done?.schedule?.status !== 'done' || done.schedule.startAt !== newStart) {
+      throw new Error('Agendamento remarcado nao foi concluido no novo horario');
+    }
+
+    return {
+      detail: 'Agendamento remarcado, confirmado e concluido no novo horario',
+      ids: { scheduleId },
+      evidence: { startAt: newStart, finalStatus: done.schedule.status },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-BOOKING-TERMINAL-STATES') {
+    const contextId = `qa-booking-terminal-${runId}`;
+    const basePayload = {
+      contextType: 'booking',
+      contextId,
+      startAt: new Date(Date.now() + 4 * 3600000).toISOString(),
+      endAt: new Date(Date.now() + 5 * 3600000).toISOString(),
+      purpose: 'atendimento',
+      requiresConfirmation: true,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    };
+
+    const a = await api.post('/api/schedules', basePayload);
+    const aId = a?.schedule?.id;
+    const noShow = await api.post(`/api/schedules/${encodeURIComponent(aId)}/no-show`, {});
+    if (noShow?.schedule?.status !== 'no_show') {
+      throw new Error(`No-show nao persistiu: ${noShow?.schedule?.status}`);
+    }
+
+    const b = await api.post('/api/schedules', basePayload);
+    const bId = b?.schedule?.id;
+    const declined = await api.post(`/api/schedules/${encodeURIComponent(bId)}/decline`, {});
+    if (declined?.schedule?.status !== 'cancelled' || declined?.schedule?.confirmationStatus !== 'declined') {
+      throw new Error('Recusa nao cancelou agendamento com confirmationStatus declined');
+    }
+
+    let invalidAction = null;
+    try {
+      await api.post(`/api/schedules/${encodeURIComponent(bId)}/acao-inexistente`, {});
+    } catch (err) {
+      invalidAction = err;
+    }
+    if (!invalidAction || invalidAction.status !== 404 || invalidAction.body?.error !== 'action_not_found') {
+      throw new Error(`Acao invalida nao rejeitada com 404 action_not_found: ${invalidAction?.status} ${invalidAction?.body?.error}`);
+    }
+
+    let missing = null;
+    try {
+      await api.post('/api/schedules/qa-schedule-inexistente/confirm', {});
+    } catch (err) {
+      missing = err;
+    }
+    if (!missing || missing.status !== 404 || missing.body?.error !== 'schedule_not_found') {
+      throw new Error(`Agendamento inexistente nao rejeitado com 404 schedule_not_found: ${missing?.status} ${missing?.body?.error}`);
+    }
+
+    return {
+      detail: 'No-show, recusa, acao invalida e agendamento inexistente tratados corretamente',
+      ids: { noShowScheduleId: aId, declinedScheduleId: bId },
+      evidence: { noShowStatus: 'no_show', declinedStatus: 'cancelled' },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-SUPPORT-TICKET-LIFECYCLE') {
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const ticket = await api.post('/tickets', {
+      phoneNumber: `+55117${phoneSuffix}`,
+      queue: 'support',
+      initialMessage: 'Cliente QA valida ciclo de vida do ticket (support_ticket_flow)',
+    });
+    const ticketId = ticket?.id || ticket?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Ticket de suporte nao retornou ID');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {});
+    const afterTakeover = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    if (afterTakeover?.mode !== 'human' || !afterTakeover?.takeoverAt) {
+      throw new Error('Takeover nao colocou o ticket em modo humano com takeoverAt');
+    }
+
+    const paused = await api.post(`/tickets/${encodeURIComponent(ticketId)}/pause`, {});
+    if ((paused?.pauseReason || paused?.ticket?.pauseReason) !== 'outside_window') {
+      throw new Error('Pausa nao registrou motivo outside_window');
+    }
+
+    const resumed = await api.post(`/tickets/${encodeURIComponent(ticketId)}/resume`, {});
+    if ((resumed?.mode || resumed?.ticket?.mode) !== 'human') {
+      throw new Error('Retomada nao manteve o ticket em modo humano');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {});
+    const closed = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    if (String(closed?.status || '').toLowerCase() !== 'closed') {
+      throw new Error('Ticket do ciclo de vida nao foi encerrado');
+    }
+
+    return {
+      detail: 'Ticket percorreu takeover, pausa, retomada e encerramento com estados persistidos',
+      ids: { ticketId },
+      evidence: { finalStatus: closed.status },
+    };
+  }
+
+  if (definition.code === 'CORE-FLOW-SUPPORT-TICKET-NOTFOUND') {
+    const missingId = `qa-ticket-inexistente-${runId}`;
+    const attempts = [
+      { action: 'takeover', payload: {} },
+      { action: 'message', payload: { message: 'Mensagem QA em ticket inexistente' } },
+      { action: 'close', payload: {} },
+    ];
+
+    for (const attempt of attempts) {
+      let rejection = null;
+      try {
+        await api.post(`/tickets/${encodeURIComponent(missingId)}/${attempt.action}`, attempt.payload);
+      } catch (err) {
+        rejection = err;
+      }
+      if (!rejection) {
+        throw new Error(`${attempt.action} em ticket inexistente foi aceito`);
+      }
+      if (![400, 404].includes(rejection.status)) {
+        throw new Error(`${attempt.action} em ticket inexistente retornou ${rejection.status} (esperado 404)`);
+      }
+    }
+
+    return {
+      detail: 'Takeover, mensagem e close em ticket inexistente rejeitados sem efeito colateral',
+      ids: {},
+      evidence: { rejectedActions: attempts.map((attempt) => attempt.action) },
+    };
+  }
+
   throw new Error(`Flow nao implementado: ${definition.code}`);
 }
 

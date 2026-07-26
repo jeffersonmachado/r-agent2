@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T22:05:54.216Z",
+  "generatedAt": "2026-07-26T16:58:02.031Z",
   "vertical": "fitness",
   "maturity": "production-like",
   "replaySupported": true,
@@ -1617,6 +1617,16 @@
               }
             }
           ]
+        },
+        {
+          "scenarioId": "business-fit-flow-lead-funnel",
+          "scenario": "Fitness funil de lead: captado, qualificado e convertido em cliente",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
         }
       ]
     },

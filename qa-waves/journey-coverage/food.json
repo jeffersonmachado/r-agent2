@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T22:05:54.216Z",
+  "generatedAt": "2026-07-26T16:58:02.031Z",
   "vertical": "food",
   "maturity": "production-like",
   "replaySupported": true,
@@ -13,6 +13,16 @@
         {
           "scenarioId": "business-food-flow-order",
           "scenario": "Food pedido via WhatsApp até confirmação",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-food-flow-order-lifecycle",
+          "scenario": "Food ciclo completo do pedido, transição inválida rejeitada e incidente idempotente",
           "status": "approved",
           "channels": [],
           "preconditions": [],

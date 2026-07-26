@@ -8,6 +8,7 @@ const {
   canModifyTicket,
 } = require('../../services/rbacService');
 const {
+  createTicket,
   getTicket,
   getTicketBySession,
   assignTicket,
@@ -46,6 +47,7 @@ function buildExtendedOperationsDeps() {
     getQaResultById,
     runQaManual,
     parseMultipartFormData,
+    createTicket,
     getTicket,
     getTicketBySession,
     listAllTickets,

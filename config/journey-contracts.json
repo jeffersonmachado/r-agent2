@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "generatedAt": "2026-07-26T10:40:45.203Z",
+  "version": 4,
+  "generatedAt": "2026-07-26T16:58:14.958Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -18,7 +18,7 @@
         "support_ticket_reply"
       ],
       "missingCapabilities": [],
-      "confidence": 0.86
+      "confidence": 0.75
     },
     "fitness_customer_checkin": {
       "requiredCapabilities": [
@@ -30,21 +30,21 @@
         "crm_update"
       ],
       "missingCapabilities": [],
-      "confidence": 0.82
+      "confidence": 1
     },
     "booking_flow": {
       "requiredCapabilities": [
         "support_ticket_flow"
       ],
       "missingCapabilities": [],
-      "confidence": 0.8
+      "confidence": 0.71
     },
     "payment_charge_flow": {
       "requiredCapabilities": [
         "billing_validation"
       ],
       "missingCapabilities": [],
-      "confidence": 0.67
+      "confidence": 0.71
     },
     "beauty_booking": {
       "requiredCapabilities": [
@@ -84,7 +84,7 @@
         "crm_update"
       ],
       "missingCapabilities": [],
-      "confidence": 0.81
+      "confidence": 0.87
     },
     "cancelamento": {
       "requiredCapabilities": [
@@ -149,7 +149,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.69
+      "confidence": 0.75
     },
     "onboarding": {
       "requiredCapabilities": [
@@ -180,7 +180,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.66
+      "confidence": 0.72
     },
     "food_order_flow": {
       "requiredCapabilities": [
