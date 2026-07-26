@@ -16,13 +16,25 @@ const CAPABILITY_HINTS = [
   { id: 'omnichannel_whatsapp', tags: ['whatsapp', 'delivery', 'message'] },
   { id: 'omnichannel_email', tags: ['omnichannel_email', 'email provider check', 'smtp'] },
   { id: 'omnichannel_webchat', tags: ['qa-chatpro-omnichannel-smoke', 'chatpro_omnichannel', 'inbox-smoke'] },
+  // Capabilities exigidas pelos contratos de jornada de negocio
+  // (config/journey-contracts.json, gerado por generate-business-contracts.js).
+  // Tags ancoradas no conteudo real dos replays prod-like
+  // (qa/smoke/prod-like/*-replay.json: LeadsPage, OnboardingPage, schedule etc.).
+  { id: 'scheduling', tags: ['booking', 'schedule', 'agenda'] },
+  { id: 'payment', tags: ['payment', 'charge'] },
+  { id: 'crm_updates', tags: ['crm', 'contact'] },
+  { id: 'notifications', tags: ['notification', 'welcome_sent'] },
+  { id: 'lead_capture', tags: ['lead', 'capture'] },
+  { id: 'onboarding', tags: ['onboarding', 'onboard'] },
 ];
 
 const JOURNEY_CAPABILITY_MAP = {
   support_ticket_flow: ['support_ticket_flow', 'support_ticket_reply', 'omnichannel_whatsapp', 'crm_update'],
   fitness_customer_checkin: ['customer_identification', 'membership_validation', 'access_decision', 'turnstile_release', 'attendance_record', 'crm_update'],
-  payment_charge_flow: ['billing_validation'],
-  omnichannel_email: ['omnichannel_email'],
+  payment_charge_flow: ['billing_validation', 'payment', 'notifications'],
+  booking_flow: ['scheduling', 'notifications', 'crm_updates'],
+  // O smoke de email dispara uma notificacao real via notificationService.dispatchNotification.
+  omnichannel_email: ['omnichannel_email', 'notifications'],
 };
 
 function readJsonSafe(filePath) {
@@ -42,20 +54,25 @@ function scoreText(text, tags) {
   return score;
 }
 
-function collectReplayFiles() {
+function collectReplayFiles(options = {}) {
   let dirs = [];
-  try {
-    dirs = getAllReplayReadDirs();
-  } catch (_) {
-    const rootDir = path.join(__dirname, '..', '..', '..', '..');
-    dirs = [
-      path.join(rootDir, 'rpa', 'replay'),
-      path.join(rootDir, 'qa-mesh', 'meshEvidence'),
-      path.join(rootDir, 'qa-mesh', 'meshHistory'),
-      path.join(rootDir, 'replays'),
-    ];
+  if (Array.isArray(options.replayDirs) && options.replayDirs.length > 0) {
+    // Injecao explicita de diretorios (testes hermeticos).
+    dirs = options.replayDirs.slice();
+  } else {
+    try {
+      dirs = getAllReplayReadDirs();
+    } catch (_) {
+      const rootDir = path.join(__dirname, '..', '..', '..', '..');
+      dirs = [
+        path.join(rootDir, 'rpa', 'replay'),
+        path.join(rootDir, 'qa-mesh', 'meshEvidence'),
+        path.join(rootDir, 'qa-mesh', 'meshHistory'),
+        path.join(rootDir, 'replays'),
+      ];
+    }
+    dirs = dirs.concat(path.join(__dirname, '..', '..', '..', '..', 'qa', 'smoke', 'prod-like'));
   }
-  dirs = dirs.concat(path.join(__dirname, '..', '..', '..', '..', 'qa', 'smoke', 'prod-like'));
   dirs = dirs.filter((dir) => fs.existsSync(dir));
   const files = [];
   for (const dir of dirs) {
@@ -135,7 +152,7 @@ function collectReplayCandidates(filePath, payload) {
 }
 
 function scan(options = {}) {
-  const replayFiles = collectReplayFiles();
+  const replayFiles = collectReplayFiles(options);
   const inferred = new Map();
   const replayStatusByCapability = new Map();
   const replayFreshnessDays = Number(options.replayFreshnessDays || 7);
@@ -158,10 +175,12 @@ function scan(options = {}) {
       }).toLowerCase();
 
       const evidence = analyzeReplayOperationality(payload);
-      const finishedAt = payload?.finishedAt || payload?.endTime || null;
+      const finishedAt = payload?.finishedAt || payload?.endTime || payload?.generatedAt || null;
       const finishedMs = finishedAt ? new Date(finishedAt).getTime() : 0;
-      const hasFreshReplay = freshnessMs > 0 && finishedMs > 0
-        ? (Date.now() - finishedMs) <= freshnessMs
+      // Replay sem timestamp confiavel nao conta como fresco: sem data fim,
+      // nao ha como provar que a evidencia pertence a versao atual do sistema.
+      const hasFreshReplay = freshnessMs > 0
+        ? (finishedMs > 0 && (Date.now() - finishedMs) <= freshnessMs)
         : true;
       const matchedCapabilities = new Set(JOURNEY_CAPABILITY_MAP[payload?.journeyId] || []);
 

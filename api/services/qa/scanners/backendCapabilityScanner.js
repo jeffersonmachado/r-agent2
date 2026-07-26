@@ -28,6 +28,14 @@ const CAPABILITY_HINTS = [
   { id: 'omnichannel_webchat', tags: ['webchat', 'chat'] },
   { id: 'omnichannel_pbx', tags: ['pbx', 'voip', 'call'] },
   { id: 'omnichannel_email', tags: ['email', 'smtp'] },
+  // Capabilities exigidas pelos contratos de jornada de negocio
+  // (config/journey-contracts.json, gerado por generate-business-contracts.js).
+  { id: 'scheduling', tags: ['scheduling', 'appointment', 'agenda'] },
+  { id: 'payment', tags: ['payment', 'charge'] },
+  { id: 'crm_updates', tags: ['crm', 'contact'] },
+  { id: 'notifications', tags: ['notification', 'notify'] },
+  { id: 'lead_capture', tags: ['lead', 'capture'] },
+  { id: 'onboarding', tags: ['onboarding', 'onboard'] },
 ];
 
 function walk(dirPath, results) {

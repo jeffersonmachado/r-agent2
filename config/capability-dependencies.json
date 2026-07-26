@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-21T09:08:58.834Z",
+  "generatedAt": "2026-07-26T10:40:45.201Z",
   "dependencies": {
     "access_decision": {
       "dependsOn": []
@@ -19,13 +19,22 @@
         "attendance_record"
       ]
     },
+    "crm_updates": {
+      "dependsOn": []
+    },
     "customer_identification": {
+      "dependsOn": []
+    },
+    "lead_capture": {
       "dependsOn": []
     },
     "membership_validation": {
       "dependsOn": [
         "access_decision"
       ]
+    },
+    "notifications": {
+      "dependsOn": []
     },
     "omnichannel_email": {
       "dependsOn": []
@@ -42,6 +51,15 @@
       "dependsOn": [
         "customer_identification"
       ]
+    },
+    "onboarding": {
+      "dependsOn": []
+    },
+    "payment": {
+      "dependsOn": []
+    },
+    "scheduling": {
+      "dependsOn": []
     },
     "support_ticket_flow": {
       "dependsOn": []

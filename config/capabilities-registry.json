@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-21T09:08:58.834Z",
+  "generatedAt": "2026-07-26T10:40:45.201Z",
   "capabilities": [
     {
       "id": "access_decision",
@@ -97,6 +97,7 @@
         "api/services/__tests__/evidenceProofValidator.test.js",
         "frontend-e2e/fitness-customer-checkin.spec.ts",
         "scripts/qa-waves/generate-business-100pct.js",
+        "scripts/qa-waves/generate-business-contracts.js",
         "scripts/qa-waves/generate-business-e2e.js",
         "scripts/smoke/qa-waves-operational-final-smoke.js",
         "frontend/src/api/verticalPilot.js",
@@ -152,6 +153,7 @@
         "api/modules/vertical/handleFitnessMembershipRoutes.js",
         "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
         "api/services/__tests__/proofPipelinePhases.test.js",
+        "business-core-flow-payment-charge.json",
         "booking_flow-replay.json",
         "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
@@ -225,6 +227,58 @@
       ]
     },
     {
+      "id": "crm_updates",
+      "domain": "fitness",
+      "module": "agent-os",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "crm",
+        "updates",
+        "domain",
+        "map",
+        "service",
+        "routes",
+        "test",
+        "controller",
+        "handleschedulingsupportroutes",
+        "autonomousgapclosureengine",
+        "loop",
+        "causalhardeninggovernance",
+        "booking",
+        "flow",
+        "replay"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "replay"
+      ],
+      "evidence": [
+        "api/modules/agent-os/services/domain-map-service.js",
+        "api/modules/crm/routes.js",
+        "api/modules/domain-operations/routes.js",
+        "api/modules/qa-waves/routes.test.js",
+        "api/modules/scheduling-support/controller.js",
+        "api/modules/scheduling-support/handleSchedulingSupportRoutes.js",
+        "api/modules/scheduling-support/routes.js",
+        "api/modules/scheduling-support/service.js",
+        "api/services/__tests__/autonomousGapClosureEngine.loop.test.js",
+        "api/services/__tests__/causalHardeningGovernance.test.js",
+        "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "frontend-e2e/fitness-customer-checkin.spec.ts",
+        "scripts/smoke/qa-waves-operational-final-smoke.js"
+      ]
+    },
+    {
       "id": "customer_identification",
       "domain": "fitness",
       "module": "access-control",
@@ -256,7 +310,12 @@
         "fitness",
         "checkin",
         "market",
-        "node"
+        "node",
+        "spec",
+        "final",
+        "clinic",
+        "calendar",
+        "block"
       ],
       "confidence": 1,
       "sources": [
@@ -272,12 +331,60 @@
         "api/services/qa/scanners/frontendCapabilityScanner.js",
         "api/services/qa/scanners/replayCapabilityScanner.js",
         "booking_flow-replay.json",
-        "fitness_customer_checkin-replay.json",
+        "clinic_calendar_block_flow-replay.json",
         "market_node_publish_flow-replay.json",
+        "payment_charge_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
         "support_ticket_flow-replay.json",
         "frontend-e2e/fitness-customer-checkin.spec.ts",
         "scripts/smoke/qa-waves-operational-final-smoke.js"
+      ]
+    },
+    {
+      "id": "lead_capture",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "lead",
+        "capture",
+        "qawavesservice",
+        "journey",
+        "test",
+        "marketingservice",
+        "backendcapabilityscanner",
+        "e2ecapabilityscanner",
+        "replaycapabilityscanner",
+        "statesnapshotservice",
+        "booking",
+        "flow",
+        "replay",
+        "clinic",
+        "calendar"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "replay"
+      ],
+      "evidence": [
+        "api/services/__tests__/qaWavesService.journey.test.js",
+        "api/services/marketing/marketingService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/e2eCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js",
+        "api/services/qa/stateSnapshotService.js",
+        "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "scripts/qa-waves/generate-business-contracts.js"
       ]
     },
     {
@@ -321,6 +428,33 @@
         "api/modules/access-control/visitor-access/visitorQrService.js",
         "frontend-e2e/fitness-customer-checkin.spec.ts",
         "scripts/smoke/qa-waves-operational-final-smoke.js"
+      ]
+    },
+    {
+      "id": "notifications",
+      "domain": "core",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "notifications",
+        "executionchainvalidator",
+        "backendcapabilityscanner",
+        "validatorinferenceservice",
+        "omnichannel",
+        "email",
+        "smoke"
+      ],
+      "confidence": 0.6,
+      "sources": [
+        "backend",
+        "e2e"
+      ],
+      "evidence": [
+        "api/services/qa/executionChainValidator.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/validatorInferenceService.js",
+        "scripts/smoke/omnichannel-email-smoke.js"
       ]
     },
     {
@@ -402,16 +536,16 @@
         "api/db/models/PbxCdr.js",
         "api/db/models/PbxExtension.js",
         "api/db/models/index.js",
-        "qa-pbx-call-events-runtime-smoke.json",
-        "qa-pbx-voice-tts-asr-smoke.json",
         "booking_flow-replay.json",
         "clinic_calendar_block_flow-replay.json",
         "fitness_customer_checkin-replay.json",
         "food_order_status_flow-replay.json",
-        "payment_charge_flow-replay.json",
+        "market_node_publish_flow-replay.json",
         "qa-waves-operational-prod-like-smoke.json",
-        "support_ticket_flow-replay.json",
-        "scripts/smoke/qa-waves-enterprise-proof-smoke.js"
+        "scripts/smoke/qa-waves-enterprise-proof-smoke.js",
+        "scripts/test-pbx-call-events-runtime-smoke.js",
+        "scripts/test-pbx-voice-tts-asr-smoke.js",
+        "scripts/test-ura-publish-rollback-smoke.js"
       ]
     },
     {
@@ -459,8 +593,8 @@
         "frontend/src/pages/ChannelHealthPage.jsx",
         "frontend/src/pages/InboxPage.jsx",
         "frontend/src/pages/SaasPublicPage.jsx",
-        "qa-chatpro-omnichannel-smoke.json",
-        "scripts/test-inbox-runtime-smoke.js"
+        "scripts/test-inbox-runtime-smoke.js",
+        "qa-chatpro-omnichannel-smoke.json"
       ]
     },
     {
@@ -520,6 +654,164 @@
         "api/services/qa/scanners/deviceCapabilityScanner.js",
         "api/services/whatsappTemplateService.js",
         "scripts/vertical-e2e-validate.js"
+      ]
+    },
+    {
+      "id": "onboarding",
+      "domain": "fitness",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "onboarding",
+        "buildcoreadmindeps",
+        "handleonboardingroutes",
+        "routes",
+        "handleagentonboardingroutes",
+        "handleagentroutes",
+        "browseroperationalrunner",
+        "test",
+        "authservice",
+        "flowtemplatemarketplaceservice",
+        "onboardingservice",
+        "qa",
+        "core",
+        "auth",
+        "login",
+        "booking",
+        "flow",
+        "replay",
+        "clinic"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "replay"
+      ],
+      "evidence": [
+        "api/composition/core/buildCoreAdminDeps.js",
+        "api/modules/domain-admin/handleOnboardingRoutes.js",
+        "api/modules/domain-admin/routes.js",
+        "api/modules/domain-identity/handleAgentOnboardingRoutes.js",
+        "api/modules/domain-identity/handleAgentRoutes.js",
+        "api/modules/frontend-fallback/routes.js",
+        "api/services/__tests__/browserOperationalRunner.test.js",
+        "api/services/authService.js",
+        "api/services/flowTemplateMarketplaceService.js",
+        "api/services/onboardingService.js",
+        "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "scripts/create-launch-project.js",
+        "scripts/qa-waves/generate-business-contracts.js"
+      ]
+    },
+    {
+      "id": "payment",
+      "domain": "core",
+      "module": "api",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "payment",
+        "paymentprovider",
+        "handlebillingroutes",
+        "proofpipelinephases",
+        "test",
+        "billingservice",
+        "journeyinferenceservice",
+        "backendcapabilityscanner",
+        "e2ecapabilityscanner",
+        "replaycapabilityscanner",
+        "statesnapshotservice",
+        "uistepinferenceservice",
+        "validate",
+        "business",
+        "needs"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "replay"
+      ],
+      "evidence": [
+        "api/integrations/paymentProvider.js",
+        "api/modules/billing/handleBillingRoutes.js",
+        "api/services/__tests__/proofPipelinePhases.test.js",
+        "api/services/billingService.js",
+        "api/services/qa/journeyInferenceService.js",
+        "api/services/qa/scanners/backendCapabilityScanner.js",
+        "api/services/qa/scanners/e2eCapabilityScanner.js",
+        "api/services/qa/scanners/replayCapabilityScanner.js",
+        "api/services/qa/stateSnapshotService.js",
+        "api/services/qa/uiStepInferenceService.js",
+        "scripts/governance/validate-business-needs.js",
+        "scripts/qa-waves/generate-business-100pct.js",
+        "scripts/qa-waves/generate-business-e2e.js",
+        "scripts/smoke/qa-waves-enterprise-proof-smoke.js",
+        "scripts/smoke/qa-waves-operational-final-smoke.js",
+        "business-core-flow-payment-charge.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json"
+      ]
+    },
+    {
+      "id": "scheduling",
+      "domain": "fitness",
+      "module": "agent-marketplace",
+      "type": "operational",
+      "required": true,
+      "tags": [
+        "scheduling",
+        "service",
+        "agent",
+        "orchestrator",
+        "domain",
+        "map",
+        "model",
+        "driven",
+        "pipeline",
+        "handleschedulingsupportcalendarroutes",
+        "beautycustomerroutes",
+        "demoorchestratorservice",
+        "booking",
+        "flow",
+        "replay"
+      ],
+      "confidence": 1,
+      "sources": [
+        "backend",
+        "e2e",
+        "replay"
+      ],
+      "evidence": [
+        "api/modules/agent-marketplace/service.js",
+        "api/modules/agent-os/routes/agent-orchestrator.js",
+        "api/modules/agent-os/services/domain-map-service.js",
+        "api/modules/agent-os/services/model-driven-pipeline.js",
+        "api/modules/journey-registry/service.js",
+        "api/modules/scheduling-support/handleSchedulingSupportCalendarRoutes.js",
+        "api/modules/scheduling-support/service.js",
+        "api/modules/vertical/vertical-beauty/beautyCustomerRoutes.js",
+        "api/modules/vertical-templates/service.js",
+        "api/services/demoOrchestratorService.js",
+        "booking_flow-replay.json",
+        "clinic_calendar_block_flow-replay.json",
+        "fitness_customer_checkin-replay.json",
+        "food_order_status_flow-replay.json",
+        "market_node_publish_flow-replay.json",
+        "payment_charge_flow-replay.json",
+        "qa-waves-operational-prod-like-smoke.json",
+        "support_ticket_flow-replay.json",
+        "scripts/populate-agent-os.js",
+        "scripts/smoke/qa-waves-enterprise-proof-smoke.js"
       ]
     },
     {

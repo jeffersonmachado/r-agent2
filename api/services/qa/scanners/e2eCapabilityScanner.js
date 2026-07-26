@@ -24,6 +24,14 @@ const CAPABILITY_HINTS = [
   { id: 'omnichannel_whatsapp', tags: ['channel: \'whatsapp\'', 'whatsapp provider check', '/webhooks/whatsapp'] },
   { id: 'omnichannel_email', tags: ['channel: \'email\'', 'email provider check', 'notification adapter'] },
   { id: 'omnichannel_webchat', tags: ['chatpro_omnichannel', 'inbox-smoke', 'l05-chatpro-omnichannel-evidence'] },
+  // Capabilities exigidas pelos contratos de jornada de negocio
+  // (config/journey-contracts.json, gerado por generate-business-contracts.js).
+  { id: 'scheduling', tags: ['booking_flow', 'scheduling', 'appointment'] },
+  { id: 'payment', tags: ['payment_charge_flow', 'payment', 'charge'] },
+  { id: 'crm_updates', tags: ['crm', 'contact'] },
+  { id: 'notifications', tags: ['notification', 'welcome_sent'] },
+  { id: 'lead_capture', tags: ['lead', 'capture'] },
+  { id: 'onboarding', tags: ['onboarding', 'onboard'] },
 ];
 
 function listE2eFiles(rootDir) {

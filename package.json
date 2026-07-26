@@ -38,6 +38,7 @@
     "test:physical:smoke": "node scripts/test-physical-queue-smoke.js",
     "test:whatsapp:qr:smoke": "node scripts/test-whatsapp-qr-smoke.js",
     "test:inbox:smoke": "node scripts/test-inbox-runtime-smoke.js",
+    "test:email:smoke": "node ./scripts/smoke/omnichannel-email-smoke.js",
     "test:tenant-intelligence:smoke": "node ./scripts/smoke/tenant-intelligence-smoke-playwright-authmock.js",
     "test:market-intelligence:smoke": "node ./scripts/smoke/market-intelligence-smoke-api.js",
     "test:scheduling-support:smoke": "node ./scripts/smoke/scheduling-support-smoke-api.js",
@@ -312,7 +313,8 @@
     "@playwright/test": "^1.40.0",
     "jest": "^29.7.0",
     "nodemon": "^3.0.0",
-    "sequelize-cli": "^6.6.2"
+    "sequelize-cli": "^6.6.2",
+    "smtp-server": "^3.19.2"
   },
   "overrides": {
     "encoding-sniffer": "1.0.2",
