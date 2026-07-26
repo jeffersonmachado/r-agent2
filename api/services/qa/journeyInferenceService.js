@@ -53,6 +53,14 @@ const JOURNEY_TEMPLATES = [
   },
 ];
 
+function readJsonSafe(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -145,10 +153,18 @@ function inferJourneys(options = {}) {
   };
 
   if (persist) {
+    // Merge não destrutivo: a inferência atualiza apenas as jornadas que ela
+    // conhece. Jornadas de negócio geradas por outras fontes (ex.:
+    // scripts/qa-waves/generate-business-contracts.js) são preservadas, e a
+    // versão nunca é rebaixada.
+    const existing = readJsonSafe(JOURNEY_CONTRACTS_PATH) || {};
     writeJsonSafe(JOURNEY_CONTRACTS_PATH, {
-      version: 1,
+      version: Math.max(Number(existing.version) || 1, 1),
       generatedAt: result.generatedAt,
-      journeys: journeyContracts,
+      journeys: {
+        ...(existing.journeys || {}),
+        ...journeyContracts,
+      },
     });
   }
 
