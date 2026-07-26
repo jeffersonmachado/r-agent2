@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-06-11T22-13-23-346Z",
+  "executionId": "mesh-2026-07-26T19-12-16-308Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -20,16 +20,16 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-06-11T22-13-23-346Z",
-    "timestamp": "2026-06-11T22:13:23.346Z",
+    "executionId": "mesh-2026-07-26T19-12-16-308Z",
+    "timestamp": "2026-07-26T19:12:16.308Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 47,
-    "attempted": 47,
-    "executed": 47,
-    "total": 47,
-    "passed": 47,
+    "registryTotal": 64,
+    "attempted": 64,
+    "executed": 64,
+    "total": 64,
+    "passed": 64,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -68,25 +68,35 @@
         "flaky": 0,
         "total": 2
       },
-      "fitness": {
-        "passed": 14,
+      "core": {
+        "passed": 17,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 14
+        "total": 17
+      },
+      "fitness": {
+        "passed": 15,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 15
       },
       "food": {
-        "passed": 2,
+        "passed": 4,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 2
+        "total": 4
       },
       "mercado": {
         "passed": 2,
@@ -97,6 +107,16 @@
         "environment_missing": 0,
         "flaky": 0,
         "total": 2
+      },
+      "market": {
+        "passed": 1,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 1
       },
       "servicos": {
         "passed": 2,
@@ -109,14 +129,14 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 3,
+        "passed": 4,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 3
+        "total": 4
       },
       "bpmn": {
         "passed": 1,
@@ -127,16 +147,6 @@
         "environment_missing": 0,
         "flaky": 0,
         "total": 1
-      },
-      "core": {
-        "passed": 5,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 5
       },
       "pbx": {
         "passed": 3,
@@ -175,6 +185,12 @@
         "byType": {},
         "successRate": 1
       },
+      "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "fitness": {
         "total": 0,
         "blocking": 0,
@@ -188,6 +204,12 @@
         "successRate": 1
       },
       "mercado": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "market": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -211,12 +233,6 @@
         "byType": {},
         "successRate": 1
       },
-      "core": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -235,26 +251,26 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-06-11T22-13-23-346Z",
-      "startedAt": "2026-06-11T22:13:23.346Z",
+      "executionId": "mesh-2026-07-26T19-12-16-308Z",
+      "startedAt": "2026-07-26T19:12:16.308Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-06-11T22:24:19.750Z",
-      "registryTotal": 47,
+      "promotedAt": "2026-07-26T19:46:29.102Z",
+      "registryTotal": 64,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-06-11T22-13-23-346Z",
-    "startedAt": "2026-06-11T22:13:23.346Z",
+    "executionId": "mesh-2026-07-26T19-12-16-308Z",
+    "startedAt": "2026-07-26T19:12:16.308Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-06-11T22:24:19.750Z",
-    "registryTotal": 47,
+    "promotedAt": "2026-07-26T19:46:29.102Z",
+    "registryTotal": 64,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "generatedAt": "2026-06-11T22:24:19.751Z"
+  "generatedAt": "2026-07-26T19:46:29.103Z"
 }

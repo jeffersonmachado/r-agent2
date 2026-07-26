@@ -14234,6 +14234,3120 @@
       ],
       "validators": [],
       "executionStatus": "queued"
+    },
+    {
+      "id": "business-e2e-beauty_booking",
+      "waveId": "wave-business-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "E2E: beauty_booking",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_beauty_booking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar beauty_booking",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "scheduling: validado",
+        "payment: validado",
+        "crm_updates: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "confidence": 0.93,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar scheduling",
+        "Validar payment",
+        "Validar crm updates",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "cap-scheduling",
+      "waveId": "wave-cap-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Validação: Scheduling",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_scheduling_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Scheduling",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Scheduling operacional"
+      ],
+      "requiredCapabilities": [
+        "scheduling"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Scheduling"
+      ]
+    },
+    {
+      "id": "cap-payment",
+      "waveId": "wave-cap-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Validação: Payment",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_payment_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Payment",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Payment operacional"
+      ],
+      "requiredCapabilities": [
+        "payment"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Payment"
+      ]
+    },
+    {
+      "id": "cap-crm_updates",
+      "waveId": "wave-cap-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Validação: Crm Updates",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_crm_updates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Crm Updates",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Crm Updates operacional"
+      ],
+      "requiredCapabilities": [
+        "crm_updates"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Crm Updates"
+      ]
+    },
+    {
+      "id": "cap-notifications",
+      "waveId": "wave-cap-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Validação: Notifications",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_notifications_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Notifications",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Notifications operacional"
+      ],
+      "requiredCapabilities": [
+        "notifications"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Notifications"
+      ]
+    },
+    {
+      "id": "precond-beauty_booking-schedule_service_available",
+      "waveId": "wave-precond-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "precond-beauty_booking-calendar_writable",
+      "waveId": "wave-precond-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Precondição: Calendar Writable",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Calendar Writable atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Calendar Writable"
+      ]
+    },
+    {
+      "id": "precond-beauty_booking-payment_gateway_available",
+      "waveId": "wave-precond-beauty_booking",
+      "vertical": "core",
+      "journey": "beauty_booking",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-beauty_new_customer",
+      "waveId": "wave-business-beauty_new_customer",
+      "vertical": "core",
+      "journey": "beauty_new_customer",
+      "name": "E2E: beauty_new_customer",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_beauty_new_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar beauty_new_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "scheduling: validado",
+        "payment: validado",
+        "crm_updates: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "confidence": 0.81,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar scheduling",
+        "Validar payment",
+        "Validar crm updates",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-beauty_new_customer-lead_capture_active",
+      "waveId": "wave-precond-beauty_new_customer",
+      "vertical": "core",
+      "journey": "beauty_new_customer",
+      "name": "Precondição: Lead Capture Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Lead Capture Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Lead Capture Active"
+      ]
+    },
+    {
+      "id": "precond-beauty_new_customer-schedule_service_available",
+      "waveId": "wave-precond-beauty_new_customer",
+      "vertical": "core",
+      "journey": "beauty_new_customer",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "precond-beauty_new_customer-payment_gateway_available",
+      "waveId": "wave-precond-beauty_new_customer",
+      "vertical": "core",
+      "journey": "beauty_new_customer",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-clinic_default_journey",
+      "waveId": "wave-business-clinic_default_journey",
+      "vertical": "core",
+      "journey": "clinic_default_journey",
+      "name": "E2E: clinic_default_journey",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_clinic_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar clinic_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "scheduling: validado",
+        "crm_updates: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "crm_updates",
+        "notifications"
+      ],
+      "confidence": 0.81,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar scheduling",
+        "Validar crm updates",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-clinic_default_journey-customer_identification_active",
+      "waveId": "wave-precond-clinic_default_journey",
+      "vertical": "core",
+      "journey": "clinic_default_journey",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-clinic_default_journey-schedule_service_available",
+      "waveId": "wave-precond-clinic_default_journey",
+      "vertical": "core",
+      "journey": "clinic_default_journey",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-agendamento",
+      "waveId": "wave-business-agendamento",
+      "vertical": "core",
+      "journey": "agendamento",
+      "name": "E2E: agendamento",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_agendamento_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar agendamento",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "scheduling: validado",
+        "notifications: validado",
+        "crm_update: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "notifications",
+        "crm_update"
+      ],
+      "confidence": 0.87,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar scheduling",
+        "Validar notifications",
+        "Validar crm update"
+      ]
+    },
+    {
+      "id": "precond-agendamento-customer_identification_active",
+      "waveId": "wave-precond-agendamento",
+      "vertical": "core",
+      "journey": "agendamento",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-agendamento-schedule_service_available",
+      "waveId": "wave-precond-agendamento",
+      "vertical": "core",
+      "journey": "agendamento",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "precond-agendamento-calendar_writable",
+      "waveId": "wave-precond-agendamento",
+      "vertical": "core",
+      "journey": "agendamento",
+      "name": "Precondição: Calendar Writable",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Calendar Writable atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Calendar Writable"
+      ]
+    },
+    {
+      "id": "business-e2e-cancelamento",
+      "waveId": "wave-business-cancelamento",
+      "vertical": "core",
+      "journey": "cancelamento",
+      "name": "E2E: cancelamento",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_cancelamento_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar cancelamento",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "membership_validation: validado",
+        "billing_validation: validado",
+        "crm_update: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "crm_update",
+        "notifications"
+      ],
+      "confidence": 0.85,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar membership validation",
+        "Validar billing validation",
+        "Validar crm update",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-cancelamento-customer_identification_active",
+      "waveId": "wave-precond-cancelamento",
+      "vertical": "core",
+      "journey": "cancelamento",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-cancelamento-membership_validation_active",
+      "waveId": "wave-precond-cancelamento",
+      "vertical": "core",
+      "journey": "cancelamento",
+      "name": "Precondição: Membership Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Membership Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Membership Validation Active"
+      ]
+    },
+    {
+      "id": "precond-cancelamento-billing_validation_active",
+      "waveId": "wave-precond-cancelamento",
+      "vertical": "core",
+      "journey": "cancelamento",
+      "name": "Precondição: Billing Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Billing Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Billing Validation Active"
+      ]
+    },
+    {
+      "id": "business-e2e-checkin",
+      "waveId": "wave-business-checkin",
+      "vertical": "core",
+      "journey": "checkin",
+      "name": "E2E: checkin",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_checkin_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar checkin",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "membership_validation: validado",
+        "access_decision: validado",
+        "turnstile_release: validado",
+        "attendance_record: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record"
+      ],
+      "confidence": 0.85,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar membership validation",
+        "Validar access decision",
+        "Validar turnstile release",
+        "Validar attendance record"
+      ]
+    },
+    {
+      "id": "precond-checkin-customer_identification_active",
+      "waveId": "wave-precond-checkin",
+      "vertical": "core",
+      "journey": "checkin",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-checkin-membership_validation_active",
+      "waveId": "wave-precond-checkin",
+      "vertical": "core",
+      "journey": "checkin",
+      "name": "Precondição: Membership Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Membership Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Membership Validation Active"
+      ]
+    },
+    {
+      "id": "precond-checkin-access_decision_active",
+      "waveId": "wave-precond-checkin",
+      "vertical": "core",
+      "journey": "checkin",
+      "name": "Precondição: Access Decision Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Access Decision Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Access Decision Active"
+      ]
+    },
+    {
+      "id": "business-e2e-checkout",
+      "waveId": "wave-business-checkout",
+      "vertical": "core",
+      "journey": "checkout",
+      "name": "E2E: checkout",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_checkout_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar checkout",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "billing_validation: validado",
+        "payment: validado",
+        "crm_update: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "confidence": 0.91,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar billing validation",
+        "Validar payment",
+        "Validar crm update",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-checkout-customer_identification_active",
+      "waveId": "wave-precond-checkout",
+      "vertical": "core",
+      "journey": "checkout",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-checkout-billing_validation_active",
+      "waveId": "wave-precond-checkout",
+      "vertical": "core",
+      "journey": "checkout",
+      "name": "Precondição: Billing Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Billing Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Billing Validation Active"
+      ]
+    },
+    {
+      "id": "precond-checkout-payment_gateway_available",
+      "waveId": "wave-precond-checkout",
+      "vertical": "core",
+      "journey": "checkout",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-fitness_active_customer",
+      "waveId": "wave-business-fitness_active_customer",
+      "vertical": "core",
+      "journey": "fitness_active_customer",
+      "name": "E2E: fitness_active_customer",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_fitness_active_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar fitness_active_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "membership_validation: validado",
+        "access_decision: validado",
+        "attendance_record: validado",
+        "crm_update: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "confidence": 0.85,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar membership validation",
+        "Validar access decision",
+        "Validar attendance record",
+        "Validar crm update"
+      ]
+    },
+    {
+      "id": "precond-fitness_active_customer-customer_identification_active",
+      "waveId": "wave-precond-fitness_active_customer",
+      "vertical": "core",
+      "journey": "fitness_active_customer",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-fitness_active_customer-membership_validation_active",
+      "waveId": "wave-precond-fitness_active_customer",
+      "vertical": "core",
+      "journey": "fitness_active_customer",
+      "name": "Precondição: Membership Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Membership Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Membership Validation Active"
+      ]
+    },
+    {
+      "id": "precond-fitness_active_customer-access_decision_active",
+      "waveId": "wave-precond-fitness_active_customer",
+      "vertical": "core",
+      "journey": "fitness_active_customer",
+      "name": "Precondição: Access Decision Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Access Decision Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Access Decision Active"
+      ]
+    },
+    {
+      "id": "business-e2e-fitness_new_customer",
+      "waveId": "wave-business-fitness_new_customer",
+      "vertical": "core",
+      "journey": "fitness_new_customer",
+      "name": "E2E: fitness_new_customer",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_fitness_new_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar fitness_new_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "membership_validation: validado",
+        "access_decision: validado",
+        "attendance_record: validado",
+        "crm_update: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "confidence": 0.97,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar membership validation",
+        "Validar access decision",
+        "Validar attendance record",
+        "Validar crm update"
+      ]
+    },
+    {
+      "id": "precond-fitness_new_customer-customer_identification_active",
+      "waveId": "wave-precond-fitness_new_customer",
+      "vertical": "core",
+      "journey": "fitness_new_customer",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-fitness_new_customer-membership_validation_active",
+      "waveId": "wave-precond-fitness_new_customer",
+      "vertical": "core",
+      "journey": "fitness_new_customer",
+      "name": "Precondição: Membership Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Membership Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Membership Validation Active"
+      ]
+    },
+    {
+      "id": "business-e2e-leads",
+      "waveId": "wave-business-leads",
+      "vertical": "core",
+      "journey": "leads",
+      "name": "E2E: leads",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_leads_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar leads",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "lead_capture: validado",
+        "customer_identification: validado",
+        "crm_updates: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "lead_capture",
+        "customer_identification",
+        "crm_updates",
+        "notifications"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar lead capture",
+        "Validar customer identification",
+        "Validar crm updates",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "cap-lead_capture",
+      "waveId": "wave-cap-leads",
+      "vertical": "core",
+      "journey": "leads",
+      "name": "Validação: Lead Capture",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_lead_capture_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Lead Capture",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Lead Capture operacional"
+      ],
+      "requiredCapabilities": [
+        "lead_capture"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Lead Capture"
+      ]
+    },
+    {
+      "id": "precond-leads-lead_capture_active",
+      "waveId": "wave-precond-leads",
+      "vertical": "core",
+      "journey": "leads",
+      "name": "Precondição: Lead Capture Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Lead Capture Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Lead Capture Active"
+      ]
+    },
+    {
+      "id": "precond-leads-customer_identification_active",
+      "waveId": "wave-precond-leads",
+      "vertical": "core",
+      "journey": "leads",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "business-e2e-onboarding",
+      "waveId": "wave-business-onboarding",
+      "vertical": "core",
+      "journey": "onboarding",
+      "name": "E2E: onboarding",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_onboarding_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar onboarding",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "crm_updates: validado",
+        "notifications: validado",
+        "onboarding: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "crm_updates",
+        "notifications",
+        "onboarding"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar crm updates",
+        "Validar notifications",
+        "Validar onboarding"
+      ]
+    },
+    {
+      "id": "cap-onboarding",
+      "waveId": "wave-cap-onboarding",
+      "vertical": "core",
+      "journey": "onboarding",
+      "name": "Validação: Onboarding",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_onboarding_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Onboarding",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Onboarding operacional"
+      ],
+      "requiredCapabilities": [
+        "onboarding"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Onboarding"
+      ]
+    },
+    {
+      "id": "precond-onboarding-customer_identification_active",
+      "waveId": "wave-precond-onboarding",
+      "vertical": "core",
+      "journey": "onboarding",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-onboarding-onboarding_flow_active",
+      "waveId": "wave-precond-onboarding",
+      "vertical": "core",
+      "journey": "onboarding",
+      "name": "Precondição: Onboarding Flow Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_onboarding_flow_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Onboarding Flow Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Onboarding Flow Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Onboarding Flow Active"
+      ]
+    },
+    {
+      "id": "business-e2e-renovacao",
+      "waveId": "wave-business-renovacao",
+      "vertical": "core",
+      "journey": "renovacao",
+      "name": "E2E: renovacao",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_renovacao_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar renovacao",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "membership_validation: validado",
+        "billing_validation: validado",
+        "payment: validado",
+        "crm_update: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "confidence": 0.88,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar membership validation",
+        "Validar billing validation",
+        "Validar payment",
+        "Validar crm update",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-renovacao-customer_identification_active",
+      "waveId": "wave-precond-renovacao",
+      "vertical": "core",
+      "journey": "renovacao",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-renovacao-membership_validation_active",
+      "waveId": "wave-precond-renovacao",
+      "vertical": "core",
+      "journey": "renovacao",
+      "name": "Precondição: Membership Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Membership Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Membership Validation Active"
+      ]
+    },
+    {
+      "id": "precond-renovacao-billing_validation_active",
+      "waveId": "wave-precond-renovacao",
+      "vertical": "core",
+      "journey": "renovacao",
+      "name": "Precondição: Billing Validation Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Billing Validation Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Billing Validation Active"
+      ]
+    },
+    {
+      "id": "precond-renovacao-payment_gateway_available",
+      "waveId": "wave-precond-renovacao",
+      "vertical": "core",
+      "journey": "renovacao",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-food_customer_journey",
+      "waveId": "wave-business-food_customer_journey",
+      "vertical": "core",
+      "journey": "food_customer_journey",
+      "name": "E2E: food_customer_journey",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_food_customer_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar food_customer_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "payment: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "confidence": 0.72,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar payment",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-food_customer_journey-customer_identification_active",
+      "waveId": "wave-precond-food_customer_journey",
+      "vertical": "core",
+      "journey": "food_customer_journey",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-food_customer_journey-order_service_available",
+      "waveId": "wave-precond-food_customer_journey",
+      "vertical": "core",
+      "journey": "food_customer_journey",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-food_customer_journey-payment_gateway_available",
+      "waveId": "wave-precond-food_customer_journey",
+      "vertical": "core",
+      "journey": "food_customer_journey",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-food_order_flow",
+      "waveId": "wave-business-food_order_flow",
+      "vertical": "core",
+      "journey": "food_order_flow",
+      "name": "E2E: food_order_flow",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_food_order_flow_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar food_order_flow",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "payment: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "confidence": 0.72,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar payment",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-food_order_flow-order_service_available",
+      "waveId": "wave-precond-food_order_flow",
+      "vertical": "core",
+      "journey": "food_order_flow",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-food_order_flow-storefront_channel_active",
+      "waveId": "wave-precond-food_order_flow",
+      "vertical": "core",
+      "journey": "food_order_flow",
+      "name": "Precondição: Storefront Channel Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_storefront_channel_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Storefront Channel Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Storefront Channel Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Storefront Channel Active"
+      ]
+    },
+    {
+      "id": "precond-food_order_flow-payment_gateway_available",
+      "waveId": "wave-precond-food_order_flow",
+      "vertical": "core",
+      "journey": "food_order_flow",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-market_default_journey",
+      "waveId": "wave-business-market_default_journey",
+      "vertical": "core",
+      "journey": "market_default_journey",
+      "name": "E2E: market_default_journey",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_market_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar market_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "payment: validado",
+        "notifications: validado",
+        "crm_updates: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications",
+        "crm_updates"
+      ],
+      "confidence": 0.81,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar payment",
+        "Validar notifications",
+        "Validar crm updates"
+      ]
+    },
+    {
+      "id": "precond-market_default_journey-customer_identification_active",
+      "waveId": "wave-precond-market_default_journey",
+      "vertical": "core",
+      "journey": "market_default_journey",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-market_default_journey-order_service_available",
+      "waveId": "wave-precond-market_default_journey",
+      "vertical": "core",
+      "journey": "market_default_journey",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-market_default_journey-payment_gateway_available",
+      "waveId": "wave-precond-market_default_journey",
+      "vertical": "core",
+      "journey": "market_default_journey",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "business-e2e-services_default_journey",
+      "waveId": "wave-business-services_default_journey",
+      "vertical": "core",
+      "journey": "services_default_journey",
+      "name": "E2E: services_default_journey",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_services_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar services_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "scheduling: validado",
+        "payment: validado",
+        "crm_updates: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "confidence": 0.85,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar scheduling",
+        "Validar payment",
+        "Validar crm updates",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "precond-services_default_journey-customer_identification_active",
+      "waveId": "wave-precond-services_default_journey",
+      "vertical": "core",
+      "journey": "services_default_journey",
+      "name": "Precondição: Customer Identification Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Customer Identification Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Customer Identification Active"
+      ]
+    },
+    {
+      "id": "precond-services_default_journey-schedule_service_available",
+      "waveId": "wave-precond-services_default_journey",
+      "vertical": "core",
+      "journey": "services_default_journey",
+      "name": "Precondição: Schedule Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Schedule Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Schedule Service Available"
+      ]
+    },
+    {
+      "id": "precond-services_default_journey-payment_gateway_available",
+      "waveId": "wave-precond-services_default_journey",
+      "vertical": "core",
+      "journey": "services_default_journey",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
     }
   ],
   "history": {

@@ -35,13 +35,30 @@ function addResult(check, status, detail) {
 }
 
 // --- Verifica histórico ---
+// A retenção do mesh é por classe (canônicas e não-canônicas têm cotas
+// separadas de MAX_HISTORY) — a contagem aqui espelha a mesma política.
+function isCanonicalHistoryFile(filePath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Boolean(parsed && (parsed.isCanonicalExecution === true
+      || (parsed.summary && parsed.summary.isCanonicalExecution === true)));
+  } catch (_) {
+    return false;
+  }
+}
+
 try {
   if (fs.existsSync(HISTORY_DIR)) {
     const historyFiles = fs.readdirSync(HISTORY_DIR).filter((f) => f.endsWith('.json'));
-    if (historyFiles.length > MAX_HISTORY) {
-      addResult('history_file_count', 'WARN', `${historyFiles.length} arquivos (limite: ${MAX_HISTORY}). Execute o mesh para auto-limpar.`);
+    const canonicalCount = historyFiles.filter((f) => isCanonicalHistoryFile(path.join(HISTORY_DIR, f))).length;
+    const nonCanonicalCount = historyFiles.length - canonicalCount;
+    const over = [];
+    if (canonicalCount > MAX_HISTORY) over.push(`${canonicalCount} canônicos`);
+    if (nonCanonicalCount > MAX_HISTORY) over.push(`${nonCanonicalCount} não-canônicos`);
+    if (over.length > 0) {
+      addResult('history_file_count', 'WARN', `${over.join(' + ')} (limite: ${MAX_HISTORY} por classe). Execute o mesh para auto-limpar.`);
     } else {
-      addResult('history_file_count', 'PASS', `${historyFiles.length}/${MAX_HISTORY} arquivos`);
+      addResult('history_file_count', 'PASS', `${nonCanonicalCount}/${MAX_HISTORY} não-canônicos + ${canonicalCount}/${MAX_HISTORY} canônicos`);
     }
   } else {
     addResult('history_dir', 'PASS', 'Diretório de histórico não existe ainda (será criado na primeira execução)');

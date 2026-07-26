@@ -1706,16 +1706,42 @@ function listEntriesNewestFirst(dir, { directories = false, jsonOnly = false } =
     .map((entry) => entry.name);
 }
 
-function pruneOldHistory() {
-  const files = listEntriesNewestFirst(HISTORY_DIR, { jsonOnly: true });
-  if (files.length <= MAX_HISTORY_FILES) return;
-  const toRemove = files.slice(MAX_HISTORY_FILES);
+/**
+ * Execuções canônicas (release/mesh completo) são evidência de cobertura:
+ * o coverage gate lê o histórico por cenário e a retenção cega podava o
+ * arquivo canônico quando o scheduler enchia a janela com runs parciais —
+ * o gate oscilava GO → NO_GO sem mudança de código. Canônicos têm janela
+ * própria (mesmo tamanho) e nunca são podados por runs não-canônicos.
+ */
+function isCanonicalHistoryFile(filePath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Boolean(parsed && (parsed.isCanonicalExecution === true
+      || (parsed.summary && parsed.summary.isCanonicalExecution === true)));
+  } catch (_) {
+    return false;
+  }
+}
+
+function pruneOldHistory({ historyDir = HISTORY_DIR, maxFiles = MAX_HISTORY_FILES } = {}) {
+  const files = listEntriesNewestFirst(historyDir, { jsonOnly: true });
+  const canonical = [];
+  const nonCanonical = [];
+  for (const file of files) {
+    if (isCanonicalHistoryFile(path.join(historyDir, file))) canonical.push(file);
+    else nonCanonical.push(file);
+  }
+  const toRemove = [
+    ...nonCanonical.slice(maxFiles),
+    ...canonical.slice(maxFiles),
+  ];
   for (const file of toRemove) {
-    try { fs.unlinkSync(path.join(HISTORY_DIR, file)); } catch (_) { /* ignore */ }
+    try { fs.unlinkSync(path.join(historyDir, file)); } catch (_) { /* ignore */ }
   }
   if (toRemove.length > 0) {
-    console.log(`[mesh:cleanup] Removidos ${toRemove.length} arquivos de historico antigos (mantidos ${MAX_HISTORY_FILES})`);
+    console.log(`[mesh:cleanup] Removidos ${toRemove.length} arquivos de historico antigos (mantidos ${maxFiles} por classe; canonicos preservados)`);
   }
+  return { removed: toRemove.length, keptCanonical: Math.min(canonical.length, maxFiles) };
 }
 
 function pruneOldEvidence() {
@@ -2402,6 +2428,7 @@ module.exports = {
   evaluateScenarioGovernance,
   applyGovernanceIntegrations,
   loadHistory,
+  pruneOldHistory,
   diffAgainstPrevious,
   executeScenarioWithFallback,
   classifyScenarioResult,

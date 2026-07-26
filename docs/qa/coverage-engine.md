@@ -203,6 +203,16 @@ qualquer `mesh-` independentemente da data (bug corrigido em 2026-07-26:
 a retenção apagava as execuções do dia e `loadHistory(1)` devolvia uma
 execução de dias atrás como "mais recente").
 
+Retenção do histórico (`pruneOldHistory`): a janela de
+`QA_MESH_MAX_HISTORY` (default 5) é aplicada POR CLASSE — execuções
+canônicas (`isCanonicalExecution: true`) e não-canônicas têm cotas
+separadas, e runs não-canônicos (scheduler "critical") nunca podam
+execuções canônicas. Motivo: o coverage gate lê o histórico por cenário
+como evidência de execução; a retenção cega podava o arquivo da execução
+canônica quando o scheduler enchia a janela com runs parciais e o gate
+oscilava GO → NO_GO sem mudança de código (bug corrigido em 2026-07-26,
+regressão em `tests/governance/meshHistoryPrune.test.js`).
+
 ## Isolamento de tenant (fonte real)
 
 `scripts/governance/tenant-isolation-report.js` (npm

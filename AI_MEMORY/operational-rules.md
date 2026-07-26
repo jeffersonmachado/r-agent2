@@ -11,7 +11,7 @@
 
 ## QA Mesh Environment Hygiene
 
-- Mesh history auto-prunes on every execution: keeps only `QA_MESH_MAX_HISTORY` files (default 5).
+- Mesh history auto-prunes on every execution: keeps `QA_MESH_MAX_HISTORY` files (default 5) PER CLASS — canonical executions (`isCanonicalExecution: true`) and non-canonical runs have separate quotas, and non-canonical scheduler runs never prune canonical ones (they are coverage evidence for the gate).
 - Mesh evidence auto-prunes on every execution: keeps only `QA_MESH_MAX_EVIDENCE` directories (default 5).
 - Flaky detection window is `QA_MESH_FLKY_WINDOW` runs (default 5, was 15).
 - Stale lock files (`canonical.lock.json`, `mesh-running.lock`) are auto-cleaned if older than `QA_MESH_STALE_LOCK_MINUTES` (default 30).

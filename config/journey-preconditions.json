@@ -58,5 +58,85 @@
         "required": ["payment_gateway_available", "ledger_writable", "invoice_service_active"],
         "optional": ["webhook_endpoint"],
         "timeout": 25000
+      },
+      "beauty_booking": {
+        "required": ["schedule_service_available", "calendar_writable", "payment_gateway_available"],
+        "optional": ["notification_service_active", "crm_service_available"],
+        "timeout": 20000
+      },
+      "beauty_new_customer": {
+        "required": ["lead_capture_active", "schedule_service_available", "payment_gateway_available"],
+        "optional": ["campaign_service_active", "notification_service_active", "crm_service_available"],
+        "timeout": 30000
+      },
+      "clinic_default_journey": {
+        "required": ["customer_identification_active", "schedule_service_available"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 20000
+      },
+      "agendamento": {
+        "required": ["customer_identification_active", "schedule_service_available", "calendar_writable"],
+        "optional": ["notification_service_active", "crm_service_available"],
+        "timeout": 20000
+      },
+      "cancelamento": {
+        "required": ["customer_identification_active", "membership_validation_active", "billing_validation_active"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 15000
+      },
+      "checkin": {
+        "required": ["customer_identification_active", "membership_validation_active", "access_decision_active"],
+        "optional": ["turnstile_device_connected", "attendance_database_accessible"],
+        "timeout": 10000
+      },
+      "checkout": {
+        "required": ["customer_identification_active", "billing_validation_active", "payment_gateway_available"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 15000
+      },
+      "fitness_active_customer": {
+        "required": ["customer_identification_active", "membership_validation_active", "access_decision_active"],
+        "optional": ["attendance_database_accessible", "crm_service_available"],
+        "timeout": 20000
+      },
+      "fitness_new_customer": {
+        "required": ["customer_identification_active", "membership_validation_active"],
+        "optional": ["payment_gateway_available", "access_decision_active", "crm_service_available"],
+        "timeout": 25000
+      },
+      "leads": {
+        "required": ["lead_capture_active", "customer_identification_active"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 15000
+      },
+      "onboarding": {
+        "required": ["customer_identification_active", "onboarding_flow_active"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 30000
+      },
+      "renovacao": {
+        "required": ["customer_identification_active", "membership_validation_active", "billing_validation_active", "payment_gateway_available"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 25000
+      },
+      "food_customer_journey": {
+        "required": ["customer_identification_active", "order_service_available", "payment_gateway_available"],
+        "optional": ["notification_service_active"],
+        "timeout": 20000
+      },
+      "food_order_flow": {
+        "required": ["order_service_available", "storefront_channel_active", "payment_gateway_available"],
+        "optional": ["notification_service_active", "delivery_service_available"],
+        "timeout": 20000
+      },
+      "market_default_journey": {
+        "required": ["customer_identification_active", "order_service_available", "payment_gateway_available"],
+        "optional": ["notification_service_active", "crm_service_available"],
+        "timeout": 20000
+      },
+      "services_default_journey": {
+        "required": ["customer_identification_active", "schedule_service_available", "payment_gateway_available"],
+        "optional": ["crm_service_available", "notification_service_active"],
+        "timeout": 25000
       }
     }
