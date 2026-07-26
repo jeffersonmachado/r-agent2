@@ -16,6 +16,8 @@ const crypto = require('crypto');
 const { getSequelize } = require('../../db/sequelize');
 const { VerticalAttendance } = require('../../db/models');
 const { appendEventV1 } = require('../eventLedgerService');
+const { emitJourneyEvent } = require('./customerJourneyEngine');
+const logger = require('../../utils/logger');
 
 const VERTICAL = 'fitness';
 
@@ -25,6 +27,24 @@ function makeId(prefix) {
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+/**
+ * Projeta a presença na timeline operacional do subject
+ * (/api/fitness/subject/:id/timeline). Best-effort: a attendance já está
+ * persistida e a catraca não pode ser bloqueada por falha na projeção,
+ * mas o erro é sempre logado (nunca engolido silenciosamente).
+ */
+async function emitAttendanceJourneyEvent(params) {
+  try {
+    await emitJourneyEvent(params);
+  } catch (error) {
+    logger.error('[FitnessAttendance] Falha ao emitir evento de timeline', {
+      eventType: params.eventType,
+      subjectId: params.subjectId,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
 }
 
 // ── Check-in (entry) ──────────────────────────────────────────────────────
@@ -77,6 +97,21 @@ async function recordCheckIn({ tenantId, subjectId, membershipId = null, accessD
     payload: { attendanceId: id, subjectId, membershipId, unitId, deviceId },
   }).catch(() => {});
 
+  // Projeta na timeline operacional do subject (best-effort, erro logado)
+  await emitAttendanceJourneyEvent({
+    tenantId,
+    vertical: VERTICAL,
+    eventType: 'checkin_recorded',
+    subjectId,
+    membershipId,
+    channel: 'internal',
+    triggeredBy: 'event',
+    correlationId: accessDecisionId || id,
+    idempotencyKey: accessDecisionId ? `checkin:${accessDecisionId}` : `checkin:${id}`,
+    payload: { attendanceId: id, subjectId, membershipId, unitId, deviceId },
+    metadata: { auto: metadata.auto === true },
+  });
+
   return row;
 }
 
@@ -118,6 +153,23 @@ async function recordCheckOut({ tenantId, subjectId, accessDecisionId = null, at
     idempotencyKey: updated.id ? `checkout:${updated.id}` : null,
     payload: { attendanceId: updated.id, durationMinutes, subjectId },
   }).catch(() => {});
+
+  // Projeta na timeline operacional do subject (best-effort, erro logado)
+  await emitAttendanceJourneyEvent({
+    tenantId,
+    vertical: VERTICAL,
+    eventType: 'checkout_recorded',
+    subjectId,
+    membershipId: updated.membership_id || null,
+    channel: 'internal',
+    triggeredBy: 'event',
+    correlationId: updated.access_decision_id || updated.id,
+    idempotencyKey: accessDecisionId
+      ? `checkout:${accessDecisionId}`
+      : (updated.id ? `checkout:${updated.id}` : null),
+    payload: { attendanceId: updated.id, durationMinutes, subjectId },
+    metadata: { auto: metadata.auto === true },
+  });
 
   return updated;
 }

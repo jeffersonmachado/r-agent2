@@ -13,6 +13,14 @@ jest.mock('../../api/services/eventLedgerService', () => ({
   appendEventV1: jest.fn(async () => ({ id: 'ledger-1' })),
 }));
 
+jest.mock('../../api/services/vertical/customerJourneyEngine', () => {
+  const actual = jest.requireActual('../../api/services/vertical/customerJourneyEngine');
+  return {
+    ...actual,
+    emitJourneyEvent: jest.fn(async () => ({ id: 'vje-1' })),
+  };
+});
+
 const mockVerticalAttendance = {
   create: jest.fn(),
   findOne: jest.fn(),
@@ -24,6 +32,7 @@ const mockVerticalAttendance = {
 const { getSequelize } = require('../../api/db/sequelize');
 const { VerticalAttendance: mockVerticalAttendanceFactory } = require('../../api/db/models');
 const { appendEventV1 } = require('../../api/services/eventLedgerService');
+const { emitJourneyEvent } = require('../../api/services/vertical/customerJourneyEngine');
 const {
   recordCheckIn,
   recordCheckOut,
@@ -88,6 +97,37 @@ describe('fitnessAttendanceService', () => {
         }),
       );
     });
+
+    it('emite evento de timeline checkin_recorded (regressão: timeline vazia no smoke prod-like)', async () => {
+      await recordCheckIn({
+        tenantId,
+        subjectId,
+        membershipId: 'mem-1',
+        accessDecisionId: 'decision-1',
+        deviceId: 'dev-1',
+      });
+
+      expect(emitJourneyEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          vertical: 'fitness',
+          eventType: 'checkin_recorded',
+          subjectId,
+          membershipId: 'mem-1',
+          triggeredBy: 'event',
+          idempotencyKey: 'checkin:decision-1',
+        }),
+      );
+    });
+
+    it('falha na timeline não impede o check-in, mas o erro é logado', async () => {
+      emitJourneyEvent.mockRejectedValueOnce(new Error('timeline_down'));
+
+      const result = await recordCheckIn({ tenantId, subjectId, accessDecisionId: 'decision-1' });
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe('open');
+    });
   });
 
   describe('recordCheckOut', () => {
@@ -123,6 +163,30 @@ describe('fitnessAttendanceService', () => {
 
       const result = await recordCheckOut({ tenantId, subjectId });
       expect(result).toBeNull();
+    });
+
+    it('emite evento de timeline checkout_recorded ao fechar attendance', async () => {
+      const openAttendance = {
+        id: 'va-9',
+        subject_id: subjectId,
+        status: 'open',
+        checked_in_at: new Date(Date.now() - 3600000),
+        update: jest.fn(async (data) => ({ ...openAttendance, ...data })),
+      };
+      mockVerticalAttendance.findOne.mockResolvedValueOnce(openAttendance);
+
+      await recordCheckOut({ tenantId, subjectId, accessDecisionId: 'decision-9' });
+
+      expect(emitJourneyEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId,
+          vertical: 'fitness',
+          eventType: 'checkout_recorded',
+          subjectId,
+          triggeredBy: 'event',
+          idempotencyKey: 'checkout:decision-9',
+        }),
+      );
     });
   });
 

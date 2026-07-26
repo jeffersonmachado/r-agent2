@@ -39,6 +39,8 @@ const JOURNEY_EVENT_TYPES = [
   'frequency_alert_sent',
   'churn_risk_detected',
   'return_campaign_sent',
+  'checkin_recorded',
+  'checkout_recorded',
 ];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
