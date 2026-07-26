@@ -421,3 +421,128 @@ describe('coverage/dbIntegrityWave', () => {
     expect(result.exemptions.ignored[0].reason).toContain('não existe');
   });
 });
+
+describe('coverage/dbIntegrityWave — relações (itens relation:)', () => {
+  const {
+    evaluateRelation,
+    resolveRelationColumn,
+  } = require('../../../qa/coverage/dbIntegrityWave');
+
+  function relationData(overrides = {}) {
+    return {
+      id: 'relation:KnowledgeGraphEdge.sourceNodeId->kg_nodes.id',
+      model: 'KnowledgeGraphEdge',
+      field: 'sourceNodeId',
+      references: { model: 'kg_nodes', key: 'id' },
+      source: 'api/db/models/KnowledgeGraphEdge.js',
+      parsed: {
+        tableName: 'kg_edges',
+        fields: {
+          id: { primaryKey: true },
+          sourceNodeId: {},
+          targetNodeId: {},
+        },
+      },
+      ...overrides,
+    };
+  }
+
+  function liveFk(overrides = {}) {
+    return {
+      tableExists: true,
+      columns: ['id', 'source_node_id', 'target_node_id'],
+      referencedTableExists: true,
+      referencedColumns: ['id', 'label'],
+      foreignKeys: [
+        { columnName: 'source_node_id', referencedTable: 'kg_nodes', referencedColumn: 'id' },
+        { columnName: 'target_node_id', referencedTable: 'kg_nodes', referencedColumn: 'id' },
+      ],
+      ...overrides,
+    };
+  }
+
+  test('resolveRelationColumn aceita atributo camelCase e coluna física', () => {
+    expect(resolveRelationColumn(relationData())).toEqual({
+      physicalColumn: 'source_node_id',
+      declaredField: 'sourceNodeId',
+    });
+    expect(resolveRelationColumn(relationData({ field: 'source_node_id' }))).toEqual({
+      physicalColumn: 'source_node_id',
+      declaredField: 'sourceNodeId',
+    });
+    expect(resolveRelationColumn(relationData({ field: 'inexistente' }))).toEqual({
+      physicalColumn: null,
+      declaredField: null,
+    });
+  });
+
+  test('relação íntegra com FK real => VALIDATED', () => {
+    const result = evaluateRelation(relationData({ live: liveFk() }), { dbAvailable: true });
+    expect(result.state).toBe(COVERAGE_STATES.VALIDATED);
+    expect(result.failedAssertions).toEqual([]);
+    expect(result.assertions.map((a) => a.name)).toEqual([
+      'sourceModelParses',
+      'fieldDefinedInModel',
+      'referencesDeclared',
+      'sourceColumnExistsInDb',
+      'referencedColumnExistsInDb',
+      'foreignKeyConstraintExistsInDb',
+    ]);
+  });
+
+  test('sem constraint FK real no banco => FAILED (não basta a coluna existir)', () => {
+    const result = evaluateRelation(
+      relationData({ live: liveFk({ foreignKeys: [] }) }),
+      { dbAvailable: true },
+    );
+    expect(result.state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.failedAssertions).toEqual(['foreignKeyConstraintExistsInDb']);
+  });
+
+  test('tabela referenciada ausente => FAILED em referencedColumnExistsInDb', () => {
+    const result = evaluateRelation(
+      relationData({ live: liveFk({ referencedTableExists: false, referencedColumns: [] }) }),
+      { dbAvailable: true },
+    );
+    expect(result.state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.failedAssertions).toEqual(['referencedColumnExistsInDb']);
+  });
+
+  test('campo FK não declarado no model => FAILED no tier estático', () => {
+    const result = evaluateRelation(relationData({ field: 'fantasma' }), { dbAvailable: true, live: liveFk() });
+    expect(result.state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.failedAssertions).toEqual(['fieldDefinedInModel']);
+  });
+
+  test('references incompletas => FAILED no tier estático', () => {
+    const result = evaluateRelation(relationData({ references: { model: 'kg_nodes' } }), { dbAvailable: false });
+    expect(result.state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.failedAssertions).toEqual(['referencesDeclared']);
+  });
+
+  test('sem DB => VISITED (estático ok, live indisponível)', () => {
+    const result = evaluateRelation(relationData(), { dbAvailable: false, dbUnavailableReason: 'sem banco' });
+    expect(result.state).toBe(COVERAGE_STATES.VISITED);
+    expect(result.assertions.some((a) => a.name === 'liveTierSkipped' && a.informational)).toBe(true);
+  });
+
+  test('wave agrega perRelation e relationTotals sem alterar totals de models', () => {
+    const result = evaluateDbIntegrityWave({
+      models: [],
+      relations: [
+        relationData({ live: liveFk() }),
+        relationData({
+          id: 'relation:KnowledgeGraphEdge.targetNodeId->kg_nodes.id',
+          field: 'targetNodeId',
+          live: liveFk({ foreignKeys: [] }),
+        }),
+      ],
+      dbAvailable: true,
+    });
+    expect(result.perRelation).toHaveLength(2);
+    expect(result.perRelation[0].state).toBe(COVERAGE_STATES.VALIDATED);
+    expect(result.perRelation[1].state).toBe(COVERAGE_STATES.FAILED);
+    expect(result.relationTotals).toEqual({ relations: 2, validated: 1, visited: 0, failed: 1 });
+    expect(result.totals).toEqual({ models: 0, validated: 0, visited: 0, failed: 0, warnings: 0 });
+  });
+});

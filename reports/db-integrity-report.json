@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-25T19:56:08.227Z",
-  "commit": "20ec2bb9108eb55427423e6817a46a5a7ca59b66",
+  "generatedAt": "2026-07-26T12:01:49.207Z",
+  "commit": "a7f65923a86b63ad1de816cee9344c97384eccd6",
   "dbAvailable": true,
   "totals": {
     "models": 155,
@@ -8,6 +8,12 @@
     "visited": 0,
     "failed": 0,
     "warnings": 15
+  },
+  "relationTotals": {
+    "relations": 9,
+    "validated": 9,
+    "visited": 0,
+    "failed": 0
   },
   "exemptions": {
     "applied": [
@@ -139,7 +145,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260314130000-create-access-control-core.js"
+          "detail": "migrations: api/db/migrations/20260314130000-create-access-control-core.js, api/db/migrations/20260726000001-fix-access-decisions-signature-text.js"
         },
         {
           "name": "tenantScope",
@@ -8128,6 +8134,341 @@
           "name": "primaryKeyExistsInDb",
           "passed": true,
           "detail": "PK no banco: id"
+        }
+      ]
+    }
+  ],
+  "perRelation": [
+    {
+      "id": "relation:AuditLog.actor_user_id->users.id",
+      "table": "audit_logs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AuditLog.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'actor_user_id' declarado (coluna física: actor_user_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: users.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'actor_user_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência users.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: actor_user_id -> users.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:AuditLog.tenant_id->tenants.id",
+      "table": "audit_logs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AuditLog.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'tenant_id' declarado (coluna física: tenant_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: tenants.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'tenant_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência tenants.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: tenant_id -> tenants.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:KnowledgeGraphEdge.sourceNodeId->kg_nodes.id",
+      "table": "kg_edges",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/KnowledgeGraphEdge.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'sourceNodeId' declarado (coluna física: source_node_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: kg_nodes.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'source_node_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência kg_nodes.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: source_node_id -> kg_nodes.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:KnowledgeGraphEdge.targetNodeId->kg_nodes.id",
+      "table": "kg_edges",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/KnowledgeGraphEdge.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'targetNodeId' declarado (coluna física: target_node_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: kg_nodes.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'target_node_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência kg_nodes.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: target_node_id -> kg_nodes.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:TenantAICredential.tenant_id->tenants.id",
+      "table": "tenant_ai_credentials",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/TenantAICredential.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'tenant_id' declarado (coluna física: tenant_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: tenants.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'tenant_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência tenants.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: tenant_id -> tenants.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:TenantAISetting.tenant_id->tenants.id",
+      "table": "tenant_ai_settings",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/TenantAISetting.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'tenant_id' declarado (coluna física: tenant_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: tenants.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'tenant_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência tenants.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: tenant_id -> tenants.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:TenantSetting.tenant_id->tenants.id",
+      "table": "tenant_settings",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/TenantSetting.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'tenant_id' declarado (coluna física: tenant_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: tenants.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'tenant_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência tenants.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: tenant_id -> tenants.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:TenantUser.tenant_id->tenants.id",
+      "table": "tenant_users",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/TenantUser.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'tenant_id' declarado (coluna física: tenant_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: tenants.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'tenant_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência tenants.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: tenant_id -> tenants.id"
+        }
+      ]
+    },
+    {
+      "id": "relation:TenantUser.user_id->users.id",
+      "table": "tenant_users",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "sourceModelParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/TenantUser.js)"
+        },
+        {
+          "name": "fieldDefinedInModel",
+          "passed": true,
+          "detail": "campo 'user_id' declarado (coluna física: user_id)"
+        },
+        {
+          "name": "referencesDeclared",
+          "passed": true,
+          "detail": "referência declarada: users.id"
+        },
+        {
+          "name": "sourceColumnExistsInDb",
+          "passed": true,
+          "detail": "coluna 'user_id' presente"
+        },
+        {
+          "name": "referencedColumnExistsInDb",
+          "passed": true,
+          "detail": "referência users.id presente"
+        },
+        {
+          "name": "foreignKeyConstraintExistsInDb",
+          "passed": true,
+          "detail": "FK real: user_id -> users.id"
         }
       ]
     }

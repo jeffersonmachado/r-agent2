@@ -192,6 +192,17 @@ sem ele e sem snapshot válido, o gate falha explicitamente (exit 1). Regere o
 snapshot a cada release ou mudança da execução canônica do mesh — ele é o
 baseline de cobertura do pipeline.
 
+### Recência do histórico do mesh
+
+O histórico convive com dois esquemas de nome: `mesh-<ISO>.json` (runMesh
+direto) e `meshq-<epochMs>-<rand>.json` (executionQueue). `loadHistory`,
+`pruneOldHistory` e `pruneOldEvidence` ordenam pela DATA REAL embutida no
+nome (epoch do `meshq-`, ISO do `mesh-`), com fallback para mtime — nunca
+por ordem lexicográfica, que colocaria qualquer `meshq-` à frente de
+qualquer `mesh-` independentemente da data (bug corrigido em 2026-07-26:
+a retenção apagava as execuções do dia e `loadHistory(1)` devolvia uma
+execução de dias atrás como "mais recente").
+
 ## Isolamento de tenant (fonte real)
 
 `scripts/governance/tenant-isolation-report.js` (npm
@@ -216,8 +227,9 @@ localmente com DB) é versionado — exceção no `.gitignore`
 ## Database Integrity Wave
 
 `scripts/governance/db-integrity-wave.js` (npm `wave:db-integrity`) executa a
-validação real dos 155 itens `model:` do inventário, com motor puro em
-`qa/coverage/dbIntegrityWave.js` (sem I/O — recebe dados e resolve estados).
+validação real dos 155 itens `model:` e dos 9 itens `relation:` do inventário,
+com motor puro em `qa/coverage/dbIntegrityWave.js` (sem I/O — recebe dados e
+resolve estados).
 
 Tiers por model:
 
@@ -232,10 +244,28 @@ Tiers por model:
   falha — models globais legítimos existem) e `timestampsDefined` (falha só
   se `timestamps: false` sem campos created/updated).
 - **TIER LIVE (somente com DB):** conexão via `api/db/sequelize.js` (config do
-  projeto; nunca credenciais hardcoded; timeout curto de 5s) e 3 queries
+  projeto; nunca credenciais hardcoded; timeout curto de 5s) e 4 queries
   agregadas no information_schema: `tableExistsInDb`,
-  `modelColumnsExistInDb` (field→column com conversão camelCase→snake_case) e
-  `primaryKeyExistsInDb`.
+  `modelColumnsExistInDb` (field→column com conversão camelCase→snake_case),
+  `primaryKeyExistsInDb` e o inventário de constraints FOREIGN KEY reais
+  (usado pelas relações, abaixo).
+
+Relações (itens `relation:` do inventário — campo FK → tabela.coluna
+referenciada) são validadas na mesma wave:
+
+- **TIER ESTÁTICO:** `sourceModelParses`, `fieldDefinedInModel` (campo FK
+  declarado no model de origem — aceita o nome do atributo, ex.
+  `sourceNodeId`, ou a coluna física, ex. `actor_user_id`) e
+  `referencesDeclared` (references.model/key presentes no item).
+- **TIER LIVE:** `sourceColumnExistsInDb`, `referencedColumnExistsInDb`
+  (tabela e coluna referenciadas existem) e
+  `foreignKeyConstraintExistsInDb` — constraint FOREIGN KEY real no banco
+  ligando origem → referência (não basta a coluna existir).
+
+Mesma precedência de estado dos models. Resultados em `perRelation` +
+`relationTotals` no relatório; o coverage gate mapeia cada entrada
+`perRelation` para o item `relation:` de mesmo id (dimensão relation do
+relatório do gate).
 
 Isenções justificadas: `config/db-integrity-exemptions.json` (versionado) pode
 marcar uma assertiva de um model como NOT_APPLICABLE —
@@ -253,11 +283,11 @@ live); estático + live passam → VALIDATED.
 
 Saídas:
 
-- evidências append-only (uma por model) em
+- evidências append-only (uma por model, uma por relação) em
   `qa/evidence/db-integrity-wave.jsonl` via `createEvidenceStore` (hash chain
   verificada ao final; diretório gitignored);
 - relatório versionado `reports/db-integrity-report.json`
-  (`{generatedAt, dbAvailable, totals, exemptions, perModel}`) — exceção no `.gitignore`
+  (`{generatedAt, dbAvailable, totals, relationTotals, exemptions, perModel, perRelation}`) — exceção no `.gitignore`
   (`!reports/db-integrity-report.json`), mesmo padrão do tenant report.
 
 Integração ao gate: `validate-coverage-gate.js` lê o relatório (se existir;

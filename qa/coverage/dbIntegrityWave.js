@@ -42,6 +42,23 @@
  *   VALIDATED) e a isenção é registrada no resultado (auditável). Isenção sem
  *   campos obrigatórios ou para assertiva inexistente é IGNORADA: a assertiva
  *   continua valendo (e falhando) normalmente.
+ *
+ * RELAÇÕES (itens `relation:` do inventário — campo FK → tabela.coluna):
+ *
+ * TIER ESTÁTICO:
+ *   - sourceModelParses:    o model de origem parseia.
+ *   - fieldDefinedInModel:  o campo FK está declarado no model (nome do
+ *                           atributo ou coluna física mapeada/snake_case).
+ *   - referencesDeclared:   references.model (tabela) e references.key
+ *                           (coluna) presentes no item de inventário.
+ *
+ * TIER LIVE (somente com DB disponível):
+ *   - sourceColumnExistsInDb:        a coluna FK existe na tabela de origem.
+ *   - referencedColumnExistsInDb:    tabela e coluna referenciadas existem.
+ *   - foreignKeyConstraintExistsInDb: há constraint FOREIGN KEY real no banco
+ *                                     ligando origem → referência.
+ *
+ * Mesma precedência de estado dos models (FAILED > VISITED > VALIDATED).
  */
 
 const { COVERAGE_STATES } = require('./coverageStates');
@@ -286,17 +303,177 @@ function evaluateModel(modelData, { dbAvailable = false, dbUnavailableReason = n
 }
 
 /**
+ * Resolve a coluna física do campo FK no model de origem: aceita o nome do
+ * atributo declarado (ex.: `sourceNodeId` → `source_node_id`) ou a coluna
+ * física direta (ex.: `actor_user_id`).
+ *
+ * @returns {{ physicalColumn: string|null, declaredField: string|null }}
+ */
+function resolveRelationColumn(relationData) {
+  const parsed = relationData.parsed || null;
+  const fields = (parsed && !parsed.parseError && parsed.fields) || {};
+  const wanted = String(relationData.field || '');
+  for (const [name, field] of Object.entries(fields)) {
+    if (name === wanted || expectedColumnName(name, field) === wanted) {
+      return { physicalColumn: expectedColumnName(name, field), declaredField: name };
+    }
+  }
+  return { physicalColumn: null, declaredField: null };
+}
+
+/**
+ * Avalia as assertivas estáticas de uma relação (item `relation:`).
+ *
+ * @param {object} relationData
+ * @param {string} relationData.id id do item (`relation:Model.campo->tabela.coluna`)
+ * @param {string} relationData.field campo FK (atributo ou coluna física)
+ * @param {object} relationData.references `{ model: <tabela>, key: <coluna> }`
+ * @param {object|null} relationData.parsed resultado de parseModelFile do model de origem
+ */
+function evaluateRelationStaticAssertions(relationData) {
+  const parsed = relationData.parsed || null;
+  const parseOk = Boolean(parsed) && !parsed.parseError;
+  const references = relationData.references || {};
+  const { physicalColumn, declaredField } = resolveRelationColumn(relationData);
+
+  return [
+    assertion(
+      'sourceModelParses',
+      parseOk,
+      parseOk ? `parse ok (${relationData.source || 'fonte desconhecida'})`
+        : `arquivo ausente ou sem sequelize.define literal (${relationData.source || 'fonte desconhecida'})`,
+    ),
+    assertion(
+      'fieldDefinedInModel',
+      parseOk && Boolean(declaredField),
+      declaredField
+        ? `campo '${declaredField}' declarado (coluna física: ${physicalColumn})`
+        : `campo '${relationData.field}' não encontrado no model ${relationData.model}`,
+    ),
+    assertion(
+      'referencesDeclared',
+      Boolean(references.model) && Boolean(references.key),
+      references.model && references.key
+        ? `referência declarada: ${references.model}.${references.key}`
+        : 'references.model/references.key ausentes no item de inventário',
+    ),
+  ];
+}
+
+/**
+ * Avalia as assertivas live de uma relação (requer information_schema).
+ *
+ * @param {object} relationData ver evaluateRelationStaticAssertions
+ * @param {object} live
+ * @param {boolean} live.tableExists        tabela de origem existe
+ * @param {string[]} live.columns           colunas da tabela de origem
+ * @param {boolean} live.referencedTableExists tabela referenciada existe
+ * @param {string[]} live.referencedColumns    colunas da tabela referenciada
+ * @param {object[]} live.foreignKeys FKs reais da tabela de origem
+ *   (`{ columnName, referencedTable, referencedColumn }`)
+ */
+function evaluateRelationLiveAssertions(relationData, live) {
+  const references = relationData.references || {};
+  const { physicalColumn } = resolveRelationColumn(relationData);
+  const column = physicalColumn || String(relationData.field || '');
+  const columns = new Set(live.columns || []);
+  const referencedColumns = new Set(live.referencedColumns || []);
+  const foreignKeys = Array.isArray(live.foreignKeys) ? live.foreignKeys : [];
+
+  const assertions = [];
+
+  assertions.push(assertion(
+    'sourceColumnExistsInDb',
+    live.tableExists && columns.has(column),
+    live.tableExists
+      ? (columns.has(column) ? `coluna '${column}' presente` : `coluna '${column}' ausente na tabela`)
+      : 'tabela de origem ausente no banco',
+  ));
+
+  assertions.push(assertion(
+    'referencedColumnExistsInDb',
+    live.referencedTableExists && referencedColumns.has(references.key),
+    live.referencedTableExists
+      ? (referencedColumns.has(references.key)
+        ? `referência ${references.model}.${references.key} presente`
+        : `coluna '${references.key}' ausente em '${references.model}'`)
+      : `tabela referenciada '${references.model}' ausente no banco`,
+  ));
+
+  const matchingFk = foreignKeys.find((fk) => fk.columnName === column
+    && fk.referencedTable === references.model
+    && fk.referencedColumn === references.key);
+  assertions.push(assertion(
+    'foreignKeyConstraintExistsInDb',
+    Boolean(matchingFk),
+    matchingFk
+      ? `FK real: ${column} -> ${references.model}.${references.key}`
+      : `sem constraint FOREIGN KEY de '${column}' para ${references.model}.${references.key}`,
+  ));
+
+  return assertions;
+}
+
+/**
+ * Avalia uma relação e resolve seu estado de cobertura (mesma precedência
+ * dos models: FAILED > VISITED > VALIDATED).
+ */
+function evaluateRelation(relationData, { dbAvailable = false, dbUnavailableReason = null } = {}) {
+  const staticAssertions = evaluateRelationStaticAssertions(relationData);
+  const staticFailures = staticAssertions.filter((a) => !a.passed);
+
+  let assertions = staticAssertions;
+  let state;
+  if (staticFailures.length > 0) {
+    state = COVERAGE_STATES.FAILED;
+  } else if (!dbAvailable) {
+    state = COVERAGE_STATES.VISITED;
+    assertions = [...assertions, assertion(
+      'liveTierSkipped',
+      true,
+      `tier live indisponível: ${dbUnavailableReason || 'DB indisponível'}`,
+      { informational: true },
+    )];
+  } else if (!relationData.live) {
+    state = COVERAGE_STATES.VISITED;
+    assertions = [...assertions, assertion(
+      'liveTierSkipped',
+      true,
+      'tier live sem dados para esta relação',
+      { informational: true },
+    )];
+  } else {
+    const liveAssertions = evaluateRelationLiveAssertions(relationData, relationData.live);
+    assertions = [...assertions, ...liveAssertions];
+    state = liveAssertions.some((a) => !a.passed) ? COVERAGE_STATES.FAILED : COVERAGE_STATES.VALIDATED;
+  }
+
+  const parsed = relationData.parsed || null;
+  return {
+    id: relationData.id,
+    model: relationData.model,
+    field: relationData.field,
+    table: (parsed && parsed.tableName) || null,
+    state,
+    assertions,
+    failedAssertions: assertions.filter((a) => !a.passed).map((a) => a.name),
+    warnings: assertions.filter((a) => a.warning).map((a) => a.name),
+  };
+}
+
+/**
  * Avalia a onda inteira.
  *
  * @param {object} input
  * @param {object[]} input.models dados estáticos (+live) por model
+ * @param {object[]} [input.relations] dados estáticos (+live) por relação
  * @param {boolean} input.dbAvailable
  * @param {string|null} [input.dbUnavailableReason]
  * @param {object} [input.exemptions] isenções justificadas por nome de model
  *   ({ "<Model>": { assertion, reason, approvedBy, date } })
- * @returns {{ waveId, dbAvailable, totals, perModel, exemptions }}
+ * @returns {{ waveId, dbAvailable, totals, relationTotals, perModel, perRelation, exemptions }}
  */
-function evaluateDbIntegrityWave({ models = [], dbAvailable = false, dbUnavailableReason = null, exemptions = {} } = {}) {
+function evaluateDbIntegrityWave({ models = [], relations = [], dbAvailable = false, dbUnavailableReason = null, exemptions = {} } = {}) {
   const applied = [];
   const ignored = [];
   const perModel = models.map((modelData) => {
@@ -335,13 +512,33 @@ function evaluateDbIntegrityWave({ models = [], dbAvailable = false, dbUnavailab
     warnings: perModel.filter((m) => m.warnings.length > 0).length,
   };
 
-  return { waveId: WAVE_ID, dbAvailable: Boolean(dbAvailable), totals, perModel, exemptions: { applied, ignored } };
+  const perRelation = relations.map((relationData) => evaluateRelation(relationData, { dbAvailable, dbUnavailableReason }));
+  const relationTotals = {
+    relations: perRelation.length,
+    validated: perRelation.filter((r) => r.state === COVERAGE_STATES.VALIDATED).length,
+    visited: perRelation.filter((r) => r.state === COVERAGE_STATES.VISITED).length,
+    failed: perRelation.filter((r) => r.state === COVERAGE_STATES.FAILED).length,
+  };
+
+  return {
+    waveId: WAVE_ID,
+    dbAvailable: Boolean(dbAvailable),
+    totals,
+    relationTotals,
+    perModel,
+    perRelation,
+    exemptions: { applied, ignored },
+  };
 }
 
 module.exports = {
   WAVE_ID,
   evaluateDbIntegrityWave,
   evaluateModel,
+  evaluateRelation,
+  evaluateRelationStaticAssertions,
+  evaluateRelationLiveAssertions,
+  resolveRelationColumn,
   evaluateStaticAssertions,
   evaluateLiveAssertions,
   isValidExemption,

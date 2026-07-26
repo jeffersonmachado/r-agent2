@@ -180,14 +180,17 @@ function buildExecutions(scenarios) {
 }
 
 /**
- * Lê reports/db-integrity-report.json e mapeia cada entrada perModel para
- * TODOS os itens do inventário pertencentes àquele model — correspondência
- * por `item.model === <nome do model>` (mesma grafia do scanner) restrita aos
- * kinds model/table/field; itens relation: ficam fora por ora. Sem relatório:
- * fonte 'missing', nenhuma execução técnica (comportamento inalterado).
+ * Lê reports/db-integrity-report.json e mapeia:
+ * - cada entrada perModel para TODOS os itens do inventário pertencentes
+ *   àquele model — correspondência por `item.model === <nome do model>`
+ *   (mesma grafia do scanner) restrita aos kinds model/table/field;
+ * - cada entrada perRelation para o item `relation:` de MESMO id
+ *   (correspondência direta e inequívoca).
+ * Sem relatório: fonte 'missing', nenhuma execução técnica (comportamento
+ * inalterado). `options.reportPath` existe para testes com fixtures.
  */
-function loadDbIntegrityTechnicalExecutions(inventoryItems) {
-  const report = loadJsonIfExists(DB_INTEGRITY_REPORT_PATH);
+function loadDbIntegrityTechnicalExecutions(inventoryItems, options = {}) {
+  const report = loadJsonIfExists(options.reportPath || DB_INTEGRITY_REPORT_PATH);
   if (!report || !Array.isArray(report.perModel)) {
     return { executions: [], source: 'missing', dbAvailable: null };
   }
@@ -197,11 +200,20 @@ function loadDbIntegrityTechnicalExecutions(inventoryItems) {
       stateByModel.set(entry.id.slice('model:'.length), entry.state);
     }
   }
-  const kinds = new Set(['model', 'table', 'field']);
+  const stateByRelationId = new Map();
+  for (const entry of (Array.isArray(report.perRelation) ? report.perRelation : [])) {
+    if (entry && typeof entry.id === 'string' && entry.id.startsWith('relation:') && entry.state) {
+      stateByRelationId.set(entry.id, entry.state);
+    }
+  }
+  const modelKinds = new Set(['model', 'table', 'field']);
   const executions = [];
   for (const item of inventoryItems || []) {
-    if (item && kinds.has(item.kind) && item.model && stateByModel.has(item.model)) {
+    if (!item) continue;
+    if (modelKinds.has(item.kind) && item.model && stateByModel.has(item.model)) {
       executions.push({ itemId: item.id, state: stateByModel.get(item.model) });
+    } else if (item.kind === 'relation' && stateByRelationId.has(item.id)) {
+      executions.push({ itemId: item.id, state: stateByRelationId.get(item.id) });
     }
   }
   return {
@@ -432,4 +444,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, loadJourneyLinkInputs, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };

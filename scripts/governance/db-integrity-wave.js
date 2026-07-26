@@ -135,8 +135,30 @@ function collectModelStaticData({ inventoryItems, rootDir = ROOT_DIR, migrationS
 }
 
 /**
- * Coleta dados do information_schema em 3 queries agregadas.
- * @returns {Map<string, {columns: string[], primaryKeyColumns: string[]}>}
+ * Coleta os dados estáticos de cada item `relation:` do inventário (fs apenas):
+ * parse do model de origem via modelScanner. Exportada para testes.
+ */
+function collectRelationStaticData({ inventoryItems, rootDir = ROOT_DIR }) {
+  return inventoryItems
+    .filter((item) => item.kind === 'relation')
+    .map((item) => {
+      const absSource = path.join(rootDir, item.source || '');
+      const parsed = item.source && fs.existsSync(absSource) ? parseModelFile(absSource) : null;
+      return {
+        id: item.id,
+        model: item.model,
+        field: item.field,
+        references: item.references || {},
+        source: item.source,
+        fingerprint: item.fingerprint || null,
+        parsed,
+      };
+    });
+}
+
+/**
+ * Coleta dados do information_schema em 4 queries agregadas.
+ * @returns {Map<string, {columns: string[], primaryKeyColumns: string[], foreignKeys: object[]}>}
  */
 async function fetchLiveData(sequelize) {
   // NB: colunas do information_schema são sql_identifier (domain de `name`);
@@ -157,16 +179,39 @@ async function fetchLiveData(sequelize) {
       WHERE tc.constraint_type = 'PRIMARY KEY'
         AND tc.table_schema = current_schema()`,
   );
+  const [fkRows] = await sequelize.query(
+    `SELECT tc.table_name::text AS table_name, kcu.column_name::text AS column_name,
+            ccu.table_name::text AS referenced_table, ccu.column_name::text AS referenced_column
+       FROM information_schema.table_constraints tc
+       JOIN information_schema.key_column_usage kcu
+         ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+        AND tc.table_name = kcu.table_name
+       JOIN information_schema.constraint_column_usage ccu
+         ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = current_schema()`,
+  );
 
   const live = new Map();
   for (const row of tableRows) {
-    live.set(row.table_name, { columns: [], primaryKeyColumns: [] });
+    live.set(row.table_name, { columns: [], primaryKeyColumns: [], foreignKeys: [] });
   }
   for (const row of columnRows) {
     if (live.has(row.table_name)) live.get(row.table_name).columns.push(row.column_name);
   }
   for (const row of pkRows) {
     if (live.has(row.table_name)) live.get(row.table_name).primaryKeyColumns.push(row.column_name);
+  }
+  for (const row of fkRows) {
+    if (live.has(row.table_name)) {
+      live.get(row.table_name).foreignKeys.push({
+        columnName: row.column_name,
+        referencedTable: row.referenced_table,
+        referencedColumn: row.referenced_column,
+      });
+    }
   }
   return live;
 }
@@ -212,8 +257,9 @@ function loadExemptions(exemptionsPath = EXEMPTIONS_PATH) {
 async function main() {
   const inventory = JSON.parse(fs.readFileSync(INVENTORY_PATH, 'utf8'));
   const models = collectModelStaticData({ inventoryItems: inventory.items });
+  const relations = collectRelationStaticData({ inventoryItems: inventory.items });
   const exemptions = loadExemptions();
-  console.log(`[db-integrity-wave] models no inventário: ${models.length}`);
+  console.log(`[db-integrity-wave] models no inventário: ${models.length} | relações: ${relations.length}`);
 
   const connection = await tryConnect();
   const dbAvailable = connection.dbAvailable;
@@ -232,13 +278,29 @@ async function main() {
           ? { tableExists: true, columns: live.columns, primaryKeyColumns: live.primaryKeyColumns }
           : { tableExists: false, columns: [], primaryKeyColumns: [] };
       }
+      for (const relationData of relations) {
+        const sourceTable = relationData.parsed && !relationData.parsed.parseError
+          ? relationData.parsed.tableName
+          : null;
+        const sourceLive = sourceTable ? liveByTable.get(sourceTable) : null;
+        const referencedLive = relationData.references && relationData.references.model
+          ? liveByTable.get(relationData.references.model)
+          : null;
+        relationData.live = {
+          tableExists: Boolean(sourceLive),
+          columns: sourceLive ? sourceLive.columns : [],
+          referencedTableExists: Boolean(referencedLive),
+          referencedColumns: referencedLive ? referencedLive.columns : [],
+          foreignKeys: sourceLive ? sourceLive.foreignKeys : [],
+        };
+      }
     } finally {
       // eslint-disable-next-line global-require
       await require('../../api/db/sequelize').close();
     }
   }
 
-  const result = evaluateDbIntegrityWave({ models, dbAvailable, dbUnavailableReason, exemptions });
+  const result = evaluateDbIntegrityWave({ models, relations, dbAvailable, dbUnavailableReason, exemptions });
   const commit = currentCommit();
   const runId = `${WAVE_ID}-${Date.now()}`;
   const environment = process.env.CI ? 'ci' : 'local';
@@ -268,6 +330,30 @@ async function main() {
       table: entry.table,
     });
   }
+  // Evidências das relações (FKs) — mesma cadeia append-only.
+  const relationById = new Map(relations.map((r) => [r.id, r]));
+  for (const entry of result.perRelation) {
+    store.append({
+      evidenceId: `${entry.id}:${runId}`,
+      executionId: runId,
+      waveId: WAVE_ID,
+      journeyId: 'technical:database-integrity',
+      journeyFingerprint: (relationById.get(entry.id) || {}).fingerprint || 'unknown',
+      commit,
+      environment,
+      status: STATE_TO_EVIDENCE_STATUS[entry.state] || 'failed',
+      assertions: entry.assertions.map((a) => ({
+        description: a.name,
+        passed: a.passed,
+        detail: a.detail,
+      })),
+      observedElements: [entry.id],
+      expectedElements: [entry.id],
+      timestamp: new Date().toISOString(),
+      dbIntegrityState: entry.state,
+      table: entry.table,
+    });
+  }
   const chain = store.verify();
   if (!chain.valid) {
     console.error(`[db-integrity-wave] ERRO: cadeia de evidências quebrada em ${chain.brokenAt}`);
@@ -280,6 +366,7 @@ async function main() {
     dbAvailable,
     ...(dbUnavailableReason ? { dbUnavailableReason } : {}),
     totals: result.totals,
+    relationTotals: result.relationTotals,
     exemptions: result.exemptions,
     perModel: result.perModel.map((entry) => ({
       id: entry.id,
@@ -290,13 +377,27 @@ async function main() {
         ...(a.notApplicable ? { notApplicable: true } : {}),
       })),
     })),
+    perRelation: result.perRelation.map((entry) => ({
+      id: entry.id,
+      table: entry.table,
+      state: entry.state,
+      assertions: entry.assertions.map((a) => ({
+        name: a.name, passed: a.passed, detail: a.detail,
+      })),
+    })),
   };
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
-  const { totals } = result;
+  const { totals, relationTotals } = result;
   console.log(`[db-integrity-wave] validated=${totals.validated} visited=${totals.visited} `
     + `failed=${totals.failed} warnings=${totals.warnings} (models=${totals.models})`);
+  console.log(`[db-integrity-wave] relações: validated=${relationTotals.validated} visited=${relationTotals.visited} `
+    + `failed=${relationTotals.failed} (relations=${relationTotals.relations})`);
+  const failedRelations = result.perRelation.filter((r) => r.state === COVERAGE_STATES.FAILED);
+  for (const entry of failedRelations.slice(0, 5)) {
+    console.log(`[db-integrity-wave] FAILED ${entry.id}: ${entry.failedAssertions.join(', ')}`);
+  }
   const failed = result.perModel.filter((m) => m.state === COVERAGE_STATES.FAILED);
   for (const entry of failed.slice(0, 5)) {
     console.log(`[db-integrity-wave] FAILED ${entry.id} (${entry.table || 'sem tabela'}): `
@@ -311,7 +412,7 @@ async function main() {
     console.warn(`[db-integrity-wave] isenção IGNORADA ${ignored.model}:${ignored.exemption.assertion || '?'} — ${ignored.reason}`);
   }
   console.log(`[db-integrity-wave] evidências: ${path.relative(ROOT_DIR, EVIDENCE_PATH)} `
-    + `(${result.perModel.length} appends, cadeia íntegra)`);
+    + `(${result.perModel.length + result.perRelation.length} appends, cadeia íntegra)`);
   console.log(`[db-integrity-wave] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
 }
 
@@ -324,6 +425,7 @@ if (require.main === module) {
 
 module.exports = {
   collectModelStaticData,
+  collectRelationStaticData,
   findMigrationMatches,
   loadMigrationSources,
   loadExemptions,
