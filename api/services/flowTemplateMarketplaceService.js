@@ -61,7 +61,7 @@ function fromDbRow(row) {
     createdBy: row.created_by || null,
     createdAt: row.created_at ? nowIso(row.created_at) : (row.createdAt?.toISOString?.() || null),
     updatedAt: row.updated_at ? nowIso(row.updated_at) : (row.updatedAt?.toISOString?.() || null),
-    scope: row.tenant_key === 'system' ? 'global' : 'tenant',
+    scope: (row.tenant_key === 'system' && String(row.id || '').startsWith(MARKETPLACE_SEED_PREFIX)) ? 'global' : 'tenant',
   };
 }
 
@@ -81,6 +81,18 @@ function toDbPayload(tpl) {
 
 function newId(prefix = 'tpl') {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+}
+
+/**
+ * Prefixo reservado dos templates globais built-in do marketplace (seed em
+ * seedSystemTemplatesBestEffort). Somente eles são tratados como globais:
+ * templates criados por usuários do tenant 'system' pertencem a esse tenant
+ * (podem ser removidos e não vazam para outros tenants).
+ */
+const MARKETPLACE_SEED_PREFIX = 'mkt-';
+
+function isBuiltInGlobal(tpl) {
+  return !!tpl && tpl.tenantId === 'system' && String(tpl.id || '').startsWith(MARKETPLACE_SEED_PREFIX);
 }
 
 function getSeedSpec() {
@@ -295,13 +307,13 @@ function listTemplates({ tenantId, tag, q, scope = 'all', activeOnly = true } = 
   if (activeOnly !== false) list = list.filter(t => t.active !== false);
 
   if (scope === 'global') {
-    list = list.filter(t => t.tenantId === 'system');
+    list = list.filter(t => isBuiltInGlobal(t));
   } else if (scope === 'tenant') {
-    list = list.filter(t => tenantId && t.tenantId === tenantId);
+    list = list.filter(t => tenantId && t.tenantId === tenantId && !isBuiltInGlobal(t));
   } else {
-    // all: global + tenant
+    // all: globais built-in + templates do próprio tenant
     if (tenantId) {
-      list = list.filter(t => t.tenantId === 'system' || t.tenantId === tenantId);
+      list = list.filter(t => isBuiltInGlobal(t) || t.tenantId === tenantId);
     } else {
       list = list.filter(t => t.tenantId === 'system');
     }
@@ -336,8 +348,9 @@ function listTemplates({ tenantId, tag, q, scope = 'all', activeOnly = true } = 
 function getTemplate({ tenantId, id } = {}) {
   const tpl = cache.get(id);
   if (!tpl) return null;
-  if (tpl.tenantId !== 'system' && tenantId && tpl.tenantId !== tenantId) return null;
-  if (tpl.tenantId !== 'system' && !tenantId) return null;
+  if (isBuiltInGlobal(tpl)) return tpl;
+  if (tenantId && tpl.tenantId !== tenantId) return null;
+  if (!tenantId && tpl.tenantId !== 'system') return null;
   return tpl;
 }
 
@@ -374,7 +387,7 @@ async function createTemplate({ tenantId, name, description = '', icon = '📋',
 async function deleteTemplate({ tenantId, id }) {
   const tpl = cache.get(id);
   if (!tpl) return { success: false, error: 'not_found' };
-  if (tpl.tenantId === 'system') return { success: false, error: 'forbidden' };
+  if (isBuiltInGlobal(tpl)) return { success: false, error: 'forbidden' };
   if (!tenantId || tpl.tenantId !== tenantId) return { success: false, error: 'forbidden' };
 
   cache.delete(id);

@@ -540,8 +540,7 @@ function filterLocalRunnable(scenarioIds) {
   return runnable;
 }
 
-// Versão "soft" — retorna [] sem erro se não houver platformScenarioIds (usado em geração de exemplos)
-function tryInferPlatformScenarioIds(scenario) {
+function collectDeclaredPlatformScenarioIds(scenario) {
   const explicit = Array.isArray(scenario?.platformScenarioIds)
     ? scenario.platformScenarioIds.filter(Boolean)
     : [];
@@ -554,7 +553,12 @@ function tryInferPlatformScenarioIds(scenario) {
     ? scenario.suggestedPlatformScenarioIds.filter(Boolean)
     : [];
 
-  const merged = Array.from(new Set([...explicit, ...platform, ...suggested]));
+  return Array.from(new Set([...explicit, ...platform, ...suggested]));
+}
+
+// Versão "soft" — retorna [] sem erro se não houver platformScenarioIds (usado em geração de exemplos)
+function tryInferPlatformScenarioIds(scenario) {
+  const merged = collectDeclaredPlatformScenarioIds(scenario);
   if (merged.length > 0) {
     return filterLocalRunnable(merged);
   }
@@ -567,8 +571,21 @@ function inferPlatformScenarioIds(scenario) {
   const result = tryInferPlatformScenarioIds(scenario);
   if (result.length > 0) return result;
 
-  // Sem platformScenarioIds → erro mandatório. Cenários devem declarar explicitamente qual(is) adapters usar.
   const context = isInPipeline() ? 'pipeline' : 'local';
+  const declared = collectDeclaredPlatformScenarioIds(scenario);
+  if (declared.length > 0) {
+    // IDs declarados existem, mas TODOS exigem o pipeline oficial e foram
+    // filtrados do contexto local. Erro distinto para não confundir com
+    // cenário sem declaração.
+    const error = new Error(
+      `Cenário "${scenario?.id}" só é executável no pipeline oficial (contexto: ${context}). ` +
+      `Todos os platformScenarioIds declarados exigem o pipeline: ${declared.join(', ')}.`
+    );
+    error.code = 'PIPELINE_ONLY_SCENARIO';
+    throw error;
+  }
+
+  // Sem platformScenarioIds → erro mandatório. Cenários devem declarar explicitamente qual(is) adapters usar.
   const error = new Error(
     `Cenário "${scenario?.id}" requer platformScenarioIds explícito para execução (contexto: ${context}). ` +
     `Configure no Waves ou deixe para a plataforma fornecer.`

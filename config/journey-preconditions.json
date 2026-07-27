@@ -1,448 +1,546 @@
 {
- "support_ticket_flow": {
-  "required": [
-   "authenticated_agent",
-   "tenant_loaded",
-   "open_ticket_exists",
-   "ticket_storage_accessible"
-  ],
-  "optional": [
-   "attachment_storage",
-   "email_gateway"
-  ],
-  "timeout": 30000
- },
- "fitness_customer_checkin": {
-  "required": [
-   "crm_contact_exists",
-   "membership_exists",
-   "credential_exists",
-   "device_available",
-   "attendance_database_accessible"
-  ],
-  "optional": [
-   "biometric_scanner",
-   "photo_capture"
-  ],
-  "timeout": 25000
- },
- "crm_contact_creation": {
-  "required": [
-   "crm_service_available",
-   "database_writable"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "billing_charge": {
-  "required": [
-   "payment_gateway_available",
-   "subscription_exists",
-   "ledger_writable"
-  ],
-  "optional": [
-   "webhook_endpoint"
-  ],
-  "timeout": 20000
- },
- "turnstile_release": {
-  "required": [
-   "access_service_available",
-   "device_connected",
-   "release_mechanism_responsive"
-  ],
-  "optional": [
-   "biometric_verification"
-  ],
-  "timeout": 10000
- },
- "voice_call_routing": {
-  "required": [
-   "pbx_service_available",
-   "agent_available",
-   "call_queue_writable"
-  ],
-  "optional": [
-   "recording_storage"
-  ],
-  "timeout": 8000
- },
- "omnichannel_engagement": {
-  "required": [
-   "whatsapp_channel_active",
-   "webchat_channel_active",
-   "pbx_trunk_active",
-   "email_gateway_active"
-  ],
-  "optional": [
-   "recording_storage"
-  ],
-  "timeout": 30000
- },
- "booking_flow": {
-  "required": [
-   "schedule_service_available",
-   "calendar_writable",
-   "notification_service_active"
-  ],
-  "optional": [
-   "reminder_webhook"
-  ],
-  "timeout": 20000
- },
- "payment_charge_flow": {
-  "required": [
-   "payment_gateway_available",
-   "ledger_writable",
-   "invoice_service_active"
-  ],
-  "optional": [
-   "webhook_endpoint"
-  ],
-  "timeout": 25000
- },
- "beauty_booking": {
-  "required": [
-   "schedule_service_available",
-   "calendar_writable",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "notification_service_active",
-   "crm_service_available"
-  ],
-  "timeout": 20000
- },
- "beauty_new_customer": {
-  "required": [
-   "lead_capture_active",
-   "schedule_service_available",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "campaign_service_active",
-   "notification_service_active",
-   "crm_service_available"
-  ],
-  "timeout": 30000
- },
- "clinic_default_journey": {
-  "required": [
-   "customer_identification_active",
-   "schedule_service_available"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 20000
- },
- "agendamento": {
-  "required": [
-   "customer_identification_active",
-   "schedule_service_available",
-   "calendar_writable"
-  ],
-  "optional": [
-   "notification_service_active",
-   "crm_service_available"
-  ],
-  "timeout": 20000
- },
- "cancelamento": {
-  "required": [
-   "customer_identification_active",
-   "membership_validation_active",
-   "billing_validation_active"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 15000
- },
- "checkin": {
-  "required": [
-   "customer_identification_active",
-   "membership_validation_active",
-   "access_decision_active"
-  ],
-  "optional": [
-   "turnstile_device_connected",
-   "attendance_database_accessible"
-  ],
-  "timeout": 10000
- },
- "checkout": {
-  "required": [
-   "customer_identification_active",
-   "billing_validation_active",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 15000
- },
- "fitness_active_customer": {
-  "required": [
-   "customer_identification_active",
-   "membership_validation_active",
-   "access_decision_active"
-  ],
-  "optional": [
-   "attendance_database_accessible",
-   "crm_service_available"
-  ],
-  "timeout": 20000
- },
- "fitness_new_customer": {
-  "required": [
-   "customer_identification_active",
-   "membership_validation_active"
-  ],
-  "optional": [
-   "payment_gateway_available",
-   "access_decision_active",
-   "crm_service_available"
-  ],
-  "timeout": 25000
- },
- "leads": {
-  "required": [
-   "lead_capture_active",
-   "customer_identification_active"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 15000
- },
- "onboarding": {
-  "required": [
-   "customer_identification_active",
-   "onboarding_flow_active"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 30000
- },
- "renovacao": {
-  "required": [
-   "customer_identification_active",
-   "membership_validation_active",
-   "billing_validation_active",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 25000
- },
- "food_customer_journey": {
-  "required": [
-   "customer_identification_active",
-   "order_service_available",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "notification_service_active"
-  ],
-  "timeout": 20000
- },
- "food_order_flow": {
-  "required": [
-   "order_service_available",
-   "storefront_channel_active",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "notification_service_active",
-   "delivery_service_available"
-  ],
-  "timeout": 20000
- },
- "market_default_journey": {
-  "required": [
-   "customer_identification_active",
-   "order_service_available",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "notification_service_active",
-   "crm_service_available"
-  ],
-  "timeout": 20000
- },
- "services_default_journey": {
-  "required": [
-   "customer_identification_active",
-   "schedule_service_available",
-   "payment_gateway_available"
-  ],
-  "optional": [
-   "crm_service_available",
-   "notification_service_active"
-  ],
-  "timeout": 25000
- },
- "capability_scheduling": {
-  "required": [
-   "schedule_service_available",
-   "calendar_writable"
-  ],
-  "optional": [
-   "notification_service_active"
-  ],
-  "timeout": 15000
- },
- "capability_crm_updates": {
-  "required": [
-   "crm_service_available",
-   "database_writable"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "capability_lead_capture": {
-  "required": [
-   "lead_capture_active",
-   "crm_service_available"
-  ],
-  "optional": [
-   "notification_service_active"
-  ],
-  "timeout": 15000
- },
- "orders": {
-  "required": [
-   "order_service_available",
-   "payment_gateway_configured"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "projects": {
-  "required": [
-   "project_service_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "inbox": {
-  "required": [
-   "inbox_service_available",
-   "agent_online"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "campaigns": {
-  "required": [
-   "campaign_engine_available"
-  ],
-  "optional": [
-   "email_gateway"
-  ],
-  "timeout": 15000
- },
- "quick_replies": {
-  "required": [
-   "quick_replies_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "webhooks": {
-  "required": [
-   "webhook_service_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "tasks": {
-  "required": [
-   "task_service_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "billing": {
-  "required": [
-   "billing_service_available",
-   "payment_gateway_configured"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "marketing": {
-  "required": [
-   "marketing_module_available"
-  ],
-  "optional": [
-   "email_gateway"
-  ],
-  "timeout": 15000
- },
- "automations": {
-  "required": [
-   "automation_engine_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "sla": {
-  "required": [
-   "sla_policies_configured"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "deliveries": {
-  "required": [
-   "delivery_tracking_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "developer": {
-  "required": [
-   "developer_keys_enabled"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "whatsapp_connections": {
-  "required": [
-   "whatsapp_gateway_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "analytics": {
-  "required": [
-   "analytics_service_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "operational_intelligence": {
-  "required": [
-   "intelligence_engine_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- },
- "calendar": {
-  "required": [
-   "calendar_service_available"
-  ],
-  "optional": [],
-  "timeout": 15000
- }
+  "support_ticket_flow": {
+    "required": [
+      "authenticated_agent",
+      "tenant_loaded",
+      "open_ticket_exists",
+      "ticket_storage_accessible"
+    ],
+    "optional": [
+      "attachment_storage",
+      "email_gateway"
+    ],
+    "timeout": 30000
+  },
+  "fitness_customer_checkin": {
+    "required": [
+      "crm_contact_exists",
+      "membership_exists",
+      "credential_exists",
+      "device_available",
+      "attendance_database_accessible"
+    ],
+    "optional": [
+      "biometric_scanner",
+      "photo_capture"
+    ],
+    "timeout": 25000
+  },
+  "crm_contact_creation": {
+    "required": [
+      "crm_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "billing_charge": {
+    "required": [
+      "payment_gateway_available",
+      "subscription_exists",
+      "ledger_writable"
+    ],
+    "optional": [
+      "webhook_endpoint"
+    ],
+    "timeout": 20000
+  },
+  "turnstile_release": {
+    "required": [
+      "access_service_available",
+      "device_connected",
+      "release_mechanism_responsive"
+    ],
+    "optional": [
+      "biometric_verification"
+    ],
+    "timeout": 10000
+  },
+  "voice_call_routing": {
+    "required": [
+      "pbx_service_available",
+      "agent_available",
+      "call_queue_writable"
+    ],
+    "optional": [
+      "recording_storage"
+    ],
+    "timeout": 8000
+  },
+  "omnichannel_engagement": {
+    "required": [
+      "whatsapp_channel_active",
+      "webchat_channel_active",
+      "pbx_trunk_active",
+      "email_gateway_active"
+    ],
+    "optional": [
+      "recording_storage"
+    ],
+    "timeout": 30000
+  },
+  "booking_flow": {
+    "required": [
+      "schedule_service_available",
+      "calendar_writable",
+      "notification_service_active"
+    ],
+    "optional": [
+      "reminder_webhook"
+    ],
+    "timeout": 20000
+  },
+  "payment_charge_flow": {
+    "required": [
+      "payment_gateway_available",
+      "ledger_writable",
+      "invoice_service_active"
+    ],
+    "optional": [
+      "webhook_endpoint"
+    ],
+    "timeout": 25000
+  },
+  "beauty_booking": {
+    "required": [
+      "schedule_service_available",
+      "calendar_writable",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "notification_service_active",
+      "crm_service_available"
+    ],
+    "timeout": 20000
+  },
+  "beauty_new_customer": {
+    "required": [
+      "lead_capture_active",
+      "schedule_service_available",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "campaign_service_active",
+      "notification_service_active",
+      "crm_service_available"
+    ],
+    "timeout": 30000
+  },
+  "clinic_default_journey": {
+    "required": [
+      "customer_identification_active",
+      "schedule_service_available"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 20000
+  },
+  "agendamento": {
+    "required": [
+      "customer_identification_active",
+      "schedule_service_available",
+      "calendar_writable"
+    ],
+    "optional": [
+      "notification_service_active",
+      "crm_service_available"
+    ],
+    "timeout": 20000
+  },
+  "cancelamento": {
+    "required": [
+      "customer_identification_active",
+      "membership_validation_active",
+      "billing_validation_active"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 15000
+  },
+  "checkin": {
+    "required": [
+      "customer_identification_active",
+      "membership_validation_active",
+      "access_decision_active"
+    ],
+    "optional": [
+      "turnstile_device_connected",
+      "attendance_database_accessible"
+    ],
+    "timeout": 10000
+  },
+  "checkout": {
+    "required": [
+      "customer_identification_active",
+      "billing_validation_active",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 15000
+  },
+  "fitness_active_customer": {
+    "required": [
+      "customer_identification_active",
+      "membership_validation_active",
+      "access_decision_active"
+    ],
+    "optional": [
+      "attendance_database_accessible",
+      "crm_service_available"
+    ],
+    "timeout": 20000
+  },
+  "fitness_new_customer": {
+    "required": [
+      "customer_identification_active",
+      "membership_validation_active"
+    ],
+    "optional": [
+      "payment_gateway_available",
+      "access_decision_active",
+      "crm_service_available"
+    ],
+    "timeout": 25000
+  },
+  "leads": {
+    "required": [
+      "lead_capture_active",
+      "customer_identification_active"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 15000
+  },
+  "onboarding": {
+    "required": [
+      "customer_identification_active",
+      "onboarding_flow_active"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 30000
+  },
+  "renovacao": {
+    "required": [
+      "customer_identification_active",
+      "membership_validation_active",
+      "billing_validation_active",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 25000
+  },
+  "food_customer_journey": {
+    "required": [
+      "customer_identification_active",
+      "order_service_available",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 20000
+  },
+  "food_order_flow": {
+    "required": [
+      "order_service_available",
+      "storefront_channel_active",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "notification_service_active",
+      "delivery_service_available"
+    ],
+    "timeout": 20000
+  },
+  "market_default_journey": {
+    "required": [
+      "customer_identification_active",
+      "order_service_available",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "notification_service_active",
+      "crm_service_available"
+    ],
+    "timeout": 20000
+  },
+  "services_default_journey": {
+    "required": [
+      "customer_identification_active",
+      "schedule_service_available",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "crm_service_available",
+      "notification_service_active"
+    ],
+    "timeout": 25000
+  },
+  "capability_scheduling": {
+    "required": [
+      "schedule_service_available",
+      "calendar_writable"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 15000
+  },
+  "capability_crm_updates": {
+    "required": [
+      "crm_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "capability_lead_capture": {
+    "required": [
+      "lead_capture_active",
+      "crm_service_available"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 15000
+  },
+  "orders": {
+    "required": [
+      "order_service_available",
+      "payment_gateway_configured"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "projects": {
+    "required": [
+      "project_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "inbox": {
+    "required": [
+      "inbox_service_available",
+      "agent_online"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "campaigns": {
+    "required": [
+      "campaign_engine_available"
+    ],
+    "optional": [
+      "email_gateway"
+    ],
+    "timeout": 15000
+  },
+  "quick_replies": {
+    "required": [
+      "quick_replies_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "webhooks": {
+    "required": [
+      "webhook_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "tasks": {
+    "required": [
+      "task_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "billing": {
+    "required": [
+      "billing_service_available",
+      "payment_gateway_configured"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "marketing": {
+    "required": [
+      "marketing_module_available"
+    ],
+    "optional": [
+      "email_gateway"
+    ],
+    "timeout": 15000
+  },
+  "automations": {
+    "required": [
+      "automation_engine_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "sla": {
+    "required": [
+      "sla_policies_configured"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "deliveries": {
+    "required": [
+      "delivery_tracking_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "developer": {
+    "required": [
+      "developer_keys_enabled"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "whatsapp_connections": {
+    "required": [
+      "whatsapp_gateway_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "analytics": {
+    "required": [
+      "analytics_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "operational_intelligence": {
+    "required": [
+      "intelligence_engine_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "calendar": {
+    "required": [
+      "calendar_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "academy_learning": {
+    "required": [
+      "learning_core_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "physical_queue_kiosk_station_panel_fila": {
+    "required": [
+      "physical_queue_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "public_tokens": {
+    "required": [
+      "public_token_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "process_runtime": {
+    "required": [
+      "process_runtime_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "solutions": {
+    "required": [
+      "solution_packs_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "rbac_access_control": {
+    "required": [
+      "rbac_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "templates": {
+    "required": [
+      "template_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "operations_dashboard": {
+    "required": [
+      "operations_dashboard_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "cognitive_assistant": {
+    "required": [
+      "cognitive_core_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "supervisor": {
+    "required": [
+      "supervisor_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "queues": {
+    "required": [
+      "queue_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "departments": {
+    "required": [
+      "department_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "export": {
+    "required": [
+      "export_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "demo": {
+    "required": [
+      "demo_orchestrator_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  }
 }

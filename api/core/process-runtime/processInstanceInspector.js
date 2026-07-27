@@ -34,10 +34,13 @@ function safeArrayCopy(value) {
   }
 }
 
-async function safeAsyncCall(fn, args, fallbackValue) {
+async function safeAsyncCall(fn, args, fallbackValue, thisArg = null) {
   if (typeof fn !== 'function') return fallbackValue;
   try {
-    return await fn(...args);
+    // Métodos de classe (SequelizeProcessInstanceStore, repositórios) dependem
+    // de `this`; invocar desvinculado lança TypeError que seria engolido pelo
+    // catch, retornando fallback silenciosamente.
+    return await fn.apply(thisArg, args);
   } catch (_) {
     return fallbackValue;
   }
@@ -58,6 +61,7 @@ class ProcessInstanceInspector {
       this.instanceStore && this.instanceStore.loadInstance,
       [safeExecutionId],
       null,
+      this.instanceStore,
     );
   }
 
@@ -67,6 +71,7 @@ class ProcessInstanceInspector {
       this.instanceStore && this.instanceStore.listInstances,
       [safeFilters],
       [],
+      this.instanceStore,
     );
     return safeArrayCopy(items);
   }
@@ -78,6 +83,7 @@ class ProcessInstanceInspector {
       this.executionRepository && this.executionRepository.listEventsByExecution,
       [safeExecutionId],
       [],
+      this.executionRepository,
     );
     return safeArrayCopy(history);
   }
@@ -97,6 +103,7 @@ class ProcessInstanceInspector {
         this.executionRepository && this.executionRepository.getLastEvent,
         [safeExecutionId],
         null,
+        this.executionRepository,
       );
       return {
         reason: 'waiting',
@@ -119,6 +126,7 @@ class ProcessInstanceInspector {
       this.replayService && this.replayService.getExecutionPath,
       [events],
       [],
+      this.replayService,
     );
     return safeArrayCopy(path);
   }

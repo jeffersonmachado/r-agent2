@@ -149,6 +149,25 @@ async function handleQueueRoutes(ctx) {
     const result = deleteQueue(queueName, force);
 
     if (result.success) {
+      // A definição persistida da fila precisa ser desativada junto: GET /queues
+      // mescla o serviço legado (memória) com queueDefinitionService (DB) e a
+      // fila "excluída" reapareceria na listagem e após restart. Aguardado
+      // para não haver corrida com listagens imediatamente posteriores.
+      try {
+        const existing = typeof queueDefinitionService.getQueueByName === 'function'
+          ? queueDefinitionService.getQueueByName(req.tenantId, queueName)
+          : null;
+        await queueDefinitionService.upsertQueue({
+          tenantId: req.tenantId,
+          name: queueName,
+          routingStrategy: existing?.routingStrategy || 'manual',
+          priority: existing?.priority ?? 0,
+          active: false,
+        });
+      } catch (err) {
+        logger.error('Erro ao desativar definição persistida da fila', err);
+      }
+
       logAction({
         agentId: req.agent.id,
         username: req.agent.username,

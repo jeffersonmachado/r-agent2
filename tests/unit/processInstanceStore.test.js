@@ -8,8 +8,7 @@ describe('InMemoryProcessInstanceStore', () => {
     cleanupAfterTest();
   });
 
-  test('cria, atualiza e lista instancias em waiting', withTimeout(async () => {
-    const store = new InMemoryProcessInstanceStore();
+  test('cria, atualiza e lista instancias em waiting', withTimeout(async () => {    const store = new InMemoryProcessInstanceStore();
     await store.createInstance({
       executionId: 'exec-store-1',
       processId: 'proc-1',
@@ -105,5 +104,37 @@ describe('InMemoryProcessInstanceStore', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].executionId).toBe('exec-store-valid');
+  }, 5000));
+
+  test('listInstances trata filtros explicitamente nulos como ausentes (regressão: lista sempre vazia)', withTimeout(async () => {
+    // Regressão observada em runtime real (2026-07-27): GET /api/process-instances
+    // sempre retornava lista vazia. A rota envia { status: null, processId: null }
+    // e resolveFilterString convertia null em '' (string vazia); matchesInstanceFilters
+    // comparava instance.status === '' e excluía todos os registros.
+    const store = new InMemoryProcessInstanceStore();
+    await store.createInstance({
+      executionId: 'exec-null-filter-1',
+      processId: 'proc-1',
+      processVersion: 1,
+      status: 'completed',
+      metadata: { tenantId: 't-1' },
+    });
+
+    const withNullFilters = await store.listInstances({
+      tenantId: 't-1',
+      status: null,
+      processId: null,
+      limit: 50,
+    });
+    const withUndefinedFilters = await store.listInstances({
+      tenantId: 't-1',
+      status: undefined,
+      processId: undefined,
+      limit: 50,
+    });
+
+    expect(withNullFilters).toHaveLength(1);
+    expect(withNullFilters[0].executionId).toBe('exec-null-filter-1');
+    expect(withUndefinedFilters).toHaveLength(1);
   }, 5000));
 });

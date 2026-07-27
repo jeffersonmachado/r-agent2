@@ -59,8 +59,32 @@ function createQueueService({ deps }) {
       return deps.getQueueInfo(queueName);
     },
 
-    deleteQueue(queueName, force) {
-      return deps.deleteQueue(queueName, force);
+    async deleteQueue(queueName, force, tenantId = null) {
+      const result = deps.deleteQueue(queueName, force);
+
+      if (result.success && tenantId) {
+        // A definição persistida da fila precisa ser desativada junto: a
+        // listagem mescla o serviço legado (memória) com o
+        // queueDefinitionService (DB) e a fila "excluída" reapareceria.
+        // Aguardado (não fire-and-forget) para não haver corrida entre a
+        // exclusão e uma listagem imediatamente posterior.
+        try {
+          const existing = typeof deps.queueDefinitionService.getQueueByName === 'function'
+            ? deps.queueDefinitionService.getQueueByName(tenantId, queueName)
+            : null;
+          await deps.queueDefinitionService.upsertQueue({
+            tenantId,
+            name: queueName,
+            routingStrategy: existing?.routingStrategy || 'manual',
+            priority: existing?.priority ?? 0,
+            active: false,
+          });
+        } catch (err) {
+          deps.logger.error('Erro ao desativar definição persistida da fila', err);
+        }
+      }
+
+      return result;
     },
 
     listQueueTickets(queueName, options) {

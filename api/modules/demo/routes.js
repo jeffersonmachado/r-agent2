@@ -62,6 +62,14 @@ function createDemoRoutes({ buildDeps }) {
         deps.sendJson(res, 404, { error: 'not_found', message: error.message });
         return;
       }
+      if (error.code === 'BAD_REQUEST') {
+        deps.sendJson(res, 400, { error: 'bad_request', message: error.message, details: error.details || undefined });
+        return;
+      }
+      if (error.code === 'MISSING_PLATFORM_SCENARIO_IDS' || error.code === 'PIPELINE_ONLY_SCENARIO') {
+        deps.sendJson(res, 422, { error: 'demo_run_unavailable', code: error.code, message: error.message });
+        return;
+      }
       deps.logger.error('[DemoRoutes] Error running /api/demo/run', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Error running demo flow' });
     }

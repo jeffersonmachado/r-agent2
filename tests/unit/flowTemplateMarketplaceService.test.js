@@ -15,7 +15,7 @@ describe('FlowTemplateMarketplaceService', () => {
     jest.clearAllMocks();
   });
 
-  test('createTemplate adiciona ao cache e listTemplates filtra por tenant + global (tenant_key=system)', async () => {
+  test('createTemplate adiciona ao cache e listTemplates filtra por tenant + global (built-in mkt-*)', async () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
     jest.doMock('../../api/db/models', () => ({ FlowTemplate: jest.fn() }));
     jest.doMock('../../engine/validator', () => ({
@@ -28,6 +28,7 @@ describe('FlowTemplateMarketplaceService', () => {
 
     const global = await svc.createTemplate({
       tenantId: 'system',
+      id: 'mkt-lead-captacao',
       name: 'Global',
       tags: ['lead'],
       flow: { nodes: [{ id: 'n1' }], edges: [] },
@@ -64,6 +65,7 @@ describe('FlowTemplateMarketplaceService', () => {
 
     await svc.createTemplate({
       tenantId: 'system',
+      id: 'mkt-pesquisa-nps',
       name: 'Pesquisa NPS',
       description: 'Pesquisa de satisfação',
       tags: ['pesquisa_satisfacao'],
@@ -72,6 +74,7 @@ describe('FlowTemplateMarketplaceService', () => {
 
     await svc.createTemplate({
       tenantId: 'system',
+      id: 'mkt-cobranca',
       name: 'Cobrança',
       description: 'Cobrança de fatura',
       tags: ['cobranca'],
@@ -110,6 +113,86 @@ describe('FlowTemplateMarketplaceService', () => {
 
     const no = svc.getTemplate({ tenantId: 'tenant-2', id: tenant.template.id });
     expect(no).toBeNull();
+  });
+
+  test('deleteTemplate permite remover template criado pelo próprio tenant system', async () => {
+    // Regressão: templates criados por usuários do tenant system recebiam tenantId='system',
+    // eram confundidos com templates globais built-in e nunca podiam ser removidos (403).
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
+    jest.doMock('../../api/db/models', () => ({ FlowTemplate: jest.fn() }));
+    jest.doMock('../../engine/validator', () => ({
+      validateFlow: jest.fn(() => ({ valid: true, errors: [] })),
+      addUiMessage: jest.fn(),
+    }));
+
+    // eslint-disable-next-line global-require
+    const svc = require('../../api/services/flowTemplateMarketplaceService');
+
+    const created = await svc.createTemplate({
+      tenantId: 'system',
+      name: 'Template do tenant system',
+      tags: [],
+      flow: { nodes: [{ id: 'n1' }], edges: [] },
+    });
+    expect(created.success).toBe(true);
+
+    const removed = await svc.deleteTemplate({ tenantId: 'system', id: created.template.id });
+    expect(removed.success).toBe(true);
+    expect(svc.getTemplate({ tenantId: 'system', id: created.template.id })).toBeNull();
+  });
+
+  test('deleteTemplate continua bloqueando templates globais built-in do marketplace', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
+    jest.doMock('../../api/db/models', () => ({ FlowTemplate: jest.fn() }));
+    jest.doMock('../../engine/validator', () => ({
+      validateFlow: jest.fn(() => ({ valid: true, errors: [] })),
+      addUiMessage: jest.fn(),
+    }));
+
+    // eslint-disable-next-line global-require
+    const svc = require('../../api/services/flowTemplateMarketplaceService');
+
+    const created = await svc.createTemplate({
+      tenantId: 'system',
+      id: 'mkt-agendamento',
+      name: 'Built-in simulado',
+      tags: [],
+      flow: { nodes: [{ id: 'n1' }], edges: [] },
+    });
+    expect(created.success).toBe(true);
+
+    const denied = await svc.deleteTemplate({ tenantId: 'system', id: 'mkt-agendamento' });
+    expect(denied.success).toBe(false);
+    expect(denied.error).toBe('forbidden');
+  });
+
+  test('template criado pelo tenant system não vaza como global para outros tenants', async () => {
+    // Regressão de isolamento: listTemplates(scope=all) incluía qualquer template com
+    // tenantId='system' para todos os tenants, expondo conteúdo criado pelo tenant system.
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
+    jest.doMock('../../api/db/models', () => ({ FlowTemplate: jest.fn() }));
+    jest.doMock('../../engine/validator', () => ({
+      validateFlow: jest.fn(() => ({ valid: true, errors: [] })),
+      addUiMessage: jest.fn(),
+    }));
+
+    // eslint-disable-next-line global-require
+    const svc = require('../../api/services/flowTemplateMarketplaceService');
+
+    const systemOwned = await svc.createTemplate({
+      tenantId: 'system',
+      name: 'Interno do tenant system',
+      tags: [],
+      flow: { nodes: [{ id: 'n1' }], edges: [] },
+    });
+    expect(systemOwned.success).toBe(true);
+
+    const listOther = svc.listTemplates({ tenantId: 'tenant-2', scope: 'all' });
+    expect(listOther.some(t => t.id === systemOwned.template.id)).toBe(false);
+    expect(svc.getTemplate({ tenantId: 'tenant-2', id: systemOwned.template.id })).toBeNull();
+
+    const listOwn = svc.listTemplates({ tenantId: 'system', scope: 'all' });
+    expect(listOwn.some(t => t.id === systemOwned.template.id)).toBe(true);
   });
 });
 

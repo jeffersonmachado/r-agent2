@@ -95,7 +95,7 @@ function createQueueController({ service, deps }) {
 
       const queueName = decodeURIComponent(String(req.params.queueName));
       const { force } = service.parseDeleteOptions(req.url);
-      const result = service.deleteQueue(queueName, force);
+      const result = await service.deleteQueue(queueName, force, req.tenantId);
 
       if (result.success) {
         bestEffortLogAction({

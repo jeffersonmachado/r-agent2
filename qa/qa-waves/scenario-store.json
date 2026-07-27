@@ -14290,7 +14290,34 @@
         "Validar payment",
         "Validar crm updates",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_beauty_booking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar beauty_booking",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-scheduling",
@@ -14339,7 +14366,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Scheduling"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_scheduling_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Scheduling",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-payment",
@@ -14388,7 +14443,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Payment"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_payment_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Payment",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-crm_updates",
@@ -14437,7 +14520,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Crm Updates"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_crm_updates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Crm Updates",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-notifications",
@@ -14486,7 +14597,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Notifications"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_notifications_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Notifications",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_booking-schedule_service_available",
@@ -14528,7 +14667,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_booking-calendar_writable",
@@ -14570,7 +14737,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Calendar Writable"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.059Z",
+      "updatedAt": "2026-07-27T01:02:32.059Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_booking-payment_gateway_available",
@@ -14612,7 +14807,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "beauty_booking",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-beauty_new_customer",
@@ -14669,7 +14892,34 @@
         "Validar payment",
         "Validar crm updates",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "beauty_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_beauty_new_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar beauty_new_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_new_customer-lead_capture_active",
@@ -14711,7 +14961,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Lead Capture Active"
-      ]
+      ],
+      "journeyId": "beauty_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_new_customer-schedule_service_available",
@@ -14753,7 +15031,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "beauty_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-beauty_new_customer-payment_gateway_available",
@@ -14795,7 +15101,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "beauty_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-clinic_default_journey",
@@ -14852,7 +15186,34 @@
         "Validar scheduling",
         "Validar crm updates",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "clinic_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_clinic_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar clinic_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-clinic_default_journey-customer_identification_active",
@@ -14894,7 +15255,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "clinic_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-clinic_default_journey-schedule_service_available",
@@ -14936,7 +15325,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "clinic_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.060Z",
+      "updatedAt": "2026-07-27T01:02:32.060Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-agendamento",
@@ -14993,7 +15410,34 @@
         "Validar scheduling",
         "Validar notifications",
         "Validar crm update"
-      ]
+      ],
+      "journeyId": "agendamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_agendamento_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar agendamento",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-agendamento-customer_identification_active",
@@ -15035,7 +15479,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "agendamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-agendamento-schedule_service_available",
@@ -15077,7 +15549,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "agendamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-agendamento-calendar_writable",
@@ -15119,7 +15619,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Calendar Writable"
-      ]
+      ],
+      "journeyId": "agendamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-cancelamento",
@@ -15179,7 +15707,34 @@
         "Validar billing validation",
         "Validar crm update",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "cancelamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_cancelamento_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar cancelamento",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-cancelamento-customer_identification_active",
@@ -15221,7 +15776,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "cancelamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-cancelamento-membership_validation_active",
@@ -15263,7 +15846,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Membership Validation Active"
-      ]
+      ],
+      "journeyId": "cancelamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-cancelamento-billing_validation_active",
@@ -15305,7 +15916,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Billing Validation Active"
-      ]
+      ],
+      "journeyId": "cancelamento",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.061Z",
+      "updatedAt": "2026-07-27T01:02:32.061Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-checkin",
@@ -15365,7 +16004,34 @@
         "Validar access decision",
         "Validar turnstile release",
         "Validar attendance record"
-      ]
+      ],
+      "journeyId": "checkin",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_checkin_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar checkin",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkin-customer_identification_active",
@@ -15407,7 +16073,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "checkin",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkin-membership_validation_active",
@@ -15449,7 +16143,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Membership Validation Active"
-      ]
+      ],
+      "journeyId": "checkin",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkin-access_decision_active",
@@ -15491,7 +16213,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Access Decision Active"
-      ]
+      ],
+      "journeyId": "checkin",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-checkout",
@@ -15551,7 +16301,34 @@
         "Validar payment",
         "Validar crm update",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "checkout",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_checkout_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar checkout",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkout-customer_identification_active",
@@ -15593,7 +16370,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "checkout",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkout-billing_validation_active",
@@ -15635,7 +16440,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Billing Validation Active"
-      ]
+      ],
+      "journeyId": "checkout",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-checkout-payment_gateway_available",
@@ -15677,7 +16510,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "checkout",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.062Z",
+      "updatedAt": "2026-07-27T01:02:32.062Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-fitness_active_customer",
@@ -15737,7 +16598,34 @@
         "Validar access decision",
         "Validar attendance record",
         "Validar crm update"
-      ]
+      ],
+      "journeyId": "fitness_active_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_fitness_active_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar fitness_active_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-fitness_active_customer-customer_identification_active",
@@ -15779,7 +16667,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "fitness_active_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-fitness_active_customer-membership_validation_active",
@@ -15821,7 +16737,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Membership Validation Active"
-      ]
+      ],
+      "journeyId": "fitness_active_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-fitness_active_customer-access_decision_active",
@@ -15863,7 +16807,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Access Decision Active"
-      ]
+      ],
+      "journeyId": "fitness_active_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-fitness_new_customer",
@@ -15923,7 +16895,34 @@
         "Validar access decision",
         "Validar attendance record",
         "Validar crm update"
-      ]
+      ],
+      "journeyId": "fitness_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_fitness_new_customer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar fitness_new_customer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-fitness_new_customer-customer_identification_active",
@@ -15965,7 +16964,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "fitness_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.063Z",
+      "updatedAt": "2026-07-27T01:02:32.063Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-fitness_new_customer-membership_validation_active",
@@ -16007,7 +17034,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Membership Validation Active"
-      ]
+      ],
+      "journeyId": "fitness_new_customer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-leads",
@@ -16064,7 +17119,34 @@
         "Validar customer identification",
         "Validar crm updates",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "leads",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_leads_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar leads",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-lead_capture",
@@ -16113,7 +17195,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Lead Capture"
-      ]
+      ],
+      "journeyId": "leads",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_lead_capture_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Lead Capture",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-leads-lead_capture_active",
@@ -16155,7 +17265,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Lead Capture Active"
-      ]
+      ],
+      "journeyId": "leads",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-leads-customer_identification_active",
@@ -16197,7 +17335,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "leads",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-onboarding",
@@ -16254,7 +17420,34 @@
         "Validar crm updates",
         "Validar notifications",
         "Validar onboarding"
-      ]
+      ],
+      "journeyId": "onboarding",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_onboarding_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar onboarding",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-onboarding",
@@ -16303,7 +17496,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Onboarding"
-      ]
+      ],
+      "journeyId": "onboarding",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_onboarding_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Onboarding",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-onboarding-customer_identification_active",
@@ -16345,7 +17566,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "onboarding",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.064Z",
+      "updatedAt": "2026-07-27T01:02:32.064Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-onboarding-onboarding_flow_active",
@@ -16387,7 +17636,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Onboarding Flow Active"
-      ]
+      ],
+      "journeyId": "onboarding",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_onboarding_flow_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Onboarding Flow Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-renovacao",
@@ -16450,7 +17727,34 @@
         "Validar payment",
         "Validar crm update",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "renovacao",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_renovacao_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar renovacao",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-renovacao-customer_identification_active",
@@ -16492,7 +17796,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "renovacao",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-renovacao-membership_validation_active",
@@ -16534,7 +17866,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Membership Validation Active"
-      ]
+      ],
+      "journeyId": "renovacao",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_membership_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Membership Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-renovacao-billing_validation_active",
@@ -16576,7 +17936,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Billing Validation Active"
-      ]
+      ],
+      "journeyId": "renovacao",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-renovacao-payment_gateway_available",
@@ -16618,7 +18006,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "renovacao",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-food_customer_journey",
@@ -16672,7 +18088,34 @@
         "Validar customer identification",
         "Validar payment",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "food_customer_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_food_customer_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar food_customer_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_customer_journey-customer_identification_active",
@@ -16714,7 +18157,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "food_customer_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_customer_journey-order_service_available",
@@ -16756,7 +18227,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "journeyId": "food_customer_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_customer_journey-payment_gateway_available",
@@ -16798,7 +18297,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "food_customer_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.065Z",
+      "updatedAt": "2026-07-27T01:02:32.065Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-food_order_flow",
@@ -16852,7 +18379,34 @@
         "Validar customer identification",
         "Validar payment",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "food_order_flow",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_food_order_flow_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar food_order_flow",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_order_flow-order_service_available",
@@ -16894,7 +18448,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "journeyId": "food_order_flow",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_order_flow-storefront_channel_active",
@@ -16936,7 +18518,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Storefront Channel Active"
-      ]
+      ],
+      "journeyId": "food_order_flow",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_storefront_channel_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Storefront Channel Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-food_order_flow-payment_gateway_available",
@@ -16978,7 +18588,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "food_order_flow",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-market_default_journey",
@@ -17035,7 +18673,34 @@
         "Validar payment",
         "Validar notifications",
         "Validar crm updates"
-      ]
+      ],
+      "journeyId": "market_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_market_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar market_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-market_default_journey-customer_identification_active",
@@ -17077,7 +18742,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "market_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-market_default_journey-order_service_available",
@@ -17119,7 +18812,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "journeyId": "market_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-market_default_journey-payment_gateway_available",
@@ -17161,7 +18882,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "market_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-services_default_journey",
@@ -17221,7 +18970,34 @@
         "Validar payment",
         "Validar crm updates",
         "Validar notifications"
-      ]
+      ],
+      "journeyId": "services_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_services_default_journey_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar services_default_journey",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-services_default_journey-customer_identification_active",
@@ -17263,7 +19039,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Customer Identification Active"
-      ]
+      ],
+      "journeyId": "services_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_customer_identification_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Customer Identification Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.066Z",
+      "updatedAt": "2026-07-27T01:02:32.066Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-services_default_journey-schedule_service_available",
@@ -17305,7 +19109,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "services_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-services_default_journey-payment_gateway_available",
@@ -17347,7 +19179,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "journeyId": "services_default_journey",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-capability_scheduling",
@@ -17395,7 +19255,34 @@
       ],
       "trainingObjectives": [
         "Validar scheduling"
-      ]
+      ],
+      "journeyId": "capability_scheduling",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_capability_scheduling_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_scheduling",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_scheduling-schedule_service_available",
@@ -17437,7 +19324,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Schedule Service Available"
-      ]
+      ],
+      "journeyId": "capability_scheduling",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_schedule_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Schedule Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_scheduling-calendar_writable",
@@ -17479,7 +19394,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Calendar Writable"
-      ]
+      ],
+      "journeyId": "capability_scheduling",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_calendar_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-capability_crm_updates",
@@ -17527,7 +19470,34 @@
       ],
       "trainingObjectives": [
         "Validar crm updates"
-      ]
+      ],
+      "journeyId": "capability_crm_updates",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_capability_crm_updates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_crm_updates",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_crm_updates-crm_service_available",
@@ -17569,7 +19539,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Crm Service Available"
-      ]
+      ],
+      "journeyId": "capability_crm_updates",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_crm_updates-database_writable",
@@ -17611,7 +19609,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Database Writable"
-      ]
+      ],
+      "journeyId": "capability_crm_updates",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_database_writable_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Database Writable",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-capability_lead_capture",
@@ -17659,7 +19685,34 @@
       ],
       "trainingObjectives": [
         "Validar lead capture"
-      ]
+      ],
+      "journeyId": "capability_lead_capture",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_capability_lead_capture_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability_lead_capture",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.067Z",
+      "updatedAt": "2026-07-27T01:02:32.067Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_lead_capture-lead_capture_active",
@@ -17701,7 +19754,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Lead Capture Active"
-      ]
+      ],
+      "journeyId": "capability_lead_capture",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_lead_capture_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Lead Capture Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-capability_lead_capture-crm_service_available",
@@ -17743,7 +19824,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Crm Service Available"
-      ]
+      ],
+      "journeyId": "capability_lead_capture",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-orders",
@@ -17791,7 +19900,34 @@
       ],
       "trainingObjectives": [
         "Validar orders"
-      ]
+      ],
+      "journeyId": "orders",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_orders_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar orders",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-orders",
@@ -17840,7 +19976,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Orders"
-      ]
+      ],
+      "journeyId": "orders",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_orders_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Orders",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-orders-order_service_available",
@@ -17882,7 +20046,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "journeyId": "orders",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-orders-payment_gateway_configured",
@@ -17924,7 +20116,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Configured"
-      ]
+      ],
+      "journeyId": "orders",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_configured_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Configured",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-projects",
@@ -17972,7 +20192,34 @@
       ],
       "trainingObjectives": [
         "Validar projects"
-      ]
+      ],
+      "journeyId": "projects",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_projects_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar projects",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-projects",
@@ -18021,7 +20268,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Projects"
-      ]
+      ],
+      "journeyId": "projects",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_projects_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Projects",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-projects-project_service_available",
@@ -18063,7 +20338,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Project Service Available"
-      ]
+      ],
+      "journeyId": "projects",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_project_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Project Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-inbox",
@@ -18111,7 +20414,34 @@
       ],
       "trainingObjectives": [
         "Validar inbox"
-      ]
+      ],
+      "journeyId": "inbox",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_inbox_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar inbox",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.068Z",
+      "updatedAt": "2026-07-27T01:02:32.068Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-inbox",
@@ -18160,7 +20490,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Inbox"
-      ]
+      ],
+      "journeyId": "inbox",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_inbox_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Inbox",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-inbox-inbox_service_available",
@@ -18202,7 +20560,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Inbox Service Available"
-      ]
+      ],
+      "journeyId": "inbox",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_inbox_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Inbox Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-inbox-agent_online",
@@ -18244,7 +20630,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Agent Online"
-      ]
+      ],
+      "journeyId": "inbox",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_agent_online_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Agent Online",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-campaigns",
@@ -18292,7 +20706,34 @@
       ],
       "trainingObjectives": [
         "Validar campaigns"
-      ]
+      ],
+      "journeyId": "campaigns",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_campaigns_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar campaigns",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-campaigns",
@@ -18341,7 +20782,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Campaigns"
-      ]
+      ],
+      "journeyId": "campaigns",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_campaigns_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Campaigns",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-campaigns-campaign_engine_available",
@@ -18383,7 +20852,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Campaign Engine Available"
-      ]
+      ],
+      "journeyId": "campaigns",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_campaign_engine_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Campaign Engine Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-quick_replies",
@@ -18431,7 +20928,34 @@
       ],
       "trainingObjectives": [
         "Validar quick replies"
-      ]
+      ],
+      "journeyId": "quick_replies",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_quick_replies_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar quick_replies",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-quick_replies",
@@ -18480,7 +21004,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Quick Replies"
-      ]
+      ],
+      "journeyId": "quick_replies",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_quick_replies_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Quick Replies",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-quick_replies-quick_replies_available",
@@ -18522,7 +21074,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Quick Replies Available"
-      ]
+      ],
+      "journeyId": "quick_replies",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_quick_replies_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Quick Replies Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.069Z",
+      "updatedAt": "2026-07-27T01:02:32.069Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-webhooks",
@@ -18570,7 +21150,34 @@
       ],
       "trainingObjectives": [
         "Validar webhooks"
-      ]
+      ],
+      "journeyId": "webhooks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_webhooks_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar webhooks",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-webhooks",
@@ -18619,7 +21226,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Webhooks"
-      ]
+      ],
+      "journeyId": "webhooks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_webhooks_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Webhooks",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-webhooks-webhook_service_available",
@@ -18661,7 +21296,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Webhook Service Available"
-      ]
+      ],
+      "journeyId": "webhooks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_webhook_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Webhook Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-tasks",
@@ -18709,7 +21372,34 @@
       ],
       "trainingObjectives": [
         "Validar tasks"
-      ]
+      ],
+      "journeyId": "tasks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_tasks_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar tasks",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-tasks",
@@ -18758,7 +21448,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Tasks"
-      ]
+      ],
+      "journeyId": "tasks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_tasks_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Tasks",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-tasks-task_service_available",
@@ -18800,7 +21518,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Task Service Available"
-      ]
+      ],
+      "journeyId": "tasks",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_task_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Task Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.070Z",
+      "updatedAt": "2026-07-27T01:02:32.070Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-billing",
@@ -18848,7 +21594,34 @@
       ],
       "trainingObjectives": [
         "Validar billing"
-      ]
+      ],
+      "journeyId": "billing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_billing_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar billing",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-billing",
@@ -18897,7 +21670,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Billing"
-      ]
+      ],
+      "journeyId": "billing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_billing_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Billing",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-billing-billing_service_available",
@@ -18939,7 +21740,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Billing Service Available"
-      ]
+      ],
+      "journeyId": "billing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_billing_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-billing-payment_gateway_configured",
@@ -18981,7 +21810,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Configured"
-      ]
+      ],
+      "journeyId": "billing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_configured_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Configured",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-marketing",
@@ -19029,7 +21886,34 @@
       ],
       "trainingObjectives": [
         "Validar marketing"
-      ]
+      ],
+      "journeyId": "marketing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_marketing_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar marketing",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-marketing",
@@ -19078,7 +21962,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Marketing"
-      ]
+      ],
+      "journeyId": "marketing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_marketing_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Marketing",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-marketing-marketing_module_available",
@@ -19120,7 +22032,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Marketing Module Available"
-      ]
+      ],
+      "journeyId": "marketing",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_marketing_module_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Marketing Module Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-automations",
@@ -19168,7 +22108,34 @@
       ],
       "trainingObjectives": [
         "Validar automations"
-      ]
+      ],
+      "journeyId": "automations",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_automations_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar automations",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-automations",
@@ -19217,7 +22184,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Automations"
-      ]
+      ],
+      "journeyId": "automations",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_automations_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Automations",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-automations-automation_engine_available",
@@ -19259,7 +22254,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Automation Engine Available"
-      ]
+      ],
+      "journeyId": "automations",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_automation_engine_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Automation Engine Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.071Z",
+      "updatedAt": "2026-07-27T01:02:32.071Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-sla",
@@ -19307,7 +22330,34 @@
       ],
       "trainingObjectives": [
         "Validar sla"
-      ]
+      ],
+      "journeyId": "sla",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_sla_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar sla",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-sla",
@@ -19356,7 +22406,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Sla"
-      ]
+      ],
+      "journeyId": "sla",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_sla_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Sla",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-sla-sla_policies_configured",
@@ -19398,7 +22476,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Sla Policies Configured"
-      ]
+      ],
+      "journeyId": "sla",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_sla_policies_configured_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Sla Policies Configured",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-deliveries",
@@ -19446,7 +22552,34 @@
       ],
       "trainingObjectives": [
         "Validar deliveries"
-      ]
+      ],
+      "journeyId": "deliveries",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_deliveries_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar deliveries",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-deliveries",
@@ -19495,7 +22628,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Deliveries"
-      ]
+      ],
+      "journeyId": "deliveries",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_deliveries_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Deliveries",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-deliveries-delivery_tracking_available",
@@ -19537,7 +22698,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Delivery Tracking Available"
-      ]
+      ],
+      "journeyId": "deliveries",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_delivery_tracking_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Delivery Tracking Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-developer",
@@ -19585,7 +22774,34 @@
       ],
       "trainingObjectives": [
         "Validar developer"
-      ]
+      ],
+      "journeyId": "developer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_developer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar developer",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-developer",
@@ -19634,7 +22850,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Developer"
-      ]
+      ],
+      "journeyId": "developer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_developer_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Developer",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-developer-developer_keys_enabled",
@@ -19676,7 +22920,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Developer Keys Enabled"
-      ]
+      ],
+      "journeyId": "developer",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_developer_keys_enabled_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Developer Keys Enabled",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.072Z",
+      "updatedAt": "2026-07-27T01:02:32.072Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-whatsapp_connections",
@@ -19724,7 +22996,34 @@
       ],
       "trainingObjectives": [
         "Validar whatsapp connections"
-      ]
+      ],
+      "journeyId": "whatsapp_connections",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_whatsapp_connections_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar whatsapp_connections",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-whatsapp_connections",
@@ -19773,7 +23072,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Whatsapp Connections"
-      ]
+      ],
+      "journeyId": "whatsapp_connections",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_whatsapp_connections_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Whatsapp Connections",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-whatsapp_connections-whatsapp_gateway_available",
@@ -19815,7 +23142,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Whatsapp Gateway Available"
-      ]
+      ],
+      "journeyId": "whatsapp_connections",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_whatsapp_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Whatsapp Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-analytics",
@@ -19863,7 +23218,34 @@
       ],
       "trainingObjectives": [
         "Validar analytics"
-      ]
+      ],
+      "journeyId": "analytics",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_analytics_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar analytics",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-analytics",
@@ -19912,7 +23294,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Analytics"
-      ]
+      ],
+      "journeyId": "analytics",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_analytics_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Analytics",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-analytics-analytics_service_available",
@@ -19954,7 +23364,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Analytics Service Available"
-      ]
+      ],
+      "journeyId": "analytics",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_analytics_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Analytics Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-operational_intelligence",
@@ -20002,7 +23440,34 @@
       ],
       "trainingObjectives": [
         "Validar operational intelligence"
-      ]
+      ],
+      "journeyId": "operational_intelligence",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_operational_intelligence_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar operational_intelligence",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-operational_intelligence",
@@ -20051,7 +23516,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Operational Intelligence"
-      ]
+      ],
+      "journeyId": "operational_intelligence",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_operational_intelligence_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Operational Intelligence",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-operational_intelligence-intelligence_engine_available",
@@ -20093,7 +23586,35 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Intelligence Engine Available"
-      ]
+      ],
+      "journeyId": "operational_intelligence",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_intelligence_engine_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Intelligence Engine Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-calendar",
@@ -20141,7 +23662,34 @@
       ],
       "trainingObjectives": [
         "Validar calendar"
-      ]
+      ],
+      "journeyId": "calendar",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_calendar_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar calendar",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.073Z",
+      "updatedAt": "2026-07-27T01:02:32.073Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-calendar",
@@ -20190,7 +23738,35 @@
       ],
       "trainingObjectives": [
         "Validar capability Calendar"
-      ]
+      ],
+      "journeyId": "calendar",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_calendar_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Calendar",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.074Z",
+      "updatedAt": "2026-07-27T01:02:32.074Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-calendar-calendar_service_available",
@@ -20232,6 +23808,1980 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Calendar Service Available"
+      ],
+      "journeyId": "calendar",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_calendar_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-07-27T01:02:32.074Z",
+      "updatedAt": "2026-07-27T01:02:32.074Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "business-e2e-academy_learning",
+      "waveId": "wave-business-academy_learning",
+      "vertical": "core",
+      "journey": "academy_learning",
+      "name": "E2E: academy_learning",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_academy_learning_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar academy_learning",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "academy_learning: validado"
+      ],
+      "requiredCapabilities": [
+        "academy_learning"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar academy learning"
+      ]
+    },
+    {
+      "id": "cap-academy_learning",
+      "waveId": "wave-cap-academy_learning",
+      "vertical": "core",
+      "journey": "academy_learning",
+      "name": "Validação: Academy Learning",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_academy_learning_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Academy Learning",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Academy Learning operacional"
+      ],
+      "requiredCapabilities": [
+        "academy_learning"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Academy Learning"
+      ]
+    },
+    {
+      "id": "precond-academy_learning-learning_core_available",
+      "waveId": "wave-precond-academy_learning",
+      "vertical": "core",
+      "journey": "academy_learning",
+      "name": "Precondição: Learning Core Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_learning_core_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Learning Core Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Learning Core Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Learning Core Available"
+      ]
+    },
+    {
+      "id": "business-e2e-physical_queue_kiosk_station_panel_fila",
+      "waveId": "wave-business-physical_queue_kiosk_station_panel_fila",
+      "vertical": "core",
+      "journey": "physical_queue_kiosk_station_panel_fila",
+      "name": "E2E: physical_queue_kiosk_station_panel_fila",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_physical_queue_kiosk_station_panel_fila_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar physical_queue_kiosk_station_panel_fila",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "physical_queue_kiosk_station_panel_fila: validado"
+      ],
+      "requiredCapabilities": [
+        "physical_queue_kiosk_station_panel_fila"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar physical queue kiosk station panel fila"
+      ]
+    },
+    {
+      "id": "cap-physical_queue_kiosk_station_panel_fila",
+      "waveId": "wave-cap-physical_queue_kiosk_station_panel_fila",
+      "vertical": "core",
+      "journey": "physical_queue_kiosk_station_panel_fila",
+      "name": "Validação: Physical Queue Kiosk Station Panel Fila",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_physical_queue_kiosk_station_panel_fila_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Physical Queue Kiosk Station Panel Fila",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Physical Queue Kiosk Station Panel Fila operacional"
+      ],
+      "requiredCapabilities": [
+        "physical_queue_kiosk_station_panel_fila"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Physical Queue Kiosk Station Panel Fila"
+      ]
+    },
+    {
+      "id": "precond-physical_queue_kiosk_station_panel_fila-physical_queue_available",
+      "waveId": "wave-precond-physical_queue_kiosk_station_panel_fila",
+      "vertical": "core",
+      "journey": "physical_queue_kiosk_station_panel_fila",
+      "name": "Precondição: Physical Queue Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_physical_queue_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Physical Queue Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Physical Queue Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Physical Queue Available"
+      ]
+    },
+    {
+      "id": "business-e2e-public_tokens",
+      "waveId": "wave-business-public_tokens",
+      "vertical": "core",
+      "journey": "public_tokens",
+      "name": "E2E: public_tokens",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_public_tokens_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar public_tokens",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "public_tokens: validado"
+      ],
+      "requiredCapabilities": [
+        "public_tokens"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar public tokens"
+      ]
+    },
+    {
+      "id": "cap-public_tokens",
+      "waveId": "wave-cap-public_tokens",
+      "vertical": "core",
+      "journey": "public_tokens",
+      "name": "Validação: Public Tokens",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_public_tokens_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Public Tokens",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Public Tokens operacional"
+      ],
+      "requiredCapabilities": [
+        "public_tokens"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Public Tokens"
+      ]
+    },
+    {
+      "id": "precond-public_tokens-public_token_service_available",
+      "waveId": "wave-precond-public_tokens",
+      "vertical": "core",
+      "journey": "public_tokens",
+      "name": "Precondição: Public Token Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_public_token_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Public Token Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Public Token Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Public Token Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-process_runtime",
+      "waveId": "wave-business-process_runtime",
+      "vertical": "core",
+      "journey": "process_runtime",
+      "name": "E2E: process_runtime",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_process_runtime_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar process_runtime",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "process_runtime: validado"
+      ],
+      "requiredCapabilities": [
+        "process_runtime"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar process runtime"
+      ]
+    },
+    {
+      "id": "cap-process_runtime",
+      "waveId": "wave-cap-process_runtime",
+      "vertical": "core",
+      "journey": "process_runtime",
+      "name": "Validação: Process Runtime",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_process_runtime_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Process Runtime",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Process Runtime operacional"
+      ],
+      "requiredCapabilities": [
+        "process_runtime"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Process Runtime"
+      ]
+    },
+    {
+      "id": "precond-process_runtime-process_runtime_available",
+      "waveId": "wave-precond-process_runtime",
+      "vertical": "core",
+      "journey": "process_runtime",
+      "name": "Precondição: Process Runtime Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_process_runtime_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Process Runtime Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Process Runtime Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Process Runtime Available"
+      ]
+    },
+    {
+      "id": "business-e2e-solutions",
+      "waveId": "wave-business-solutions",
+      "vertical": "core",
+      "journey": "solutions",
+      "name": "E2E: solutions",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_solutions_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar solutions",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "solutions: validado"
+      ],
+      "requiredCapabilities": [
+        "solutions"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar solutions"
+      ]
+    },
+    {
+      "id": "cap-solutions",
+      "waveId": "wave-cap-solutions",
+      "vertical": "core",
+      "journey": "solutions",
+      "name": "Validação: Solutions",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_solutions_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Solutions",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Solutions operacional"
+      ],
+      "requiredCapabilities": [
+        "solutions"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Solutions"
+      ]
+    },
+    {
+      "id": "precond-solutions-solution_packs_available",
+      "waveId": "wave-precond-solutions",
+      "vertical": "core",
+      "journey": "solutions",
+      "name": "Precondição: Solution Packs Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_solution_packs_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Solution Packs Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Solution Packs Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Solution Packs Available"
+      ]
+    },
+    {
+      "id": "business-e2e-rbac_access_control",
+      "waveId": "wave-business-rbac_access_control",
+      "vertical": "core",
+      "journey": "rbac_access_control",
+      "name": "E2E: rbac_access_control",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_rbac_access_control_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar rbac_access_control",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "rbac_access_control: validado"
+      ],
+      "requiredCapabilities": [
+        "rbac_access_control"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar rbac access control"
+      ]
+    },
+    {
+      "id": "cap-rbac_access_control",
+      "waveId": "wave-cap-rbac_access_control",
+      "vertical": "core",
+      "journey": "rbac_access_control",
+      "name": "Validação: Rbac Access Control",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_rbac_access_control_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Rbac Access Control",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Rbac Access Control operacional"
+      ],
+      "requiredCapabilities": [
+        "rbac_access_control"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Rbac Access Control"
+      ]
+    },
+    {
+      "id": "precond-rbac_access_control-rbac_service_available",
+      "waveId": "wave-precond-rbac_access_control",
+      "vertical": "core",
+      "journey": "rbac_access_control",
+      "name": "Precondição: Rbac Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_rbac_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Rbac Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Rbac Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Rbac Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-templates",
+      "waveId": "wave-business-templates",
+      "vertical": "core",
+      "journey": "templates",
+      "name": "E2E: templates",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_templates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar templates",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "templates: validado"
+      ],
+      "requiredCapabilities": [
+        "templates"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar templates"
+      ]
+    },
+    {
+      "id": "cap-templates",
+      "waveId": "wave-cap-templates",
+      "vertical": "core",
+      "journey": "templates",
+      "name": "Validação: Templates",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_templates_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Templates",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Templates operacional"
+      ],
+      "requiredCapabilities": [
+        "templates"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Templates"
+      ]
+    },
+    {
+      "id": "precond-templates-template_service_available",
+      "waveId": "wave-precond-templates",
+      "vertical": "core",
+      "journey": "templates",
+      "name": "Precondição: Template Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_template_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Template Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Template Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Template Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-operations_dashboard",
+      "waveId": "wave-business-operations_dashboard",
+      "vertical": "core",
+      "journey": "operations_dashboard",
+      "name": "E2E: operations_dashboard",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_operations_dashboard_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar operations_dashboard",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "operations_dashboard: validado"
+      ],
+      "requiredCapabilities": [
+        "operations_dashboard"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar operations dashboard"
+      ]
+    },
+    {
+      "id": "cap-operations_dashboard",
+      "waveId": "wave-cap-operations_dashboard",
+      "vertical": "core",
+      "journey": "operations_dashboard",
+      "name": "Validação: Operations Dashboard",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_operations_dashboard_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Operations Dashboard",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Operations Dashboard operacional"
+      ],
+      "requiredCapabilities": [
+        "operations_dashboard"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Operations Dashboard"
+      ]
+    },
+    {
+      "id": "precond-operations_dashboard-operations_dashboard_available",
+      "waveId": "wave-precond-operations_dashboard",
+      "vertical": "core",
+      "journey": "operations_dashboard",
+      "name": "Precondição: Operations Dashboard Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_operations_dashboard_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Operations Dashboard Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Operations Dashboard Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Operations Dashboard Available"
+      ]
+    },
+    {
+      "id": "business-e2e-cognitive_assistant",
+      "waveId": "wave-business-cognitive_assistant",
+      "vertical": "core",
+      "journey": "cognitive_assistant",
+      "name": "E2E: cognitive_assistant",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_cognitive_assistant_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar cognitive_assistant",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "cognitive_assistant: validado"
+      ],
+      "requiredCapabilities": [
+        "cognitive_assistant"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar cognitive assistant"
+      ]
+    },
+    {
+      "id": "cap-cognitive_assistant",
+      "waveId": "wave-cap-cognitive_assistant",
+      "vertical": "core",
+      "journey": "cognitive_assistant",
+      "name": "Validação: Cognitive Assistant",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_cognitive_assistant_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Cognitive Assistant",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Cognitive Assistant operacional"
+      ],
+      "requiredCapabilities": [
+        "cognitive_assistant"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Cognitive Assistant"
+      ]
+    },
+    {
+      "id": "precond-cognitive_assistant-cognitive_core_available",
+      "waveId": "wave-precond-cognitive_assistant",
+      "vertical": "core",
+      "journey": "cognitive_assistant",
+      "name": "Precondição: Cognitive Core Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_cognitive_core_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Cognitive Core Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Cognitive Core Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Cognitive Core Available"
+      ]
+    },
+    {
+      "id": "business-e2e-supervisor",
+      "waveId": "wave-business-supervisor",
+      "vertical": "core",
+      "journey": "supervisor",
+      "name": "E2E: supervisor",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_supervisor_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar supervisor",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "supervisor: validado"
+      ],
+      "requiredCapabilities": [
+        "supervisor"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar supervisor"
+      ]
+    },
+    {
+      "id": "cap-supervisor",
+      "waveId": "wave-cap-supervisor",
+      "vertical": "core",
+      "journey": "supervisor",
+      "name": "Validação: Supervisor",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_supervisor_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Supervisor",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Supervisor operacional"
+      ],
+      "requiredCapabilities": [
+        "supervisor"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Supervisor"
+      ]
+    },
+    {
+      "id": "precond-supervisor-supervisor_service_available",
+      "waveId": "wave-precond-supervisor",
+      "vertical": "core",
+      "journey": "supervisor",
+      "name": "Precondição: Supervisor Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_supervisor_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Supervisor Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Supervisor Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Supervisor Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-queues",
+      "waveId": "wave-business-queues",
+      "vertical": "core",
+      "journey": "queues",
+      "name": "E2E: queues",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_queues_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar queues",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "queues: validado"
+      ],
+      "requiredCapabilities": [
+        "queues"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar queues"
+      ]
+    },
+    {
+      "id": "cap-queues",
+      "waveId": "wave-cap-queues",
+      "vertical": "core",
+      "journey": "queues",
+      "name": "Validação: Queues",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_queues_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Queues",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Queues operacional"
+      ],
+      "requiredCapabilities": [
+        "queues"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Queues"
+      ]
+    },
+    {
+      "id": "precond-queues-queue_service_available",
+      "waveId": "wave-precond-queues",
+      "vertical": "core",
+      "journey": "queues",
+      "name": "Precondição: Queue Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_queue_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Queue Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Queue Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Queue Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-departments",
+      "waveId": "wave-business-departments",
+      "vertical": "core",
+      "journey": "departments",
+      "name": "E2E: departments",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_departments_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar departments",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "departments: validado"
+      ],
+      "requiredCapabilities": [
+        "departments"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar departments"
+      ]
+    },
+    {
+      "id": "cap-departments",
+      "waveId": "wave-cap-departments",
+      "vertical": "core",
+      "journey": "departments",
+      "name": "Validação: Departments",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_departments_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Departments",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Departments operacional"
+      ],
+      "requiredCapabilities": [
+        "departments"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Departments"
+      ]
+    },
+    {
+      "id": "precond-departments-department_service_available",
+      "waveId": "wave-precond-departments",
+      "vertical": "core",
+      "journey": "departments",
+      "name": "Precondição: Department Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_department_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Department Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Department Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Department Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-export",
+      "waveId": "wave-business-export",
+      "vertical": "core",
+      "journey": "export",
+      "name": "E2E: export",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_export_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar export",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "export: validado"
+      ],
+      "requiredCapabilities": [
+        "export"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar export"
+      ]
+    },
+    {
+      "id": "cap-export",
+      "waveId": "wave-cap-export",
+      "vertical": "core",
+      "journey": "export",
+      "name": "Validação: Export",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_export_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Export",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Export operacional"
+      ],
+      "requiredCapabilities": [
+        "export"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Export"
+      ]
+    },
+    {
+      "id": "precond-export-export_service_available",
+      "waveId": "wave-precond-export",
+      "vertical": "core",
+      "journey": "export",
+      "name": "Precondição: Export Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_export_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Export Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Export Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Export Service Available"
+      ]
+    },
+    {
+      "id": "business-e2e-demo",
+      "waveId": "wave-business-demo",
+      "vertical": "core",
+      "journey": "demo",
+      "name": "E2E: demo",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_demo_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar demo",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "demo: validado"
+      ],
+      "requiredCapabilities": [
+        "demo"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar demo"
+      ]
+    },
+    {
+      "id": "cap-demo",
+      "waveId": "wave-cap-demo",
+      "vertical": "core",
+      "journey": "demo",
+      "name": "Validação: Demo",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_demo_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Demo",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Demo operacional"
+      ],
+      "requiredCapabilities": [
+        "demo"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Demo"
+      ]
+    },
+    {
+      "id": "precond-demo-demo_orchestrator_available",
+      "waveId": "wave-precond-demo",
+      "vertical": "core",
+      "journey": "demo",
+      "name": "Precondição: Demo Orchestrator Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_demo_orchestrator_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Demo Orchestrator Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Demo Orchestrator Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Demo Orchestrator Available"
       ]
     }
   ],
@@ -20973,7 +26523,49 @@
           "scenario atualizado"
         ]
       }
+    ],
+    "probe-x": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-07-27T01:02:32.074Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-07-27T01:03:15.850Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-07-27T01:03:47.860Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-07-27T01:03:58.547Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-07-27T01:04:10.214Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-07-23T21:23:18.244Z"
+  "updatedAt": "2026-07-27T01:04:11.055Z"
 }

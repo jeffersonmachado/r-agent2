@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-27T00:33:15.539Z",
+  "generatedAt": "2026-07-27T01:41:17.108Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -323,6 +323,132 @@
           "scenarios": [
             {
               "scenarioId": "business-core-cap-scheduling",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "academy_learning",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-academy",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "physical_queue_kiosk_station_panel_fila",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-physical-queue",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "public_tokens",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-public-tokens",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "process_runtime",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-process-runtime",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "solutions",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-solutions",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "rbac_access_control",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-rbac",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "templates",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-templates",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "operations_dashboard",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-ops-dashboard",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "cognitive_assistant",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-cognitive",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "supervisor",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-supervisor",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "queues",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-queues",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "departments",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-departments",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "export",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-export",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "demo",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-demo",
               "status": "active"
             }
           ]

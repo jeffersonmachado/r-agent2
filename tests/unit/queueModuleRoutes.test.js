@@ -71,6 +71,35 @@ describe('queue module', () => {
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, ['Delivery', 'Sales', 'Support']);
   });
 
+  test('controller remove desativa a definição persistida (regressão: fila reaparecia após exclusão)', async () => {
+    // Regressão observada em runtime real (2026-07-27): DELETE /queues/:name
+    // removia apenas o Map em memória; a definição persistida continuava ativa
+    // e GET /queues (merge das duas fontes) seguia exibindo a fila excluída.
+    const deps = makeDeps({
+      queueDefinitionService: {
+        listQueues: jest.fn(() => []),
+        getQueueByName: jest.fn(() => ({ id: 'q-1', tenantId: 'tenant-1', name: 'oldq', routingStrategy: 'round_robin', priority: 5, active: true })),
+        upsertQueue: jest.fn(async () => ({ success: true })),
+      },
+    });
+    const service = createQueueService({ deps });
+    const controller = createQueueController({ service, deps });
+    const req = makeReq({ params: { queueName: 'oldq' }, url: '/queues/oldq' });
+    const res = {};
+
+    await controller.remove(req, res);
+
+    expect(deps.deleteQueue).toHaveBeenCalledWith('oldq', false);
+    expect(deps.queueDefinitionService.upsertQueue).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      name: 'oldq',
+      active: false,
+      routingStrategy: 'round_robin',
+      priority: 5,
+    }));
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
+  });
+
   test('controller create preserva auditoria e status 201', async () => {
     const deps = makeDeps({
       parseJsonBody: jest.fn(async () => ({ name: 'VIP' })),

@@ -65,7 +65,11 @@ function normalizeFilterString(value) {
 function resolveFilterString(filters, key) {
   if (!safeHasOwn(filters, key)) return null;
   const rawValue = safeGet(filters, key, null);
-  if (rawValue == null) return '';
+  // null/undefined explícitos significam "filtro ausente" — a rota de
+  // listagem sempre envia as chaves com null quando o parâmetro não vem
+  // na query. Converter para '' faria matchesInstanceFilters comparar
+  // contra string vazia e excluir todos os registros.
+  if (rawValue == null) return null;
   return safeToString(rawValue, '');
 }
 

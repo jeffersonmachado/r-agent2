@@ -124,10 +124,10 @@ function exportTicketsCSV(options = {}) {
 /**
  * Exporta métricas em CSV.
  * @param {Object} options
- * @returns {string}
+ * @returns {Promise<string>}
  */
-function exportMetricsCSV(options = {}) {
-  const metrics = getAllMetrics(options);
+async function exportMetricsCSV(options = {}) {
+  const metrics = await getAllMetrics(options);
   
   const lines = [];
   lines.push('MÉTRICAS GERAIS');
@@ -230,10 +230,10 @@ function exportConversationsJSON(options = {}) {
 /**
  * Exporta relatório completo em JSON.
  * @param {Object} options
- * @returns {Object}
+ * @returns {Promise<Object>}
  */
-function exportFullReportJSON(options = {}) {
-  const metrics = getAllMetrics(options);
+async function exportFullReportJSON(options = {}) {
+  const metrics = await getAllMetrics(options);
   const conversations = exportConversationsJSON(options);
   
   return {

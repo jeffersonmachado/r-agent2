@@ -143,4 +143,54 @@ describe('ProcessInstanceInspector', () => {
     expect(history).toEqual([]);
     expect(path).toEqual([]);
   }, 5000));
+
+  test('suporta stores de classe cujos métodos dependem de this (regressão: safeAsyncCall desvinculado)', withTimeout(async () => {
+    // Regressão observada em runtime real (2026-07-27): GET /api/process-instances
+    // retornava lista vazia e GET /api/process-instances/:id retornava not_found
+    // mesmo com instâncias persistidas. Causa: safeAsyncCall invocava os métodos
+    // do store desvinculados (fn(...args)); SequelizeProcessInstanceStore depende
+    // de `this` (this.model/this._fallback), lançava TypeError e o catch genérico
+    // engolia o erro retornando o fallback silenciosamente.
+    class ClassBasedStore {
+      constructor() {
+        this.rows = new Map([['exec-class-1', { executionId: 'exec-class-1', status: 'completed' }]]);
+      }
+
+      async loadInstance(executionId) {
+        return this.rows.get(executionId) || null;
+      }
+
+      async listInstances() {
+        return Array.from(this.rows.values());
+      }
+    }
+
+    class ClassBasedRepository {
+      constructor() {
+        this.events = [{ sequence: 1, eventType: 'PROCESS_STARTED' }];
+      }
+
+      async listEventsByExecution() {
+        return this.events;
+      }
+
+      async getLastEvent() {
+        return this.events[this.events.length - 1];
+      }
+    }
+
+    const inspector = new ProcessInstanceInspector({
+      instanceStore: new ClassBasedStore(),
+      executionRepository: new ClassBasedRepository(),
+      replayService: { getExecutionPath: () => [] },
+    });
+
+    const state = await inspector.getInstanceState('exec-class-1');
+    const items = await inspector.listInstances({});
+    const history = await inspector.getExecutionHistory('exec-class-1');
+
+    expect(state).toEqual({ executionId: 'exec-class-1', status: 'completed' });
+    expect(items).toEqual([{ executionId: 'exec-class-1', status: 'completed' }]);
+    expect(history).toHaveLength(1);
+  }, 5000));
 });

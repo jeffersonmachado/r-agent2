@@ -75,7 +75,7 @@ async function handleExportRoutes({ req, res, method, pathname, deps }) {
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
 
-      const csv = exportMetricsCSV(options);
+      const csv = await exportMetricsCSV(options);
       const filename = `metrics_${new Date().toISOString().split('T')[0]}.csv`;
 
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -148,7 +148,7 @@ async function handleExportRoutes({ req, res, method, pathname, deps }) {
         endDate: urlObj.searchParams.get('endDate') || undefined,
       };
 
-      const data = exportFullReportJSON(options);
+      const data = await exportFullReportJSON(options);
       const filename = `full-report_${new Date().toISOString().split('T')[0]}.json`;
 
       res.setHeader('Content-Type', 'application/json; charset=utf-8');

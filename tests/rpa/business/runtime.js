@@ -2249,6 +2249,508 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-BIZ-ACADEMY') {
+    const profile = await api.get('/api/learning/profile/me');
+    if (!profile || !profile.profile) {
+      throw new Error('Perfil de aprendizado indisponível');
+    }
+
+    const sessionId = `qa-academy-${runId}`;
+    const interaction = await api.post('/api/learning/interactions', {
+      sessionId,
+      events: [{ type: 'navigation', route: '/academy', clientEventId: `evt-${runId}` }],
+    });
+    if (!interaction || interaction.accepted < 1) {
+      throw new Error(`Interação de navegação não foi aceita: ${JSON.stringify(interaction)}`);
+    }
+
+    const competencies = await api.post('/api/learning/competencies/recompute', {});
+    if (!competencies || !Array.isArray(competencies.competencies)) {
+      throw new Error('Recomputação de competências não retornou lista');
+    }
+
+    const certifications = await api.post('/api/learning/certifications/evaluate', {});
+    if (!certifications || !Array.isArray(certifications.assessments)) {
+      throw new Error('Avaliação de certificações não retornou lista');
+    }
+
+    const tutor = await api.post('/api/learning/tutor/help', {
+      route: '/academy',
+      level: 2,
+      question: 'Como criar uma campanha?',
+    });
+    if (!tutor || tutor.available !== true) {
+      throw new Error('Tutor não respondeu com conteúdo disponível');
+    }
+
+    const missions = await api.get('/api/learning/missions/me');
+    if (!missions || !Array.isArray(missions.missions)) {
+      throw new Error('Missões de aprendizado indisponíveis');
+    }
+
+    return {
+      detail: 'Perfil, interação, competências, certificações, tutor e missões validados',
+      ids: { sessionId },
+      evidence: { accepted: interaction.accepted, competencies: competencies.competencies.length },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-PHYSICAL-QUEUE') {
+    await ensureDbConnection();
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const kinds = ['kiosk', 'panel', 'station'];
+    const tokens = {};
+    for (const kind of kinds) {
+      const created = await createPublicToken({
+        tenantId: TEST_TENANT_ID,
+        kind,
+        meta: { source: 'business_qa', scenarioCode: definition.code },
+      });
+      if (!created?.token) {
+        throw new Error(`Token público ${kind} não foi criado`);
+      }
+      tokens[kind] = created.token;
+    }
+
+    const issued = await api.post(`/physical/kiosk/tickets?token=${encodeURIComponent(tokens.kiosk)}`, { priority: 0 });
+    const ticket = issued?.ticket;
+    if (!ticket?.id || ticket.status !== 'waiting') {
+      throw new Error(`Senha física não foi emitida corretamente: ${JSON.stringify(issued)}`);
+    }
+
+    const panel = await api.get(`/physical/panel/state?token=${encodeURIComponent(tokens.panel)}`);
+    if (!panel || panel.ok !== true || !Array.isArray(panel.queues)) {
+      throw new Error('Estado do painel físico indisponível');
+    }
+
+    const called = await api.post(`/physical/station/call-next?token=${encodeURIComponent(tokens.station)}`, {
+      stationId: `qa-station-${runId}`,
+    });
+    const calledTicket = called?.ticket;
+    if (!calledTicket || calledTicket.id !== ticket.id || calledTicket.status !== 'called') {
+      throw new Error(`Estação não chamou a senha emitida: ${JSON.stringify(called)}`);
+    }
+
+    return {
+      detail: 'Senha emitida no kiosk, painel consultado e chamada realizada na estação',
+      ids: { ticketId: ticket.id },
+      evidence: { ticketNumber: ticket.ticket_number, finalStatus: calledTicket.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-PUBLIC-TOKENS') {
+    const created = await api.post('/public-tokens', { kind: 'storefront', meta: { source: 'business_qa', scenarioCode: definition.code } });
+    const token = created?.token;
+    if (!token?.id || !token?.token) {
+      throw new Error('Token público não foi criado');
+    }
+
+    const listed = await api.get('/public-tokens');
+    if (!(listed?.items || []).some((item) => item.id === token.id)) {
+      throw new Error('Token público não apareceu na listagem');
+    }
+
+    const resolved = await api.get(`/public-tokens/resolve?token=${encodeURIComponent(token.token)}`);
+    if (!resolved || resolved.ok !== true || resolved.token?.tenantId !== TEST_TENANT_ID) {
+      throw new Error('Token público não resolveu para o tenant correto');
+    }
+
+    const rotated = await api.post(`/public-tokens/${encodeURIComponent(token.id)}/rotate`, {});
+    const rotatedToken = rotated?.newToken;
+    if (!rotatedToken?.id || !rotatedToken?.token || rotatedToken.token === token.token) {
+      throw new Error(`Rotação não gerou novo token: ${JSON.stringify(rotated)}`);
+    }
+
+    let oldTokenRejected = false;
+    try {
+      await api.get(`/public-tokens/resolve?token=${encodeURIComponent(token.token)}`);
+    } catch (err) {
+      oldTokenRejected = err.status === 401 || err.status === 404;
+    }
+    if (!oldTokenRejected) {
+      throw new Error('Token anterior continua resolvendo após rotação');
+    }
+
+    await api.post(`/public-tokens/${encodeURIComponent(rotatedToken.id)}/revoke`, {});
+    let revokedRejected = false;
+    try {
+      await api.get(`/public-tokens/resolve?token=${encodeURIComponent(rotatedToken.token)}`);
+    } catch (err) {
+      revokedRejected = err.status === 401 || err.status === 404;
+    }
+    if (!revokedRejected) {
+      throw new Error('Token revogado continua resolvendo');
+    }
+
+    return {
+      detail: 'Token criado, resolvido, rotacionado e revogado com invalidação comprovada',
+      ids: { tokenId: token.id },
+      evidence: { rotated: true, revoked: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-PROCESS-RUNTIME') {
+    const processDefinition = {
+      id: `proc-qa-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+      name: `QA Journey Process ${runId}`,
+      version: 1,
+      metadata: { tenantId: TEST_TENANT_ID },
+      entrypoints: ['start-1'],
+      nodes: [
+        { id: 'start-1', type: 'start', subtype: 'start', label: 'Start', config: {}, metadata: {} },
+        { id: 'service-1', type: 'task.service', subtype: null, label: 'Service', config: { outputVariable: 'ticket', mockResult: { ok: true } }, metadata: {} },
+        { id: 'end-1', type: 'end', subtype: 'end', label: 'End', config: {}, metadata: {} },
+      ],
+      edges: [
+        { id: 'e1', source: 'start-1', target: 'service-1', condition: null, priority: 0, metadata: { sourcePort: 'out' } },
+        { id: 'e2', source: 'service-1', target: 'end-1', condition: null, priority: 0, metadata: { sourcePort: 'out' } },
+      ],
+    };
+
+    const started = await api.post('/api/process-runtime/start', {
+      processDefinition,
+      input: { channel: 'qa' },
+    });
+    if (!started || started.ok !== true || !started.executionId) {
+      throw new Error(`Processo não foi iniciado: ${JSON.stringify(started)}`);
+    }
+    if (started.status !== 'completed') {
+      throw new Error(`Processo não concluiu: status=${started.status}`);
+    }
+
+    const instances = await api.get('/api/process-instances');
+    const items = instances?.items || [];
+    const instance = items.find((item) => item.executionId === started.executionId || item.id === started.executionId);
+    if (!instance) {
+      throw new Error('Instância de processo não apareceu na listagem');
+    }
+
+    const history = await api.get(`/api/process-instances/${encodeURIComponent(started.executionId)}/history`);
+    if (!history || history.error) {
+      throw new Error('Histórico da instância indisponível');
+    }
+
+    const simulation = await api.post('/api/process-runtime/simulate', { processDefinition });
+    if (!simulation || simulation.error) {
+      throw new Error(`Simulação de processo falhou: ${JSON.stringify(simulation)}`);
+    }
+
+    return {
+      detail: 'Processo durável iniciado, concluído, inspecionado e simulado',
+      ids: { executionId: started.executionId },
+      evidence: { status: started.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-SOLUTIONS') {
+    const packs = await api.get('/api/solutions/packs');
+    const items = packs?.items || [];
+    if (!items.some((item) => item.id === 'geral')) {
+      throw new Error('Pack geral não está listado');
+    }
+
+    const installed = await api.post('/api/solutions/packs/install', { segment: 'geral' });
+    if (!installed || installed.ok !== true || installed.success !== true) {
+      throw new Error(`Instalação do pack falhou: ${JSON.stringify(installed)}`);
+    }
+
+    return {
+      detail: 'Pack de solução listado e instalado',
+      ids: { packId: 'geral' },
+      evidence: { created: installed.created },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-RBAC') {
+    const roles = await api.get('/rbac/roles');
+    if (!Array.isArray(roles?.roles) || roles.roles.length === 0) {
+      throw new Error('Listagem de roles indisponível');
+    }
+
+    const permissions = await api.get('/rbac/permissions');
+    if (!Array.isArray(permissions?.permissions) || permissions.permissions.length === 0) {
+      throw new Error('Listagem de permissões indisponível');
+    }
+
+    const roleName = `qa_flow_role_${runId}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const created = await api.post('/rbac/roles', {
+      role: roleName,
+      permissions: [{ resource: 'tickets', action: 'read' }],
+    });
+    if (!created || created.role !== roleName) {
+      throw new Error(`Role QA não foi criada: ${JSON.stringify(created)}`);
+    }
+
+    const users = await api.get('/api/users/search?q=supervisor');
+    const target = (users?.items || [])[0];
+    if (!target?.id) {
+      throw new Error('Agente supervisor seed não encontrado para atribuição de role');
+    }
+    const originalRole = target.role;
+
+    try {
+      const assigned = await api.post('/rbac/assign', { agentId: target.id, role: roleName });
+      if (assigned?.agent?.role !== roleName) {
+        throw new Error(`Atribuição de role não aplicada: ${JSON.stringify(assigned?.agent?.role)}`);
+      }
+    } finally {
+      await api.post('/rbac/assign', { agentId: target.id, role: originalRole });
+    }
+
+    const restored = await api.get('/api/users/search?q=supervisor');
+    const restoredUser = (restored?.items || []).find((item) => item.id === target.id);
+    if (restoredUser?.role !== originalRole) {
+      throw new Error(`Role original não restaurada: ${restoredUser?.role} != ${originalRole}`);
+    }
+
+    return {
+      detail: 'Role criada, atribuída e original restaurada sem efeito residual',
+      ids: { role: roleName, agentId: target.id },
+      evidence: { originalRole },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-TEMPLATES') {
+    const flowId = `qa-tpl-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const flow = {
+      id: flowId,
+      tenantId: TEST_TENANT_ID,
+      version: 1,
+      nodes: [
+        { id: 's1', type: 'start', label: 'Início', next: 'n1' },
+        { id: 'n1', type: 'message', label: 'Oi', config: { text: 'Olá' }, next: 'e1' },
+        { id: 'e1', type: 'end', label: 'Fim' },
+      ],
+      edges: [],
+    };
+
+    const created = await api.post('/templates', { id: flowId, name: `QA Template ${runId}`, flow });
+    if (!created?.template?.id) {
+      throw new Error(`Template não foi criado: ${JSON.stringify(created)}`);
+    }
+
+    const templates = await api.get('/templates');
+    const templateItems = Array.isArray(templates) ? templates : (templates?.items || templates?.templates || []);
+    if (!templateItems.some((item) => item.id === flowId)) {
+      throw new Error('Template não apareceu na listagem');
+    }
+
+    const ftId = `qa-ft-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const flowTemplate = await api.post('/flow-templates', {
+      id: ftId,
+      name: `QA Flow Template ${runId}`,
+      flow: { ...flow, id: ftId },
+    });
+    if (!flowTemplate || flowTemplate.error || !flowTemplate.template) {
+      throw new Error(`Flow-template não foi criado: ${JSON.stringify(flowTemplate)}`);
+    }
+    const ftRecordId = flowTemplate.template.id || ftId;
+
+    const flowTemplates = await api.get('/flow-templates');
+    const ftItems = flowTemplates?.templates || flowTemplates?.items || [];
+    if (!ftItems.some((item) => (item.flow && item.flow.id === ftId) || item.id === ftId || item.name === `QA Flow Template ${runId}`)) {
+      throw new Error('Flow-template não apareceu na listagem');
+    }
+
+    // Limpeza: templates de QA não podem se acumular no tenant nem no disco.
+    await api.del(`/templates/${encodeURIComponent(flowId)}`);
+    await api.del(`/flow-templates/${encodeURIComponent(ftRecordId)}`);
+
+    const afterCleanup = await api.get('/templates');
+    const remaining = Array.isArray(afterCleanup) ? afterCleanup : (afterCleanup?.items || afterCleanup?.templates || []);
+    if (remaining.some((item) => item.id === flowId)) {
+      throw new Error('Template não foi removido na limpeza');
+    }
+
+    return {
+      detail: 'Template e flow-template criados, listados e removidos',
+      ids: { templateId: flowId, flowTemplateId: ftId },
+      evidence: { cleanedUp: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-OPS-DASHBOARD') {
+    const endpoints = ['summary', 'insights', 'jobs', 'notifications', 'timeline'];
+    for (const endpoint of endpoints) {
+      const result = await api.get(`/api/operations-dashboard/${endpoint}`);
+      if (!result || result.ok !== true) {
+        throw new Error(`operations-dashboard/${endpoint} não respondeu ok=true`);
+      }
+    }
+
+    return {
+      detail: 'Todos os endpoints do operations dashboard responderam ok=true',
+      ids: {},
+      evidence: { endpoints },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-COGNITIVE') {
+    const intents = await api.get('/api/cognitive/intents');
+    if (!Array.isArray(intents?.intents) || intents.intents.length === 0) {
+      throw new Error('Intents cognitivos indisponíveis');
+    }
+
+    const tools = await api.get('/api/cognitive/tools');
+    if (!Array.isArray(tools?.tools) || tools.tools.length === 0) {
+      throw new Error('Tools cognitivas indisponíveis');
+    }
+
+    const processed = await api.post('/api/cognitive/process', { message: 'Olá, preciso de ajuda', channel: 'web' });
+    if (!processed || processed.error) {
+      throw new Error(`Processamento cognitivo falhou: ${JSON.stringify(processed)}`);
+    }
+
+    return {
+      detail: 'Intents, tools e processamento cognitivo validados',
+      ids: {},
+      evidence: { intents: intents.intents.length, tools: tools.tools.length },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-SUPERVISOR') {
+    const agents = await api.get('/supervisor/agents/status');
+    if (!agents || !Array.isArray(agents.agents)) {
+      throw new Error('Status de agentes indisponível');
+    }
+
+    const metrics = await api.get('/supervisor/metrics');
+    if (!metrics || typeof metrics.summary?.totalTickets !== 'number') {
+      throw new Error('Métricas de supervisor indisponíveis');
+    }
+
+    const queues = await api.get('/supervisor/queues/status');
+    if (!queues || !Array.isArray(queues.queues)) {
+      throw new Error('Status de filas indisponível');
+    }
+
+    return {
+      detail: 'Status de agentes, métricas e filas de supervisor validados',
+      ids: {},
+      evidence: { totalTickets: metrics.summary.totalTickets, agents: agents.agents.length },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-QUEUES') {
+    const queueName = `qa_flow_queue_${runId}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const created = await api.post('/queues', { name: queueName });
+    if (!created || created.success !== true) {
+      throw new Error(`Fila não foi criada: ${JSON.stringify(created)}`);
+    }
+
+    try {
+      const listed = await api.get('/queues');
+      const names = Array.isArray(listed) ? listed : (listed?.queues || listed?.items || []);
+      if (!names.some((name) => String(name) === queueName)) {
+        throw new Error('Fila não apareceu na listagem');
+      }
+
+      const detail = await api.get(`/queues/${encodeURIComponent(queueName)}`);
+      if (!detail || detail.exists !== true) {
+        throw new Error('Detalhe da fila indisponível');
+      }
+
+      const tickets = await api.get(`/queues/${encodeURIComponent(queueName)}/tickets`);
+      if (!Array.isArray(tickets)) {
+        throw new Error('Tickets da fila indisponíveis');
+      }
+    } finally {
+      await api.del(`/queues/${encodeURIComponent(queueName)}`);
+    }
+
+    const afterDelete = await api.get('/queues');
+    const remaining = Array.isArray(afterDelete) ? afterDelete : (afterDelete?.queues || []);
+    if (remaining.some((name) => String(name) === queueName)) {
+      throw new Error('Fila não foi removida');
+    }
+
+    return {
+      detail: 'Fila criada, consultada e removida',
+      ids: { queueName },
+      evidence: { deleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-DEPARTMENTS') {
+    const name = `QA Dept ${runId}`;
+    const created = await api.post('/departments', { name, description: 'Departamento criado pelo QA de jornadas' });
+    const department = created?.id ? created : (created?.department || null);
+    if (!department?.id) {
+      throw new Error(`Departamento não foi criado: ${JSON.stringify(created)}`);
+    }
+
+    const listed = await api.get('/departments');
+    const items = listed?.departments || listed?.items || [];
+    if (!items.some((item) => item.id === department.id)) {
+      throw new Error('Departamento não apareceu na listagem');
+    }
+
+    return {
+      detail: 'Departamento criado e listado',
+      ids: { departmentId: department.id },
+      evidence: { name },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-EXPORT') {
+    const ticketsCsv = await api.get('/export/tickets.csv');
+    if (typeof ticketsCsv !== 'string' || !ticketsCsv.includes('ID')) {
+      throw new Error('CSV de tickets não foi exportado');
+    }
+
+    const metricsCsv = await api.get('/export/metrics.csv');
+    if (typeof metricsCsv !== 'string' || !metricsCsv.includes('MÉTRICAS GERAIS') || !metricsCsv.includes('Total de Tickets,')) {
+      throw new Error('CSV de métricas não foi exportado com totais');
+    }
+
+    const conversations = await api.get('/export/conversations.json');
+    if (!conversations || typeof conversations.totalConversations !== 'number') {
+      throw new Error('JSON de conversas não foi exportado');
+    }
+
+    const report = await api.get('/export/full-report.json');
+    if (!report || typeof report.summary?.totalTickets !== 'number') {
+      throw new Error('Relatório completo sem summary de métricas');
+    }
+
+    return {
+      detail: 'Tickets CSV, métricas CSV, conversas JSON e relatório completo exportados',
+      ids: {},
+      evidence: { totalTickets: report.summary.totalTickets, totalConversations: conversations.totalConversations },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-DEMO') {
+    const state = await api.get('/api/demo/state');
+    if (!state || !state.demo || !state.journey) {
+      throw new Error('Estado do demo indisponível');
+    }
+
+    let runStatus = null;
+    let runCode = null;
+    try {
+      await api.post('/api/demo/run', {});
+      runStatus = 202;
+    } catch (err) {
+      runStatus = err.status;
+      runCode = err.body && err.body.code;
+    }
+    // Localmente o cenário do demo exige o pipeline oficial: a API deve
+    // responder 422 com diagnóstico real, nunca 500 genérico.
+    if (runStatus === 500) {
+      throw new Error('demo/run retornou 500 genérico em vez de erro codificado');
+    }
+    if (runStatus !== 202 && !(runStatus === 422 && (runCode === 'PIPELINE_ONLY_SCENARIO' || runCode === 'MISSING_PLATFORM_SCENARIO_IDS'))) {
+      throw new Error(`demo/run retornou status inesperado: ${runStatus} (${runCode})`);
+    }
+
+    return {
+      detail: 'Estado do demo carregado e run com semântica de erro correta',
+      ids: {},
+      evidence: { vertical: state.demo.vertical, runStatus, runCode },
+    };
+  }
+
   throw new Error(`Flow nao implementado: ${definition.code}`);
 }
 

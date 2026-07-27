@@ -351,6 +351,42 @@ describe('queueRoutes handler', () => {
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
   });
 
+  test('DELETE /queues/:name desativa a definição persistida para não reaparecer na listagem (regressão)', async () => {
+    // Regressão observada em runtime real (2026-07-27): DELETE /queues/:name
+    // retornava sucesso removendo apenas o Map em memória do queueService
+    // legado, mas a definição persistida (queueDefinitionService) continuava
+    // ativa — GET /queues mescla as duas fontes e a fila "excluída" seguia
+    // aparecendo (e voltava integralmente após restart).
+    const { handleQueueRoutes } = require('../../api/modules/queue/handleQueueRoutes');
+
+    const res = {};
+    const deps = makeDeps({
+      deleteQueue: jest.fn(() => ({ success: true, message: 'Fila excluída' })),
+      queueDefinitionService: {
+        listQueues: jest.fn(() => []),
+        getQueueByName: jest.fn(() => ({ id: 'q-1', tenantId: 'tenant-1', name: 'oldq', routingStrategy: 'round_robin', priority: 5, active: true })),
+        upsertQueue: jest.fn(async () => ({ success: true })),
+      },
+    });
+    const handled = await handleQueueRoutes({
+      req: makeReq({ url: '/queues/oldq' }),
+      res,
+      method: 'DELETE',
+      pathname: '/queues/oldq',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.queueDefinitionService.upsertQueue).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      name: 'oldq',
+      active: false,
+      routingStrategy: 'round_robin',
+      priority: 5,
+    }));
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
+  });
+
   // ── GET /queues/:queue/tickets ────────────────────────────────────────────
 
   test('GET /queues/:queue/tickets retorna 401 sem autenticacao', async () => {

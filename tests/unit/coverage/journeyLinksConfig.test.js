@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 39 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 53 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(39);
-    expect(summary.bySource['journey-coverage']).toBe(34);
+    expect(summary.total).toBe(53);
+    expect(summary.bySource['journey-coverage']).toBe(48);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -133,5 +133,22 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(links.analytics.scenarioIds).toContain('business-core-biz-analytics');
     expect(links.operational_intelligence.scenarioIds).toContain('business-core-biz-intelligence');
     expect(links.calendar.scenarioIds).toContain('business-core-cap-scheduling');
+
+    // Jornadas business batch 1c: plataforma operacional (academy, fila
+    // física, tokens públicos, process runtime, RBAC, templates, export...).
+    expect(links.academy_learning.scenarioIds).toContain('business-core-biz-academy');
+    expect(links.physical_queue_kiosk_station_panel_fila.scenarioIds).toContain('business-core-biz-physical-queue');
+    expect(links.public_tokens.scenarioIds).toContain('business-core-biz-public-tokens');
+    expect(links.process_runtime.scenarioIds).toContain('business-core-biz-process-runtime');
+    expect(links.solutions.scenarioIds).toContain('business-core-biz-solutions');
+    expect(links.rbac_access_control.scenarioIds).toContain('business-core-biz-rbac');
+    expect(links.templates.scenarioIds).toContain('business-core-biz-templates');
+    expect(links.operations_dashboard.scenarioIds).toContain('business-core-biz-ops-dashboard');
+    expect(links.cognitive_assistant.scenarioIds).toContain('business-core-biz-cognitive');
+    expect(links.supervisor.scenarioIds).toContain('business-core-biz-supervisor');
+    expect(links.queues.scenarioIds).toContain('business-core-biz-queues');
+    expect(links.departments.scenarioIds).toContain('business-core-biz-departments');
+    expect(links.export.scenarioIds).toContain('business-core-biz-export');
+    expect(links.demo.scenarioIds).toContain('business-core-biz-demo');
   });
 });

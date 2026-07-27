@@ -1,356 +1,454 @@
 {
- "version": 4,
- "generatedAt": "2026-07-26T16:58:14.958Z",
- "journeys": {
-  "omnichannel_engagement": {
-   "requiredCapabilities": [
-    "omnichannel_whatsapp",
-    "omnichannel_webchat",
-    "omnichannel_pbx",
-    "omnichannel_email"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.88
-  },
-  "support_ticket_flow": {
-   "requiredCapabilities": [
-    "support_ticket_flow",
-    "support_ticket_reply"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "fitness_customer_checkin": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "access_decision",
-    "turnstile_release",
-    "attendance_record",
-    "crm_update"
-   ],
-   "missingCapabilities": [],
-   "confidence": 1
-  },
-  "booking_flow": {
-   "requiredCapabilities": [
-    "support_ticket_flow"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.71
-  },
-  "capability_scheduling": {
-   "requiredCapabilities": [
-    "scheduling"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "capability_crm_updates": {
-   "requiredCapabilities": [
-    "crm_updates"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "capability_lead_capture": {
-   "requiredCapabilities": [
-    "lead_capture"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "payment_charge_flow": {
-   "requiredCapabilities": [
-    "billing_validation"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.71
-  },
-  "beauty_booking": {
-   "requiredCapabilities": [
-    "scheduling",
-    "payment",
-    "crm_updates",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.93
-  },
-  "beauty_new_customer": {
-   "requiredCapabilities": [
-    "scheduling",
-    "payment",
-    "crm_updates",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.81
-  },
-  "clinic_default_journey": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "scheduling",
-    "crm_updates",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.81
-  },
-  "agendamento": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "scheduling",
-    "notifications",
-    "crm_update"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.87
-  },
-  "cancelamento": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "billing_validation",
-    "crm_update",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.85
-  },
-  "checkin": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "access_decision",
-    "turnstile_release",
-    "attendance_record"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.85
-  },
-  "checkout": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "billing_validation",
-    "payment",
-    "crm_update",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.91
-  },
-  "fitness_active_customer": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "access_decision",
-    "attendance_record",
-    "crm_update"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.85
-  },
-  "fitness_new_customer": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "access_decision",
-    "attendance_record",
-    "crm_update"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.97
-  },
-  "leads": {
-   "requiredCapabilities": [
-    "lead_capture",
-    "customer_identification",
-    "crm_updates",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "onboarding": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "crm_updates",
-    "notifications",
-    "onboarding"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "renovacao": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "membership_validation",
-    "billing_validation",
-    "payment",
-    "crm_update",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.88
-  },
-  "food_customer_journey": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "payment",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.72
-  },
-  "food_order_flow": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "payment",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.72
-  },
-  "market_default_journey": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "payment",
-    "notifications",
-    "crm_updates"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.81
-  },
-  "services_default_journey": {
-   "requiredCapabilities": [
-    "customer_identification",
-    "scheduling",
-    "payment",
-    "crm_updates",
-    "notifications"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.85
-  },
-  "orders": {
-   "requiredCapabilities": [
-    "orders"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "projects": {
-   "requiredCapabilities": [
-    "projects"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "inbox": {
-   "requiredCapabilities": [
-    "inbox"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "campaigns": {
-   "requiredCapabilities": [
-    "campaigns"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "quick_replies": {
-   "requiredCapabilities": [
-    "quick_replies"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "webhooks": {
-   "requiredCapabilities": [
-    "webhooks"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "tasks": {
-   "requiredCapabilities": [
-    "tasks"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "billing": {
-   "requiredCapabilities": [
-    "billing"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "marketing": {
-   "requiredCapabilities": [
-    "marketing"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "automations": {
-   "requiredCapabilities": [
-    "automations"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "sla": {
-   "requiredCapabilities": [
-    "sla"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "deliveries": {
-   "requiredCapabilities": [
-    "deliveries"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "developer": {
-   "requiredCapabilities": [
-    "developer"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "whatsapp_connections": {
-   "requiredCapabilities": [
-    "whatsapp_connections"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "analytics": {
-   "requiredCapabilities": [
-    "analytics"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "operational_intelligence": {
-   "requiredCapabilities": [
-    "operational_intelligence"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
-  },
-  "calendar": {
-   "requiredCapabilities": [
-    "calendar"
-   ],
-   "missingCapabilities": [],
-   "confidence": 0.75
+  "version": 4,
+  "generatedAt": "2026-07-26T16:58:14.958Z",
+  "journeys": {
+    "omnichannel_engagement": {
+      "requiredCapabilities": [
+        "omnichannel_whatsapp",
+        "omnichannel_webchat",
+        "omnichannel_pbx",
+        "omnichannel_email"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.88
+    },
+    "support_ticket_flow": {
+      "requiredCapabilities": [
+        "support_ticket_flow",
+        "support_ticket_reply"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "fitness_customer_checkin": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 1
+    },
+    "booking_flow": {
+      "requiredCapabilities": [
+        "support_ticket_flow"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.71
+    },
+    "capability_scheduling": {
+      "requiredCapabilities": [
+        "scheduling"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "capability_crm_updates": {
+      "requiredCapabilities": [
+        "crm_updates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "capability_lead_capture": {
+      "requiredCapabilities": [
+        "lead_capture"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "payment_charge_flow": {
+      "requiredCapabilities": [
+        "billing_validation"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.71
+    },
+    "beauty_booking": {
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.93
+    },
+    "beauty_new_customer": {
+      "requiredCapabilities": [
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "clinic_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "agendamento": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "notifications",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.87
+    },
+    "cancelamento": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "checkin": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "turnstile_release",
+        "attendance_record"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "checkout": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.91
+    },
+    "fitness_active_customer": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "fitness_new_customer": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "access_decision",
+        "attendance_record",
+        "crm_update"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.97
+    },
+    "leads": {
+      "requiredCapabilities": [
+        "lead_capture",
+        "customer_identification",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "onboarding": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "crm_updates",
+        "notifications",
+        "onboarding"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "renovacao": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "membership_validation",
+        "billing_validation",
+        "payment",
+        "crm_update",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.88
+    },
+    "food_customer_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.72
+    },
+    "food_order_flow": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.72
+    },
+    "market_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "payment",
+        "notifications",
+        "crm_updates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.81
+    },
+    "services_default_journey": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "scheduling",
+        "payment",
+        "crm_updates",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.85
+    },
+    "orders": {
+      "requiredCapabilities": [
+        "orders"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "projects": {
+      "requiredCapabilities": [
+        "projects"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "inbox": {
+      "requiredCapabilities": [
+        "inbox"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "campaigns": {
+      "requiredCapabilities": [
+        "campaigns"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "quick_replies": {
+      "requiredCapabilities": [
+        "quick_replies"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "webhooks": {
+      "requiredCapabilities": [
+        "webhooks"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "tasks": {
+      "requiredCapabilities": [
+        "tasks"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "billing": {
+      "requiredCapabilities": [
+        "billing"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "marketing": {
+      "requiredCapabilities": [
+        "marketing"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "automations": {
+      "requiredCapabilities": [
+        "automations"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "sla": {
+      "requiredCapabilities": [
+        "sla"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "deliveries": {
+      "requiredCapabilities": [
+        "deliveries"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "developer": {
+      "requiredCapabilities": [
+        "developer"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "whatsapp_connections": {
+      "requiredCapabilities": [
+        "whatsapp_connections"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "analytics": {
+      "requiredCapabilities": [
+        "analytics"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "operational_intelligence": {
+      "requiredCapabilities": [
+        "operational_intelligence"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "calendar": {
+      "requiredCapabilities": [
+        "calendar"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "academy_learning": {
+      "requiredCapabilities": [
+        "academy_learning"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "physical_queue_kiosk_station_panel_fila": {
+      "requiredCapabilities": [
+        "physical_queue_kiosk_station_panel_fila"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "public_tokens": {
+      "requiredCapabilities": [
+        "public_tokens"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "process_runtime": {
+      "requiredCapabilities": [
+        "process_runtime"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "solutions": {
+      "requiredCapabilities": [
+        "solutions"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "rbac_access_control": {
+      "requiredCapabilities": [
+        "rbac_access_control"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "templates": {
+      "requiredCapabilities": [
+        "templates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "operations_dashboard": {
+      "requiredCapabilities": [
+        "operations_dashboard"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "cognitive_assistant": {
+      "requiredCapabilities": [
+        "cognitive_assistant"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "supervisor": {
+      "requiredCapabilities": [
+        "supervisor"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "queues": {
+      "requiredCapabilities": [
+        "queues"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "departments": {
+      "requiredCapabilities": [
+        "departments"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "export": {
+      "requiredCapabilities": [
+        "export"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "demo": {
+      "requiredCapabilities": [
+        "demo"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    }
   }
- }
 }
