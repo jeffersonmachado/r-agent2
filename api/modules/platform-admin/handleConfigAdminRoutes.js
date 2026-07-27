@@ -204,8 +204,17 @@ async function handleBackupRoute(ctx) {
 
   try {
     const { Flow, TenantSetting } = require('../../db/models');
+    const { resolveTenantUuid } = require('../../services/tenantSettingsService');
     const FlowModel = Flow();
     const TenantSettingModel = TenantSetting();
+    // tenant_settings.tenant_id é UUID (FK para tenants.id): a chave do tenant
+    // ('system') precisa ser resolvida antes de qualquer consulta, senão o
+    // Postgres rejeita com 22P02 (invalid input syntax for type uuid) → 500.
+    const tenantUuid = await resolveTenantUuid(tenantId);
+    if (!tenantUuid) {
+      sendJson(res, 404, { error: 'tenant_not_found', message: 'Tenant não encontrado para backup' });
+      return true;
+    }
 
     if (method === 'GET') {
       const flowRows = await FlowModel.findAll({ where: { tenant_key: tenantId } });
@@ -213,7 +222,7 @@ async function handleBackupRoute(ctx) {
         const data = row.data && typeof row.data === 'object' ? row.data : {};
         return { ...data, id: row.id, tenantId };
       });
-      const settingsRows = await TenantSettingModel.findAll({ where: { tenant_id: String(tenantId) } });
+      const settingsRows = await TenantSettingModel.findAll({ where: { tenant_id: tenantUuid } });
       const settings = settingsRows.map((row) => {
         const json = row.toJSON ? row.toJSON() : row;
         return { key: json.key, value: json.value || {} };
@@ -261,11 +270,11 @@ async function handleBackupRoute(ctx) {
       if (!settingInput || !settingInput.key) continue;
       const key = String(settingInput.key);
       const value = settingInput.value && typeof settingInput.value === 'object' ? settingInput.value : {};
-      const existing = await TenantSettingModel.findOne({ where: { tenant_id: String(tenantId), key } });
+      const existing = await TenantSettingModel.findOne({ where: { tenant_id: tenantUuid, key } });
       if (existing) {
         await existing.update({ value });
       } else {
-        await TenantSettingModel.create({ tenant_id: String(tenantId), key, value });
+        await TenantSettingModel.create({ tenant_id: tenantUuid, key, value });
       }
       settingImported += 1;
     }

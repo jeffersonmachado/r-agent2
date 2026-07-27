@@ -247,6 +247,11 @@ async function handleAgentFactoryRoutes(ctx) {
     });
 
     if (!result.ok) {
+      // Agente inexistente é 404, não bloqueio de governança.
+      if (result.code === 'NOT_FOUND') {
+        return sendJson({ error: 'agent_not_found', message: result.error || 'Agent not found' }, 404);
+      }
+
       await logAction('agent_factory.publish_blocked', {
         agentId: body.id,
         reason: result.reason,

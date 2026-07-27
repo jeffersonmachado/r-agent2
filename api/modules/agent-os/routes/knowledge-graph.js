@@ -1,7 +1,10 @@
 'use strict';
 
 const kgService = require('../../knowledge-graph/service');
+const getKnowledgeGraphNodeModel = require('../../../db/models/KnowledgeGraphNode');
 const logger = require('../../../utils/logger');
+
+const VALID_NODE_TYPES = getKnowledgeGraphNodeModel.NODE_TYPES;
 
 async function handleKnowledgeGraphRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
@@ -44,6 +47,9 @@ async function handleKnowledgeGraphRoutes(ctx) {
     const body = await parseJsonBody(req);
 
     if (!body.type || !body.label) return badRequest('type and label are required');
+    if (!VALID_NODE_TYPES.includes(body.type)) {
+      return badRequest(`type inválido: "${body.type}". Valores aceitos: ${VALID_NODE_TYPES.join(', ')}`);
+    }
 
     const node = await kgService.upsertNode({
       tenantId,

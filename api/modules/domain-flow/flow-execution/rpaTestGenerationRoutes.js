@@ -18,7 +18,8 @@ async function handleRpaTestGenerationRoutes(ctx) {
     STRICT_TENANT_MODE,
   } = deps;
 
-  if (!pathname.startsWith('/flows/') || (!pathname.match(/^\/flows\/([^/]+)\/generate-rpa-test$/) && pathname !== '/rpa-tests')) {
+  const generateRpaTestMatch = pathname.match(/^\/flows\/([^/]+)\/generate-rpa-test$/);
+  if (!generateRpaTestMatch && pathname !== '/rpa-tests') {
     return false;
   }
 
@@ -139,7 +140,7 @@ async function handleRpaTestGenerationRoutes(ctx) {
       }
 
       logger.info('Passo 4: Validando plano gerado pelo gate de validacao', { flowId });
-      const { validateGeneratedPlanOrThrow } = require('../../../engine/ai/validateGeneratedPlan');
+      const { validateGeneratedPlanOrThrow } = require('../../../../engine/ai/validateGeneratedPlan');
       try {
         validateGeneratedPlanOrThrow(rpaTest, 'rpa');
         logger.info('Passo 4: Validacao do script concluida', {
@@ -201,6 +202,14 @@ async function handleRpaTestGenerationRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/rpa-tests') {
+    // Escrita de seed RPA em disco exige autenticação (proteção contra
+    // execução/gravação arbitrária de seeds).
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;
@@ -215,7 +224,7 @@ async function handleRpaTestGenerationRoutes(ctx) {
         return true;
       }
 
-      const { validateGeneratedPlanOrThrow } = require('../../../engine/ai/validateGeneratedPlan');
+      const { validateGeneratedPlanOrThrow } = require('../../../../engine/ai/validateGeneratedPlan');
       try {
         validateGeneratedPlanOrThrow(rpaTest, 'rpa');
       } catch (validationError) {

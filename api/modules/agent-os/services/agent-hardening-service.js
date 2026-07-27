@@ -16,7 +16,9 @@ const logger = require('../../../utils/logger');
 const agentRegistryService = require('../../agent-registry/service');
 const governanceService = require('../../ai-governance/service');
 
-const ROOT_DIR = path.join(__dirname, '..', '..', '..');
+// services/ → agent-os/ → modules/ → api/ → raiz do repositório.
+// Evidências e replays devem ficar na raiz (qa-mesh/, replays/), nunca em api/.
+const ROOT_DIR = path.join(__dirname, '..', '..', '..', '..');
 
 function nowIso() {
   return new Date().toISOString();
@@ -78,7 +80,7 @@ async function generateValidationJourney({ agent, tenantId }) {
  * Cria um cenário de validação, submete ao QA Mesh e aguarda resultado.
  * NUNCA usa body.qaWaveResult — sempre execução real.
  */
-async function runQaWaveValidation({ agent, tenantId, journeyId }) {
+async function runQaWaveValidation({ agent, tenantId, journeyId, maxWaitMs = 30000, pollIntervalMs = 1000 }) {
   const waveId = `agent-os-${agent.slug}`;
   const executionId = makeId('agent_qa_wave');
 
@@ -132,12 +134,53 @@ async function runQaWaveValidation({ agent, tenantId, journeyId }) {
       tenantId,
     });
 
+    const finalExecutionId = execution?.executionId || executionId;
+
+    // A execução é assíncrona (fila da QA Mesh): aguardar o veredito real em
+    // vez de devolver 'executing' perpetuamente. Timeout vira NO_GO — nunca
+    // um status ambíguo que o pipeline de publish possa interpretar mal.
+    const qaMeshService = require('../../../services/qaMeshService');
+    const deadline = Date.now() + Math.max(0, Number(maxWaitMs) || 0);
+    const interval = Math.max(50, Number(pollIntervalMs) || 1000);
+    let finalExecution = null;
+    for (;;) {
+      finalExecution = qaMeshService.getExecutionById(finalExecutionId);
+      const status = finalExecution && String(finalExecution.status || '').toLowerCase();
+      if (status && status !== 'running' && status !== 'queued' && status !== 'pending') break;
+      if (Date.now() >= deadline) {
+        logger.error('[AgentOS:Hardening] QA Wave execution timeout', {
+          agentId: agent.id,
+          executionId: finalExecutionId,
+          maxWaitMs,
+        });
+        return {
+          waveId,
+          executionId: finalExecutionId,
+          scenarioId: savedScenario?.scenario?.id || scenario.id,
+          status: 'NO_GO',
+          source: 'qa_waves_real',
+          error: `Timeout aguardando veredito da QA Wave (${maxWaitMs}ms)`,
+          checks: [
+            { name: 'qa_wave_verdict', status: 'FAILED', reason: 'timeout_waiting_execution' },
+          ],
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+
+    const goNoGo = finalExecution?.summary?.goNoGo || (finalExecution?.status === 'completed' ? 'GO' : 'NO_GO');
     return {
       waveId,
-      executionId: execution?.executionId || executionId,
+      executionId: finalExecutionId,
       scenarioId: savedScenario?.scenario?.id || scenario.id,
-      status: 'executing',
+      status: goNoGo === 'GO' ? 'GO' : 'NO_GO',
       source: 'qa_waves_real',
+      ...(goNoGo === 'GO' ? {} : {
+        error: `QA Wave finalizou com ${goNoGo}`,
+        checks: [
+          { name: 'qa_wave_verdict', status: 'FAILED', reason: finalExecution?.summary?.reasons?.join('; ') || goNoGo },
+        ],
+      }),
     };
   } catch (error) {
     // Se QA Waves não estiver disponível, registra falha real (não simula)
@@ -307,7 +350,9 @@ async function recordGovernanceTrail({ agent, waveResult, evidence, replay, tena
   await governanceService.logGovernanceEvent({
     tenantId,
     agentId: agent.id,
-    eventType: 'agent_validation',
+    // 'audit' é o eventType do ENUM do Postgres para trilhas de validação
+    // ('agent_validation' violava o CHECK ai_governance_records_event_type_check).
+    eventType: 'audit',
     actor: actor || 'system',
     actorRole: 'super_admin',
     description: `Agent ${agent.slug} validation: ${waveResult?.status || 'NO_GO'}`,

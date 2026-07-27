@@ -297,6 +297,27 @@ function createConfigService({ deps }) {
       return sanitizedConfig;
     },
 
+    /**
+     * Visão pública (pré-login) da configuração: apenas sinalizadores de
+     * prontidão de integrações e feature flags. Nunca inclui credenciais,
+     * URLs internas, tokens ou dados de conexão. Usada pelo onboarding antes
+     * da autenticação — o payload completo exige auth + config:read.
+     */
+    readPublicConfig() {
+      appConfig.reload();
+      const rawConfig = appConfig.loadConfig() || {};
+      const configData = appConfig.getAll() || {};
+      return {
+        public: true,
+        features: configData.features && typeof configData.features === 'object'
+          ? JSON.parse(JSON.stringify(configData.features))
+          : {},
+        configValidation: {
+          integrations: evaluateIntegrationReadiness(rawConfig),
+        },
+      };
+    },
+
     readQuestionGenerationRules() {
       if (!fs.existsSync(rulesFile)) {
         return null;

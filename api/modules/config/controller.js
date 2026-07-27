@@ -35,6 +35,17 @@ function createConfigController({ service, deps }) {
         return false;
       }
 
+      // Pré-login (ex.: onboarding) recebe apenas a visão pública sanitizada —
+      // o payload completo contém credenciais (ex.: database.url) e exige
+      // auth + config:read.
+      const authCheck = deps.requireAuth(req);
+      if (!authCheck.valid) {
+        deps.sendJson(res, 200, service.readPublicConfig());
+        return true;
+      }
+      const isSuperAdminUser = deps.isSuperAdmin(authCheck.agent);
+      if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return true;
+
       try {
         deps.sendJson(res, 200, service.reloadAndReadConfig());
       } catch (err) {
@@ -186,6 +197,11 @@ function createConfigController({ service, deps }) {
 
     async updateConfig(req, res) {
       if (!ensureJson(req, res)) return;
+      // Sobrescreve a configuração inteira e reinicia o servidor: exige auth + config:update.
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'update', isSuperAdminUser)) return;
       try {
         const body = await deps.parseJsonBody(req);
         if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -208,6 +224,10 @@ function createConfigController({ service, deps }) {
     },
 
     async getProcessManager(req, res) {
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return;
       const processManager = service.detectProcessManager();
       deps.sendJson(res, 200, {
         success: true,
@@ -219,6 +239,11 @@ function createConfigController({ service, deps }) {
 
     async validateProviderToken(req, res) {
       if (!ensureJson(req, res)) return;
+      // Oracle de validação de tokens de provedor: exige auth + config:read.
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return;
       try {
         const body = await deps.parseJsonBody(req);
         const { provider, apiKey } = service.parseProviderTokenBody(body);
@@ -244,6 +269,11 @@ function createConfigController({ service, deps }) {
 
     async validateRedis(req, res) {
       if (!ensureJson(req, res)) return;
+      // Tenta conexão TCP arbitrária (SSRF): exige auth + config:read.
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return;
       try {
         const body = await deps.parseJsonBody(req);
         const validation = service.validateRedisUrl(body?.redisUrl);
@@ -260,6 +290,11 @@ function createConfigController({ service, deps }) {
     },
 
     async restartServer(req, res) {
+      // Encerra o processo (process.exit): operação destrutiva — auth + config:update.
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'update', isSuperAdminUser)) return;
       deps.logger.info('Reinício do servidor solicitado via API');
       const processManager = service.detectProcessManager();
       deps.sendJson(res, 200, {

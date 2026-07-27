@@ -11,6 +11,15 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const { processWhatsAppMessage } = require('./messageProcessor');
 
+function safeErrorCode(err) {
+  try {
+    const code = err && err.code;
+    return typeof code === 'string' && code ? code : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function safeErrorMessage(err, fallback = '') {
   if (err == null) return fallback;
   let message = '';
@@ -49,7 +58,9 @@ async function sendMessengerMessage(recipientId, text) {
   try {
     const pageAccessToken = config.get('messenger.pageAccessToken');
     if (!pageAccessToken) {
-      throw new Error('Page Access Token do Messenger não configurado');
+      const configError = new Error('Page Access Token do Messenger não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${pageAccessToken}`;
@@ -84,10 +95,13 @@ async function sendMessengerMessage(recipientId, text) {
     };
   } catch (error) {
     logger.error('[Messenger] Erro ao enviar mensagem:', safeErrorMessage(error));
-    return {
+    const result = {
       success: false,
       error: safeErrorMessage(error),
     };
+    const errorCode = safeErrorCode(error);
+    if (errorCode) result.code = errorCode;
+    return result;
   }
 }
 
@@ -174,7 +188,9 @@ async function sendMessengerButtons(recipientId, text, buttons) {
   try {
     const pageAccessToken = config.get('messenger.pageAccessToken');
     if (!pageAccessToken) {
-      throw new Error('Page Access Token do Messenger não configurado');
+      const configError = new Error('Page Access Token do Messenger não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const url = `https://graph.facebook.com/v18.0/me/messages?access_token=${pageAccessToken}`;
@@ -223,10 +239,13 @@ async function sendMessengerButtons(recipientId, text, buttons) {
     };
   } catch (error) {
     logger.error('[Messenger] Erro ao enviar botões:', safeErrorMessage(error));
-    return {
+    const result = {
       success: false,
       error: safeErrorMessage(error),
     };
+    const errorCode = safeErrorCode(error);
+    if (errorCode) result.code = errorCode;
+    return result;
   }
 }
 

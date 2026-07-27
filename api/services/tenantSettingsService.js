@@ -113,4 +113,5 @@ async function upsertSetting({ tenantId, key, value }) {
 module.exports = {
   getSetting,
   upsertSetting,
+  resolveTenantUuid,
 };

@@ -405,6 +405,66 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
     }
   }
 
+  // 2b. Helpers de dispatch do projeto: `isRouteMatch(method, pathname, 'GET', '/x')`
+  // e `canHandlePrefix(method, pathname, 'GET', '/x/')` (prefixo → ':id').
+  const helperCallRe = /\b\w+\s*\(\s*method\s*,\s*pathname\s*,\s*'(GET|POST|PUT|PATCH|DELETE)'\s*,\s*'([^']+)'\s*\)/g;
+  while ((match = helperCallRe.exec(source)) !== null) {
+    const routePath = match[2].endsWith('/') ? `${match[2]}:id` : match[2];
+    pushItem(match[1], routePath, source.slice(Math.max(0, match.index - 400), match.index + 400), []);
+  }
+
+  // 2c. Rotas parametrizadas via startsWith:
+  //   `method === 'GET' && pathname.startsWith('/x/')`            → GET:/x/:id
+  //   `method !== 'DELETE' || !pathname.startsWith('/x/')`        → DELETE:/x/:id
+  //   `!(method === 'PUT' && pathname.startsWith('/x/') && …)`    → PUT:/x/:id
+  //   com `pathname.endsWith('/suffix')` na mesma condição        → /x/:id/suffix
+  const startsWithPatterns = [
+    /\bmethod\s*===\s*'(GET|POST|PUT|PATCH|DELETE)'\s*&&\s*pathname\.startsWith\('([^']+\/)'\)/g,
+    /\bpathname\.startsWith\('([^']+\/)'\)\s*&&\s*method\s*===\s*'(GET|POST|PUT|PATCH|DELETE)'/g,
+    /\bmethod\s*!==\s*'(GET|POST|PUT|PATCH|DELETE)'\s*\|\|\s*!pathname\.startsWith\('([^']+\/)'\)/g,
+    /!\(\s*method\s*===\s*'(GET|POST|PUT|PATCH|DELETE)'\s*&&\s*pathname\.startsWith\('([^']+\/)'\)/g,
+  ];
+  for (let p = 0; p < startsWithPatterns.length; p += 1) {
+    const pattern = startsWithPatterns[p];
+    while ((match = pattern.exec(source)) !== null) {
+      const method = (p === 1) ? match[2] : match[1];
+      const prefix = (p === 1) ? match[1] : match[2];
+      const tail = source.slice(match.index, match.index + 200);
+      // endsWith só entra no path quando NÃO está negado (ex.: o environment
+      // route usa `&& pathname.endsWith('/environment')`; o read route usa
+      // `&& !pathname.endsWith('/environment')` para excluir esse sufixo).
+      const suffixMatch = /[^!]\bpathname\.endsWith\('([^']+)'\)/.exec(tail);
+      const suffix = suffixMatch ? suffixMatch[1] : '';
+      pushItem(method, `${prefix}:id${suffix}`, source.slice(Math.max(0, match.index - 400), match.index + 400), []);
+    }
+  }
+
+  // 2d. Guarda negada com par método+rota (ex.: backup):
+  //   `method === 'GET' && pathname !== '/api/backup/export'` → GET:/api/backup/export
+  const negatedPairRe = /\bmethod\s*===\s*'(GET|POST|PUT|PATCH|DELETE)'\s*&&\s*pathname\s*!==\s*'([^']+)'/g;
+  while ((match = negatedPairRe.exec(source)) !== null) {
+    pushItem(match[1], match[2], source.slice(Math.max(0, match.index - 400), match.index + 400), []);
+  }
+
+  // 2e. Guarda de prefixo + allow-list de métodos (ex.: tenant-settings):
+  //   `if (!pathname.startsWith('/x/')) return false;` + `method !== 'A' && method !== 'B'`
+  const prefixGuardRe = /!\s*pathname\.startsWith\('([^']+\/)'\)/g;
+  while ((match = prefixGuardRe.exec(source)) !== null) {
+    const prefix = match[1];
+    // Só emitir quando houver allow-list explícita de métodos na vizinhança —
+    // evita confundir guards compostos (já cobertos por 2c) com este idioma.
+    const window = source.slice(match.index, match.index + 400);
+    if (!/method\s*===|method\s*!==/.test(window)) continue;
+    if (/\bmethod\s*===\s*'(GET|POST|PUT|PATCH|DELETE)'\s*&&\s*pathname\.startsWith/.test(window)) continue;
+    const allowList = new Set();
+    const allowRe = /method\s*!==\s*'(GET|POST|PUT|PATCH|DELETE)'/g;
+    let m2;
+    while ((m2 = allowRe.exec(window)) !== null) allowList.add(m2[1]);
+    for (const method of allowList) {
+      pushItem(method, `${prefix}:id`, source.slice(Math.max(0, match.index - 200), match.index + 200), []);
+    }
+  }
+
   // 3. Chamadas via helper local: helperName('<path>', handler).
   for (const [helperName, helper] of routeHelpers) {
     const callRe = new RegExp(`(?<![.\\w$])${helperName}\\s*\\(\\s*'([^']+)'`, 'g');

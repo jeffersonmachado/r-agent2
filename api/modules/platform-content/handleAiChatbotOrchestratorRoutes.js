@@ -136,6 +136,10 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
 
       sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
+      if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR')) {
+        sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
+        return true;
+      }
       logger.error('[API] Erro ao gerar RPA', { error: err.message, stack: err.stack });
       const requestId = (req.headers['x-request-id'] && String(req.headers['x-request-id']).trim())
         ? String(req.headers['x-request-id']).trim()

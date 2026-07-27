@@ -5,6 +5,16 @@ const { getSequelize } = require('../sequelize');
 
 let KnowledgeGraphNode = null;
 
+// Fonte única dos valores válidos de type — usada no ENUM do model e na
+// validação de contrato das rotas. Manter em sincronia com o CHECK
+// knowledge_graph_nodes_type_check (migrations/agent-os-2026-06-11.sql).
+const NODE_TYPES = [
+  'Customer', 'Lead', 'Conversation', 'Ticket', 'Journey',
+  'Agent', 'Replay', 'Wave', 'Campaign', 'Appointment',
+  'Contract', 'Invoice', 'Knowledge', 'Decision', 'Document',
+  'Product', 'Service', 'Event', 'Insight',
+];
+
 function getKnowledgeGraphNodeModel() {
   if (!KnowledgeGraphNode) {
     const sequelize = getSequelize();
@@ -20,12 +30,7 @@ function getKnowledgeGraphNodeModel() {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
       tenant_id: { type: DataTypes.STRING, allowNull: false, defaultValue: 'system' },
       type: {
-        type: DataTypes.ENUM(
-          'Customer', 'Lead', 'Conversation', 'Ticket', 'Journey',
-          'Agent', 'Replay', 'Wave', 'Campaign', 'Appointment',
-          'Contract', 'Invoice', 'Knowledge', 'Decision', 'Document',
-          'Product', 'Service', 'Event', 'Insight'
-        ),
+type: DataTypes.ENUM(...NODE_TYPES),
         allowNull: false,
       },
       label: { type: DataTypes.STRING, allowNull: false },
@@ -50,3 +55,4 @@ function getKnowledgeGraphNodeModel() {
 }
 
 module.exports = getKnowledgeGraphNodeModel;
+module.exports.NODE_TYPES = NODE_TYPES;

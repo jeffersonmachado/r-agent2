@@ -21,8 +21,9 @@ function createWebScrapingRoutes({ buildDeps }) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
+    let body = null;
     try {
-      const body = await deps.parseJsonBody(req);
+      body = await deps.parseJsonBody(req);
       if (!body.url) {
         deps.badRequest(res, 'URL é obrigatória');
         return;

@@ -713,33 +713,41 @@ async function runFlowScenario(definition, ctx) {
     const initialTotal = Array.isArray(catalogBefore?.items) ? catalogBefore.items.length : 0;
 
     const nodeId = `qa-market-${runId}`;
-    const publish = await api.post('/api/node-marketplace/publish', {
-      node: {
-        id: nodeId,
-        label: `QA Market Node ${runId}`,
-        category: 'core',
-        version: '1.0.0',
-        description: 'Node publicado pela suite business QA',
-        visibility: 'tenant',
-      },
-    });
-    if (!publish?.ok) {
-      throw new Error('Publicacao de node nao confirmou sucesso');
-    }
+    try {
+      const publish = await api.post('/api/node-marketplace/publish', {
+        node: {
+          id: nodeId,
+          label: `QA Market Node ${runId}`,
+          category: 'core',
+          version: '1.0.0',
+          description: 'Node publicado pela suite business QA',
+          visibility: 'tenant',
+        },
+      });
+      if (!publish?.ok) {
+        throw new Error('Publicacao de node nao confirmou sucesso');
+      }
 
-    const published = await api.get('/api/node-marketplace/published');
-    const found = (published?.items || []).find((item) => item.id === nodeId);
-    if (!found) {
-      throw new Error('Node publicado nao apareceu na lista de publicados');
-    }
+      const published = await api.get('/api/node-marketplace/published');
+      const found = (published?.items || []).find((item) => item.id === nodeId);
+      if (!found) {
+        throw new Error('Node publicado nao apareceu na lista de publicados');
+      }
 
-    const catalogAfter = await api.get('/api/node-marketplace/catalog');
-    const finalTotal = Array.isArray(catalogAfter?.items) ? catalogAfter.items.length : initialTotal;
-    return {
-      detail: 'Node publicado e visivel no marketplace do tenant',
-      ids: { nodeId },
-      evidence: { catalogBefore: initialTotal, catalogAfter: finalTotal },
-    };
+      const catalogAfter = await api.get('/api/node-marketplace/catalog');
+      const finalTotal = Array.isArray(catalogAfter?.items) ? catalogAfter.items.length : initialTotal;
+      return {
+        detail: 'Node publicado, visivel no marketplace do tenant e revogado',
+        ids: { nodeId },
+        evidence: { catalogBefore: initialTotal, catalogAfter: finalTotal, unpublished: true },
+      };
+    } finally {
+      // O registry do marketplace é versionado (governance/): node de QA não
+      // pode sobrar após o cenário, senão cada run acumula lixo no git.
+      try {
+        await api.del(`/api/node-marketplace/publish/${encodeURIComponent(nodeId)}`);
+      } catch (_) { /* melhor esforço: falha de cleanup não mascara o resultado */ }
+    }
   }
 
   if (definition.code === 'SERV-FLOW-SOLUTION') {

@@ -252,13 +252,13 @@ describe('Agent OS Hardening - Regression Tests', () => {
     it('deve registrar evento de governança', async () => {
       mockGovernanceService.logGovernanceEvent.mockResolvedValue({
         id: 'gov-event-001',
-        eventType: 'agent_validation',
+        eventType: 'audit',
       });
 
       const result = await mockGovernanceService.logGovernanceEvent({
         tenantId: 'system',
         agentId: 'agent-001',
-        eventType: 'agent_validation',
+        eventType: 'audit',
         actor: 'systemadmin',
         description: 'Validation completed',
         decision: 'approved',
@@ -269,7 +269,7 @@ describe('Agent OS Hardening - Regression Tests', () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.eventType).toBe('agent_validation');
+      expect(result.eventType).toBe('audit');
       expect(mockGovernanceService.logGovernanceEvent).toHaveBeenCalledTimes(1);
     });
   });

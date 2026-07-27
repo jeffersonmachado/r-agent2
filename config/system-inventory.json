@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-27T02:19:29.698Z",
+  "generatedAt": "2026-07-27T04:20:11.673Z",
   "counts": {
-    "total": 2636,
+    "total": 2728,
     "byKind": {
-      "api": 675,
+      "api": 768,
       "field": 1492,
       "model": 155,
-      "page": 150,
+      "page": 149,
       "relation": 9,
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2415,
-      "DEVELOPMENT": 132,
+      "PRODUCTION": 2500,
+      "DEVELOPMENT": 139,
       "SUPPORT": 89
     },
-    "orphaned": 97
+    "orphaned": 126
   },
   "items": [
     {
@@ -279,6 +279,25 @@
       "fingerprint": "f4b1c9450e129b5bbcaf0c4762d1ca306161ccebc5c513188e253571ab36ad8e"
     },
     {
+      "id": "api:DELETE:/auth/agents/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/auth/agents/:id",
+      "module": "domain-identity",
+      "source": "api/modules/domain-identity/handleAgentCrudRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:agents:delete"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
+      "fingerprint": "fd9957ff0608c18ee0fe9f3d6db7ca4f45bef86dd40f5c804ec73ebf0ba66d16"
+    },
+    {
       "id": "api:DELETE:/bulk-campaigns/:campaignId",
       "kind": "api",
       "method": "DELETE",
@@ -295,6 +314,101 @@
       ],
       "linkedDomains": [],
       "fingerprint": "1c0316b9f6f78100edb4898ce2cea1de382fa790738bf9c6a0a78751f52026b9"
+    },
+    {
+      "id": "api:DELETE:/bulk-campaigns/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/bulk-campaigns/:id",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:delete"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "18a9f77d9481edb93395788e450f7e98643b832e51f345b1d1bea2a523a36412"
+    },
+    {
+      "id": "api:DELETE:/channel-accounts/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/channel-accounts/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleChannelAccountRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "e1bca8003bfc914cae16bbebdf5c9d410e02147891555cf98b4e826d695f9798"
+    },
+    {
+      "id": "api:DELETE:/departments/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/departments/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleDepartmentRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:departments:delete"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "departments"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c2eea3ff8835b2e852981c2b75c67762a0610c390deccefa77eda68b3d97ee45"
+    },
+    {
+      "id": "api:DELETE:/flow-templates/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/flow-templates/:id",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleFlowTemplateMarketplaceRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:flows:create"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "17ebeda701c6542778c53c0953f60bca82b22d09d7c5df4d39084ef7446610d3"
+    },
+    {
+      "id": "api:DELETE:/flows/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/flows/:id",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/handleFlowCrudDeleteRoute.js",
+      "authRequired": true,
+      "authorization": [
+        "handleFlowCrudDeleteRoute",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "a21f7f750b4e554200175d334ca9ed33982fb5e39f00b768d39484f0912cb9ca"
     },
     {
       "id": "api:DELETE:/projects/:projectId",
@@ -393,6 +507,73 @@
       "fingerprint": "bf0f2e1638bb30aad804e87bfadb45c9f4bf0638313e66e0dade869b2e331088"
     },
     {
+      "id": "api:DELETE:/rag/documents/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/rag/documents/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "acd7146aabd44e4356bae54444da7ce13911938fd7db3ed5d7f5e7c7fa272bcd"
+    },
+    {
+      "id": "api:DELETE:/rag/learning/synonyms/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/rag/learning/synonyms/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "62eaf67b969ec1c8672ebc4712f7ef3056f3afc3c8b40f38658fd3ff35314bf6"
+    },
+    {
+      "id": "api:DELETE:/rpa/recordings/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/rpa/recordings/:id",
+      "module": "rpa-tests",
+      "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "74b8a38897080582927de7c0a05e7d8d394e21812d51dc5d27de4cab3014b545"
+    },
+    {
+      "id": "api:DELETE:/templates/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/templates/:id",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleTemplatesRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4c2cb7571988f9b2cfb4727faf79a4468b0610e8c20a36c468e5943c5b499a1b"
+    },
+    {
       "id": "api:DELETE:/tenants/:tenantId",
       "kind": "api",
       "method": "DELETE",
@@ -407,6 +588,27 @@
       "technicalWave": "platform",
       "linkedJourneys": [],
       "fingerprint": "e1101fe093c9c20db3d2cde32746d2c39917dd77ac1dad7f780fe00d56dbe437"
+    },
+    {
+      "id": "api:DELETE:/webhooks/:id",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/webhooks/:id",
+      "module": "webhooks",
+      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:webhooks:delete"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "webhooks"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7bee42885c11790d53a709895aa22f9a49c758bce2ca4b6f0a742250e3c8d144"
     },
     {
       "id": "api:DELETE:/webhooks/:webhookId",
@@ -889,6 +1091,27 @@
       "fingerprint": "ebc4ba8d2fe6953afa14a501bee30ea2243ff82e8798471e6f068b15c5ff9d64"
     },
     {
+      "id": "api:GET:/api/backup/export",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/backup/export",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleConfigAdminRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:GET:read:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "export"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e90bf5b15717e5d078eb2190b81fbada5d3354c2303229c9a59f4843f840dc47"
+    },
+    {
       "id": "api:GET:/api/beauty/agenda",
       "kind": "api",
       "method": "GET",
@@ -1162,6 +1385,27 @@
         "pbx"
       ],
       "fingerprint": "2efff1f219647d0ebe7824c1260dc8c74de01c5519535a20a6d46085c36fe310"
+    },
+    {
+      "id": "api:GET:/api/cc/reports/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/cc/reports/:id",
+      "module": "pbx",
+      "source": "api/modules/pbx/pbx/pbxContactCenterRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [],
+      "linkedDomains": [
+        "pbx"
+      ],
+      "fingerprint": "114b7c3375955879da79e161883a3414f96570609f82ad2940bf4f5a7bca13c4"
     },
     {
       "id": "api:GET:/api/cc/scheduled-callbacks",
@@ -1816,6 +2060,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "afea05fadde8c61c7616d3b10567d4d2ffd3605c6b4b78b551aabbdcf6851d32"
+    },
+    {
+      "id": "api:GET:/api/intelligence/insights/:id/evidence",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/intelligence/insights/:id/evidence",
+      "module": "intelligence",
+      "source": "api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js",
+      "authRequired": false,
+      "authorization": [
+        "requirePermission:analytics:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operational_intelligence"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "50d31bf96699c07a1fe4f93dd86de515980e27c8c545f5ae63f09be92a3511bf"
     },
     {
       "id": "api:GET:/api/intelligence/operational-state",
@@ -4006,6 +4270,21 @@
       "fingerprint": "747c3563bb507eb152999174866692572a3e3b6cd1b8eb891ed9e1fc53d8b92c"
     },
     {
+      "id": "api:GET:/api/tenant-settings/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/tenant-settings/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleConfigAdminRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "2ece77b053093f3045e5e9ba2113527a19f0fdab878f7abc2f62d89da3681ded"
+    },
+    {
       "id": "api:GET:/api/test-executions/:executionId",
       "kind": "api",
       "method": "GET",
@@ -4360,6 +4639,42 @@
       "fingerprint": "364ace8062f15ab978c59141785460a12a66b3c94567437752174f376c3bb777"
     },
     {
+      "id": "api:GET:/auth/agents/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/auth/agents/:id",
+      "module": "domain-identity",
+      "source": "api/modules/domain-identity/handleAgentCrudRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
+      "fingerprint": "67a822f23d67e1fa61d98f25a74c3ec47297a8e539f1d2d671a9a5bf027c407d"
+    },
+    {
+      "id": "api:GET:/auth/agents/:id/name",
+      "kind": "api",
+      "method": "GET",
+      "path": "/auth/agents/:id/name",
+      "module": "domain-identity",
+      "source": "api/modules/domain-identity/handleAgentCrudRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
+      "fingerprint": "494d624fc783fcd04a135d22e62f8fe29ab93b5e8220a9ca9a15b5c34ccf3cb9"
+    },
+    {
       "id": "api:GET:/auth/me",
       "kind": "api",
       "method": "GET",
@@ -4467,6 +4782,27 @@
       "fingerprint": "0e983478de324514cd95cb46d239ad05394122d67c7585026f94af43deb689ba"
     },
     {
+      "id": "api:GET:/bulk-campaigns/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/bulk-campaigns/:id",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "79a3005bc9cc8c5e953f2bbaeafe9983de23a8061ced1fb0f39d0af8739db747"
+    },
+    {
       "id": "api:GET:/channel-accounts",
       "kind": "api",
       "method": "GET",
@@ -4541,6 +4877,22 @@
       "fingerprint": "2ebd987fe3b8b5b349fe5992f0c4068986dd0fd63bc2698b122c3bce097cb719"
     },
     {
+      "id": "api:GET:/conversations/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/conversations/:id",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/handleConversationRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:audit:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "998f1a67f2394789630dcfc6f51414f4a4192efe9277901b940200d3cdbf7b2b"
+    },
+    {
       "id": "api:GET:/deliveries/:deliveryId",
       "kind": "api",
       "method": "GET",
@@ -4579,6 +4931,26 @@
       "fingerprint": "c6e4bdc090a6a8533ffbb9cfea69cf9a4d471a79b561bcdeb67f30548203d465"
     },
     {
+      "id": "api:GET:/departments/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/departments/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleDepartmentRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "departments"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0b4d1b52fa5945f361ffde83ddab7cd3eb8625f62998ceb393f45adf82a8caa1"
+    },
+    {
       "id": "api:GET:/dev/files",
       "kind": "api",
       "method": "GET",
@@ -4596,6 +4968,24 @@
       "technicalWave": "platform",
       "linkedJourneys": [],
       "fingerprint": "2703af335febc62e1393d1e6f2fb07325209909cfad8472fc94d36c135fd21f5"
+    },
+    {
+      "id": "api:GET:/dev/files/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/dev/files/:id",
+      "module": "dev-management",
+      "source": "api/modules/dev-management/handleDevManagementRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "629f8e5f3dd8a7461761cf5cbc1234267d7b315db0f3d4f02d0f829d963dec7a"
     },
     {
       "id": "api:GET:/developer/keys",
@@ -4740,6 +5130,27 @@
       "fingerprint": "9a438e8c65efa2cb30d4fe482af8a7732c61696d7d985fbfb84df770ff12f1e3"
     },
     {
+      "id": "api:GET:/flow-templates/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/flow-templates/:id",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleFlowTemplateMarketplaceRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:flows:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f9564bbdaafad76b596e9e0c391c44e5bc88b626817bf7bbe39c466c080ad0bb"
+    },
+    {
       "id": "api:GET:/flows",
       "kind": "api",
       "method": "GET",
@@ -4754,6 +5165,19 @@
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
       "fingerprint": "7beba2f6dda5da77fca7ff26fb459aac803d0afc1d79ed18b3274e3cbd111d10"
+    },
+    {
+      "id": "api:GET:/flows/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/flows/:id",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/handleFlowCrudReadRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0b4584650bff125dab02e673a9a3d76d7a881522f3c5fddef9f14554705be10d"
     },
     {
       "id": "api:GET:/health",
@@ -4842,6 +5266,22 @@
       "fingerprint": "6eaaa99c736b2c6791f211c788dc5f49c1c9c0d6f98b8700994d097ebc3aa15f"
     },
     {
+      "id": "api:GET:/lp/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/lp/:id",
+      "module": "public-system",
+      "source": "api/modules/public-system/publicMarketingRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "a8c66bf9da986a1bfc92e214dcc4cc670f58fa11b5633e28d5c9f836737593bc"
+    },
+    {
       "id": "api:GET:/metrics/queues",
       "kind": "api",
       "method": "GET",
@@ -4859,6 +5299,22 @@
       ],
       "linkedDomains": [],
       "fingerprint": "6e0565e29801be7f01af8681aa8bba3e1bc939196fa1149fa5fefccc60b402da"
+    },
+    {
+      "id": "api:GET:/mkt/l/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mkt/l/:id",
+      "module": "public-system",
+      "source": "api/modules/public-system/publicMarketingRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "0982ed45bd2302559fc939b0f30f0295569d1f9cadfc9c91081e6b8801933f0a"
     },
     {
       "id": "api:GET:/mkt/track.js",
@@ -5195,6 +5651,22 @@
       ],
       "linkedDomains": [],
       "fingerprint": "2113e6f2b06ea921490a5ce50b68161724056d3abd66b03b9051098403b7abb9"
+    },
+    {
+      "id": "api:GET:/provision/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/provision/:id",
+      "module": "public-system",
+      "source": "api/modules/public-system/publicProvisioningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "91adaee0d5033a1d0189db8ffe8652eb8255f1ec882994d31a2231d70dcb029f"
     },
     {
       "id": "api:GET:/public-tokens",
@@ -5797,6 +6269,138 @@
       "fingerprint": "4a8908e99c91b4ab0575eb05953cc45dcd6a53bd53873af4270c148727cbccd2"
     },
     {
+      "id": "api:GET:/rag/deduplication/stats",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/deduplication/stats",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "7aad6c7df76ffbcbb19442173f8b170845039852f164fd277c2c9928ddf6af83"
+    },
+    {
+      "id": "api:GET:/rag/documents",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/documents",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "2e2c4e63b274155e11e504920adb2acc7d093ba5ab6bd217338c7bba60dc8f4c"
+    },
+    {
+      "id": "api:GET:/rag/documents/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/documents/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "741c5e82547447b7735e481c5204a4b9fbb7460dc08785d72daf5840d303f2f7"
+    },
+    {
+      "id": "api:GET:/rag/documents/stats",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/documents/stats",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "152f2389f6916bb9ad8048e0cceb0684079d5da0682c320dc046da14412c1910"
+    },
+    {
+      "id": "api:GET:/rag/domains",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/domains",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "880197db085d6f757a956fd33f04ba94ea4e550b44a824ff9458450580391f1b"
+    },
+    {
+      "id": "api:GET:/rag/health",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/health",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "9625de2c0a0a5ccd32b4f5ca34629bcc3e9e385c97fec330731c120fd278157b"
+    },
+    {
+      "id": "api:GET:/rag/learning/full-data/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/learning/full-data/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "450b22c53f1ac55a11ee99396cb96522c02605292b5d4c957f9cc59b2af097ee"
+    },
+    {
+      "id": "api:GET:/rag/learning/metrics/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/learning/metrics/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "33ffecf569e0e45e73ccdae8e67c8e88a0537852a0bd8e7ad261b5465df77c5c"
+    },
+    {
+      "id": "api:GET:/rag/learning/validation-rules",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rag/learning/validation-rules",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f1fe15e8b3d1233a764bb35fb33b9517098bb5f380f5edb3fb64b335d5cc2b71"
+    },
+    {
       "id": "api:GET:/rbac/permissions",
       "kind": "api",
       "method": "GET",
@@ -5831,6 +6435,19 @@
       ],
       "linkedDomains": [],
       "fingerprint": "072d62dde51b75178af396557589f53c0a89530569e69d49d8cd27c9a7fc9b38"
+    },
+    {
+      "id": "api:GET:/replay/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/replay/:id",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/flow-execution/flowExecutionRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "c45a5574f5b443760edd9639af80f1145853cc3749112482e2d808f27d412eae"
     },
     {
       "id": "api:GET:/resource-bookings",
@@ -5885,6 +6502,42 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "cf08757308d58c25c1595ef371fb516f4817b94b7022061bcd02091c8c99cb2b"
+    },
+    {
+      "id": "api:GET:/rpa/execution/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rpa/execution/:id",
+      "module": "rpa-tests",
+      "source": "api/modules/rpa-tests/handleRpaExecutionRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "fc290e7410ee234d24110288d602df15c4f6a9a947c71b87295b72ebb69f5a4f"
+    },
+    {
+      "id": "api:GET:/rpa/record/status/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/rpa/record/status/:id",
+      "module": "rpa-tests",
+      "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "96f0c3d4d410e754b87d6321a6c46c3d8b4a09d652e05fa4005ac764d77d5681"
     },
     {
       "id": "api:GET:/rpa/recordings",
@@ -6022,6 +6675,25 @@
       ],
       "linkedDomains": [],
       "fingerprint": "a57ffd30bcebe2bd6d57854279133e83ec424c60ee420c31e2478fdb208c2bdb"
+    },
+    {
+      "id": "api:GET:/storefront/orders/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/storefront/orders/:id",
+      "module": "platform-public",
+      "source": "api/modules/platform-public/handleStorefrontRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "orders",
+        "public_tokens"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0319d1d478564d933d1723868e316bb3dd522431e3d025a2f3aba6c5b952a41f"
     },
     {
       "id": "api:GET:/super-admin/ai-generations",
@@ -6189,6 +6861,24 @@
       "fingerprint": "fcd4d408bb12bb1bb84dc36b88de08a976c15ba83aa213ba126e5300bd20484a"
     },
     {
+      "id": "api:GET:/templates/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/templates/:id",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleTemplatesRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "92deb58f037da50886fc0d1efdd177b6eaf76ea3788834abe55e636592bc8dab"
+    },
+    {
       "id": "api:GET:/tenants",
       "kind": "api",
       "method": "GET",
@@ -6332,6 +7022,114 @@
       "fingerprint": "dc8ed1e8cb19c4c9a2e9b570acb0423e258d44eb4aae4abee4b2d05e3a68a82f"
     },
     {
+      "id": "api:GET:/tickets/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/:id",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "af5712cc0f19cf27ecd73d6b5ff20dcf29e907c3ccbcf868aa9b3c64ccd28dda"
+    },
+    {
+      "id": "api:GET:/tickets/:id/ai-summary",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/:id/ai-summary",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3c613e57844409271684606c04110bf89170d50839b7b58222431b1a5321d481"
+    },
+    {
+      "id": "api:GET:/tickets/:id/delivery-failures",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/:id/delivery-failures",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5091ffb5b6e80e689a9e11c49ce0f0fde6aabb680232a98ff15879acc7e4d252"
+    },
+    {
+      "id": "api:GET:/tickets/:id/messages",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/:id/messages",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ba7bcd21aa9f1ccb2a0049a9145266c41ae37425397973fe25ed1d5ad1f2c865"
+    },
+    {
+      "id": "api:GET:/tickets/media/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/media/:id",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "162f72f74166ce872bad93d063e65af485de8c0de476e65e0bb7d4f2faf94f1c"
+    },
+    {
+      "id": "api:GET:/tickets/session/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/tickets/session/:id",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "348665f53bc5cd7e4007f14c9a9bcdae03f0b27779207c2d5fb41930ca3cf698"
+    },
+    {
       "id": "api:GET:/timesheet",
       "kind": "api",
       "method": "GET",
@@ -6382,6 +7180,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "4e4f319f8dfcbb524134da0dd71b3a71120711dae04f25bc92724012f6fb2ae1"
+    },
+    {
+      "id": "api:GET:/webhooks/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/webhooks/:id",
+      "module": "webhooks",
+      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "webhooks"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "9ff7a84a5f54f7e8231cb8fc72590cad8b83044c29040044ab8f9da62f25d195"
     },
     {
       "id": "api:GET:/webhooks/:webhookId",
@@ -6540,6 +7358,28 @@
       ],
       "linkedDomains": [],
       "fingerprint": "ff584f5222067711580018cb0aa54c5024384f038af79ee999f16380268c80dc"
+    },
+    {
+      "id": "api:GET:/whatsapp/templates/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/whatsapp/templates/:id",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleWhatsappTemplateRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:flows:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates",
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "88799a518741988f379a788d4525ccaaec68a3c6508554b39b48a17aa5a16940"
     },
     {
       "id": "api:GET:/workspace/entities",
@@ -7271,6 +8111,22 @@
       "technicalWave": "security",
       "linkedJourneys": [],
       "fingerprint": "33c3ec318aeab21164a32e4192f802238ca559800def90fc3321926fffb9e114"
+    },
+    {
+      "id": "api:POST:/api/backup/import",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/backup/import",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleConfigAdminRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:GET:read:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0867e82e17eabd601d1f88b6a254a202c093880eb9fe402c87cf2eaf7a41105f"
     },
     {
       "id": "api:POST:/api/beauty/appointment",
@@ -9895,6 +10751,21 @@
       "fingerprint": "358f00eb49c83c1b8b3998879888457f12f0402bac09dcc707b3498f9d658f0c"
     },
     {
+      "id": "api:POST:/api/tenant-settings/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/tenant-settings/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleConfigAdminRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "4da93e314ac188f9435132b3e02e3f47a6b6a3fafc58aa6e808bb3664897faae"
+    },
+    {
       "id": "api:POST:/api/test-executions",
       "kind": "api",
       "method": "POST",
@@ -10510,6 +11381,69 @@
       "fingerprint": "9ff8745e8cef3b9a3757f3d8c195c27ee7c4b7feba1698c5fe4b047c8a52bdee"
     },
     {
+      "id": "api:POST:/bulk-campaigns/:id/pause",
+      "kind": "api",
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/pause",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "249ab5e1587363f3ad974f6593b7a4ec852ffd49d27a3d39f9b4f75a97738f4c"
+    },
+    {
+      "id": "api:POST:/bulk-campaigns/:id/resume",
+      "kind": "api",
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/resume",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b31f31a3aa388f374c2b7d92b0f9da41701e0f44b2a987efae11b2c35c918698"
+    },
+    {
+      "id": "api:POST:/bulk-campaigns/:id/start",
+      "kind": "api",
+      "method": "POST",
+      "path": "/bulk-campaigns/:id/start",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e4f0a748d4cefb460f53815e16facc9b16cf799c2819d4c563bdb625a42719f3"
+    },
+    {
       "id": "api:POST:/channel-accounts",
       "kind": "api",
       "method": "POST",
@@ -10524,6 +11458,22 @@
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
       "fingerprint": "0b4ceff8ea128895156912fcd9432072df3c15ff5b6ab8462a3a423b662a7578"
+    },
+    {
+      "id": "api:POST:/channel-accounts/:id/test",
+      "kind": "api",
+      "method": "POST",
+      "path": "/channel-accounts/:id/test",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleChannelAccountRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "9c93bcbfc388ae3f75774bac8f037cad62c349b69f0e8e5206aa6e4221aa3eca"
     },
     {
       "id": "api:POST:/config/validate-provider-token",
@@ -10571,6 +11521,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "0a1d05515043ee1b2407b05df6a990cc67195dd3f4cb3588c7a15ee160451976"
+    },
+    {
+      "id": "api:POST:/departments/:id/agents",
+      "kind": "api",
+      "method": "POST",
+      "path": "/departments/:id/agents",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleDepartmentRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:departments:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "departments"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1758e0e68a553bc282ca273c4b286c18b58e990c4ac8a4983cb5a648c8bb9988"
     },
     {
       "id": "api:POST:/dev/qa-waves/generate-seeds",
@@ -10700,6 +11671,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "49f8868f96b7780957da7f977af85745a4f76328696130e3cd378081b049129e"
+    },
+    {
+      "id": "api:POST:/flow-templates/:id/install",
+      "kind": "api",
+      "method": "POST",
+      "path": "/flow-templates/:id/install",
+      "module": "platform-content",
+      "source": "api/modules/platform-content/handleFlowTemplateMarketplaceRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:flows:create"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "templates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "986a1fbd2f139e4ca62a296c82813cdb468a94247475232a8d46c46aaa4de483"
     },
     {
       "id": "api:POST:/flows",
@@ -10850,6 +11842,22 @@
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
       "fingerprint": "dc2e60e1f7af9b82cc7c2466ad3ae4e31d497bb37021de2d27ccc27b6f36c033"
+    },
+    {
+      "id": "api:POST:/lp/:id/submit",
+      "kind": "api",
+      "method": "POST",
+      "path": "/lp/:id/submit",
+      "module": "public-system",
+      "source": "api/modules/public-system/publicMarketingRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "observability",
+      "linkedJourneys": [],
+      "fingerprint": "7b0bffd490ec592d725eddc1455d126d1cffa3b6c7d87dfc74512a252f280d98"
     },
     {
       "id": "api:POST:/messenger/send",
@@ -11597,6 +12605,182 @@
       "fingerprint": "cafcdb1d14d547251673986d9e02299a54d95f4803f27ecc03c0196d374fc430"
     },
     {
+      "id": "api:POST:/rag/documents",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/documents",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "2778d0fac93420781c9c6c365fd881d5f18f75f7475f3c623ae175c1898c22e7"
+    },
+    {
+      "id": "api:POST:/rag/documents/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/documents/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "2b88dd21e53225acf87a00f7d16b9d2aa35167ae8b291fbe6cc06d64be2e3096"
+    },
+    {
+      "id": "api:POST:/rag/documents/clean-orphans",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/documents/clean-orphans",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "f2583a9bfa7489728bc36c06b22f9f749b251b523157c511596cb3c29debaace"
+    },
+    {
+      "id": "api:POST:/rag/documents/reindex-all",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/documents/reindex-all",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "97cd71725f4f4638087b59a8af11ee28fc2f43d7f91ae0fdeca78e011bd5cd86"
+    },
+    {
+      "id": "api:POST:/rag/documents/upload",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/documents/upload",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragIngestionRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "b84a7cbbf2d309bec86021ea58bb8b30ce0d30b7964d65a3ad2d05694c5bd263"
+    },
+    {
+      "id": "api:POST:/rag/ephemeral/context",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/ephemeral/context",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragEphemeralRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "f208ef0b02169511c90ab9385af5a7191ca48f44d0a75746446bad9e5d747ccc"
+    },
+    {
+      "id": "api:POST:/rag/learning/clean-invalid-queries/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/learning/clean-invalid-queries/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "bccff3c02daac1dfb461a6073832a306941f9cf7ab7f09cfc423019b42dac2ce"
+    },
+    {
+      "id": "api:POST:/rag/learning/trigger-learning/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/learning/trigger-learning/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1f1d83659f3a173fa0767bbb38d803d9cce312193ad6fe4987d781d21740e569"
+    },
+    {
+      "id": "api:POST:/rag/learning/update-synonyms",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/learning/update-synonyms",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6a1a87dd5ba2febe2867b51d989fe41c4445d205f1355749c62af2c195cb5f3a"
+    },
+    {
+      "id": "api:POST:/rag/learning/validation-rules/adapt/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/learning/validation-rules/adapt/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "44136bc3bab4a45e5f8e1eb86a71778162ced6bd523cfd09f71c257343b88d22"
+    },
+    {
+      "id": "api:POST:/rag/query",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/query",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragQueryRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "c890e3e172bbbafc14812b5e64e8a46d35a62e2e67ced3027c2843f4323302f4"
+    },
+    {
+      "id": "api:POST:/rag/reindex-all",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rag/reindex-all",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "efa0b99225ab34fb8e83e9abe5f80ebd4ef9a4e206c7331ccaddc7e717a2c32e"
+    },
+    {
       "id": "api:POST:/rbac/assign",
       "kind": "api",
       "method": "POST",
@@ -11693,11 +12877,31 @@
       "path": "/rpa-tests",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/flow-execution/rpaTestGenerationRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
-      "fingerprint": "72cc9c3bc2e5f78cf93c57b42ef91198735daa9ab880dd53214ec86663cbe374"
+      "fingerprint": "8b0ff7e35a973ce3fcf2983e50e93d8e31c87002f487fa32da46bc1c3f9f90a6"
+    },
+    {
+      "id": "api:POST:/rpa/execute/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rpa/execute/:id",
+      "module": "rpa-tests",
+      "source": "api/modules/rpa-tests/handleRpaExecutionRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "954b812a978955c0f20371d32abd9584d744084b269ba92338e5faeb67003381"
     },
     {
       "id": "api:POST:/rpa/record/start",
@@ -11716,6 +12920,24 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "f0af131c7aecdac2be3ae3d48c8071a715a44bcd32c755ef40a1d437864b3bd7"
+    },
+    {
+      "id": "api:POST:/rpa/record/stop/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/rpa/record/stop/:id",
+      "module": "rpa-tests",
+      "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "b144b7bbe69cd905c36228a2808a3806205f6315eec58cf8c1dd77f3a3efa31d"
     },
     {
       "id": "api:POST:/server/restart",
@@ -12022,6 +13244,184 @@
       ],
       "linkedDomains": [],
       "fingerprint": "34c13f7d1b03ea69d0c9a4912c4528294b9bcff3499220ce3c561c1671357ba2"
+    },
+    {
+      "id": "api:POST:/tickets/:id/ai-summary",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/ai-summary",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3036fe4a40e14fcb97b59d16efa54beb382e703709919a24d11819883ed073e2"
+    },
+    {
+      "id": "api:POST:/tickets/:id/assign",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/assign",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8f052c3524dcb529634f2e01581f02a7333c675f170a06cf57dd27b37e11c9f4"
+    },
+    {
+      "id": "api:POST:/tickets/:id/close",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/close",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1e5f0d1a527d8d406a718a1ef9601247aad8adeba8bb52181e30d00463c2b473"
+    },
+    {
+      "id": "api:POST:/tickets/:id/mark-read",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/mark-read",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCommunicationRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ba12d0c03441ebcc06577bdadaace8c143c31b3fcf6413310597202b8ba4d5df"
+    },
+    {
+      "id": "api:POST:/tickets/:id/message",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/message",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketCommunicationRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a8f2fdac2227936af7d11b19688d52a359897fdbb4af9787a66fa7f569bd782f"
+    },
+    {
+      "id": "api:POST:/tickets/:id/pause",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/pause",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a982fa119ec2df5eb26aa877d21d1b66dca55395f5139e7c7c264d30e0aaee89"
+    },
+    {
+      "id": "api:POST:/tickets/:id/resume",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/resume",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3986f04008faa5094697c91a5b8cdd65fab1334cb83cf895d8d7991d40a554a6"
+    },
+    {
+      "id": "api:POST:/tickets/:id/return-to-bot",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/return-to-bot",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "df582723cd93087ee38481c8ca5aafe634497f5ec989d1efa82db4228520498a"
+    },
+    {
+      "id": "api:POST:/tickets/:id/tags",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/tags",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleSegmentationRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:tickets:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "caf7c337da3da39309779673bcba7f2c6e41decbedea92c2ba5b89971460921e"
+    },
+    {
+      "id": "api:POST:/tickets/:id/takeover",
+      "kind": "api",
+      "method": "POST",
+      "path": "/tickets/:id/takeover",
+      "module": "ticket",
+      "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d16c9017e5bdb4ceedc2b11c709aaf8cc9de9dbc4ef32d8e1bdfe1f8ac36d60b"
     },
     {
       "id": "api:POST:/tickets/media/upload",
@@ -12456,6 +13856,26 @@
       "fingerprint": "30e3ba0d4a707023467bddd4574c06dcf6f79ee2eed31dc5068c52135e122127"
     },
     {
+      "id": "api:PUT:/api/intelligence/goals/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/intelligence/goals/:id",
+      "module": "intelligence",
+      "source": "api/modules/intelligence/handleIntelligenceGoalRoutes.js",
+      "authRequired": false,
+      "authorization": [
+        "requirePermission:config:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operational_intelligence"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2345177174465a050babeb851115cdad51e22e2c7ad4069062409516dad7cc8e"
+    },
+    {
       "id": "api:PUT:/api/marketing/google-ads/recommendations/:recommendationId",
       "kind": "api",
       "method": "PUT",
@@ -12474,6 +13894,24 @@
       "fingerprint": "5261d7080048aef8976ccbb9a93720a22d718782a91cbbabded45ada6aae0bde"
     },
     {
+      "id": "api:PUT:/auth/agents/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/auth/agents/:id",
+      "module": "domain-identity",
+      "source": "api/modules/domain-identity/handleAgentCrudRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
+      "fingerprint": "72f0c05d8905bd424322237a9648cb2ddb3809fd391cb48467963e432a1243c7"
+    },
+    {
       "id": "api:PUT:/bulk-campaigns/:campaignId",
       "kind": "api",
       "method": "PUT",
@@ -12490,6 +13928,43 @@
       ],
       "linkedDomains": [],
       "fingerprint": "c674e671108234c84b620d3c5d08c5595aa5497677fb299fd49307dde340559e"
+    },
+    {
+      "id": "api:PUT:/bulk-campaigns/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/bulk-campaigns/:id",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "36505eb283552b0a554e956864f7e17146163a1513db5e06974b4958c7276643"
+    },
+    {
+      "id": "api:PUT:/channel-accounts/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/channel-accounts/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleChannelAccountRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "173ce3040bbb145139f6b37b847bc05e3bfcf7a00c8d2603c1be7858a6797c63"
     },
     {
       "id": "api:PUT:/config",
@@ -12521,6 +13996,73 @@
       ],
       "linkedDomains": [],
       "fingerprint": "50f1d8895790cf6036c45b4c21b68e50b03976d68ec9e5e0114d805d5f965862"
+    },
+    {
+      "id": "api:PUT:/departments/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/departments/:id",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleDepartmentRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:departments:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "departments"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a6a9f183626b6eb1313db49b83af7afba24240a20a4d7bfd951be2643c5e7979"
+    },
+    {
+      "id": "api:PUT:/dev/files/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/dev/files/:id",
+      "module": "dev-management",
+      "source": "api/modules/dev-management/handleDevManagementRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "09e6e2638076676fb0a8349530735e48ea4d6183fb927910435479d15ba58d13"
+    },
+    {
+      "id": "api:PUT:/flows/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/flows/:id",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/handleFlowCrudRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "ab4792c0238548e8cd496b9b74eb7083b55550669771d654a5f12d9d7f4589ad"
+    },
+    {
+      "id": "api:PUT:/flows/:id/environment",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/flows/:id/environment",
+      "module": "domain-flow",
+      "source": "api/modules/domain-flow/handleFlowCrudEnvironmentRoute.js",
+      "authRequired": true,
+      "authorization": [
+        "handleFlowCrudEnvironmentRoute"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "f3dd98d93e58fa0dbc8c42964db6f9247b6e8a1330f724dab21ad9832a2159e3"
     },
     {
       "id": "api:PUT:/orders/:orderId/status",
@@ -12560,6 +14102,37 @@
       ],
       "linkedDomains": [],
       "fingerprint": "d2d1948fd88f442a3c82f1781777ff5f27e89f32d4900d428b5c297ba288af5e"
+    },
+    {
+      "id": "api:PUT:/rag/documents/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/rag/documents/:id",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0e54fa0e0575da106ba9fab3a35a64721bedfd151f9204c74b98ce047c00d875"
+    },
+    {
+      "id": "api:PUT:/rag/learning/synonyms",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/rag/learning/synonyms",
+      "module": "platform-content",
+      "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6415a6ee0eedd6dcbece4d86787f094192a6b9fa91f75ba1abfa6882fd29c501"
     },
     {
       "id": "api:PUT:/tenants/:tenantId",
@@ -12624,6 +14197,43 @@
       "technicalWave": "platform",
       "linkedJourneys": [],
       "fingerprint": "ff9974c5e074d9afb5e86fac2651365d2db3649eeb642a324b2e908e6acf5a31"
+    },
+    {
+      "id": "api:PUT:/tickets/:id/category",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/tickets/:id/category",
+      "module": "platform-admin",
+      "source": "api/modules/platform-admin/handleSegmentationRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:tickets:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0b8aa64888fafd8b9173f4910f701b7196f15e1f08ac13dfd074ba9c714abdda"
+    },
+    {
+      "id": "api:PUT:/webhooks/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/webhooks/:id",
+      "module": "webhooks",
+      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:webhooks:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "webhooks"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e0ee704e5572de49f3fc81e32e350023acc2316eb54b645707d964f752b468da"
     },
     {
       "id": "api:PUT:/webhooks/:webhookId",
@@ -14378,24 +15988,14 @@
       "default": null,
       "primaryKey": false,
       "unique": false,
-      "enumValues": [
-        "create",
-        "approve",
-        "reject",
-        "publish",
-        "deprecate",
-        "archive",
-        "execute",
-        "decision",
-        "audit"
-      ],
+      "enumValues": [],
       "classification": "PRODUCTION",
       "source": "api/db/models/AiGovernanceRecord.js",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "d8ebdad95f9ead69ea378bba76b04ee249c6365c94ee01f662d4101be9899623"
+      "fingerprint": "d6cf2f1843810b3ae863e3e6f0961a67c977454df3fcafb32d6182e638013f27"
     },
     {
       "id": "field:AiGovernanceRecord.id",
@@ -14443,19 +16043,14 @@
       "default": "'low'",
       "primaryKey": false,
       "unique": false,
-      "enumValues": [
-        "low",
-        "medium",
-        "high",
-        "critical"
-      ],
+      "enumValues": [],
       "classification": "PRODUCTION",
       "source": "api/db/models/AiGovernanceRecord.js",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "9ce97e050367109c9f1eaff435d12696ceffe0d46b3ebcb316fec9649d1987a7"
+      "fingerprint": "3c892611a2a20e88c4704064bef2e43f1aa89c26dbfbf7a49c43dbf7308b31f2"
     },
     {
       "id": "field:AiGovernanceRecord.tenant_id",
@@ -20067,34 +21662,14 @@
       "default": null,
       "primaryKey": false,
       "unique": false,
-      "enumValues": [
-        "Customer",
-        "Lead",
-        "Conversation",
-        "Ticket",
-        "Journey",
-        "Agent",
-        "Replay",
-        "Wave",
-        "Campaign",
-        "Appointment",
-        "Contract",
-        "Invoice",
-        "Knowledge",
-        "Decision",
-        "Document",
-        "Product",
-        "Service",
-        "Event",
-        "Insight"
-      ],
+      "enumValues": [],
       "classification": "PRODUCTION",
       "source": "api/db/models/KnowledgeGraphNode.js",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "46f02b52b1cfeec04af4141d3c956b269365e0aa06b8fd91c93e80c45c3388fe"
+      "fingerprint": "64019a4a6ab8ae0ee529aef7085da11d3f04362506f409ff140a3439bc6ce71f"
     },
     {
       "id": "field:KnowledgeGraphNode.updatedAt",
@@ -46384,19 +47959,6 @@
       ],
       "linkedDomains": [],
       "fingerprint": "1a61683bc9544591eb1535a1b577a39caec0961377f85dcb43c956be67bafb2b"
-    },
-    {
-      "id": "page:/r-agent2",
-      "kind": "page",
-      "path": "/r-agent2",
-      "roles": null,
-      "permission": null,
-      "section": null,
-      "guarded": false,
-      "classification": "PRODUCTION",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "b9261a9cf785c4f2324c8b927349e00a3f8a0e1f90e481e90622f8eb5d566595"
     },
     {
       "id": "page:/r-agent2/crm",

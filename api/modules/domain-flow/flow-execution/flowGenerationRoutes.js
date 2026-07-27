@@ -91,6 +91,10 @@ async function handleFlowGenerationRoutes(ctx) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON invalido no corpo da requisicao');
+      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR')) {
+        sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
+      } else if (err && err.code === 'NOT_FOUND') {
+        sendJson(res, 404, { error: 'not_found', message: err.message });
       } else {
         logger.error('Erro ao gerar fluxo:', err);
         sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar fluxo' });
@@ -144,6 +148,10 @@ async function handleFlowGenerationRoutes(ctx) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON invalido no corpo da requisicao');
+      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR')) {
+        sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
+      } else if (err && err.code === 'NOT_FOUND') {
+        sendJson(res, 404, { error: 'not_found', message: err.message });
       } else {
         logger.error('Erro no DRY-RUN de geracao:', err);
         sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno no DRY-RUN' });

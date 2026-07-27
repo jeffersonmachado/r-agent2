@@ -11,6 +11,15 @@ const config = require('../utils/config');
 const logger = require('../utils/logger');
 const { processWhatsAppMessage } = require('./messageProcessor');
 
+function safeErrorCode(err) {
+  try {
+    const code = err && err.code;
+    return typeof code === 'string' && code ? code : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function safeErrorMessage(err) {
   let message;
 
@@ -66,12 +75,16 @@ async function sendInstagramMessage(recipientId, text) {
   try {
     const pageAccessToken = config.get('instagram.pageAccessToken') || config.get('messenger.pageAccessToken');
     if (!pageAccessToken) {
-      throw new Error('Page Access Token do Instagram não configurado');
+      const configError = new Error('Page Access Token do Instagram não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const pageId = config.get('instagram.pageId');
     if (!pageId) {
-      throw new Error('Page ID do Instagram não configurado');
+      const configError = new Error('Page ID do Instagram não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const url = `https://graph.facebook.com/v18.0/${pageId}/messages`;
@@ -107,10 +120,13 @@ async function sendInstagramMessage(recipientId, text) {
     };
   } catch (error) {
     logger.error('[Instagram] Erro ao enviar mensagem:', error);
-    return {
+    const result = {
       success: false,
       error: safeErrorMessage(error),
     };
+    const errorCode = safeErrorCode(error);
+    if (errorCode) result.code = errorCode;
+    return result;
   }
 }
 
@@ -196,12 +212,16 @@ async function sendInstagramMedia(recipientId, mediaUrl, mediaType = 'image') {
   try {
     const pageAccessToken = config.get('instagram.pageAccessToken') || config.get('messenger.pageAccessToken');
     if (!pageAccessToken) {
-      throw new Error('Page Access Token do Instagram não configurado');
+      const configError = new Error('Page Access Token do Instagram não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const pageId = config.get('instagram.pageId');
     if (!pageId) {
-      throw new Error('Page ID do Instagram não configurado');
+      const configError = new Error('Page ID do Instagram não configurado');
+      configError.code = 'channel_not_configured';
+      throw configError;
     }
     
     const url = `https://graph.facebook.com/v18.0/${pageId}/messages`;
@@ -241,10 +261,13 @@ async function sendInstagramMedia(recipientId, mediaUrl, mediaType = 'image') {
     };
   } catch (error) {
     logger.error('[Instagram] Erro ao enviar mídia:', error);
-    return {
+    const result = {
       success: false,
       error: safeErrorMessage(error),
     };
+    const errorCode = safeErrorCode(error);
+    if (errorCode) result.code = errorCode;
+    return result;
   }
 }
 

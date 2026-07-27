@@ -107,6 +107,14 @@ function flattenMenu(nodes, context = {}) {
   return entries;
 }
 
+/**
+ * Prefixos de mount de deploy (a app é servida sob este base path em produção).
+ * Não são páginas: main.jsx usa startsWith neles apenas para normalizar
+ * currentPath. Sem esta exclusão o scanner inventaria itens fantasma
+ * (ex.: page:/r-agent2), sempre órfãos.
+ */
+const DEPLOY_MOUNT_PREFIXES = new Set(['/r-agent2']);
+
 /** Extrai os paths referenciados em main.jsx. */
 function extractMainJsxPaths(mainSource) {
   const paths = new Set();
@@ -134,6 +142,7 @@ function extractMainJsxPaths(mainSource) {
     }
   }
   paths.delete('/');
+  for (const mountPrefix of DEPLOY_MOUNT_PREFIXES) paths.delete(mountPrefix);
   return paths;
 }
 

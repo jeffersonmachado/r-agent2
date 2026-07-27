@@ -36,8 +36,19 @@ async function handleAudioTranscriptionRoutes({ req, res, method, pathname, deps
       const result = await transcribeAudio({
         audioData: audioInput,
         provider: provider || 'whisper',
-        tenantId,
+        // O tenant do contexto autenticado prevalece sobre o do body.
+        tenantId: req.tenantId || tenantId,
       });
+
+      // Falha do provider não pode se disfarçar de sucesso (200 com texto de erro).
+      if (result && result.error) {
+        sendJson(res, 502, {
+          error: 'transcription_failed',
+          message: result.error,
+          provider: result.provider,
+        });
+        return true;
+      }
 
       sendJson(res, 200, result);
     } catch (err) {

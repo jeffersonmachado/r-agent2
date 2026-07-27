@@ -1,7 +1,10 @@
 'use strict';
 
 const governanceService = require('../../ai-governance/service');
+const getAiGovernanceRecordModel = require('../../../db/models/AiGovernanceRecord');
 const logger = require('../../../utils/logger');
+
+const VALID_EVENT_TYPES = getAiGovernanceRecordModel.EVENT_TYPES;
 
 async function handleAiGovernanceRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
@@ -60,6 +63,9 @@ async function handleAiGovernanceRoutes(ctx) {
     const body = await parseJsonBody(req);
 
     if (!body.eventType) return badRequest('eventType is required');
+    if (!VALID_EVENT_TYPES.includes(body.eventType)) {
+      return badRequest(`eventType inválido: "${body.eventType}". Valores aceitos: ${VALID_EVENT_TYPES.join(', ')}`);
+    }
 
     const record = await governanceService.logGovernanceEvent({
       tenantId,

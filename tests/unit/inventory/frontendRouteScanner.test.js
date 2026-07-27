@@ -21,6 +21,7 @@ const isQaWaves = isRoute('/dev/qa-waves');
 const isQa = isRoute('/qa');
 const isCrm = currentPath.startsWith('/crm');
 const isHome = currentPath === '/dashboard';
+const normalizedPath = currentPath.startsWith('/r-agent2') ? currentPath.replace(/^\/r-agent2/, '') : currentPath;
 const protectedRoutes = ['/agenda', '/qa'];
 `);
 
@@ -98,6 +99,13 @@ describe('frontendRouteScanner', () => {
   it('descobre paths via currentPath.startsWith e currentPath ===', () => {
     expect(result.items.some((item) => item.id === 'page:/crm')).toBe(true);
     expect(result.items.some((item) => item.id === 'page:/dashboard')).toBe(true);
+  });
+
+  it('ignora prefixo de mount de deploy (/r-agent2) — não é uma página', () => {
+    // Regressão: currentPath.startsWith('/r-agent2') em main.jsx é a normalização do
+    // prefixo de deploy (app servida sob /r-agent2 em produção), não uma rota.
+    // O scanner gerava o item fantasma page:/r-agent2 (órfão sem jornada possível).
+    expect(result.items.some((item) => item.id === 'page:/r-agent2')).toBe(false);
   });
 
   it('regra de classification isolada', () => {

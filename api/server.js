@@ -54,9 +54,12 @@ function parseBooleanEnv(value, defaultValue = false) {
   return defaultValue;
 }
 
+// Segurança por padrão: modo estrito (auth + tenant obrigatórios) é o default
+// em TODOS os ambientes. O modo legado sem auth é opt-in explícito via
+// STRICT_TENANT_MODE=false (apenas desenvolvimento local controlado).
 const STRICT_TENANT_MODE = parseBooleanEnv(
   process.env.STRICT_TENANT_MODE,
-  process.env.NODE_ENV === 'production'
+  true
 );
 
 function ensureRequestTracing(req) {

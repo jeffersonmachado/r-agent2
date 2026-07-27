@@ -175,7 +175,11 @@ async function handleMessengerWebhookRoutes({ req, res, method, pathname, deps }
       }
 
       if (!result.success) {
-        sendJson(res, 500, { error: 'send_failed', message: result.error });
+        if (result.code === 'channel_not_configured') {
+          sendJson(res, 503, { error: 'channel_not_configured', message: result.error });
+          return true;
+        }
+        sendJson(res, 502, { error: 'send_failed', message: result.error });
         return true;
       }
 

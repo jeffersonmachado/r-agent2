@@ -230,4 +230,89 @@ describe('backup export/import endpoints', () => {
 
     await new Promise((resolve) => server.close(resolve));
   });
+
+  test('GET /api/backup/export resolve tenant_key → UUID antes de consultar tenant_settings', async () => {
+    // Regressão: em Postgres real, tenant_settings.tenant_id é UUID e a rota
+    // passava a chave do tenant ('system') direto → 500 invalid input syntax.
+    // Mock fiel: rejeita tenant_id que não seja UUID, como o Postgres faz.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const SYSTEM_UUID = '11111111-2222-3333-4444-555555555555';
+    const settingStore = new Map([
+      [`${SYSTEM_UUID}:phone-masking`, { tenant_id: SYSTEM_UUID, key: 'phone-masking', value: { enabled: true } }],
+    ]);
+
+    const assertUuid = (value) => {
+      if (!UUID_RE.test(String(value || ''))) {
+        const err = new Error(`invalid input syntax for type uuid: "${value}"`);
+        err.code = '22P02';
+        throw err;
+      }
+    };
+
+    jest.doMock('../../api/db/sequelize', () => ({
+      connect: jest.fn(async () => ({})),
+      getSequelize: jest.fn(() => ({})),
+      close: jest.fn(async () => {}),
+      Sequelize: require('sequelize').Sequelize,
+    }));
+    jest.doMock('../../api/db/migrate', () => ({ runMigrations: jest.fn(async () => {}) }));
+    jest.doMock('../../api/db/seed', () => ({ runSeed: jest.fn(async () => {}) }));
+    jest.doMock('../../api/services/auditService', () => ({
+      logAction: jest.fn(),
+      queryLogs: jest.fn(() => []),
+    }));
+    jest.doMock('../../api/db/models', () => ({
+      defineRelationships: jest.fn(),
+      Flow: () => ({
+        findAll: jest.fn(async () => []),
+        findByPk: jest.fn(async () => null),
+        create: jest.fn(async (payload) => payload),
+      }),
+      Tenant: () => ({
+        findOne: jest.fn(async ({ where }) => (
+          where?.tenant_key === 'system' ? { id: SYSTEM_UUID, tenant_key: 'system' } : null
+        )),
+      }),
+      TenantSetting: () => ({
+        findAll: jest.fn(async ({ where }) => {
+          assertUuid(where?.tenant_id);
+          return [...settingStore.values()]
+            .filter((s) => s.tenant_id === where.tenant_id)
+            .map((s) => ({ toJSON: () => s }));
+        }),
+        findOne: jest.fn(async ({ where }) => {
+          assertUuid(where?.tenant_id);
+          return settingStore.get(`${where.tenant_id}:${where.key}`) || null;
+        }),
+        create: jest.fn(async (payload) => {
+          assertUuid(payload.tenant_id);
+          settingStore.set(`${payload.tenant_id}:${payload.key}`, payload);
+          return payload;
+        }),
+      }),
+    }));
+
+    // eslint-disable-next-line global-require
+    const { createServer } = require('../../api/server');
+    const server = createServer();
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) return;
+    const port = listenResult.port;
+
+    const exportRes = await httpJson({
+      port,
+      method: 'GET',
+      path: '/api/backup/export',
+      headers: {
+        Authorization: 'Bearer token-test',
+        'X-Tenant-Id': 'system',
+      },
+    });
+
+    expect(exportRes.status).toBe(200);
+    expect(exportRes.body.ok).toBe(true);
+    expect(exportRes.body.settings.find((s) => s.key === 'phone-masking')).toBeTruthy();
+
+    await new Promise((resolve) => server.close(resolve));
+  });
 });

@@ -71,7 +71,9 @@ describe('POST /system/generate-and-validate (tenant safe-mode)', () => {
 
   beforeAll((done) => {
     process.env.NODE_ENV = 'development';
-    delete process.env.STRICT_TENANT_MODE;
+    // O modo legado sem auth agora é opt-in explícito (default é estrito);
+    // este teste exercita justamente o comportamento desse modo.
+    process.env.STRICT_TENANT_MODE = 'false';
 
     jest.resetModules();
 
@@ -130,6 +132,7 @@ describe('POST /system/generate-and-validate (tenant safe-mode)', () => {
   });
 
   afterAll((done) => {
+    delete process.env.STRICT_TENANT_MODE;
     if (!server || !server.listening) {
       done();
       return;
