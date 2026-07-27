@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-27T00:19:42.538Z",
+  "generatedAt": "2026-07-27T00:35:01.598Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -480,6 +480,77 @@
       "scenarioCode": "CLINIC-SCR-01"
     },
     {
+      "id": "business-core-biz-analytics",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core analytics: funil, agentes, departamentos, métricas, filas, ROI e trends respondem",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Todos os endpoints de analytics respondem 200",
+        "Estruturas de resposta válidas"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "analytics",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-ANALYTICS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-ANALYTICS"
+    },
+    {
+      "id": "business-core-biz-automations",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core automações: automação criada e publicada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Automação criada em draft",
+        "Automação publicada",
+        "Status published refletido na listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "automations",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AUTOMATIONS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AUTOMATIONS"
+    },
+    {
       "id": "business-core-biz-billing",
       "domain": "core",
       "type": "regression",
@@ -554,6 +625,78 @@
       "scenarioCode": "CORE-BIZ-CAMPAIGNS"
     },
     {
+      "id": "business-core-biz-deliveries",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core entregas: pedido delivery gera entrega, despachada e refletida",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Pedido delivery cria entrega associada",
+        "Entrega despachada (dispatched)",
+        "Status e timestamp refletidos na consulta da entrega"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "deliveries",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-DELIVERIES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-DELIVERIES"
+    },
+    {
+      "id": "business-core-biz-developer",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core developer: chave de API criada, listada e uso consultado",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Chave de developer criada",
+        "Chave presente na listagem (sem exposição de segredo)",
+        "Endpoint de uso responde com estrutura válida"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "developer",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-DEVELOPER"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-DEVELOPER"
+    },
+    {
       "id": "business-core-biz-inbox",
       "domain": "core",
       "type": "regression",
@@ -590,6 +733,79 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-INBOX"
+    },
+    {
+      "id": "business-core-biz-intelligence",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core inteligência operacional: meta criada, insights e estado operacional consultados",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Meta operacional criada com metric_key e target_value",
+        "Meta presente na listagem de goals",
+        "Insights e operational-state respondem com estrutura válida"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "operational_intelligence",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-INTELLIGENCE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-INTELLIGENCE"
+    },
+    {
+      "id": "business-core-biz-marketing",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core marketing: formulário criado e regra de scoring ativa",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Formulário de marketing criado com slug",
+        "Formulário presente na listagem",
+        "Regra de scoring criada com eventType e delta",
+        "Regra de scoring presente na listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "marketing",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-MARKETING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-MARKETING"
     },
     {
       "id": "business-core-biz-orders",
@@ -703,6 +919,42 @@
       "scenarioCode": "CORE-BIZ-QUICK-REPLIES"
     },
     {
+      "id": "business-core-biz-sla",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core SLA: política criada, listada e breaches consultadas",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Política de SLA criada",
+        "Política presente na listagem",
+        "Endpoint de breaches responde com estrutura válida"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "sla",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-SLA"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-SLA"
+    },
+    {
       "id": "business-core-biz-tasks",
       "domain": "core",
       "type": "regression",
@@ -773,6 +1025,43 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-WEBHOOKS"
+    },
+    {
+      "id": "business-core-biz-whatsapp-connections",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core WhatsApp: conexão criada, status consultado e removida",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Conexão WhatsApp criada (disconnected)",
+        "Conexão presente na listagem",
+        "Status da conexão consultado",
+        "Conexão removida e ausente da listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "whatsapp_connections",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-WHATSAPP-CONNECTIONS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-WHATSAPP-CONNECTIONS"
     },
     {
       "id": "business-core-cap-crm-updates",
@@ -3225,6 +3514,14 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-analytics",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-automations",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-billing",
       "status": "passed"
     },
@@ -3233,7 +3530,23 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-deliveries",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-developer",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-inbox",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-intelligence",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-marketing",
       "status": "passed"
     },
     {
@@ -3249,11 +3562,19 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-sla",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-tasks",
       "status": "passed"
     },
     {
       "scenarioId": "business-core-biz-webhooks",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-whatsapp-connections",
       "status": "passed"
     },
     {

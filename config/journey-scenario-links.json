@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-27T00:17:53.466Z",
+  "generatedAt": "2026-07-27T00:33:15.539Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -242,6 +242,87 @@
           "scenarios": [
             {
               "scenarioId": "business-core-biz-projects",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "marketing",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-marketing",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "automations",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-automations",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "sla",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-sla",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "deliveries",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-deliveries",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "developer",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-developer",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "whatsapp_connections",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-whatsapp-connections",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "analytics",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-analytics",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "operational_intelligence",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-intelligence",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "calendar",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-cap-scheduling",
               "status": "active"
             }
           ]

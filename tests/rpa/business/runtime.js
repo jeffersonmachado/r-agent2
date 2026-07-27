@@ -1982,6 +1982,273 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-BIZ-MARKETING') {
+    const slug = `form-qa-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const form = await api.post('/api/marketing/forms', {
+      name: `Form QA ${runId}`,
+      slug,
+      fields: [{ name: 'nome', type: 'text', required: true }],
+    });
+    const formId = form?.form?.id;
+    if (!formId) {
+      throw new Error('Formulário de marketing nao retornou ID');
+    }
+
+    const forms = await api.get('/api/marketing/forms');
+    const formItems = forms?.items || forms?.forms || [];
+    if (!formItems.some((item) => item.id === formId)) {
+      throw new Error('Formulário criado nao apareceu na listagem');
+    }
+
+    const rule = await api.post('/api/marketing/scoring-rules', {
+      name: `Rule QA ${runId}`,
+      eventType: 'message_received',
+      delta: 10,
+      conditions: { field: 'source', operator: 'equals', value: 'whatsapp' },
+    });
+    const ruleId = rule?.rule?.id;
+    if (!ruleId) {
+      throw new Error('Regra de scoring nao retornou ID');
+    }
+
+    const rules = await api.get('/api/marketing/scoring-rules');
+    if (!(rules?.items || []).some((item) => item.id === ruleId)) {
+      throw new Error('Regra de scoring nao apareceu na listagem');
+    }
+
+    return {
+      detail: 'Formulário e regra de scoring criados e listados',
+      ids: { formId, ruleId },
+      evidence: { slug },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-AUTOMATIONS') {
+    const created = await api.post('/automations', {
+      name: `Automação QA ${runId}`,
+      trigger: { type: 'ticket.created' },
+      actions: [{ type: 'noop' }],
+    });
+    const automation = created?.automation || created;
+    if (!automation?.id) {
+      throw new Error('Automação nao retornou ID');
+    }
+    if (automation.status !== 'draft') {
+      throw new Error(`Automação criada com status inesperado: ${automation.status}`);
+    }
+
+    await api.post(`/automations/${encodeURIComponent(automation.id)}/publish`, {});
+
+    const listed = await api.get('/automations');
+    const items = listed?.automations || listed?.items || [];
+    const published = items.find((item) => item.id === automation.id);
+    if (!published) {
+      throw new Error('Automação nao apareceu na listagem');
+    }
+    if (published.status !== 'published') {
+      throw new Error(`Automação nao ficou publicada: ${published.status}`);
+    }
+
+    return {
+      detail: 'Automação criada e publicada',
+      ids: { automationId: automation.id },
+      evidence: { finalStatus: published.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-SLA') {
+    const created = await api.post('/sla/policies', {
+      name: `SLA QA ${runId}`,
+      responseMinutes: 30,
+      resolutionMinutes: 120,
+    });
+    const policy = created?.policy || created;
+    if (!policy?.id) {
+      throw new Error('Política de SLA nao retornou ID');
+    }
+
+    const listed = await api.get('/sla/policies');
+    const items = listed?.policies || listed?.items || [];
+    if (!items.some((item) => item.id === policy.id)) {
+      throw new Error('Política de SLA nao apareceu na listagem');
+    }
+
+    const breaches = await api.get('/sla/breaches');
+    if (!breaches || breaches.error) {
+      throw new Error('Endpoint de breaches do SLA indisponível');
+    }
+
+    return {
+      detail: 'Política de SLA criada, listada e breaches consultadas',
+      ids: { policyId: policy.id },
+      evidence: { breachesOk: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-DELIVERIES') {
+    await ensureDbConnection();
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const storefront = await createPublicToken({
+      tenantId: TEST_TENANT_ID,
+      kind: 'storefront',
+      meta: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (!storefront?.token) {
+      throw new Error('Token publico de storefront nao foi criado');
+    }
+
+    const created = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      customerName: `Cliente QA Deliveries ${runId}`,
+      customerPhone: '+5511999997400',
+      items: [{ name: 'Item QA Deliveries', qty: 1, price: 15.0 }],
+      deliveryType: 'delivery',
+      deliveryAddress: { street: 'Rua QA', number: '200', city: 'Sao Paulo' },
+      idempotencyKey: `business-qa:${definition.code}:${runId}`,
+    });
+    const deliveryId = created?.delivery?.id;
+    if (!deliveryId) {
+      throw new Error('Pedido delivery nao gerou entrega associada');
+    }
+
+    await api.put(`/deliveries/${encodeURIComponent(deliveryId)}/status`, { status: 'dispatched' });
+
+    const delivery = await api.get(`/deliveries/${encodeURIComponent(deliveryId)}`);
+    const row = delivery?.delivery || delivery;
+    if (String(row?.status || '').toLowerCase() !== 'dispatched') {
+      throw new Error(`Entrega nao ficou despachada: ${row && row.status}`);
+    }
+    if (!row.dispatched_at) {
+      throw new Error('Timestamp de despacho nao registrado');
+    }
+
+    return {
+      detail: 'Entrega criada via pedido e despachada',
+      ids: { deliveryId, orderId: created.order && created.order.id },
+      evidence: { status: row.status, dispatchedAt: row.dispatched_at },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-DEVELOPER') {
+    const created = await api.post('/developer/keys', {
+      name: `Key QA ${runId}`,
+      scopes: ['read'],
+    });
+    const key = created?.key || created;
+    if (!key?.id) {
+      throw new Error('Chave de developer nao retornou ID');
+    }
+
+    const listed = await api.get('/developer/keys');
+    const items = listed?.keys || listed?.items || [];
+    const found = items.find((item) => item.id === key.id);
+    if (!found) {
+      throw new Error('Chave de developer nao apareceu na listagem');
+    }
+    // Segredo nunca vai para evidência: apenas o id.
+    const usage = await api.get('/developer/usage');
+    if (!usage || usage.error) {
+      throw new Error('Endpoint de uso de developer indisponível');
+    }
+
+    return {
+      detail: 'Chave de developer criada, listada e uso consultado',
+      ids: { keyId: key.id },
+      evidence: { usageOk: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-WHATSAPP-CONNECTIONS') {
+    const created = await api.post('/whatsapp/connections', {
+      name: `WA QA ${runId}`,
+      phoneNumber: '+5511999997500',
+    });
+    const connection = created?.connection || created;
+    if (!connection?.id) {
+      throw new Error('Conexão WhatsApp nao retornou ID');
+    }
+
+    const listed = await api.get('/whatsapp/connections');
+    const items = listed?.connections || [];
+    if (!items.some((item) => item.id === connection.id)) {
+      throw new Error('Conexão WhatsApp nao apareceu na listagem');
+    }
+
+    const status = await api.get(`/whatsapp/connections/${encodeURIComponent(connection.id)}/status`);
+    if (!status || status.error) {
+      throw new Error('Status da conexão indisponível');
+    }
+
+    await api.del(`/whatsapp/connections/${encodeURIComponent(connection.id)}`);
+    const afterDelete = await api.get('/whatsapp/connections');
+    if ((afterDelete?.connections || []).some((item) => item.id === connection.id)) {
+      throw new Error('Conexão WhatsApp nao foi removida');
+    }
+
+    return {
+      detail: 'Conexão WhatsApp criada, consultada e removida',
+      ids: { connectionId: connection.id },
+      evidence: { deleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-ANALYTICS') {
+    const endpoints = ['funnel', 'agents', 'departments', 'metrics', 'queues', 'roi', 'trends', 'general'];
+    const failures = [];
+    for (const endpoint of endpoints) {
+      try {
+        const result = await api.get(`/analytics/${endpoint}`);
+        if (!result || result.error) {
+          failures.push(`${endpoint}: resposta com erro`);
+        }
+      } catch (err) {
+        failures.push(`${endpoint}: ${err.status || err.message}`);
+      }
+    }
+    if (failures.length > 0) {
+      throw new Error(`Endpoints de analytics falharam: ${failures.join('; ')}`);
+    }
+
+    return {
+      detail: `${endpoints.length} endpoints de analytics responderam com estrutura válida`,
+      ids: {},
+      evidence: { endpoints },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-INTELLIGENCE') {
+    const created = await api.post('/api/intelligence/goals', {
+      name: `Goal QA ${runId}`,
+      metric_key: 'tickets_closed',
+      target_value: 10,
+    });
+    const goal = created?.goal || created;
+    if (!goal?.id) {
+      throw new Error('Meta operacional nao retornou ID');
+    }
+
+    const goals = await api.get('/api/intelligence/goals');
+    const goalItems = goals?.items || goals?.goals || [];
+    if (!goalItems.some((item) => item.id === goal.id)) {
+      throw new Error('Meta operacional nao apareceu na listagem');
+    }
+
+    const insights = await api.get('/api/intelligence/insights');
+    if (!insights || insights.error) {
+      throw new Error('Insights operacionais indisponíveis');
+    }
+
+    const state = await api.get('/api/intelligence/operational-state');
+    if (!state || state.error) {
+      throw new Error('Estado operacional indisponível');
+    }
+
+    return {
+      detail: 'Meta criada, insights e estado operacional consultados',
+      ids: { goalId: goal.id },
+      evidence: { insightsOk: true, operationalStateOk: true },
+    };
+  }
+
   throw new Error(`Flow nao implementado: ${definition.code}`);
 }
 

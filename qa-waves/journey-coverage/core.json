@@ -340,6 +340,177 @@
      ]
     }
    ]
+  },
+  {
+   "vertical": "core",
+   "journey": "marketing",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-marketing",
+     "scenario": "Core marketing: formulário criado e regra de scoring ativa",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "automations",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-automations",
+     "scenario": "Core automações: automação criada e publicada",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "sla",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-sla",
+     "scenario": "Core SLA: política criada, listada e breaches consultadas",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "deliveries",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-deliveries",
+     "scenario": "Core entregas: pedido delivery gera entrega, despachada e refletida",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "developer",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-developer",
+     "scenario": "Core developer: chave de API criada, listada e uso consultado",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "whatsapp_connections",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-whatsapp-connections",
+     "scenario": "Core WhatsApp: conexão criada, status consultado e removida",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "analytics",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-analytics",
+     "scenario": "Core analytics: funil, agentes, departamentos, métricas, filas, ROI e trends respondem",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "operational_intelligence",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-intelligence",
+     "scenario": "Core inteligência operacional: meta criada, insights e estado operacional consultados",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "calendar",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-cap-scheduling",
+     "scenario": "Core capability scheduling: catálogo, agenda do recurso, bloco de calendário e ciclo do agendamento",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
   }
  ]
 }

@@ -288,6 +288,69 @@
    ],
    "missingCapabilities": [],
    "confidence": 0.75
+  },
+  "marketing": {
+   "requiredCapabilities": [
+    "marketing"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "automations": {
+   "requiredCapabilities": [
+    "automations"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "sla": {
+   "requiredCapabilities": [
+    "sla"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "deliveries": {
+   "requiredCapabilities": [
+    "deliveries"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "developer": {
+   "requiredCapabilities": [
+    "developer"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "whatsapp_connections": {
+   "requiredCapabilities": [
+    "whatsapp_connections"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "analytics": {
+   "requiredCapabilities": [
+    "analytics"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "operational_intelligence": {
+   "requiredCapabilities": [
+    "operational_intelligence"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
+  },
+  "calendar": {
+   "requiredCapabilities": [
+    "calendar"
+   ],
+   "missingCapabilities": [],
+   "confidence": 0.75
   }
  }
 }
