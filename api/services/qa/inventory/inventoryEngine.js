@@ -20,7 +20,10 @@
  *   3. LINKED (linkKind 'journey'): interseção não vazia com tokens de alguma
  *      jornada (`linkedJourneys`) ou com algum domínio do mesh
  *      (`linkedDomains`); domínios também puxam jornadas cujo id contém o
- *      domínio.
+ *      domínio. NÃO participam do journey-linking: superfícies
+ *      DEVELOPMENT/SUPPORT (rotas/páginas) e módulos declarados no
+ *      technical-wave-map — tokens coincidentes não criam vínculo falso.
+ *      Itens de dados permanecem elegíveis (grafo jornada→modelo).
  *   4. Sem vínculo de negócio:
  *      - itens DEVELOPMENT/SUPPORT recebem `technicalWave` pela regra
  *        TECHNICAL_WAVE_RULES e ficam LINKED com linkKind 'technical-wave';
@@ -150,17 +153,29 @@ function findOrphanedItems(items, { journeyContracts, meshRegistry, technicalWav
 
   for (const item of items) {
     const tokens = itemTokens(item);
+    const declaredWave = technicalWaveByModule.get(item.module);
+    // Superfícies de engenharia/suporte (rotas/páginas) e módulos declarados
+    // no mapa de waves técnicas NÃO participam de journey-linking: tokens
+    // coincidentes (ex.: 'support' em /api/debug/*) criariam vínculos falsos
+    // com jornadas de negócio. Itens de dados (model/table/field/relation)
+    // permanecem elegíveis — são o grafo de rastreabilidade jornada→modelo.
+    const engineeringSurface = !DATA_KINDS.has(item.kind)
+      && (item.classification === 'DEVELOPMENT' || item.classification === 'SUPPORT');
+    const journeyEligible = !engineeringSurface && !declaredWave;
+
     const linkedJourneys = new Set();
     const linkedDomains = new Set();
 
-    for (const [journey, tokensOfJourney] of journeyTokens) {
-      if ([...tokensOfJourney].some((token) => tokens.has(token))) linkedJourneys.add(journey);
-    }
-    for (const domain of domains) {
-      if (tokens.has(domain)) {
-        linkedDomains.add(domain);
-        for (const journey of journeys) {
-          if (journey.includes(domain)) linkedJourneys.add(journey);
+    if (journeyEligible) {
+      for (const [journey, tokensOfJourney] of journeyTokens) {
+        if ([...tokensOfJourney].some((token) => tokens.has(token))) linkedJourneys.add(journey);
+      }
+      for (const domain of domains) {
+        if (tokens.has(domain)) {
+          linkedDomains.add(domain);
+          for (const journey of journeys) {
+            if (journey.includes(domain)) linkedJourneys.add(journey);
+          }
         }
       }
     }
@@ -183,7 +198,6 @@ function findOrphanedItems(items, { journeyContracts, meshRegistry, technicalWav
 
     // Capacidade transversal de plataforma declarada no mapa versionado
     // (PRODUCTION, mas não é jornada de negócio): recebe a wave declarada.
-    const declaredWave = technicalWaveByModule.get(item.module);
     if (declaredWave) {
       item.linkStatus = 'LINKED';
       item.linkKind = 'technical-wave';

@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 22 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 30 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(22);
-    expect(summary.bySource['journey-coverage']).toBe(17);
+    expect(summary.total).toBe(30);
+    expect(summary.bySource['journey-coverage']).toBe(25);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -110,5 +110,16 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(links.capability_scheduling.scenarioIds).toContain('business-core-cap-scheduling');
     expect(links.capability_crm_updates.scenarioIds).toContain('business-core-cap-crm-updates');
     expect(links.capability_lead_capture.scenarioIds).toContain('business-core-cap-lead-capture');
+
+    // Jornadas business batch 1a: ligadas aos cenários business-core-biz-*
+    // executados no mesh com fluxos reais (tests/rpa/business).
+    expect(links.orders.scenarioIds).toContain('business-core-biz-orders');
+    expect(links.billing.scenarioIds).toContain('business-core-biz-billing');
+    expect(links.tasks.scenarioIds).toContain('business-core-biz-tasks');
+    expect(links.quick_replies.scenarioIds).toContain('business-core-biz-quick-replies');
+    expect(links.webhooks.scenarioIds).toContain('business-core-biz-webhooks');
+    expect(links.inbox.scenarioIds).toContain('business-core-biz-inbox');
+    expect(links.campaigns.scenarioIds).toContain('business-core-biz-campaigns');
+    expect(links.projects.scenarioIds).toContain('business-core-biz-projects');
   });
 });

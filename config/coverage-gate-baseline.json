@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T23:51:43.801Z",
+  "generatedAt": "2026-07-27T00:19:42.538Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -478,6 +478,301 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CLINIC-SCR-01"
+    },
+    {
+      "id": "business-core-biz-billing",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core billing: cobrança avulsa criada, confirmada e listada nas transações",
+      "steps": [
+        "Tenant autenticado",
+        "Billing sandbox habilitado"
+      ],
+      "assertions": [
+        "Cobrança criada com idempotencyKey",
+        "Pagamento confirmado via webhook do provider sandbox",
+        "Transação confirmada presente na listagem de billing"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "billing",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-BILLING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-BILLING"
+    },
+    {
+      "id": "business-core-biz-campaigns",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core campanhas: campanha de e-mail publicada e campanha em massa criada e removida",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Campanha de e-mail criada e publicada/simulada",
+        "Campanha em massa criada com destinatários válidos",
+        "Campanha em massa presente na listagem",
+        "Campanha em massa removida"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "campaigns",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-CAMPAIGNS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-CAMPAIGNS"
+    },
+    {
+      "id": "business-core-biz-inbox",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core inbox: conversa atribuída, anotada e refletida na listagem",
+      "steps": [
+        "Tenant autenticado",
+        "Conversa elegível na caixa de entrada"
+      ],
+      "assertions": [
+        "Conversa listada na inbox",
+        "Conversa atribuída ao agente",
+        "Nota interna registrada na conversa",
+        "Atribuição refletida na listagem da inbox"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "inbox",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-INBOX"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-INBOX"
+    },
+    {
+      "id": "business-core-biz-orders",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core pedidos: pedido criado via storefront, confirmado, cobrado e pago",
+      "steps": [
+        "Tenant autenticado",
+        "Billing sandbox habilitado"
+      ],
+      "assertions": [
+        "Pedido criado via storefront com total calculado",
+        "Pedido visível na listagem operacional de pedidos",
+        "Status do pedido avança para confirmed",
+        "Cobrança do pedido criada e confirmada"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "orders",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-ORDERS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-ORDERS"
+    },
+    {
+      "id": "business-core-biz-projects",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core projetos: projeto criado com item, item concluído e dashboard consistente",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Projeto criado com nome",
+        "Item criado no projeto",
+        "Item concluído",
+        "Projeto e item visíveis nas consultas"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "projects",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-PROJECTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-PROJECTS"
+    },
+    {
+      "id": "business-core-biz-quick-replies",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core respostas rápidas: criada, listada e removida",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Resposta rápida criada com título e mensagem",
+        "Resposta rápida presente na listagem",
+        "Resposta rápida removida e ausente da listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "quick_replies",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-QUICK-REPLIES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-QUICK-REPLIES"
+    },
+    {
+      "id": "business-core-biz-tasks",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core tarefas: tarefa criada, listada e concluída",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Tarefa criada com título e vencimento",
+        "Tarefa presente na listagem",
+        "Tarefa concluída com status done"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "tasks",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-TASKS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-TASKS"
+    },
+    {
+      "id": "business-core-biz-webhooks",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core webhooks: webhook criado, listado e removido",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Webhook criado com URL e eventos válidos",
+        "Webhook presente na listagem",
+        "Webhook removido e ausente da listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "webhooks",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-WEBHOOKS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-WEBHOOKS"
     },
     {
       "id": "business-core-cap-crm-updates",
@@ -2927,6 +3222,38 @@
     },
     {
       "scenarioId": "business-clinic-scr-01",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-billing",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-campaigns",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-inbox",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-orders",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-projects",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-quick-replies",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-tasks",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-webhooks",
       "status": "passed"
     },
     {

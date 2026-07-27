@@ -206,6 +206,51 @@ describe('inventoryEngine', () => {
     expect(items[0].linkStatus).toBe('ORPHANED');
   });
 
+  it('superfície DEVELOPMENT/SUPPORT nunca é journey-linked por coincidência de token', () => {
+    // /api/debug/* (SUPPORT) tem token 'support', que casa com a jornada
+    // support_ticket_flow — mas superfície de engenharia/suporte pertence a
+    // wave técnica, não a jornada de negócio (política de segregação).
+    const items = findOrphanedItems([
+      {
+        id: 'api:POST:/api/debug/entities/extract', kind: 'api', method: 'POST',
+        path: '/api/debug/entities/extract', module: 'support-debug', classification: 'SUPPORT',
+      },
+    ], { journeyContracts: { journeys: { support_ticket_flow: {} } }, meshRegistry: [] });
+    expect(items[0].linkStatus).toBe('LINKED');
+    expect(items[0].linkKind).toBe('technical-wave');
+    expect(items[0].technicalWave).toBe('support-diagnostics');
+    expect(items[0].linkedJourneys).toEqual([]);
+  });
+
+  it('módulo declarado no technical-wave-map não é journey-linked por coincidência de token', () => {
+    const map = { version: 1, waves: { platform: { modules: ['domain-admin'] } } };
+    const items = findOrphanedItems([
+      {
+        id: 'api:GET:/system/channel-health', kind: 'api', method: 'GET',
+        path: '/system/channel-health', module: 'domain-admin', classification: 'PRODUCTION',
+      },
+    ], {
+      journeyContracts: { journeys: { channel_accounts: {} } },
+      meshRegistry: [],
+      technicalWaveMap: map,
+    });
+    expect(items[0].linkStatus).toBe('LINKED');
+    expect(items[0].linkKind).toBe('technical-wave');
+    expect(items[0].technicalWave).toBe('platform');
+    expect(items[0].linkedJourneys).toEqual([]);
+  });
+
+  it('itens de dados continuam elegíveis a journey-linking (grafo de rastreabilidade)', () => {
+    const items = findOrphanedItems([
+      {
+        id: 'model:Ticket', kind: 'model', model: 'Ticket', table: 'tickets', classification: 'PRODUCTION',
+      },
+    ], { journeyContracts: { journeys: { support_ticket_flow: {} } }, meshRegistry: [] });
+    expect(items[0].linkStatus).toBe('LINKED');
+    expect(items[0].linkKind).toBe('journey');
+    expect(items[0].linkedJourneys).toContain('support_ticket_flow');
+  });
+
   it('mapa real versionado liga módulos de plataforma às waves declaradas', () => {
     const map = JSON.parse(
       fs.readFileSync(path.join(__dirname, '../../../config/technical-wave-map.json'), 'utf8'),

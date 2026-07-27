@@ -1677,6 +1677,311 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-BIZ-ORDERS') {
+    await ensureDbConnection();
+    const { createPublicToken } = require('../../../api/services/publicAccessTokenService');
+    const storefront = await createPublicToken({
+      tenantId: TEST_TENANT_ID,
+      kind: 'storefront',
+      meta: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (!storefront?.token) {
+      throw new Error('Token publico de storefront nao foi criado');
+    }
+
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const created = await api.post(`/storefront/orders?token=${encodeURIComponent(storefront.token)}`, {
+      customerName: `Cliente QA Orders ${runId}`,
+      customerPhone: '+5511999997100',
+      items: [{ name: 'Item QA Orders', qty: 2, price: 19.9 }],
+      deliveryType: 'pickup',
+      idempotencyKey,
+    });
+    const orderId = created?.order?.id;
+    if (!orderId) {
+      throw new Error('Pedido nao retornou ID via storefront');
+    }
+    if (Number(created?.order?.total_amount) !== 39.8) {
+      throw new Error(`Total do pedido incorreto: ${created?.order?.total_amount}`);
+    }
+
+    const listed = await api.get('/orders?limit=50');
+    const found = (listed?.orders || []).find((item) => item.id === orderId);
+    if (!found) {
+      throw new Error('Pedido criado nao apareceu na listagem operacional');
+    }
+
+    await api.put(`/orders/${encodeURIComponent(orderId)}/status`, { status: 'confirmed' });
+    const after = await api.get(`/orders/${encodeURIComponent(orderId)}`);
+    if (String(after?.order?.status || '').toLowerCase() !== 'confirmed') {
+      throw new Error('Pedido nao avancou para confirmed');
+    }
+
+    const charge = await api.post(`/orders/${encodeURIComponent(orderId)}/charge`, {
+      amount: 39.8,
+      currency: 'BRL',
+      provider: 'sandbox',
+      idempotencyKey: `${idempotencyKey}:charge`,
+    });
+    const transaction = charge?.transaction;
+    if (!transaction?.id) {
+      throw new Error('Cobranca do pedido nao retornou transacao');
+    }
+    await confirmTransaction(api, transaction);
+    const payments = await api.get('/billing/transactions?limit=50');
+    const tx = (payments?.items || []).find((item) => item.id === transaction.id);
+    if (!tx || tx.status !== 'confirmed') {
+      throw new Error('Cobranca do pedido nao ficou confirmada');
+    }
+
+    return {
+      detail: 'Pedido criado, confirmado, cobrado e pago',
+      ids: { orderId, transactionId: transaction.id },
+      evidence: { status: after.order.status, paymentStatus: tx.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-BILLING') {
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const charge = await api.post('/billing/create-charge', {
+      type: 'one_time',
+      amount: 24.9,
+      currency: 'BRL',
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      provider: 'sandbox',
+      description: `Cobranca QA ${definition.code}`,
+      customerName: 'Cliente QA Billing',
+      customerEmail: `core-billing-${runId}@qa.example.com`,
+      idempotencyKey,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const transaction = charge?.transaction;
+    if (!transaction?.id) {
+      throw new Error('Cobranca nao retornou transacao');
+    }
+
+    await confirmTransaction(api, transaction);
+
+    const payments = await api.get('/billing/transactions?limit=50');
+    const tx = (payments?.items || []).find((item) => item.id === transaction.id);
+    if (!tx) {
+      throw new Error('Transacao ausente na listagem de billing');
+    }
+    if (tx.status !== 'confirmed') {
+      throw new Error(`Transacao nao ficou confirmada: ${tx.status}`);
+    }
+
+    return {
+      detail: 'Cobrança criada e confirmada via webhook sandbox',
+      ids: { transactionId: transaction.id },
+      evidence: { finalStatus: tx.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-TASKS') {
+    const title = `Tarefa QA ${definition.code} ${runId}`;
+    const created = await api.post('/api/tasks', {
+      title,
+      description: 'Tarefa criada pela jornada business tasks',
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+    });
+    const task = created?.task || created;
+    if (!task?.id) {
+      throw new Error('Tarefa nao retornou ID');
+    }
+
+    const listed = await api.get('/api/tasks');
+    const found = (listed?.tasks || []).find((item) => item.id === task.id);
+    if (!found) {
+      throw new Error('Tarefa criada nao apareceu na listagem');
+    }
+
+    await api.post(`/api/tasks/${encodeURIComponent(task.id)}/complete`, {});
+    const reloaded = await api.get('/api/tasks');
+    const done = (reloaded?.tasks || []).find((item) => item.id === task.id);
+    if (!done || !['done', 'completed'].includes(String(done.status || '').toLowerCase())) {
+      throw new Error(`Tarefa nao ficou concluida: ${done && done.status}`);
+    }
+
+    return {
+      detail: 'Tarefa criada, listada e concluída',
+      ids: { taskId: task.id },
+      evidence: { finalStatus: done.status },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-QUICK-REPLIES') {
+    const title = `QR QA ${runId}`;
+    const created = await api.post('/quick-replies', {
+      title,
+      message: 'Resposta rápida criada pela jornada business quick_replies.',
+      tags: ['business_qa'],
+      category: 'qa',
+    });
+    const reply = created?.quickReply || created;
+    if (!reply?.id) {
+      throw new Error('Resposta rápida nao retornou ID');
+    }
+
+    const listed = await api.get('/quick-replies');
+    const found = (listed?.quickReplies || []).find((item) => item.id === reply.id);
+    if (!found) {
+      throw new Error('Resposta rápida nao apareceu na listagem');
+    }
+
+    await api.del(`/quick-replies/${encodeURIComponent(reply.id)}`);
+    const afterDelete = await api.get('/quick-replies');
+    if ((afterDelete?.quickReplies || []).some((item) => item.id === reply.id)) {
+      throw new Error('Resposta rápida nao foi removida');
+    }
+
+    return {
+      detail: 'Resposta rápida criada, listada e removida',
+      ids: { quickReplyId: reply.id },
+      evidence: { deleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-WEBHOOKS') {
+    const created = await api.post('/webhooks', {
+      url: `https://qa.example.com/webhooks/${runId}`,
+      events: ['ticket.created'],
+      active: true,
+    });
+    const webhook = created?.webhook || created;
+    if (!webhook?.id) {
+      throw new Error('Webhook nao retornou ID');
+    }
+
+    const listed = await api.get('/webhooks');
+    const found = (listed?.webhooks || []).find((item) => item.id === webhook.id);
+    if (!found) {
+      throw new Error('Webhook nao apareceu na listagem');
+    }
+
+    await api.del(`/webhooks/${encodeURIComponent(webhook.id)}`);
+    const afterDelete = await api.get('/webhooks');
+    if ((afterDelete?.webhooks || []).some((item) => item.id === webhook.id)) {
+      throw new Error('Webhook nao foi removido');
+    }
+
+    return {
+      detail: 'Webhook criado, listado e removido',
+      ids: { webhookId: webhook.id },
+      evidence: { deleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-INBOX') {
+    const listed = await api.get('/inbox/conversations?limit=50');
+    const conversations = listed?.tickets || listed?.items || [];
+    const target = conversations.find((item) => item.status !== 'closed') || conversations[0];
+    if (!target?.id) {
+      throw new Error('Nenhuma conversa elegível encontrada na inbox');
+    }
+
+    await api.post(`/inbox/conversations/${encodeURIComponent(target.id)}/assign`, {});
+
+    const note = `Nota QA ${definition.code} ${runId}`;
+    await api.post(`/inbox/conversations/${encodeURIComponent(target.id)}/notes`, { note });
+
+    const reloaded = await api.get('/inbox/conversations?limit=50');
+    const updated = (reloaded?.tickets || reloaded?.items || []).find((item) => item.id === target.id);
+    if (!updated) {
+      throw new Error('Conversa atribuída sumiu da listagem da inbox');
+    }
+    if (!updated.assignedTo) {
+      throw new Error('Atribuição nao refletida na conversa');
+    }
+
+    return {
+      detail: 'Conversa atribuída e anotada na inbox',
+      ids: { conversationId: target.id },
+      evidence: { assignedTo: updated.assignedTo },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CAMPAIGNS') {
+    const emailCampaign = await createBeautyCampaign(api, `${runId}-core-campaigns`);
+    if (!emailCampaign?.id) {
+      throw new Error('Campanha de e-mail nao retornou ID');
+    }
+    await publishCampaign(api, emailCampaign.id);
+
+    const bulk = await api.post('/bulk-campaigns', {
+      name: `Campanha QA ${runId}`,
+      message: 'Mensagem da campanha de QA business.',
+      phoneNumbers: ['+5511999997200'],
+    });
+    const bulkCampaign = bulk?.campaign || bulk;
+    if (!bulkCampaign?.id) {
+      throw new Error('Campanha em massa nao retornou ID');
+    }
+
+    const listed = await api.get('/bulk-campaigns');
+    const found = (listed?.campaigns || []).find((item) => item.id === bulkCampaign.id);
+    if (!found) {
+      throw new Error('Campanha em massa nao apareceu na listagem');
+    }
+
+    await api.del(`/bulk-campaigns/${encodeURIComponent(bulkCampaign.id)}`);
+    const afterDelete = await api.get('/bulk-campaigns');
+    if ((afterDelete?.campaigns || []).some((item) => item.id === bulkCampaign.id)) {
+      throw new Error('Campanha em massa nao foi removida');
+    }
+
+    return {
+      detail: 'Campanha de e-mail publicada e campanha em massa criada/removida',
+      ids: { emailCampaignId: emailCampaign.id, bulkCampaignId: bulkCampaign.id },
+      evidence: { bulkDeleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-PROJECTS') {
+    const created = await api.post('/projects', {
+      name: `Projeto QA ${runId}`,
+      description: 'Projeto criado pela jornada business projects',
+    });
+    const project = created?.project || created;
+    if (!project?.id) {
+      throw new Error('Projeto nao retornou ID');
+    }
+
+    const itemCreated = await api.post(`/projects/${encodeURIComponent(project.id)}/items`, {
+      title: `Item QA ${runId}`,
+    });
+    const item = itemCreated?.item || itemCreated;
+    if (!item?.id) {
+      throw new Error('Item do projeto nao retornou ID');
+    }
+
+    await api.post(
+      `/projects/${encodeURIComponent(project.id)}/items/${encodeURIComponent(item.id)}/complete`,
+      {},
+    );
+
+    const items = await api.get(`/projects/${encodeURIComponent(project.id)}/items`);
+    const itemList = items?.items || items?.project?.items || [];
+    const doneItem = itemList.find((entry) => entry.id === item.id);
+    if (!doneItem) {
+      throw new Error('Item concluído ausente na listagem do projeto');
+    }
+    if (!['done', 'completed'].includes(String(doneItem.status || '').toLowerCase())) {
+      throw new Error(`Item nao ficou concluído: ${doneItem.status}`);
+    }
+
+    const dashboard = await api.get(`/projects/${encodeURIComponent(project.id)}/dashboard`);
+    if (!dashboard || dashboard.error) {
+      throw new Error('Dashboard do projeto indisponível após operacoes');
+    }
+
+    return {
+      detail: 'Projeto criado com item concluído e dashboard consistente',
+      ids: { projectId: project.id, itemId: item.id },
+      evidence: { itemStatus: doneItem.status },
+    };
+  }
+
   throw new Error(`Flow nao implementado: ${definition.code}`);
 }
 

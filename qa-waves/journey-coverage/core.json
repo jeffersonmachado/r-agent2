@@ -1,193 +1,345 @@
 {
-  "generatedAt": "2026-07-26T16:58:02.031Z",
-  "vertical": "core",
-  "kind": "system",
-  "maturity": "system",
-  "replaySupported": false,
-  "journeys": [
+ "generatedAt": "2026-07-26T16:58:02.031Z",
+ "vertical": "core",
+ "kind": "system",
+ "maturity": "system",
+ "replaySupported": false,
+ "journeys": [
+  {
+   "vertical": "core",
+   "journey": "booking_flow",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
     {
-      "vertical": "core",
-      "journey": "booking_flow",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-flow-booking",
-          "scenario": "Core agendamento criado, confirmado e concluído",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-booking-reschedule",
-          "scenario": "Core agendamento remarcado, confirmado e concluído",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-booking-terminal-states",
-          "scenario": "Core agendamento: no-show, recusa, ação inválida e agendamento inexistente",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        }
-      ]
+     "scenarioId": "business-core-flow-booking",
+     "scenario": "Core agendamento criado, confirmado e concluído",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
     },
     {
-      "vertical": "core",
-      "journey": "capability_crm_updates",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-cap-crm-updates",
-          "scenario": "Core capability crm_updates: conta, contato, oportunidade movida de estágio e atualização na timeline",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        }
-      ]
+     "scenarioId": "business-core-flow-booking-reschedule",
+     "scenario": "Core agendamento remarcado, confirmado e concluído",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
     },
     {
-      "vertical": "core",
-      "journey": "capability_lead_capture",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-cap-lead-capture",
-          "scenario": "Core capability lead_capture: lead capturado com origem, persistido e visível na listagem",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        }
-      ]
-    },
-    {
-      "vertical": "core",
-      "journey": "capability_scheduling",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-cap-scheduling",
-          "scenario": "Core capability scheduling: catálogo, agenda do recurso, bloco de calendário e ciclo do agendamento",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        }
-      ]
-    },
-    {
-      "vertical": "core",
-      "journey": "payment_charge_flow",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-flow-payment-charge",
-          "scenario": "Core cobrança avulsa criada e pagamento confirmado",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado",
-            "Billing sandbox habilitado"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-payment-idempotent",
-          "scenario": "Core cobrança com idempotencyKey não duplica transação",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado",
-            "Billing sandbox habilitado"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-payment-invalid",
-          "scenario": "Core cobrança com valor inválido é rejeitada sem persistir transação",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado",
-            "Billing sandbox habilitado"
-          ]
-        }
-      ]
-    },
-    {
-      "vertical": "core",
-      "journey": "support_ticket_flow",
-      "replaySupport": false,
-      "qaSupport": true,
-      "scenarios": [
-        {
-          "scenarioId": "business-core-flow-support-ticket",
-          "scenario": "Core abertura, resposta e encerramento de ticket de suporte",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado",
-            "Fila de suporte disponível"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-support-ticket-lifecycle",
-          "scenario": "Core ticket: takeover, pausa, retomada e encerramento com estados persistidos",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        },
-        {
-          "scenarioId": "business-core-flow-support-ticket-notfound",
-          "scenario": "Core operações em ticket inexistente rejeitadas com 404 sem efeito colateral",
-          "status": "active",
-          "channels": [],
-          "preconditions": [],
-          "integrations": [],
-          "steps": [
-            "Tenant autenticado"
-          ]
-        }
-      ]
+     "scenarioId": "business-core-flow-booking-terminal-states",
+     "scenario": "Core agendamento: no-show, recusa, ação inválida e agendamento inexistente",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
     }
-  ]
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "capability_crm_updates",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-cap-crm-updates",
+     "scenario": "Core capability crm_updates: conta, contato, oportunidade movida de estágio e atualização na timeline",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "capability_lead_capture",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-cap-lead-capture",
+     "scenario": "Core capability lead_capture: lead capturado com origem, persistido e visível na listagem",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "capability_scheduling",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-cap-scheduling",
+     "scenario": "Core capability scheduling: catálogo, agenda do recurso, bloco de calendário e ciclo do agendamento",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "payment_charge_flow",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-flow-payment-charge",
+     "scenario": "Core cobrança avulsa criada e pagamento confirmado",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+     ]
+    },
+    {
+     "scenarioId": "business-core-flow-payment-idempotent",
+     "scenario": "Core cobrança com idempotencyKey não duplica transação",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+     ]
+    },
+    {
+     "scenarioId": "business-core-flow-payment-invalid",
+     "scenario": "Core cobrança com valor inválido é rejeitada sem persistir transação",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "support_ticket_flow",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-flow-support-ticket",
+     "scenario": "Core abertura, resposta e encerramento de ticket de suporte",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado",
+      "Fila de suporte disponível"
+     ]
+    },
+    {
+     "scenarioId": "business-core-flow-support-ticket-lifecycle",
+     "scenario": "Core ticket: takeover, pausa, retomada e encerramento com estados persistidos",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    },
+    {
+     "scenarioId": "business-core-flow-support-ticket-notfound",
+     "scenario": "Core operações em ticket inexistente rejeitadas com 404 sem efeito colateral",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "orders",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-orders",
+     "scenario": "Core pedidos: pedido criado via storefront, confirmado, cobrado e pago",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "billing",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-billing",
+     "scenario": "Core billing: cobrança avulsa criada, confirmada e listada nas transações",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "tasks",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-tasks",
+     "scenario": "Core tarefas: tarefa criada, listada e concluída",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "quick_replies",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-quick-replies",
+     "scenario": "Core respostas rápidas: criada, listada e removida",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "webhooks",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-webhooks",
+     "scenario": "Core webhooks: webhook criado, listado e removido",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "inbox",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-inbox",
+     "scenario": "Core inbox: conversa atribuída, anotada e refletida na listagem",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "campaigns",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-campaigns",
+     "scenario": "Core campanhas: campanha de e-mail publicada e campanha em massa criada e removida",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  },
+  {
+   "vertical": "core",
+   "journey": "projects",
+   "replaySupport": false,
+   "qaSupport": true,
+   "scenarios": [
+    {
+     "scenarioId": "business-core-biz-projects",
+     "scenario": "Core projetos: projeto criado com item, item concluído e dashboard consistente",
+     "status": "active",
+     "channels": [],
+     "preconditions": [],
+     "integrations": [],
+     "steps": [
+      "Tenant autenticado"
+     ]
+    }
+   ]
+  }
+ ]
 }

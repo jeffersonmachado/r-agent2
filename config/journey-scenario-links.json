@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-26T16:58:15.348Z",
+  "generatedAt": "2026-07-27T00:17:53.466Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -170,6 +170,78 @@
             },
             {
               "scenarioId": "business-core-flow-support-ticket-notfound",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "orders",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-orders",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "billing",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-billing",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "tasks",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-tasks",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "quick_replies",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-quick-replies",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "webhooks",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-webhooks",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "inbox",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-inbox",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "campaigns",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-campaigns",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "projects",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-projects",
               "status": "active"
             }
           ]
