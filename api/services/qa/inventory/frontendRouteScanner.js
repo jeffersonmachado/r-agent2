@@ -152,6 +152,14 @@ function isEngineeringEntry(menuEntry) {
   return menuEntry.ancestors.some((id) => ENGINEERING_ANCESTOR_TOKENS.some((token) => id.includes(token)));
 }
 
+/**
+ * Aliases legados (fora do prefixo /dev) que renderizam páginas de engenharia
+ * em main.jsx. Classificados DEVELOPMENT para não virarem órfãos PRODUCTION
+ * nem ruído na política de visibilidade. Manter sincronizado com
+ * PROTECTED_PATH_PREFIXES de frontend/src/utils/menuPermissions.js.
+ */
+const LEGACY_DEV_PATH_ALIASES = new Set(['/rpa-replays', '/rpa-seeds', '/system-status']);
+
 function hasSupportSegment(value) {
   if (!value) return false;
   return String(value).split('/').filter(Boolean)
@@ -160,6 +168,9 @@ function hasSupportSegment(value) {
 
 function classifyPage(pagePath, menuEntry) {
   if (pagePath === '/dev' || pagePath.startsWith('/dev/') || pagePath === '/dev-dashboard') {
+    return 'DEVELOPMENT';
+  }
+  if (LEGACY_DEV_PATH_ALIASES.has(pagePath)) {
     return 'DEVELOPMENT';
   }
   if (isEngineeringEntry(menuEntry)) {

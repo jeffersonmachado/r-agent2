@@ -80,4 +80,19 @@ describe('menuPermissions', () => {
   it('mantém allowUnknown para paths fora dos prefixos protegidos', () => {
     expect(canAccessPath(adminAgent, '/alguma-rota-nova', { allowUnknown: true })).toBe(true);
   });
+
+  it('nega aliases legados de páginas de engenharia para não-super_admin', () => {
+    // Regressão: /system-status (alias legado de /dev/system-status) não tem prefixo
+    // protegido nem entrada de menu — qualquer usuário autenticado abria a página de
+    // diagnóstico por URL direta (bypass da segregação DEVELOPMENT).
+    const operatorAgent = { id: 'agent-op', username: 'op', role: 'operator', tenantId: 'demo-tenant' };
+    const managerAgent = { id: 'agent-mg', username: 'mg', role: 'manager', tenantId: 'demo-tenant' };
+
+    for (const agent of [operatorAgent, managerAgent]) {
+      expect(canAccessPath(agent, '/system-status')).toBe(false);
+      expect(canAccessPath(agent, '/rpa-replays')).toBe(false);
+      expect(canAccessPath(agent, '/rpa-seeds')).toBe(false);
+    }
+    expect(canAccessPath(superAdminAgent, '/system-status')).toBe(true);
+  });
 });

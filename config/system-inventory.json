@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-27T01:41:27.886Z",
+  "generatedAt": "2026-07-27T02:19:29.698Z",
   "counts": {
     "total": 2636,
     "byKind": {
@@ -12,11 +12,11 @@
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2417,
-      "DEVELOPMENT": 129,
-      "SUPPORT": 90
+      "PRODUCTION": 2415,
+      "DEVELOPMENT": 132,
+      "SUPPORT": 89
     },
-    "orphaned": 99
+    "orphaned": 97
   },
   "items": [
     {
@@ -46459,10 +46459,13 @@
       "permission": null,
       "section": null,
       "guarded": false,
-      "classification": "PRODUCTION",
+      "classification": "DEVELOPMENT",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "0fcba4179f97030efbd9fda07bf1e81e3bdcb9cd4e26d33fe9e35ed22db02d0e"
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "29650cd43a16d3107e8018eed7a3e2c88b10c2ffc7e5219b901596b50ee83f7b"
     },
     {
       "id": "page:/rpa-seeds",
@@ -46472,10 +46475,13 @@
       "permission": null,
       "section": null,
       "guarded": false,
-      "classification": "PRODUCTION",
+      "classification": "DEVELOPMENT",
       "source": "frontend/src/main.jsx",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "cd694de8d4b026a16f051ae6108dba8d850400ab8298bc528cd876b57421ac94"
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "1a13e7a5bd340f71125076f1613557c89dcdf778eb0e350de1dcc941bf9cb7e5"
     },
     {
       "id": "page:/saas",
@@ -46736,13 +46742,13 @@
       "permission": null,
       "section": null,
       "guarded": false,
-      "classification": "SUPPORT",
+      "classification": "DEVELOPMENT",
       "source": "frontend/src/main.jsx",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "59bf244001b2865811d02985e9d84f4c794c79155ca33459452ac6ff85090664"
+      "fingerprint": "009551f0c444445fb8f61eac648a20841df3276fd6f2f55182bbbe577d4a8ff2"
     },
     {
       "id": "page:/tasks",

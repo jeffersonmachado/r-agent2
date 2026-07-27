@@ -110,4 +110,17 @@ describe('frontendRouteScanner', () => {
       { roles: ['super_admin'], ancestors: ['plataforma', 'super-admin'], section: 'plataforma' },
     )).toBe('DEVELOPMENT');
   });
+
+  it('aliases legados de páginas /dev/* herdam classificação DEVELOPMENT', () => {
+    // Regressão: aliases legados (/rpa-replays, /rpa-seeds, /system-status) renderizam
+    // as mesmas páginas de engenharia que /dev/*, mas eram classificados PRODUCTION
+    // por não terem prefixo /dev nem entrada de menu — viravam órfãos e ruído de
+    // política de visibilidade.
+    expect(classifyPage('/rpa-replays', null)).toBe('DEVELOPMENT');
+    expect(classifyPage('/rpa-seeds', null)).toBe('DEVELOPMENT');
+    expect(classifyPage('/system-status', null)).toBe('DEVELOPMENT');
+    // páginas operacionais com prefixo parecido não podem ser afetadas
+    expect(classifyPage('/rpa', null)).not.toBe('DEVELOPMENT');
+    expect(classifyPage('/system', null)).not.toBe('DEVELOPMENT');
+  });
 });

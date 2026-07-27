@@ -346,8 +346,10 @@ export function filterNavigationTree(agent, nodes = []) {
  * Prefixos de rotas de engenharia (PRODUCTION_HIDDEN na política de segregação):
  * exigem super_admin, inclusive para paths sem mapeamento explícito no menu
  * (allowUnknown não se aplica a esses prefixos).
+ * Inclui aliases legados fora de /dev que renderizam páginas de engenharia
+ * (ver main.jsx): '/rpa-replays', '/rpa-seeds', '/system-status'.
  */
-const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa'];
+const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa', '/rpa-replays', '/rpa-seeds', '/system-status'];
 
 function isProtectedPath(targetPath) {
   return PROTECTED_PATH_PREFIXES.some(

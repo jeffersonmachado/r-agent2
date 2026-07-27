@@ -60,7 +60,7 @@ const PRODUCTION_HIDDEN_ROUTES = [
   '/dev/rpa-replays', '/rpa-replays', '/dev/rpa-test', '/rpa-seeds',
   '/dev/qa-waves', '/qa', '/qa-mesh', '/qa/stability',
   '/dev/qa-gaps', '/dev/work-management',
-  '/generate-system', '/dev/system-status', '/dev-dashboard',
+  '/generate-system', '/dev/system-status', '/system-status', '/dev-dashboard',
   '/dev', '/admin/agents',
 ];
 
@@ -73,7 +73,7 @@ const DEVELOPMENT_VISIBLE_ROUTES = [
   '/dev/qa-waves', '/qa', '/qa-mesh', '/qa/stability',
   '/dev/rpa-replays', '/dev/rpa-test', '/rpa-seeds',
   '/dev/qa-gaps', '/generate-system', '/dev',
-  '/dev-dashboard', '/dev/system-status', '/dev/work-management',
+  '/dev-dashboard', '/dev/system-status', '/system-status', '/dev/work-management',
   '/admin/agents',
 ];
 
