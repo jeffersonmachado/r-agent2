@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-28T12:41:21.694Z",
-  "commit": "df0ab67be532923abdbe5a6dd2e9c42dcb29e348",
+  "generatedAt": "2026-07-28T13:33:37.229Z",
+  "commit": "7d146924fdc138ede38abefd465e84cdc8279337",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -122,13 +122,6 @@
       "item": "page:/onboarding",
       "assertion": "pageLoads",
       "reason": "Página de setup inicial de tenant restrita por design de RBAC: o item de menu exige permission tenant:read (frontend/src/navigation/menu.js), que o papel admin não possui (ROLE_PERMISSIONS em frontend/src/utils/menuPermissions.js) — 'Acesso Negado' para o usuário de probe (admin) é o comportamento projetado, não página quebrada. O público da página é owner.",
-      "approvedBy": "jeffersonmachado",
-      "date": "2026-07-28"
-    },
-    {
-      "item": "page:/pbx/referencia/xml",
-      "assertion": "pageLoads",
-      "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
       "approvedBy": "jeffersonmachado",
       "date": "2026-07-28"
     },
@@ -2849,7 +2842,7 @@
         {
           "name": "pageLoads",
           "passed": true,
-          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "detail": "falha de carregamento para super_admin: console.error=6 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
           "notApplicable": true
         }
       ],
@@ -2882,10 +2875,12 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 1,
+          "consoleErrors": 6,
           "pageErrors": 0,
           "errorSamples": [
-            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+            "[2026-07-28T13:32:52.108Z] [ERROR] [WebSocketContext] Falha na autenticação \"Token=[redacted]",
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
           ]
         }
       }
@@ -4432,17 +4427,9 @@
         {
           "name": "pageLoads",
           "passed": true,
-          "detail": "falha de carregamento para papel PRODUCTION: console.error=12 pageerror=0 | NOT_APPLICABLE — isenção justificada: Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado. (aprovada por jeffersonmachado em 2026-07-28)",
-          "notApplicable": true
+          "detail": "página carregou são para papel PRODUCTION"
         }
       ],
-      "exemption": {
-        "item": "page:/pbx/referencia/xml",
-        "assertion": "pageLoads",
-        "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
-        "approvedBy": "jeffersonmachado",
-        "date": "2026-07-28"
-      },
       "probes": {
         "p1": {
           "docStatus": 200,
@@ -4457,13 +4444,8 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 12,
-          "pageErrors": 0,
-          "errorSamples": [
-            "Failed to load resource: the server responded with a status of 404 (Not Found)",
-            "[2026-07-28T12:37:14.378Z] [ERROR] HTTP Error 404 {\n  \"method\": \"GET\",\n  \"url\": \"/api/pbx-legacy/xml-entities?entity=ddr\",\n  \"path\": \"/api/pbx-legacy/xml-entities?entity=ddr\",\n  \"status\": 404,\n  \"erro",
-            "[HTTP Client] 💥 Erro capturado no catch: {name: Error, message: Erro HTTP 404 ao chamar /api/pbx-legacy/xml-entities?entity=ddr - not_found, status: 404, path: /api/pbx-legacy/xml-entities?entity=ddr"
-          ]
+          "consoleErrors": 0,
+          "pageErrors": 0
         },
         "p3": "skipped"
       }

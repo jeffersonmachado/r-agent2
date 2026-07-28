@@ -538,7 +538,7 @@ export function PbxPage() {
       setLegacyXmlItems(r?.items || []);
     } catch (err) {
       const msg = err?.message || String(err);
-      if (msg === 'pbx_xml_dir_not_configured') {
+      if (err?.code === 'pbx_xml_dir_not_configured' || msg === 'pbx_xml_dir_not_configured') {
         setLegacyXmlError('PBX Legado (XML) não está configurado neste servidor. Defina PBX_LEGACY_ROOT ou PBX_LEGACY_XML_DIR no backend.');
         setLegacyXmlMeta({ entity: e, file: null, rootTag: null, itemTag: null });
         setLegacyXmlItems([]);

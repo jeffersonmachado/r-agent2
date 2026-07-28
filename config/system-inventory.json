@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-28T10:13:19.005Z",
+  "generatedAt": "2026-07-28T13:08:16.625Z",
   "counts": {
-    "total": 2725,
+    "total": 2728,
     "byKind": {
-      "api": 765,
+      "api": 768,
       "field": 1492,
       "model": 155,
       "page": 149,
@@ -12,7 +12,7 @@
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2507,
+      "PRODUCTION": 2510,
       "DEVELOPMENT": 136,
       "SUPPORT": 82
     },
@@ -144,6 +144,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "953001fe013d6ff8a628c8d4cefee651521e839e7e2c58e39b0a2664437abade"
+    },
+    {
+      "id": "api:DELETE:/api/pbx-legacy/xml-entities",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/api/pbx-legacy/xml-entities",
+      "module": "pbx",
+      "source": "api/modules/pbx/pbx/pbxLegacyRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [],
+      "linkedDomains": [
+        "pbx"
+      ],
+      "fingerprint": "84aff9c4a73c027ba7fd96b92e18974ab266c05f5a8be50328b8687cbeee0fc2"
     },
     {
       "id": "api:DELETE:/api/pbx/queue-members",
@@ -3257,6 +3278,27 @@
       "fingerprint": "17ad8b4b12a5ae0d5df99eb9e53a6ca6635c001ad930a0e56eb20efb87114780"
     },
     {
+      "id": "api:GET:/api/pbx-legacy/xml-entities",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/pbx-legacy/xml-entities",
+      "module": "pbx",
+      "source": "api/modules/pbx/pbx/pbxLegacyRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [],
+      "linkedDomains": [
+        "pbx"
+      ],
+      "fingerprint": "da2c1490f8e9fc37dd604c2ab7bb07491b680e378468942c2a890a2e3861acd2"
+    },
+    {
       "id": "api:GET:/api/pbx/audio-assets",
       "kind": "api",
       "method": "GET",
@@ -3439,11 +3481,8 @@
       "path": "/api/pbx/operator-panel/events",
       "module": "pbx",
       "source": "api/modules/pbx/pbx-core/operatorPanelRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth",
-        "requirePermission:config:read"
-      ],
+      "authRequired": false,
+      "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -3453,7 +3492,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "e51b6febf2f7dc95a3e3fb778ec1d9d52990853775199670ad9ec9a8a121b4a6"
+      "fingerprint": "6f1edd84007515ca74856f79c8994acfd7c0400abefaf413a6acd7a9dd05b014"
     },
     {
       "id": "api:GET:/api/pbx/operator-panel/snapshot",
@@ -9968,6 +10007,27 @@
         "pbx"
       ],
       "fingerprint": "07e5aa94789254ae2674f33b69c05a9de46abe69d14acbe455fd52c1a0f91a0f"
+    },
+    {
+      "id": "api:POST:/api/pbx-legacy/xml-entities",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/pbx-legacy/xml-entities",
+      "module": "pbx",
+      "source": "api/modules/pbx/pbx/pbxLegacyRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:update"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [],
+      "linkedDomains": [
+        "pbx"
+      ],
+      "fingerprint": "978b323843e6c3fbca4263d37ce553d673c0cfbce55c3d55f89f400bdcb45612"
     },
     {
       "id": "api:POST:/api/pbx/audio-assets/upload",

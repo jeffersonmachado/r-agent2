@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-07-28T10:15:47.676Z",
-  "commit": "19c410d925d993834834cf5e7825dd08eaff3c2c",
+  "generatedAt": "2026-07-28T13:08:47.307Z",
+  "commit": "7d146924fdc138ede38abefd465e84cdc8279337",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 765,
+    "items": 768,
     "byState": {
       "VISITED": 237,
-      "VALIDATED": 528
+      "VALIDATED": 531
     }
   },
   "exemptions": [
@@ -145,6 +145,30 @@
     },
     {
       "id": "api:DELETE:/api/crm/pipelines/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:DELETE:/api/pbx-legacy/xml-entities",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -4174,6 +4198,33 @@
       }
     },
     {
+      "id": "api:GET:/api/pbx-legacy/xml-entities",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 400,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:GET:/api/pbx/audio-assets",
       "state": "VALIDATED",
       "assertions": [
@@ -4397,11 +4448,6 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8326,7 +8372,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (500)"
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -8339,7 +8385,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 500,
+          "status": 200,
           "notFoundFallback": false
         }
       }
@@ -13148,6 +13194,30 @@
     },
     {
       "id": "api:POST:/api/pbx-legacy/ramais",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/pbx-legacy/xml-entities",
       "state": "VALIDATED",
       "assertions": [
         {

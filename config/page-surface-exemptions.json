@@ -41,12 +41,6 @@
     "approvedBy": "jeffersonmachado",
     "date": "2026-07-28"
   },
-  "page:/pbx/referencia/xml": {
-    "assertion": "pageLoads",
-    "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
-    "approvedBy": "jeffersonmachado",
-    "date": "2026-07-28"
-  },
   "page:/dev/work-management": {
     "assertion": "pageLoads",
     "reason": "Degradação intencional por design de empacotamento: frontend/src/pages/WorkManagementPage.jsx faz React.lazy(() => import('../../../dev/work-management/App.jsx')) — módulo fora do root do Vite, deliberadamente não empacotado no build atual — e renderiza o fallback projetado 'Work Management indisponível / não empacotado no build atual'. O console.error é o log do dynamic import falho capturado pelo ErrorBoundary da própria página, não um defeito.",
@@ -112,5 +106,6 @@
     "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
     "approvedBy": "jeffersonmachado",
     "date": "2026-07-28"
-  }
+  },
+  "exemptions": []
 }

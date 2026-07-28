@@ -59,13 +59,34 @@ Ou:
   - Upsert de um ramal no `ramal.xml` (migração gradual).
   - Observação: isto **não recarrega Asterisk** ainda; é apenas o primeiro passo para substituir os binários CGI.
 
+### Entidades XML de referência (`/api/pbx-legacy/xml-entities`)
+
+CRUD genérico das entidades XML de referência do legado, com schemas fiéis aos
+parsers em C (`fontes.novo/src/{entidade}_xml.c`): cada entidade é um arquivo
+`${entidade}.xml` em `dados/xml`, com blocos `<itemTag idAttr="...">` e campos
+filhos. O parser é tolerante e preserva atributos/campos desconhecidos
+(`_attrs`) para migração gradual.
+
+Entidades suportadas (whitelist): `ddr`, `grupo`, `desvio`, `transbordo`,
+`bloqueio`, `retorno`, `recusa`, `feriado`, `transferencia`.
+
+- `GET /api/pbx-legacy/xml-entities?entity=<entidade>` (`config:read`)
+  - Retorna `{ entity, file, rootTag, itemTag, supported, items }`, com itens
+    no shape `{ id, ...campos, _attrs }`.
+  - Sem `PBX_LEGACY_ROOT`/`PBX_LEGACY_XML_DIR`: envelope `pbx_xml_dir_not_configured`
+    (tratado pelo frontend como estado esperado, não como falha).
+- `POST /api/pbx-legacy/xml-entities?entity=<entidade>` (`config:update`)
+  - Upsert por `id` (obrigatório); mescla preservando campos não enviados.
+- `DELETE /api/pbx-legacy/xml-entities?entity=<entidade>&id=<id>` (`config:update`)
+  - Remove o item; `not_found` se ausente.
+
 ## Roadmap (próximos domínios)
 
-Após estabilizar `ramais`, repetir o padrão para:
+Após estabilizar `ramais` e as entidades de referência, repetir o padrão para:
 
 - Filas (`fila.xml`)
 - Rotas (`rota.xml`, `rota_base.xml`)
-- URA/DDR/Desvio/Transferência etc.
+- URA etc.
 
 O alvo final é substituir:
 

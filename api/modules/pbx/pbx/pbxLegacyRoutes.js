@@ -152,7 +152,136 @@ async function handlePbxLegacyRoutes(ctx) {
     return true;
   }
 
+  // GET /api/pbx-legacy/xml-entities?entity=<entidade>
+  if (method === 'GET' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+    if (!requireTenant(req, res)) return;
+
+    try {
+      const entity = new URL(req.url, 'http://localhost').searchParams.get('entity');
+      const xmlEntities = require('../../../services/pbxLegacy/xmlEntities');
+      const result = xmlEntities.listXmlEntities(entity);
+      sendJson(res, 200, result);
+    } catch (err) {
+      const { code, httpStatus } = mapXmlEntityError(err);
+      logger.error('[PBX] Erro em GET /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: xmlEntityErrorMessage(err, code),
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return true;
+  }
+
+  // POST /api/pbx-legacy/xml-entities?entity=<entidade> (upsert)
+  if (method === 'POST' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+    if (!requireTenant(req, res)) return;
+    if (!hasJsonContentType(req)) {
+      const { badRequest } = deps;
+      badRequest(res, 'Content-Type deve ser application/json');
+      return true;
+    }
+
+    try {
+      const entity = new URL(req.url, 'http://localhost').searchParams.get('entity');
+      const body = await parseJsonBody(req);
+      const xmlEntities = require('../../../services/pbxLegacy/xmlEntities');
+      const saved = xmlEntities.upsertXmlEntity(entity, body);
+      sendJson(res, 200, { ok: true, item: saved });
+    } catch (err) {
+      const { code, httpStatus } = mapXmlEntityError(err);
+      logger.error('[PBX] Erro em POST /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: xmlEntityErrorMessage(err, code),
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return true;
+  }
+
+  // DELETE /api/pbx-legacy/xml-entities?entity=<entidade>&id=<id>
+  if (method === 'DELETE' && pathname === '/api/pbx-legacy/xml-entities') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+    if (!requireTenant(req, res)) return;
+
+    try {
+      const searchParams = new URL(req.url, 'http://localhost').searchParams;
+      const xmlEntities = require('../../../services/pbxLegacy/xmlEntities');
+      const result = xmlEntities.removeXmlEntity(searchParams.get('entity'), searchParams.get('id'));
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      const { code, httpStatus } = mapXmlEntityError(err);
+      logger.error('[PBX] Erro em DELETE /api/pbx-legacy/xml-entities', err);
+      sendJson(res, httpStatus, buildApiError({
+        code,
+        message: xmlEntityErrorMessage(err, code),
+        httpStatus,
+        retryable: httpStatus >= 500,
+        details: null,
+        req,
+      }));
+    }
+    return true;
+  }
+
   return false;
+}
+
+const XML_ENTITY_ERROR_STATUS = {
+  pbx_xml_dir_not_configured: 400,
+  unknown_entity: 400,
+  id_required: 400,
+  not_found: 404,
+};
+
+function mapXmlEntityError(err) {
+  const code = err && err.code ? err.code : 'pbx_xml_entities_error';
+  return { code, httpStatus: XML_ENTITY_ERROR_STATUS[code] || 500 };
+}
+
+function xmlEntityErrorMessage(err, code) {
+  if (code === 'pbx_xml_dir_not_configured') {
+    // O frontend (pbxLegacy.js) trata este code como estado esperado e exibe
+    // orientação de configuração; manter message igual ao code por compatibilidade.
+    return 'pbx_xml_dir_not_configured';
+  }
+  return (err && err.message) || 'Erro ao manipular entidade XML do PBX legado';
 }
 
 module.exports = { handlePbxLegacyRoutes };
