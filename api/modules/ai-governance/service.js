@@ -89,9 +89,15 @@ async function generateComplianceReport({ tenantId, startDate, endDate }) {
   return {
     period: { startDate: startDate || 'beginning', endDate: endDate || 'now' },
     summary: {
-      ...summary,
+      totalEvents: summary.totalEvents,
+      byType: summary.byType,
+      byRiskLevel: summary.byRiskLevel,
+      totalCost: summary.totalCost,
       agentsInvolved: summary.agentsInvolved.size,
       dataAccessedCount: summary.dataAccessed.size,
+      // Set serializa como {} em JSON — o payload publica o array
+      // determinístico (ordenado) com os dados efetivamente acessados.
+      dataAccessed: [...summary.dataAccessed].sort(),
     },
     records,
   };

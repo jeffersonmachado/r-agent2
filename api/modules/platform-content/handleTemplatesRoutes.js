@@ -1,6 +1,18 @@
 const path = require('path');
 const fs = require('fs');
 const { handleFlowTemplateMarketplaceRoutes } = require('./handleFlowTemplateMarketplaceRoutes');
+const { resolveRuntimePath } = require('../../utils/runtimePaths');
+
+// Templates embutidos (seeds versionados, somente leitura) ficam no frontend
+// real do repositório. Templates criados em runtime são escritos FORA do
+// repo, em RUNTIME_ROOT/templates — nunca dentro do worktree.
+function builtinTemplatesDir() {
+  return path.join(__dirname, '..', '..', '..', 'frontend', 'public', 'templates');
+}
+
+function runtimeTemplatesDir() {
+  return resolveRuntimePath('templates');
+}
 
 module.exports = { handleTemplatesRoutes };
 
@@ -33,26 +45,18 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
   // GET /templates - Lista todos os templates disponíveis
   if (method === 'GET' && pathname === '/templates') {
     try {
-      const templatesDir = path.join(__dirname, '..', '..', 'frontend', 'public', 'templates');
+      // Built-ins versionados + overrides de runtime (runtime vence por id).
+      const templates = new Map();
 
-      if (!fs.existsSync(templatesDir)) {
-        sendJson(res, 200, []);
-        return true;
-      }
-
-      const files = fs.readdirSync(templatesDir);
-      const templates = [];
-
-      for (const file of files) {
-        if (file.endsWith('.json')) {
+      const collectFrom = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        for (const file of fs.readdirSync(dir)) {
+          if (!file.endsWith('.json')) continue;
           try {
-            const filePath = path.join(templatesDir, file);
-            const content = fs.readFileSync(filePath, 'utf8');
-            const template = JSON.parse(content);
-
+            const template = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
             // Valida estrutura básica do template
             if (template && template.id && template.name && template.flow) {
-              templates.push({
+              templates.set(template.id, {
                 id: template.id,
                 name: template.name,
                 description: template.description || '',
@@ -63,9 +67,12 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
             logger.warn(`Erro ao ler template ${file}:`, err.message);
           }
         }
-      }
+      };
 
-      sendJson(res, 200, templates);
+      collectFrom(builtinTemplatesDir());
+      collectFrom(runtimeTemplatesDir());
+
+      sendJson(res, 200, [...templates.values()]);
     } catch (err) {
       logger.error('Erro ao listar templates', err);
       sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar templates' });
@@ -83,8 +90,10 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const templatesDir = path.join(__dirname, '..', '..', 'frontend', 'public', 'templates');
-      const templateFile = path.join(templatesDir, `${templateId}.json`);
+      // Runtime tem precedência sobre o built-in versionado.
+      const runtimeFile = path.join(runtimeTemplatesDir(), `${templateId}.json`);
+      const builtinFile = path.join(builtinTemplatesDir(), `${templateId}.json`);
+      const templateFile = fs.existsSync(runtimeFile) ? runtimeFile : builtinFile;
 
       if (!fs.existsSync(templateFile)) {
         sendJson(res, 404, { error: 'not_found', message: `Template "${templateId}" não encontrado` });
@@ -159,7 +168,8 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
       // Sanitiza o ID do template (usado como nome do arquivo)
       const templateId = body.id.trim().replace(/[^a-z0-9-]/g, '-').toLowerCase();
-      const templatesDir = path.join(__dirname, '..', '..', 'frontend', 'public', 'templates');
+      // Escrita sempre em RUNTIME_ROOT — nunca dentro do repositório.
+      const templatesDir = runtimeTemplatesDir();
       const templateFile = path.join(templatesDir, `${templateId}.json`);
 
       // Garante que o diretório existe
@@ -213,8 +223,9 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
       // Sanitiza o ID do template (mesmo processo usado no POST)
       const sanitizedId = templateId.trim().replace(/[^a-z0-9-]/g, '-').toLowerCase();
-      const templatesDir = path.join(__dirname, '..', '..', 'frontend', 'public', 'templates');
-      const templateFile = path.join(templatesDir, `${sanitizedId}.json`);
+      // DELETE só alcança arquivos de runtime — built-ins versionados do
+      // repositório são intocáveis via API (respondem 404 aqui).
+      const templateFile = path.join(runtimeTemplatesDir(), `${sanitizedId}.json`);
 
       // Verifica se o arquivo existe
       if (!fs.existsSync(templateFile)) {

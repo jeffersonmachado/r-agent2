@@ -74,6 +74,7 @@ function createDomainFlowRoutes({ buildDeps }) {
     executeRpaFlowPipeline: ctx.executeRpaFlowPipeline,
     simulateFlow: ctx.simulateFlow,
     sessionEvents: ctx.sessionEvents,
+    sessionTenants: ctx.sessionTenants,
     saveSessionEventsToFile: ctx.saveSessionEventsToFile,
     buildConversationReplay: ctx.buildConversationReplay,
   })));
@@ -85,6 +86,7 @@ function createDomainFlowRoutes({ buildDeps }) {
     sendJson: ctx.sendJson,
     logger: ctx.logger,
     sessionEvents: ctx.sessionEvents,
+    sessionTenants: ctx.sessionTenants,
     listChannelConversations: ctx.listChannelConversations,
     listConversationMessages: ctx.listConversationMessages,
     buildConversationReplay: ctx.buildConversationReplay,

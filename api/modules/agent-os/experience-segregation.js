@@ -11,6 +11,16 @@
  * SUPPORT: Replay, Incidentes, Diagnóstico, Logs, Auditoria, Evidências
  *
  * DEVELOPMENT: QA Waves, Replay Studio, Seeds, Scenario Builder, Validation Engine, Coverage Analysis, Regression Engine, RPA Lab
+ *
+ * Exceção documentada (revisão 2026-07-28): GET /replay/:sessionId
+ * (api/modules/domain-flow/flow-execution/flowExecutionRoutes.js) permanece
+ * PRODUCTION porque é o replay da CONVERSA SIMULADA do editor de fluxos —
+ * parte do construtor operacional de chatbots, não o replay diagnóstico de
+ * RPA/sessões reais (esses estão em SUPPORT/DEVELOPMENT: /rpa-replays,
+ * /api/test-executions/replays, /api/qa-waves/replays). Proteções vigentes:
+ * requireAuth obrigatório + isolamento por tenant (carimbo sessionTenants,
+ * fail-closed 404 cross-tenant). Revisar esta exceção se o endpoint passar
+ * a expor qualquer dado de sessões reais de clientes.
  */
 const logger = require('../../utils/logger');
 

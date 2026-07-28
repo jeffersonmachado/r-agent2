@@ -31,7 +31,7 @@ const {
 const { autoAssign: autoAssignTicket } = require('../../services/assignmentService');
 
 function buildExtendedChannelDeps(localDeps) {
-  const { flows, sessionEvents, saveSessionEventsToFile } = localDeps;
+  const { flows, sessionEvents, sessionTenants, saveSessionEventsToFile } = localDeps;
 
   return {
     scrapeUrl,
@@ -58,6 +58,7 @@ function buildExtendedChannelDeps(localDeps) {
     autoAssignTicket,
     flows,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
   };
 }

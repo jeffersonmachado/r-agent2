@@ -30,6 +30,7 @@ function createChannelWebhookExpressRouter({ buildExtendedRoutingContext }) {
         'emitEvent',
         'flows',
         'sessionEvents',
+        'sessionTenants',
         'saveSessionEventsToFile',
       ]);
     },

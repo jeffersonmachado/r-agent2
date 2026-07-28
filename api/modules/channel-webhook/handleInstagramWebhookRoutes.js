@@ -26,6 +26,7 @@ async function handleInstagramWebhookRoutes({ req, res, method, pathname, deps }
     emitEvent,
     flows,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
   } = deps;
 
@@ -133,6 +134,7 @@ async function handleInstagramWebhookRoutes({ req, res, method, pathname, deps }
             await processWhatsAppMessage(compatibleMessage, compatibleValue, {
               flows,
               sessionEvents,
+              sessionTenants,
               saveSessionEvents: saveSessionEventsToFile,
               tenantId,
               conversationId: ingest?.persist?.conversationId || null,

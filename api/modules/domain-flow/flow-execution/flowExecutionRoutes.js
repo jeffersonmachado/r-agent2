@@ -20,6 +20,7 @@ async function handleFlowExecutionRoutes(ctx) {
     executeRpaFlowPipeline,
     simulateFlow,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
     buildConversationReplay,
     requireAuth,
@@ -78,6 +79,11 @@ async function handleFlowExecutionRoutes(ctx) {
 
       if (sessionId) {
         sessionEvents.set(sessionId, Array.isArray(result.events) ? result.events : []);
+        // Carimbo de tenant: sem ele o replay fica fail-closed nos readers.
+        if (sessionTenants && typeof sessionTenants.set === 'function') {
+          const sessionTenantId = flow.tenantId || req.tenantId || null;
+          if (sessionTenantId) sessionTenants.set(sessionId, sessionTenantId);
+        }
         saveSessionEventsToFile();
       }
 
@@ -211,7 +217,12 @@ async function handleFlowExecutionRoutes(ctx) {
 
     const sessionId = decodeURIComponent(pathname.slice('/replay/'.length));
     const events = sessionEvents.get(sessionId);
-    if (!events) {
+    // Isolamento por tenant: sessão sem carimbo ou de outro tenant responde
+    // 404 — nunca vaza existência nem conteúdo cross-tenant.
+    const stampedTenant = sessionTenants && typeof sessionTenants.get === 'function'
+      ? sessionTenants.get(sessionId)
+      : null;
+    if (!events || !stampedTenant || stampedTenant !== req.tenantId) {
       sendJson(res, 404, { error: 'session_not_found' });
       return true;
     }

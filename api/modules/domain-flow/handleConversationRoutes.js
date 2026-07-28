@@ -11,6 +11,7 @@ async function handleConversationRoutes(ctx) {
     sendJson,
     logger,
     sessionEvents,
+    sessionTenants,
     listChannelConversations,
     listConversationMessages,
     buildConversationReplay,
@@ -193,8 +194,13 @@ async function handleConversationRoutes(ctx) {
     try {
       const sessionId = decodeURIComponent(pathname.slice('/conversations/'.length));
       const events = sessionEvents.get(sessionId);
-      
-      if (!events || !Array.isArray(events) || events.length === 0) {
+      // Isolamento por tenant: sessão sem carimbo ou de outro tenant responde
+      // 404 — nunca vaza existência nem conteúdo cross-tenant.
+      const stampedTenant = sessionTenants && typeof sessionTenants.get === 'function'
+        ? sessionTenants.get(sessionId)
+        : null;
+
+      if (!events || !Array.isArray(events) || events.length === 0 || !stampedTenant || stampedTenant !== req.tenantId) {
         sendJson(res, 404, { error: 'conversation_not_found', message: 'Conversa não encontrada' });
         return true;
       }

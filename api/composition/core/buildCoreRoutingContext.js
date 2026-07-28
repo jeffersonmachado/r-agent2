@@ -33,6 +33,7 @@ function createBuildCoreRoutingContext(localDeps) {
     persistFlowBestEffort,
     deleteFlowBestEffort,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
     strictTenantMode,
   } = localDeps;
@@ -53,6 +54,7 @@ function createBuildCoreRoutingContext(localDeps) {
         persistFlowBestEffort,
         deleteFlowBestEffort,
         sessionEvents,
+        sessionTenants,
         saveSessionEventsToFile,
       }),
     };

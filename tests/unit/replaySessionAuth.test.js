@@ -38,6 +38,7 @@ function baseDeps(overrides) {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     requireAuth: () => ({ valid: false, error: 'Token de autenticação ausente' }),
     sessionEvents: new Map([['sess-1', [{ type: 'message', text: 'oi' }]]]),
+    sessionTenants: new Map([['sess-1', 'tenant-qa']]),
     buildConversationReplay: (events) => ({ events }),
     ...overrides,
   };
@@ -69,9 +70,12 @@ describe('GET /replay/:sessionId — autenticação obrigatória', () => {
     expect(ctx.res.statusCode).toBe(401);
   });
 
-  it('retorna o replay para chamador autenticado', async () => {
+  it('retorna o replay para chamador autenticado no tenant da sessão', async () => {
     const ctx = ctxFor('/replay/sess-1', baseDeps({
-      requireAuth: () => ({ valid: true, userId: 'u1', role: 'admin' }),
+      requireAuth: (req) => {
+        req.tenantId = 'tenant-qa';
+        return { valid: true, userId: 'u1', role: 'admin' };
+      },
     }));
     const handled = await handleFlowExecutionRoutes(ctx);
     expect(handled).toBe(true);

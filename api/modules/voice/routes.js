@@ -19,9 +19,21 @@ function createVoiceRoutes({ buildDeps }) {
     return true;
   }
 
+  // Todo endpoint deste módulo é tenant-scoped: sem tenant explícito
+  // (ex.: super-admin sem X-Tenant-Id) a resposta deve ser 403 tenant_required,
+  // nunca um 200 silencioso com lista vazia.
+  function requireExplicitTenant(req, res, deps) {
+    if (!req.tenantId || typeof req.tenantId !== 'string' || req.tenantId.trim() === '') {
+      deps.sendJson(res, 403, { error: 'tenant_required' });
+      return false;
+    }
+    return true;
+  }
+
   router.post('/api/voice/events', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'config', 'update')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
@@ -55,6 +67,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.post('/api/voice/runtime/start', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'config', 'update')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
@@ -85,6 +98,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.post('/api/voice/runtime/step', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'config', 'update')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
@@ -116,6 +130,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.delete('/api/voice/runtime/session/:callId', (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'config', 'update')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     try {
       const { clearVoiceSession } = require('../../services/voiceRuntimeService');
       const cleared = clearVoiceSession({ tenantId: req.tenantId, callId: decodeURIComponent(req.params.callId) });
@@ -129,6 +144,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.get('/api/voice/runtime/stats', (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'reports', 'read')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     try {
       const { getVoiceRuntimeStats } = require('../../services/voiceRuntimeService');
       deps.sendJson(res, 200, getVoiceRuntimeStats({ tenantId: req.tenantId }));
@@ -141,6 +157,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.get('/api/voice/metrics', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'reports', 'read')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     try {
       const urlObj = new URL(req.originalUrl || req.url || '/', 'http://localhost');
       const windowDays = urlObj.searchParams.get('windowDays');
@@ -163,6 +180,7 @@ function createVoiceRoutes({ buildDeps }) {
   router.get('/api/event-ledger', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requirePermissionGuard(req, res, deps, 'analytics', 'read')) return;
+    if (!requireExplicitTenant(req, res, deps)) return;
     try {
       const urlObj = new URL(req.originalUrl || req.url || '/', 'http://localhost');
       const { listEvents } = require('../../services/eventLedgerService');

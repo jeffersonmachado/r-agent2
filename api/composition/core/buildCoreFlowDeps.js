@@ -20,6 +20,7 @@ function buildCoreFlowDeps(localDeps) {
     persistFlowBestEffort,
     deleteFlowBestEffort,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
   } = localDeps;
 
@@ -41,6 +42,7 @@ function buildCoreFlowDeps(localDeps) {
     executeRpaFlowPipeline,
     simulateFlow,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
     buildConversationReplay,
     listChannelConversations,

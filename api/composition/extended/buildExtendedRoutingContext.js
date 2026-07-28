@@ -21,6 +21,7 @@ function createBuildExtendedRoutingContext(localDeps = {}) {
     requireTenant,
     flows,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
   } = localDeps;
 
@@ -35,6 +36,7 @@ function createBuildExtendedRoutingContext(localDeps = {}) {
       ...buildExtendedChannelDeps({
         flows,
         sessionEvents,
+        sessionTenants,
         saveSessionEventsToFile,
       }),
       ragRouteContext: buildRagRouteDeps(),

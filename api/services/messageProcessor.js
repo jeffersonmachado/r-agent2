@@ -187,10 +187,10 @@ function safeErrorDetails(err, fallback = null) {
  *
  * @param {any} message - Objeto de mensagem do webhook do WhatsApp (value.messages[i])
  * @param {any} value - Objeto "value" completo do webhook (contém metadata da conversation)
- * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null }} deps
+ * @param {{ flows: Map<string, any>, sessionEvents: Map<string, any[]>, sessionTenants?: Map<string, string>, saveSessionEvents?: () => void, tenantId?: string|null, conversationId?: string|null, channelType?: string|null }} deps
  */
 async function processWhatsAppMessage(message, value, deps) {
-  const { flows, sessionEvents, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
+  const { flows, sessionEvents, sessionTenants, saveSessionEvents, tenantId: inboundTenantId, conversationId } = deps || {};
   const effectiveChannelType = (deps && deps.channelType && safeTrim(deps.channelType))
     ? safeTrim(deps.channelType)
     : 'whatsapp';
@@ -641,6 +641,10 @@ async function processWhatsAppMessage(message, value, deps) {
   // Guarda eventos para replay
   const existingEvents = sessionEvents.get(sessionId) || [];
   sessionEvents.set(sessionId, existingEvents.concat(result.events || []));
+  // Carimbo de tenant: readers de replay/conversa são fail-closed sem ele.
+  if (sessionTenants && typeof sessionTenants.set === 'function' && inboundTenantId) {
+    sessionTenants.set(sessionId, inboundTenantId);
+  }
   
   // Salva conversas após adicionar eventos (se função de salvamento fornecida)
   if (saveSessionEvents && typeof saveSessionEvents === 'function') {

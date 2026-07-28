@@ -25,6 +25,7 @@ async function handleMessengerWebhookRoutes({ req, res, method, pathname, deps }
     emitEvent,
     flows,
     sessionEvents,
+    sessionTenants,
     saveSessionEventsToFile,
   } = deps;
 
@@ -126,6 +127,7 @@ async function handleMessengerWebhookRoutes({ req, res, method, pathname, deps }
             await processWhatsAppMessage(compatibleMessage, compatibleValue, {
               flows,
               sessionEvents,
+              sessionTenants,
               saveSessionEvents: saveSessionEventsToFile,
               tenantId,
               conversationId: ingest?.persist?.conversationId || null,

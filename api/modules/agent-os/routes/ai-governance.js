@@ -71,8 +71,10 @@ async function handleAiGovernanceRoutes(ctx) {
       tenantId,
       agentId: body.agentId,
       eventType: body.eventType,
-      actor: body.actor || req.user?.username,
-      actorRole: body.actorRole || req.user?.role,
+      // requireAuth popula req.agent (nunca req.user): derivar o ator do
+      // agente autenticado para não persistir actor null na trilha de auditoria.
+      actor: body.actor || req.agent?.username || req.agent?.id || null,
+      actorRole: body.actorRole || req.agent?.role || null,
       description: body.description,
       metadata: body.metadata || {},
       decision: body.decision,

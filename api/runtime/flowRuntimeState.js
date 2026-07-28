@@ -73,8 +73,22 @@ function ensureFlowHasMeta(rawFlow, tenantId = null) {
 function createFlowRuntimeState({ logger }) {
   const flows = new Map();
   const sessionEvents = new Map();
+  // Carimbo de tenant por sessão de replay: sessionId → tenantId.
+  // Readers (/replay/:sessionId, /conversations/:sessionId) só respondem
+  // quando o tenant carimbado casa com req.tenantId (fail-closed).
+  const sessionTenants = new Map();
   const SESSION_CLEANUP_INTERVAL = 60 * 60 * 1000;
   const SESSION_MAX_AGE = 24 * 60 * 60 * 1000;
+
+  function setSessionTenant(sessionId, tenantId) {
+    if (!sessionId || typeof sessionId !== 'string') return;
+    if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') return;
+    sessionTenants.set(sessionId, tenantId.trim());
+  }
+
+  function getSessionTenant(sessionId) {
+    return sessionTenants.get(sessionId) || null;
+  }
 
   function saveSessionEventsToFile() {
     logger.debug('[Conversations] saveSessionEventsToFile chamado mas ignorado (dados estão no banco de dados)');
@@ -105,6 +119,7 @@ function createFlowRuntimeState({ logger }) {
 
       if (now - eventTimestamp > SESSION_MAX_AGE) {
         sessionEvents.delete(sessionId);
+        sessionTenants.delete(sessionId);
         cleaned += 1;
       }
     }
@@ -206,6 +221,9 @@ function createFlowRuntimeState({ logger }) {
   return {
     flows,
     sessionEvents,
+    sessionTenants,
+    setSessionTenant,
+    getSessionTenant,
     saveSessionEventsToFile,
     saveSessionEventsToFileImmediate,
     loadFlowsFromDb,

@@ -77,6 +77,7 @@ const buildCoreRoutingContext = createBuildCoreRoutingContext({
   persistFlowBestEffort: runtimeState.persistFlowBestEffort,
   deleteFlowBestEffort: runtimeState.deleteFlowBestEffort,
   sessionEvents: runtimeState.sessionEvents,
+  sessionTenants: runtimeState.sessionTenants,
   saveSessionEventsToFile: runtimeState.saveSessionEventsToFile,
   strictTenantMode: STRICT_TENANT_MODE,
 });
@@ -94,6 +95,7 @@ const buildExtendedRoutingContext = createBuildExtendedRoutingContext({
   requireTenant,
   flows: runtimeState.flows,
   sessionEvents: runtimeState.sessionEvents,
+  sessionTenants: runtimeState.sessionTenants,
   saveSessionEventsToFile: runtimeState.saveSessionEventsToFile,
 });
 
@@ -200,5 +202,6 @@ module.exports = {
     validateFlowStructure: runtimeState.validateFlowStructure,
     flows: runtimeState.flows,
     sessionEvents: runtimeState.sessionEvents,
+    sessionTenants: runtimeState.sessionTenants,
   },
 };
