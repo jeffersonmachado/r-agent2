@@ -74,6 +74,32 @@ describe('API server (api/server.js)', () => {
   let port;
   let createServer;
   let skipServerTests = false;
+  // Auth é DB-first: sem PostgreSQL os testes autenticados são pulados
+  // (padrão já usado em tests/tenant). STRICT_TENANT_MODE é true por default
+  // em todos os ambientes — endpoints de /flows exigem token + tenant explícito.
+  let dbReady = false;
+  let cachedAuthToken = null;
+
+  /**
+   * Login real como systemadmin (super_admin). Em modo estrito, super-admin
+   * precisa enviar X-Tenant-Id para resolver o tenant do request.
+   * @param {string} [tenantId]
+   * @returns {Promise<Record<string, string>>}
+   */
+  async function loginAuthHeaders(tenantId) {
+    if (!cachedAuthToken) {
+      const loginRes = await request(port, 'POST', '/auth/login?tenantId=system', {
+        username: 'systemadmin',
+        password: 'Admin123!',
+      });
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body).toHaveProperty('token');
+      cachedAuthToken = loginRes.body.token;
+    }
+    const headers = { Authorization: `Bearer ${cachedAuthToken}` };
+    if (tenantId) headers['X-Tenant-Id'] = tenantId;
+    return headers;
+  }
 
   beforeAll((done) => {
     // Estes testes validam comportamento base/compatibilidade do servidor.
@@ -104,7 +130,18 @@ describe('API server (api/server.js)', () => {
       } else {
         port = 0;
       }
-      done();
+      // Conecta ao PostgreSQL quando disponível (padrão tests/tenant).
+      // Sem DB, apenas os testes autenticados são pulados.
+      const { connect } = require('./db/sequelize');
+      connect(5, 1000)
+        .then(() => {
+          dbReady = true;
+        })
+        .catch(() => {
+          dbReady = false;
+          console.warn('[Test] PostgreSQL não disponível, pulando testes autenticados');
+        })
+        .then(() => done(), done);
     });
   });
 
@@ -294,24 +331,12 @@ describe('API server (api/server.js)', () => {
   });
 
   test('GET endpoints QA Waves com token valido devem responder sem 401', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
 
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const tenantId = `tenant-qa-waves-${unique}`;
-
-    const tokenSeedRes = await request(port, 'GET', '/api/auth/rpa/token');
-    expect(tokenSeedRes.status).toBe(200);
-    expect(tokenSeedRes.body).toHaveProperty('token');
-
-    const loginRes = await request(port, 'POST', '/api/auth/rpa/login', {
-      token: tokenSeedRes.body.token,
-      tenantId,
-    });
-
-    expect(loginRes.status).toBe(200);
-    expect(loginRes.body).toHaveProperty('token');
-
-    const authHeaders = { Authorization: `Bearer ${loginRes.body.token}` };
+    // QA Waves é classificação DEVELOPMENT: apenas super_admin (systemadmin)
+    // tem acesso. Token RPA (role admin) é PRODUCTION e recebe 403 por design —
+    // cobertura do fluxo rpa/login: tests/unit/authRoutes.test.js e tests/rpa/.
+    const authHeaders = await loginAuthHeaders();
 
     const journeysRes = await request(port, 'GET', '/api/qa-waves/journeys', undefined, authHeaders);
     const journeyStatusRes = await request(port, 'GET', '/api/qa-waves/journey-status', undefined, authHeaders);
@@ -380,7 +405,8 @@ describe('API server (api/server.js)', () => {
   });
 
   test('Fluxo completo: POST /flows -> GET /flows/:id -> validate -> simulate -> GET /replay/:sessionId', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     // 1) Cria fluxo mínimo com ID único
     const uniqueId = `flow-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const baseFlow = {
@@ -395,14 +421,14 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    const createRes = await request(port, 'POST', '/flows', baseFlow);
+    const createRes = await request(port, 'POST', '/flows', baseFlow, authHeaders);
     // POST retorna 201 (Created) quando cria com sucesso
     expect([200, 201]).toContain(createRes.status);
     expect(createRes.body).toHaveProperty('id');
     const savedFlow = createRes.body;
 
     // 2) GET /flows/:id
-    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(savedFlow.id)}`);
+    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(savedFlow.id)}`, undefined, authHeaders);
     expect(getRes.status).toBe(200);
     expect(getRes.body).toHaveProperty('id', savedFlow.id);
 
@@ -434,6 +460,8 @@ describe('API server (api/server.js)', () => {
       port,
       'GET',
       `/replay/${encodeURIComponent(sessionId)}`,
+      undefined,
+      authHeaders,
     );
     expect(replayRes.status).toBe(200);
     expect(replayRes.body).toHaveProperty('messages');
@@ -441,14 +469,16 @@ describe('API server (api/server.js)', () => {
   });
 
   test('GET /flows deve retornar array (pode estar vazio)', async () => {
-    if (skipServerTests) return;
-    const res = await request(port, 'GET', '/flows');
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
+    const res = await request(port, 'GET', '/flows', undefined, authHeaders);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
   test('PUT /flows/:id deve atualizar fluxo existente', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     const flowId = `flow-put-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     // Primeiro cria o fluxo com POST
     const createRes = await request(port, 'POST', '/flows', {
@@ -460,7 +490,7 @@ describe('API server (api/server.js)', () => {
         { id: 'msg', type: 'message', config: { text: 'v1' }, next: 'end' },
         { id: 'end', type: 'end', config: {}, next: null },
       ],
-    });
+    }, authHeaders);
     expect([200, 201]).toContain(createRes.status);
     expect(createRes.body).toHaveProperty('id', flowId);
 
@@ -473,7 +503,7 @@ describe('API server (api/server.js)', () => {
         { id: 'msg', type: 'message', config: { text: 'v2' }, next: 'end' },
         { id: 'end', type: 'end', config: {}, next: null },
       ],
-    });
+    }, authHeaders);
     expect(putRes2.status).toBe(200);
     expect(putRes2.body).toHaveProperty('id', flowId);
     expect(putRes2.body).toHaveProperty('name', 'Segunda versão');
@@ -487,7 +517,8 @@ describe('API server (api/server.js)', () => {
   });
 
   test('DELETE /flows/:id deve remover fluxo existente', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     const flowId = `flow-delete-test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     // Primeiro cria um fluxo
     const createRes = await request(port, 'POST', '/flows', {
@@ -499,23 +530,23 @@ describe('API server (api/server.js)', () => {
         { id: 'msg', type: 'message', config: { text: 'del' }, next: 'end' },
         { id: 'end', type: 'end', config: {}, next: null },
       ],
-    });
+    }, authHeaders);
     // POST retorna 201 (Created) quando cria com sucesso
     expect([200, 201]).toContain(createRes.status);
     expect(createRes.body).toHaveProperty('id', flowId);
 
     // Verifica que o fluxo existe
-    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`);
+    const getRes = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`, undefined, authHeaders);
     expect(getRes.status).toBe(200);
 
     // Deleta o fluxo
-    const deleteRes = await request(port, 'DELETE', `/flows/${encodeURIComponent(flowId)}`);
+    const deleteRes = await request(port, 'DELETE', `/flows/${encodeURIComponent(flowId)}`, undefined, authHeaders);
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.body).toHaveProperty('success', true);
     expect(deleteRes.body).toHaveProperty('deletedId', flowId);
 
     // Verifica que o fluxo não existe mais
-    const getResAfter = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`);
+    const getResAfter = await request(port, 'GET', `/flows/${encodeURIComponent(flowId)}`, undefined, authHeaders);
     expect(getResAfter.status).toBe(404);
   });
 
@@ -553,14 +584,18 @@ describe('API server (api/server.js)', () => {
   });
 
   test('GET /replay/:sessionId deve retornar 404 se sessão não existir', async () => {
-    if (skipServerTests) return;
-    const res = await request(port, 'GET', '/replay/sessao-inexistente');
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
+    const res = await request(port, 'GET', '/replay/sessao-inexistente', undefined, authHeaders);
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty('error', 'session_not_found');
   });
 
   test('POST /flows com fluxo sem tenantId retorna 403 tenant_required', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    // Super-admin autenticado, mas SEM X-Tenant-Id: o tenant do request não
+    // resolve e o handler responde 403 tenant_required (modo estrito).
+    const authHeaders = await loginAuthHeaders();
     const uniqueId = `flow-no-tenant-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const flowWithoutTenant = {
       id: uniqueId,
@@ -572,13 +607,14 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    const res = await request(port, 'POST', '/flows', flowWithoutTenant);
+    const res = await request(port, 'POST', '/flows', flowWithoutTenant, authHeaders);
     expect(res.status).toBe(403);
     expect(res.body).toHaveProperty('error', 'tenant_required');
   });
 
   test('POST /flows com fluxo sem id gera id automaticamente', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     const flowWithoutId = {
       tenantId: 'tenant-demo',
       name: 'Fluxo sem id',
@@ -589,7 +625,7 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    const res = await request(port, 'POST', '/flows', flowWithoutId);
+    const res = await request(port, 'POST', '/flows', flowWithoutId, authHeaders);
     // POST retorna 201 (Created) quando cria com sucesso
     expect([200, 201]).toContain(res.status);
     expect(res.body).toHaveProperty('id');
@@ -598,7 +634,8 @@ describe('API server (api/server.js)', () => {
   });
 
   test('PUT /flows/:id com id diferente no body deve retornar erro 400', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     const flowId = `flow-url-id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     // Primeiro cria o fluxo
     await request(port, 'POST', '/flows', {
@@ -610,7 +647,7 @@ describe('API server (api/server.js)', () => {
         { id: 'msg', type: 'message', config: { text: 'init' }, next: 'end' },
         { id: 'end', type: 'end', config: {}, next: null },
       ],
-    });
+    }, authHeaders);
 
     const flow = {
       id: 'flow-body-id', // diferente do id na URL
@@ -624,13 +661,14 @@ describe('API server (api/server.js)', () => {
     };
 
     // O servidor deve rejeitar quando o id do body é diferente do id da URL
-    const res = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, flow);
+    const res = await request(port, 'PUT', `/flows/${encodeURIComponent(flowId)}`, flow, authHeaders);
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty('error', 'bad_request');
   });
 
   test('POST /flows/simulate aceita maxSteps e executa simulação', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     // Primeiro cria um fluxo
     const flow = {
       tenantId: 'tenant-demo',
@@ -644,7 +682,7 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    await request(port, 'POST', '/flows', flow);
+    await request(port, 'POST', '/flows', flow, authHeaders);
 
     // Simula com maxSteps customizado
     const res = await request(port, 'POST', '/flows/simulate', {
@@ -657,7 +695,8 @@ describe('API server (api/server.js)', () => {
   });
 
   test('POST /flows/simulate com maxSteps muito alto deve retornar erro', async () => {
-    if (skipServerTests) return;
+    if (skipServerTests || !dbReady) return;
+    const authHeaders = await loginAuthHeaders('tenant-demo');
     const flow = {
       tenantId: 'tenant-demo',
       id: 'flow-simulate-limit',
@@ -670,7 +709,7 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    await request(port, 'POST', '/flows', flow);
+    await request(port, 'POST', '/flows', flow, authHeaders);
 
     const res = await request(port, 'POST', '/flows/simulate', {
       flowId: 'flow-simulate-limit',
@@ -682,8 +721,12 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  test('GET /flows retorna todos os fluxos (sem filtro por tenantId)', async () => {
-    if (skipServerTests) return;
+  test('GET /flows no modo estrito retorna apenas fluxos do tenant selecionado', async () => {
+    if (skipServerTests || !dbReady) return;
+    // STRICT_TENANT_MODE é o default: a listagem DEVE ser filtrada pelo
+    // tenant explícito (X-Tenant-Id), nunca expor fluxos de outros tenants.
+    const headersT1 = await loginAuthHeaders('tenant-1');
+    const headersT2 = await loginAuthHeaders('tenant-2');
     const flow1 = {
       tenantId: 'tenant-1',
       id: 'flow-tenant-1',
@@ -708,14 +751,16 @@ describe('API server (api/server.js)', () => {
       ],
     };
 
-    await request(port, 'POST', '/flows', flow1);
-    await request(port, 'POST', '/flows', flow2);
+    await request(port, 'POST', '/flows', flow1, headersT1);
+    await request(port, 'POST', '/flows', flow2, headersT2);
 
-    const res = await request(port, 'GET', '/flows');
+    const res = await request(port, 'GET', '/flows', undefined, headersT1);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    // Deve retornar todos os fluxos (sem filtro)
-    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    // Isolamento: vê o fluxo do próprio tenant e NUNCA o do outro tenant
+    const ids = res.body.map((f) => f.id);
+    expect(ids).toContain('flow-tenant-1');
+    expect(ids).not.toContain('flow-tenant-2');
   });
 
   test('POST /flows/validate com fluxo válido retorna valid: true', async () => {
