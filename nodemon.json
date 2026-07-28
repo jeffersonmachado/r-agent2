@@ -10,6 +10,8 @@
     "node_modules",
     "frontend",
     "logs",
+    "api/frontend/public/templates",
+    "api/frontend/public/templates/**",
     "tests/rpa/flows",
     "tests/rpa/flows/**",
     "tests/rpa/reports",

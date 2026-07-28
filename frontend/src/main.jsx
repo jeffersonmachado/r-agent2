@@ -395,6 +395,7 @@ function AppWithAuth() {
     currentPath.startsWith(`${basePath}?`);
 
   // Determina qual página renderizar baseado na URL
+  const isStorefront = currentPath === '/storefront' || currentPath.startsWith('/storefront?');
   const isStorefrontOrder = currentPath === '/storefront/order' || currentPath.startsWith('/storefront/order?');
   const isStorefrontOrderStatus = currentPath.startsWith('/storefront/order/');
   const isKiosk = isRoute('/kiosk');
@@ -553,7 +554,7 @@ function AppWithAuth() {
     if (loading) return;
     
     const allRoutes = [
-      isStorefrontOrder, isStorefrontOrderStatus,
+      isStorefront, isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
       isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
@@ -576,6 +577,7 @@ function AppWithAuth() {
       }
     }
   }, [
+    isStorefront, isStorefrontOrder, isStorefrontOrderStatus,
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,

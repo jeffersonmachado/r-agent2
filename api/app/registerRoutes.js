@@ -66,6 +66,7 @@ const { createDomainOperationsRoutes } = require('../modules/domain-operations/r
 const { createDomainBusinessRoutes } = require('../modules/domain-business/routes');
 const { createCrmRoutes } = require('../modules/crm/routes');
 const { createQueueTicketExpressRouter } = require('../composition/queue-ticket');
+const { createOrderRoutes } = require('../modules/order/routes');
 const { createOpsExpressRouter } = require('../composition/ops');
 const { createExecutionLedgerExpressRouter } = require('../composition/execution-ledger');
 const { createSupportDebugExpressRouter } = require('../composition/support-debug');
@@ -137,6 +138,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const bulkCampaignsRouter = createBulkCampaignsExpressRouter();
   const quickRepliesRouter = createQuickRepliesExpressRouter();
   const queueTicketRouter = createQueueTicketExpressRouter({ buildExtendedRoutingContext });
+  const orderRouter = createOrderRoutes({ buildDeps: buildExtendedRoutingContext });
   const opsRouter = createOpsExpressRouter({ buildExtendedRoutingContext });
   const executionLedgerRouter = createExecutionLedgerExpressRouter({ buildExtendedRoutingContext });
   const evidenceRouter = createEvidenceExpressRouter();
@@ -203,6 +205,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     platformContentRouter,
     platformPublicRouter,
     queueTicketRouter,
+    orderRouter,
     opsRouter,
     executionLedgerRouter,
     evidenceRouter,

@@ -62,16 +62,16 @@ async function downloadAudio(url) {
 
 /**
  * Salva buffer de áudio temporariamente.
+ * Grava sob RUNTIME_ROOT (fora do workspace) — política de runtime paths:
+ * artefatos transitórios nunca na árvore do repositório.
  * @param {Buffer} audioBuffer
  * @param {string} extension
  * @returns {Promise<string>} - Caminho do arquivo
  */
 async function saveTempAudio(audioBuffer, extension = 'ogg') {
-  const tempDir = path.join(__dirname, '..', '..', 'temp');
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
-  
+  const { resolveRuntimePath } = require('../utils/runtimePaths');
+  const tempDir = resolveRuntimePath('temp', 'audio');
+
   const filename = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${extension}`;
   const filepath = path.join(tempDir, filename);
   
@@ -290,5 +290,6 @@ module.exports = {
   transcribeAudio,
   processWhatsAppAudio,
   transcribeWithWhisper,
+  saveTempAudio,
 };
 

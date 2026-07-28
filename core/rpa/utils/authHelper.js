@@ -173,17 +173,22 @@ async function performLogin(page, options = {}) {
       'input[data-testid*="password" i]',
     ];
 
-    // Seletores para botão de login
+    // Seletores para botão de login.
+    // Ordem importa: o toggle de tema da página é <button type="submit"> e
+    // aparece ANTES do botão real no DOM — por isso os seletores de texto vêm
+    // primeiro e o type="submit" fica como último recurso. Falha observada
+    // (Business QA Wave 2026-07-27, CORE-BIZ-LOGIN): elementHandle.click
+    // timeout com "element is not visible" no seletor button[type="submit"].
     const buttonSelectors = [
-      'button[type="submit"]',
       'button:has-text("Entrar")',
+      'button:has-text("Acessar")',
       'button:has-text("Login")',
       'button:has-text("Sign in")',
-      'button:has-text("Acessar")',
       'button.primary',
       'button.btn-primary',
       'button[data-testid*="login" i]',
-      'button[data-testid*="submit" i]'
+      'button[data-testid*="submit" i]',
+      'button[type="submit"]'
     ];
 
     // Tenta preencher username
@@ -240,12 +245,14 @@ async function performLogin(page, options = {}) {
     let buttonClicked = false;
     for (const selector of buttonSelectors) {
       try {
-        const button = await page.$(selector);
-        if (button) {
+        const buttons = await page.$$(selector);
+        for (const button of buttons) {
+          if (!(await button.isVisible())) continue;
           await button.click();
           buttonClicked = true;
           break;
         }
+        if (buttonClicked) break;
       } catch (e) {
         continue;
       }

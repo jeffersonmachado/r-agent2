@@ -39,6 +39,7 @@ function createRouteRegistry(routers) {
     { router: routers.platformContentRouter },
     { router: routers.platformPublicRouter },
     { router: routers.queueTicketRouter },
+    { router: routers.orderRouter },
     { router: routers.opsRouter },
     { router: routers.executionLedgerRouter },
     { router: routers.evidenceRouter },

@@ -164,6 +164,7 @@ class ActionExecutor {
         type: 'request_failed',
         url: request.url(),
         method: request.method(),
+        failure: (request.failure() && request.failure().errorText) || null,
         timestamp: new Date().toISOString(),
       };
       this.errors.push(event);
@@ -1311,6 +1312,16 @@ class ActionExecutor {
         waitUntil: 'domcontentloaded', // Mais rápido que networkidle
         timeout: action.timeout || this.options.timeout,
       });
+
+      // Fidelidade de usuário real: aguarda a página assentar a rede
+      // (batch inicial de fetches) antes de seguir para o próximo passo.
+      // Sem isso, navegações rápidas do player abortam requests em voo
+      // (net::ERR_ABORTED) — falso positivo de "erro crítico de página"
+      // sob carga, quando as respostas levam 1.5s+. Limitado a 10s e
+      // best-effort: páginas com polling contínuo têm janelas ociosas
+      // >500ms entre ciclos, então o idle é alcançável; se não for, o
+      // fluxo segue sem bloquear a execução.
+      await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => null);
 
       // Aguarda um pouco para garantir que a página renderizou
       await this.page.waitForTimeout(1000);

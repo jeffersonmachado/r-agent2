@@ -3,6 +3,11 @@ const { ActionRecorder } = require('../../core/rpa/actionRecorder');
 const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');
 // Usa versão de produção do normalizador, que vive em `api/utils`
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
+const {
+  partitionPageErrors,
+  partitionConsoleErrors,
+  createNetworkRecoveryTracker,
+} = require('../utils/transientNetworkRecovery');
 const logger = require('../utils/logger');
 const {
   safeToString,
@@ -96,28 +101,7 @@ function emitRecordingWsEvent(recordingId, status, extra = {}) {
   }
 }
 
-function isIgnorableOnboardingNoise(entry) {
-  if (!entry || typeof entry !== 'object') return false;
-  const url = safeToString(entry.url || entry.path || '');
-  const message = safeToString(entry.message || entry.text || entry.error || '');
-  const type = safeTrimLower(entry.type || '');
-  // Telemetria do Learning Core é best-effort por desenho (sendBeacon no
-  // pagehide/unload). Um request_failed do ingest — típico quando o browser
-  // fecha ou navega no meio do beacon — não é falha de produto.
-  const hasLearningTelemetryRef = /\/api\/learning\/interactions(?:\?|$)/i.test(url);
-  if (hasLearningTelemetryRef && type === 'request_failed') return true;
-  const hasOnboardingRef = /\/onboarding\/(?:start|status|complete|complete-step)(?:\?|$)/i.test(url)
-    || /\/onboarding\/(?:start|status|complete|complete-step)/i.test(message)
-    || /Erro ao carregar status de onboarding/i.test(message)
-    || /Erro ao carregar onboarding/i.test(message)
-    || /Toast.*onboarding/i.test(message);
-  if (!hasOnboardingRef) return false;
-
-  if (type === 'request_failed') return true;
-  // Toast de erro de onboarding é consequência direta da falha de rede
-  if (/Toast.*onboarding/i.test(message)) return true;
-  return /failed to fetch|api não acessível|err_connection_refused|fetch.*failed/i.test(message);
-}
+const { isIgnorablePageNoise } = require('../utils/rpaPageNoiseFilters');
 
 /**
  * Lista todas as gravações RPA disponíveis.
@@ -403,6 +387,10 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
       const pageConsoleEvents = [];
       const pageNetworkEvents = [];
+      // Rastreador dedicado de recuperação de rede: imune ao cap de 1000
+      // eventos do buffer principal (execuções longas descartam eventos
+      // antigos e a recuperação deixava de ser detectada).
+      const networkRecoveryTracker = createNetworkRecoveryTracker();
       const activePage = runner.executor?.page;
       if (activePage) {
         activePage.on('console', (msg) => {
@@ -444,6 +432,31 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
               contentType: headers['content-type'] || headers['Content-Type'] || null,
             });
             if (pageNetworkEvents.length > 1000) pageNetworkEvents.shift();
+            networkRecoveryTracker.onResponse({ url: response.url(), status: response.status() });
+          } catch (_) {
+            // noop
+          }
+        });
+
+        // requestfailed entra na trilha de rede para permitir distinguir
+        // blip transitório recuperado (mesma URL responde < 400 depois) de
+        // falha real — ver api/utils/transientNetworkRecovery.js.
+        activePage.on('requestfailed', (request) => {
+          try {
+            const failure = (request.failure() && request.failure().errorText) || null;
+            pageNetworkEvents.push({
+              timestamp: Date.now(),
+              type: 'request_failed',
+              method: request.method(),
+              url: request.url(),
+              failure,
+            });
+            if (pageNetworkEvents.length > 1000) pageNetworkEvents.shift();
+            networkRecoveryTracker.onRequestFailed({
+              url: request.url(),
+              method: request.method(),
+              failure,
+            });
           } catch (_) {
             // noop
           }
@@ -1260,7 +1273,21 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
         // Adiciona erros coletados da página
         const pageErrors = runner.executor.getErrors();
-        const relevantPageErrors = pageErrors.filter((entry) => !isIgnorableOnboardingNoise(entry));
+        const relevantPageErrorsRaw = pageErrors.filter((entry) => !isIgnorablePageNoise(entry));
+        // Blip de rede transitório RECUPERADO (mesma URL respondeu < 400
+        // depois, via retry da própria aplicação) não é erro crítico de
+        // página — é evidência de resiliência. Falha sem recuperação
+        // continua reprovando a execução. Os blips ficam registrados em
+        // results.transientNetworkRecovery (transparência, não silêncio).
+        const recoveredFailedUrls = networkRecoveryTracker.recoveredUrls();
+        const pageErrorPartition = partitionPageErrors(relevantPageErrorsRaw, recoveredFailedUrls);
+        const relevantPageErrors = pageErrorPartition.relevant;
+        const recoveredTransientRequests = pageErrorPartition.recoveredTransient;
+        if (recoveredTransientRequests.length > 0) {
+          addLog('info', `🔁 ${recoveredTransientRequests.length} falha(s) de rede transitória(s) recuperada(s) via retry da aplicação`, {
+            recovered: recoveredTransientRequests.map((entry) => entry.url),
+          });
+        }
         if (relevantPageErrors.length > 0) {
           results.pageErrors = relevantPageErrors;
           addLog('warning', `⚠️ ${relevantPageErrors.length} erro(s) detectado(s) na página`, {
@@ -1298,9 +1325,24 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           });
         }
 
-        const criticalConsoleErrors = pageConsoleEvents.filter(
-          (entry) => String(entry?.level || '').toLowerCase() === 'error' && !isIgnorableOnboardingNoise(entry)
+        const criticalConsoleErrorsRaw = pageConsoleEvents.filter(
+          (entry) => String(entry?.level || '').toLowerCase() === 'error' && !isIgnorablePageNoise(entry)
         );
+        // Assinaturas transitórias ("Failed to fetch", "API temporariamente
+        // indisponível") são consequência dos blips recuperados acima: só
+        // saem da lista crítica quando houve falha de rede recuperada na
+        // mesma execução. Erros funcionais permanecem críticos sempre.
+        const consolePartition = partitionConsoleErrors(
+          criticalConsoleErrorsRaw,
+          recoveredTransientRequests.length > 0,
+        );
+        const criticalConsoleErrors = consolePartition.relevant;
+        if (recoveredTransientRequests.length > 0 || consolePartition.suppressed.length > 0) {
+          results.transientNetworkRecovery = {
+            recoveredRequests: recoveredTransientRequests.slice(-20),
+            suppressedConsoleErrors: consolePartition.suppressed.slice(-20),
+          };
+        }
         if (criticalConsoleErrors.length > 0) {
           results.success = false;
           results.errors.push({

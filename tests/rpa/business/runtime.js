@@ -30,8 +30,41 @@ function withTenantQuery(url, tenantId) {
   return `${url}${hasQuery ? '&' : '?'}${suffix}`;
 }
 
+/**
+ * fetchJson tolerante a janelas de restart do servidor dev.
+ *
+ * O nodemon do ambiente vigia api/, engine/, src/ e qa-mesh/ (incluindo
+ * api/data/config.json): cenários que provocam escrita nesses caminhos
+ * (ex.: PUT /config) derrubam a API por alguns segundos. ECONNREFUSED é
+ * seguro para retry em qualquer método — a conexão foi recusada, então
+ * NADA foi processado pelo servidor. Outros erros de socket (conexão
+ * fechada no meio) não são repetidos: o request pode ter sido processado.
+ */
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options);
+  const retryDeadline = Date.now() + 120000;
+  const method = String(options.method || 'GET').toUpperCase();
+  // Métodos idempotentes não têm efeito colateral: qualquer falha de rede
+  // (conexão recusada OU fechada no meio por reload do nodemon) pode ser
+  // repetida com segurança. Para os demais, apenas ECONNREFUSED é seguro
+  // (conexão recusada = nada foi processado pelo servidor).
+  const idempotent = ['GET', 'HEAD', 'OPTIONS'].includes(method);
+  let response;
+  for (;;) {
+    try {
+      response = await fetch(url, options);
+      break;
+    } catch (err) {
+      const code = err && err.cause && err.cause.code;
+      const retryable = idempotent ? true : code === 'ECONNREFUSED';
+      if (!retryable || Date.now() > retryDeadline) {
+        if (code && !err.message.includes(code)) {
+          err.message = `${err.message} (cause: ${code})`;
+        }
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
   const text = await response.text();
   let body = null;
   try {
@@ -96,10 +129,10 @@ async function loginApi() {
 }
 
 async function createApiClient() {
-  const authToken = await loginApi();
+  let authToken = await loginApi();
 
   async function request(method, pathname, payload = null, extraHeaders = {}) {
-    return fetchJson(buildUrl(API_URL, pathname), {
+    const doRequest = () => fetchJson(buildUrl(API_URL, pathname), {
       method,
       headers: {
         Authorization: `Bearer ${authToken}`,
@@ -109,10 +142,29 @@ async function createApiClient() {
       },
       ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
+    try {
+      return await doRequest();
+    } catch (err) {
+      // Sessões são voláteis por design (cache em memória sobre o DB): restart
+      // do servidor ou recarga de cache invalida o token no meio da corrida.
+      // Re-login UMA vez e repete a chamada; a segunda falha propaga.
+      const sessionLost = err && err.status === 401 && /sessão não encontrada|token inválido|unauthorized/i.test(err.message || '');
+      if (!sessionLost) throw err;
+      authToken = await loginApi();
+      return doRequest();
+    }
   }
 
   return {
-    authToken,
+    get authToken() { return authToken; },
+    // Sessões são em memória: qualquer restart do servidor (ex.: PUT /config
+    // regravando api/data/config.json sob nodemon) invalida o token. Cenários
+    // que forçam restart devem chamar refreshAuth() e atualizar o localStorage
+    // da página compartilhada.
+    async refreshAuth() {
+      authToken = await loginApi();
+      return authToken;
+    },
     get: (pathname) => request('GET', pathname),
     post: (pathname, payload, headers = {}) => request('POST', pathname, payload, headers),
     put: (pathname, payload, headers = {}) => request('PUT', pathname, payload, headers),
@@ -518,8 +570,131 @@ async function runScreenScenario(definition, ctx) {
   };
 }
 
+// Padrões de console error ignorados nas aberturas de página: falhas de rede
+// ("Failed to load resource") já são assertadas no nível de API pelos fluxos;
+// os demais são ruído conhecido de tooling/extensões.
+const IGNORED_PAGE_CONSOLE_PATTERNS = [
+  /favicon/i,
+  /devtools/i,
+  /third-?party/i,
+  /source\s?map/i,
+  /failed to load resource/i,
+];
+
+/**
+ * Aguarda a API voltar a responder /health. Necessário porque o nodemon do
+ * ambiente dev vigia api/data/config.json: qualquer PUT /config derruba e
+ * sobe o servidor (janela de ~20-60s sem resposta).
+ *
+ * `settleMs`: exige estabilidade contínua por esse tempo antes de retornar.
+ * Sem ele, a função retorna no primeiro 200 — mas o nodemon tem delay de
+ * detecção (~1s) após a escrita do arquivo, então o restart pode ainda estar
+ * PENDENTE quando o primeiro /health responde. Qualquer falha ou resposta
+ * não-OK zera a janela de estabilidade.
+ */
+async function waitForApiReady({ timeoutMs = 180000, intervalMs = 3000, settleMs = 0 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let stableSince = null;
+  for (;;) {
+    let ok = false;
+    try {
+      const res = await fetch(buildUrl(API_URL, '/health'));
+      ok = res.ok;
+    } catch {
+      // API ainda reiniciando
+    }
+    if (!ok) {
+      stableSince = null;
+    } else if (settleMs <= 0) {
+      return true;
+    } else if (stableSince === null) {
+      stableSince = Date.now();
+    } else if (Date.now() - stableSince >= settleMs) {
+      return true;
+    }
+    if (Date.now() > deadline) {
+      throw new Error('API não respondeu /health dentro do timeout após reload');
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, 1000)));
+  }
+}
+
+/**
+ * Abre uma página do frontend e asserta: render não vazio, sem 'Acesso Negado',
+ * URL final correta (a menos que allowRedirect) e zero console errors de página.
+ * Usada pelos cenários business (campo `pages` do catálogo).
+ */
+async function assertBusinessPage(page, pageDef, definition) {
+  const consoleErrors = [];
+  const onConsole = (msg) => {
+    if (msg.type() !== 'error') return;
+    const text = msg.text();
+    if (IGNORED_PAGE_CONSOLE_PATTERNS.some((pattern) => pattern.test(text))) return;
+    consoleErrors.push(text);
+  };
+  const onPageError = (err) => consoleErrors.push(String((err && err.message) || err));
+  page.on('console', onConsole);
+  page.on('pageerror', onPageError);
+  try {
+    await page.goto(`${FRONTEND_URL}${pageDef.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(1500);
+    const bodyText = await page.locator('body').innerText();
+    if (/Acesso Negado/i.test(bodyText)) {
+      throw new Error(`Pagina ${pageDef.path} apresentou 'Acesso Negado'`);
+    }
+    const rootText = await page.locator('#root').innerText().catch(() => '');
+    if (!String(rootText || bodyText).trim()) {
+      throw new Error(`Pagina ${pageDef.path} renderizou vazia`);
+    }
+    const finalPath = new URL(page.url()).pathname;
+    if (!pageDef.allowRedirect) {
+      const expected = pageDef.expectPath || pageDef.path;
+      if (finalPath !== expected && !finalPath.startsWith(`${expected}/`)) {
+        throw new Error(`Pagina ${pageDef.path} terminou em URL inesperada: ${finalPath}`);
+      }
+    }
+    if (consoleErrors.length > 0) {
+      throw new Error(`Pagina ${pageDef.path} com console errors: ${consoleErrors.join(' | ')}`);
+    }
+    return { path: pageDef.path, finalPath };
+  } finally {
+    page.off('console', onConsole);
+    page.off('pageerror', onPageError);
+  }
+}
+
+/**
+ * Abre, na sessão autenticada compartilhada, todas as páginas declaradas no
+ * catálogo para o cenário (ignora as marcadas como anonymous — essas são
+ * tratadas pelo próprio fluxo com browser anônimo dedicado).
+ */
+async function assertBusinessPages(page, definition) {
+  const pages = (definition.pages || []).filter((pageDef) => !pageDef.anonymous);
+  if (pages.length === 0) return [];
+  if (!page) {
+    throw new Error(`Cenario ${definition.code} declara pages mas a sessao de browser nao foi criada`);
+  }
+  const results = [];
+  for (const pageDef of pages) {
+    results.push(await assertBusinessPage(page, pageDef, definition));
+    await captureScenarioScreenshot(page, definition.code, `page-${slugify(pageDef.path)}`);
+  }
+  return results;
+}
+
+/** Browser anônimo dedicado (login real, páginas públicas saas/storefront). */
+async function createAnonymousUiPage() {
+  const launch = await launchChromiumWithFallback(chromium, {
+    headless: process.env.HEADLESS !== 'false',
+  });
+  const browser = launch.browser;
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  return { browser, context, page };
+}
+
 async function runFlowScenario(definition, ctx) {
-  const { api, runId } = ctx;
+  const { api, page, runId } = ctx;
   if (definition.code === 'FIT-FLOW-STUDENT') {
     const created = await createFitnessStudent(api, `${runId}-flow-student`);
     const search = await api.get(`/api/fitness/students/search?q=${encodeURIComponent(created.subjectId)}&limit=10`);
@@ -2282,11 +2457,21 @@ async function runFlowScenario(definition, ctx) {
       throw new Error('Avaliação de certificações não retornou lista');
     }
 
-    const tutor = await api.post('/api/learning/tutor/help', {
-      route: '/academy',
-      level: 2,
-      question: 'Como criar uma campanha?',
-    });
+    // O tutor nível 2 depende do RAG (modelo de embeddings): logo após o boot
+    // do rag-service a primeira chamada pode falhar com ai_unavailable
+    // (cold start). Retry limitado somente nesse motivo — a assertiva
+    // (available:true) continua obrigatória na tentativa final.
+    let tutor = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      tutor = await api.post('/api/learning/tutor/help', {
+        route: '/academy',
+        level: 2,
+        question: 'Como criar uma campanha?',
+      });
+      if (tutor && tutor.available === true) break;
+      if (tutor?.reason !== 'ai_unavailable' || attempt === 3) break;
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
     if (!tutor || tutor.available !== true) {
       throw new Error('Tutor não respondeu com conteúdo disponível');
     }
@@ -2756,6 +2941,1370 @@ async function runFlowScenario(definition, ctx) {
       detail: 'Estado do demo carregado e run com semântica de erro correta',
       ids: {},
       evidence: { vertical: state.demo.vertical, runStatus, runCode },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-AGENT-FACTORY') {
+    const slug = `qa-agent-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const created = await api.post('/api/agent-factory/create', {
+      name: `QA Factory Agent ${runId}`,
+      slug,
+      description: 'Agente criado pelo QA de jornadas (agent_factory)',
+      capabilities: ['crm.read'],
+      tools: ['crm_integration'],
+    });
+    const agentId = created?.agent?.id;
+    if (!agentId || created?.workflow?.step !== 'created') {
+      throw new Error(`Agente não foi criado pela factory: ${JSON.stringify(created)}`);
+    }
+
+    try {
+      const configured = await api.post('/api/agent-factory/configure', {
+        id: agentId,
+        capabilities: ['crm.read', 'ticket.read'],
+        tools: ['crm_integration', 'ticket_system'],
+        config: { source: 'business_qa', scenarioCode: definition.code },
+      });
+      if (configured?.workflow?.step !== 'configured' || configured?.agent?.id !== agentId) {
+        throw new Error(`Agente não foi configurado: ${JSON.stringify(configured)}`);
+      }
+
+      // Validate executa QA Wave real (aguarda veredito da mesh com timeout
+      // de 30s por default): GO ou NO_GO estruturado são ambos legítimos — o
+      // que importa é o contrato (status, evidence; replay no caminho de sucesso).
+      const validated = await api.post('/api/agent-factory/validate', { id: agentId });
+      const waveStatus = validated?.qaWave?.status;
+      if (waveStatus !== 'GO' && waveStatus !== 'NO_GO') {
+        throw new Error(`Validate sem qaWave.status estruturado: ${JSON.stringify(validated)}`);
+      }
+      if (!validated?.evidence?.evidenceId) {
+        throw new Error(`Validate sem evidência: ${JSON.stringify(validated)}`);
+      }
+      if ('replay' in (validated || {}) && !validated.replay?.replayId) {
+        throw new Error(`Validate com replay inválido: ${JSON.stringify(validated.replay)}`);
+      }
+      if (!validated?.workflow?.step) {
+        throw new Error('Validate sem workflow.step');
+      }
+
+      // Approve exige gates de governança (qa_wave, replay, evidence,
+      // approval, risk): para agente recém-criado o bloqueio estruturado
+      // (400 governance_gates_failed) é resposta legítima de contrato.
+      let approveOutcome = null;
+      try {
+        const approved = await api.post('/api/agent-factory/approve', { id: agentId, riskLevel: 'low' });
+        if (approved?.workflow?.step !== 'approved' || !approved?.agent) {
+          throw new Error(`Approve sem contrato de aprovação: ${JSON.stringify(approved)}`);
+        }
+        approveOutcome = 'approved';
+      } catch (err) {
+        if (err.status !== 400 || err.body?.error !== 'governance_gates_failed') throw err;
+        if (!Array.isArray(err.body?.governance?.checks) || !Array.isArray(err.body?.governance?.blockers)) {
+          throw new Error(`governance_gates_failed sem checks/blockers: ${JSON.stringify(err.body)}`);
+        }
+        approveOutcome = 'governance_gates_failed';
+      }
+
+      // Publish de agente recém-criado pode retornar 400 publish_blocked
+      // (NO_GO legítimo da QA Wave): assert no contrato, não em GO.
+      let publishOutcome = null;
+      try {
+        const published = await api.post('/api/agent-factory/publish', { id: agentId });
+        if (published?.workflow?.step !== 'published' || !published?.qaWave || !published?.evidence || !published?.replay) {
+          throw new Error(`Publish sem contrato completo: ${JSON.stringify(published)}`);
+        }
+        publishOutcome = 'published';
+      } catch (err) {
+        if (err.status !== 400 || err.body?.error !== 'publish_blocked') throw err;
+        const blocked = err.body;
+        if (!blocked.status || !blocked.waveResult || !blocked.evidence || !blocked.replay || !blocked.workflow) {
+          throw new Error(`publish_blocked sem contrato completo: ${JSON.stringify(blocked)}`);
+        }
+        publishOutcome = 'publish_blocked';
+      }
+
+      return {
+        detail: 'Agente criado, configurado, validado, aprovado e publish com contrato de governança',
+        ids: { agentId, slug },
+        evidence: { waveStatus, approveOutcome, publishOutcome },
+      };
+    } finally {
+      await api.del(`/api/agent-registry/${encodeURIComponent(agentId)}`).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-AGENT-MARKETPLACE') {
+    const catalog = await api.get('/api/agent-marketplace/catalog');
+    if (!Array.isArray(catalog?.catalog) || typeof catalog?.total !== 'number' || catalog.catalog.length === 0) {
+      throw new Error(`Catálogo do marketplace indisponível: ${JSON.stringify(catalog)}`);
+    }
+
+    const slug = catalog.catalog[0].slug;
+    const detail = await api.get(`/api/agent-marketplace/catalog/${encodeURIComponent(slug)}`);
+    if (detail?.agent?.slug !== slug) {
+      throw new Error(`Agente do catálogo não encontrado por slug: ${JSON.stringify(detail)}`);
+    }
+
+    const installed = await api.post('/api/agent-marketplace/install', { slug });
+    const installedId = installed?.agent?.id;
+    if (!installedId || installed?.installed !== true) {
+      throw new Error(`Instalação do agente falhou: ${JSON.stringify(installed)}`);
+    }
+
+    try {
+      const registry = await api.get(`/api/agent-registry/${encodeURIComponent(installedId)}`);
+      if (registry?.agent?.id !== installedId) {
+        throw new Error('Agente instalado não está no registry');
+      }
+    } finally {
+      await api.del(`/api/agent-registry/${encodeURIComponent(installedId)}`).catch(() => {});
+    }
+
+    return {
+      detail: 'Catálogo consultado, agente instalado a partir do catálogo e removido',
+      ids: { slug, agentId: installedId },
+      evidence: { total: catalog.total, cleanedUp: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-AGENT-ORCHESTRATOR') {
+    const capabilities = await api.get('/api/agent-orchestrator/capabilities');
+    if (!capabilities?.capabilities || Object.keys(capabilities.capabilities).length === 0) {
+      throw new Error('Capabilities do orchestrator indisponíveis');
+    }
+    if (!Array.isArray(capabilities?.byCategory?.PRODUCTION) || capabilities.byCategory.PRODUCTION.length === 0) {
+      throw new Error('Capabilities não agrupadas por categoria PRODUCTION');
+    }
+
+    const intents = await api.get('/api/agent-orchestrator/intents');
+    if (!Array.isArray(intents?.intents) || intents.intents.length === 0 || !Array.isArray(intents?.capabilities)) {
+      throw new Error('Intents do orchestrator indisponíveis');
+    }
+
+    const startedAt = Date.now() - 5000;
+    const executed = await api.post('/api/agent-orchestrator/execute', {
+      intent: 'customer_inquiry',
+      params: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const orchestration = executed?.orchestration;
+    if (!orchestration || orchestration.intent !== 'customer_inquiry') {
+      throw new Error(`Execução orquestrada inválida: ${JSON.stringify(executed)}`);
+    }
+    if (!Array.isArray(orchestration.steps) || orchestration.steps.length === 0) {
+      throw new Error('Execução orquestrada sem steps');
+    }
+    if (orchestration.status !== 'completed' && orchestration.status !== 'partial') {
+      throw new Error(`Status agregado inesperado: ${orchestration.status}`);
+    }
+
+    // A execução grava eventos 'execute' em ai_governance_records: a trilha
+    // deve conter os eventos desta execução (janela desde startedAt).
+    const decisionLog = await api.get('/api/ai-governance/decision-log?limit=50');
+    const ownRecords = (decisionLog?.decisionLog || []).filter((record) => (
+      record.eventType === 'execute'
+      && String(record.description || '').includes('customer_inquiry')
+      && new Date(record.created_at || record.createdAt || 0).getTime() >= startedAt
+    ));
+    if (ownRecords.length === 0) {
+      throw new Error('Execução não gravou evento execute na trilha de governança');
+    }
+
+    // Cleanup via model (não há rota DELETE para ai_governance_records).
+    try {
+      return {
+        detail: 'Capabilities, intents e execução orquestrada com trilha de governança validados',
+        ids: { governanceRecordIds: ownRecords.map((record) => record.id) },
+        evidence: { status: orchestration.status, steps: orchestration.steps.length, governanceEvents: ownRecords.length },
+      };
+    } finally {
+      await ensureDbConnection();
+      const getAiGovernanceRecordModel = require('../../../api/db/models/AiGovernanceRecord');
+      await getAiGovernanceRecordModel().destroy({ where: { id: ownRecords.map((record) => record.id) } });
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-AGENT-REGISTRY') {
+    const slug = `qa-reg-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const created = await api.post('/api/agent-registry', {
+      name: `QA Registry Agent ${runId}`,
+      slug,
+      description: 'Agente criado pelo QA de jornadas (agent_registry)',
+      classification: 'DEVELOPMENT',
+    });
+    const agentId = created?.agent?.id;
+    if (!agentId) {
+      throw new Error(`Agente não foi criado no registry: ${JSON.stringify(created)}`);
+    }
+
+    let deleted = false;
+    try {
+      const listed = await api.get(`/api/agent-registry?search=${encodeURIComponent(slug)}`);
+      if (!(listed?.agents || []).some((agent) => agent.id === agentId)) {
+        throw new Error('Agente não apareceu na listagem com filtro de busca');
+      }
+
+      const fetched = await api.get(`/api/agent-registry/${encodeURIComponent(agentId)}`);
+      if (fetched?.agent?.slug !== slug) {
+        throw new Error(`Agente não consultado por id: ${JSON.stringify(fetched)}`);
+      }
+
+      const updatedDescription = `Atualizado pelo QA ${runId}`;
+      const updated = await api.put(`/api/agent-registry/${encodeURIComponent(agentId)}`, { description: updatedDescription });
+      if (updated?.agent?.description !== updatedDescription) {
+        throw new Error(`Agente não foi atualizado: ${JSON.stringify(updated)}`);
+      }
+
+      const removed = await api.del(`/api/agent-registry/${encodeURIComponent(agentId)}`);
+      if (removed?.success !== true) {
+        throw new Error(`Remoção não confirmada: ${JSON.stringify(removed)}`);
+      }
+      deleted = true;
+
+      let notFound = false;
+      try {
+        await api.get(`/api/agent-registry/${encodeURIComponent(agentId)}`);
+      } catch (err) {
+        notFound = err.status === 404;
+      }
+      if (!notFound) {
+        throw new Error('Agente removido continua consultável');
+      }
+
+      return {
+        detail: 'Agente criado, listado, consultado, atualizado e removido',
+        ids: { agentId, slug },
+        evidence: { deleted: true },
+      };
+    } finally {
+      if (!deleted) {
+        await api.del(`/api/agent-registry/${encodeURIComponent(agentId)}`).catch(() => {});
+      }
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-JOURNEY-REGISTRY') {
+    const slug = `qa-jrn-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const created = await api.post('/api/journey-registry', {
+      domain: 'qa',
+      name: `QA Journey ${runId}`,
+      slug,
+      description: 'Jornada criada pelo QA de jornadas (journey_registry)',
+      criticality: 'low',
+    });
+    const journeyId = created?.journey?.id;
+    if (!journeyId) {
+      throw new Error(`Jornada não foi criada no registry: ${JSON.stringify(created)}`);
+    }
+
+    // NÃO há rota DELETE em journey-registry: o cleanup é só via DB
+    // (service.deleteJourney) no finally abaixo; slug único com runId evita
+    // colisão entre execuções.
+    try {
+      const listed = await api.get('/api/journey-registry?domain=qa');
+      if (!(listed?.journeys || []).some((journey) => journey.id === journeyId)) {
+        throw new Error('Jornada não apareceu na listagem filtrada por domínio');
+      }
+
+      const fetched = await api.get(`/api/journey-registry/${encodeURIComponent(journeyId)}`);
+      if (fetched?.journey?.slug !== slug) {
+        throw new Error(`Jornada não consultada por id: ${JSON.stringify(fetched)}`);
+      }
+
+      const updatedName = `QA Journey ${runId} atualizada`;
+      const updated = await api.put(`/api/journey-registry/${encodeURIComponent(journeyId)}`, { name: updatedName });
+      if (updated?.journey?.name !== updatedName) {
+        throw new Error(`Jornada não foi atualizada: ${JSON.stringify(updated)}`);
+      }
+
+      // Seed é idempotente: com jornadas já existentes no tenant deve
+      // responder sem criar nada (count === journeys.length).
+      const seeded = await api.post('/api/journey-registry/seed', {});
+      if (!Array.isArray(seeded?.journeys) || seeded?.count !== seeded.journeys.length) {
+        throw new Error(`Seed sem contrato journeys/count: ${JSON.stringify(seeded)}`);
+      }
+
+      return {
+        detail: 'Jornada criada, listada, consultada, atualizada e seed idempotente',
+        ids: { journeyId, slug },
+        evidence: { seededCount: seeded.count, cleanedUp: 'db' },
+      };
+    } finally {
+      await ensureDbConnection();
+      const journeyRegistryService = require('../../../api/modules/journey-registry/service');
+      await journeyRegistryService.deleteJourney(journeyId, TEST_TENANT_ID).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-KNOWLEDGE-GRAPH') {
+    const externalRef = `qa-kg-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    // type deve ser um dos 19 valores do ENUM (KnowledgeGraphNode.NODE_TYPES).
+    const journeyNode = await api.post('/api/knowledge-graph/node', {
+      type: 'Journey',
+      label: `QA KG Journey ${runId}`,
+      externalRef,
+      externalType: 'business_qa',
+      properties: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const journeyNodeId = journeyNode?.node?.id;
+    if (!journeyNodeId) {
+      throw new Error(`Nó Journey não foi criado: ${JSON.stringify(journeyNode)}`);
+    }
+
+    const agentNode = await api.post('/api/knowledge-graph/node', {
+      type: 'Agent',
+      label: `QA KG Agent ${runId}`,
+      properties: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const agentNodeId = agentNode?.node?.id;
+    if (!agentNodeId) {
+      throw new Error(`Nó Agent não foi criado: ${JSON.stringify(agentNode)}`);
+    }
+
+    // NÃO há rota DELETE em knowledge-graph: o cleanup é só via DB
+    // (service.deleteNode, que remove também as arestas ligadas) no finally.
+    try {
+      const edge = await api.post('/api/knowledge-graph/edge', {
+        sourceNodeId: journeyNodeId,
+        targetNodeId: agentNodeId,
+        relationship: 'qa_covers',
+        weight: 1,
+        properties: { source: 'business_qa' },
+      });
+      if (!edge?.edge?.id) {
+        throw new Error(`Aresta não foi criada: ${JSON.stringify(edge)}`);
+      }
+
+      const graph = await api.get('/api/knowledge-graph?types=Journey,Agent');
+      const nodeIds = (graph?.nodes || []).map((node) => node.id);
+      if (!nodeIds.includes(journeyNodeId) || !nodeIds.includes(agentNodeId)) {
+        throw new Error('Nós criados ausentes na consulta do grafo');
+      }
+      if (!(graph?.edges || []).some((item) => item.id === edge.edge.id)) {
+        throw new Error('Aresta criada ausente na consulta do grafo');
+      }
+
+      const related = await api.get(`/api/knowledge-graph/node/${encodeURIComponent(journeyNodeId)}/related`);
+      if (!(related?.relatedNodes || []).some((node) => node.id === agentNodeId)) {
+        throw new Error('Relacionados do nó Journey não incluem o nó Agent');
+      }
+
+      return {
+        detail: 'Nós e aresta criados, grafo e relacionados consultados',
+        ids: { journeyNodeId, agentNodeId, edgeId: edge.edge.id },
+        evidence: { cleanedUp: 'db' },
+      };
+    } finally {
+      await ensureDbConnection();
+      const knowledgeGraphService = require('../../../api/modules/knowledge-graph/service');
+      await knowledgeGraphService.deleteNode(journeyNodeId, TEST_TENANT_ID).catch(() => {});
+      await knowledgeGraphService.deleteNode(agentNodeId, TEST_TENANT_ID).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-RAP-LEARN') {
+    const sourceRef = `qa-rap-learn-${runId}`;
+    const recorded = await api.post('/api/rap-learn/failure', {
+      source: 'business_qa',
+      sourceRef,
+      classification: 'regression',
+      metrics: { errorRate: 1, window: 'qa' },
+    });
+    const recordId = recorded?.record?.id;
+    if (!recordId || recorded?.record?.type !== 'failure' || recorded?.record?.status !== 'detected') {
+      throw new Error(`Falha não foi registrada: ${JSON.stringify(recorded)}`);
+    }
+
+    // NÃO há rota DELETE em rap-learn: o cleanup é só via DB (model
+    // LearningRecord.destroy) no finally abaixo.
+    try {
+      const records = await api.get('/api/rap-learn/records?type=failure');
+      if (!(records?.records || []).some((record) => record.id === recordId)) {
+        throw new Error('Registro ausente na listagem de records');
+      }
+
+      const regressions = await api.get('/api/rap-learn/regressions?windowHours=1');
+      if (regressions?.windowHours !== 1 || !(regressions?.regressions || []).some((record) => record.id === recordId)) {
+        throw new Error('Registro não detectado na consulta de regressões da janela');
+      }
+
+      return {
+        detail: 'Falha registrada, listada e detectada como regressão na janela',
+        ids: { recordId, sourceRef },
+        evidence: { cleanedUp: 'db' },
+      };
+    } finally {
+      await ensureDbConnection();
+      const getLearningRecordModel = require('../../../api/db/models/LearningRecord');
+      await getLearningRecordModel().destroy({ where: { id: recordId } }).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-AI-GOVERNANCE') {
+    const description = `qa-ai-governance-${runId}`;
+    // eventType deve ser um dos valores do ENUM (AiGovernanceRecord.EVENT_TYPES).
+    const recorded = await api.post('/api/ai-governance/event', {
+      eventType: 'audit',
+      actor: 'business_qa',
+      description,
+      riskLevel: 'low',
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const recordId = recorded?.record?.id;
+    if (!recordId || recorded?.record?.eventType !== 'audit') {
+      throw new Error(`Evento de governança não foi registrado: ${JSON.stringify(recorded)}`);
+    }
+
+    // NÃO há rota DELETE em ai-governance: o cleanup é só via DB (model
+    // AiGovernanceRecord.destroy) no finally abaixo.
+    try {
+      const trail = await api.get('/api/ai-governance/audit-trail?eventTypes=audit&limit=50');
+      if (!(trail?.auditTrail || []).some((record) => record.id === recordId)) {
+        throw new Error('Evento ausente na audit-trail filtrada');
+      }
+
+      const decisionLog = await api.get('/api/ai-governance/decision-log');
+      if (!Array.isArray(decisionLog?.decisionLog)) {
+        throw new Error('Decision log não respondeu com lista');
+      }
+
+      const report = await api.get('/api/ai-governance/compliance-report');
+      if (typeof report?.report?.summary?.totalEvents !== 'number') {
+        throw new Error(`Compliance report sem summary de eventos: ${JSON.stringify(report)}`);
+      }
+
+      return {
+        detail: 'Evento audit registrado, trilha, decision log e compliance report validados',
+        ids: { recordId },
+        evidence: { totalEvents: report.report.summary.totalEvents, cleanedUp: 'db' },
+      };
+    } finally {
+      await ensureDbConnection();
+      const getAiGovernanceRecordModel = require('../../../api/db/models/AiGovernanceRecord');
+      await getAiGovernanceRecordModel().destroy({ where: { id: recordId } }).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-FLOWS-EDITOR') {
+    const flowName = `QA Flow ${runId}`;
+    const flowDefinition = {
+      name: flowName,
+      nodes: [
+        { id: 's1', type: 'start', label: 'Início', next: 'n1' },
+        { id: 'n1', type: 'message', label: 'Oi', config: { text: 'Olá' }, next: 'e1' },
+        { id: 'e1', type: 'end', label: 'Fim' },
+      ],
+    };
+
+    const created = await api.post('/flows', flowDefinition);
+    const flowId = created?.id;
+    if (!flowId) {
+      throw new Error(`Fluxo não foi criado: ${JSON.stringify(created)}`);
+    }
+
+    const generatedFlowIds = [];
+    try {
+      const listed = await api.get('/flows');
+      if (!Array.isArray(listed) || !listed.some((flow) => flow.id === flowId)) {
+        throw new Error('Fluxo não apareceu na listagem');
+      }
+
+      const fetched = await api.get(`/flows/${encodeURIComponent(flowId)}`);
+      if (fetched?.id !== flowId) {
+        throw new Error(`Fluxo não consultado por id: ${JSON.stringify(fetched)}`);
+      }
+
+      const renamed = `${flowName} v2`;
+      const updated = await api.put(`/flows/${encodeURIComponent(flowId)}`, { ...flowDefinition, id: flowId, name: renamed });
+      if (updated?.name !== renamed) {
+        throw new Error(`Fluxo não foi atualizado: ${JSON.stringify(updated)}`);
+      }
+
+      const environment = await api.put(`/flows/${encodeURIComponent(flowId)}/environment`, { environment: 'dev' });
+      if (environment?.ok !== true || !environment?.flow) {
+        throw new Error(`Ambiente do fluxo não foi definido: ${JSON.stringify(environment)}`);
+      }
+
+      // Validate exige o fluxo completo persistido (id + tenantId válidos).
+      const validation = await api.post('/flows/validate', fetched);
+      if (validation?.valid !== true) {
+        throw new Error(`Validate reprovou fluxo válido: ${JSON.stringify(validation)}`);
+      }
+
+      const preview = await api.post('/flows/preview', { flow: { ...flowDefinition, id: flowId } });
+      if (preview?.ok !== true || preview?.valid !== true || !preview?.summary) {
+        throw new Error(`Preview inválido: ${JSON.stringify(preview)}`);
+      }
+
+      const simulation = await api.post('/flows/simulate', { flowId });
+      const sessionId = simulation?.replay?.sessionId;
+      if (!sessionId) {
+        throw new Error(`Simulação não gerou sessão de replay: ${JSON.stringify(simulation)}`);
+      }
+
+      const replay = await api.get(`/replay/${encodeURIComponent(sessionId)}`);
+      if (replay?.sessionId !== sessionId || !Array.isArray(replay?.nodesVisited)) {
+        throw new Error(`Replay da sessão indisponível: ${JSON.stringify(replay)}`);
+      }
+
+      // Generate dry-run nunca persiste; generate pode falhar de forma
+      // estruturada (400) quando não há provider de IA — ambos são contrato.
+      let dryRunOutcome = 'success';
+      try {
+        const dryRun = await api.post('/flows/generate/dry-run', {
+          name: `QA Gen ${runId}`,
+          description: 'Fluxo simples de boas-vindas gerado pelo QA de jornadas',
+        });
+        if (dryRun?.success !== true || dryRun?.dryRun !== true) {
+          throw new Error(`Dry-run sem contrato: ${JSON.stringify(dryRun)}`);
+        }
+      } catch (err) {
+        if (err.status !== 400) throw err;
+        dryRunOutcome = 'structured_failure';
+      }
+
+      let generateOutcome = 'success';
+      try {
+        const generated = await api.post('/flows/generate', {
+          name: `QA Gen Persist ${runId}`,
+          description: 'Fluxo simples de boas-vindas gerado pelo QA de jornadas',
+        });
+        if (generated?.success !== true) {
+          throw new Error(`Generate sem contrato: ${JSON.stringify(generated)}`);
+        }
+        if (generated?.flow?.id) generatedFlowIds.push(generated.flow.id);
+      } catch (err) {
+        if (err.status !== 400) throw err;
+        generateOutcome = 'structured_failure';
+      }
+
+      // Plano RPA test-only: a rota grava o seed em disco (RUNTIME_ROOT) —
+      // o cleanup remove o arquivo gravado.
+      const planId = `qa-rpa-plan-${runId}`;
+      const rpaPlan = {
+        id: planId,
+        version: '1.0',
+        type: 'rpa_test_plan',
+        context: { application: 'rap', mode: 'test-only' },
+        steps: [{ action: 'navigate', target: 'https://example.com' }],
+        assertions: [{ type: 'url_contains', value: 'example.com' }],
+      };
+      const savedPlan = await api.post('/rpa-tests', { rpaTest: rpaPlan });
+      if (savedPlan?.success !== true || savedPlan?.testId !== planId || !savedPlan?.filePath) {
+        throw new Error(`Plano RPA não foi aceito: ${JSON.stringify(savedPlan)}`);
+      }
+      await fs.promises.unlink(savedPlan.filePath).catch(() => {});
+
+      let aiRpaOutcome = 'success';
+      try {
+        const aiRpa = await api.post('/ai/rpa/generate', {
+          userInput: 'Plano RPA simples de boas-vindas',
+          options: {},
+        });
+        if (typeof aiRpa?.success !== 'boolean') {
+          throw new Error(`ai/rpa/generate sem contrato: ${JSON.stringify(aiRpa)}`);
+        }
+        if (aiRpa?.flow?.id) generatedFlowIds.push(aiRpa.flow.id);
+        aiRpaOutcome = aiRpa.success ? 'success' : 'structured_failure';
+      } catch (err) {
+        if (err.status !== 400) throw err;
+        aiRpaOutcome = 'structured_failure';
+      }
+
+      const pageResults = await assertBusinessPages(page, definition);
+
+      return {
+        detail: 'CRUD de fluxo, validate, preview, simulate com replay, generate, plano RPA e editor validados',
+        ids: { flowId, sessionId, planId },
+        evidence: { dryRunOutcome, generateOutcome, aiRpaOutcome, pages: pageResults },
+      };
+    } finally {
+      for (const id of [flowId, ...generatedFlowIds]) {
+        await api.del(`/flows/${encodeURIComponent(id)}`).catch(() => {});
+      }
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-RAG-DOCUMENTS') {
+    const health = await api.get(`/rag/health?tenantId=${encodeURIComponent(TEST_TENANT_ID)}`);
+    if (!health || typeof health.ok !== 'boolean') {
+      throw new Error(`rag/health sem contrato: ${JSON.stringify(health)}`);
+    }
+
+    const domains = await api.get('/rag/domains');
+    if (!domains?.domains) {
+      throw new Error(`rag/domains sem contrato: ${JSON.stringify(domains)}`);
+    }
+
+    const documents = await api.get('/rag/documents');
+    if (!Array.isArray(documents)) {
+      throw new Error('rag/documents não retornou lista');
+    }
+
+    const title = `QA RAG Doc ${runId}`;
+    const created = await api.post('/rag/documents', {
+      title,
+      content: `Conteúdo de QA da jornada rag_documents (${runId})`,
+      autoIndex: false,
+      source: 'business_qa',
+    });
+    const documentId = created?.id;
+    if (!documentId) {
+      throw new Error(`Documento RAG não foi criado: ${JSON.stringify(created)}`);
+    }
+
+    try {
+      const fetched = await api.get(`/rag/documents/${encodeURIComponent(documentId)}`);
+      if (fetched?.id !== documentId) {
+        throw new Error(`Documento RAG não consultado por id: ${JSON.stringify(fetched)}`);
+      }
+
+      const updatedTitle = `${title} v2`;
+      const updated = await api.put(`/rag/documents/${encodeURIComponent(documentId)}`, { title: updatedTitle });
+      if (updated?.title !== updatedTitle && updated?.document?.title !== updatedTitle) {
+        throw new Error(`Documento RAG não foi atualizado: ${JSON.stringify(updated)}`);
+      }
+
+      // Upload multipart em dryRun: exercita a rota sem persistir nada.
+      const form = new FormData();
+      form.append('file', new Blob([`Upload QA ${runId}`], { type: 'text/plain' }), `qa-rag-${runId}.txt`);
+      form.append('dryRun', 'true');
+      const uploadResponse = await fetch(buildUrl(API_URL, '/rag/documents/upload'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${api.authToken}`, 'X-Tenant-Id': TEST_TENANT_ID },
+        body: form,
+      });
+      const uploadBody = await uploadResponse.json().catch(() => null);
+      if (![200, 201, 207].includes(uploadResponse.status) || !uploadBody || uploadBody.ok !== true) {
+        throw new Error(`Upload dry-run falhou: ${uploadResponse.status} ${JSON.stringify(uploadBody)}`);
+      }
+
+      // Query: se o rag-service Python estiver fora, o contrato é 500 com
+      // mensagem de serviço inacessível — nunca erro não estruturado.
+      let queryOutcome = 'success';
+      try {
+        const query = await api.post('/rag/query', { query: 'QA jornada rag_documents' });
+        if (typeof query?.success !== 'boolean') {
+          throw new Error(`rag/query sem contrato: ${JSON.stringify(query)}`);
+        }
+      } catch (err) {
+        if (err.status !== 500 || !/rag/i.test(String(err.body?.message || err.message))) throw err;
+        queryOutcome = 'rag_service_unavailable';
+      }
+
+      const stats = await api.get('/rag/documents/stats');
+      if (typeof stats?.total !== 'number') {
+        throw new Error(`rag/documents/stats sem contrato: ${JSON.stringify(stats)}`);
+      }
+
+      const dedupStats = await api.get('/rag/deduplication/stats');
+      if (!dedupStats || typeof dedupStats !== 'object') {
+        throw new Error('rag/deduplication/stats indisponível');
+      }
+
+      // clean-orphans com lista vazia: exercita a rota sem remover nada.
+      const cleaned = await api.post('/rag/documents/clean-orphans', { documentIds: [] });
+      if (!cleaned || typeof cleaned !== 'object' || cleaned.error) {
+        throw new Error(`clean-orphans sem contrato: ${JSON.stringify(cleaned)}`);
+      }
+
+      // Contexto efêmero: grava em Redis com TTL (sem efeito residual).
+      // executionId precisa casar /^exec-[a-zA-Z0-9-]+$/ (requireExecutionId).
+      const ephemeral = await api.post('/rag/ephemeral/context', {
+        executionId: `exec-qa-rag-${runId}`,
+        chunks: [{ id: 'c1', content: `Contexto efêmero QA ${runId}` }],
+      });
+      if (ephemeral?.ok !== true) {
+        throw new Error(`rag/ephemeral/context sem contrato: ${JSON.stringify(ephemeral)}`);
+      }
+
+      // Rotas pesadas/destrutivas (POST /rag/reindex-all wipe de vetores e
+      // POST /rag/documents/reindex-all reindex síncrono) são cobertas pelo
+      // vínculo da jornada mas não executadas: reindex real durante o mesh
+      // degradaria o ambiente compartilhado.
+
+      for (const rulesPath of ['/api/data/rag_question_generation_rules.json', '/contracts/rag/question-generation.rules.json']) {
+        const rules = await api.get(rulesPath);
+        if (!rules || typeof rules !== 'object' || rules.error) {
+          throw new Error(`Regras de geração indisponíveis em ${rulesPath}`);
+        }
+      }
+
+      const pageResults = await assertBusinessPages(page, definition);
+
+      return {
+        detail: 'Health, domains, documento CRUD, upload dry-run, query, stats e regras validados',
+        ids: { documentId },
+        evidence: { queryOutcome, uploadStatus: uploadResponse.status, pages: pageResults },
+      };
+    } finally {
+      await api.del(`/rag/documents/${encodeURIComponent(documentId)}`).catch(() => {});
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-KNOWLEDGE-BASE'
+    || definition.code === 'CORE-BIZ-PRODUCT-DOCS'
+    || definition.code === 'CORE-BIZ-AGENDA'
+    || definition.code === 'CORE-BIZ-AGENTS'
+    || definition.code === 'CORE-BIZ-BULK-MESSAGING'
+    || definition.code === 'CORE-BIZ-FAILED-MESSAGES'
+    || definition.code === 'CORE-BIZ-KITCHEN-DISPATCH'
+    || definition.code === 'CORE-BIZ-FAQ'
+    || definition.code === 'CORE-BIZ-MFA'
+    || definition.code === 'CORE-BIZ-SSO-SCIM'
+    || definition.code === 'CORE-BIZ-MAINTENANCE'
+    || definition.code === 'CORE-BIZ-PLAN-USAGE') {
+    const pageResults = await assertBusinessPages(page, definition);
+    return {
+      detail: `Páginas da jornada ${definition.journey} renderizaram autenticadas`,
+      ids: {},
+      evidence: { pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CHANNEL-ACCOUNTS') {
+    const externalId = `qa-ca-${runId}`;
+    const created = await api.post('/channel-accounts', {
+      type: 'webchat',
+      externalId,
+      config: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const accountId = created?.account?.id;
+    if (created?.success !== true || !accountId) {
+      throw new Error(`Conta de canal não foi criada: ${JSON.stringify(created)}`);
+    }
+
+    let deleted = false;
+    try {
+      const listed = await api.get('/channel-accounts');
+      if (!(listed?.accounts || []).some((account) => account.id === accountId)) {
+        throw new Error('Conta de canal não apareceu na listagem');
+      }
+
+      // Conta webchat recém-criada: teste passa sem chamada externa (200) ou
+      // responde missing_config estruturado (400) — ambos são contrato.
+      let testOutcome = 'success';
+      try {
+        const tested = await api.post(`/channel-accounts/${encodeURIComponent(accountId)}/test`, {});
+        if (tested?.success !== true) {
+          throw new Error(`Teste da conta sem contrato: ${JSON.stringify(tested)}`);
+        }
+      } catch (err) {
+        if (err.status !== 400 || err.body?.error !== 'missing_config') throw err;
+        testOutcome = 'missing_config';
+      }
+
+      const updated = await api.put(`/channel-accounts/${encodeURIComponent(accountId)}`, { status: 'inactive' });
+      if (updated?.success !== true) {
+        throw new Error(`Conta de canal não foi atualizada: ${JSON.stringify(updated)}`);
+      }
+
+      const removed = await api.del(`/channel-accounts/${encodeURIComponent(accountId)}`);
+      if (removed?.success !== true) {
+        throw new Error(`Remoção da conta não confirmada: ${JSON.stringify(removed)}`);
+      }
+      deleted = true;
+
+      const pageResults = await assertBusinessPages(page, definition);
+
+      return {
+        detail: 'Conta de canal criada, listada, testada, atualizada e removida',
+        ids: { accountId, externalId },
+        evidence: { testOutcome, deleted, pages: pageResults },
+      };
+    } finally {
+      if (!deleted) {
+        await api.del(`/channel-accounts/${encodeURIComponent(accountId)}`).catch(() => {});
+      }
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-INSTAGRAM-MESSENGER') {
+    // Sem canal Meta configurado no tenant QA o contrato correto (commit
+    // 20c0901) é 503 channel_not_configured; com canal configurado e
+    // destinatário fake, 502 send_failed. NUNCA 500 nem envio real com sucesso.
+    const outcomes = {};
+    const attempts = [
+      { key: 'instagram', path: '/instagram/send', body: { recipientId: `qa-ig-${runId}`, text: 'QA jornada instagram_messenger' } },
+      { key: 'messenger', path: '/messenger/send', body: { recipientId: `qa-ms-${runId}`, text: 'QA jornada instagram_messenger' } },
+    ];
+    for (const attempt of attempts) {
+      let outcome = null;
+      try {
+        const sent = await api.post(attempt.path, attempt.body);
+        throw new Error(`${attempt.path} retornou sucesso para destinatário fake: ${JSON.stringify(sent)}`);
+      } catch (err) {
+        if (err.message.includes('retornou sucesso')) throw err;
+        if (err.status === 503 && err.body?.error === 'channel_not_configured') {
+          outcome = 'channel_not_configured';
+        } else if (err.status === 502 && err.body?.error === 'send_failed') {
+          outcome = 'send_failed';
+        } else {
+          throw new Error(`${attempt.path} retornou erro inesperado: ${err.status} ${JSON.stringify(err.body)}`);
+        }
+      }
+      outcomes[attempt.key] = outcome;
+    }
+
+    return {
+      detail: 'Send de instagram e messenger com erro estruturado (nunca 500)',
+      ids: {},
+      evidence: outcomes,
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-SEGMENTATION') {
+    const tags = await api.get('/segmentation/tags');
+    if (!Array.isArray(tags?.tags)) {
+      throw new Error(`segmentation/tags sem contrato: ${JSON.stringify(tags)}`);
+    }
+
+    const categories = await api.get('/segmentation/categories');
+    if (!Array.isArray(categories?.categories)) {
+      throw new Error(`segmentation/categories sem contrato: ${JSON.stringify(categories)}`);
+    }
+
+    const tickets = await api.get('/segmentation/tickets');
+    if (!Array.isArray(tickets?.tickets) || typeof tickets?.count !== 'number') {
+      throw new Error(`segmentation/tickets sem contrato: ${JSON.stringify(tickets)}`);
+    }
+
+    const stats = await api.get('/segmentation/stats');
+    if (!stats || typeof stats !== 'object' || stats.error) {
+      throw new Error(`segmentation/stats sem contrato: ${JSON.stringify(stats)}`);
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Tags, categories, tickets e stats de segmentação validados',
+      ids: {},
+      evidence: { tickets: tickets.count, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-TICKETS-TAGS') {
+    // Ticket próprio de QA (telefone único por run): mexer em ticket do mesh
+    // poderia interferir nos asserts de cenários concorrentes.
+    const phoneDigits = String(runId).replace(/\D/g, '').slice(-8).padStart(8, '0');
+    const phoneNumber = `+55119${phoneDigits}`;
+    let ticketId = null;
+    let ownTicket = false;
+    let originalCategory = null;
+
+    try {
+      const created = await api.post('/tickets', {
+        phoneNumber,
+        queue: 'qa',
+        initialMessage: `Ticket QA da jornada tickets_tags (${runId})`,
+      });
+      const ticket = created?.ticket || created;
+      ticketId = ticket?.id;
+      ownTicket = true;
+    } catch (err) {
+      // 409 ticket_already_exists / 403 limit_exceeded: fallback para um
+      // ticket já listado, com restauração estrita do estado original.
+      if (![403, 409].includes(err.status)) throw err;
+      const listed = await api.get('/segmentation/tickets');
+      const fallback = (listed?.tickets || [])[0];
+      if (!fallback?.id) {
+        throw new Error(`Sem ticket próprio (criação bloqueada: ${err.status}) nem ticket listado para fallback`);
+      }
+      ticketId = fallback.id;
+      originalCategory = fallback.category || null;
+    }
+
+    const tag = `qa-tag-${runId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    try {
+      const tagged = await api.post(`/tickets/${encodeURIComponent(ticketId)}/tags`, { tag });
+      if (!Array.isArray(tagged?.tags) || !tagged.tags.includes(tag)) {
+        throw new Error(`Tag não aplicada ao ticket: ${JSON.stringify(tagged)}`);
+      }
+
+      const categorized = await api.put(`/tickets/${encodeURIComponent(ticketId)}/category`, { category: 'qa-business' });
+      if (categorized?.category !== 'qa-business') {
+        throw new Error(`Categoria não aplicada ao ticket: ${JSON.stringify(categorized)}`);
+      }
+
+      return {
+        detail: 'Tag adicionada e categoria atualizada em ticket de QA',
+        ids: { ticketId, tag },
+        evidence: { ownTicket },
+      };
+    } finally {
+      await api.del(`/tickets/${encodeURIComponent(ticketId)}/tags/${encodeURIComponent(tag)}`).catch(() => {});
+      if (!ownTicket && originalCategory !== null) {
+        await api.put(`/tickets/${encodeURIComponent(ticketId)}/category`, { category: originalCategory }).catch(() => {});
+      }
+      if (ownTicket) {
+        await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {}).catch(() => {});
+      }
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-TENANT-CONFIG') {
+    const current = await api.get('/config');
+    if (!current || typeof current !== 'object' || (!current.features && !current.api && !current.chatbot)) {
+      throw new Error(`GET /config sem visão completa: ${JSON.stringify(current)}`);
+    }
+
+    // PUT /config é REPLACE TOTAL e a visão do GET é sanitizada (sem o campo
+    // `ai`): restaurar a partir do GET evisceraria a config (incidente real).
+    // Por isso o original vem do arquivo em disco, não da API.
+    const configFilePath = path.join(__dirname, '..', '..', '..', 'api', 'data', 'config.json');
+    const originalRaw = await fs.promises.readFile(configFilePath, 'utf8');
+    const originalConfig = JSON.parse(originalRaw);
+
+    // Cada PUT /config regrava api/data/config.json, que o nodemon vigia:
+    // o servidor reinicia após cada escrita. Retry apenas em erro de REDE
+    // (janela de reload); erro HTTP é resposta de contrato e não se repete.
+    // Os endpoints exercitados aqui (PUT replace-total, validadores e
+    // tenant-settings no-op) são livres de efeito colateral, então retry de
+    // erro de rede é seguro para todos.
+    const withNetworkRetry = async (fn) => {
+      const deadline = Date.now() + 180000;
+      for (;;) {
+        try {
+          return await fn();
+        } catch (err) {
+          if (err && typeof err.status === 'number') throw err;
+          if (Date.now() > deadline) throw err;
+          await waitForApiReady({ settleMs: 6000 }).catch(() => {});
+        }
+      }
+    };
+    const putConfigWithRetry = (payload) => withNetworkRetry(() => api.put('/config', payload));
+
+    const probed = { ...originalConfig, qaProbe: { source: 'business_qa', runId } };
+    try {
+      const written = await putConfigWithRetry(probed);
+      if (written?.success !== true) {
+        throw new Error(`PUT /config não confirmou: ${JSON.stringify(written)}`);
+      }
+    } finally {
+      // Restore obrigatório mesmo em falha do probe: se não executar, o
+      // cenário inteiro falha (config jamais fica com a chave de sonda).
+      await putConfigWithRetry(originalConfig).catch((err) => {
+        throw new Error(`FALHA CRÍTICA: restore de /config não executado: ${err.message}`);
+      });
+      // O nodemon tem delay de detecção (~1s) após a escrita: sem settle, o
+      // primeiro /health 200 antecede o kill e os calls seguintes morrem no
+      // restart pendente (falha real observada: UND_ERR_SOCKET no POST
+      // validate-provider-token). Exige 6s de estabilidade contínua.
+      await waitForApiReady({ settleMs: 6000 });
+      // Os restarts acima podem invalidar a sessão (tokens em memória):
+      // renova o token do client e o localStorage da página compartilhada
+      // para este e para os cenários seguintes.
+      const freshToken = await withNetworkRetry(() => api.refreshAuth());
+      if (page) {
+        await page.evaluate((token) => window.localStorage.setItem('auth_token', token), freshToken);
+      }
+    }
+
+    const providerToken = await withNetworkRetry(() => api.post('/config/validate-provider-token', {
+      provider: 'openai',
+      apiKey: `qa-invalid-token-${runId}`,
+    }));
+    if (providerToken?.success !== true || providerToken?.valid !== false) {
+      throw new Error(`validate-provider-token com token inválido deveria retornar valid:false: ${JSON.stringify(providerToken)}`);
+    }
+
+    const redis = await withNetworkRetry(() => api.post('/config/validate-redis', { redisUrl: `qa-invalid-redis-${runId}` }));
+    if (redis?.success !== true || redis?.valid !== false) {
+      throw new Error(`validate-redis com URL inválida deveria retornar valid:false: ${JSON.stringify(redis)}`);
+    }
+
+    // phone-masking tem fallback 200 mesmo sem registro: lê e regrava o MESMO
+    // valor (no-op) para exercitar o POST sem mutação real.
+    const settings = await withNetworkRetry(() => api.get('/api/tenant-settings/phone-masking'));
+    if (settings?.ok !== true || settings?.key !== 'phone-masking') {
+      throw new Error(`tenant-settings phone-masking sem contrato: ${JSON.stringify(settings)}`);
+    }
+    const rewritten = await withNetworkRetry(() => api.post('/api/tenant-settings/phone-masking', { value: settings.value || { enabled: false } }));
+    if (rewritten?.ok !== true || rewritten?.key !== 'phone-masking') {
+      throw new Error(`POST tenant-settings sem contrato: ${JSON.stringify(rewritten)}`);
+    }
+
+    // Guarda do restart: chamada ANÔNIMA deve ser 401 — prova a proteção sem
+    // derrubar o servidor (autenticado executaria process.exit).
+    let restartStatus = null;
+    try {
+      await fetchJson(buildUrl(API_URL, '/server/restart'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      restartStatus = 200;
+    } catch (err) {
+      restartStatus = err.status;
+    }
+    if (restartStatus !== 401) {
+      throw new Error(`/server/restart anônimo deveria ser 401, veio ${restartStatus}`);
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Config lida, escrita inócua restaurada, validadores com credenciais inválidas e guarda do restart provada',
+      ids: {},
+      evidence: { configRestored: true, restartGuardStatus: restartStatus, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CONVERSATIONS-CHAT') {
+    const list = await api.get('/conversations');
+    if (!Array.isArray(list?.conversations)) {
+      throw new Error(`Listagem de conversas sem contrato: ${JSON.stringify(list)}`);
+    }
+
+    let detailOutcome = 'skipped_empty_list';
+    let sessionId = null;
+    if (list.conversations.length > 0) {
+      sessionId = list.conversations[0].sessionId;
+      const detail = await api.get(`/conversations/${encodeURIComponent(sessionId)}`);
+      if (detail?.sessionId !== sessionId || !Array.isArray(detail?.messages)) {
+        throw new Error(`Detalhe da conversa sem contrato: ${JSON.stringify(detail)}`);
+      }
+      detailOutcome = 'detail_validated';
+    }
+    // Lista vazia é contrato legítimo (sessionEvents em memória): o GET /:id
+    // fica skipped com justificativa detailOutcome=skipped_empty_list.
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Listagem de conversas validada; detalhe consultado quando havia sessão',
+      ids: { sessionId },
+      evidence: { conversations: list.conversations.length, detailOutcome, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-AI-TOOLS') {
+    // Sem provider de IA o orquestrador agrega o erro e responde 400
+    // success:false (nunca 500); suggest/rewrite têm fallback silencioso 200.
+    let generateOutcome = 'success';
+    try {
+      const generated = await api.post('/ai/chatbot/generate', {
+        userInput: 'Fluxo simples de boas-vindas para QA',
+        options: {},
+      });
+      if (typeof generated?.success !== 'boolean') {
+        throw new Error(`chatbot/generate sem contrato: ${JSON.stringify(generated)}`);
+      }
+      if (generated?.flow?.id) {
+        await api.del(`/flows/${encodeURIComponent(generated.flow.id)}`).catch(() => {});
+      }
+      generateOutcome = generated.success ? 'success' : 'structured_failure';
+    } catch (err) {
+      if (err.status !== 400) throw err;
+      generateOutcome = 'structured_failure';
+    }
+
+    const rewritten = await api.post('/ai/rewrite-message', {
+      message: 'ola, preciso de ajuda com meu pedido',
+      tone: 'professional',
+    });
+    if (typeof rewritten?.original !== 'string' || typeof rewritten?.rewritten !== 'string' || !Array.isArray(rewritten?.improvements)) {
+      throw new Error(`rewrite-message sem contrato: ${JSON.stringify(rewritten)}`);
+    }
+
+    const rewrittenMultiple = await api.post('/ai/rewrite-multiple', {
+      messages: ['ola, preciso de ajuda'],
+      tone: 'professional',
+    });
+    if (!Array.isArray(rewrittenMultiple?.results) || rewrittenMultiple.results.length !== 1) {
+      throw new Error(`rewrite-multiple sem contrato: ${JSON.stringify(rewrittenMultiple)}`);
+    }
+
+    const suggestions = await api.post('/ai/suggest-response', {
+      userMessage: 'quero saber o status do meu pedido',
+    });
+    if (!Array.isArray(suggestions?.suggestions) || !Array.isArray(suggestions?.quickReplies)) {
+      throw new Error(`suggest-response sem contrato: ${JSON.stringify(suggestions)}`);
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Generate, rewrite e suggest com contratos estruturados validados',
+      ids: {},
+      evidence: { generateOutcome, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-AUDIO-TRANSCRIBE') {
+    let validationStatus = null;
+    try {
+      await api.post('/audio/transcribe', {});
+      validationStatus = 200;
+    } catch (err) {
+      validationStatus = err.status;
+      if (err.status !== 400 || err.body?.error !== 'bad_request') {
+        throw new Error(`Transcribe sem áudio deveria ser 400 bad_request: ${err.status} ${JSON.stringify(err.body)}`);
+      }
+    }
+    if (validationStatus !== 400) {
+      throw new Error(`Transcribe sem áudio retornou ${validationStatus} em vez de 400`);
+    }
+
+    // Sem provider de transcrição o contrato é 502 transcription_failed;
+    // com provider, 200 { text }. Nunca 500.
+    let transcribeOutcome = null;
+    try {
+      const result = await api.post('/audio/transcribe', { audioData: 'UklGRgAAAAA=' });
+      if (typeof result?.text !== 'string') {
+        throw new Error(`Transcribe sem campo text: ${JSON.stringify(result)}`);
+      }
+      transcribeOutcome = 'success';
+    } catch (err) {
+      if (err.status !== 502 || err.body?.error !== 'transcription_failed') {
+        throw new Error(`Transcribe com provider indisponível deveria ser 502 transcription_failed: ${err.status} ${JSON.stringify(err.body)}`);
+      }
+      transcribeOutcome = 'transcription_failed';
+    }
+
+    return {
+      detail: 'Validação 400 sem áudio e contrato de transcrição validados',
+      ids: {},
+      evidence: { transcribeOutcome },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-VOICE-EVENTS') {
+    const callId = `qa-call-${runId}`;
+    const correlationId = `qa-voice-${runId}`;
+    const recorded = await api.post('/api/voice/events', {
+      eventType: 'ringing',
+      callId,
+      correlationId,
+      payload: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    if (recorded?.ok !== true || !recorded?.event) {
+      throw new Error(`Evento de voz não foi registrado: ${JSON.stringify(recorded)}`);
+    }
+    // event-ledger é append-only (sem DELETE): o evento QA permanece marcado
+    // com correlationId único — sujeira aceitável e auditável.
+
+    const ledger = await api.get(`/api/event-ledger?correlationId=${encodeURIComponent(correlationId)}`);
+    if (ledger?.ok !== true || typeof ledger?.total !== 'number' || ledger.total < 1) {
+      throw new Error(`Evento não encontrado no ledger por correlationId: ${JSON.stringify(ledger)}`);
+    }
+
+    // Métricas SEM X-Tenant-Id: super-admin sem tenant resolvido deve
+    // receber 400 tenant_required.
+    let noTenantStatus = null;
+    try {
+      await fetchJson(buildUrl(API_URL, '/api/voice/metrics'), {
+        headers: { Authorization: `Bearer ${api.authToken}` },
+      });
+      noTenantStatus = 200;
+    } catch (err) {
+      noTenantStatus = err.status;
+      if (err.status !== 400 || err.body?.error !== 'tenant_required') {
+        throw new Error(`voice/metrics sem tenant deveria ser 400 tenant_required: ${err.status} ${JSON.stringify(err.body)}`);
+      }
+    }
+    if (noTenantStatus !== 400) {
+      throw new Error(`voice/metrics sem X-Tenant-Id retornou ${noTenantStatus} em vez de 400`);
+    }
+
+    const metrics = await api.get('/api/voice/metrics');
+    if (metrics?.ok !== true || !metrics?.totals || typeof metrics?.totals?.totalCalls !== 'number') {
+      throw new Error(`voice/metrics sem contrato: ${JSON.stringify(metrics)}`);
+    }
+
+    return {
+      detail: 'Evento de voz registrado no ledger, métricas e guarda de tenant validados',
+      ids: { callId, correlationId },
+      evidence: { ledgerTotal: ledger.total, noTenantStatus },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-BACKUP-RESTORE') {
+    const exported = await api.get('/api/backup/export');
+    if (exported?.ok !== true || !Array.isArray(exported?.flows) || !Array.isArray(exported?.settings)) {
+      throw new Error(`Backup export sem contrato: ${JSON.stringify(exported)}`);
+    }
+
+    // Import com payload vazio é no-op estruturado (flowImported: 0) — NUNCA
+    // import real (overwrite sobrescreveria flows/settings do tenant).
+    const imported = await api.post('/api/backup/import', {});
+    if (imported?.ok !== true || imported?.flowImported !== 0 || imported?.overwrite !== false) {
+      throw new Error(`Import vazio deveria ser no-op: ${JSON.stringify(imported)}`);
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Backup export lido e import vazio no-op validados',
+      ids: {},
+      evidence: { exportedFlows: exported.flows.length, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-WEB-SCRAPING') {
+    let invalidOutcome = null;
+    try {
+      await api.post('/web-scraping/scrape', { url: 'url-invalida-qa' });
+      invalidOutcome = 'accepted_invalid_url';
+    } catch (err) {
+      if (err.status !== 400) {
+        throw new Error(`Scrape com URL inválida deveria ser 400: ${err.status} ${JSON.stringify(err.body)}`);
+      }
+      invalidOutcome = 'structured_400';
+    }
+    if (invalidOutcome !== 'structured_400') {
+      throw new Error('Scrape aceitou URL inválida');
+    }
+
+    // URL controlada (o próprio /health da API, sugerida pela spec) com
+    // autoIndex=false: nada é indexado no RAG. Falha estruturada também é
+    // contrato (scraper indisponível no ambiente).
+    let scrapeOutcome = 'success';
+    try {
+      const scraped = await api.post('/web-scraping/scrape', {
+        url: `${API_URL}/health`,
+        autoIndex: false,
+        timeout: 15000,
+      });
+      if (scraped?.ok !== true) {
+        throw new Error(`Scrape controlado sem contrato: ${JSON.stringify(scraped)}`);
+      }
+    } catch (err) {
+      if (![500, 502].includes(err.status)) throw err;
+      scrapeOutcome = 'structured_failure';
+    }
+
+    let batchOutcome = 'success';
+    try {
+      const batch = await api.post('/web-scraping/scrape-batch', {
+        urls: [`${API_URL}/health`],
+        dryRun: true,
+        executionId: `exec-qa-scrape-${runId}`,
+        timeout: 15000,
+      });
+      if (batch?.ok !== true || !batch?.data) {
+        throw new Error(`Scrape-batch dryRun sem contrato: ${JSON.stringify(batch)}`);
+      }
+    } catch (err) {
+      // 207 parcial e 409 SCRAPING_EMPTY são contratos estruturados da rota.
+      if (![409].includes(err.status)) throw err;
+      batchOutcome = 'scraping_empty';
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Validação de URL inválida e scrape controlado sem indexação validados',
+      ids: {},
+      evidence: { invalidOutcome, scrapeOutcome, batchOutcome, pages: pageResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-LOGIN') {
+    const { performLogin, isLoginPage } = require('../../../core/rpa/utils/authHelper');
+    const anon = await createAnonymousUiPage();
+    try {
+      await anon.page.goto(`${FRONTEND_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await anon.page.waitForSelector('input[type="password"]', { timeout: 15000 });
+
+      // Credenciais QA locais documentadas (systemadmin/Admin123!, tenant system).
+      const login = await performLogin(anon.page, {
+        username: TEST_SUPERADMIN_USERNAME,
+        password: TEST_SUPERADMIN_PASSWORD,
+        tenantId: TEST_TENANT_ID,
+      });
+      if (!login.success) {
+        throw new Error(`Login UI falhou: ${login.error}`);
+      }
+
+      const storedToken = await anon.page.evaluate(() => window.localStorage.getItem('auth_token'));
+      if (!storedToken) {
+        throw new Error('Login não gravou auth_token no localStorage');
+      }
+      if (await isLoginPage(anon.page)) {
+        throw new Error('UI permaneceu no estado de login após autenticação');
+      }
+      const finalPath = new URL(anon.page.url()).pathname;
+
+      // Logout apenas se existir controle VISÍVEL na UI (o seletor também casa
+      // com itens de menus colapsados/ocultos, que não são acionáveis).
+      const logoutCandidates = await anon.page.$$('button:has-text("Sair"), a:has-text("Sair"), [data-testid*="logout" i]');
+      let logoutControl = null;
+      for (const candidate of logoutCandidates) {
+        if (await candidate.isVisible()) {
+          logoutControl = candidate;
+          break;
+        }
+      }
+      let loggedOut = false;
+      if (logoutControl) {
+        await logoutControl.click();
+        await anon.page.waitForTimeout(1500);
+        loggedOut = await isLoginPage(anon.page);
+      }
+
+      return {
+        detail: 'Login real via UI com redirect pós-login e auth_token gravado',
+        ids: {},
+        evidence: { finalPath, tokenStored: true, logoutFound: Boolean(logoutControl), loggedOut },
+      };
+    } finally {
+      await anon.browser.close().catch(() => null);
+    }
+  }
+
+  if (definition.code === 'CORE-BIZ-SAAS-STOREFRONT') {
+    // Páginas públicas: valida anônimo (browser dedicado) E autenticado
+    // (sessão compartilhada, via helper padrão que ignora as anonymous).
+    const anon = await createAnonymousUiPage();
+    const anonymousResults = [];
+    try {
+      for (const pageDef of definition.pages || []) {
+        anonymousResults.push(await assertBusinessPage(anon.page, { ...pageDef, anonymous: false }, definition));
+      }
+    } finally {
+      await anon.browser.close().catch(() => null);
+    }
+
+    const authenticatedResults = [];
+    for (const pageDef of definition.pages || []) {
+      authenticatedResults.push(await assertBusinessPage(page, { ...pageDef, anonymous: false }, definition));
+    }
+
+    return {
+      detail: 'Páginas saas/storefront renderizaram anônimas e autenticadas',
+      ids: {},
+      evidence: { anonymous: anonymousResults, authenticated: authenticatedResults },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-TENANTS') {
+    // GET /tenants/current/ai-config: tenant sem config responde 404
+    // estruturado — ambos são contrato.
+    let aiConfigOutcome = 'found';
+    try {
+      const aiConfig = await api.get('/tenants/current/ai-config');
+      if (!aiConfig || typeof aiConfig !== 'object' || aiConfig.error) {
+        throw new Error(`tenants/current/ai-config sem contrato: ${JSON.stringify(aiConfig)}`);
+      }
+    } catch (err) {
+      if (err.status !== 404 || err.body?.error !== 'not_found') throw err;
+      aiConfigOutcome = 'not_found';
+    }
+
+    // Teste de credencial: sem credencial configurada responde 200
+    // valid:false (contrato); com credencial, valid reflete o teste real.
+    const credentialTest = await api.post('/tenants/current/ai-credentials/test', { provider: 'openai' });
+    if (credentialTest?.success !== true || typeof credentialTest?.valid !== 'boolean') {
+      throw new Error(`ai-credentials/test sem contrato: ${JSON.stringify(credentialTest)}`);
+    }
+
+    const pageResults = await assertBusinessPages(page, definition);
+
+    return {
+      detail: 'Página de tenants, ai-config e teste de credencial validados',
+      ids: {},
+      evidence: { aiConfigOutcome, credentialValid: credentialTest.valid, pages: pageResults },
     };
   }
 

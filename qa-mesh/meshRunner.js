@@ -5,6 +5,7 @@ const path = require('path');
 const { SCREEN_SCENARIOS, FLOW_SCENARIOS, JOURNEY_SCENARIOS } = require('../tests/rpa/business/catalog');
 const { getChangedFiles, determineAffectedScopes } = require('../qa/qaRunner');
 const { evaluateGoNoGo, evaluateWaveResult } = require('./governance');
+const { isTransientEnvFailure, waitForApiStable } = require('./transientEnvRetry');
 const operationalStepExecutor = require('../api/services/qa/operationalStepExecutor');
 const { buildFailureIntelligence } = require('./intelligence/failureIntelligence');
 const rpaAdapter = require('./adapters/rpaAdapter');
@@ -2048,13 +2049,54 @@ async function runMesh(options = {}) {
       total: registryTotal,
     });
 
-    const adapterResult = await executeScenarioWithFallback(effectiveScenario, {
+    let adapterResult = await executeScenarioWithFallback(effectiveScenario, {
       executionMode: options.executionMode || options.operationalMode || 'operational_go',
       appendLog,
       onStepProgress: options.onStepProgress
         ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
         : null,
     });
+
+    // Retry ÚNICO para falhas cuja evidência é exclusivamente de ambiente
+    // transitório (API indisponível/socket/fetch): atravessa janelas de
+    // restart do servidor dev e contenção de máquina. NÃO enfraquece
+    // assertivas — a reexecução precisa passar integralmente, e a primeira
+    // falha fica registrada em `transientEnvRetry` na evidência.
+    if (adapterResult.status !== 'passed' && isTransientEnvFailure(adapterResult)) {
+      const firstFailureSummary = {
+        status: adapterResult.status,
+        errors: normalizeErrorList(adapterResult.errors).slice(0, 3),
+      };
+      appendLog('TRANSIENT_ENV_RETRY', 'warn', { scenarioId: effectiveScenario.id, reason: 'environment_signature' });
+      try {
+        await waitForApiStable({
+          apiUrl: process.env.TEST_API_URL || process.env.API_URL || 'http://localhost:3001',
+          settleMs: 5000,
+        });
+        const retryResult = await executeScenarioWithFallback(effectiveScenario, {
+          executionMode: options.executionMode || options.operationalMode || 'operational_go',
+          appendLog,
+          onStepProgress: options.onStepProgress
+            ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
+            : null,
+        });
+        if (retryResult.status === 'passed') {
+          adapterResult = {
+            ...retryResult,
+            transientEnvRetry: { attempted: true, recovered: true, firstFailure: firstFailureSummary },
+          };
+          appendLog('TRANSIENT_ENV_RETRY_RECOVERED', 'warn', { scenarioId: effectiveScenario.id });
+        } else {
+          adapterResult = {
+            ...retryResult,
+            transientEnvRetry: { attempted: true, recovered: false, firstFailure: firstFailureSummary },
+          };
+          appendLog('TRANSIENT_ENV_RETRY_FAILED', 'error', { scenarioId: effectiveScenario.id });
+        }
+      } catch (retryError) {
+        appendLog('TRANSIENT_ENV_RETRY_ABORTED', 'error', { scenarioId: effectiveScenario.id, message: retryError.message });
+      }
+    }
     const scenarioFinishedAt = nowIso();
     const result = {
       id: effectiveScenario.id,
@@ -2076,6 +2118,8 @@ async function runMesh(options = {}) {
       mode: effectiveScenario.runtimeMode || null,
       // rawStatus compacto alimenta o uiTrace do replay QA Waves (passo a passo das telas).
       rawStatus: compactRawStatus(adapterResult.rawStatus),
+      // Evidência transparente do retry de falha transitória de ambiente.
+      ...(adapterResult.transientEnvRetry ? { transientEnvRetry: adapterResult.transientEnvRetry } : {}),
     };
     const waveGovernance = await evaluateScenarioGovernance(effectiveScenario, result, {
       closeGovernanceDbAfterIntegration: options.closeGovernanceDbAfterIntegration,

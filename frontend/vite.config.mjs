@@ -100,6 +100,12 @@ function frontendRoutesPlugin() {
                           url.startsWith('/analytics/') ||
                           url.startsWith('/export/') ||
                           url.startsWith('/conversations') ||
+                          // /orders é página SPA (OrdersPage) em navegação (text/html)
+                          // e API quando Accept JSON; subrotas são sempre API.
+                          (url === '/orders' && isApiRequest) ||
+                          (url.startsWith('/orders/') && url !== '/orders') ||
+                          // API pública do storefront (páginas são /storefront/order*, singular)
+                          url.startsWith('/storefront/orders') ||
                           (url === '/workspace' && isApiRequest) ||
                           (url.startsWith('/workspace/') && url !== '/workspace') ||
                           (url === '/projects' && isApiRequest) || // /projects pode ser API (JSON) ou página (HTML)
@@ -334,6 +340,33 @@ const viteConfig = defineConfig(({ mode }) => {
           }
           return undefined;
         },
+      },
+      // /orders é página SPA (OrdersPage) em navegação e API quando Accept JSON;
+      // subrotas (/orders/:id, /orders/:id/status) são sempre API. Sem esta
+      // entrada as páginas kitchen/dispatch/orders recebiam index.html no dev.
+      // Prefixo simples: chamadas de API trazem query string (/orders?status=...).
+      '^/orders': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req) {
+          if (req.method === 'GET' && (req.url || '').split('?')[0] === '/orders') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
+          return undefined;
+        },
+      },
+      // API pública do storefront (/storefront/orders*). As páginas são
+      // /storefront/order* (singular) — não podem ser capturadas aqui.
+      '^/storefront/orders': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
       },
       '^/quick-replies': {
         target: apiProxyTarget,

@@ -203,6 +203,12 @@ async function handleFlowExecutionRoutes(ctx) {
   }
 
   if (method === 'GET' && pathname.startsWith('/replay/')) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+
     const sessionId = decodeURIComponent(pathname.slice('/replay/'.length));
     const events = sessionEvents.get(sessionId);
     if (!events) {

@@ -31,6 +31,7 @@ describe('route registry', () => {
       platformContentRouter: 'platform-content',
       platformPublicRouter: 'platform-public',
       queueTicketRouter: 'queue-ticket',
+      orderRouter: 'order',
       opsRouter: 'ops',
       executionLedgerRouter: 'execution-ledger',
       evidenceRouter: 'evidence',
@@ -48,6 +49,9 @@ describe('route registry', () => {
 
     expect(registry[2]).toEqual({ path: '/tenants', router: 'tenant' });
     expect(registry.find((entry) => entry.router === 'evidence')).toEqual({ router: 'evidence' });
+    // Orders: módulo api/modules/order montado (pedidos das verticais food/market);
+    // sem a montagem as páginas /orders, /kitchen e /dispatch recebiam 404.
+    expect(registry.find((entry) => entry.router === 'order')).toEqual({ router: 'order' });
     expect(registry[registry.length - 3]).toEqual({ router: 'domain-business' });
     expect(registry[registry.length - 2]).toEqual({ router: 'crm' });
     expect(registry[registry.length - 1]).toEqual({ router: 'frontend-fallback' });

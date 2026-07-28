@@ -83,7 +83,7 @@ async function main() {
   const api = await createApiClient();
   const seed = await seedBusinessBaseline(api);
   const runId = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
-  const needsUi = scenarios.some((item) => item.type === 'screen');
+  const needsUi = scenarios.some((item) => item.type === 'screen' || (Array.isArray(item.pages) && item.pages.length > 0));
   const ui = needsUi ? await createUiSession() : null;
 
   try {
@@ -109,6 +109,7 @@ async function main() {
         } else if (definition.type === 'flow') {
           await executeStep(scenario, 'flow-validation', async () => runFlowScenario(definition, {
             api,
+            page: ui ? ui.page : null,
             runId,
             seed,
           }));

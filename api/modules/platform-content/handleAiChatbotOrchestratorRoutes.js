@@ -72,6 +72,14 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
 
       sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
+      // Erros de validação (payload ou fluxo gerado inválido) são erros do
+      // cliente: 400 estruturado, nunca 500. FLOW_* vem do flowPreValidator
+      // (ex.: FLOW_DISCONNECTED — nós não alcançáveis a partir do start).
+      const code = err && err.code;
+      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
+        sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
+        return true;
+      }
       logger.error('[API] Erro ao gerar chatbot (alias do orquestrador)', { error: err.message, stack: err.stack });
       sendJson(res, 500, { error: 'internal_error', message: err.message || 'Erro interno ao gerar chatbot' });
     }
@@ -136,7 +144,11 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
 
       sendJson(res, result.success ? 200 : 400, result);
     } catch (err) {
-      if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR')) {
+      // Mesma política do /ai/chatbot/generate: erros de validação (payload ou
+      // fluxo gerado inválido — FLOW_* do flowPreValidator) são erros do
+      // cliente: 400 estruturado, nunca 500.
+      const code = err && err.code;
+      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
         return true;
       }
