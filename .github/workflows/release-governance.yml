@@ -123,6 +123,9 @@ jobs:
 
       - name: "Upload coverage gate report (diagnóstico)"
         if: always()
+        # Diagnóstico: falha de upload (ex.: quota de artifact storage) não pode
+        # bloquear a cadeia de verificação [1/6]–[7/7], que é o gate real.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: coverage-gate-report-node${{ matrix.node-version }}
@@ -189,6 +192,11 @@ jobs:
 
       - name: Upload artifacts de governança
         if: always()
+        # Diagnóstico/auditoria: falha de upload (ex.: quota de artifact storage)
+        # não pode bloquear o job — o envelope é re-gerado e verificado offline
+        # a partir do próprio checkout. Retenção curta para não estourar quota
+        # (cada run envia ~144 MB em ZIPs, 2 versões de Node).
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: governance-artifacts-node${{ matrix.node-version }}
@@ -202,7 +210,7 @@ jobs:
             dist/ci-logs/ci-governance-audit.log
             dist/ci-logs/ci-governance-report.json
             dist/ci-logs/ci-offline-test.log
-          retention-days: 30
+          retention-days: 3
           if-no-files-found: warn
 
   # ===========================================================================
