@@ -126,6 +126,7 @@
     "coverage-gate:links": "node scripts/governance/sync-journey-scenario-links.js",
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
     "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",
+    "wave:api-surface": "node scripts/governance/api-surface-wave.js",
     "analyze:impact": "node scripts/analyze-impact.js",
     "demo:coverage": "node scripts/demo-coverage-scenarios.js",
     "validate:coverage-auto-fix": "node scripts/governance/validate-coverage-completeness.js && node scripts/governance/auto-cover-gaps.js --apply",

@@ -34,6 +34,20 @@ async function handleFlowCrudEnvironmentRoute(ctx) {
 
   try {
     const body = await parseJsonBody(req);
+
+    // Auth ANTES de validação de negócio e de existência: fail-closed e sem
+    // oráculo de existência (anônimo não distingue 404 de fluxo inexistente).
+    const authResult = requireAuth(req);
+    let tenantId = null;
+    if (STRICT_TENANT_MODE) {
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return true;
+      }
+      tenantId = requireTenant(req, res);
+      if (!tenantId) return true;
+    }
+
     const env = body && body.environment ? String(body.environment).trim() : '';
     if (!env || !['dev', 'stage', 'prod'].includes(env)) {
       badRequest(res, 'Campo "environment" inválido. Use: dev|stage|prod');
@@ -46,14 +60,7 @@ async function handleFlowCrudEnvironmentRoute(ctx) {
       return true;
     }
 
-    const authResult = requireAuth(req);
     if (STRICT_TENANT_MODE) {
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return true;
-      }
-      const tenantId = requireTenant(req, res);
-      if (!tenantId) return true;
       if (existingFlow.tenantId !== tenantId) {
         sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
         return true;

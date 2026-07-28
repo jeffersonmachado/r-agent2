@@ -1,6 +1,23 @@
 'use strict';
 
 const express = require('express');
+const { checkClassification } = require('../../middleware/requireClassification');
+
+
+// Rotas do execution ledger são diagnóstico (SUPPORT): papel operacional
+// (PRODUCTION) não acessa. Negações são auditadas pelo middleware.
+function requireSupportClassification(req, res, deps) {
+  const check = checkClassification(req, 'SUPPORT');
+  if (!check.allowed) {
+    deps.sendJson(res, 403, {
+      error: 'classification_required',
+      required: check.required,
+      classification: check.classification,
+    });
+    return false;
+  }
+  return true;
+}
 
 function createExecutionLedgerRoutes({ buildDeps }) {
   const router = express.Router();
@@ -12,6 +29,7 @@ function createExecutionLedgerRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
+    if (!requireSupportClassification(req, res, deps)) return;
     const permResult = deps.requirePermission(req, 'analytics', 'read');
     if (!permResult.allowed) {
       deps.sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -54,6 +72,7 @@ function createExecutionLedgerRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
+    if (!requireSupportClassification(req, res, deps)) return;
     const permResult = deps.requirePermission(req, 'analytics', 'read');
     if (!permResult.allowed) {
       deps.sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -96,6 +115,7 @@ function createExecutionLedgerRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
+    if (!requireSupportClassification(req, res, deps)) return;
     const permResult = deps.requirePermission(req, 'analytics', 'read');
     if (!permResult.allowed) {
       deps.sendJson(res, 403, { error: 'forbidden', message: permResult.error });
@@ -133,6 +153,7 @@ function createExecutionLedgerRoutes({ buildDeps }) {
       deps.sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return;
     }
+    if (!requireSupportClassification(req, res, deps)) return;
     const permResult = deps.requirePermission(req, 'config', 'update');
     if (!permResult.allowed) {
       deps.sendJson(res, 403, { error: 'forbidden', message: permResult.error });

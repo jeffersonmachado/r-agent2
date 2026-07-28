@@ -125,6 +125,9 @@ reports/*
 # Exceção: baseline versionado da Database Integrity Wave, consumido pelo
 # Coverage Gate como fonte de execução técnica (gerado por wave:db-integrity).
 !reports/db-integrity-report.json
+# Exceção: baseline versionado da API Surface Wave, consumido pelo Coverage
+# Gate como fonte de execução técnica (gerado por wave:api-surface).
+!reports/api-surface-report.json
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

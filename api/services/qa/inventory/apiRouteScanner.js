@@ -64,8 +64,23 @@ const DEVELOPMENT_MODULE_TOKENS = new Set(['dev', 'engineering', 'seeds']);
 const SUPPORT_MODULES = new Set(['execution-ledger', 'test-executions']);
 const SUPPORT_MODULE_TOKENS = new Set(['support', 'diagnostics', 'audit']);
 
+/**
+ * Overrides de classificação por módulo (justificativa auditável). Prevalecem
+ * sobre a heurística por tokens.
+ * - support-debug: o nome é histórico — o módulo serve rotas OPERACIONAIS:
+ *   CRUD de /api/schedules (consumido por frontend/src/api/scheduling.js) e
+ *   sugestões de IA da inbox (frontend/src/api/tickets.js). Runtime confirma:
+ *   papel operacional acessa com 200 (API Surface Wave, 2026-07-28).
+ */
+const MODULE_CLASSIFICATION_OVERRIDES = new Map([
+  ['support-debug', 'PRODUCTION'],
+]);
+
 function classifyModule(moduleName) {
   const name = String(moduleName || '');
+  if (MODULE_CLASSIFICATION_OVERRIDES.has(name)) {
+    return MODULE_CLASSIFICATION_OVERRIDES.get(name);
+  }
   const tokens = name.split('-');
   if (DEVELOPMENT_MODULES.has(name) || tokens.some((t) => DEVELOPMENT_MODULE_TOKENS.has(t))) {
     return 'DEVELOPMENT';
@@ -297,9 +312,66 @@ function analyzeAuthAndAuthorization(chainAndBody, localAuthHelpers, localPermis
   return { authRequired, authorization: [...authorization].sort() };
 }
 
+/**
+ * Remove comentários de bloco e de linha preservando strings e a contagem de
+ * linhas (cada caractere de comentário vira espaço, exceto \n). Comentários
+ * NUNCA podem gerar itens de inventário — um exemplo em docstring (ex.:
+ * `router.get('/rota', ...)` na documentação de um middleware) não é rota.
+ */
+function stripComments(source) {
+  let out = '';
+  let i = 0;
+  let quote = null;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (quote) {
+      out += ch;
+      if (ch === '\\') {
+        out += next || '';
+        i += 2;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      out += ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') {
+        out += ' ';
+        i += 1;
+      }
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      out += '  ';
+      i += 2;
+      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) {
+        out += source[i] === '\n' ? '\n' : ' ';
+        i += 1;
+      }
+      if (i < source.length) {
+        out += '  ';
+        i += 2;
+      }
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
 function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, classification }, _depth = 0) {
-  const source = readFileSafe(sourceFile);
-  if (source === null) return { items: [], warnings: [`router não legível: ${sourceFile}`] };
+  const rawSource = readFileSafe(sourceFile);
+  if (rawSource === null) return { items: [], warnings: [`router não legível: ${sourceFile}`] };
+  const source = stripComments(rawSource);
 
   const warnings = [];
   const functionDefs = findFunctionDefinitions(source);

@@ -51,6 +51,20 @@ async function handleFlowCrudReadRoutes(ctx) {
   // GET /flows/:id
   if (method === 'GET' && pathname.startsWith('/flows/') && !pathname.endsWith('/environment')) {
     const id = decodeURIComponent(pathname.slice('/flows/'.length));
+
+    // Auth ANTES da checagem de existência: fail-closed e sem oráculo de
+    // existência para chamadores anônimos.
+    const authResult = requireAuth(req);
+    let tenantId = null;
+    if (STRICT_TENANT_MODE) {
+      if (!authResult.valid) {
+        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+        return true;
+      }
+      tenantId = requireTenant(req, res);
+      if (!tenantId) return true;
+    }
+
     let flow = flows.get(id);
 
     // Best-effort fallback no DB quando cache em memoria nao tiver o fluxo.
@@ -81,14 +95,7 @@ async function handleFlowCrudReadRoutes(ctx) {
       return true;
     }
 
-    const authResult = requireAuth(req);
     if (STRICT_TENANT_MODE) {
-      if (!authResult.valid) {
-        sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-        return true;
-      }
-      const tenantId = requireTenant(req, res);
-      if (!tenantId) return true;
       if (flow.tenantId !== tenantId) {
         sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
         return true;

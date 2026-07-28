@@ -1,0 +1,14 @@
+{
+  "api:GET:/system/status": {
+    "assertion": "authEnforced",
+    "reason": "Endpoint público intencional: status agregado de infra sem dados de tenant (decisão documentada em api/services/systemStatusService.js — '/system/status é público, então NÃO usa tenantId (agregado)'). O requireAuth no handler é opcional e só enriquece a resposta (emit de websocket) quando o chamador já está autenticado; o inventário marca authRequired=true por detectar esse requireAuth condicional.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "api:GET:/api/qa-waves/health": {
+    "assertion": "classificationEnforced",
+    "reason": "Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  }
+}

@@ -238,13 +238,8 @@ async function handleFlowCrudRoutes(ctx) {
     try {
       const body = await parseJsonBody(req);
 
-      // Verifica se o fluxo existe
-      const existingFlow = flows.get(id);
-      if (!existingFlow) {
-        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
-        return true;
-      }
-
+      // Auth ANTES da checagem de existência: fail-closed e sem oráculo de
+      // existência para chamadores anônimos.
       const authResult = requireAuth(req);
       let tenantId = null;
       if (STRICT_TENANT_MODE) {
@@ -254,6 +249,16 @@ async function handleFlowCrudRoutes(ctx) {
         }
         tenantId = requireTenant(req, res);
         if (!tenantId) return true;
+      }
+
+      // Verifica se o fluxo existe
+      const existingFlow = flows.get(id);
+      if (!existingFlow) {
+        sendJson(res, 404, { error: 'flow_not_found', message: `Fluxo com id "${id}" não encontrado` });
+        return true;
+      }
+
+      if (STRICT_TENANT_MODE) {
         if (existingFlow.tenantId !== tenantId) {
           sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
           return true;

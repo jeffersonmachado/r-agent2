@@ -23,20 +23,27 @@ async function handleFlowCrudDeleteRoute(ctx) {
   }
 
   const id = decodeURIComponent(pathname.slice('/flows/'.length));
+
+  // Auth ANTES da checagem de existência: fail-closed e sem oráculo de
+  // existência para chamadores anônimos.
+  const authResult = requireAuth(req);
+  let tenantId = null;
+  if (STRICT_TENANT_MODE) {
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    tenantId = requireTenant(req, res);
+    if (!tenantId) return true;
+  }
+
   const flow = flows.get(id);
   if (!flow) {
     sendJson(res, 404, { error: 'flow_not_found' });
     return true;
   }
 
-  const authResult = requireAuth(req);
   if (STRICT_TENANT_MODE) {
-    if (!authResult.valid) {
-      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-      return true;
-    }
-    const tenantId = requireTenant(req, res);
-    if (!tenantId) return true;
     if (flow.tenantId !== tenantId) {
       sendJson(res, 403, { error: 'forbidden', message: 'Fluxo não pertence ao seu tenant' });
       return true;

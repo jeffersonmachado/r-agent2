@@ -11,6 +11,17 @@ async function handleSystemAdminRoutes(ctx) {
   } = deps;
 
   if (method === 'POST' && pathname === '/admin/rate-limit/clear-cache') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+
     try {
       clearLimitersCache();
       logger.info('[Admin] Cache de rate limiters limpo via endpoint');
@@ -29,6 +40,17 @@ async function handleSystemAdminRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/admin/rate-limit/clear') {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
+    const permResult = requirePermission(req, 'config', 'update');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+
     const nodeEnv = config.get('nodeEnv', 'development');
     if (nodeEnv !== 'development') {
       sendJson(res, 403, {

@@ -243,6 +243,9 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   });
 
   app.use((req, res) => {
+    // Marcador de fallback terminal: permite distinguir "rota não registrada"
+    // de um 404 de entidade respondido por um handler (API Surface Wave).
+    res.setHeader('x-api-route-fallback', '1');
     notFound(res);
   });
 }

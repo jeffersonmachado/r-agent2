@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-27T22:39:36.223Z",
+  "generatedAt": "2026-07-28T10:13:19.005Z",
   "counts": {
-    "total": 2728,
+    "total": 2725,
     "byKind": {
-      "api": 768,
+      "api": 765,
       "field": 1492,
       "model": 155,
       "page": 149,
@@ -12,9 +12,9 @@
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2500,
-      "DEVELOPMENT": 139,
-      "SUPPORT": 89
+      "PRODUCTION": 2507,
+      "DEVELOPMENT": 136,
+      "SUPPORT": 82
     },
     "orphaned": 1
   },
@@ -4288,12 +4288,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "fc804b05eea57bb82100a8dbe37f67bd9b84b1c7e673ef290248958a194ee033"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d39b7fdd2d5906ad6142072fd629b24f34dc1bbbf54d3eba9c77c7d41987d7f6"
     },
     {
       "id": "api:GET:/api/schedules/availability",
@@ -4306,12 +4308,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "6aa7375b6005da7c763b07b572e1748dc441ee2bfa6e2d2b66daa4d937b2685b"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7fd2441cc23aab817e640a57d02a17072b54f57bdac880ee83edd4abad89bcae"
     },
     {
       "id": "api:GET:/api/solutions/packs",
@@ -5391,8 +5395,10 @@
       "path": "/flows/:id",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/handleFlowCrudReadRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5400,7 +5406,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "0b4584650bff125dab02e673a9a3d76d7a881522f3c5fddef9f14554705be10d"
+      "fingerprint": "c901eda7b62c92137c270accf2e60730ddae9108f12d97c6334398b397023880"
     },
     {
       "id": "api:GET:/health",
@@ -6272,24 +6278,6 @@
       "fingerprint": "fd5f71dc5c1cfef20de7860a9b7d7ec35c6e1738cecf1331d86b98d495f690c8"
     },
     {
-      "id": "api:GET:/qa/rota",
-      "kind": "api",
-      "method": "GET",
-      "path": "/qa/rota",
-      "module": "operationalStatus",
-      "source": "api/middleware/requireClassification.js",
-      "authRequired": false,
-      "authorization": [
-        "requireClassification"
-      ],
-      "classification": "DEVELOPMENT",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "observability",
-      "linkedJourneys": [],
-      "fingerprint": "6bc5e57f40714b0a5369b151ff59d14f73dedafa9cdd62f7295facd3cc4227c8"
-    },
-    {
       "id": "api:GET:/qa/stability",
       "kind": "api",
       "method": "GET",
@@ -6753,24 +6741,6 @@
         "workspace"
       ],
       "fingerprint": "5a06ddf3e6c7d58ac78c996f1d16354538804fb09a8cf770e1eca63945efc57a"
-    },
-    {
-      "id": "api:GET:/rota",
-      "kind": "api",
-      "method": "GET",
-      "path": "/rota",
-      "module": "qa",
-      "source": "api/middleware/requireClassification.js",
-      "authRequired": false,
-      "authorization": [
-        "requireClassification"
-      ],
-      "classification": "DEVELOPMENT",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "resilience",
-      "linkedJourneys": [],
-      "fingerprint": "cf08757308d58c25c1595ef371fb516f4817b94b7022061bcd02091c8c99cb2b"
     },
     {
       "id": "api:GET:/rpa/execution/:id",
@@ -7964,14 +7934,17 @@
       "path": "/admin/rate-limit/clear",
       "module": "domain-admin",
       "source": "api/modules/domain-admin/handleSystemAdminRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "6258b22640f1bac24ee112205c2291b5a316845d5cef7a2341a199912f767f63"
+      "fingerprint": "d2e083769fd85843c8f4d9380dfd7b7e8285062f96161e867dfa6d8dae34bb77"
     },
     {
       "id": "api:POST:/admin/rate-limit/clear-cache",
@@ -7982,14 +7955,16 @@
       "source": "api/modules/domain-admin/handleSystemAdminRoutes.js",
       "authRequired": true,
       "authorization": [
-        "handleSystemAdminRoutes"
+        "handleSystemAdminRoutes",
+        "requireAuth",
+        "requirePermission:config:update"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "5490f51873dc8a2f0a40a829e47e731b152bb66a051c537d375748f8b1b88797"
+      "fingerprint": "de8e94189a0b353a3abc386e5cbc8240ae01450f044539a8f2d4029e780451c0"
     },
     {
       "id": "api:POST:/ai/chatbot/generate",
@@ -9098,12 +9073,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "c123654561618c61df4fa8d5759f62f206d1c064a655223f1fc24f9b48d834c2"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e7ef04fa03f88ca2e4838c40e2a47f08cca35cf870217f0e1ca1206b982188e7"
     },
     {
       "id": "api:POST:/api/demo/run",
@@ -11114,12 +11091,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "ee6beac4cf2817709b5f0fd76242e3cb20e8f5a52814dc7177c866064d4b8350"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1b13c095b2c3a1fe60215636266c9d7067ab3824abd74e5c3f369527b9134478"
     },
     {
       "id": "api:POST:/api/schedules/:scheduleId/:action",
@@ -11132,12 +11111,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "cdcec9afdc5da19e879b9495999ed2ca18fea2e009bb6f53e6c9e3ce5c4508a0"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f41bf3c822797d442c3136075bf77105039faa10411cd4af0d9d252c9c65a440"
     },
     {
       "id": "api:POST:/api/solutions/packs/install",
@@ -11168,12 +11149,14 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "acc10fd933f3ca2593046960bd840c113c6456aa1881ad4eb69046ca6d80af47"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "898e613d1935eb19a815b6f71337aba0038344aec58858c84b627a1d7eac64c9"
     },
     {
       "id": "api:POST:/api/support/tags/suggest",
@@ -11186,12 +11169,15 @@
       "authorization": [
         "requireAuthenticated"
       ],
-      "classification": "SUPPORT",
+      "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "support-diagnostics",
-      "linkedJourneys": [],
-      "fingerprint": "dc7b45527bb7ee849acbb33ecb5b1c91e996043747708d7f0e7570948f4bcdf4"
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "support_ticket_flow",
+        "tickets_tags"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d44461d778d8cf15dbef717af619f994e10d6faea157e920e1c9b8b708b7b895"
     },
     {
       "id": "api:POST:/api/tasks",
@@ -13084,25 +13070,6 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "f5657b644ded19568f0e8bb9546e5a9284b72bae27b172a6d6c01b4f9900af99"
-    },
-    {
-      "id": "api:POST:/qa/tickets",
-      "kind": "api",
-      "method": "POST",
-      "path": "/qa/tickets",
-      "module": "operationalStatus",
-      "source": "api/middleware/auth.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth",
-        "requirePermission:tickets:create"
-      ],
-      "classification": "DEVELOPMENT",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "observability",
-      "linkedJourneys": [],
-      "fingerprint": "6816d3729d8fe1db74a5c7d0b7719c8838a9de3c8403b296c7b7b98b64cb61ae"
     },
     {
       "id": "api:POST:/queues",

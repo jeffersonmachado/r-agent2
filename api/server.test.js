@@ -510,8 +510,13 @@ describe('API server (api/server.js)', () => {
   });
 
   test('Fluxo inexistente deve retornar 404 apropriado', async () => {
-    if (skipServerTests) return;
-    const res = await request(port, 'GET', '/flows/nao-existe');
+    if (skipServerTests || !dbReady) return;
+    // Sem credencial: 401 (auth vem antes da existência — sem oráculo).
+    const anonymousRes = await request(port, 'GET', '/flows/nao-existe');
+    expect(anonymousRes.status).toBe(401);
+    // Autenticado: 404 flow_not_found.
+    const authHeaders = await loginAuthHeaders('tenant-demo');
+    const res = await request(port, 'GET', '/flows/nao-existe', undefined, authHeaders);
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'flow_not_found' });
   });
@@ -551,8 +556,13 @@ describe('API server (api/server.js)', () => {
   });
 
   test('DELETE /flows/:id deve retornar 404 para fluxo inexistente', async () => {
-    if (skipServerTests) return;
-    const res = await request(port, 'DELETE', '/flows/nao-existe');
+    if (skipServerTests || !dbReady) return;
+    // Sem credencial: 401 (auth vem antes da existência — sem oráculo).
+    const anonymousRes = await request(port, 'DELETE', '/flows/nao-existe');
+    expect(anonymousRes.status).toBe(401);
+    // Autenticado: 404 flow_not_found.
+    const authHeaders = await loginAuthHeaders('tenant-demo');
+    const res = await request(port, 'DELETE', '/flows/nao-existe', undefined, authHeaders);
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'flow_not_found' });
   });

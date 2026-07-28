@@ -117,7 +117,10 @@ describe('apiRouteScanner', () => {
     expect(classifyModule('qa-mesh')).toBe('DEVELOPMENT');
     expect(classifyModule('rpa-tests')).toBe('DEVELOPMENT');
     expect(classifyModule('dev-management')).toBe('DEVELOPMENT');
-    expect(classifyModule('support-debug')).toBe('SUPPORT');
+    // support-debug: override justificado — serve rotas operacionais
+    // (/api/schedules → frontend/src/api/scheduling.js); ver
+    // MODULE_CLASSIFICATION_OVERRIDES em apiRouteScanner.js.
+    expect(classifyModule('support-debug')).toBe('PRODUCTION');
     expect(classifyModule('execution-ledger')).toBe('SUPPORT');
     expect(classifyModule('crm')).toBe('PRODUCTION');
   });
