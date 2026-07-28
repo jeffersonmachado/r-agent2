@@ -32,7 +32,7 @@ describe('inventory integration (repositório real)', () => {
   it('descobre as páginas reais do frontend', () => {
     const result = scanFrontendRoutes({ rootDir: ROOT_DIR });
     expect(result.warnings).toEqual([]);
-    expect(result.items.length).toBeGreaterThanOrEqual(149);
+    expect(result.items.length).toBeGreaterThanOrEqual(138);
     expect(result.items.some((item) => item.id === 'page:/agenda')).toBe(true);
     expect(result.items.some((item) => item.id === 'page:/dev/qa-waves')).toBe(true);
     // /r-agent2 é prefixo de mount de deploy, não página — nunca pode virar item.
@@ -54,7 +54,7 @@ describe('inventory integration (repositório real)', () => {
     const inventory = buildInventory({ rootDir: ROOT_DIR });
     expect(inventory.counts.total).toBeGreaterThanOrEqual(2632);
     expect(inventory.counts.byKind.api).toBeGreaterThanOrEqual(671);
-    expect(inventory.counts.byKind.page).toBeGreaterThanOrEqual(149);
+    expect(inventory.counts.byKind.page).toBeGreaterThanOrEqual(138);
     expect(inventory.counts.byKind.model).toBeGreaterThanOrEqual(155);
     expect(inventory.counts.orphaned).toBeGreaterThanOrEqual(0);
     expect(inventory.items.every((item) => /^[0-9a-f]{64}$/.test(item.fingerprint))).toBe(true);

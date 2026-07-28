@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-28T13:08:16.625Z",
+  "generatedAt": "2026-07-28T17:20:21.538Z",
   "counts": {
-    "total": 2728,
+    "total": 2717,
     "byKind": {
       "api": 768,
       "field": 1492,
       "model": 155,
-      "page": 149,
+      "page": 138,
       "relation": 9,
       "table": 155
     },
     "byClassification": {
       "PRODUCTION": 2510,
-      "DEVELOPMENT": 136,
+      "DEVELOPMENT": 125,
       "SUPPORT": 82
     },
     "orphaned": 1
@@ -48272,204 +48272,6 @@
       "technicalWave": "observability",
       "linkedJourneys": [],
       "fingerprint": "94ae616d410049feacc0b0ea7f502f69ed071d90d06afabeea52b248f1a6d516"
-    },
-    {
-      "id": "page:/dev/work-management",
-      "kind": "page",
-      "path": "/dev/work-management",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "613a590584cb7089a2d24c69e8dc116e28fb6728d61cc38b31d8683882ae14e2"
-    },
-    {
-      "id": "page:/dev/work-management/ai-suggestions",
-      "kind": "page",
-      "path": "/dev/work-management/ai-suggestions",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "f431f0bd9097a35aa37e69ddef31f0645e20ddde5c299ef47e9899e362d1428b"
-    },
-    {
-      "id": "page:/dev/work-management/board",
-      "kind": "page",
-      "path": "/dev/work-management/board",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "77fb628068f7c2aabc5d7a4ed1343a50b22015464960cbb77e4c52b95f684605"
-    },
-    {
-      "id": "page:/dev/work-management/deliverables",
-      "kind": "page",
-      "path": "/dev/work-management/deliverables",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "dbfc4d05a923abb4bed6fb33818b41f70323700e7d29b44032c81f3b46179476"
-    },
-    {
-      "id": "page:/dev/work-management/documents",
-      "kind": "page",
-      "path": "/dev/work-management/documents",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "f667934e95523ccbdd39562710d473bdc17f31995cd85a63ee225daa27603ca8"
-    },
-    {
-      "id": "page:/dev/work-management/metrics",
-      "kind": "page",
-      "path": "/dev/work-management/metrics",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "observability",
-      "linkedJourneys": [],
-      "fingerprint": "65d1c81fcfe1adeb78c4f00b5039674a7d0ac4e6e8d4bfb333b823c0e3f176a6"
-    },
-    {
-      "id": "page:/dev/work-management/operations",
-      "kind": "page",
-      "path": "/dev/work-management/operations",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "d2f7203c0ec96f25ba15d87e1f61bc65437d8ae3a7d68188f800a0abe0fa125d"
-    },
-    {
-      "id": "page:/dev/work-management/projects",
-      "kind": "page",
-      "path": "/dev/work-management/projects",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "d456c1ce533ccd45a41e59f50373f8dcad81012c30e23a86854ce51323e02c0f"
-    },
-    {
-      "id": "page:/dev/work-management/qa-validation",
-      "kind": "page",
-      "path": "/dev/work-management/qa-validation",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "resilience",
-      "linkedJourneys": [],
-      "fingerprint": "2aa8926cad36ee0fbe308ae9e7018ba63e2fc22cf408c7cf1e5b2325d981123b"
-    },
-    {
-      "id": "page:/dev/work-management/team",
-      "kind": "page",
-      "path": "/dev/work-management/team",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "7ce7b230cb26480f2c588d97470eb12e063928d4115c9fce8b63b197394897cc"
-    },
-    {
-      "id": "page:/dev/work-management/timeline",
-      "kind": "page",
-      "path": "/dev/work-management/timeline",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "reports:read",
-      "section": "plataforma",
-      "guarded": true,
-      "classification": "DEVELOPMENT",
-      "source": "frontend/src/main.jsx",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "1d90ba1d4099587d9af97bfce5c827ef23b282b5835b0fb428d3b456f288ccf3"
     },
     {
       "id": "page:/developer-keys",

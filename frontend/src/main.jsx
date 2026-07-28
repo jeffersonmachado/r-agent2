@@ -69,7 +69,6 @@ import { QaWavesPage } from './pages/QaWavesPage';
 import { QaGapsPage } from './pages/QaGapsPage';
 import { QaWavesOperationalHealthPage } from './pages/QaWavesOperationalHealthPage';
 import { QaWavesEnterpriseGovernancePage } from './pages/QaWavesEnterpriseGovernancePage';
-import { WorkManagementPage } from './pages/WorkManagementPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { PbxPage } from './pages/PbxPage';
 import { PbxRoutesPage } from './pages/PbxRoutesPage';
@@ -482,7 +481,6 @@ function AppWithAuth() {
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
   const isAgentOsHub = isRoute('/admin/agents');
   const isQaAudit = isRoute('/dev/qa-audit');
-  const isWorkManagement = currentPath === '/dev/work-management' || currentPath.startsWith('/dev/work-management/');
   const isOrders = isRoute('/orders');
   const isKitchen = isRoute('/kitchen');
   const isDispatch = isRoute('/dispatch');
@@ -562,7 +560,7 @@ function AppWithAuth() {
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
-      isWorkManagement, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance,
+      isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance,
       isAgentOsHub,
       isQaAudit,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
@@ -581,7 +579,7 @@ function AppWithAuth() {
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isWorkManagement, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
+            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -712,17 +710,6 @@ function AppWithAuth() {
       '/dev/qa-gaps': '🧭 QA Gaps Operacionais',
       '/dev/qa-waves/operational-health': 'QA Waves Operational Health',
       '/dev/qa-waves/enterprise-governance': 'QA Waves Enterprise Governance',
-      '/dev/work-management': '🧭 Work Management',
-      '/dev/work-management/projects': '🧭 Work Management • Projetos',
-      '/dev/work-management/board': '🧭 Work Management • Quadro',
-      '/dev/work-management/timeline': '🧭 Work Management • Linha do Tempo',
-      '/dev/work-management/deliverables': '🧭 Work Management • Entregáveis',
-      '/dev/work-management/operations': '🧭 Work Management • Operações',
-      '/dev/work-management/qa-validation': '🧭 Work Management • QA & Validation',
-      '/dev/work-management/documents': '🧭 Work Management • Documentos',
-      '/dev/work-management/team': '🧭 Work Management • Equipe',
-      '/dev/work-management/metrics': '🧭 Work Management • Métricas',
-      '/dev/work-management/ai-suggestions': '🧭 Work Management • Sugestões de IA',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
       '/saas': '🌐 Results SaaS',
       '/saas/products': '🧩 Produtos SaaS',
@@ -1013,8 +1000,6 @@ function AppWithAuth() {
     pageContent = <QaWavesPage />;
   } else if (isQaGaps) {
     pageContent = <QaGapsPage />;
-  } else if (isWorkManagement) {
-    pageContent = <WorkManagementPage />;
   } else if (isOrders) {
     pageContent = <OrdersPage />;
   } else if (isKitchen) {
