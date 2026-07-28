@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-06-12T19:51:59.199Z",
+  "generatedAt": "2026-07-28T01:17:11.367Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260612-165011.zip",
-  "zipHash": "559d6ba79f3fb78663daed015f922df8b92961926da93d80216c605ba5e93e67",
-  "manifestHash": "797b24df5f1ba6ee8af7bb6642a446d6fac1290023e7328193d0701567f24bfd",
-  "replayHash": "a85e3db765b8def2c13244ce1c720f66e760e4e8f22807bfd666d4b0f16b2aed",
-  "governanceHash": "572e4df96296fef95a6ddecc565c7e4d4caee492ec11471b807b74d223d899aa",
-  "readinessHash": "bb66fc4ebd8d15e4b461dcaf66772959ae3645b5458b9b814b7973b14b934742",
-  "consistencyHash": "341bddfe9289108f30cdb3ab726c4e440a6e157b9a97eb359ba61eb9b078612f",
-  "contaminationHash": "c66d2af050f2f5702bc9f7090f74d8b480c4a163da610e352f487052866d0ac1",
-  "packageIntegrityHash": "a75936838db83b345d72bc4f5d52713a34adfb360ca25430cb21bfa72e86ae17",
+  "zipName": "r-agent2-20260727-221549.zip",
+  "zipHash": "139b752835bd7867be5ecd2e8d73b4426acdfb18d01d3abf188a131bd9204d92",
+  "manifestHash": "fb9d71dda2f6fa375f39c0acc9f0001e311d4d750ec4daa4a33ebee9b1882440",
+  "replayHash": "fb401fbf53071fff684d56c8ed7c6337c4d94c41ccfe012e880c764ce4230569",
+  "governanceHash": "ff01d94e49d9b7ba8afd9ff038ed8f6d372562828848cf714c0ef175c571f4b4",
+  "readinessHash": "adee4ff34efe0562be5f33210036f1e2548e24c97c6e5c9a87b53744a1e84d97",
+  "consistencyHash": "52104e7c8c680466dc4503ce722e200b0043ba5ea704a116e62d11a446ca1118",
+  "contaminationHash": "5166e6b2908e5bc19a16c0669bc101f0742ceac21b7cd3218deb433f7a600c41",
+  "packageIntegrityHash": "fab0581d3d6c8e1f9e3dffad27f1648a3e974f8fc72be1dfad37cae09d38b5f0",
   "driftHash": "e29e058a75aeb07b8e73e4d302dfafd13e519edf2526ddb62fa3890bc24f6ef6",
   "gateHash": "0cc1d7048258c160fe946434f92493586f637db6cc18c47823d999783efe898a",
   "recalculatedReadinessHash": "2afc16c0639875afca5c5e25642d7f4b3b5c50911f7b33bea1ddfe6acd150158",
@@ -26,5 +26,5 @@
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
   "autonomousReady": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260612-165011.zip. Package: ÍNTEGRO."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260727-221549.zip. Package: ÍNTEGRO."
 }

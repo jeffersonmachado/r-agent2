@@ -1,413 +1,9 @@
 {
-  "generatedAt": "2026-05-12T17:54:32.507Z",
+  "generatedAt": "2026-07-28T01:19:24.681Z",
   "sourceArtifact": "qa/smoke/qa-waves-operational-final-smoke.json",
   "snapshots": [
     {
       "journeyId": "support_ticket_flow",
-      "stepId": "step_reply_ticket",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.messages.count",
-            "before": 1,
-            "after": 2
-          },
-          {
-            "field": "events.audit.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "events.notifications.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.activities.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "e7d62804aa61b1fe5e6523617e267d6173d11ad108438bb591690a8a4c5991f0"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_change_status",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.ticket.status",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "db.ticketStatus",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "events.audit.count",
-            "before": 1,
-            "after": 2
-          }
-        ]
-      },
-      "hash": "4eb964ee3da772fc60423ab42abe8af68316ad2f2b91f463d808f858de4ad30c"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_ui",
-      "before": null,
-      "after": null,
-      "diff": {
-        "expectedMutations": [
-          "ticket_status_changed",
-          "ticket_reply_persisted"
-        ],
-        "expectedSideEffects": [
-          "crm_updated",
-          "audit_log_created"
-        ]
-      },
-      "hash": "ecc1409a971b908d6978650c8022e6d4aa6f9efdf8b9dea7869634728e4fdf0e"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_backend",
-      "before": null,
-      "after": null,
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "d73890c68836d110e53c195884c332dc57d1ef54f4f617b44d3a8f537e4f2f0d"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_reply_ticket",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.messages.count",
-            "before": 1,
-            "after": 2
-          },
-          {
-            "field": "events.audit.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "events.notifications.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.activities.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "e7d62804aa61b1fe5e6523617e267d6173d11ad108438bb591690a8a4c5991f0"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_change_status",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.ticket.status",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "db.ticketStatus",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "events.audit.count",
-            "before": 1,
-            "after": 2
-          }
-        ]
-      },
-      "hash": "4eb964ee3da772fc60423ab42abe8af68316ad2f2b91f463d808f858de4ad30c"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_ui",
-      "before": null,
-      "after": null,
-      "diff": {
-        "expectedMutations": [
-          "ticket_status_changed",
-          "ticket_reply_persisted"
-        ],
-        "expectedSideEffects": [
-          "crm_updated",
-          "audit_log_created"
-        ]
-      },
-      "hash": "ecc1409a971b908d6978650c8022e6d4aa6f9efdf8b9dea7869634728e4fdf0e"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_backend",
-      "before": null,
-      "after": null,
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "d73890c68836d110e53c195884c332dc57d1ef54f4f617b44d3a8f537e4f2f0d"
-    },
-    {
-      "journeyId": "support_ticket_flow",
       "stepId": "step_access_support_module",
       "before": {
         "db": {
@@ -436,33 +32,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -494,33 +90,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -552,40 +148,6 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_reply_ticket",
-      "before": {
-        "db": {
-          "messages": {
             "count": 1
           },
           "ticket": {
@@ -607,272 +169,14 @@
           }
         }
       },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
       "diff": {
-        "changed": true,
+        "changed": false,
         "mutations": [],
         "sideEffects": [],
         "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.messages.count",
-            "before": 1,
-            "after": 2
-          },
-          {
-            "field": "events.audit.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "events.notifications.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.activities.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
+        "details": []
       },
-      "hash": "e7d62804aa61b1fe5e6523617e267d6173d11ad108438bb591690a8a4c5991f0"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_change_status",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.ticket.status",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "db.ticketStatus",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "events.audit.count",
-            "before": 1,
-            "after": 2
-          }
-        ]
-      },
-      "hash": "4eb964ee3da772fc60423ab42abe8af68316ad2f2b91f463d808f858de4ad30c"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_ui",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "expectedMutations": [
-          "ticket_status_changed",
-          "ticket_reply_persisted"
-        ],
-        "expectedSideEffects": [
-          "crm_updated",
-          "audit_log_created"
-        ]
-      },
-      "hash": "2fdc6dec84e24012410595bfa97fb2659c49ce1f7f438810fd966e24ba1e8f4b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_backend",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -904,33 +208,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -962,33 +266,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -1020,40 +324,6 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_reply_ticket",
-      "before": {
-        "db": {
-          "messages": {
             "count": 1
           },
           "ticket": {
@@ -1075,272 +345,14 @@
           }
         }
       },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
       "diff": {
-        "changed": true,
+        "changed": false,
         "mutations": [],
         "sideEffects": [],
         "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.messages.count",
-            "before": 1,
-            "after": 2
-          },
-          {
-            "field": "events.audit.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "events.notifications.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.activities.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
+        "details": []
       },
-      "hash": "e7d62804aa61b1fe5e6523617e267d6173d11ad108438bb591690a8a4c5991f0"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_change_status",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.ticket.status",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "db.ticketStatus",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "events.audit.count",
-            "before": 1,
-            "after": 2
-          }
-        ]
-      },
-      "hash": "4eb964ee3da772fc60423ab42abe8af68316ad2f2b91f463d808f858de4ad30c"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_ui",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "expectedMutations": [
-          "ticket_status_changed",
-          "ticket_reply_persisted"
-        ],
-        "expectedSideEffects": [
-          "crm_updated",
-          "audit_log_created"
-        ]
-      },
-      "hash": "2fdc6dec84e24012410595bfa97fb2659c49ce1f7f438810fd966e24ba1e8f4b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_backend",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -1372,33 +384,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -1430,33 +442,33 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
+            "count": 1
           },
           "ticket": {
-            "status": "resolved"
+            "status": "open"
           },
-          "ticketStatus": "resolved"
+          "ticketStatus": "open"
         },
         "events": {
           "audit": {
-            "count": 2
+            "count": 0
           },
           "notifications": {
-            "count": 1
+            "count": 0
           }
         },
         "crm": {
           "activities": {
-            "count": 1
+            "count": 0
           }
         }
       },
       "diff": {
-        "changed": true,
+        "changed": false,
         "details": [],
-        "valid": true
+        "valid": false
       },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -1488,40 +500,6 @@
       "after": {
         "db": {
           "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_reply_ticket",
-      "before": {
-        "db": {
-          "messages": {
             "count": 1
           },
           "ticket": {
@@ -1543,272 +521,14 @@
           }
         }
       },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
       "diff": {
-        "changed": true,
+        "changed": false,
         "mutations": [],
         "sideEffects": [],
         "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.messages.count",
-            "before": 1,
-            "after": 2
-          },
-          {
-            "field": "events.audit.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "events.notifications.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.activities.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
+        "details": []
       },
-      "hash": "e7d62804aa61b1fe5e6523617e267d6173d11ad108438bb591690a8a4c5991f0"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_change_status",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 1
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.ticket.status",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "db.ticketStatus",
-            "before": "open",
-            "after": "resolved"
-          },
-          {
-            "field": "events.audit.count",
-            "before": 1,
-            "after": 2
-          }
-        ]
-      },
-      "hash": "4eb964ee3da772fc60423ab42abe8af68316ad2f2b91f463d808f858de4ad30c"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_ui",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "expectedMutations": [
-          "ticket_status_changed",
-          "ticket_reply_persisted"
-        ],
-        "expectedSideEffects": [
-          "crm_updated",
-          "audit_log_created"
-        ]
-      },
-      "hash": "2fdc6dec84e24012410595bfa97fb2659c49ce1f7f438810fd966e24ba1e8f4b"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_assert_ticket_backend",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 2
-          },
-          "ticket": {
-            "status": "resolved"
-          },
-          "ticketStatus": "resolved"
-        },
-        "events": {
-          "audit": {
-            "count": 2
-          },
-          "notifications": {
-            "count": 1
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 1
-          }
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "a7f656eadb75011be668d8af56943934c545465eddd97b448c179b9aee405448"
+      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
     },
     {
       "journeyId": "fitness_customer_checkin",

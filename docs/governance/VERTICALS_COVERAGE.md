@@ -9,13 +9,13 @@
 ## fitness
 - Classification: production-like
 - Journeys: 10
-- Scenarios: 39
+- Scenarios: 41
 - Blockers: none
 
 ## food
 - Classification: production-like
 - Journeys: 2
-- Scenarios: 3
+- Scenarios: 5
 - Blockers: none
 
 ## services
@@ -33,5 +33,5 @@
 ## market
 - Classification: production-like
 - Journeys: 1
-- Scenarios: 3
+- Scenarios: 4
 - Blockers: none
