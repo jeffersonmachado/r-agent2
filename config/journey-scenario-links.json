@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync.",
-  "generatedAt": "2026-07-27T01:41:17.108Z",
+  "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync; jornadas com \"manual\": true dentro de verticais geradas também são preservadas.",
+  "generatedAt": "2026-07-27T22:38:39.897Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -97,6 +97,132 @@
       "vertical": "core",
       "journeys": [
         {
+          "journey": "academy_learning",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-academy",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agenda",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agenda",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agent_factory",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agent-factory",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agent_marketplace",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agent-marketplace",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agent_orchestrator",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agent-orchestrator",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agent_registry",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agent-registry",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "agents",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-agents",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "ai_governance",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-ai-governance",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "ai_tools",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-ai-tools",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "analytics",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-analytics",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "audio_transcribe",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-audio-transcribe",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "automations",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-automations",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "backup_restore",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-backup-restore",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "billing",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-billing",
+              "status": "active"
+            }
+          ]
+        },
+        {
           "journey": "booking_flow",
           "scenarios": [
             {
@@ -109,6 +235,24 @@
             },
             {
               "scenarioId": "business-core-flow-booking-terminal-states",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "bulk_messaging",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-bulk-messaging",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "campaigns",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-campaigns",
               "status": "active"
             }
           ]
@@ -141,6 +285,222 @@
           ]
         },
         {
+          "journey": "channel_accounts",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-channel-accounts",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "cognitive_assistant",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-cognitive",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "conversations_chat",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-conversations-chat",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "deliveries",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-deliveries",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "demo",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-demo",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "departments",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-departments",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "developer",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-developer",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "export",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-export",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "failed_messages",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-failed-messages",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "faq",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-faq",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "flows_editor_rpa_replay",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-flows-editor",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "inbox",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-inbox",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "instagram_messenger",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-instagram-messenger",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "journey_registry",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-journey-registry",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "kitchen_dispatch",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-kitchen-dispatch",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "knowledge_base",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-knowledge-base",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "knowledge_graph",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-knowledge-graph",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "login",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-login",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "maintenance",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-maintenance",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "marketing",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-marketing",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "mfa",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-mfa",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "operational_intelligence",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-intelligence",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "operations_dashboard",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-ops-dashboard",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "orders",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-orders",
+              "status": "active"
+            }
+          ]
+        },
+        {
           "journey": "payment_charge_flow",
           "scenarios": [
             {
@@ -153,6 +513,159 @@
             },
             {
               "scenarioId": "business-core-flow-payment-invalid",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "physical_queue_kiosk_station_panel_fila",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-physical-queue",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "plan_usage",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-plan-usage",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "process_runtime",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-process-runtime",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "product_docs",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-product-docs",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "projects",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-projects",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "public_tokens",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-public-tokens",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "queues",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-queues",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "quick_replies",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-quick-replies",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "rag_documents",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-rag-documents",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "rap_learn",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-rap-learn",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "rbac_access_control",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-rbac",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "saas_storefront",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-saas-storefront",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "segmentation",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-segmentation",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "sla",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-sla",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "solutions",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-solutions",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "sso_scim",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-sso-scim",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "supervisor",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-supervisor",
               "status": "active"
             }
           ]
@@ -175,208 +688,10 @@
           ]
         },
         {
-          "journey": "orders",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-orders",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "billing",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-billing",
-              "status": "active"
-            }
-          ]
-        },
-        {
           "journey": "tasks",
           "scenarios": [
             {
               "scenarioId": "business-core-biz-tasks",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "quick_replies",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-quick-replies",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "webhooks",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-webhooks",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "inbox",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-inbox",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "campaigns",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-campaigns",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "projects",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-projects",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "marketing",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-marketing",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "automations",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-automations",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "sla",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-sla",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "deliveries",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-deliveries",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "developer",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-developer",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "whatsapp_connections",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-whatsapp-connections",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "analytics",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-analytics",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "operational_intelligence",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-intelligence",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "calendar",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-cap-scheduling",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "academy_learning",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-academy",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "physical_queue_kiosk_station_panel_fila",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-physical-queue",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "public_tokens",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-public-tokens",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "process_runtime",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-process-runtime",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "solutions",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-solutions",
-              "status": "active"
-            }
-          ]
-        },
-        {
-          "journey": "rbac_access_control",
-          "scenarios": [
-            {
-              "scenarioId": "business-core-biz-rbac",
               "status": "active"
             }
           ]
@@ -391,64 +706,74 @@
           ]
         },
         {
-          "journey": "operations_dashboard",
+          "journey": "tenant_config",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-ops-dashboard",
+              "scenarioId": "business-core-biz-tenant-config",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "cognitive_assistant",
+          "journey": "tenants",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-cognitive",
+              "scenarioId": "business-core-biz-tenants",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "supervisor",
+          "journey": "tickets_tags",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-supervisor",
+              "scenarioId": "business-core-biz-tickets-tags",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "queues",
+          "journey": "voice_event_ledger",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-queues",
+              "scenarioId": "business-core-biz-voice-events",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "departments",
+          "journey": "web_scraping",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-departments",
+              "scenarioId": "business-core-biz-web-scraping",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "export",
+          "journey": "webhooks",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-export",
+              "scenarioId": "business-core-biz-webhooks",
               "status": "active"
             }
           ]
         },
         {
-          "journey": "demo",
+          "journey": "whatsapp_connections",
           "scenarios": [
             {
-              "scenarioId": "business-core-biz-demo",
+              "scenarioId": "business-core-biz-whatsapp-connections",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "calendar",
+          "manual": true,
+          "scenarios": [
+            {
+              "scenarioId": "business-core-cap-scheduling",
               "status": "active"
             }
           ]
@@ -687,6 +1012,10 @@
             {
               "scenarioId": "business-food-flow-order-lifecycle",
               "status": "approved"
+            },
+            {
+              "scenarioId": "business-food-flow-order-payment",
+              "status": "approved"
             }
           ]
         },
@@ -717,6 +1046,10 @@
             },
             {
               "scenarioId": "business-market-flow-node",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-market-flow-order-customer",
               "status": "approved"
             },
             {

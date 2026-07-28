@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "generatedAt": "2026-07-26T16:58:14.958Z",
+  "generatedAt": "2026-07-27T05:11:59.000Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -446,6 +446,258 @@
     "demo": {
       "requiredCapabilities": [
         "demo"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agent_factory": {
+      "requiredCapabilities": [
+        "agent_factory"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agent_marketplace": {
+      "requiredCapabilities": [
+        "agent_marketplace"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agent_orchestrator": {
+      "requiredCapabilities": [
+        "agent_orchestration"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agent_registry": {
+      "requiredCapabilities": [
+        "agent_registry"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "journey_registry": {
+      "requiredCapabilities": [
+        "journey_registry"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "knowledge_graph": {
+      "requiredCapabilities": [
+        "knowledge_graph"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "rap_learn": {
+      "requiredCapabilities": [
+        "rap_learn"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "ai_governance": {
+      "requiredCapabilities": [
+        "ai_governance"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "flows_editor_rpa_replay": {
+      "requiredCapabilities": [
+        "flows_editor_rpa_replay"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "rag_documents": {
+      "requiredCapabilities": [
+        "rag_documents"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "knowledge_base": {
+      "requiredCapabilities": [
+        "knowledge_base"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "product_docs": {
+      "requiredCapabilities": [
+        "product_docs"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "channel_accounts": {
+      "requiredCapabilities": [
+        "channel_accounts"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "instagram_messenger": {
+      "requiredCapabilities": [
+        "instagram_messenger"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "segmentation": {
+      "requiredCapabilities": [
+        "segmentation"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "tickets_tags": {
+      "requiredCapabilities": [
+        "tickets_tags"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "tenant_config": {
+      "requiredCapabilities": [
+        "tenant_config"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "conversations_chat": {
+      "requiredCapabilities": [
+        "conversations_chat"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "ai_tools": {
+      "requiredCapabilities": [
+        "ai_tools"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "audio_transcribe": {
+      "requiredCapabilities": [
+        "audio_transcribe"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "voice_event_ledger": {
+      "requiredCapabilities": [
+        "voice_event_ledger"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "backup_restore": {
+      "requiredCapabilities": [
+        "backup_restore"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "web_scraping": {
+      "requiredCapabilities": [
+        "web_scraping"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agenda": {
+      "requiredCapabilities": [
+        "agenda"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "agents": {
+      "requiredCapabilities": [
+        "agents"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "bulk_messaging": {
+      "requiredCapabilities": [
+        "bulk_messaging"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "failed_messages": {
+      "requiredCapabilities": [
+        "failed_messages"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "kitchen_dispatch": {
+      "requiredCapabilities": [
+        "kitchen_dispatch"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "faq": {
+      "requiredCapabilities": [
+        "faq"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "login": {
+      "requiredCapabilities": [
+        "login"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "mfa": {
+      "requiredCapabilities": [
+        "mfa"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "sso_scim": {
+      "requiredCapabilities": [
+        "sso_scim"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "maintenance": {
+      "requiredCapabilities": [
+        "maintenance"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "plan_usage": {
+      "requiredCapabilities": [
+        "plan_usage"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "saas_storefront": {
+      "requiredCapabilities": [
+        "saas_storefront"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
+    "tenants": {
+      "requiredCapabilities": [
+        "tenants"
       ],
       "missingCapabilities": [],
       "confidence": 0.75

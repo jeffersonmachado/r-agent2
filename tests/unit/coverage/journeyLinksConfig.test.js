@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 53 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 89 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(53);
-    expect(summary.bySource['journey-coverage']).toBe(48);
+    expect(summary.total).toBe(89);
+    expect(summary.bySource['journey-coverage']).toBe(84);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -150,5 +150,17 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(links.departments.scenarioIds).toContain('business-core-biz-departments');
     expect(links.export.scenarioIds).toContain('business-core-biz-export');
     expect(links.demo.scenarioIds).toContain('business-core-biz-demo');
+
+    // Jornadas de plataforma/sistema (batch 2): agent OS, registries, auth,
+    // canais e operações — ligadas aos cenários business-core-biz-* do mesh.
+    expect(links.agent_factory.scenarioIds).toContain('business-core-biz-agent-factory');
+    expect(links.agent_registry.scenarioIds).toContain('business-core-biz-agent-registry');
+    expect(links.journey_registry.scenarioIds).toContain('business-core-biz-journey-registry');
+    expect(links.rap_learn.scenarioIds).toContain('business-core-biz-rap-learn');
+    expect(links.flows_editor_rpa_replay.scenarioIds).toContain('business-core-biz-flows-editor');
+    expect(links.login.scenarioIds).toContain('business-core-biz-login');
+    expect(links.agenda.scenarioIds).toContain('business-core-biz-agenda');
+    expect(links.tenants.scenarioIds).toContain('business-core-biz-tenants');
+    expect(links.mfa.scenarioIds).toContain('business-core-biz-mfa');
   });
 });

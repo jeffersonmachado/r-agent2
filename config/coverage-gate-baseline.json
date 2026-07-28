@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-27T02:04:25.557Z",
+  "generatedAt": "2026-07-27T22:39:52.978Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -518,6 +518,302 @@
       "scenarioCode": "CORE-BIZ-ACADEMY"
     },
     {
+      "id": "business-core-biz-agenda",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agenda: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /agenda renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agenda",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENDA"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENDA"
+    },
+    {
+      "id": "business-core-biz-agent-factory",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agent factory: agente criado, configurado, validado, aprovado e publish com contrato de governança",
+      "steps": [
+        "Tenant autenticado",
+        "QA Waves disponíveis"
+      ],
+      "assertions": [
+        "Agente criado via factory com workflow created",
+        "Agente configurado com workflow configured",
+        "Validate retorna contrato estruturado (qaWave.status GO/NO_GO, evidence, replay quando presente)",
+        "Approve retorna aprovado ou governance_gates_failed estruturado",
+        "Publish retorna publicado ou publish_blocked com status, waveResult, evidence e replay",
+        "Agente removido no cleanup"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agent_factory",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENT-FACTORY"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENT-FACTORY"
+    },
+    {
+      "id": "business-core-biz-agent-marketplace",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agent marketplace: catálogo consultado e agente instalado a partir do catálogo",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Catálogo do marketplace listado com total",
+        "Agente do catálogo consultado por slug",
+        "Agente instalado a partir do catálogo",
+        "Agente instalado removido no cleanup"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agent_marketplace",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENT-MARKETPLACE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENT-MARKETPLACE"
+    },
+    {
+      "id": "business-core-biz-agent-orchestrator",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agent orchestrator: capabilities e intents listados, execução orquestrada com trilha de governança",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Capabilities listadas com agrupamento por categoria",
+        "Intents disponíveis listados",
+        "Execução orquestrada retorna steps e status agregado",
+        "Evento execute registrado na trilha de governança",
+        "Registros de governança da execução removidos no cleanup"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agent_orchestrator",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENT-ORCHESTRATOR"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENT-ORCHESTRATOR"
+    },
+    {
+      "id": "business-core-biz-agent-registry",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agent registry: agente corporativo criado, consultado, atualizado e removido",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Agente criado no registry",
+        "Agente presente na listagem com filtro de busca",
+        "Agente consultado por id e atualizado",
+        "Agente removido e consulta posterior retorna 404"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agent_registry",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENT-REGISTRY"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENT-REGISTRY"
+    },
+    {
+      "id": "business-core-biz-agents",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core agents: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /agents renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "agents",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AGENTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AGENTS"
+    },
+    {
+      "id": "business-core-biz-ai-governance",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core ai governance: evento audit registrado, trilha, decision log e relatório de compliance",
+      "steps": [
+        "Tenant autenticado",
+        "Banco gravável"
+      ],
+      "assertions": [
+        "Evento audit registrado com eventType válido do ENUM",
+        "Evento presente na audit-trail filtrada",
+        "Decision log responde com lista",
+        "Compliance report responde com summary de eventos",
+        "Evento removido no cleanup via DB (não há rota DELETE)"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "ai_governance",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AI-GOVERNANCE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AI-GOVERNANCE"
+    },
+    {
+      "id": "business-core-biz-ai-tools",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core ai tools: generate, rewrite e suggest respondem com contrato estruturado",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "chatbot/generate responde sucesso ou falha agregada estruturada (nunca 500)",
+        "rewrite-message e rewrite-multiple respondem com fallback estruturado",
+        "suggest-response responde com listas de sugestões e quick replies",
+        "Página /ai-tools renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "ai_tools",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AI-TOOLS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AI-TOOLS"
+    },
+    {
       "id": "business-core-biz-analytics",
       "domain": "core",
       "type": "regression",
@@ -551,6 +847,41 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-ANALYTICS"
+    },
+    {
+      "id": "business-core-biz-audio-transcribe",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core audio transcribe: validação 400 sem áudio e erro estruturado sem provider",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Transcribe sem audioUrl/audioData retorna 400 bad_request",
+        "Transcribe com áudio inválido retorna 502 transcription_failed estruturado ou sucesso (nunca 500)"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "audio_transcribe",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-AUDIO-TRANSCRIBE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-AUDIO-TRANSCRIBE"
     },
     {
       "id": "business-core-biz-automations",
@@ -587,6 +918,42 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-AUTOMATIONS"
+    },
+    {
+      "id": "business-core-biz-backup-restore",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core backup: export lido e import com payload vazio é no-op estruturado",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Backup export responde com flows e settings",
+        "Import com payload vazio responde ok sem importar nada (nunca overwrite real)",
+        "Página /backup renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "backup_restore",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-BACKUP-RESTORE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-BACKUP-RESTORE"
     },
     {
       "id": "business-core-biz-billing",
@@ -626,6 +993,40 @@
       "scenarioCode": "CORE-BIZ-BILLING"
     },
     {
+      "id": "business-core-biz-bulk-messaging",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core bulk messaging: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /bulk-messaging renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "bulk_messaging",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-BULK-MESSAGING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-BULK-MESSAGING"
+    },
+    {
       "id": "business-core-biz-campaigns",
       "domain": "core",
       "type": "regression",
@@ -663,6 +1064,43 @@
       "scenarioCode": "CORE-BIZ-CAMPAIGNS"
     },
     {
+      "id": "business-core-biz-channel-accounts",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core channel accounts: conta criada, listada, testada, atualizada e removida",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Conta de canal criada e listada",
+        "Teste da conta responde com contrato estruturado (success ou missing_config)",
+        "Conta atualizada e removida no cleanup",
+        "Página /channel-accounts renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "channel_accounts",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-CHANNEL-ACCOUNTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-CHANNEL-ACCOUNTS"
+    },
+    {
       "id": "business-core-biz-cognitive",
       "domain": "core",
       "type": "regression",
@@ -697,6 +1135,42 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-COGNITIVE"
+    },
+    {
+      "id": "business-core-biz-conversations-chat",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core conversations: listagem responde e detalhe consultado quando há sessão",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Listagem de conversas responde com contrato (vazia ou não)",
+        "Detalhe da primeira conversa responde com replay quando há sessões",
+        "Página /chat-humano renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "conversations_chat",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-CONVERSATIONS-CHAT"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-CONVERSATIONS-CHAT"
     },
     {
       "id": "business-core-biz-deliveries",
@@ -879,6 +1353,115 @@
       "scenarioCode": "CORE-BIZ-EXPORT"
     },
     {
+      "id": "business-core-biz-failed-messages",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core failed messages: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /failed-messages renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "failed_messages",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-FAILED-MESSAGES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-FAILED-MESSAGES"
+    },
+    {
+      "id": "business-core-biz-faq",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core faq: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /faq renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "faq",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-FAQ"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-FAQ"
+    },
+    {
+      "id": "business-core-biz-flows-editor",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core flows: CRUD de fluxo, validate, preview, simulate com replay, generate dry-run, plano RPA e editor",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Fluxo criado, listado, consultado, atualizado e ambiente definido",
+        "Validate e preview aprovam fluxo válido",
+        "Simulação gera sessão consultável em /replay/:id",
+        "Generate dry-run responde sem persistir; generate responde com contrato estruturado",
+        "Plano RPA test-only aceito e seed removido do disco",
+        "ai/rpa/generate responde com contrato estruturado (sucesso ou falha agregada)",
+        "Fluxo removido no cleanup",
+        "Página /editor renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "flows_editor_rpa_replay",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-FLOWS-EDITOR"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-FLOWS-EDITOR"
+    },
+    {
       "id": "business-core-biz-inbox",
       "domain": "core",
       "type": "regression",
@@ -917,6 +1500,41 @@
       "scenarioCode": "CORE-BIZ-INBOX"
     },
     {
+      "id": "business-core-biz-instagram-messenger",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core instagram/messenger: send sem canal configurado retorna erro estruturado (nunca 500)",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "instagram/send responde 503 channel_not_configured ou 502 send_failed estruturado",
+        "messenger/send responde 503 channel_not_configured ou 502 send_failed estruturado"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "instagram_messenger",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-INSTAGRAM-MESSENGER"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-INSTAGRAM-MESSENGER"
+    },
+    {
       "id": "business-core-biz-intelligence",
       "domain": "core",
       "type": "regression",
@@ -951,6 +1569,222 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-INTELLIGENCE"
+    },
+    {
+      "id": "business-core-biz-journey-registry",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core journey registry: jornada criada, consultada, atualizada e seed idempotente",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Jornada criada no registry",
+        "Jornada presente na listagem filtrada por domínio",
+        "Jornada consultada por id e atualizada",
+        "Seed responde com contrato journeys/count sem duplicar",
+        "Jornada removida no cleanup via DB (não há rota DELETE)"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "journey_registry",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-JOURNEY-REGISTRY"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-JOURNEY-REGISTRY"
+    },
+    {
+      "id": "business-core-biz-kitchen-dispatch",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core kitchen/dispatch: páginas renderizam autenticadas",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /kitchen renderiza autenticada sem console errors",
+        "Página /dispatch renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "kitchen_dispatch",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-KITCHEN-DISPATCH"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-KITCHEN-DISPATCH"
+    },
+    {
+      "id": "business-core-biz-knowledge-base",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core knowledge base: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /knowledge-base renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "knowledge_base",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-KNOWLEDGE-BASE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-KNOWLEDGE-BASE"
+    },
+    {
+      "id": "business-core-biz-knowledge-graph",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core knowledge graph: nós e aresta criados, grafo e relacionados consultados",
+      "steps": [
+        "Tenant autenticado",
+        "Banco gravável"
+      ],
+      "assertions": [
+        "Nós Journey e Agent criados com tipo válido do ENUM",
+        "Aresta criada entre os nós",
+        "Grafo consultado com filtro de tipos contém os nós",
+        "Relacionados do nó incluem o nó conectado",
+        "Nós e arestas removidos no cleanup via DB (não há rota DELETE)"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "knowledge_graph",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-KNOWLEDGE-GRAPH"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-KNOWLEDGE-GRAPH"
+    },
+    {
+      "id": "business-core-biz-login",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core login: autenticação real via UI com credenciais QA e redirect pós-login",
+      "steps": [
+        "Credenciais QA systemadmin seedadas"
+      ],
+      "assertions": [
+        "Página /login renderiza o formulário deslogada",
+        "Login UI com systemadmin/Admin123! redireciona e grava auth_token",
+        "Logout executado quando o controle existe"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "login",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-LOGIN"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-LOGIN"
+    },
+    {
+      "id": "business-core-biz-maintenance",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core maintenance: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /maintenance renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "maintenance",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-MAINTENANCE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-MAINTENANCE"
     },
     {
       "id": "business-core-biz-marketing",
@@ -988,6 +1822,40 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-MARKETING"
+    },
+    {
+      "id": "business-core-biz-mfa",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core mfa: página abre autenticada (ou redireciona com comportamento documentado)",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /mfa abre autenticada ou redireciona com comportamento real documentado"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "mfa",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-MFA"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-MFA"
     },
     {
       "id": "business-core-biz-ops-dashboard",
@@ -1099,6 +1967,40 @@
       "scenarioCode": "CORE-BIZ-PHYSICAL-QUEUE"
     },
     {
+      "id": "business-core-biz-plan-usage",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core plan usage: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /plan-usage renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "plan_usage",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-PLAN-USAGE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-PLAN-USAGE"
+    },
+    {
       "id": "business-core-biz-process-runtime",
       "domain": "core",
       "type": "regression",
@@ -1133,6 +2035,40 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-PROCESS-RUNTIME"
+    },
+    {
+      "id": "business-core-biz-product-docs",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core product docs: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /product-docs renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "product_docs",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-PRODUCT-DOCS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-PRODUCT-DOCS"
     },
     {
       "id": "business-core-biz-projects",
@@ -1282,6 +2218,85 @@
       "scenarioCode": "CORE-BIZ-QUICK-REPLIES"
     },
     {
+      "id": "business-core-biz-rag-documents",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core rag documents: health, domains, documento criado/consultado/atualizado, upload dry-run, query, stats e cleanup",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Health e domains respondem com contrato",
+        "Documento criado sem autoIndex, consultado e atualizado",
+        "Upload multipart em dryRun não persiste",
+        "Query responde ou falha com erro estruturado de rag-service indisponível",
+        "Stats e deduplication stats respondem",
+        "Regras de geração de perguntas servidas nos dois caminhos estáticos",
+        "Documento removido no cleanup",
+        "Página /rag-documents renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "rag_documents",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-RAG-DOCUMENTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-RAG-DOCUMENTS"
+    },
+    {
+      "id": "business-core-biz-rap-learn",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core rap learn: falha registrada, listada e detectada como regressão na janela",
+      "steps": [
+        "Tenant autenticado",
+        "Banco gravável"
+      ],
+      "assertions": [
+        "Falha registrada com status detected",
+        "Registro presente na listagem de records",
+        "Registro detectado na consulta de regressões da janela",
+        "Registro removido no cleanup via DB (não há rota DELETE)"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "rap_learn",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-RAP-LEARN"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-RAP-LEARN"
+    },
+    {
       "id": "business-core-biz-rbac",
       "domain": "core",
       "type": "regression",
@@ -1317,6 +2332,75 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-RBAC"
+    },
+    {
+      "id": "business-core-biz-saas-storefront",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core saas/storefront: páginas públicas renderizam anônimas e autenticadas",
+      "steps": [],
+      "assertions": [
+        "Páginas /saas, /saas/pricing, /saas/products, /saas/signup e /storefront renderizam anônimas",
+        "Mesmas páginas renderizam autenticadas sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "saas_storefront",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-SAAS-STOREFRONT"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-SAAS-STOREFRONT"
+    },
+    {
+      "id": "business-core-biz-segmentation",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core segmentation: tags, categories, tickets e stats respondem com contrato",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Tags, categories e tickets de segmentação respondem com listas",
+        "Stats de segmentação respondem",
+        "Página /segmentation renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "segmentation",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-SEGMENTATION"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-SEGMENTATION"
     },
     {
       "id": "business-core-biz-sla",
@@ -1388,6 +2472,40 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-SOLUTIONS"
+    },
+    {
+      "id": "business-core-biz-sso-scim",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core sso/scim: página renderiza autenticada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /sso-scim renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "sso_scim",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-SSO-SCIM"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-SSO-SCIM"
     },
     {
       "id": "business-core-biz-supervisor",
@@ -1496,6 +2614,194 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-TEMPLATES"
+    },
+    {
+      "id": "business-core-biz-tenant-config",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core tenant config: config lida, escrita inócua restaurada, validadores com credenciais inválidas, tenant-settings e guarda do restart",
+      "steps": [
+        "Tenant autenticado",
+        "api/data/config.json legível no disco"
+      ],
+      "assertions": [
+        "GET /config autenticado retorna visão completa sanitizada",
+        "PUT /config com chave inócua responde success e original é restaurado no finally",
+        "validate-provider-token com token inválido retorna valid:false",
+        "validate-redis com URL inválida retorna valid:false",
+        "tenant-settings phone-masking lido e reescrito com o mesmo valor",
+        "POST /server/restart anônimo retorna 401 (guarda provada sem derrubar o servidor)",
+        "Página /config renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "tenant_config",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-TENANT-CONFIG"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-TENANT-CONFIG"
+    },
+    {
+      "id": "business-core-biz-tenants",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core tenants: página renderiza autenticada, ai-config do tenant atual e teste de credencial com contrato estruturado",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Página /tenants renderiza autenticada sem console errors",
+        "GET /tenants/current/ai-config responde config ou 404 estruturado",
+        "POST /tenants/current/ai-credentials/test responde valid:false/true estruturado"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "tenants",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-TENANTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-TENANTS"
+    },
+    {
+      "id": "business-core-biz-tickets-tags",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core tickets: tag adicionada/removida e categoria atualizada em ticket próprio de QA",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Ticket de QA criado com telefone único",
+        "Tag adicionada e presente no ticket",
+        "Categoria atualizada e refletida no ticket",
+        "Tag removida e ticket fechado no cleanup"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "tickets_tags",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-TICKETS-TAGS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-TICKETS-TAGS"
+    },
+    {
+      "id": "business-core-biz-voice-events",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core voice events: evento de voz registrado no ledger, métricas respondem e guarda de tenant provada",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Evento ringing registrado com ok=true",
+        "Evento visível no event-ledger filtrado por correlationId",
+        "voice/metrics sem X-Tenant-Id retorna 400 tenant_required",
+        "voice/metrics com tenant responde com totais"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "voice_event_ledger",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-VOICE-EVENTS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-VOICE-EVENTS"
+    },
+    {
+      "id": "business-core-biz-web-scraping",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core web scraping: validação de URL inválida e scrape controlado sem indexação",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Scrape com URL inválida retorna erro estruturado 400",
+        "Scrape de URL controlada (localhost/health) com autoIndex=false responde ou falha estruturado",
+        "Scrape-batch com dryRun responde com contrato (nunca URL externa)",
+        "Página /web-scraping renderiza autenticada sem console errors"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "normal",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "web_scraping",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-WEB-SCRAPING"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-WEB-SCRAPING"
     },
     {
       "id": "business-core-biz-webhooks",
@@ -4025,7 +5331,43 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-agenda",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-agent-factory",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-agent-marketplace",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-agent-orchestrator",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-agent-registry",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-agents",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-ai-governance",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-ai-tools",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-analytics",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-audio-transcribe",
       "status": "passed"
     },
     {
@@ -4033,7 +5375,15 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-backup-restore",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-billing",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-bulk-messaging",
       "status": "passed"
     },
     {
@@ -4041,7 +5391,15 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-channel-accounts",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-cognitive",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-conversations-chat",
       "status": "passed"
     },
     {
@@ -4065,7 +5423,23 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-failed-messages",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-faq",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-flows-editor",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-inbox",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-instagram-messenger",
       "status": "passed"
     },
     {
@@ -4073,7 +5447,35 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-journey-registry",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-kitchen-dispatch",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-knowledge-base",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-knowledge-graph",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-login",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-maintenance",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-marketing",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-mfa",
       "status": "passed"
     },
     {
@@ -4089,7 +5491,15 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-plan-usage",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-process-runtime",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-product-docs",
       "status": "passed"
     },
     {
@@ -4109,7 +5519,23 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-core-biz-rag-documents",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-rap-learn",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-core-biz-rbac",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-saas-storefront",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-segmentation",
       "status": "passed"
     },
     {
@@ -4118,6 +5544,10 @@
     },
     {
       "scenarioId": "business-core-biz-solutions",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-sso-scim",
       "status": "passed"
     },
     {
@@ -4130,6 +5560,26 @@
     },
     {
       "scenarioId": "business-core-biz-templates",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-tenant-config",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-tenants",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-tickets-tags",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-voice-events",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-web-scraping",
       "status": "passed"
     },
     {

@@ -542,5 +542,290 @@
     ],
     "optional": [],
     "timeout": 15000
+  },
+  "agent_factory": {
+    "required": [
+      "agent_registry_service_available",
+      "qa_waves_available"
+    ],
+    "optional": [],
+    "timeout": 60000
+  },
+  "agent_marketplace": {
+    "required": [
+      "agent_marketplace_catalog_available",
+      "agent_registry_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "agent_orchestrator": {
+    "required": [
+      "agent_orchestrator_available",
+      "ai_governance_service_available"
+    ],
+    "optional": [],
+    "timeout": 20000
+  },
+  "agent_registry": {
+    "required": [
+      "agent_registry_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "journey_registry": {
+    "required": [
+      "journey_registry_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "knowledge_graph": {
+    "required": [
+      "knowledge_graph_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "rap_learn": {
+    "required": [
+      "rap_learn_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "ai_governance": {
+    "required": [
+      "ai_governance_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "flows_editor_rpa_replay": {
+    "required": [
+      "flow_runtime_available",
+      "frontend_available"
+    ],
+    "optional": [
+      "ai_provider_configured"
+    ],
+    "timeout": 60000
+  },
+  "rag_documents": {
+    "required": [
+      "rag_documents_service_available",
+      "database_writable",
+      "frontend_available"
+    ],
+    "optional": [
+      "rag_service_available"
+    ],
+    "timeout": 30000
+  },
+  "knowledge_base": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "product_docs": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "channel_accounts": {
+    "required": [
+      "channel_accounts_service_available",
+      "database_writable",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "instagram_messenger": {
+    "required": [
+      "channel_webhook_available"
+    ],
+    "optional": [
+      "meta_channel_configured"
+    ],
+    "timeout": 15000
+  },
+  "segmentation": {
+    "required": [
+      "segmentation_service_available",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "tickets_tags": {
+    "required": [
+      "ticket_service_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "tenant_config": {
+    "required": [
+      "config_service_available",
+      "config_file_readable",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 60000
+  },
+  "conversations_chat": {
+    "required": [
+      "conversation_service_available",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "ai_tools": {
+    "required": [
+      "ai_suggestion_service_available",
+      "frontend_available"
+    ],
+    "optional": [
+      "ai_provider_configured"
+    ],
+    "timeout": 30000
+  },
+  "audio_transcribe": {
+    "required": [
+      "audio_transcription_route_available"
+    ],
+    "optional": [
+      "transcription_provider_configured"
+    ],
+    "timeout": 30000
+  },
+  "voice_event_ledger": {
+    "required": [
+      "voice_event_service_available",
+      "event_ledger_available",
+      "database_writable"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "backup_restore": {
+    "required": [
+      "backup_service_available",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "web_scraping": {
+    "required": [
+      "web_scraping_service_available",
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 60000
+  },
+  "agenda": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "agents": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "bulk_messaging": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "failed_messages": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "kitchen_dispatch": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "faq": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "login": {
+    "required": [
+      "frontend_available",
+      "qa_credentials_seeded"
+    ],
+    "optional": [],
+    "timeout": 30000
+  },
+  "mfa": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "sso_scim": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "maintenance": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "plan_usage": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 15000
+  },
+  "saas_storefront": {
+    "required": [
+      "frontend_available"
+    ],
+    "optional": [],
+    "timeout": 30000
+  },
+  "tenants": {
+    "required": [
+      "frontend_available",
+      "tenant_service_available"
+    ],
+    "optional": [],
+    "timeout": 15000
   }
 }

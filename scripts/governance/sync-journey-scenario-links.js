@@ -30,6 +30,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { preserveManualEntries } = require('../../qa/coverage/journeyLinksManualPreserve');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const JOURNEY_COVERAGE_DIR = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
@@ -49,9 +50,7 @@ function main() {
     .filter((name) => name.endsWith('.json'))
     .sort();
 
-  const verticals = [];
-  let journeyCount = 0;
-  let scenarioRefCount = 0;
+  const generatedVerticals = [];
 
   // Verticais marcadas como "manual": true no config existente são declarações
   // mantidas à mão (ex.: jornadas core fora das 6 verticais geradas pelo
@@ -62,9 +61,6 @@ function main() {
   } catch {
     existing = null;
   }
-  const manualVerticals = existing && Array.isArray(existing.verticals)
-    ? existing.verticals.filter((v) => v && v.manual === true && Array.isArray(v.journeys))
-    : [];
 
   for (const name of files) {
     const data = loadJson(path.join(JOURNEY_COVERAGE_DIR, name));
@@ -80,18 +76,11 @@ function main() {
         .filter((scenario) => scenario && typeof scenario.scenarioId === 'string')
         .map((scenario) => ({ scenarioId: scenario.scenarioId, status: scenario.status || 'approved' }));
       journeys.push({ journey: entry.journey, scenarios });
-      journeyCount += 1;
-      scenarioRefCount += scenarios.length;
     }
-    verticals.push({ vertical, journeys });
+    generatedVerticals.push({ vertical, journeys });
   }
 
-  for (const manual of manualVerticals) {
-    if (verticals.some((v) => v.vertical === manual.vertical)) continue;
-    verticals.push(manual);
-    journeyCount += manual.journeys.length;
-    scenarioRefCount += manual.journeys.reduce((sum, j) => sum + ((j && j.scenarios) || []).length, 0);
-  }
+  const { verticals, journeyCount, scenarioRefCount } = preserveManualEntries(generatedVerticals, existing);
 
   const output = {
     version: 1,
@@ -99,7 +88,8 @@ function main() {
       + 'Gerada por scripts/governance/sync-journey-scenario-links.js a partir de '
       + 'qa-waves/journey-coverage/*.json (artefatos do platform-readiness). '
       + 'Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. '
-      + 'Verticais com "manual": true são mantidas à mão e preservadas pelo sync.',
+      + 'Verticais com "manual": true são mantidas à mão e preservadas pelo sync; '
+      + 'jornadas com "manual": true dentro de verticais geradas também são preservadas.',
     generatedAt: new Date().toISOString(),
     source: 'qa-waves/journey-coverage/*.json',
     verticals,
@@ -114,4 +104,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { OUTPUT_PATH, JOURNEY_COVERAGE_DIR };
+module.exports = { OUTPUT_PATH, JOURNEY_COVERAGE_DIR, preserveManualEntries };
