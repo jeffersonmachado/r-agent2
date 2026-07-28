@@ -18,6 +18,15 @@ async function handlePbxOperatorPanelRoutes(ctx) {
 
   // GET /api/pbx/operator-panel/events  — SSE stream do snapshot
   if (method === 'GET' && pathname === '/api/pbx/operator-panel/events') {
+    // EventSource não envia header Authorization — aceita o token via query
+    // param (escopo restrito a esta rota SSE; demais rotas seguem exigindo o
+    // header). O frontend anexa ?token= em buildOperatorPanelEventsUrl.
+    if (!req.headers.authorization) {
+      const tokenFromQuery = new URL(req.url || '/', 'http://localhost').searchParams.get('token');
+      if (tokenFromQuery) {
+        req.headers.authorization = `Bearer ${tokenFromQuery}`;
+      }
+    }
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });

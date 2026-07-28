@@ -21,6 +21,9 @@
  * - reports/api-surface-report.json (API Surface Wave, opcional): probes
  *   HTTP reais por rota (existência, auth, classificação), aplicados aos
  *   itens api: sem domínio ligado como technicalExecutions.
+ * - reports/page-surface-report.json (Page Surface Wave, opcional): probes
+ *   reais de navegação por página (auth, classificação, carregamento),
+ *   aplicados aos itens page: sem domínio ligado como technicalExecutions.
  * - Ligação jornada ↔ execução (qa/coverage/journeyLinks.js): aliases de
  *   domínio de config/qa-waves-registry.json + declaração versionada
  *   config/journey-scenario-links.json (estável no checkout; funciona igual
@@ -80,6 +83,11 @@ const DB_INTEGRITY_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'db-integrity-re
 // classificação) — fonte de execução técnica para itens api: sem domínio
 // ligado. Ausente → comportamento inalterado (itens ficam UNCOVERED).
 const API_SURFACE_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'api-surface-report.json');
+// Relatório da Page Surface Wave (scripts/governance/page-surface-wave.js):
+// probes reais de navegação (Playwright) por página (enforcement de auth e
+// de classificação, carregamento são) — fonte de execução técnica para itens
+// page: sem domínio ligado. Ausente → comportamento inalterado.
+const PAGE_SURFACE_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'page-surface-report.json');
 // Snapshot versionado usado quando qa-mesh/meshRegistry.json não existe no
 // checkout (arquivo de runtime, gitignored) — ex.: CI. Gerado por
 // scripts/governance/coverage-gate-snapshot.js a partir dos dados vivos.
@@ -261,6 +269,36 @@ function loadApiSurfaceTechnicalExecutions(inventoryItems, options = {}) {
 }
 
 /**
+ * Lê reports/page-surface-report.json (Page Surface Wave) e mapeia cada
+ * entrada perItem para o item do inventário de MESMO id (correspondência
+ * direta — ids `page:` são estáveis e inequívocos). Sem relatório: fonte
+ * 'missing', nenhuma execução técnica. `options.reportPath` existe para
+ * testes.
+ */
+function loadPageSurfaceTechnicalExecutions(inventoryItems, options = {}) {
+  const report = loadJsonIfExists(options.reportPath || PAGE_SURFACE_REPORT_PATH);
+  if (!report || !Array.isArray(report.perItem)) {
+    return { executions: [], source: 'missing' };
+  }
+  const stateById = new Map();
+  for (const entry of report.perItem) {
+    if (entry && typeof entry.id === 'string' && entry.id.startsWith('page:') && entry.state) {
+      stateById.set(entry.id, entry.state);
+    }
+  }
+  const executions = [];
+  for (const item of inventoryItems || []) {
+    if (item && item.kind === 'page' && stateById.has(item.id)) {
+      executions.push({ itemId: item.id, state: stateById.get(item.id) });
+    }
+  }
+  return {
+    executions,
+    source: `reports/page-surface-report.json (${report.generatedAt || 'sem data'})`,
+  };
+}
+
+/**
  * Carrega as entradas da ligação jornada ↔ cenários: aliases de domínio
  * (config/qa-waves-registry.json) e a declaração versionada
  * config/journey-scenario-links.json ({ verticals: [{ vertical, journeys:
@@ -380,7 +418,8 @@ function main() {
   const tenantIsolation = loadTenantIsolationViolations();
   const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
   const apiSurface = loadApiSurfaceTechnicalExecutions(inventory.items);
-  const technicalExecutions = [...dbIntegrity.executions, ...apiSurface.executions];
+  const pageSurface = loadPageSurfaceTechnicalExecutions(inventory.items);
+  const technicalExecutions = [...dbIntegrity.executions, ...apiSurface.executions, ...pageSurface.executions];
   const journeyLinks = loadJourneyLinkInputs(scenarios);
 
   let staleItemIds = [];
@@ -442,6 +481,7 @@ function main() {
       tenantIsolationSource: tenantIsolation.source,
       dbIntegritySource: dbIntegrity.source,
       apiSurfaceSource: apiSurface.source,
+      pageSurfaceSource: pageSurface.source,
       journeyLinks: journeyLinks.summary,
       ...(dbIntegrity.dbAvailable === false
         ? { dbIntegrityNote: 'dbAvailable=false: itens técnicos da Database Integrity Wave ficaram no máximo VISITED (sem tier live)' }
@@ -484,4 +524,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };

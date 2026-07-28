@@ -168,9 +168,9 @@ export function CrmTable({ columns, data, onRowClick, onDelete, isLoading }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
+          {data.map((row, rowIndex) => (
             <tr
-              key={row.id}
+              key={row.id ?? rowIndex}
               className="border-b border-border-default hover:bg-bg-hover"
             >
               {columns.map((col) => (

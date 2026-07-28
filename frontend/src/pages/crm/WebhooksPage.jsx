@@ -14,7 +14,7 @@ export function WebhooksPage() {
   const loadWebhooks = async () => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-      const response = await fetch(buildApiUrl('/api/crm/webhooks'), {
+      const response = await fetch(buildApiUrl('/webhooks'), {
         headers: { Authorization: `Bearer ${token}` }
       });
       

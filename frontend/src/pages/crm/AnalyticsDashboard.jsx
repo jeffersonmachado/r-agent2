@@ -48,6 +48,11 @@ export function AnalyticsDashboard() {
   }
 
   const { summary, opportunity, activity } = dashboard;
+  // O endpoint pode omitir seções (ex.: stageDistribution/activity quando não
+  // há dados) — renderização não pode quebrar por seção ausente.
+  const stageDistribution = (opportunity && opportunity.stageDistribution) || {};
+  const stageDistributionTotal = Object.values(stageDistribution).reduce((a, b) => a + b, 0);
+  const activitySafe = activity || {};
 
   const formatCurrency = (value) => {
     const numeric = Number(value || 0);
@@ -131,7 +136,7 @@ export function AnalyticsDashboard() {
       <CrmCard>
         <h2 className="text-2xl font-bold text-text-primary mb-4">📈 Estágios do pipeline</h2>
         <div className="space-y-3">
-          {Object.entries(opportunity.stageDistribution).map(([stage, count]) => (
+          {Object.entries(stageDistribution).map(([stage, count]) => (
             <div key={stage}>
               <div className="flex justify-between mb-1">
                 <span className="text-sm font-medium text-text-secondary">{stage}</span>
@@ -143,9 +148,7 @@ export function AnalyticsDashboard() {
                   style={{
                     width: `${Math.max(
                       5,
-                      (count /
-                        Object.values(opportunity.stageDistribution).reduce((a, b) => a + b, 0)) *
-                        100
+                      stageDistributionTotal > 0 ? (count / stageDistributionTotal) * 100 : 0
                     )}%`,
                   }}
                 ></div>
@@ -161,11 +164,11 @@ export function AnalyticsDashboard() {
         <div className="grid grid-cols-2 gap-4">
           <div className="border-l-4 border-accent-primary pl-4">
             <p className="text-text-secondary text-sm">Esta semana</p>
-            <p className="text-2xl font-bold text-text-primary mt-1">{activity.thisWeekCount}</p>
+            <p className="text-2xl font-bold text-text-primary mt-1">{activitySafe.thisWeekCount}</p>
           </div>
           <div className="border-l-4 border-status-success pl-4">
             <p className="text-text-secondary text-sm">Total</p>
-            <p className="text-2xl font-bold text-text-primary mt-1">{activity.totalCount}</p>
+            <p className="text-2xl font-bold text-text-primary mt-1">{activitySafe.totalCount}</p>
           </div>
         </div>
       </CrmCard>

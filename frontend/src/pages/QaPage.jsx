@@ -19,6 +19,7 @@ import { useToast } from '../components/Toast';
 import { NavigationLink } from '../components/NavigationLink';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
+import { isSuperAdmin } from '../utils/menuPermissions';
 
 export function QaPage() {
   const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
@@ -39,8 +40,8 @@ export function QaPage() {
   const [running, setRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('latest'); // 'latest', 'history', 'stats'
 
-  const canViewQa = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor';
-  const canRunQa = currentAgent?.role === 'admin';
+  const canViewQa = currentAgent?.role === 'admin' || currentAgent?.role === 'supervisor' || isSuperAdmin(currentAgent);
+  const canRunQa = currentAgent?.role === 'admin' || isSuperAdmin(currentAgent);
 
   useEffect(() => {
     if (canViewQa && isAuthenticated) {

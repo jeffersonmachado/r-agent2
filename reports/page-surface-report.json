@@ -1,0 +1,5867 @@
+{
+  "generatedAt": "2026-07-28T12:41:21.694Z",
+  "commit": "df0ab67be532923abdbe5a6dd2e9c42dcb29e348",
+  "baseUrl": "http://localhost:5173",
+  "sessions": {
+    "development": true,
+    "production": true
+  },
+  "totals": {
+    "items": 149,
+    "byState": {
+      "VALIDATED": 149
+    }
+  },
+  "exemptions": [
+    {
+      "item": "page:/audit",
+      "assertion": "classificationEnforced",
+      "reason": "A política canônica de segregação (api/modules/agent-os/experience-segregation.js, verificada por validate:visibility-policy) NÃO esconde /audit de PRODUCTION: a rota consta em SUPPORT_VISIBLE_ROUTES e está ausente de PRODUCTION_HIDDEN_ROUTES (validateRouteVisibility → production_allowed). A trilha de auditoria de negócio é acessível a papéis operacionais por design RBAC (menu concede audit:read a admin/manager/owner em frontend/src/navigation/menu.js). A classificação SUPPORT do inventário deriva da heurística de segmento de path do scanner (frontendRouteScanner.js), mais estrita que a política canônica.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/bpmn-editor",
+      "assertion": "pageLoads",
+      "reason": "Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/channel-health",
+      "assertion": "classificationEnforced",
+      "reason": "Mesma situação de page:/audit: a política canônica (experience-segregation.js) não lista /channel-health em PRODUCTION_HIDDEN_ROUTES (production_allowed) e o RBAC do menu permite acesso operacional ao diagnóstico de canais. A classificação SUPPORT do inventário vem da heurística de segmento de path do scanner, mais estrita que a política canônica.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/crm/audit",
+      "assertion": "classificationEnforced",
+      "reason": "Mesma situação de page:/audit: /crm/audit não consta em PRODUCTION_HIDDEN_ROUTES na política canônica (experience-segregation.js) e o menu concede audit:read a papéis operacionais. Classificação SUPPORT do inventário é heurística de path do scanner.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management",
+      "assertion": "pageLoads",
+      "reason": "Degradação intencional por design de empacotamento: frontend/src/pages/WorkManagementPage.jsx faz React.lazy(() => import('../../../dev/work-management/App.jsx')) — módulo fora do root do Vite, deliberadamente não empacotado no build atual — e renderiza o fallback projetado 'Work Management indisponível / não empacotado no build atual'. O console.error é o log do dynamic import falho capturado pelo ErrorBoundary da própria página, não um defeito.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/ai-suggestions",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/board",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/deliverables",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/documents",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/metrics",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/operations",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/projects",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/qa-validation",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/team",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/dev/work-management/timeline",
+      "assertion": "pageLoads",
+      "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/onboarding",
+      "assertion": "pageLoads",
+      "reason": "Página de setup inicial de tenant restrita por design de RBAC: o item de menu exige permission tenant:read (frontend/src/navigation/menu.js), que o papel admin não possui (ROLE_PERMISSIONS em frontend/src/utils/menuPermissions.js) — 'Acesso Negado' para o usuário de probe (admin) é o comportamento projetado, não página quebrada. O público da página é owner.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/pbx/referencia/xml",
+      "assertion": "pageLoads",
+      "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/rbac",
+      "assertion": "pageLoads",
+      "reason": "Gestão de RBAC restrita por design: o item de menu exige permission agents:update (roles admin/owner/super_admin), que o papel admin não possui (menuPermissions.js). 'Acesso Negado' para o usuário de probe admin é o comportamento projetado, não defeito da página.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    },
+    {
+      "item": "page:/tenants",
+      "assertion": "pageLoads",
+      "reason": "Gestão de tenants restrita por design de RBAC: o item de menu exige permission tenant:read, ausente no papel admin (menuPermissions.js). O bloqueio ('Acesso Negado') para o usuário de probe admin é o comportamento projetado; o público da página é owner/super_admin.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-07-28"
+    }
+  ],
+  "perItem": [
+    {
+      "id": "page:/academy",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/access-control",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/admin/agents",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/agenda",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/agents",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/ai-tools",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/analytics",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/audit",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION acessou página SUPPORT — violação de visibilidade | NOT_APPLICABLE — isenção justificada: A política canônica de segregação (api/modules/agent-os/experience-segregation.js, verificada por validate:visibility-policy) NÃO esconde /audit de PRODUCTION: a rota consta em SUPPORT_VISIBLE_ROUTES e está ausente de PRODUCTION_HIDDEN_ROUTES (validateRouteVisibility → production_allowed). A trilha de auditoria de negócio é acessível a papéis operacionais por design RBAC (menu concede audit:read a admin/manager/owner em frontend/src/navigation/menu.js). A classificação SUPPORT do inventário deriva da heurística de segmento de path do scanner (frontendRouteScanner.js), mais estrita que a política canônica. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "exemption": {
+        "item": "page:/audit",
+        "assertion": "classificationEnforced",
+        "reason": "A política canônica de segregação (api/modules/agent-os/experience-segregation.js, verificada por validate:visibility-policy) NÃO esconde /audit de PRODUCTION: a rota consta em SUPPORT_VISIBLE_ROUTES e está ausente de PRODUCTION_HIDDEN_ROUTES (validateRouteVisibility → production_allowed). A trilha de auditoria de negócio é acessível a papéis operacionais por design RBAC (menu concede audit:read a admin/manager/owner em frontend/src/navigation/menu.js). A classificação SUPPORT do inventário deriva da heurística de segmento de path do scanner (frontendRouteScanner.js), mais estrita que a política canônica.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/automations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/backup",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/bundles",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/campaigns",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/customers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/leads",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/payments",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/schedule",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/beauty/services",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/bpmn-editor",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para papel PRODUCTION: console.error=100 pageerror=0 | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/bpmn-editor",
+        "assertion": "pageLoads",
+        "reason": "Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 100,
+          "pageErrors": 0,
+          "errorSamples": [
+            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
+            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
+            "unhandled error in event listener Error: Tried to access di from the businessObject. The di is available through the diagram element only. For more information, see https://github.com/bpmn-io/bpmn-js/"
+          ]
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/bulk-messaging",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/channel-accounts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/channel-health",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION acessou página SUPPORT — violação de visibilidade | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/audit: a política canônica (experience-segregation.js) não lista /channel-health em PRODUCTION_HIDDEN_ROUTES (production_allowed) e o RBAC do menu permite acesso operacional ao diagnóstico de canais. A classificação SUPPORT do inventário vem da heurística de segmento de path do scanner, mais estrita que a política canônica. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "exemption": {
+        "item": "page:/channel-health",
+        "assertion": "classificationEnforced",
+        "reason": "Mesma situação de page:/audit: a política canônica (experience-segregation.js) não lista /channel-health em PRODUCTION_HIDDEN_ROUTES (production_allowed) e o RBAC do menu permite acesso operacional ao diagnóstico de canais. A classificação SUPPORT do inventário vem da heurística de segmento de path do scanner, mais estrita que a política canônica.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/chat",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/chat-humano",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/config",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/accounts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/activities",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/analytics",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/audit",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION acessou página SUPPORT — violação de visibilidade | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/audit: /crm/audit não consta em PRODUCTION_HIDDEN_ROUTES na política canônica (experience-segregation.js) e o menu concede audit:read a papéis operacionais. Classificação SUPPORT do inventário é heurística de path do scanner. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "exemption": {
+        "item": "page:/crm/audit",
+        "assertion": "classificationEnforced",
+        "reason": "Mesma situação de page:/audit: /crm/audit não consta em PRODUCTION_HIDDEN_ROUTES na política canônica (experience-segregation.js) e o menu concede audit:read a papéis operacionais. Classificação SUPPORT do inventário é heurística de path do scanner.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/crm/campaigns",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/contacts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/leads",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/opportunities",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/pipelines",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/rbac",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/reports",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/crm/webhooks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/dashboard-legacy",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/demo",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/departments",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/dev",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev-dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/qa-audit",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/qa-gaps",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/qa-waves",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/qa-waves/enterprise-governance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/qa-waves/operational-health",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/rpa-replays",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/rpa-seeds",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/rpa-test",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/system-status",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Degradação intencional por design de empacotamento: frontend/src/pages/WorkManagementPage.jsx faz React.lazy(() => import('../../../dev/work-management/App.jsx')) — módulo fora do root do Vite, deliberadamente não empacotado no build atual — e renderiza o fallback projetado 'Work Management indisponível / não empacotado no build atual'. O console.error é o log do dynamic import falho capturado pelo ErrorBoundary da própria página, não um defeito. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management",
+        "assertion": "pageLoads",
+        "reason": "Degradação intencional por design de empacotamento: frontend/src/pages/WorkManagementPage.jsx faz React.lazy(() => import('../../../dev/work-management/App.jsx')) — módulo fora do root do Vite, deliberadamente não empacotado no build atual — e renderiza o fallback projetado 'Work Management indisponível / não empacotado no build atual'. O console.error é o log do dynamic import falho capturado pelo ErrorBoundary da própria página, não um defeito.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/ai-suggestions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/ai-suggestions",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/board",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/board",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/deliverables",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/deliverables",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/documents",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/documents",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/metrics",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/metrics",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/operations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/operations",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/projects",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/projects",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/qa-validation",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/qa-validation",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/team",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/team",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/dev/work-management/timeline",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para super_admin: console.error=1 pageerror=0 | NOT_APPLICABLE — isenção justificada: Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/dev/work-management/timeline",
+        "assertion": "pageLoads",
+        "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 1,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "page:/developer-keys",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/dispatch",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/editor",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/export",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/failed-messages",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/faq",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/fila-fisica",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/fitness",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/fitness/attendance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/fitness/memberships",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/fitness/students",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/generate-system",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/inbox",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/kiosk",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/kitchen",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/knowledge-base",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/login",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/maintenance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/marketing",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/mfa",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/node-marketplace",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/onboarding",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para papel PRODUCTION: conteúdo não renderizou; tela de bloqueio (acesso negado/login) | NOT_APPLICABLE — isenção justificada: Página de setup inicial de tenant restrita por design de RBAC: o item de menu exige permission tenant:read (frontend/src/navigation/menu.js), que o papel admin não possui (ROLE_PERMISSIONS em frontend/src/utils/menuPermissions.js) — 'Acesso Negado' para o usuário de probe (admin) é o comportamento projetado, não página quebrada. O público da página é owner. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/onboarding",
+        "assertion": "pageLoads",
+        "reason": "Página de setup inicial de tenant restrita por design de RBAC: o item de menu exige permission tenant:read (frontend/src/navigation/menu.js), que o papel admin não possui (ROLE_PERMISSIONS em frontend/src/utils/menuPermissions.js) — 'Acesso Negado' para o usuário de probe (admin) é o comportamento projetado, não página quebrada. O público da página é owner.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/operations-dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/orders",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/panel",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/acls",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/callbacks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/campaign-list",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/campaigns",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/click2call",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/contact-reasons",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cc/pause-reasons",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/cdr",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/dialplan",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/dids",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/extensions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/governance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/ivr",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/media",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/operator-panel",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/queue-members",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/queues",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/recordings",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/referencia/xml",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para papel PRODUCTION: console.error=12 pageerror=0 | NOT_APPLICABLE — isenção justificada: Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/pbx/referencia/xml",
+        "assertion": "pageLoads",
+        "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 12,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: the server responded with a status of 404 (Not Found)",
+            "[2026-07-28T12:37:14.378Z] [ERROR] HTTP Error 404 {\n  \"method\": \"GET\",\n  \"url\": \"/api/pbx-legacy/xml-entities?entity=ddr\",\n  \"path\": \"/api/pbx-legacy/xml-entities?entity=ddr\",\n  \"status\": 404,\n  \"erro",
+            "[HTTP Client] 💥 Erro capturado no catch: {name: Error, message: Erro HTTP 404 ao chamar /api/pbx-legacy/xml-entities?entity=ddr - not_found, status: 404, path: /api/pbx-legacy/xml-entities?entity=ddr"
+          ]
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/routes",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/pbx/trunks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/plan-usage",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/product-docs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/projects",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/qa",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página SUPPORT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/qa-mesh",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página SUPPORT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/qa/stability",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página SUPPORT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/quick-replies",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/r-agent2/crm",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/rag-documents",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/rbac",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para papel PRODUCTION: conteúdo não renderizou; tela de bloqueio (acesso negado/login) | NOT_APPLICABLE — isenção justificada: Gestão de RBAC restrita por design: o item de menu exige permission agents:update (roles admin/owner/super_admin), que o papel admin não possui (menuPermissions.js). 'Acesso Negado' para o usuário de probe admin é o comportamento projetado, não defeito da página. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/rbac",
+        "assertion": "pageLoads",
+        "reason": "Gestão de RBAC restrita por design: o item de menu exige permission agents:update (roles admin/owner/super_admin), que o papel admin não possui (menuPermissions.js). 'Acesso Negado' para o usuário de probe admin é o comportamento projetado, não defeito da página.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/rpa-replays",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/rpa-seeds",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/saas",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/saas/pricing",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/saas/products",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/saas/signup",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/saas/solutions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/segmentation",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/sla-policies",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/solutions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/sso-scim",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/station",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/storefront",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/storefront/order",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para anônimo (página pública)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/super-admin",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/supervisor",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/support",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/system-status",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/tasks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/tenant-intelligence",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/tenants",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "falha de carregamento para papel PRODUCTION: conteúdo não renderizou; tela de bloqueio (acesso negado/login) | NOT_APPLICABLE — isenção justificada: Gestão de tenants restrita por design de RBAC: o item de menu exige permission tenant:read, ausente no papel admin (menuPermissions.js). O bloqueio ('Acesso Negado') para o usuário de probe admin é o comportamento projetado; o público da página é owner/super_admin. (aprovada por jeffersonmachado em 2026-07-28)",
+          "notApplicable": true
+        }
+      ],
+      "exemption": {
+        "item": "page:/tenants",
+        "assertion": "pageLoads",
+        "reason": "Gestão de tenants restrita por design de RBAC: o item de menu exige permission tenant:read, ausente no papel admin (menuPermissions.js). O bloqueio ('Acesso Negado') para o usuário de probe admin é o comportamento projetado; o público da página é owner/super_admin.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-07-28"
+      },
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/vertical/dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/web-scraping",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/whatsapp-connections",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/whatsapp-ivr",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/whatsapp-templates",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "page:/workspace",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para papel PRODUCTION"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": "skipped"
+      }
+    }
+  ]
+}

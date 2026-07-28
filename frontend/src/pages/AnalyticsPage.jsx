@@ -133,8 +133,11 @@ export function AnalyticsPage() {
 
     const nextSearch = params.toString() ? `?${params.toString()}` : '';
     if (nextSearch !== (window.location.search || '')) {
+      // NÃO chamar setLocationSearch aqui: locationSearch reflete navegação
+      // EXTERNA (popstate/router:change). Realimentar o estado a partir da
+      // sincronização URL→estado cria oscilação infinita entre os effects
+      // (React "Maximum update depth exceeded").
       window.history.replaceState({}, '', `${window.location.pathname}${nextSearch}`);
-      setLocationSearch(nextSearch);
     }
   }, [
     selectedWindowDays,
@@ -655,6 +658,7 @@ export function AnalyticsPage() {
         setHourStart={setHourStart}
         hourEnd={hourEnd}
         setHourEnd={setHourEnd}
+        selectedHourPreset={selectedHourPreset}
         setSelectedHourPreset={setSelectedHourPreset}
         HOUR_PRESETS={HOUR_PRESETS}
         applyHourPreset={applyHourPreset}

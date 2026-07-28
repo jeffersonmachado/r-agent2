@@ -1,0 +1,116 @@
+{
+  "page:/audit": {
+    "assertion": "classificationEnforced",
+    "reason": "A política canônica de segregação (api/modules/agent-os/experience-segregation.js, verificada por validate:visibility-policy) NÃO esconde /audit de PRODUCTION: a rota consta em SUPPORT_VISIBLE_ROUTES e está ausente de PRODUCTION_HIDDEN_ROUTES (validateRouteVisibility → production_allowed). A trilha de auditoria de negócio é acessível a papéis operacionais por design RBAC (menu concede audit:read a admin/manager/owner em frontend/src/navigation/menu.js). A classificação SUPPORT do inventário deriva da heurística de segmento de path do scanner (frontendRouteScanner.js), mais estrita que a política canônica.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/channel-health": {
+    "assertion": "classificationEnforced",
+    "reason": "Mesma situação de page:/audit: a política canônica (experience-segregation.js) não lista /channel-health em PRODUCTION_HIDDEN_ROUTES (production_allowed) e o RBAC do menu permite acesso operacional ao diagnóstico de canais. A classificação SUPPORT do inventário vem da heurística de segmento de path do scanner, mais estrita que a política canônica.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/crm/audit": {
+    "assertion": "classificationEnforced",
+    "reason": "Mesma situação de page:/audit: /crm/audit não consta em PRODUCTION_HIDDEN_ROUTES na política canônica (experience-segregation.js) e o menu concede audit:read a papéis operacionais. Classificação SUPPORT do inventário é heurística de path do scanner.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/onboarding": {
+    "assertion": "pageLoads",
+    "reason": "Página de setup inicial de tenant restrita por design de RBAC: o item de menu exige permission tenant:read (frontend/src/navigation/menu.js), que o papel admin não possui (ROLE_PERMISSIONS em frontend/src/utils/menuPermissions.js) — 'Acesso Negado' para o usuário de probe (admin) é o comportamento projetado, não página quebrada. O público da página é owner.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/tenants": {
+    "assertion": "pageLoads",
+    "reason": "Gestão de tenants restrita por design de RBAC: o item de menu exige permission tenant:read, ausente no papel admin (menuPermissions.js). O bloqueio ('Acesso Negado') para o usuário de probe admin é o comportamento projetado; o público da página é owner/super_admin.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/rbac": {
+    "assertion": "pageLoads",
+    "reason": "Gestão de RBAC restrita por design: o item de menu exige permission agents:update (roles admin/owner/super_admin), que o papel admin não possui (menuPermissions.js). 'Acesso Negado' para o usuário de probe admin é o comportamento projetado, não defeito da página.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/bpmn-editor": {
+    "assertion": "pageLoads",
+    "reason": "Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/pbx/referencia/xml": {
+    "assertion": "pageLoads",
+    "reason": "Dívida de produto conhecida: a aba 'Referência XML' consome GET /api/pbx-legacy/xml-entities, endpoint nunca implementado no backend (api/modules/pbx/pbx/pbxLegacyRoutes.js expõe apenas health/inventory/ramais após a migração BIG-BANG do PBX v1; o client frontend já previa o código pbx_xml_dir_not_configured como erro esperado — ver frontend/src/api/pbxLegacy.js). A página renderiza e degrada com mensagem de erro no widget; a implementação do endpoint é trabalho de backend separado.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management": {
+    "assertion": "pageLoads",
+    "reason": "Degradação intencional por design de empacotamento: frontend/src/pages/WorkManagementPage.jsx faz React.lazy(() => import('../../../dev/work-management/App.jsx')) — módulo fora do root do Vite, deliberadamente não empacotado no build atual — e renderiza o fallback projetado 'Work Management indisponível / não empacotado no build atual'. O console.error é o log do dynamic import falho capturado pelo ErrorBoundary da própria página, não um defeito.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/ai-suggestions": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/board": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/deliverables": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/documents": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/metrics": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/operations": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/projects": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/qa-validation": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/team": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  },
+  "page:/dev/work-management/timeline": {
+    "assertion": "pageLoads",
+    "reason": "Mesma situação de page:/dev/work-management: sub-rota do módulo dev/work-management deliberadamente não empacotado (lazy import fora do root do Vite); a página renderiza o fallback projetado de indisponibilidade.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-07-28"
+  }
+}

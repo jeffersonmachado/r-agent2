@@ -35,13 +35,20 @@ export function AuditPage() {
   const loadAuditLogs = async () => {
     try {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-      const response = await fetch(buildApiUrl('/api/crm/audit'), {
+      const response = await fetch(buildApiUrl('/audit/logs'), {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        setAuditLogs(data.logs || []);
+        const items = data.logs || data.items || [];
+        setAuditLogs(items.map((item) => ({
+          timestamp: item.timestamp || item.created_at || item.createdAt,
+          user_id: item.user_id || item.username || item.agentId,
+          action: item.action,
+          entity_type: item.entity_type || item.resource,
+          entity_id: item.entity_id || item.resourceId,
+        })));
       } else {
         console.error('Error loading audit logs:', response.status);
       }

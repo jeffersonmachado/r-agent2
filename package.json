@@ -127,6 +127,7 @@
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
     "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",
     "wave:api-surface": "node scripts/governance/api-surface-wave.js",
+    "wave:page-surface": "node scripts/governance/page-surface-wave.js",
     "analyze:impact": "node scripts/analyze-impact.js",
     "demo:coverage": "node scripts/demo-coverage-scenarios.js",
     "validate:coverage-auto-fix": "node scripts/governance/validate-coverage-completeness.js && node scripts/governance/auto-cover-gaps.js --apply",

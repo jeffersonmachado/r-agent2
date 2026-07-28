@@ -264,7 +264,7 @@ function QaWavesAuditTab() {
               const failed = (j.failed || 0);
               const rate = total > 0 ? ((passed / total) * 100).toFixed(0) : '0';
               return (
-                <tr key={j.id || j.journeyId || i} className="border-t border-border-default hover:bg-bg-surface">
+                <tr key={`${j.id || j.journeyId || 'journey'}-${i}`} className="border-t border-border-default hover:bg-bg-surface">
                   <td className="px-4 py-2 font-medium">{j.name || j.label || j.journey || `Jornada ${i + 1}`}</td>
                   <td className="px-4 py-2 text-text-secondary">{j.domain || '-'}</td>
                   <td className="px-4 py-2">{total}</td>

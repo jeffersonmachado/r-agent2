@@ -257,6 +257,12 @@ export function buildOperatorPanelEventsUrl(filters = {}, options = {}) {
   if (filters.activeCallWindowMinutes != null) sp.set('activeCallWindowMinutes', String(filters.activeCallWindowMinutes));
   if (options.intervalSec != null) sp.set('intervalSec', String(options.intervalSec));
   if (options.maxDurationSec != null) sp.set('maxDurationSec', String(options.maxDurationSec));
+  // EventSource não envia header Authorization: o token vai via query param
+  // (aceito apenas por esta rota SSE — ver operatorPanelRoutes.js).
+  if (typeof window !== 'undefined') {
+    const token = window.localStorage.getItem('auth_token');
+    if (token) sp.set('token', token);
+  }
   const qs = sp.toString() ? `?${sp.toString()}` : '';
   // Resolve to full URL so EventSource can use it (supports relative paths via window.location.origin)
   const base = typeof window !== 'undefined' ? window.location.origin : '';

@@ -84,15 +84,35 @@ function frontendRoutesPlugin() {
                           url.startsWith('/api') ||
                           url.startsWith('/metrics') ||
                           url.startsWith('/auth') ||
-                          url.startsWith('/system') ||
-                          url.startsWith('/tenants') ||
+                          // /system-status é página SPA (alias de /dev/system-status);
+                          // APIs são /system e /system/* (ex.: /system/status)
+                          (url === '/system' || url.startsWith('/system/')) ||
+                          // /tenants é página SPA em navegação (text/html) e API
+                          // quando Accept JSON; subrotas /tenants/* são sempre API
+                          (url === '/tenants' && isApiRequest) ||
+                          url.startsWith('/tenants/') ||
+                          // Endpoints de API sem prefixo /api usados por páginas SPA
+                          (url === '/automations' && isApiRequest) ||
+                          url.startsWith('/automations/') ||
+                          // /developer-keys é página; /developer/* é API
+                          url.startsWith('/developer/') ||
+                          // /sla-policies é página; /sla/* é API
+                          url.startsWith('/sla/') ||
+                          // /crm/webhooks é página; /webhooks* é API
+                          url.startsWith('/webhooks') ||
                           // IMPORTANTE: endpoints de API são /rag e /rag/*.
                           // A página do frontend é /rag-documents (não deve ser proxyada).
                           (url === '/rag' || url.startsWith('/rag/')) ||
                           // /super-admin e /onboarding são páginas SPA; somente subrotas são API
                           (url.startsWith('/super-admin/') || (url === '/super-admin' && isApiRequest)) ||
                           (url.startsWith('/onboarding/') || (url === '/onboarding' && isApiRequest)) ||
-                          url.startsWith('/admin') ||
+                          // /admin/agents é página SPA (AgentOsHub) em navegação;
+                          // demais rotas /admin* são API. Sem esta exceção o proxy
+                          // enviava a navegação ao backend, que respondia 302 de
+                          // volta ao frontend — loop de redirects (ERR_TOO_MANY_REDIRECTS).
+                          (url === '/admin/agents' && isApiRequest) ||
+                          (url.startsWith('/admin/') && url !== '/admin/agents') ||
+                          (url === '/admin' && isApiRequest) ||
                           url === '/dev/files' ||
                           url.startsWith('/dev/files/') ||
                           // /analytics e /export (sem subcaminho) são rotas de página
@@ -553,6 +573,42 @@ const viteConfig = defineConfig(({ mode }) => {
         secure: false,
       },
       '^/tenants': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      // /automations é página SPA em navegação (text/html) e API quando
+      // Accept JSON; subrotas (/automations/*) são sempre API.
+      '^/automations': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req) {
+          if (req.method === 'GET' && (req.url || '').split('?')[0] === '/automations') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
+          return undefined;
+        },
+      },
+      // /developer-keys é página SPA; /developer/* são endpoints de API.
+      '^/developer/': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      // /sla-policies é página SPA; /sla/* são endpoints de API.
+      '^/sla/': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      // /crm/webhooks é página SPA; /webhooks* são endpoints de API.
+      '^/webhooks': {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,

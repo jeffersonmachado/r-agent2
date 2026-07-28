@@ -11,6 +11,7 @@ export function AnalyticsOrdersAndPhysicalSection({
   setHourStart,
   hourEnd,
   setHourEnd,
+  selectedHourPreset,
   setSelectedHourPreset,
   HOUR_PRESETS,
   applyHourPreset,
