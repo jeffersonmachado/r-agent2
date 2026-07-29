@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import WorkManagementApp from './App.jsx';
+import LoginScreen from './components/LoginScreen.jsx';
+import {
+  clearSession,
+  getTenant,
+  getToken,
+  getUsername,
+  saveSession,
+  setUnauthorizedHandler,
+} from './services/api/client.js';
 
 // O App foi desenhado para ser montado pela plataforma sob /dev/work-management.
 // Standalone, usamos hash routing preservando o mesmo contrato de
@@ -21,6 +30,7 @@ function navigate(path) {
 
 function StandaloneRoot() {
   const [currentPath, setCurrentPath] = useState(pathFromHash);
+  const [token, setToken] = useState(getToken);
 
   useEffect(() => {
     const onHashChange = () => setCurrentPath(pathFromHash());
@@ -28,7 +38,39 @@ function StandaloneRoot() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  return <WorkManagementApp currentPath={currentPath} navigate={navigate} />;
+  useEffect(() => {
+    // 401 em qualquer chamada da API derruba a sessão e volta para o login.
+    setUnauthorizedHandler(() => setToken(null));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  function handleLogin(session) {
+    saveSession(session);
+    setToken(session.token);
+  }
+
+  function handleLogout() {
+    clearSession();
+    setToken(null);
+  }
+
+  if (!token) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  return (
+    <>
+      <div className="wm-session-bar">
+        <span>
+          {getUsername()} · tenant {getTenant()}
+        </span>
+        <button type="button" className="wm-button wm-button-secondary" onClick={handleLogout}>
+          Sair
+        </button>
+      </div>
+      <WorkManagementApp key={token} currentPath={currentPath} navigate={navigate} />
+    </>
+  );
 }
 
 createRoot(document.getElementById('root')).render(

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadWorkManagementData } from '../services/mock/workManagementService.js';
+import { loadWorkManagementData } from '../services/workManagementService.js';
 import { BOARD_COLUMNS, DEFAULT_FILTERS } from '../types/models.js';
 
 function isWithinPeriod(value, period) {
@@ -41,6 +41,8 @@ export function useWorkManagement({ projectId = null }) {
   const [selectedExecutionId, setSelectedExecutionId] = useState(null);
   const [selectedReplayId, setSelectedReplayId] = useState(null);
   const [projectView, setProjectView] = useState('cards');
+  const [sources, setSources] = useState({});
+  const [liveErrors, setLiveErrors] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -50,7 +52,16 @@ export function useWorkManagement({ projectId = null }) {
       setError('');
       try {
         const next = await loadWorkManagementData();
-        if (active) setData(next);
+        if (!active) return;
+        if (next.authRequired) {
+          // Sem sessão: não exibir mock como se fosse dado real.
+          setError('Login necessário para carregar os dados do Work Management.');
+          return;
+        }
+        const { authRequired, sources: nextSources, liveErrors: nextLiveErrors, ...collections } = next;
+        setData(collections);
+        setSources(nextSources || {});
+        setLiveErrors(nextLiveErrors || {});
       } catch (loadError) {
         if (active) setError(loadError?.message || 'Falha ao carregar o modulo Work Management.');
       } finally {
@@ -97,7 +108,8 @@ export function useWorkManagement({ projectId = null }) {
   const filteredExecutions = useMemo(() => {
     return sortByDateDescending(
       data.executions.filter((execution) => {
-        if (!allowedItemIds.has(execution.workItemId)) return false;
+        // entidades live (_live) não têm workItem no mock — não filtrar por vínculo
+        if (!execution._live && !allowedItemIds.has(execution.workItemId)) return false;
         if (filters.tenant !== 'all' && execution.tenant !== filters.tenant) return false;
         if (filters.environment !== 'all' && execution.environment !== filters.environment) return false;
         if (filters.channel !== 'all' && execution.channel !== filters.channel) return false;
@@ -109,7 +121,7 @@ export function useWorkManagement({ projectId = null }) {
 
   const filteredReplays = useMemo(() => {
     return sortByDateDescending(
-      data.replays.filter((replay) => allowedItemIds.has(replay.workItemId) && isWithinPeriod(replay.createdAt, filters.period)),
+      data.replays.filter((replay) => (replay._live || allowedItemIds.has(replay.workItemId)) && isWithinPeriod(replay.createdAt, filters.period)),
       'createdAt',
     );
   }, [allowedItemIds, data.replays, filters.period]);
@@ -149,7 +161,7 @@ export function useWorkManagement({ projectId = null }) {
 
   const filteredQaScenarios = useMemo(() => {
     return data.qaScenarios.filter((scenario) => {
-      if (!allowedItemIds.has(scenario.workItemId)) return false;
+      if (!scenario._live && !allowedItemIds.has(scenario.workItemId)) return false;
       if (filters.channel !== 'all' && scenario.channel !== filters.channel) return false;
       return true;
     });
@@ -257,6 +269,8 @@ export function useWorkManagement({ projectId = null }) {
   return {
     loading,
     error,
+    sources,
+    liveErrors,
     filters,
     setFilterValue,
     resetFilters,

@@ -126,6 +126,7 @@ export default function WorkManagementApp({ currentPath, navigate }) {
         onResetFilters={model.resetFilters}
         loading={model.loading}
         error={model.error}
+        sources={model.sources}
       >
         {selectedProject ? (
           <div className="wm-panel is-flat">

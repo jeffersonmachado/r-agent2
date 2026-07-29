@@ -16,6 +16,7 @@ export function WorkManagementPage({
   children,
   loading,
   error,
+  sources = null,
 }) {
   return (
     <div className="wm-shell">
@@ -60,6 +61,17 @@ export function WorkManagementPage({
         onChange={onFilterChange}
         onReset={onResetFilters}
       />
+
+      {sources && Object.keys(sources).length ? (
+        <div className="wm-source-legend">
+          <span className="wm-overline">Fontes de dados</span>
+          {Object.entries(sources).map(([domain, source]) => (
+            <span key={domain} className={`wm-source-pill ${source === 'live' ? 'is-live' : 'is-mock'}`}>
+              {domain}: {source}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {loading ? <div className="wm-panel"><div className="wm-empty-state">Carregando modulo...</div></div> : null}
       {error ? <div className="wm-panel"><div className="wm-empty-state is-error">{error}</div></div> : null}
