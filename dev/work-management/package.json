@@ -1,0 +1,20 @@
+{
+  "name": "work-management-dev",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "App standalone de engenharia: Gestão de Trabalho (projetos, board, timeline, QA validation). Desconectado do pacote operacional por decisão de arquitetura (2026-07-28); roda isolado na porta 5177.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.10"
+  }
+}
