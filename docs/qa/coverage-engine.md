@@ -27,7 +27,7 @@ reports/visibility-policy-report.json ─┘
 | `coverageStates.js` | Enum de estados + `resolveItemState` (precedência NOT_APPLICABLE > ORPHANED > STALE > BLOCKED > FAILED > VALIDATED > VISITED > UNCOVERED) |
 | `traceabilityGraph.js` | `TraceabilityGraph` (declareEdge/observeEdge/computeEdgeStatuses/findOrphans/markStale/propagateImpact) e `CRITICALITY_WEIGHTS` {CRITICAL:5, HIGH:3, NORMAL:1} |
 | `coverageCalculator.js` | Métricas puras: visitedCoverage, validatedCoverage, successRate, weightedCoverage, dimensionCoverage, criticalSummary, waveScore (presets `business-journey`, `database-integrity`, `security`) |
-| `evidenceStore.js` | Evidence store append-only JSONL com hash chain SHA-256 (`append`/`markStale`/`verify`) e redaction de chaves sensíveis |
+| `evidenceStore.js` | Evidence store append-only JSONL com hash chain SHA-256 (`append`/`appendRaw`/`markStale`/`verify`) e redaction de chaves sensíveis |
 | `gateThresholds.js` | Thresholds default + resolução de overrides (arquivo JSON + env) |
 | `coverageGate.js` | Motor puro do gate (sem I/O): `evaluateCoverageGate`, `buildGateItems` |
 | `journeyLinks.js` | Ligação jornada ↔ cenários do mesh (sem I/O): `resolveDomainAliases`, `journeyMatchesDomain`, `buildJourneyScenarioLinks` (aliases de domínio + arquivos verticais + convenção de nome) |
@@ -212,6 +212,32 @@ como evidência de execução; a retenção cega podava o arquivo da execução
 canônica quando o scheduler enchia a janela com runs parciais e o gate
 oscilava GO → NO_GO sem mudança de código (bug corrigido em 2026-07-26,
 regressão em `tests/governance/meshHistoryPrune.test.js`).
+
+### Cadeia imutável de execuções (`qa-mesh/executionHistoryChain.js`)
+
+Os arquivos `meshHistory/<id>.json` são o retrato persistido de cada
+execução, mas são JSON mutável e podados pela retenção. A cada execução
+concluída, o `meshRunner` anexa um registro imutável em
+`qa-mesh/execution-history/index.jsonl` (Evidence Store: redaction
+obrigatória + hash chain SHA-256 com `prevHash`). O registro carrega
+`executionId`, `executionOrigin`, `goNoGo`, métricas, `commit` (git HEAD)
+e `historyFileSha256` — o SHA-256 do arquivo de histórico no momento do
+fechamento, permitindo detectar adulteração posterior
+(`verifyHistoryFile`). Arquivo podado pela retenção reporta
+`valid: 'missing'` (ausência por retenção não é adulteração).
+
+O caminho fica fora de `meshHistory/` de propósito: o endpoint
+`DELETE /api/qa-waves/executions` limpa `meshHistory/*` e não pode apagar
+a cadeia. Consulta: `GET /api/qa-waves/executions/history?limit=N`
+(classificação DEVELOPMENT) retorna `{ items, verification, chainPath }`.
+`GET /api/qa-waves/executions` (lista operacional) faz merge do estado
+vivo em memória com o histórico persistido em `meshHistory/` (origem
+`qa_waves_real`), com deduplicação por `executionId` — o Map em memória
+continua sendo o estado vivo do runtime (single-flight + EventEmitter),
+não persistência de domínio. Testes:
+`qa-mesh/__tests__/executionHistoryChain.test.js`,
+`api/services/__tests__/qaWavesExecutionService.history.test.js`,
+`api/services/__tests__/qaMeshService.executionOrigin.test.js`.
 
 ## Isolamento de tenant (fonte real)
 

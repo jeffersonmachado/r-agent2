@@ -317,7 +317,7 @@ function queueMeshRun(options = {}) {
       qaWavesLogger.info(`[RUN] Iniciando execução`, { executionId, tenantId, scenarioIds: options.scenarioIds });
       const result = await runMesh({
       executionId,
-      executionOrigin: 'manual_run',
+      executionOrigin: options.executionOrigin || 'manual_run',
       closeGovernanceDbAfterIntegration: false,
       scenarioIds: options.scenarioIds,
       domain: options.domain,

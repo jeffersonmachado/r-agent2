@@ -146,16 +146,16 @@ describe('Operational Semantic Consistency (Phase 2)', () => {
         actionType: 'checkin_submit',
         mutationExpected: true,
         beforeStepSnapshot: {
-          attendance_count: 0,
-          access_decision_count: 0,
-          access_event_count: 0,
-          crm_journey_count: 5,
+          db: { attendance: { count: 0, created: false, not_exists: true } },
+          api: { access: { decision: { count: 0, allow: false } } },
+          devices: { access: { events: 0 } },
+          crm: { presenceActivity: { count: 5, created: false } },
         },
         afterStepSnapshot: {
-          attendance_count: 1,
-          access_decision_count: 1,
-          access_event_count: 1,
-          crm_journey_count: 6,
+          db: { attendance: { count: 1, created: true, not_exists: false } },
+          api: { access: { decision: { count: 1, allow: true } } },
+          devices: { access: { events: 1 } },
+          crm: { presenceActivity: { count: 6, created: true } },
         },
         networkEvents: [
           {
@@ -277,16 +277,14 @@ describe('Operational Semantic Consistency (Phase 2)', () => {
         actionType: 'type_and_send',
         mutationExpected: true,
         beforeStepSnapshot: {
-          message_count: 3,
-          audit_count: 10,
-          crm_log_count: 5,
-          notification_count: 0,
+          db: { messages: { count: 3 } },
+          events: { audit: { count: 10 }, notifications: { count: 0 } },
+          crm: { activities: { count: 5 } },
         },
         afterStepSnapshot: {
-          message_count: 4,
-          audit_count: 11,
-          crm_log_count: 6,
-          notification_count: 1,
+          db: { messages: { count: 4 } },
+          events: { audit: { count: 11 }, notifications: { count: 1 } },
+          crm: { activities: { count: 6 } },
         },
         networkEvents: [
           {
@@ -403,8 +401,8 @@ describe('Operational Semantic Consistency (Phase 2)', () => {
         id: 'step_change_status',
         actionType: 'change_status',
         mutationExpected: true,
-        beforeStepSnapshot: { ticket_status: 'open' },
-        afterStepSnapshot: { ticket_status: 'resolved' },
+        beforeStepSnapshot: { db: { ticket: { status: 'open' } }, events: { audit: { count: 10 } } },
+        afterStepSnapshot: { db: { ticket: { status: 'resolved' } }, events: { audit: { count: 11 } } },
         networkEvents: [
           {
             type: 'response',

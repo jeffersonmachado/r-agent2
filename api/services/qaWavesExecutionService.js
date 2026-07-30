@@ -1658,8 +1658,21 @@ function buildReplayArtifactsIndex(executionIds = null) {
 }
 
 function listWaveExecutions(limit = 20) {
-  const executions = qaMeshService.getAllExecutions(limit)
+  const liveExecutions = qaMeshService.getAllExecutions(limit)
     .filter((execution) => execution?.payload?.executionOrigin === 'qa_waves_real')
+  const liveIds = new Set(liveExecutions.map((execution) => execution.executionId).filter(Boolean));
+
+  // Histórico persistido (qa-mesh/meshHistory): registros em disco usam
+  // `executionOrigin` no topo (in-memory usa payload.executionOrigin).
+  // Sem este merge o endpoint ficava vazio após restart da API.
+  const persistedExecutions = (typeof qaMeshService.getMeshHistory === 'function'
+    ? qaMeshService.getMeshHistory({ limit: Math.max(limit * 5, 50) })
+    : [])
+    .filter((item) => item?.executionOrigin === 'qa_waves_real' && !liveIds.has(item.executionId));
+
+  const executions = [...liveExecutions, ...persistedExecutions]
+    .sort((a, b) => String(b.finishedAt || b.createdAt || '').localeCompare(String(a.finishedAt || a.createdAt || '')))
+    .slice(0, limit);
   const executionIds = new Set(executions.map((execution) => execution.executionId).filter(Boolean));
   const startedAt = Date.now();
   const { byExecutionId: replayArtifactsIndex, scannedFiles, indexedFiles } = buildReplayArtifactsIndex(executionIds);
@@ -1699,6 +1712,21 @@ function clearWaveExecutions() {
   return { cleared: true };
 }
 
+/**
+ * Histórico imutável de execuções (cadeia append-only com hash chain):
+ * itens do mais recente para o mais antigo + verificação de integridade.
+ */
+function getWaveExecutionHistory(limit = 50) {
+  const chain = require('../../qa-mesh/executionHistoryChain');
+  const parsed = Number.parseInt(String(limit), 10);
+  const safeLimit = Number.isFinite(parsed) ? parsed : 50;
+  return {
+    items: chain.readChain(safeLimit),
+    verification: chain.verifyChain(),
+    chainPath: chain.CHAIN_PATH,
+  };
+}
+
 module.exports = {
   buildSnapshotContext,
   createStepSnapshotCollector,
@@ -1707,6 +1735,7 @@ module.exports = {
   normalizeOperationalRuntimeSteps,
   executePreparedWaveScenarios,
   listWaveExecutions,
+  getWaveExecutionHistory,
   clearWaveExecutions,
   writeReplayArtifact,
   updateReplayArtifact,

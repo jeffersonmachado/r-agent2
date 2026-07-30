@@ -338,6 +338,25 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
+  router.get('/api/qa-waves/executions/history', (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
+
+    try {
+      const limit = Number.parseInt(String(req.query?.limit || '50'), 10);
+      const history = deps.getWaveExecutionHistory(Number.isFinite(limit) ? limit : 50);
+      deps.sendJson(res, 200, history);
+    } catch (error) {
+      deps.logger.error('Erro ao consultar histórico imutável de execuções QA Waves:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao consultar histórico de execuções' });
+    }
+  });
+
   router.get('/api/qa-waves/executions/:executionId', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);

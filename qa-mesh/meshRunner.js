@@ -2324,6 +2324,12 @@ async function runMesh(options = {}) {
   }
   execution.historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
   writeJson(execution.historyPath, normalizeExecutionRecord(execution));
+  try {
+    require('./executionHistoryChain').appendExecutionRecord(execution);
+  } catch (chainError) {
+    execution.historyChainError = chainError.message;
+    console.error(`[meshRunner] Falha ao anexar registro na cadeia de histórico: ${chainError.message}`);
+  }
   if (writeCanonicalOutputs) {
     writeJson(QA_MESH_CANONICAL_PROMOTION_PATH, {
       ...canonicalPromotion,

@@ -98,6 +98,11 @@ function createDefaultDeps() {
     saveWaveScenario: jest.fn(() => ({ scenario: { id: 'scenario-1', version: 'v2' } })),
     listWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1', version: 'v1' }], history: {} })),
     runWaveScenario: jest.fn(() => ({ executionId: 'mesh-1', replayId: 'replay-1' })),
+    getWaveExecutionHistory: jest.fn(() => ({
+      items: [{ executionId: 'exec-hist-1', goNoGo: 'GO' }],
+      verification: { valid: true, brokenAt: null },
+      chainPath: '/tmp/chain.jsonl',
+    })),
     getOperationalSnapshot: jest.fn(() => ({
       summary: { goNoGo: 'NO_GO', capabilities: 3, journeys: 1 },
       governance: { goNoGo: 'NO_GO', blockers: [{ capability: 'turnstile_release', reason: 'capability_sem_replay' }] },
@@ -277,6 +282,60 @@ describe('qa-waves routes', () => {
       classification: 'SUPPORT',
     });
     expect(deps.listWaves).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/executions/history deve retornar 401 sem autenticacao', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockReturnValue({ valid: false, error: 'token_missing' });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/executions/history');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: 'unauthorized', message: 'token_missing' });
+    expect(deps.getWaveExecutionHistory).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/executions/history deve retornar 403 classification_required para operator', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockImplementation((req) => {
+        req.agent = { id: 'agent-op', username: 'operador', role: 'operator', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/executions/history');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'PRODUCTION',
+    });
+    expect(deps.getWaveExecutionHistory).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/executions/history retorna cadeia imutável e verificação para DEVELOPMENT', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/executions/history?limit=10');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      items: [{ executionId: 'exec-hist-1', goNoGo: 'GO' }],
+      verification: { valid: true, brokenAt: null },
+      chainPath: '/tmp/chain.jsonl',
+    });
+    expect(deps.getWaveExecutionHistory).toHaveBeenCalledWith(10);
+  });
+
+  test('GET /api/qa-waves/executions/history não colide com /executions/:executionId', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/executions/history');
+
+    expect(res.status).toBe(200);
+    expect(deps.getWaveExecutionHistory).toHaveBeenCalled();
   });
 
   test('GET /api/qa-waves/coverage/summary deve retornar consolidado de cobertura para super_admin', async () => {

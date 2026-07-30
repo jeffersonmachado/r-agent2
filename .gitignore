@@ -102,6 +102,7 @@ qa/deploy-report.json
 # Artefatos locais de execução do QA Mesh
 qa-mesh/meshEvidence/*
 qa-mesh/meshHistory/*
+qa-mesh/execution-history/*
 qa-mesh/isolated-run*/
 qa-mesh/meshReport.json
 qa-mesh/metrics.json

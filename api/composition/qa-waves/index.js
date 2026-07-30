@@ -35,6 +35,7 @@ const {
 } = require('../../services/qaWavesScenarioService');
 const {
   listWaveExecutions,
+  getWaveExecutionHistory,
   clearWaveExecutions,
 } = require('../../services/qaWavesExecutionService');
 const {
@@ -116,6 +117,7 @@ function buildQaWavesRouteDeps() {
     },
     runWaveScenario: runScenarioExecution,
     listWaveExecutions,
+    getWaveExecutionHistory,
     clearWaveExecutions,
     // Intelligence
     getCoverageSummary: () => getCoverageSummary(),

@@ -110,6 +110,24 @@ function createEvidenceStore({ filePath }) {
   }
 
   /**
+   * Anexa um registro tipado genérico (ex.: histórico de execuções de waves)
+   * sem a validação de campos de jornada, mantendo redaction obrigatória e
+   * hash chain. `type` e `timestamp` são exigidos para auditabilidade.
+   */
+  function appendRaw(record) {
+    if (!record || typeof record !== 'object') {
+      throw new Error('evidence_record_required');
+    }
+    if (!record.type || typeof record.type !== 'string') {
+      throw new Error('evidence_raw_type_required');
+    }
+    if (!record.timestamp) {
+      throw new Error('evidence_raw_timestamp_required');
+    }
+    return appendRecord(redactSensitive(record));
+  }
+
+  /**
    * Marca uma evidência como STALE sem editar o registro original:
    * anexa um novo registro `stale-marker` na cadeia.
    */
@@ -147,6 +165,7 @@ function createEvidenceStore({ filePath }) {
   return Object.freeze({
     filePath,
     append,
+    appendRaw,
     markStale,
     verify,
     readAll,
