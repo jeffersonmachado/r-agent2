@@ -181,6 +181,86 @@ function findFunctionDefinitions(source) {
   return defs;
 }
 
+/**
+ * Encontra métodos de objeto `(async )?name(params) { body }` — formato dos
+ * controllers retornados pelas factories (ex.: `async restartServer(req, res)`
+ * no objeto literal de createConfigController).
+ */
+function findObjectMethodDefinitions(source) {
+  const defs = [];
+  const re = /(?:async\s+)?([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    const openBrace = source.indexOf('{', match.index + match[0].length - 1);
+    const closeBrace = matchDelimiter(source, openBrace, '{', '}');
+    if (closeBrace === -1) continue;
+    defs.push({
+      name: match[1],
+      params: match[2].split(',').map((p) => p.trim()).filter(Boolean),
+      body: source.slice(openBrace + 1, closeBrace),
+      end: closeBrace,
+    });
+  }
+  return defs;
+}
+
+/**
+ * Overrides declarados e auditáveis de authRequired por rota. Usado quando a
+ * análise estática não consegue expressar a semântica real do handler — cada
+ * entrada exige justificativa ancorada no comportamento observado ao vivo.
+ */
+const AUTH_REQUIRED_OVERRIDES = {
+  // GET /config: o controller tenta requireAuth, mas serve 200 com a visão
+  // pública sanitizada quando anônimo (onboarding pré-login) — o payload
+  // completo exige auth + config:read. Probe ao vivo da API Surface Wave:
+  // anônimo → 200. Sem o override, a presença do requireAuth condicional
+  // marcaria a rota como protegida (falso positivo).
+  'api:GET:/config': false,
+};
+
+/**
+ * Carrega controllers irmãos referenciados pelo router (require('./controller'))
+ * para resolver delegações `controllerFor(req, res).metodo(req, res)`: a
+ * proteção (ensureAuth/ensurePermission) vive no controller, não no router.
+ * @returns {{ methodBodies: Map<string, string>, authHelpers: string[], permissionHelpers: string[] }}
+ */
+function loadDelegatedControllerIndex(sourceFile, routerSource, rootDir) {
+  const methodBodies = new Map();
+  const authHelpers = new Set();
+  const permissionHelpers = new Set();
+
+  const requireRe = /require\(\s*'(\.{1,2}\/[^']*controller[^']*)'\s*\)/gi;
+  let match;
+  while ((match = requireRe.exec(routerSource)) !== null) {
+    const resolved = path.resolve(path.dirname(sourceFile), match[1]);
+    const controllerFile = resolved.endsWith('.js') ? resolved : `${resolved}.js`;
+    const raw = readFileSafe(controllerFile);
+    if (raw === null) continue;
+    const source = stripComments(raw);
+
+    const defs = [...findFunctionDefinitions(source), ...findObjectMethodDefinitions(source)];
+    for (const def of defs) {
+      if (!methodBodies.has(def.name)) methodBodies.set(def.name, def.body);
+      if (/\brequireAuth\s*\(/.test(def.body)) authHelpers.add(def.name);
+      if (/\brequirePermission\s*\(/.test(def.body)) permissionHelpers.add(def.name);
+    }
+  }
+
+  return { methodBodies, authHelpers: [...authHelpers], permissionHelpers: [...permissionHelpers] };
+}
+
+/** Extrai corpos dos métodos de controller delegados no handler do router. */
+function resolveDelegatedBodies(chainAndBody, methodBodies) {
+  const bodies = [];
+  const re = /\.([A-Za-z_$][\w$]*)\s*\(\s*req\s*,\s*res\s*\)/g;
+  let match;
+  while ((match = re.exec(chainAndBody)) !== null) {
+    const body = methodBodies.get(match[1]);
+    if (body) bodies.push(body);
+  }
+  return bodies;
+}
+
 // ---------------------------------------------------------------------------
 // Resolução de mounts (routeRegistry + registerRoutes)
 // ---------------------------------------------------------------------------
@@ -384,6 +464,10 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
     .filter((def) => /\brequirePermission\s*\(/.test(def.body))
     .map((def) => def.name);
 
+  // Controllers irmãos (require('./controller')) para resolver delegações
+  // `controllerFor(req, res).metodo(req, res)` — a proteção vive lá.
+  const controllerIndex = loadDelegatedControllerIndex(sourceFile, source, rootDir);
+
   // Helpers que registram rotas com path dinâmico (ex.: registerJsonPost(pathname, handler)).
   const routeHelpers = new Map(); // name -> { method, body }
   for (const def of functionDefs) {
@@ -405,10 +489,12 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
 
   function pushItem(method, routePath, chainAndBody, extraMiddlewares) {
     const fullPath = joinPath(routePath);
-    const { authRequired, authorization } = analyzeAuthAndAuthorization(
-      chainAndBody,
-      localAuthHelpers,
-      localPermissionHelpers,
+    const delegatedBodies = resolveDelegatedBodies(chainAndBody, controllerIndex.methodBodies);
+    const analysisText = [chainAndBody, ...delegatedBodies].join('\n');
+    const { authRequired: detectedAuthRequired, authorization } = analyzeAuthAndAuthorization(
+      analysisText,
+      [...localAuthHelpers, ...controllerIndex.authHelpers],
+      [...localPermissionHelpers, ...controllerIndex.permissionHelpers],
     );
     const middlewares = extraMiddlewares || [];
     for (const mw of middlewares) {
@@ -424,6 +510,10 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
     const id = `api:${method}:${fullPath}`;
     if (seen.has(id)) return;
     seen.add(id);
+    let authRequired = detectedAuthRequired || middlewares.some((mw) => AUTH_MIDDLEWARE_NAMES.has(mw));
+    if (Object.prototype.hasOwnProperty.call(AUTH_REQUIRED_OVERRIDES, id)) {
+      authRequired = AUTH_REQUIRED_OVERRIDES[id];
+    }
     items.push({
       id,
       kind: 'api',
@@ -431,7 +521,7 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
       path: fullPath,
       module: moduleName,
       source: relativeSource,
-      authRequired: authRequired || middlewares.some((mw) => AUTH_MIDDLEWARE_NAMES.has(mw)),
+      authRequired,
       authorization,
       classification,
     });

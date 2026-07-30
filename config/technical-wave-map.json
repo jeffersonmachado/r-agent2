@@ -28,11 +28,12 @@
       ]
     },
     "platform": {
-      "modules": ["tenant", "domain-admin"],
-      "rationale": "Ciclo de vida de tenants e administração da plataforma (super-admin, channel-health, rate-limit) são capacidades transversais, não jornada de negócio de uma vertical.",
+      "modules": ["tenant", "domain-admin", "platform-admin"],
+      "rationale": "Ciclo de vida de tenants, administração da plataforma (super-admin, channel-health, rate-limit) e lifecycle/config de servidor (restart, process-manager, config operacional) são capacidades transversais, não jornada de negócio de uma vertical.",
       "backing": [
         "Database Integrity Wave (reports/db-integrity-report.json)",
-        "suítes de tenant isolation e migrations (npm run wave:db-integrity)"
+        "suítes de tenant isolation e migrations (npm run wave:db-integrity)",
+        "API Surface Wave — reports/api-surface-report.json (probe anônimo seguro: POST /server/restart retorna 401 sem derrubar o servidor)"
       ]
     }
   }

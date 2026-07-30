@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-28T17:20:21.538Z",
+  "generatedAt": "2026-07-30T18:44:55.437Z",
   "counts": {
     "total": 2717,
     "byKind": {
@@ -16,7 +16,7 @@
       "DEVELOPMENT": 125,
       "SUPPORT": 82
     },
-    "orphaned": 1
+    "orphaned": 0
   },
   "items": [
     {
@@ -26,8 +26,10 @@
       "path": "/api/calendar/resource/:resourceId/blocks/:blockId",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -36,7 +38,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "a8d10ba5f2510c347d324375c8b261de188318d6129363a62798c2a0ccd6cd34"
+      "fingerprint": "dae34261195432197aa40f45e3e009d2f63eae3791e79021c6b2eb8daf06e043"
     },
     {
       "id": "api:DELETE:/api/crm/accounts/:id",
@@ -375,11 +377,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "channel_accounts"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "e1bca8003bfc914cae16bbebdf5c9d410e02147891555cf98b4e826d695f9798"
     },
     {
@@ -396,11 +396,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "c2eea3ff8835b2e852981c2b75c67762a0610c390deccefa77eda68b3d97ee45"
     },
     {
@@ -453,7 +451,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:delete"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -462,7 +462,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "e1e0b59a80884f98c943bbbf52e7bdfedf76ce7d7519919e36bcd49df10aeb8d"
+      "fingerprint": "9e64adef368475ac01303b5726b323a0776e2bf997946019d842cdb369a26162"
     },
     {
       "id": "api:DELETE:/projects/:projectId/items/:itemId",
@@ -472,7 +472,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:delete"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -481,7 +483,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "aab0b90309738ac0125787e39562b149122d927d89b964e47d8fa185e1743868"
+      "fingerprint": "33d9b11e3e3d72e918778600efa09197ee7c7441cf3b2e06324d7465cafbcd4f"
     },
     {
       "id": "api:DELETE:/projects/:projectId/members/:memberId",
@@ -491,7 +493,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_members"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -500,7 +504,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "7ec314c7f65284d43de98d364a5463bcb94492b95502e3f3ce9243d61202df14"
+      "fingerprint": "5589b1df3600b3d0657852664c2583d3962be956d56092d23cad0298768f6265"
     },
     {
       "id": "api:DELETE:/queues/:queueName",
@@ -509,16 +513,17 @@
       "path": "/queues/:queueName",
       "module": "platform-admin",
       "source": "api/modules/queue/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:queues:delete"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "queues"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "74a698610aa9e32c13a35838f9e736ebf257b2e19d9cbc876e1fd5829de53d68"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "75ecfc224c5cd14f42e43aca50344c0bdb4e35afe9ff8b9c246b28d20113d18a"
     },
     {
       "id": "api:DELETE:/quick-replies/:id",
@@ -1209,12 +1214,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "backup_restore",
-        "export"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "e90bf5b15717e5d078eb2190b81fbada5d3354c2303229c9a59f4843f840dc47"
     },
     {
@@ -1352,8 +1354,10 @@
       "path": "/api/calendar/me",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1362,7 +1366,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "a4db6da852ddf1c25e406632a68c87086ba9e656a33d8fc4468779b4180a0878"
+      "fingerprint": "d544ad8f33e955a339b72358ed8b39421e8505afad2dccc2bd6a990e81e52fc7"
     },
     {
       "id": "api:GET:/api/calendar/resource/:resourceId",
@@ -1371,8 +1375,10 @@
       "path": "/api/calendar/resource/:resourceId",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1381,7 +1387,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "0fd2b48be58f7c5350a72db90d8ba41d0a505380a7f54544792c01437d608d98"
+      "fingerprint": "1f525963275687bd3c3e7b1ac03d3c54828506d70ceb5de5aea591f5a0a13a7f"
     },
     {
       "id": "api:GET:/api/cc/campaigns",
@@ -1671,8 +1677,10 @@
       "path": "/api/crm/contacts",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1681,7 +1689,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "5ac668d234f63bc4555937ad90e10ded8dbee5eeeec0982c1c22deb7661be2c5"
+      "fingerprint": "7e0aefd27ffa0f7acc7fec20a99fa336ec6d0d7e5c0dc030ed0c875e7455c854"
     },
     {
       "id": "api:GET:/api/crm/contacts/:id",
@@ -1864,11 +1872,9 @@
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "rag_documents"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "72fe4b08ba9359a1aa8ef11bc954025099efe811e16eeb14ce787647522678de"
     },
     {
@@ -2616,8 +2622,11 @@
       "path": "/api/marketing/email-campaigns",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2626,7 +2635,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "c4b9bfec25f3a24b44c57a60ea5b7cf9f162f7bacd045acef42e232b2b5bb89e"
+      "fingerprint": "f5c6fac7a8ac8163f3c9d3dda743ed34118dc30c4fbf7d78e1512fcca9421780"
     },
     {
       "id": "api:GET:/api/marketing/forms",
@@ -2635,8 +2644,11 @@
       "path": "/api/marketing/forms",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2644,7 +2656,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "b500b20be919d268340765613bf979ee48e62871ca1a48f9f25280e805da935e"
+      "fingerprint": "b87816a2982bd10b1fca3e8e990933189b1103b75c89620644d92451eab38825"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/attribution-exceptions",
@@ -2653,8 +2665,11 @@
       "path": "/api/marketing/google-ads/attribution-exceptions",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2662,7 +2677,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "d56b786ef79a0450de727f6576357f25283d44704dad6fefffe7e785d28db0dc"
+      "fingerprint": "480fd8906f592ac7c7c300d9c10b22ff47e6c1d3bbc3a72cc3d6f15826854b1e"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/conversions",
@@ -2671,8 +2686,11 @@
       "path": "/api/marketing/google-ads/conversions",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2680,7 +2698,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "e428aa02fac1184fd083c55ee44c01550c8b47c02839e35344e1a5a500c71328"
+      "fingerprint": "1ec67c6d518bf5cd6d70e77274718ce32001e2f31ad25452fad603d449093222"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/keywords/performance",
@@ -2689,8 +2707,11 @@
       "path": "/api/marketing/google-ads/keywords/performance",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2698,7 +2719,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "48ce3ccb254a997a26b3739f2a20b21b24f2476e1aa59509c6dcc9780bfc746d"
+      "fingerprint": "c4153b7f8bc79f7adb62b3eaee810ff758a9db14ec34b5345448b809ec245e3f"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/recommendations",
@@ -2707,8 +2728,11 @@
       "path": "/api/marketing/google-ads/recommendations",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2716,7 +2740,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "e17d2abebf8ec34ddd60792af20d453c41fddbc70e0a951735e42443b4e2f195"
+      "fingerprint": "f3c8424a10a06232f2a3a05e6c4a7d417c265f059c2ec44a6ce17d45acb8e037"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/roi",
@@ -2725,8 +2749,11 @@
       "path": "/api/marketing/google-ads/roi",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2734,7 +2761,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "13f27b91c5df1a6e7d41cf94e628002116d192213f2f382f55705e889d507d3a"
+      "fingerprint": "c0c2f5c50f71c3fd4cdbebb5eaaaa78c934f3502190bbd01f64f3c9a19f5cc62"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/search-terms/performance",
@@ -2743,8 +2770,11 @@
       "path": "/api/marketing/google-ads/search-terms/performance",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2752,7 +2782,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "c945d0fc2389cae63fbc5181e01e4a73a21c85619577647f80c06db4dd51d95c"
+      "fingerprint": "27f245da484c5d1583e13164f4b0ee79b36ece35a37091d209429c44f1c963cc"
     },
     {
       "id": "api:GET:/api/marketing/google-ads/settings",
@@ -2761,8 +2791,11 @@
       "path": "/api/marketing/google-ads/settings",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2770,7 +2803,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "575fadb159548939ae55c5d45f652cfa43efebb7a360519540d5d9e69e8f8057"
+      "fingerprint": "7fefb519ae3ede0849b6379de551dfad479596d29caf0c3f9211c8e8f29c6b5d"
     },
     {
       "id": "api:GET:/api/marketing/leads",
@@ -2779,8 +2812,11 @@
       "path": "/api/marketing/leads",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2789,7 +2825,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "7e186668d929f913869a3a494084a6c6b33691a339dcffccebe82755dc26535d"
+      "fingerprint": "5db0e2f06d8926366035509663cff3755ac60c4337d865dd07978e36f04f3177"
     },
     {
       "id": "api:GET:/api/marketing/leads/stats",
@@ -2798,8 +2834,11 @@
       "path": "/api/marketing/leads/stats",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2808,7 +2847,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "00d36d375c39f591e8561114395a28c47cb94e1ae0d445c34e6fd317a84dc28f"
+      "fingerprint": "26b2bdfe2682d36782e6d0656c3477406b233e4bb08d02e8ed38014b8128c7ba"
     },
     {
       "id": "api:GET:/api/marketing/links",
@@ -2817,8 +2856,11 @@
       "path": "/api/marketing/links",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2826,7 +2868,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "e1c9312cb294552a4cdc603479a120fe6e09b58dbb9b73e8fbea773c3c630add"
+      "fingerprint": "9928fd7883885b18581a649e1aa1c7fe7541ca81f515ab0110a4ca57fdaace82"
     },
     {
       "id": "api:GET:/api/marketing/scoring-rules",
@@ -2835,8 +2877,11 @@
       "path": "/api/marketing/scoring-rules",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2844,7 +2889,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "313aa7ea6c3ae54f38298efd71f421eab5a72803226023166bef623b20340476"
+      "fingerprint": "49d32aa7c8ef2e61d63e9063560f00a5679023c11e59537bd24d88606dd7f053"
     },
     {
       "id": "api:GET:/api/node-marketplace/catalog",
@@ -2861,11 +2906,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "agent_marketplace"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "d780d063db40def5fbbe3ae99102381ef3204e84d727e5ef44b3c38962f9829a"
     },
     {
@@ -2882,11 +2925,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "agent_marketplace"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "79e3fa3d9f6bbf2c7f46f67dc702805d29913febcbe0897639060d99ec2c5177"
     },
     {
@@ -2903,11 +2944,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "agent_marketplace"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "ca615fdf404861e008243d4b9b1b3b3327749bcfae4c0027c50b91d1f86db30b"
     },
     {
@@ -3787,8 +3826,11 @@
       "path": "/api/process-instances",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -3796,7 +3838,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "22ad142dd60891f403cbb9e51e38a1d688b92e52c4321df9585c119721175d2e"
+      "fingerprint": "1a8705c666dc361b9d3a8dd5ac042a9bf628b7f797d2c1d421c3cfcfa46c125a"
     },
     {
       "id": "api:GET:/api/process-instances/:executionId",
@@ -3805,8 +3847,11 @@
       "path": "/api/process-instances/:executionId",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -3814,7 +3859,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "2e5a3217261d5e29cb6b3641c161c29942817a8aad352f6b5d3dc102996b8e5b"
+      "fingerprint": "7d1cd86a4f9903c530f395ce29395f3ed81a7335213dc68a1cb70abbfd0dc6c5"
     },
     {
       "id": "api:GET:/api/process-instances/:executionId/history",
@@ -3823,8 +3868,11 @@
       "path": "/api/process-instances/:executionId/history",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -3832,7 +3880,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "d8893f427f978b6cff911b38ce6d8e6f12533a3f32a2dd248396dcb7cd23a2fa"
+      "fingerprint": "e22520962015d88396e7d0539ba80cff05160f88d54022ed98454c598d74f4c0"
     },
     {
       "id": "api:GET:/api/process-runtime/analytics",
@@ -3841,8 +3889,11 @@
       "path": "/api/process-runtime/analytics",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -3851,7 +3902,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "8025603c5b37347a5f3519e920ba6d17ca903b2e2bd40d8e0ede8977474117a3"
+      "fingerprint": "88627e09e4300391836a61adb5af77ed87384a26d6fbc8a01f69c4c16b03d203"
     },
     {
       "id": "api:GET:/api/qa-waves/closure/analyze-gaps",
@@ -4305,8 +4356,10 @@
       "path": "/api/schedule-purposes",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4314,7 +4367,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "558cf7dd06b63bc9dce9a2c14d790348e0e2b294233a29fbc94c68c7d61b2596"
+      "fingerprint": "4d36db396dcce7575a4ae41bf4497e7bee48003fd291b413eda867b37cc46c43"
     },
     {
       "id": "api:GET:/api/schedules",
@@ -4363,8 +4416,11 @@
       "path": "/api/solutions/packs",
       "module": "domain-business",
       "source": "api/modules/solution/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4372,7 +4428,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "d320b9b3c6f6b7983888811854dbd32862f38dcaf967680979874954a867a428"
+      "fingerprint": "7ef1d62f5c4e9409334bb06e0dea43bf26665ce30d59a77db1c04e90b3a33b0b"
     },
     {
       "id": "api:GET:/api/support/dashboard",
@@ -4449,8 +4505,11 @@
       "path": "/api/tasks",
       "module": "task",
       "source": "api/modules/task/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4458,7 +4517,7 @@
         "tasks"
       ],
       "linkedDomains": [],
-      "fingerprint": "1595c00ff7113f6ff95a4ed68c8b1d411968366f3cabb2e24a29c78e2c0a093f"
+      "fingerprint": "b5388d23392308e3fd4e722ed312765ffba0ab64d81e3b90e50b385d4ddf56ad"
     },
     {
       "id": "api:GET:/api/teams/search",
@@ -4467,8 +4526,10 @@
       "path": "/api/teams/search",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4476,7 +4537,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "747c3563bb507eb152999174866692572a3e3b6cd1b8eb891ed9e1fc53d8b92c"
+      "fingerprint": "8c9195ad3509904580607b1f016f5a15840fa342cf46aa994b45c3ad0e1d50a4"
     },
     {
       "id": "api:GET:/api/tenant-settings/:id",
@@ -4491,11 +4552,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "2ece77b053093f3045e5e9ba2113527a19f0fdab878f7abc2f62d89da3681ded"
     },
     {
@@ -4703,8 +4762,10 @@
       "path": "/api/users/search",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4712,7 +4773,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "cc12b30c5cba8762cbe7a883a54c86dfd16bbc02360413d7d9d55e2329ed83f3"
+      "fingerprint": "f9075c2903f3c624ede08eb99cc4c1f01998dd2d33569e36af73a4f6846969d2"
     },
     {
       "id": "api:GET:/api/vertical-templates",
@@ -4937,8 +4998,11 @@
       "path": "/automations",
       "module": "domain-business",
       "source": "api/modules/automation/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -4946,7 +5010,7 @@
         "automations"
       ],
       "linkedDomains": [],
-      "fingerprint": "132309a0b06eca1352aafa29db0377b245ad77948de29d16209a3c23ef518f2e"
+      "fingerprint": "02cdab6e4fbaae948978b5686b617dcb311de97c2d4bf83a0922fb9c331455d4"
     },
     {
       "id": "api:GET:/billing/transactions",
@@ -5042,11 +5106,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "channel_accounts"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "c54cd54fde21949474791729d47d0777db4a108464afb5d8f5a25777627f8ed7"
     },
     {
@@ -5075,15 +5137,17 @@
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:config:read",
+        "getConfig",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "6bb626a1dfe7e708ca772e5588bbad0b21dbf6215c2d2c88dcab69f4c3138ff8"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "66da78f2d3d2c5c2e9aa1c4d4f20c96c1eb5712ac5e895d2fa3583402c4ee731"
     },
     {
       "id": "api:GET:/contracts/rag/question-generation.rules.json",
@@ -5096,11 +5160,9 @@
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "rag_documents"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "879b903da87a189c4dd1c8eddd52dcf89b29f72e99a22477ee98c665cdf49ee1"
     },
     {
@@ -5151,8 +5213,11 @@
       "path": "/deliveries/:deliveryId",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5161,7 +5226,7 @@
         "food_order_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "61ef4a529e2d73d27110a7a7aea3616d740628d1956d73ee61307fd64d725b70"
+      "fingerprint": "b168f64cba57cf176eb02c16996c312ff6608f6da1181742d2c3f2c9ec3378f7"
     },
     {
       "id": "api:GET:/departments",
@@ -5176,11 +5241,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "c6e4bdc090a6a8533ffbb9cfea69cf9a4d471a79b561bcdeb67f30548203d465"
     },
     {
@@ -5196,11 +5259,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0b4d1b52fa5945f361ffde83ddab7cd3eb8625f62998ceb393f45adf82a8caa1"
     },
     {
@@ -5247,8 +5308,15 @@
       "path": "/developer/keys",
       "module": "domain-business",
       "source": "api/modules/developer-key/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read",
+        "if",
+        "if:read",
+        "list",
+        "requirePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5256,7 +5324,7 @@
         "developer"
       ],
       "linkedDomains": [],
-      "fingerprint": "2f4d3ab22298ed9168e632e045a9df1cf8be6da4046cb05f9019dc6e5ec9b933"
+      "fingerprint": "a616cdafbb9423444b294fcea6dbd8f9febd3cc08463d25bc9b8cc1ee6defb5a"
     },
     {
       "id": "api:GET:/developer/usage",
@@ -5265,8 +5333,13 @@
       "path": "/developer/usage",
       "module": "domain-business",
       "source": "api/modules/developer-key/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read",
+        "if",
+        "if:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5275,7 +5348,7 @@
         "plan_usage"
       ],
       "linkedDomains": [],
-      "fingerprint": "9b2f172d9aeacd0cfc4a0a6b2c3ebcc519de398b9cdfd1f31fc1562a7dde6cf7"
+      "fingerprint": "f4637dac01436366e11719fd96e7b4ba9aaa2747bb8cd0522e3891cb7f98787a"
     },
     {
       "id": "api:GET:/export/conversations.json",
@@ -5291,12 +5364,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "conversations_chat",
-        "export"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "af2a89f179a3162a838a26d1ba2b61510220c0565f89ffb7820734137ce9bc93"
     },
     {
@@ -5313,11 +5383,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "export"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "38ced35dd821a00c416b1836ab64083a9477955f12fd13a9f7f21866095178d7"
     },
     {
@@ -5334,11 +5402,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "export"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "5733700f49a6a58d3da78ae0a87f12dd3ec931b73f205eb159bd650c12e18e9d"
     },
     {
@@ -5356,12 +5422,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "export",
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0c29b54144147de0bf38831668028124378fce5d13ed225dd9ad9c68b050630a"
     },
     {
@@ -5502,8 +5565,11 @@
       "path": "/inbox/conversations",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5513,7 +5579,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "4804c4c0f5c58b2899323f2080c919e6c7c6e37bf67a8fb4962dcfb6459e69cc"
+      "fingerprint": "0eafcb7f03465d4998ea08c06aad74678ffa25da68c41059436c2dfd6be832e3"
     },
     {
       "id": "api:GET:/inbox/conversations/:conversationId",
@@ -5522,8 +5588,11 @@
       "path": "/inbox/conversations/:conversationId",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5533,7 +5602,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "6eaaa99c736b2c6791f211c788dc5f49c1c9c0d6f98b8700994d097ebc3aa15f"
+      "fingerprint": "c03d51bdd73224974cae5bdee12522ca4569fc81389ad25d628f199b505a314c"
     },
     {
       "id": "api:GET:/lp/:id",
@@ -5645,8 +5714,11 @@
       "path": "/orders",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5655,7 +5727,7 @@
         "orders"
       ],
       "linkedDomains": [],
-      "fingerprint": "b69fc9242eebe1c4ab84ddcefbe3d58b28bfa289de9a6a1c06e7c7d0bc2f32f6"
+      "fingerprint": "7c2490d7e409c448a8dd3548dee7e76f1dad0ff5ef142f7ec66a99f3cda99b0a"
     },
     {
       "id": "api:GET:/orders/:orderId",
@@ -5664,8 +5736,11 @@
       "path": "/orders/:orderId",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5674,7 +5749,7 @@
         "orders"
       ],
       "linkedDomains": [],
-      "fingerprint": "20d0e521886338400c1be0fb8ea62a144c03ceb830cdaaa6b8cda319a475053e"
+      "fingerprint": "522d166f1f103d5adeccda6278ad287b4d7b40b7f53788fbb3b771257046d44a"
     },
     {
       "id": "api:GET:/payment-events",
@@ -5723,7 +5798,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5732,7 +5809,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "c38e1e5703d9becefecde76f6e44cf5d590d5134b537b90ad243ab5b00f5d3e8"
+      "fingerprint": "bf37b70e757b29c94575c88c0eb8cfc2288bf111b1f19c242df7b008856069da"
     },
     {
       "id": "api:GET:/projects",
@@ -5742,7 +5819,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5751,7 +5830,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "aa2d1af9fad6f3224e66b374bf230b0951b19e25fcfe035fa7013c9f32ef023a"
+      "fingerprint": "1514147ba8cbc81617a5ef910e23070b7f6c6abc375da77cbd2548a3c93b199e"
     },
     {
       "id": "api:GET:/projects/:projectId",
@@ -5761,7 +5840,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5770,7 +5851,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "692035f16c74f0263a6d05f137eef646eba3e924451335e8efb5d106d34887c7"
+      "fingerprint": "0b5aeaa1985ba256065950a17f5f23894d41d640f4b7d11d1ca743341ab4ea5c"
     },
     {
       "id": "api:GET:/projects/:projectId/activities",
@@ -5780,7 +5861,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5789,7 +5872,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "3880a053f33e1103d1aef4f137e044bb6977814f8d6d1355b67f7872255dd79e"
+      "fingerprint": "c312b51bdc76a0f8e4bc314e96b06a8b9dd0210ca64afc091a0d7312fc3d489e"
     },
     {
       "id": "api:GET:/projects/:projectId/dashboard",
@@ -5799,7 +5882,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5808,7 +5893,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "4036d4125734d458bec8b4f6a4127b212b99319a51268bb7347deac4ee23c94b"
+      "fingerprint": "ec4e8e07e79503edc36c990e81c4113fca0d4dc2697e213432826601a9d1cad2"
     },
     {
       "id": "api:GET:/projects/:projectId/items",
@@ -5818,7 +5903,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5827,7 +5914,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "044f99aac87a8e6fd851cada98cb028c51fa0e2c1b4a54db3251a44af7a41b76"
+      "fingerprint": "252f11c3928f537098d70470d125062686ace58c72b32109c46cdd2f1a81d48b"
     },
     {
       "id": "api:GET:/projects/:projectId/items/:itemId",
@@ -5837,7 +5924,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5846,7 +5935,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "e2e587e4d5a9341d8daae1230518cd85345f265d0687e440b6cc3779169edb8a"
+      "fingerprint": "7693003f988af1a01446cbf303c78a3c8dcfbda0f9b15798dafc598cb81a3f9e"
     },
     {
       "id": "api:GET:/projects/:projectId/items/:itemId/comments",
@@ -5856,7 +5945,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:comment"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5865,7 +5956,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "79981092a8e325b02098e66b619508f12614a792f158ceb5d285d0fc501ae211"
+      "fingerprint": "247ce12cd6cb3192316814f00ec8a15db4d385bad25a70d3a220e0a0b80b5259"
     },
     {
       "id": "api:GET:/projects/:projectId/lists",
@@ -5875,7 +5966,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5884,7 +5977,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "692a071aa18cef7fd91aea5bc137f3f0986e237115b6e8e2f71097adee02bb37"
+      "fingerprint": "c68b72687dfd274a6f50545b4c5b0452dfdf133ebd7168220a2e56826355995e"
     },
     {
       "id": "api:GET:/projects/:projectId/members",
@@ -5894,7 +5987,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5903,7 +5998,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "18512befa08190affc294d1d34c9fe022e7986b6bd18f1ba6a48df0e3849e29d"
+      "fingerprint": "ced31de515403bdc061155a5140b78f8567429b2ec2059effcafd580805738f6"
     },
     {
       "id": "api:GET:/projects/:projectId/timeline",
@@ -5913,7 +6008,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5922,7 +6019,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "2113e6f2b06ea921490a5ce50b68161724056d3abd66b03b9051098403b7abb9"
+      "fingerprint": "c4c32fd25bb63e645fbce4348471cd9a8b4f22f97b179a2e1fda7d8b5c71f3ae"
     },
     {
       "id": "api:GET:/provision/:id",
@@ -5947,8 +6044,15 @@
       "path": "/public-tokens",
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read",
+        "if",
+        "if:read",
+        "list",
+        "requirePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5956,7 +6060,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "327d7a110541ebfef53c51258949f437e38bf15e0f01e8a1ea9234a7ec186f4d"
+      "fingerprint": "70e1042abf0071cd2c18535f591313f073a6d8289b8a2c5a713d2b0cf1526462"
     },
     {
       "id": "api:GET:/public-tokens/resolve",
@@ -5966,7 +6070,9 @@
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "if"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5974,7 +6080,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "21ffe95f6b7da67ebdd0bd423cd2435603dbe500d7aee466cd34616d7e33ce72"
+      "fingerprint": "4ba5ee0ee02c79ee7ba57eaa015a006961bde12088fa14e2a31d0f54ac784ef3"
     },
     {
       "id": "api:GET:/public-tokens/stats",
@@ -5983,8 +6089,13 @@
       "path": "/public-tokens/stats",
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:read",
+        "if",
+        "if:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5992,7 +6103,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "a212bdc78e31165c379e92bcffd347c0a3fe1ffd45bc79ad938842bb4d43af26"
+      "fingerprint": "fafcd18f6e0c05f16c4aff7453e4ac35a92526c38efe3db6dec5270c2b9c9cec"
     },
     {
       "id": "api:GET:/qa-mesh/execution/:id/status",
@@ -6395,16 +6506,17 @@
       "path": "/queues",
       "module": "platform-admin",
       "source": "api/modules/queue/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:queues:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "queues"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "7193be0a7f56a0413f8d249ce59b2de85561f105451cdc93fe0c5331587b0fa5"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "c8d9f2a9bb14fbe3f0b887e68f7cfcc3041b25745ab12123793d27683a8c5d8a"
     },
     {
       "id": "api:GET:/queues/:queueName",
@@ -6413,16 +6525,17 @@
       "path": "/queues/:queueName",
       "module": "platform-admin",
       "source": "api/modules/queue/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:queues:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "queues"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "c28b86d94e5d15cb187435729fa53820b4e0871e1f06793989721bc53a26a168"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "ad107f829259d93f9bb71857de5d32a6ce211bdd8e87de146c76f794cbf5ae28"
     },
     {
       "id": "api:GET:/queues/:queueName/tickets",
@@ -6431,17 +6544,17 @@
       "path": "/queues/:queueName/tickets",
       "module": "platform-admin",
       "source": "api/modules/queue/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:tickets:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "queues",
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "fada49b4234c6c5cb579c1a776303f51910a80e4fe5c79a75bd1c18d346ab272"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "25c27e2396bef532ad75b798a88b04299f6c499c59c846c6b3b4d2cb87e09293"
     },
     {
       "id": "api:GET:/quick-replies",
@@ -6696,8 +6809,11 @@
       "path": "/rbac/permissions",
       "module": "domain-business",
       "source": "api/modules/rbac/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:agents:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6705,7 +6821,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "bd628d717739f869913668761211c9aba83f8999b538a5a934e0513006d9d66d"
+      "fingerprint": "0139fc90db6e00235257b572bbcf0501c57361871e0a98f03a69740e24194321"
     },
     {
       "id": "api:GET:/rbac/roles",
@@ -6714,8 +6830,11 @@
       "path": "/rbac/roles",
       "module": "domain-business",
       "source": "api/modules/rbac/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:agents:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6723,7 +6842,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "072d62dde51b75178af396557589f53c0a89530569e69d49d8cd27c9a7fc9b38"
+      "fingerprint": "b0c2dc8a491b069749094398a57edf1de7b0583e79b84beb3374fbaedf3551c1"
     },
     {
       "id": "api:GET:/replay/:id",
@@ -6849,11 +6968,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "segmentation"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "de6be1d40d7e0010b5b7ee086609d57c0d8c725b29453444941808165c8dc4a9"
     },
     {
@@ -6870,11 +6987,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "segmentation"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "421a7968723ade05d502c624cb7d33a863a4b74d1beef22e4f95cfbb92241f54"
     },
     {
@@ -6892,12 +7007,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "segmentation",
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "a7ea2176fee33cab83baa634853c7658e90374ff0f8039cab71a42348e0609c3"
     },
     {
@@ -6914,12 +7026,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "segmentation",
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "f349d7f8c0df224feec9004060966fa8f288b75e6abf9bdbe0da75b86c655167"
     },
     {
@@ -6929,16 +7038,17 @@
       "path": "/server/process-manager",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "process_runtime"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "a2147ec67ddfff53da9fc44061b0a59235aa4a8184e23a8cd8e86d49de6253a4"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "0b4dc9d2ee0329a026f068059fefba8bc2ecb476742cc17da155d7ec015804c3"
     },
     {
       "id": "api:GET:/sla/breaches",
@@ -6947,8 +7057,11 @@
       "path": "/sla/breaches",
       "module": "domain-business",
       "source": "api/modules/sla/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsPermission",
+        "ensureReportsPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6956,7 +7069,7 @@
         "sla"
       ],
       "linkedDomains": [],
-      "fingerprint": "5c3a70698dfd2b418c04027290157de51b7eaa7d0409c6bc288a5cadb9b5a6f6"
+      "fingerprint": "fecb8ddbb4ebebf89a51328e7ecabdf6a5d2e793e2ea58e6f704a1329ec1592d"
     },
     {
       "id": "api:GET:/sla/policies",
@@ -6965,8 +7078,11 @@
       "path": "/sla/policies",
       "module": "domain-business",
       "source": "api/modules/sla/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsPermission",
+        "ensureReportsPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6974,7 +7090,7 @@
         "sla"
       ],
       "linkedDomains": [],
-      "fingerprint": "a57ffd30bcebe2bd6d57854279133e83ec424c60ee420c31e2478fdb208c2bdb"
+      "fingerprint": "dbb1a2d5b7d90958dbb0b5d6a6597ed77cc9b7e4d1a569a25c82ffbf2951ff48"
     },
     {
       "id": "api:GET:/storefront/orders/:id",
@@ -7039,8 +7155,10 @@
       "path": "/supervisor/agents/status",
       "module": "domain-operations",
       "source": "api/modules/supervisor/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsRead"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7050,7 +7168,7 @@
         "supervisor"
       ],
       "linkedDomains": [],
-      "fingerprint": "51e1c3a8ff7ee8b711a9def04f2c4551e1726ccb1844ebe924f18cca2957754d"
+      "fingerprint": "bb563059af0f5a31c22dc40e7630028de4ff1984142fca3b38e11e5c66e85d34"
     },
     {
       "id": "api:GET:/supervisor/metrics",
@@ -7059,8 +7177,10 @@
       "path": "/supervisor/metrics",
       "module": "domain-operations",
       "source": "api/modules/supervisor/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsRead"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7069,7 +7189,7 @@
         "supervisor"
       ],
       "linkedDomains": [],
-      "fingerprint": "e8a187250def34afe01c218b2f353c1a01d2d39ed95962e6e4c9e676384330fc"
+      "fingerprint": "cb18633ccce3a1bf2ac25fd80688a30e6ec816feab83d48e140b549bff52130e"
     },
     {
       "id": "api:GET:/supervisor/queues/status",
@@ -7078,8 +7198,10 @@
       "path": "/supervisor/queues/status",
       "module": "domain-operations",
       "source": "api/modules/supervisor/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsRead"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7089,7 +7211,7 @@
         "supervisor"
       ],
       "linkedDomains": [],
-      "fingerprint": "f761799d7a68ff13316dbae9bec88313c0d939658d1dcd1de69a3618e3155893"
+      "fingerprint": "5645884bddf230b0169657afa84cdb43b368a08a276c1506f5cc2d5ae02fc242"
     },
     {
       "id": "api:GET:/system/channel-health",
@@ -7299,19 +7421,16 @@
       "path": "/tenants/current/ai-config",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "ai_governance",
-        "ai_tools",
-        "tenant_config",
-        "tenants"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "b4246e1019a26321ac3fd83b45fb7a85759dd7777745de379805803561ffd6b5"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "cb3e1893b65a3cf4c9b0b5d7384913047f91aecda979b219e4d74f27fb9be265"
     },
     {
       "id": "api:GET:/tickets",
@@ -7897,8 +8016,11 @@
       "path": "/api/marketing/leads/:leadId",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:crm:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7907,7 +8029,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "9b9cf4bde97a4c8b59894981cae48d4612529e47db4394a82e57051290f83f89"
+      "fingerprint": "b0b4241961f01feba54854b15469e10c8d7b5c35eb1af0f1d7fccd6d5866f1f6"
     },
     {
       "id": "api:PATCH:/projects/:projectId",
@@ -7917,7 +8039,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7926,7 +8050,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "d1d852b3bd7a27036b54d2b2daacf6ae3b45cc50c5f2c8fdb99b088bf266f3ed"
+      "fingerprint": "b3f2750634a085ec7f420f2bade5d157c09793519d8b115edd1cb26a436496c3"
     },
     {
       "id": "api:PATCH:/projects/:projectId/items/:itemId",
@@ -7936,7 +8060,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7945,7 +8071,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "63ff5781860ea145e9a9e2266169044abc36a29c86bceb0276b4d53f409a6ffe"
+      "fingerprint": "f6202492eac23092e21fa22924f83f8dd63d018a1b0be631ff3655d5382d04de"
     },
     {
       "id": "api:PATCH:/projects/:projectId/lists/:listId",
@@ -7955,7 +8081,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_workflow"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7964,7 +8092,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "685b5e7a90ef7efeb8fecb5b95e3c4aef5290142ef4810daec95294b8f1c5e41"
+      "fingerprint": "d32d7bb197681a105274a3c06cafab243f213c74ef0548949fc0e8cbbf5be27c"
     },
     {
       "id": "api:POST:/admin/rate-limit/clear",
@@ -8562,11 +8690,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "backup_restore"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0867e82e17eabd601d1f88b6a254a202c093880eb9fe402c87cf2eaf7a41105f"
     },
     {
@@ -8788,8 +8914,10 @@
       "path": "/api/calendar/resource/:resourceId/blocks",
       "module": "domain-operations",
       "source": "api/modules/scheduling-support/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8798,7 +8926,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "25fb8da97cb68d647f4b40f3e707b68aafd25bb69f5ab6aea1ff2d3383a89186"
+      "fingerprint": "26ec371d3893c30c3b90a19402fe41ff5932b37f252eddf2fb26dd2aeb676fd9"
     },
     {
       "id": "api:POST:/api/cc/campaigns",
@@ -9680,8 +9808,11 @@
       "path": "/api/marketing/email-campaigns",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9690,7 +9821,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "e05e78b2f234e52dc244095c4eb37ac3bfbe61176b30f2021f4779102951f9d7"
+      "fingerprint": "d7af81cd6ddfdd1911e772e0fe3145d9c345cb41631de2869ca7e236115cb649"
     },
     {
       "id": "api:POST:/api/marketing/email-campaigns/:campaignId/send",
@@ -9699,8 +9830,11 @@
       "path": "/api/marketing/email-campaigns/:campaignId/send",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9709,7 +9843,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "884491684df9de11db17424c2aabbb793cf5b609f699377bf69d9a4494ea9204"
+      "fingerprint": "271fa03186ed0516a77dc7e71147a428ebb4973a135c4082716a43e5d9909162"
     },
     {
       "id": "api:POST:/api/marketing/forms",
@@ -9718,8 +9852,11 @@
       "path": "/api/marketing/forms",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9727,7 +9864,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "f943fd97d6dca0e5932fb7497644662127cd3b744b5bba66f5b060e4cbb9eefe"
+      "fingerprint": "5e897e9c878e5e69d8b12e22da3a13359d556c6abfb059d308be82552ff28a98"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/conversions",
@@ -9736,8 +9873,11 @@
       "path": "/api/marketing/google-ads/conversions",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9745,7 +9885,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "88085f7544b4c54c55e1f37debcf5dae7ecb7b87809f04e8784f827fed9ab61c"
+      "fingerprint": "76bb02837697ba55802d94f9e79518fc5336c005b6411338e242ed6ddfffd9de"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/conversions/upload",
@@ -9754,8 +9894,11 @@
       "path": "/api/marketing/google-ads/conversions/upload",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9763,7 +9906,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "9c8bf5d0183a00e8f671c3c120f09358d84580f91a382af3a209a0e5f672b783"
+      "fingerprint": "f51c6f4d2b8cdc7a3738fc8a1c7dd345ad4136699b4a4f11f1bf5ed7e3963a8f"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/keywords/actions/apply",
@@ -9772,8 +9915,11 @@
       "path": "/api/marketing/google-ads/keywords/actions/apply",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9781,7 +9927,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "e3493f8f98409243116394ac511209f2877cc79465cbdc70b607e214ff112059"
+      "fingerprint": "090b6390145648b4c344eb9b91493a64dd717fdf02fd7e2586acfed2358c9752"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/keywords/analyze",
@@ -9790,8 +9936,11 @@
       "path": "/api/marketing/google-ads/keywords/analyze",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9799,7 +9948,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "a495a21d8d4adf2ed754ee0d0287c3ac8d21fcfb3e5a593ee0a1a624df702371"
+      "fingerprint": "6a064902cbcf1e4badbc7c963a92c268624afcd749d4d9db0b94fadcf4deda6a"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/keywords/sync",
@@ -9808,8 +9957,11 @@
       "path": "/api/marketing/google-ads/keywords/sync",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9817,7 +9969,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "3fa83b07c48c549cf1323c9906d5b2ca72dc68300435197218e66c4606efffaf"
+      "fingerprint": "44cafe264bb666314c34a43e5498f16a82244ea596bb078028de9bd685d9ca3d"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/recommendations/:recommendationId/apply",
@@ -9826,8 +9978,11 @@
       "path": "/api/marketing/google-ads/recommendations/:recommendationId/apply",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9835,7 +9990,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "de7e93669d4d6d1ea5b4ff4331d26864f9c4cd3acc53b676b03a3738e2e7fd1d"
+      "fingerprint": "e008fc4f5fdff2ee6cfddbca50cedd8f678da3889aa28897af7aaca88a7b0c95"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/recommendations/sync",
@@ -9844,8 +9999,11 @@
       "path": "/api/marketing/google-ads/recommendations/sync",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9853,7 +10011,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "15175937cb43b34b491bed61db150aa445fc82ac5de38fe0111988997ad5202e"
+      "fingerprint": "c4b1b5e1ea14599552551b628c4757002e73b77fcfc417db50c258d31c3e3af9"
     },
     {
       "id": "api:POST:/api/marketing/google-ads/settings",
@@ -9862,8 +10020,11 @@
       "path": "/api/marketing/google-ads/settings",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9871,7 +10032,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "ad59979eb07af8ddd79688c1a090d1932ef5cff597962992b2acf619ee7dbf53"
+      "fingerprint": "706071acf8fff960ede3619bd0b6c272112c0bf6bc048e66bef4d36657de5433"
     },
     {
       "id": "api:POST:/api/marketing/leads",
@@ -9880,8 +10041,11 @@
       "path": "/api/marketing/leads",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:crm:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9890,7 +10054,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "379aa6d5a3e6ba6806e36677f68aa554e20e6050e6ff0a7d11415c18b35752ce"
+      "fingerprint": "dead9843862d81adc5bc9a5ddb489de177af961685937718c592207b927a8179"
     },
     {
       "id": "api:POST:/api/marketing/links",
@@ -9899,8 +10063,11 @@
       "path": "/api/marketing/links",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9908,7 +10075,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "6f30c5b4397e7412550a8d843bee4d70fae95896b058d5a6f964a22e5fd42722"
+      "fingerprint": "251ce119a9007a0ad07299dc66ba1e0ad468a55a75902de5b1fbebb6a40241ca"
     },
     {
       "id": "api:POST:/api/marketing/scoring-rules",
@@ -9917,8 +10084,11 @@
       "path": "/api/marketing/scoring-rules",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9926,7 +10096,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "69de7e1ab0cece504de12bb1bd6b986e84057d0b0ae16118085d0fe5925cdb54"
+      "fingerprint": "2653a942a4e9b5ae78ac7b08e7dfa47e878bbef76aea4246ad555f7ebafa3b61"
     },
     {
       "id": "api:POST:/api/node-marketplace/publish",
@@ -9942,11 +10112,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "agent_marketplace"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "2063981d34876b6b5099a4f230b454b0aaab4907b5793b915a5333e079314476"
     },
     {
@@ -10524,8 +10692,11 @@
       "path": "/api/process-instances/:executionId/cancel",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10533,7 +10704,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "133dbea22c020867c951c52c08771204edcbf2cbc3e8379375af1a0be905e138"
+      "fingerprint": "0b3d84593c37d34d8f90021e4797e4514f3ca105fa3bfaaa12dae419293f3d33"
     },
     {
       "id": "api:POST:/api/process-instances/:executionId/resume",
@@ -10542,8 +10713,11 @@
       "path": "/api/process-instances/:executionId/resume",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10551,7 +10725,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "748a8cfc009cc1bdc0c68575624aed463e34f5ba9c87e5d199a2f97a5e93ba74"
+      "fingerprint": "a52cd35c5fff2765f8ccf6fd1f9f272f454a45bcc65d7580a2a4e9816bfb0337"
     },
     {
       "id": "api:POST:/api/process-instances/resume/external",
@@ -10560,8 +10734,11 @@
       "path": "/api/process-instances/resume/external",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10569,7 +10746,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "d3e18893de4b0303362fed4a7def63483b104c75159ac28378a68d8770a7927f"
+      "fingerprint": "9342d66070ccb918bdeef6579541f43fbec5f428a83eef733ebdc0badaa3ba4f"
     },
     {
       "id": "api:POST:/api/process-runtime/intelligence",
@@ -10578,8 +10755,11 @@
       "path": "/api/process-runtime/intelligence",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10588,7 +10768,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "c36dfef12939e229def6b2fc4a4d1bb18af36204348f6a86ae42e74bbcaa94ae"
+      "fingerprint": "678343b5930f60e39d68eff1c0bac5e77f6f5ad8dd7bf9a3dcc63986283c76b8"
     },
     {
       "id": "api:POST:/api/process-runtime/simulate",
@@ -10597,8 +10777,11 @@
       "path": "/api/process-runtime/simulate",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:analytics:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10606,7 +10789,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "54c1be67e88a7ac8eb7d0a294e512a112975ec47180bb2d31fb7eab47a80a0ca"
+      "fingerprint": "fadeca9928c7a8076d42e02b3383794558239f8bee6f73502703bec15270025e"
     },
     {
       "id": "api:POST:/api/process-runtime/start",
@@ -10615,8 +10798,11 @@
       "path": "/api/process-runtime/start",
       "module": "domain-business",
       "source": "api/modules/process-runtime/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -10624,7 +10810,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "2ed4f516e39e587f9e0f4f26e60580714dea193c853c43292c60aa14c2be7d82"
+      "fingerprint": "b9c60b696e57e72e360cff2362057b55e70460c1110ae0ef1b82f793031b591d"
     },
     {
       "id": "api:POST:/api/qa-waves/bot/apply-remediations",
@@ -11187,8 +11373,11 @@
       "path": "/api/solutions/packs/install",
       "module": "domain-business",
       "source": "api/modules/solution/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11196,7 +11385,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "5b1d2ec9a1602b9d56a3357ecf8572f117347e6f2a06d4275d6fe6b6f145cfcb"
+      "fingerprint": "452298afdea47f733a1a220439e12dfecb805bffdcd7a77575d5190ae90de8c2"
     },
     {
       "id": "api:POST:/api/support/sentiment/suggest",
@@ -11246,8 +11435,11 @@
       "path": "/api/tasks",
       "module": "task",
       "source": "api/modules/task/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11255,7 +11447,7 @@
         "tasks"
       ],
       "linkedDomains": [],
-      "fingerprint": "0f6324e0f85c4725602fb38b78ba36ec73c41da6f223e47168aa2123eb84e091"
+      "fingerprint": "6643dbd3d892acf32a88e715301f4e52145627462e4c528955bd5edecf3cc616"
     },
     {
       "id": "api:POST:/api/tasks/:taskId/complete",
@@ -11264,8 +11456,11 @@
       "path": "/api/tasks/:taskId/complete",
       "module": "task",
       "source": "api/modules/task/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11273,7 +11468,7 @@
         "tasks"
       ],
       "linkedDomains": [],
-      "fingerprint": "ede604ef2dfc2e23d87f6710a8e7db752aa975d214d7fe7f902f03fd7ecdf569"
+      "fingerprint": "a1244e7aacf0d7a2594e0cf94d4521a98cc3bb573c46398a306a52156a575159"
     },
     {
       "id": "api:POST:/api/tasks/:taskId/reminder",
@@ -11282,8 +11477,11 @@
       "path": "/api/tasks/:taskId/reminder",
       "module": "task",
       "source": "api/modules/task/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11291,7 +11489,7 @@
         "tasks"
       ],
       "linkedDomains": [],
-      "fingerprint": "358f00eb49c83c1b8b3998879888457f12f0402bac09dcc707b3498f9d658f0c"
+      "fingerprint": "47a43dc1a7bc67ba2e5d7a08426586d58bc3bbf29c0d1eb7c3eb07f3e6357fb6"
     },
     {
       "id": "api:POST:/api/tenant-settings/:id",
@@ -11306,11 +11504,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "4da93e314ac188f9435132b3e02e3f47a6b6a3fafc58aa6e808bb3664897faae"
     },
     {
@@ -11770,8 +11966,11 @@
       "path": "/automations",
       "module": "domain-business",
       "source": "api/modules/automation/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11779,7 +11978,7 @@
         "automations"
       ],
       "linkedDomains": [],
-      "fingerprint": "bc8a2c93679cb3b523926efafd465c6e7c054f059ef54df481e2d7ee83cba437"
+      "fingerprint": "c44cdc31e8a0f36a96547a1f394880b75e9adba6324165a50b640294a1f3ec05"
     },
     {
       "id": "api:POST:/automations/:automationId/publish",
@@ -11788,8 +11987,11 @@
       "path": "/automations/:automationId/publish",
       "module": "domain-business",
       "source": "api/modules/automation/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11797,7 +11999,7 @@
         "automations"
       ],
       "linkedDomains": [],
-      "fingerprint": "7440373e8bd2ba3709847f631dddc981ce027dcf7ea872e8a008c5d1937d56b3"
+      "fingerprint": "19962b74ad1b9b95dc784c6cc0975a681555ecbab77fdfa00a95758d4f1f742e"
     },
     {
       "id": "api:POST:/automations/:automationId/run",
@@ -11806,8 +12008,11 @@
       "path": "/automations/:automationId/run",
       "module": "domain-business",
       "source": "api/modules/automation/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -11815,7 +12020,7 @@
         "automations"
       ],
       "linkedDomains": [],
-      "fingerprint": "2ccaa3e07e75f1675e5fbd4432b9d4a8efcfcf095d79dc7b77c32b57a2b69f48"
+      "fingerprint": "f418ad8138801b88fb9b2a6f1e3d042c283495055f866f458fc9107bd231f640"
     },
     {
       "id": "api:POST:/billing/create-charge",
@@ -12032,11 +12237,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "channel_accounts"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0b4ceff8ea128895156912fcd9432072df3c15ff5b6ab8462a3a423b662a7578"
     },
     {
@@ -12053,11 +12256,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "channel_accounts"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "9c93bcbfc388ae3f75774bac8f037cad62c349b69f0e8e5206aa6e4221aa3eca"
     },
     {
@@ -12067,16 +12268,17 @@
       "path": "/config/validate-provider-token",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "1efdb24fd36aadfdc25d7857ff55be61c6f72f590e30cbeb3e211c43c12111db"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "9c80b4731cd115911192751f0eeb4205bfc9f1b91de517dc25402de536b60f0d"
     },
     {
       "id": "api:POST:/config/validate-redis",
@@ -12085,16 +12287,17 @@
       "path": "/config/validate-redis",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "48c4437960d1e5f6c72a88764aa9a900353fe4662b2552b7f04b78e9102f639d"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "ad71869e8609bfbf8539ad23378a19d05e8f0942f13884c8d90178690981a926"
     },
     {
       "id": "api:POST:/departments",
@@ -12110,11 +12313,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0a1d05515043ee1b2407b05df6a990cc67195dd3f4cb3588c7a15ee160451976"
     },
     {
@@ -12131,12 +12332,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "agents",
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "1758e0e68a553bc282ca273c4b286c18b58e990c4ac8a4983cb5a648c8bb9988"
     },
     {
@@ -12236,8 +12434,13 @@
       "path": "/developer/keys",
       "module": "domain-business",
       "source": "api/modules/developer-key/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update",
+        "if",
+        "if:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12245,7 +12448,7 @@
         "developer"
       ],
       "linkedDomains": [],
-      "fingerprint": "c710d7759f625f8ef305bd48436a066d98001ce145e5e60999e9b5e4b61d97bb"
+      "fingerprint": "ee03bc40f609f58ee8d3b5eea055bfd4788132a7708be93029191ee7efb5c48d"
     },
     {
       "id": "api:POST:/flow-templates",
@@ -12404,8 +12607,11 @@
       "path": "/inbox/conversations/:conversationId/assign",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:assign"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12415,7 +12621,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "a6d662a04f6163e33fa3a3d60dfd07d9d8fb362db92a40858efda2a6a0dadec6"
+      "fingerprint": "1ac4bdc57540b245c59c1e79832530551240160e153b6cdbb448401a5832b46d"
     },
     {
       "id": "api:POST:/inbox/conversations/:conversationId/notes",
@@ -12424,8 +12630,11 @@
       "path": "/inbox/conversations/:conversationId/notes",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12435,7 +12644,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "246b9328a9d7ac662edc5ac2538325dd96dbeb608e79ec73f017769f7ef8f52a"
+      "fingerprint": "37bc4802ee28a07e23a183155f554903a77fb32b8fd14af8d07b146fcc57851f"
     },
     {
       "id": "api:POST:/inbox/conversations/:conversationId/transfer",
@@ -12444,8 +12653,11 @@
       "path": "/inbox/conversations/:conversationId/transfer",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12455,7 +12667,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "862d7b6f948464a1e00b4c61660b5b23a0c919bbf4be4da99f712d532f766423"
+      "fingerprint": "9d224519b2d5c4b931f675dade1cf854ff70aad060adc4426233f6086cd7f1a5"
     },
     {
       "id": "api:POST:/instagram/send",
@@ -12610,8 +12822,11 @@
       "path": "/orders/:orderId/charge",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12621,7 +12836,7 @@
         "payment_charge_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "e0bc96d561f7723a1a9e7292c80244b3f4547bdd2f958cc953274639563ab0ce"
+      "fingerprint": "3dc62597c9a05c5deccc40ab77cda6552167013f45f5264c37d93bbc907d311a"
     },
     {
       "id": "api:POST:/orders/:orderId/incidents",
@@ -12630,8 +12845,11 @@
       "path": "/orders/:orderId/incidents",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12640,7 +12858,7 @@
         "orders"
       ],
       "linkedDomains": [],
-      "fingerprint": "cbf8827f3b387c8f4b02f994354cd2c57b301807efd1d70fdc3ca627d55b923d"
+      "fingerprint": "307afbaf6b5eeb5a32ab12fbd36aa91b506accebe93c2606951b95019514c0a0"
     },
     {
       "id": "api:POST:/payment-events",
@@ -12788,7 +13006,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_templates"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12797,7 +13017,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "c339010d555c45fa585c531d3df8fd863ffbb906fdbc5da53c84b7e1697e26e7"
+      "fingerprint": "b94d145d6fc000f6e32cc24135d3eae260333a44cdad074184451ac468d7d724"
     },
     {
       "id": "api:POST:/projects",
@@ -12807,7 +13027,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12816,7 +13038,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "911e90e0c30ba5ba81c9946be24139f4b801014cef7e9ade053732c91ccfa8fd"
+      "fingerprint": "50d898929770d9b4a8b49ab7a4a982584aa17fe7e44a7ca9004d0c3ef353cb0e"
     },
     {
       "id": "api:POST:/projects/:projectId/items",
@@ -12826,7 +13048,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12835,7 +13059,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "34c7b99aff28b40d90365a17b99fff9a7cd3b8e2eb719974d4d36b5e72bc81a8"
+      "fingerprint": "2218b96232557e7af553d6f81df906895b6fc5c254e00d4b17df97b32ca55c68"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/comments",
@@ -12845,7 +13069,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:comment"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12854,7 +13080,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "14850cf3dc0df5d9c6f179f68f7019d1c2f7e8791e963b4afa2e3220f1610428"
+      "fingerprint": "aafcfa6223018b1137275e9d35c7fa91ba79cff8eb26dc00f2fd6b747bf56650"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/complete",
@@ -12864,7 +13090,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12873,7 +13101,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "d71f6bea5f2200b384bc39c8083c6307af30b5bd45c30cdca047ac1c41881551"
+      "fingerprint": "54383b9e24e0393e9313290e491db10f06f1dcb9175c325990a962283a3ff412"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/move",
@@ -12883,7 +13111,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12892,7 +13122,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "ed1da48ec408d77cbdfb9f6bbf33b2123c3103f9ed16146b5b8f2ea44ac3dea5"
+      "fingerprint": "1c439c0f2564d362201b09d167e5aa5cedd1d42b41ce9a2f8ce8f99021a7e689"
     },
     {
       "id": "api:POST:/projects/:projectId/lists",
@@ -12902,7 +13132,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_workflow"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12911,7 +13143,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "9bf6d3e3622b54dfc50d05c849e7f01f94c244273e51194b198073eaadde72b5"
+      "fingerprint": "5a84724f84cf197b1a10ff59044b4fedf7e7c24e5b4bbd88953b1e98b14ecfb2"
     },
     {
       "id": "api:POST:/projects/:projectId/lists/reorder",
@@ -12921,7 +13153,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_workflow"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12930,7 +13164,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "e88b9f6026a8e203046418c7f34255da7af2006eceecf8268c0176213f84ae0d"
+      "fingerprint": "76c9ddafc5487cad7c0e9f35e470ecb04c74b132a81c859860b64a55a258afc2"
     },
     {
       "id": "api:POST:/projects/:projectId/members",
@@ -12940,7 +13174,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:manage_members"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12949,7 +13185,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "6ca294629fbbc48ed62544926ec56b4c8783e42db48c4464a3424ad759efdc28"
+      "fingerprint": "fe67056350f224234abf58413d276655fa9fc3344ca3cecc361642fd05b9094f"
     },
     {
       "id": "api:POST:/projects/from-template",
@@ -12959,7 +13195,9 @@
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
       "authRequired": false,
-      "authorization": [],
+      "authorization": [
+        "ensurePermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12968,7 +13206,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "f836a37a8b0d6951c6e1bb3e7e639d97539e4651bff9ce4716018733acaa1f3c"
+      "fingerprint": "831b1b9702451cd130d4eb32bfe344460d1e7ce613c6b66806328d48e69e36bc"
     },
     {
       "id": "api:POST:/public-tokens",
@@ -12977,8 +13215,13 @@
       "path": "/public-tokens",
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update",
+        "if",
+        "if:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12986,7 +13229,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "8c7b867f1e90fdfa7c5edc4747c7f96ed7733ddbc6f40db7ca733dba932c4909"
+      "fingerprint": "973479a47dfbbe2f15f714a37d09d07935745b7ee5a4ef9a6d0f932ecc7c466f"
     },
     {
       "id": "api:POST:/public-tokens/:tokenId/revoke",
@@ -12995,8 +13238,13 @@
       "path": "/public-tokens/:tokenId/revoke",
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update",
+        "if",
+        "if:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13004,7 +13252,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "a5adf76feb8658fc1431042c99463e97436253e4191c1ac7d220b0a9ba39205e"
+      "fingerprint": "79a1107f570603f65235cbf94fb857634959edb4ab5d437fc3021aab0a85eb99"
     },
     {
       "id": "api:POST:/public-tokens/:tokenId/rotate",
@@ -13013,8 +13261,15 @@
       "path": "/public-tokens/:tokenId/rotate",
       "module": "platform-public",
       "source": "api/modules/public-token/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureConfigPermission",
+        "ensureConfigPermission:update",
+        "if",
+        "if:token_inactive",
+        "if:token_not_found",
+        "if:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13022,7 +13277,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "1cb334dd070e3358be2b92d2904f1403a46cb567df140f93e22dedaf81e3c5a1"
+      "fingerprint": "f04007f20a8441717c074e8a5291e26f705fdb9694eb486a34b528f65be36900"
     },
     {
       "id": "api:POST:/qa-mesh/registry/refresh",
@@ -13138,16 +13393,17 @@
       "path": "/queues",
       "module": "platform-admin",
       "source": "api/modules/queue/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:queues:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "queues"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "00db8262bfa1112b927ebda930521899433c30e29b3129b15f0f26e03c7e98bf"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "5334aa0fb0391038ac36b418ce254d33cda7b36f2e49a832fbd984e61ed3805a"
     },
     {
       "id": "api:POST:/queues/reload",
@@ -13456,8 +13712,11 @@
       "path": "/rbac/assign",
       "module": "domain-business",
       "source": "api/modules/rbac/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:agents:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13465,7 +13724,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "2551abc9527685d8d2cf0e61e0f4814ab7043dce7b8d422084a683340ea2f641"
+      "fingerprint": "15ad3c4d67807c9e8be2013082725d5f523a4c5be5d6b423d6263ad03b001fbf"
     },
     {
       "id": "api:POST:/rbac/roles",
@@ -13474,8 +13733,11 @@
       "path": "/rbac/roles",
       "module": "domain-business",
       "source": "api/modules/rbac/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13483,7 +13745,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "beb26090cd741b82445429a80ee79db696c6902966f1c9130811fbd75ce9d5f5"
+      "fingerprint": "f92a2cd13a912fe7220e39e517932f87312983c0a9b45e54c6db26cab3c7f3d0"
     },
     {
       "id": "api:POST:/resource-bookings",
@@ -13620,11 +13882,17 @@
       "path": "/server/restart",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
-      "linkStatus": "ORPHANED",
-      "fingerprint": "2dc421f6ca71411dc8f65ffb6570d21b04fb1062586200d939be4cf10b8102ea"
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "449607ba36525089586e48856154916f1e4c12238d3e5869fb17204d6d319667"
     },
     {
       "id": "api:POST:/sla/policies",
@@ -13633,8 +13901,11 @@
       "path": "/sla/policies",
       "module": "domain-business",
       "source": "api/modules/sla/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureReportsPermission",
+        "ensureReportsPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13642,7 +13913,7 @@
         "sla"
       ],
       "linkedDomains": [],
-      "fingerprint": "fb2afc4975c58e440f4575b1b8734d49108cd90da1e197f2059ab8647f1fe8be"
+      "fingerprint": "3fdecccc4651d2c98292e63b58a68ec3d4bb8933b9e09b2ef3a0b6ad49c1983b"
     },
     {
       "id": "api:POST:/storefront/orders",
@@ -13880,18 +14151,16 @@
       "path": "/tenants/:tenantKey/ai-credentials/test",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "ai_governance",
-        "ai_tools",
-        "tenants"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "a2c315a4236d4cbf387af87df40b9304077481e349f597cedac9002b341157c6"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "d54758dfa7636c106d37037fad1983e77294bb853e888c7cc0f9c87bdd916d29"
     },
     {
       "id": "api:POST:/tenants/generate-by-ai",
@@ -14096,11 +14365,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "caf7c337da3da39309779673bcba7f2c6e41decbedea92c2ba5b89971460921e"
     },
     {
@@ -14596,8 +14863,11 @@
       "path": "/api/marketing/google-ads/recommendations/:recommendationId",
       "module": "domain-business",
       "source": "api/modules/marketing/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensurePermission",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14605,7 +14875,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "5261d7080048aef8976ccbb9a93720a22d718782a91cbbabded45ada6aae0bde"
+      "fingerprint": "945aec0d6328c7ecf31dcbb697f6630f0d60c950699142d9d36e4e560f32dbf0"
     },
     {
       "id": "api:PUT:/auth/agents/:id",
@@ -14680,11 +14950,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "channel_accounts"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "173ce3040bbb145139f6b37b847bc05e3bfcf7a00c8d2603c1be7858a6797c63"
     },
     {
@@ -14694,16 +14962,17 @@
       "path": "/config",
       "module": "platform-admin",
       "source": "api/modules/config/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tenant_config"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "2ccfa3f25666f02b7b88c06f242d14502b5595601818a58deaff121620ed5e41"
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "ca31bdce8e3e3481f2a1eda0878116c12d7ee8b0af72db075350c522432cce51"
     },
     {
       "id": "api:PUT:/deliveries/:deliveryId/status",
@@ -14712,8 +14981,11 @@
       "path": "/deliveries/:deliveryId/status",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14722,7 +14994,7 @@
         "food_order_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "91760c1004ce333f2fd9ba5384b060cc6dd1f441e8f707802f901a2ff30e8837"
+      "fingerprint": "22e8d9585b3a7e702b353027fe782ca6a4c78c0cbc436544e23b44b0ede805a1"
     },
     {
       "id": "api:PUT:/departments/:id",
@@ -14738,11 +15010,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "departments"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "a6a9f183626b6eb1313db49b83af7afba24240a20a4d7bfd951be2643c5e7979"
     },
     {
@@ -14808,8 +15078,11 @@
       "path": "/orders/:orderId/status",
       "module": "order",
       "source": "api/modules/order/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14818,7 +15091,7 @@
         "orders"
       ],
       "linkedDomains": [],
-      "fingerprint": "06129a0cbfac731571fe3e84451d6f366e0fc218179c1c26c6a0b738824b804a"
+      "fingerprint": "b6bf96b65be320904e9f21bab8d07d7c86940403fe23fd3e6d86be12cd9c23f9"
     },
     {
       "id": "api:PUT:/quick-replies/:id",
@@ -14956,11 +15229,9 @@
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "tickets_tags"
-      ],
-      "linkedDomains": [],
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
       "fingerprint": "0b8aa64888fafd8b9173f4910f701b7196f15e1f08ac13dfd074ba9c714abdda"
     },
     {
