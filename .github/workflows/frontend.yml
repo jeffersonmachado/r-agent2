@@ -1,0 +1,49 @@
+name: Frontend Tests
+
+# =============================================================================
+# Suíte Vitest do frontend (React 18 + Vite) em todo push/PR.
+#
+# Receita validada em worktree limpo com npm ci real: 95 arquivos / 640
+# testes verdes. Não depende de backend, banco ou serviços externos.
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION_LTS: '20'
+
+jobs:
+  frontend-vitest:
+    name: "Frontend Vitest (95 arquivos)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (frontend)
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend
+
+      - name: Run Vitest
+        run: npm run test:unit
+        working-directory: frontend
+        env:
+          CI: true
