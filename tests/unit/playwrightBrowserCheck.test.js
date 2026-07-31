@@ -10,7 +10,7 @@ describe('playwrightBrowserCheck (boot)', () => {
     if (requireFails) {
       jest.doMock('playwright', () => {
         throw new Error("Cannot find module 'playwright'");
-      }, { virtual: true });
+      });
     } else {
       jest.doMock('playwright', () => ({
         chromium: { launch: jest.fn(launchImpl) },

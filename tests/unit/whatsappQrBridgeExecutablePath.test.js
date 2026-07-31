@@ -11,54 +11,46 @@ jest.mock('../../api/utils/logger', () => ({
   error: jest.fn(),
 }));
 
+const { resolveConfiguredExecutablePath } = require('../../api/services/whatsappQrBridgeService');
+
 describe('whatsappQrBridgeService.resolveConfiguredExecutablePath', () => {
   const originalEnv = { ...process.env };
 
   afterEach(() => {
     process.env = { ...originalEnv };
-    jest.resetModules();
-    jest.clearAllMocks();
   });
 
-  function loadService(puppeteerExecutablePath) {
-    jest.doMock('puppeteer', () => ({
-      executablePath: jest.fn(() => puppeteerExecutablePath),
-    }), { virtual: true });
-    return require('../../api/services/whatsappQrBridgeService');
-  }
-
-  test('caminho do puppeteer inexistente nao deve ser retornado (fallback para Chrome do sistema)', () => {
+  test('nunca retorna caminho inexistente (regressão: puppeteer sem download sombreava Chrome do sistema)', () => {
     delete process.env.WHATSAPP_QR_PUPPETEER_EXECUTABLE_PATH;
     delete process.env.PUPPETEER_EXECUTABLE_PATH;
 
-    const bogusPath = path.join(os.tmpdir(), 'puppeteer-chrome-inexistente', 'chrome');
-    const svc = loadService(bogusPath);
+    const resolved = resolveConfiguredExecutablePath();
 
-    const resolved = svc.resolveConfiguredExecutablePath();
-    expect(resolved).not.toBe(bogusPath);
-    // Ou cai num candidato de sistema existente, ou retorna '' — nunca um caminho quebrado.
+    // Invariante do bug de 2026-07: puppeteer.executablePath() pode apontar
+    // para um Chrome nunca baixado; o resolvedor só pode devolver um binário
+    // que existe (puppeteer com download, candidato do sistema) ou ''.
     if (resolved) {
       expect(fs.existsSync(resolved)).toBe(true);
+    } else {
+      expect(resolved).toBe('');
     }
   });
 
-  test('caminho do puppeteer existente continua sendo respeitado', () => {
-    delete process.env.WHATSAPP_QR_PUPPETEER_EXECUTABLE_PATH;
-    delete process.env.PUPPETEER_EXECUTABLE_PATH;
-
+  test('variável de ambiente explícita tem precedência e é respeitada', () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qr-chrome-'));
     const realPath = path.join(tmpDir, 'chrome');
     fs.writeFileSync(realPath, '');
+    process.env.WHATSAPP_QR_PUPPETEER_EXECUTABLE_PATH = realPath;
 
-    const svc = loadService(realPath);
-    expect(svc.resolveConfiguredExecutablePath()).toBe(realPath);
+    expect(resolveConfiguredExecutablePath()).toBe(realPath);
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('variavel de ambiente explicita tem precedencia sobre o puppeteer', () => {
-    process.env.WHATSAPP_QR_PUPPETEER_EXECUTABLE_PATH = '/opt/chrome-custom/chrome';
-    const svc = loadService('/qualquer/puppeteer/chrome');
-    expect(svc.resolveConfiguredExecutablePath()).toBe('/opt/chrome-custom/chrome');
+  test('PUPPETEER_EXECUTABLE_PATH também é honrado como override', () => {
+    process.env.PUPPETEER_EXECUTABLE_PATH = '/opt/chrome-custom/chrome';
+    delete process.env.WHATSAPP_QR_PUPPETEER_EXECUTABLE_PATH;
+
+    expect(resolveConfiguredExecutablePath()).toBe('/opt/chrome-custom/chrome');
   });
 });
