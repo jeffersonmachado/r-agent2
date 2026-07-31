@@ -368,10 +368,17 @@ test.describe('QA Waves -> RPA Replays', () => {
               currentStep: detail.currentStep || null,
               totalResults: results.length,
             }));
-            // Entradas completas dos cenários falhos: o array `errors` traz
-            // os detalhes (ex.: mensagens de console críticas do RPA).
+            // Entradas dos cenários falhos sem o array `logs` (verboso):
+            // prioriza `errors` (mensagens de console críticas do RPA) e
+            // mantém apenas as últimas linhas de log para contexto.
             for (const entry of failedResults) {
-              console.log('[spec] drain cenário falho:', JSON.stringify(entry).slice(0, 3000));
+              const slim = {
+                id: entry.id,
+                status: entry.status,
+                errors: entry.errors || [],
+                lastLogs: Array.isArray(entry.logs) ? entry.logs.slice(-5) : [],
+              };
+              console.log('[spec] drain cenário falho:', JSON.stringify(slim).slice(0, 4000));
             }
           }
         }
