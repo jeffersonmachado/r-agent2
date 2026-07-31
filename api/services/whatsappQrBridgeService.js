@@ -104,7 +104,10 @@ function resolveConfiguredExecutablePath() {
     const puppeteer = require('puppeteer');
     if (puppeteer && typeof puppeteer.executablePath === 'function') {
       const resolved = safeTrim(puppeteer.executablePath());
-      if (resolved) return resolved;
+      // puppeteer.executablePath() pode apontar para um Chrome nunca baixado
+      // (ex.: npm ci sem download de browser). Só aceitar se o binário existir,
+      // senão cair nos candidatos do sistema.
+      if (resolved && fs.existsSync(resolved)) return resolved;
     }
   } catch (_) {}
 
@@ -827,4 +830,5 @@ module.exports = {
   startWhatsAppQrBridge,
   stopWhatsAppQrBridge,
   getWhatsAppQrBridgeStats,
+  resolveConfiguredExecutablePath,
 };
