@@ -59,6 +59,7 @@ jobs:
   jest-integration:
     name: "Jest Integration (tests/integration + tests/tenant c/ Postgres real)"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -113,6 +114,10 @@ jobs:
         run: npm run db:migrate
 
       - name: Run integration + tenant suites
-        run: npx jest tests/integration tests/tenant --bail=0
+        # --forceExit: as suítes sobem o servidor completo (workers, sequelize,
+        # redis, websocket); no runner (Node 20) o processo principal do Jest
+        # não encerra após o "20 passed" (handles de infra). forceExit encerra
+        # APÓS os resultados — não mascara falhas de teste (exit code preservado).
+        run: npx jest tests/integration tests/tenant --bail=0 --forceExit
         env:
           CI: true
