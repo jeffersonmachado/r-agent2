@@ -339,6 +339,43 @@ test.describe('QA Waves -> RPA Replays', () => {
             .catch(() => 'processing');
         }
         console.log(`[spec] drain da execução ${executionId}: status final=${drainStatus}`);
+        if (drainStatus !== 'success') {
+          // Evidência de diagnóstico: a execução RPA da wave termina 'failed'
+          // no runner do CI (local: success). Logar erro e steps para tornar
+          // a causa visível no log do job em vez de escondê-la.
+          const detail = await page
+            .evaluate(async (execId) => {
+              const token = localStorage.getItem('auth_token');
+              const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
+              const resp = await fetch(`/api/test-executions/${encodeURIComponent(execId)}`, {
+                credentials: 'include',
+                headers: {
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  'X-Tenant-Id': String(tenantId),
+                },
+              }).catch(() => null);
+              if (!resp) return null;
+              return resp.json().catch(() => null);
+            }, executionId)
+            .catch(() => null);
+          if (detail) {
+            const results = Array.isArray(detail.results) ? detail.results : [];
+            const failedResults = results
+              .filter((r) => r && String(r.status || '').toLowerCase() !== 'success')
+              .map((r) => ({
+                scenarioId: r.scenarioId || r.id,
+                status: r.status,
+                error: String(r.error || r.message || '').slice(0, 300),
+              }));
+            console.log('[spec] drain diagnóstico:', JSON.stringify({
+              status: detail.status,
+              summary: detail.summary || null,
+              currentStep: detail.currentStep || null,
+              totalResults: results.length,
+              failedResults,
+            }));
+          }
+        }
       }
     } catch (error) {
       await attachFailureDiagnostics();
