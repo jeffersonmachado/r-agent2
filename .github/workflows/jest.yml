@@ -55,3 +55,64 @@ jobs:
         run: npm test
         env:
           CI: true
+
+  jest-integration:
+    name: "Jest Integration (tests/integration + tests/tenant c/ Postgres real)"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # pgvector/pgvector inclui a extensão vector exigida pela migration
+        # 20260122000003-enable-pgvector-and-create-rag-chunks.js
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar @results/auth (pacote irmão fora do checkout)
+        run: |
+          mkdir -p ../../packages
+          rm -rf ../../packages/auth
+          cp -r vendor/auth ../../packages/auth
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
+      - name: Run integration + tenant suites
+        run: npx jest tests/integration tests/tenant --bail=0
+        env:
+          CI: true
