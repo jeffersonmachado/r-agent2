@@ -17,11 +17,51 @@
 
 describe('Model-Driven Waves & Journeys Pipeline', () => {
 
+  // A suíte valida os relatórios gerados pelo pipeline model-driven em
+  // dist/governance/. Os artefatos são efêmeros (dist/ é limpo entre
+  // releases), então o pipeline é executado aqui para garantir que as
+  // assertivas validem a saída ATUAL do pipeline, e não snapshots velhos.
+  // Relatórios que não existiam antes da suíte são removidos ao final,
+  // restaurando o estado original de dist/governance/.
+  const GOVERNANCE_REPORTS = [
+    'model-introspection-report.json',
+    'domain-map-report.json',
+    'entity-graph-report.json',
+    'journey-inference-report.json',
+    'model-driven-seeds-report.json',
+    'model-driven-waves-report.json',
+    'model-driven-agent-factory-report.json',
+    'model-driven-final-attestation.json',
+  ];
+  const preExistingReports = new Set();
+
+  beforeAll(async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const distDir = path.join(__dirname, '..', '..', '..', '..', 'dist', 'governance');
+    for (const name of GOVERNANCE_REPORTS) {
+      if (fs.existsSync(path.join(distDir, name))) preExistingReports.add(name);
+    }
+    const { run } = require('../services/run-model-driven-pipeline');
+    await run();
+  }, 120000);
+
+  afterAll(() => {
+    const fs = require('fs');
+    const path = require('path');
+    const distDir = path.join(__dirname, '..', '..', '..', '..', 'dist', 'governance');
+    for (const name of GOVERNANCE_REPORTS) {
+      if (preExistingReports.has(name)) continue;
+      const reportPath = path.join(distDir, name);
+      if (fs.existsSync(reportPath)) fs.unlinkSync(reportPath);
+    }
+  });
+
   // ================================================================
   // TESTE 01: Models são introspectados
   // ================================================================
   describe('Model Introspection', () => {
-    it('deve carregar 146 models do diretório api/db/models/', () => {
+    it('deve carregar todos os models do diretório api/db/models/', () => {
       const fs = require('fs');
       const path = require('path');
       const modelsDir = path.join(__dirname, '..', '..', '..', '..', 'api', 'db', 'models');
@@ -38,6 +78,11 @@ describe('Model-Driven Waves & Journeys Pipeline', () => {
       expect(report.totalModels).toBeGreaterThan(100);
       expect(report.modelsLoaded).toBeGreaterThan(100);
       expect(report.modelsWithErrors).toBe(0);
+      // A introspecção deve cobrir exatamente os arquivos de model existentes
+      const modelsDir = path.join(__dirname, '..', '..', '..', '..', 'api', 'db', 'models');
+      const files = fs.readdirSync(modelsDir).filter(f => f.endsWith('.js') && f !== 'index.js' && f !== 'helpers.js');
+      expect(report.totalModels).toBe(files.length);
+      expect(report.modelsLoaded).toBe(files.length);
     });
   });
 
@@ -86,13 +131,20 @@ describe('Model-Driven Waves & Journeys Pipeline', () => {
   // TESTE 03: Entity Graph é gerado
   // ================================================================
   describe('Entity Graph', () => {
-    it('deve gerar entity-graph-report.json com 146 nodes', () => {
+    it('deve gerar entity-graph-report.json com um node por model introspectado', () => {
       const fs = require('fs');
       const path = require('path');
       const reportPath = path.join(__dirname, '..', '..', '..', '..', 'dist', 'governance', 'entity-graph-report.json');
       expect(fs.existsSync(reportPath)).toBe(true);
       const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-      expect(report.totalNodes).toBe(146);
+      // buildEntityGraph cria exatamente 1 node por model carregado sem erro
+      // (api/modules/agent-os/services/model-driven-pipeline.js), então o
+      // total de nodes deve igualar modelsLoaded da introspecção — não um
+      // snapshot fixo (era 146 quando havia 146 models; hoje são 155).
+      const introspection = JSON.parse(fs.readFileSync(
+        path.join(__dirname, '..', '..', '..', '..', 'dist', 'governance', 'model-introspection-report.json'), 'utf8'
+      ));
+      expect(report.totalNodes).toBe(introspection.modelsLoaded);
       expect(report.totalEdges).toBeGreaterThan(500);
     });
   });

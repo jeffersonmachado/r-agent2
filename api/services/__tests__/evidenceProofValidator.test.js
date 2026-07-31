@@ -112,6 +112,15 @@ describe('validateNetworkProof', () => {
     expect(result.blockers.some((b) => b.reason === 'network_proof_missing_endpoint')).toBe(true);
   });
 
+  test('step_submit_checkin: sub-rota de checkin (ex.: histórico) não serve como prova → NO_GO', () => {
+    const events = [
+      makeNetworkResponse('POST', '/api/fitness/checkin/history', 201),
+    ];
+    const result = validateNetworkProof(events, 'step_submit_checkin', 'checkin_submit');
+    expect(result.valid).toBe(false);
+    expect(result.blockers.some((b) => b.reason === 'network_proof_missing_endpoint')).toBe(true);
+  });
+
   test('step_change_status: PATCH correto → valid:true', () => {
     const events = [
       makeNetworkResponse('PATCH', '/api/tickets/xyz/status', 200),

@@ -62,6 +62,7 @@ const fitnessAttendanceService = require('../../api/services/vertical/fitnessAtt
 const fitnessMembershipService = require('../../api/services/vertical/fitnessMembershipService');
 const { handleFitnessJourneyTick, handleFitnessGraceExpiryScan, handleFitnessInactivityScan } = require('../../api/services/vertical/verticalJourneyJobHandler');
 const notificationService = require('../../api/services/notificationService');
+const engagementEngine = require('../../api/services/vertical/engagementEngine');
 
 const TENANT = 'tenant-fitness-e2e';
 const SUBJECT = 'subject-fitness-001';
@@ -277,17 +278,14 @@ describe('Fitness Vertical — End-to-End Journey', () => {
   // ── 7. Inactivity scan sends alerts ──────────────────────────────────────
 
   describe('7. Fitness inactivity scan', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     test('sends frequency_alert for low-frequency subject', async () => {
       const membership = makeMembershipRow();
-      // 1 visit 10 days ago → score 0.25 → low_frequency (not churn_risk)
-      const oneRecentVisit = [{
-        id: 'va-recent',
-        checked_in_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-        status: 'completed',
-      }];
       mockFindAll
         .mockResolvedValueOnce([membership]) // memberships
-        .mockResolvedValueOnce(oneRecentVisit) // attendances for engagement signal
         .mockResolvedValue([]);               // subsequent calls
 
       // No recent frequency_alert
@@ -295,6 +293,24 @@ describe('Fitness Vertical — End-to-End Journey', () => {
 
       // engagementSignal create
       mockCreate.mockImplementation(async (data) => ({ ...data, toJSON() { return this; } }));
+
+      // AI/ML boundary: since commit 89b0180 the engagement score requires a real
+      // AI/ML provider (computeFitnessChurnScore throws AI_ML_REQUIRED; heuristic
+      // fallback removed by design). This test covers the scan dispatch pipeline,
+      // not the ML model — so we stub the signal the AI/ML provider would produce
+      // for a low-frequency subject (1 visit in 30d → low_frequency).
+      jest.spyOn(engagementEngine, 'computeEngagementSignal').mockResolvedValue({
+        tenant_key: TENANT,
+        vertical: 'fitness',
+        subject_id: SUBJECT,
+        membership_id: MEMBERSHIP_ID,
+        signal_type: 'low_frequency',
+        score: 0.25,
+        days_since_last_visit: 10,
+        frequency_last_30d: 1,
+        metadata: { billingStatus: 'active', computed_by: 'ai_ml_required' },
+        computed_at: new Date(),
+      });
 
       await handleFitnessInactivityScan({ tenantId: TENANT });
 

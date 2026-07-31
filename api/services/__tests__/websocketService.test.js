@@ -1,3 +1,15 @@
+// Registra os mocks de api/db/sequelize e api/db/models (store em memória)
+// para o authService, que é DB-only (PostgreSQL obrigatório).
+// Deve ser requerido ANTES de websocketService/authService.
+require('../../../tests/helpers/authDbMock');
+
+// O check de limite de plano é best-effort no createAgent; mockamos o serviço
+// irmão para focar no fluxo de autenticação via WebSocket.
+// Nota: jest.config.cjs usa resetMocks: true — por isso função comum, não jest.fn.
+jest.mock('../planLimitsService', () => ({
+  checkLimit: async () => ({ allowed: true }),
+}));
+
 const WebSocket = require('ws');
 const http = require('http');
 const {

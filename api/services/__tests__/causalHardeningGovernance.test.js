@@ -38,12 +38,21 @@ describe('CausalHardening: snapshot fail-closed para blocking journeys', () => {
     expect(contract.networkProofRequired).toBe(true);
   });
 
-  test('registry: step_confirm_attendance tem snapshotRequired e journeyId correto', () => {
+  test('registry: step_confirm_attendance é asserção sem mutação (snapshotRequired false) na fitness_customer_checkin', () => {
     const { getOperationalStepContract } = require('../../../qa/contracts/operationalStepRegistry');
     const contract = getOperationalStepContract('step_confirm_attendance');
     expect(contract).toBeDefined();
     expect(contract.journeyId).toBe('fitness_customer_checkin');
-    expect(contract.snapshotRequired).toBe(true);
+    // Contrato deliberado do registry (fitness flow, passo 5): confirm_attendance é
+    // asserção de backend SEM mutação adicional — a mutação attendance_created ocorre
+    // apenas em step_submit_checkin. Por isso snapshotRequired/mutationExpected são false
+    // e a prova exigida é state_assertion + backend_record_verification.
+    expect(contract.mutationExpected).toBe(false);
+    expect(contract.snapshotRequired).toBe(false);
+    expect(contract.proofRequirements).toEqual(['state_assertion', 'backend_record_verification']);
+    // Fail-closed permanece garantido no step mutacional da mesma jornada:
+    const mutational = getOperationalStepContract('step_submit_checkin');
+    expect(mutational.snapshotRequired).toBe(true);
   });
 });
 
@@ -534,7 +543,7 @@ describe('CausalHardening: normalizeStep expõe expectedNetworkEvents canônico'
     expect(normalized.expectedNetworkEvents[0].method).toBe('PATCH');
   });
 
-  test('step_submit_checkin: expectedNetworkEvents contém POST /access/checkin', () => {
+  test('step_submit_checkin: expectedNetworkEvents contém POST /fitness/checkin', () => {
     const step = { id: 'step_submit_checkin', status: 'success' };
     const normalized = replayAdapter.normalizeStep(step);
     expect(normalized.expectedNetworkEvents[0].method).toBe('POST');
@@ -568,23 +577,31 @@ describe('CausalHardening: getExpectedNetworkEventsForStep', () => {
 
   test('retorna array para step_reply_ticket', () => {
     const result = getExpectedNetworkEventsForStep('step_reply_ticket');
-    expect(result).toHaveLength(1);
-    expect(result[0].method).toBe('POST');
-    expect(result[0].path).toBe('/tickets/:id/reply');
+    // Registry (qa/contracts/operationalStepRegistry.js, step_reply_ticket.expectedNetworkEvents):
+    // POST /tickets/:id/reply (frontend legado) e POST /tickets/:id/message
+    // (rota real: api/modules/ticket/tickets/ticketCommunicationRoutes.js).
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ method: 'POST', path: '/tickets/:id/reply' });
+    expect(result[1]).toEqual({ method: 'POST', path: '/tickets/:id/message' });
   });
 
   test('retorna array para step_change_status', () => {
     const result = getExpectedNetworkEventsForStep('step_change_status');
-    expect(result).toHaveLength(1);
-    expect(result[0].method).toBe('PATCH');
-    expect(result[0].path).toBe('/tickets/:id/status');
+    // Registry (step_change_status.expectedNetworkEvents): PATCH /tickets/:id/status e
+    // POST /tickets/:id/close (rota real: api/modules/ticket/tickets/ticketLifecycleRoutes.js).
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ method: 'PATCH', path: '/tickets/:id/status' });
+    expect(result[1]).toEqual({ method: 'POST', path: '/tickets/:id/close' });
   });
 
   test('retorna array para step_submit_checkin', () => {
     const result = getExpectedNetworkEventsForStep('step_submit_checkin');
-    expect(result).toHaveLength(1);
-    expect(result[0].method).toBe('POST');
-    expect(result[0].path).toBe('/access/checkin');
+    // Registry (step_submit_checkin.expectedNetworkEvents): POST /fitness/checkin
+    // (api/services/qa/journeyStepDefinitions/fitnessCheckinFlowSteps.js) e
+    // POST /access-control/decisions/resolve (api/modules/access-control/routes.js).
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ method: 'POST', path: '/fitness/checkin' });
+    expect(result[1]).toEqual({ method: 'POST', path: '/access-control/decisions/resolve' });
   });
 
   test('retorna [] para stepId inexistente', () => {

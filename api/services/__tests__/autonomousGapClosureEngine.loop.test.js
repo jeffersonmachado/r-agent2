@@ -8,6 +8,93 @@ jest.mock('../../../qa-mesh/meshRunner', () => ({
   runMesh: jest.fn(),
 }));
 
+const { getJourneySteps } = require('../../../qa/contracts/operationalStepRegistry');
+
+/**
+ * Materializa network events concretos a partir do contrato do registry
+ * (expectedNetworkEvents em formato canonico → URLs reais com status 2xx).
+ * Garante que matchExpectedNetworkEvent() encontra pelo menos um evento valido.
+ */
+function materializeNetworkEvents(spec) {
+  const expected = Array.isArray(spec.expectedNetworkEvents) && spec.expectedNetworkEvents.length > 0
+    ? spec.expectedNetworkEvents
+    : [{ method: 'POST', path: '/tickets/:id/event' }];
+  return expected.map((evt, index) => ({
+    id: `net-${spec.stepId}-${index + 1}`,
+    type: 'response',
+    method: String(evt.method || 'POST').split('|')[0].trim(),
+    url: `/api${String(evt.path || '').replace(/:[^/]+/g, 'ticket-1')}`,
+    status: 200,
+  }));
+}
+
+/**
+ * Gera os steps operacionais da jornada a partir do operationalStepRegistry.
+ *
+ * Cada step satisfaz, por actionType, os campos exigidos por
+ * validateEvidenceByContract (qa/evidence/stepEvidenceContracts.js) e, para
+ * steps com mutationExpected=true, a proveniencia completa exigida por
+ * validateMutationProvenanceCompleteness / validateJourneyOperationalFlow /
+ * replayHasDeterministicOperationalProof (api/services/qa/operationalReplayValidator.js).
+ * Gerar do registry torna o teste robusto a novos steps na jornada.
+ */
+function buildJourneyReplaySteps(journeyId) {
+  const specs = Object.values(getJourneySteps(journeyId));
+  return specs.map((spec, index) => {
+    const step = {
+      id: spec.stepId,
+      actionType: spec.actionType,
+      timestamp: `2026-05-07T10:01:${String(10 + index).padStart(2, '0')}.000Z`,
+      stepResult: 'pass',
+      evidenceId: `ev-${spec.stepId}`,
+      url: '/support',
+      page: '/support',
+      selector: `[data-testid="${spec.stepId}"]`,
+      dataTestId: spec.stepId,
+      screenshotBefore: `/tmp/${spec.stepId}-before.png`,
+      screenshotAfter: `/tmp/${spec.stepId}-after.png`,
+      domAfter: `<div data-testid="${spec.stepId}"></div>`,
+    };
+
+    if (spec.networkProofRequired) {
+      step.networkEvents = materializeNetworkEvents(spec);
+    }
+
+    if (spec.mutationExpected) {
+      const networkEvents = step.networkEvents || materializeNetworkEvents(spec);
+      step.networkEvents = networkEvents;
+      step.observedMutations = [...spec.expectedMutations];
+      step.observedSideEffects = Array.from(new Set([
+        ...spec.expectedSideEffects,
+        ...spec.expectedMutations,
+      ]));
+      step.incrementalDiff = { changed: true };
+      step.networkCorrelation = networkEvents;
+      step.mutationLinkage = {
+        correlatedBy: 'network_linkage',
+        source: 'network_event',
+        mutations: [...spec.expectedMutations],
+      };
+      step.sideEffectLinkage = { sideEffects: [...step.observedSideEffects] };
+      step.mutationProvenance = spec.expectedMutations.map((mutation) => ({
+        mutation,
+        originatingStepId: spec.stepId,
+        originatingActionType: spec.actionType,
+        originatingNetworkEvent: networkEvents[0],
+        entityScope: Array.isArray(spec.entityScope) && spec.entityScope.length > 0
+          ? [...spec.entityScope]
+          : ['ticket'],
+        beforeStepSnapshotHash: `sha256:before:${spec.stepId}`,
+        afterStepSnapshotHash: `sha256:after:${spec.stepId}`,
+        valid: true,
+        correlatedBy: 'network_linkage',
+      }));
+    }
+
+    return step;
+  });
+}
+
 jest.mock('../qa/gapDetectionEngine', () => ({
   detectGaps: jest.fn(() => ({
     gaps: { operational: [] },
@@ -128,32 +215,7 @@ describe('autonomousGapClosureEngine runAutonomousGapClosureLoop', () => {
             conversationId: 'conv-1',
             contactId: 'contact-1',
           },
-          steps: [
-            {
-              id: 'step-list',
-              actionType: 'navigate',
-              dataTestId: 'ticket-list',
-              selector: '[data-testid="ticket-list"]',
-              timestamp: '2026-05-07T10:00:01.000Z',
-              stepResult: 'pass',
-              evidenceId: 'ev-1',
-              url: '/support',
-              screenshotAfter: '/tmp/s-list.png',
-              domAfter: '<div data-testid="ticket-list"></div>',
-            },
-            {
-              id: 'step-open',
-              actionType: 'navigate',
-              dataTestId: 'ticket-card',
-              selector: '[data-testid="ticket-card"]',
-              timestamp: '2026-05-07T10:00:02.000Z',
-              stepResult: 'pass',
-              evidenceId: 'ev-2',
-              url: '/ticket/1',
-              screenshotAfter: '/tmp/s-open.png',
-              domAfter: '<div data-testid="ticket-card"></div>',
-            },
-          ],
+          steps: buildJourneyReplaySteps('support_ticket_flow'),
         },
         null,
         2

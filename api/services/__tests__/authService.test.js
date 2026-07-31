@@ -1,20 +1,36 @@
 /**
- * Testes para authService.js
+ * Testes para authService.js (PostgreSQL mockado)
+ *
+ * O authService é DB-only ("PostgreSQL é obrigatório para o serviço de
+ * autenticação"). A camada de banco é mockada via tests/helpers/authDbMock,
+ * que registra jest.mock de api/db/sequelize e api/db/models com um store
+ * em memória (mesmo padrão de tests/helpers/dbMock.js usado por
+ * tenantService.test.js), permitindo exercitar os fluxos reais do serviço.
  */
 
-// Mock do sistema de arquivos antes de importar o módulo
-jest.mock('fs');
+// Registra os mocks de api/db/sequelize e api/db/models (store em memória).
+// Deve ser requerido ANTES de qualquer módulo que dependa do banco.
+const { mockModelsStore } = require('../../../tests/helpers/authDbMock');
+
 jest.mock('../../utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
   error: jest.fn(),
   warn: jest.fn(),
 }));
+// Nota: jest.config.cjs usa resetMocks: true, que remove implementações de
+// jest.fn() antes de cada teste — por isso os factories abaixo usam funções
+// comuns quando a implementação importa (config, planLimitsService).
 jest.mock('../../utils/config', () => ({
-  get: jest.fn((key, defaultValue) => defaultValue || null), // Removido fallback para 'tenant-demo'
+  get: (key, defaultValue) => defaultValue || null, // Removido fallback para 'tenant-demo'
 }));
 
-const fs = require('fs');
+// O check de limite de plano é best-effort no createAgent; mockamos o serviço
+// irmão (padrão já usado em tenantService.test.js) para focar no authService.
+jest.mock('../planLimitsService', () => ({
+  checkLimit: async () => ({ allowed: true }),
+}));
+
 const {
   createAgent,
   login,
@@ -26,16 +42,9 @@ const {
 
 describe('authService', () => {
   beforeEach(() => {
+    // Limpa apenas histórico de chamadas; o store em memória e o cache do
+    // authService persistem entre os testes (usernames únicos evitam colisão).
     jest.clearAllMocks();
-    // Mock fs.existsSync para retornar false (arquivos não existem)
-    fs.existsSync = jest.fn().mockReturnValue(false);
-    fs.mkdirSync = jest.fn();
-    fs.writeFileSync = jest.fn();
-    fs.readFileSync = jest.fn().mockReturnValue('[]');
-    
-    // Limpa agentes e sessões antes de cada teste
-    // Nota: Isso pode não funcionar perfeitamente devido ao carregamento inicial do módulo
-    // Mas vamos tentar
   });
 
   // Nota: hashPassword, verifyPassword e generateToken não são exportados
@@ -170,9 +179,27 @@ describe('authService', () => {
       expect(loginResult.error).toContain('Credenciais inválidas');
     });
 
-    test('deve rejeitar login de agente inativo', () => {
-      // Este teste requer mock mais complexo, vamos pular por enquanto
-      // e focar nos casos básicos
+    test('deve rejeitar login de agente inativo', async () => {
+      const uniqueUsername = `testuser-inactive-${Date.now()}`;
+      const createResult = await createAgent({
+        tenantId: 'tenant-1',
+        username: uniqueUsername,
+        email: `test-inactive-${Date.now()}@example.com`,
+        password: 'password123',
+        role: 'operator',
+      });
+      expect(createResult.success).toBe(true);
+
+      // Desativa o usuário diretamente no "banco" (store mockado)
+      await mockModelsStore.User.update(
+        { is_active: false },
+        { where: { username: uniqueUsername } },
+      );
+
+      const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test-agent');
+
+      expect(loginResult.success).toBe(false);
+      expect(loginResult.error).toContain('inativo');
     });
   });
 
@@ -202,8 +229,28 @@ describe('authService', () => {
       expect(validation.valid).toBe(false);
     });
 
-    test('deve rejeitar token expirado', () => {
-      // Este teste requer manipulação de datas, vamos pular por enquanto
+    test('deve rejeitar token expirado', async () => {
+      const uniqueUsername = `testuser-expiry-${Date.now()}`;
+      await createAgent({
+        tenantId: 'tenant-1',
+        username: uniqueUsername,
+        email: `test-expiry-${Date.now()}@example.com`,
+        password: 'password123',
+      });
+
+      const loginResult = await login(uniqueUsername, 'password123');
+      expect(loginResult.success).toBe(true);
+
+      // Avança o relógio além da expiração do token (24h por padrão)
+      jest.useFakeTimers();
+      try {
+        jest.setSystemTime(Date.now() + 25 * 60 * 60 * 1000);
+        const validation = validateToken(loginResult.token);
+        expect(validation.valid).toBe(false);
+        expect(validation.error).toContain('expirada');
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -308,4 +355,3 @@ describe('authService', () => {
     });
   });
 });
-

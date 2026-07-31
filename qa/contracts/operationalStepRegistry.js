@@ -122,7 +122,7 @@ const SUPPORT_TICKET_FLOW = {
     proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
     networkProofRequired: true,
     networkEndpoints: [
-      { method: 'POST', pathPattern: /\/(api\/tickets\/[^/]+\/reply|tickets\/[^/]+\/(reply|message))/, status: [200, 201] },
+      { method: 'POST', pathPattern: /\/(api\/tickets\/[^/]+\/reply|tickets\/[^/]+\/(reply|message))(?:\?|$)/, status: [200, 201] },
     ],
     expectedNetworkEvents: [
       { method: 'POST', path: '/tickets/:id/reply' },
@@ -173,7 +173,7 @@ const SUPPORT_TICKET_FLOW = {
     proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
     networkProofRequired: true,
     networkEndpoints: [
-      { method: 'PATCH|POST', pathPattern: /\/(api\/tickets\/[^/]+\/(status|change-status)|tickets\/[^/]+\/close)/, status: [200, 201] },
+      { method: 'PATCH|POST', pathPattern: /\/(api\/tickets\/[^/]+\/(status|change-status)|tickets\/[^/]+\/close)(?:\?|$)/, status: [200, 201] },
     ],
     expectedNetworkEvents: [
       { method: 'PATCH', path: '/tickets/:id/status' },
@@ -287,7 +287,7 @@ const FITNESS_CUSTOMER_CHECKIN_FLOW = {
     proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
     networkProofRequired: true,
     networkEndpoints: [
-      { method: 'POST', pathPattern: /\/(api\/fitness\/checkin|api\/access-control\/decisions\/resolve)/, status: [200, 201] },
+      { method: 'POST', pathPattern: /\/(api\/fitness\/checkin|api\/access-control\/decisions\/resolve)(?:\?|$)/, status: [200, 201] },
     ],
     expectedNetworkEvents: [
       { method: 'POST', path: '/fitness/checkin' },
