@@ -39,7 +39,8 @@ const {
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
-const MESH_REGISTRY_PATH = path.join(ROOT_DIR, 'qa-mesh', 'meshRegistry.json');
+const MESH_REGISTRY_PATH = process.env.QA_MESH_REGISTRY_PATH
+  || path.join(ROOT_DIR, 'qa-mesh', 'meshRegistry.json');
 
 let _meshRegistryCache = null;
 function getMeshRegistry() {

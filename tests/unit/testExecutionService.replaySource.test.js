@@ -120,12 +120,23 @@ describe('qaWavesExecutionService.writeReplayArtifact — origem de produto no a
   beforeEach(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-write-'));
     process.env.RUNTIME_ROOT = runtimeRoot;
+    // O mesh registry real (qa-mesh/meshRegistry.json) é artefato de runtime
+    // gitignored — ausente em clones limpos (CI). O teste provê um registry
+    // fixture autocontido via QA_MESH_REGISTRY_PATH.
+    const registryPath = path.join(runtimeRoot, 'meshRegistry.json');
+    fs.writeFileSync(
+      registryPath,
+      `${JSON.stringify([{ id: 'support-inbox-nota-ui', adapter: 'rpa' }], null, 2)}\n`,
+      'utf8',
+    );
+    process.env.QA_MESH_REGISTRY_PATH = registryPath;
     jest.resetModules();
     ({ writeReplayArtifact } = require('../../api/services/qaWavesExecutionService'));
   });
 
   afterEach(() => {
     delete process.env.RUNTIME_ROOT;
+    delete process.env.QA_MESH_REGISTRY_PATH;
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });
 
