@@ -1,0 +1,54 @@
+name: Jest Unit
+
+# =============================================================================
+# Suíte unitária Jest (tests/unit) em todo push/PR.
+#
+# Motivação: antes deste workflow, NENHUM teste Jest rodava no CI — apenas
+# scripts de governança. Suítes podiam apodrecer sem gate (aconteceu com 7
+# suítes mortas ressuscitadas em 2026-07). tests/unit não exige PostgreSQL/
+# Redis (testes que dependem de infra real vivem em tests/integration e
+# seguem o padrão self-skip documentado em release-governance.yml).
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION_LTS: '20'
+
+jobs:
+  jest-unit:
+    name: "Jest Unit (tests/unit)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar @results/auth (pacote irmão fora do checkout)
+        run: |
+          mkdir -p ../../packages
+          rm -rf ../../packages/auth
+          cp -r vendor/auth ../../packages/auth
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          CI: true
