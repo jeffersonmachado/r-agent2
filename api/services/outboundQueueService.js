@@ -360,6 +360,9 @@ async function deliverOutbound({ tenantId, channelType, message }) {
       const phoneNumberId = config.get('whatsapp.phoneNumberId');
       const accessToken = config.get('whatsapp.accessToken');
       if (!phoneNumberId || !accessToken) throw new Error('Credenciais do WhatsApp não configuradas');
+      if (!whatsappService.areCredentialsValid()) {
+        throw new Error('WhatsApp credentials são inválidas ou são placeholders. Configure credenciais reais em config.json');
+      }
 
       const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
       const payload = {

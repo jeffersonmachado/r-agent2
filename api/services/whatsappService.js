@@ -34,15 +34,13 @@ function normalizeMediaType(type, mimeType) {
  * @returns {boolean}
  */
 function areCredentialsValid() {
-  // Verifica se phoneNumberId não é um placeholder
-  const phoneNumberId = WHATSAPP_PHONE_NUMBER_ID;
-  if (!phoneNumberId || typeof phoneNumberId !== 'string') {
-    return false;
-  }
-  
-  // Detecta placeholders comuns
+  // Detecta placeholders comuns (aplicado a phoneNumberId, accessToken e
+  // verifyToken — um placeholder em qualquer um deles torna a chamada à
+  // Meta garantidamente inválida, ex.: 401 OAuthException por
+  // "Malformed access token REPLACE_WITH_WHATSAPP_ACCESS_TOKEN").
   const placeholderPatterns = [
     /^\+?\s*1\s*555\s*059\s*7005/i, // "+1 555 059 7005"
+    /REPLACE_WITH/i,
     /SEU_/i,
     /YOUR_/i,
     /PLACEHOLDER/i,
@@ -50,20 +48,36 @@ function areCredentialsValid() {
     /TESTE/i,
     /^ID_DO_/i,
   ];
-  
+
+  // Verifica se phoneNumberId existe e não é um placeholder
+  const phoneNumberId = WHATSAPP_PHONE_NUMBER_ID;
+  if (!phoneNumberId || typeof phoneNumberId !== 'string') {
+    return false;
+  }
+
   if (placeholderPatterns.some(pattern => pattern.test(phoneNumberId))) {
     return false;
   }
-  
-  // Verifica se accessToken existe e não é placeholder
+
+  // Verifica se accessToken existe, não é placeholder e tem tamanho plausível
   if (!WHATSAPP_ACCESS_TOKEN || typeof WHATSAPP_ACCESS_TOKEN !== 'string') {
     return false;
   }
-  
+
+  if (placeholderPatterns.some(pattern => pattern.test(WHATSAPP_ACCESS_TOKEN))) {
+    return false;
+  }
+
   if (WHATSAPP_ACCESS_TOKEN.length < 20) {
     return false; // Token muito curto, provavelmente inválido
   }
-  
+
+  // verifyToken também não pode ser placeholder (webhook verify + guarda simétrica)
+  if (!WHATSAPP_VERIFY_TOKEN || typeof WHATSAPP_VERIFY_TOKEN !== 'string'
+    || placeholderPatterns.some(pattern => pattern.test(WHATSAPP_VERIFY_TOKEN))) {
+    return false;
+  }
+
   return true;
 }
 
