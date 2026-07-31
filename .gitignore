@@ -190,8 +190,9 @@ scripts/test-report.json
 .wwebjs_cache/
 api/data/wa_sessions/
 
-# Runtime root opcional para ambientes locais/containerizados
-runtime/
+# Runtime root opcional para ambientes locais/containerizados (somente na raiz —
+# sem a barra inicial o padrão também ignorava api/runtime/, diretório de código-fonte)
+/runtime/
 
 # Saída de teste do empacotamento
 dist/test-release/
