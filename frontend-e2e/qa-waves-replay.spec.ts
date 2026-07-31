@@ -361,19 +361,18 @@ test.describe('QA Waves -> RPA Replays', () => {
           if (detail) {
             const results = Array.isArray(detail.results) ? detail.results : [];
             const failedResults = results
-              .filter((r) => r && String(r.status || '').toLowerCase() !== 'success')
-              .map((r) => ({
-                scenarioId: r.scenarioId || r.id,
-                status: r.status,
-                error: String(r.error || r.message || '').slice(0, 300),
-              }));
+              .filter((r) => r && String(r.status || '').toLowerCase() !== 'success');
             console.log('[spec] drain diagnóstico:', JSON.stringify({
               status: detail.status,
               summary: detail.summary || null,
               currentStep: detail.currentStep || null,
               totalResults: results.length,
-              failedResults,
             }));
+            // Entradas completas dos cenários falhos: o array `errors` traz
+            // os detalhes (ex.: mensagens de console críticas do RPA).
+            for (const entry of failedResults) {
+              console.log('[spec] drain cenário falho:', JSON.stringify(entry).slice(0, 3000));
+            }
           }
         }
       }
