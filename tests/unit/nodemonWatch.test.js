@@ -73,9 +73,23 @@ describe('nodemon watch do QA Mesh (regressão: scheduler stale derrubou o gate)
     expect(isIgnored(config.ignore, artifact)).toBe(true);
   });
 
-  it('artefatos de runtime existem de fato em qa-mesh/ (guarda contra lista fictícia)', () => {
+  it('artefatos de runtime são de fato escritos pelo código do mesh/scheduler (guarda contra lista fictícia)', () => {
+    // Não se pode exigir que os arquivos existam em disco: num checkout fresco
+    // (CI) os artefatos de runtime ainda não foram gerados. A prova
+    // determinística de que a lista não é fictícia é cada artefato estar
+    // referenciado no código que o escreve em execução.
+    const corpus = [
+      ...fs.readdirSync(path.join(ROOT, 'qa-mesh'))
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => fs.readFileSync(path.join(ROOT, 'qa-mesh', f), 'utf8')),
+      ...fs.readdirSync(path.join(ROOT, 'scripts', 'governance'))
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => fs.readFileSync(path.join(ROOT, 'scripts', 'governance', f), 'utf8')),
+    ].join('\n');
+
     for (const artifact of RUNTIME_ARTIFACTS) {
-      expect(fs.existsSync(path.join(ROOT, artifact))).toBe(true);
+      const basename = artifact.replace(/^qa-mesh\//, '').replace(/-\d+\.json$/, '');
+      expect(corpus).toContain(basename);
     }
   });
 });
