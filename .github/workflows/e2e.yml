@@ -119,6 +119,24 @@ jobs:
         env:
           API_PORT: '3001'
 
+      - name: Warmup de auth (elimina cold-start de login no primeiro teste)
+        # /health responde antes de o pipeline de auth estar quente; sem este
+        # warmup o primeiro login real das specs (fitness) falhava no CI.
+        run: |
+          for i in $(seq 1 60); do
+            TOKEN=$(curl -fsS -X POST "http://localhost:3001/auth/login?tenantId=system" \
+              -H 'Content-Type: application/json' \
+              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||j.accessToken||'')}catch{}})")
+            if [ -n "$TOKEN" ]; then
+              echo "Login funcional após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Login não funcionou em 60s — últimas linhas do log da API:"
+          tail -100 /tmp/api-e2e.log || true
+          exit 1
+
       - name: Install dependencies (frontend)
         run: npm ci --no-audit --no-fund
         working-directory: frontend

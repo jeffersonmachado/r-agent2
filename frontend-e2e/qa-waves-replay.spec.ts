@@ -146,7 +146,7 @@ test.describe('QA Waves -> RPA Replays', () => {
   // ainda está ativa falharia no POST por 409, mascarando o resultado real.
   test.describe.configure({ retries: 0 });
   test('gera replay completo e permite diagnóstico visual', async ({ page }, testInfo) => {
-    test.setTimeout(300000);
+    test.setTimeout(420000);
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const consoleLogs: string[] = [];
 
@@ -312,6 +312,34 @@ test.describe('QA Waves -> RPA Replays', () => {
       }
       // Diagnóstico visual: verificar que o item continua visível após clique (best-effort: clique pode navegar para detalhe)
       await expect(replayItem).toBeVisible({ timeout: 10000 }).catch(() => {});
+
+      // Dreno best-effort da execução RPA: a fila é global na API e o Chromium
+      // do RPA consome CPU do runner. Aguardar o término (sem falhar se
+      // estourar o orçamento) evita contenção com as specs seguintes.
+      if (executionId) {
+        const drainDeadline = Date.now() + 240000;
+        let drainStatus = 'processing';
+        while (drainStatus === 'processing' && Date.now() < drainDeadline) {
+          await page.waitForTimeout(10000);
+          drainStatus = await page
+            .evaluate(async (execId) => {
+              const token = localStorage.getItem('auth_token');
+              const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
+              const resp = await fetch(`/api/test-executions/${encodeURIComponent(execId)}`, {
+                credentials: 'include',
+                headers: {
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  'X-Tenant-Id': String(tenantId),
+                },
+              }).catch(() => null);
+              if (!resp) return 'processing';
+              const body = await resp.json().catch(() => ({}));
+              return String(body?.status || '').toLowerCase() || 'processing';
+            }, executionId)
+            .catch(() => 'processing');
+        }
+        console.log(`[spec] drain da execução ${executionId}: status final=${drainStatus}`);
+      }
     } catch (error) {
       await attachFailureDiagnostics();
       throw error;

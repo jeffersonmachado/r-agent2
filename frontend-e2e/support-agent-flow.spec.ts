@@ -87,7 +87,9 @@ async function navigateToSupport(page: any, baseUrl: string, role = 'agent') {
 
     const supportVisible = await page
       .getByTestId('support-page')
-      .waitFor({ state: 'visible', timeout: 20000 })
+      // 45s: em runners com poucos vCPUs a página pode competir com o Chromium
+      // do RPA de uma wave em andamento; o carregamento é infra, não assertiva.
+      .waitFor({ state: 'visible', timeout: 45000 })
       .then(() => true)
       .catch(() => false);
 

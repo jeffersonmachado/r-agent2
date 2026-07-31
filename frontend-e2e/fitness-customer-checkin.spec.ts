@@ -111,6 +111,7 @@ test.describe('Fitness Customer Check-in Operational Flow', () => {
       }),
     });
     if (!student.ok || !student.body?.subject?.id || !student.body?.membership?.id) {
+      console.log('[spec] POST /api/fitness/student falhou:', student.status, JSON.stringify(student.body || {}).slice(0, 500));
       noGo('PRECONDITION_FAILED', ['crm_contact_real', 'membership_active']);
     }
 
