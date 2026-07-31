@@ -91,7 +91,7 @@ npm run system:deploy        # dry-run por padrão; deploy real exige SYSTEM_DEP
 
 - `npm test` → `test:unit` + `test:flow` + `test:rpa:jest`.
 - `npm run test:unit` → `jest tests/unit` (rodar após toda alteração de domínio).
-- `npm run test:flow` → testes E2E de fluxo (`tests/flow`).
+- `npm run test:flow` → testes E2E de fluxo (`tests/flow` + `engine/__tests__`; até 2026-07 rodava só `tests/flow`, que não contém arquivos `*.test.js` — gate vacuoso corrigido).
 - `npm run test:rpa:jest` → testes RPA sem browser (flags `RPA_SKIP_BROWSER_TESTS`/`SKIP_RPA_INTEGRATION_TESTS`).
 - `npm run test:system` → contratos, governança, CI, runtime, organizacional, stress e rate-limit.
 - `npm run test:vertical:proof` → prova das verticais Beauty/Fitness (unit + integration + `scripts/vertical-e2e-validate.js`).
