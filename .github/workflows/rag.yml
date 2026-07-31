@@ -1,0 +1,56 @@
+name: RAG Service Tests
+
+# =============================================================================
+# Suíte pytest do rag-service (FastAPI + sentence-transformers, torch CPU).
+#
+# Receita validada localmente com venv zerado (pip install do zero,
+# torch==2.2.2+cpu): 30/30 testes verdes. Não exige Postgres — os testes
+# usam vector store em disco (VECTOR_STORE_PATH isolado pelo conftest).
+# O modelo all-MiniLM-L6-v2 é baixado do HuggingFace na 1ª execução
+# (cacheado entre runs).
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  rag-pytest:
+    name: "RAG pytest (30 testes)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: rag-service/requirements.txt
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-models-${{ hashFiles('rag-service/requirements.txt') }}
+          restore-keys: hf-models-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: rag-service
+
+      - name: Run pytest
+        run: python -m pytest -q
+        working-directory: rag-service
+        env:
+          CI: true
