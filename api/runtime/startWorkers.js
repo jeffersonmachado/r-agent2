@@ -10,6 +10,19 @@ function startWorkers({
   startAssignmentWorker,
   processRef = process,
 }) {
+  // Playwright browser check (best-effort): validators de runtime/RPA dependem
+  // do Chromium do Playwright; avisa cedo se o cache de browsers foi apagado.
+  if (processRef.env.ENABLE_PLAYWRIGHT_BOOT_CHECK !== 'false') {
+    try {
+      const { checkPlaywrightBrowser } = require('./playwrightBrowserCheck');
+      checkPlaywrightBrowser({ logger }).catch((err) => {
+        logger.warn('[PlaywrightBootCheck] Falha inesperada no check (ignorado)', { error: err?.message });
+      });
+    } catch (err) {
+      logger.warn('[PlaywrightBootCheck] Erro ao iniciar check (ignorado)', { error: err?.message });
+    }
+  }
+
   // WhatsApp QR Bridge initialization (best-effort).
   if (processRef.env.ENABLE_WHATSAPP_QR_BRIDGE !== 'false') {
     try {
