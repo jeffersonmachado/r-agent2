@@ -208,8 +208,6 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     executionStatus: 'running',
     waveId: scenario.waveId,
     journeyId,
-    journeySteps,
-    journeyStep: journeySteps[0] || null,
     scenarioId: scenario.id,
     platformScenarioIds,
     platformAdapter: resolvePlatformAdapter(platformScenarioIds),
@@ -218,12 +216,19 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     seedId: seed?.id || null,
     seedEvidence: seed?.seedEvidence || null,
     operationalSeedStatus: seed?.operationalSeedStatus || null,
-    source: scenario.source,
+    // Origem de produto do replay (usada pelo filtro "Origem" de /dev/rpa-replays).
+    // A origem de catálogo do cenário (manual/ai_inferred/seed) fica em tags.source.
+    source: 'qa-waves',
     status,
     startedAt,
     finishedAt: null,
     durationMs: 0,
     latency: null,
+    // Arrays potencialmente grandes ficam DEPOIS de todos os metadados de
+    // filtro: a listagem extrai metadados lendo apenas o prefixo do arquivo
+    // (16KB) e campos após arrays grandes ficariam fora do prefixo.
+    journeySteps,
+    journeyStep: journeySteps[0] || null,
     timeline: [],
     actions: [],
     logs: [],

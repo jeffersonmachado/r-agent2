@@ -44,41 +44,36 @@ async function ensureAuthenticated(page: any, baseUrl: string) {
 }
 
 async function ensureTenantSelected(page: any) {
-  const tenantHeading = page.getByRole('heading', { name: /Selecione o Tenant/i }).first();
-  const headingVisible = await tenantHeading.isVisible().catch(() => false);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const modalRoot = page
+      .locator('div[tabindex="-1"]')
+      .filter({ hasText: 'Selecione o Tenant' })
+      .first();
+    const modalVisible = await modalRoot.isVisible().catch(() => false);
+    if (!modalVisible) return;
 
-  // Caminho 1: modal com role=dialog
-  const tenantDialog = page.locator('[role="dialog"]').filter({ hasText: 'Selecione o Tenant' }).first();
-  const dialogVisible = await tenantDialog.isVisible().catch(() => false);
-
-  // Caminho 2: modal sem role, mas com container de overlay tabindex=-1
-  const tenantOverlay = page.locator('div[tabindex="-1"]').filter({ hasText: 'Selecione o Tenant' }).first();
-  const overlayVisible = await tenantOverlay.isVisible().catch(() => false);
-
-  if (!headingVisible && !dialogVisible && !overlayVisible) return;
-
-  const modalRoot = dialogVisible ? tenantDialog : overlayVisible ? tenantOverlay : page;
-
-  // Seleciona tenant System (quando disponível)
-  await modalRoot.locator('text=System').first().click({ force: true }).catch(() => {});
-
-  // Confirma acesso; tenta no modal e depois fallback global
-  const acessarInModal = modalRoot.getByRole('button', { name: /^Acessar$/i }).first();
-  const hasAcessarInModal = await acessarInModal.isVisible().catch(() => false);
-  if (hasAcessarInModal) {
-    await acessarInModal.click({ force: true });
-  } else {
-    const acessarGlobal = page.getByRole('button', { name: /^Acessar$/i }).first();
-    const hasAcessarGlobal = await acessarGlobal.isVisible().catch(() => false);
-    if (hasAcessarGlobal) {
-      await acessarGlobal.click({ force: true });
+    // Seleciona o tenant System clicando no BOTÃO do tenant (o nome acessível
+    // inclui "System SYSTEM system • enterprise"). O botão "Acessar" só fica
+    // habilitado após a seleção.
+    const systemTenantButton = modalRoot.getByRole('button', { name: /System/i }).first();
+    if (await systemTenantButton.isVisible().catch(() => false)) {
+      await systemTenantButton.click({ force: true }).catch(() => {});
     }
-  }
 
-  // Aguarda o fechamento do modal de tenant
-  await expect(tenantHeading).toBeHidden({ timeout: 30000 }).catch(() => {});
-  await expect(tenantDialog).toBeHidden({ timeout: 30000 }).catch(() => {});
-  await expect(tenantOverlay).toBeHidden({ timeout: 30000 }).catch(() => {});
+    const acessarButton = modalRoot.getByRole('button', { name: /^Acessar$/i }).first();
+    if (await acessarButton.isEnabled({ timeout: 5000 }).catch(() => false)) {
+      await acessarButton.click({ force: true }).catch(() => {});
+    }
+
+    // Aguarda o fechamento real do modal antes de prosseguir; se não fechar,
+    // tenta novamente (o modal pode reabrir tarde, após as queries da página).
+    const closed = await expect(modalRoot)
+      .toBeHidden({ timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+    if (closed) return;
+    await page.waitForTimeout(500);
+  }
 }
 
 async function ensureQaWavesReady(page: any, baseUrl: string) {
@@ -146,6 +141,10 @@ async function waitForReplayVisibleInUi(page: any, replaysUrl: string, replayId:
 
 
 test.describe('QA Waves -> RPA Replays', () => {
+  // Sem retry: esta spec dispara uma execução real na fila global da API
+  // (EXECUTION_ALREADY_RUNNING). Uma retentativa enquanto a execução anterior
+  // ainda está ativa falharia no POST por 409, mascarando o resultado real.
+  test.describe.configure({ retries: 0 });
   test('gera replay completo e permite diagnóstico visual', async ({ page }, testInfo) => {
     test.setTimeout(300000);
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -192,8 +191,27 @@ test.describe('QA Waves -> RPA Replays', () => {
       await expect(page.getByTestId('qa-waves-title')).toContainText('QA Waves Integrado', { timeout: 30000 });
       await expect(page.getByTestId('qa-waves-run-button').first()).toBeVisible({ timeout: 30000 });
 
-      // 2) Evita alterar cenário dinamicamente durante o teste para reduzir flakiness.
-      // O fluxo crítico aqui valida execução real + replay de um cenário já persistido.
+      // 2) Seleciona um cenário executável no contexto local. O cenário
+      // selecionado por padrão pode ser pipeline-only (ex.: cenários de
+      // vertical com platformScenarioIds marcados requiresOfficialPipeline
+      // no meshRegistry) — nesse caso o POST retorna PIPELINE_ONLY_SCENARIO
+      // e nenhum replay é gerado. 'support-inbox-nota-ui' é persistido e
+      // executável localmente (validado via POST /api/test-executions).
+      // Caminho na UI: árvore de jornadas → "Support Ticket Flow" (filtra a
+      // aba Cenários para essa jornada) → cenário na lista. O modal de tenant
+      // pode reabrir tardiamente (após as queries da página) — garantir que
+      // está fechado antes de interagir com a árvore.
+      await ensureTenantSelected(page);
+      await page
+        .locator('.qa-journey-tree-journey', { hasText: 'Support Ticket Flow' })
+        .first()
+        .click();
+      await page.getByRole('button', { name: 'Cenários', exact: true }).click();
+      const runnableScenarioButton = page
+        .locator('button', { hasText: 'support-inbox-nota-ui@' })
+        .first();
+      await expect(runnableScenarioButton).toBeVisible({ timeout: 30000 });
+      await runnableScenarioButton.click();
 
       // 3) Executar cenário e capturar resposta do POST com retentativa caso o cenário não esteja selecionado.
       const executeButton = page.getByTestId('qa-waves-run-button').first();

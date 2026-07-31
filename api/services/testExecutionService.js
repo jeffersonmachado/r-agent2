@@ -889,11 +889,19 @@ function listReplayFiles({
       // Extração rápida por regex dos metadados essenciais
       const { prefixBuf, suffixBuf } = readFilePrefixAndSuffix(fullPath, stat.size);
       const prefix = prefixBuf.toString('utf8');
+      const replayType = extractJsonStringField(prefix, 'type');
+      const explicitSource = extractJsonStringField(prefix, 'source');
       const replayMeta = {
         replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id') || entry.name.replace(/\.json$/i, ''),
-        scenarioId: extractJsonStringField(prefix, 'scenarioId'),
+        // Em artefatos legados finalizados, scenarioId/seedId ficavam após o
+        // array journeySteps (fora do prefixo lido). Para replays QA Waves,
+        // recordingId é gravado com o mesmo valor de scenario.id.
+        scenarioId: extractJsonStringField(prefix, 'scenarioId')
+          || (replayType === 'qa_wave_rpa_replay' ? extractJsonStringField(prefix, 'recordingId') : null),
         executionId: extractJsonStringField(prefix, 'executionId'),
-        source: extractJsonStringField(prefix, 'source'),
+        // Artefatos legados de QA Waves não gravavam `source`; deriva a origem
+        // de produto a partir do tipo para que o filtro source=qa-waves os encontre.
+        source: explicitSource || (replayType === 'qa_wave_rpa_replay' ? 'qa-waves' : null),
         waveId: extractJsonStringField(prefix, 'waveId'),
         journeyId: extractJsonStringField(prefix, 'journeyId'),
         seedId: extractJsonStringField(prefix, 'seedId'),

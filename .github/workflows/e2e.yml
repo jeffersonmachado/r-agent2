@@ -1,0 +1,171 @@
+name: E2E Playwright
+
+# =============================================================================
+# Suíte E2E real (frontend-e2e/, Playwright) contra a stack viva:
+# PostgreSQL + Redis + API (:3001) + frontend Vite (:5173).
+#
+# Cobre jornadas operacionais ponta a ponta (login → tenant → páginas → API →
+# banco) e o fluxo QA Waves → replay (o cenário executável dispara um RPA com
+# Chromium real dentro da API). Antes deste workflow, a suíte só rodava
+# localmente e podia apodrecer sem gate.
+#
+# Browsers: dois builds de Chromium são necessários —
+#   - root (playwright 1.57): usado pelo runner RPA da API;
+#   - frontend-e2e (@playwright/test 1.54): usado pelas specs.
+# O `--with-deps` no root instala as libs de sistema para ambos.
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION_LTS: '20'
+
+jobs:
+  e2e:
+    name: "E2E Playwright (stack viva: API + frontend + Postgres + Redis)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+      RUNTIME_ROOT: /tmp/ragent2-runtime-ci
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar @results/auth (pacote irmão fora do checkout)
+        run: |
+          mkdir -p ../../packages
+          rm -rf ../../packages/auth
+          cp -r vendor/auth ../../packages/auth
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Chromium do runner RPA da API (playwright root) + libs de sistema
+        run: npx playwright install --with-deps chromium
+
+      - name: Config mínima de runtime (.env + api/data/config.json)
+        run: |
+          cp env.example .env
+          echo "ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> .env
+          cp api/data/config.example.json api/data/config.json
+          # Ambiente de QA/E2E: o limite padrão de sessões por agente (3) derruba
+          # a sessão do auto-login RPA quando as specs fazem logins sucessivos
+          # (Sessão não encontrada → 401 no meio da execução). Em QA o limite
+          # precisa acomodar os atores sintéticos; o default de produto (3)
+          # permanece inalterado.
+          node -e "const fs=require('fs');const p='api/data/config.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.auth={...(c.auth||{}),maxSessionsPerAgent:50};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');"
+          mkdir -p "$RUNTIME_ROOT"
+
+      - name: Run migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
+      - name: Start API (:3001) e aguardar /health
+        run: |
+          nohup node api/server.js > /tmp/api-e2e.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3001/health > /dev/null 2>&1; then
+              echo "API saudável após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API não respondeu em 90s — últimas linhas do log:"
+          tail -100 /tmp/api-e2e.log || true
+          exit 1
+        env:
+          API_PORT: '3001'
+
+      - name: Install dependencies (frontend)
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend
+
+      - name: Start frontend Vite (:5173) e aguardar
+        run: |
+          nohup npm run start > /tmp/frontend-e2e.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5173 > /dev/null 2>&1; then
+              echo "Frontend saudável após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Frontend não respondeu em 90s — últimas linhas do log:"
+          tail -100 /tmp/frontend-e2e.log || true
+          exit 1
+        working-directory: frontend
+        env:
+          # api/data/config.json (do example) usa api.port=3000; a API do job
+          # sobe na 3001 — o proxy do Vite precisa apontar para ela.
+          VITE_PROXY_TARGET: http://localhost:3001
+
+      - name: Install dependencies (frontend-e2e)
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend-e2e
+
+      - name: Chromium das specs (@playwright/test 1.54)
+        run: npx playwright install chromium
+        working-directory: frontend-e2e
+
+      - name: Run E2E suite
+        run: npx playwright test
+        working-directory: frontend-e2e
+        env:
+          FRONTEND_URL: http://localhost:5173
+
+      - name: Upload Playwright artifacts (falhas)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-results
+          path: |
+            frontend-e2e/test-results/
+            frontend-e2e/playwright-report/
+          retention-days: 7
+
+      - name: Dump API log (falhas)
+        if: failure()
+        run: tail -200 /tmp/api-e2e.log || true

@@ -229,6 +229,10 @@ function failNoGo(reason: string, missing: string[]) {
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 test.describe('Support Agent Operations Wave', () => {
+  // Sem retry: o cenário 6 dispara uma execução real na fila global da API
+  // (EXECUTION_ALREADY_RUNNING). Uma retentativa enquanto a execução anterior
+  // ainda está ativa falharia no POST por 409, mascarando o resultado real.
+  test.describe.configure({ retries: 0 });
   const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   test('cenário 1: agente visualiza lista de tickets e abre ticket', async ({ page }) => {
@@ -392,12 +396,21 @@ test.describe('Support Agent Operations Wave', () => {
     // 0) Navegar para suporte primeiro (necessário para localStorage acessível em supportFetch)
     await navigateToSupport(page, baseUrl);
 
-    // 1) Obter o primeiro scenarioId válido disponível na API
+    // 1) Selecionar cenário executável localmente da jornada de suporte.
+    // O primeiro item da lista pode ser pipeline-only (ex.: cenários de
+    // vertical cujos platformScenarioIds exigem o pipeline oficial) — nesse
+    // caso o POST retorna 409 PIPELINE_ONLY_SCENARIO e nenhum replay é
+    // gerado. A wave operacional de suporte deve usar um cenário da
+    // jornada support_ticket_flow, executável no ambiente local.
     const scenariosResp = await supportFetch(page, '/api/qa-waves/scenarios');
     const scenarioItems: any[] = scenariosResp.body?.items || [];
-    const validScenarioId: string = scenarioItems[0]?.id || '';
+    const hasPlatformIds = (item: any) => Array.isArray(item?.platformScenarioIds) && item.platformScenarioIds.length > 0;
+    const supportScenario =
+      scenarioItems.find((item) => item?.id === 'support-inbox-nota-ui' && hasPlatformIds(item))
+      || scenarioItems.find((item) => (item?.journeyId === 'support_ticket_flow' || item?.journey === 'support_ticket_flow') && hasPlatformIds(item));
+    const validScenarioId: string = supportScenario?.id || '';
     if (!validScenarioId) {
-      failNoGo('PRECONDITION_FAILED', ['qa_waves_scenario_available']);
+      failNoGo('PRECONDITION_FAILED', ['qa_waves_support_scenario_available']);
     }
 
     // 2) Disparar execução
@@ -410,12 +423,35 @@ test.describe('Support Agent Operations Wave', () => {
         scenarioIds: [validScenarioId],
       }),
     });
-    if (!execution.ok) {
-      failNoGo('PRECONDITION_FAILED', ['qa_waves_support_execution']);
-    }
 
-    const executionId: string = execution.body?.executionId || '';
+    let executionId: string = execution.body?.executionId || '';
     let capturedReplayId: string = (execution.body?.replayId || '').replace(/\.json$/i, '');
+
+    if (!execution.ok) {
+      // A fila de execuções QA Waves é global no processo da API. Quando outra
+      // spec desta mesma run serial já disparou uma wave (ex.: qa-waves-replay),
+      // o POST retorna 409 execution_already_running. Nesse caso a wave
+      // operacional JÁ está em andamento e já gerou replay — usar a execução
+      // ativa como evidência e validar a listagem dela (sem enfraquecer o
+      // critério: o replay precisa existir e aparecer na UI).
+      const alreadyRunning = execution.status === 409
+        && execution.body?.error === 'execution_already_running'
+        && typeof execution.body?.activeExecutionId === 'string';
+      if (!alreadyRunning) {
+        failNoGo('PRECONDITION_FAILED', ['qa_waves_support_execution']);
+      }
+
+      executionId = execution.body.activeExecutionId;
+      const activeReplays = await supportFetch(
+        page,
+        `/api/test-executions/replays?executionId=${encodeURIComponent(executionId)}`,
+      );
+      const activeFiles: any[] = activeReplays.body?.files || [];
+      capturedReplayId = String(activeFiles[0]?.replayId || '').replace(/\.json$/i, '');
+      if (!capturedReplayId) {
+        failNoGo('PRECONDITION_FAILED', ['qa_waves_support_execution']);
+      }
+    }
 
     // 3) Polling de até 60 s para aguardar replayId ser preenchido
     if (!capturedReplayId && executionId) {

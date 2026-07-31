@@ -896,11 +896,11 @@ export function QaWavesPage() {
 
   return (
     <>
-      <div className="qa-waves-page">
+      <div className="qa-waves-page" data-testid="qa-waves-page">
       <header className="qa-waves-header">
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
-            <h1 className="qa-waves-title">QA Waves Integrado</h1>
+            <h1 className="qa-waves-title" data-testid="qa-waves-title">QA Waves Integrado</h1>
             <p className="qa-waves-subtitle">
               Opera na mesma API e frontend do r-agent2, sem porta adicional.
             </p>
@@ -1033,6 +1033,7 @@ export function QaWavesPage() {
                 onClick={() => runScenarioReal([selectedScenarioId])}
                 disabled={!selectedScenarioId || executionPolling.isPolling}
                 className="qa-btn-primary"
+                data-testid="qa-waves-run-button"
                 title={executionPolling.isPolling ? 'Execução em andamento. Aguarde a conclusão.' : ''}
               >
                 ▶ Executar cenário
@@ -1261,6 +1262,7 @@ export function QaWavesPage() {
                   onClick={() => runScenarioReal([selectedScenarioId])}
                   disabled={!selectedScenarioId || executionPolling.isPolling}
                   className="qa-btn-primary"
+                  data-testid="qa-waves-run-button"
                   title={executionPolling.isPolling ? 'Execução em andamento. Aguarde a conclusão.' : ''}
                 >
                   ▶ Executar cenário
