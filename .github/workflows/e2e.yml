@@ -159,6 +159,12 @@ jobs:
           # api/data/config.json (do example) usa api.port=3000; a API do job
           # sobe na 3001 — o proxy do Vite precisa apontar para ela.
           VITE_PROXY_TARGET: http://localhost:3001
+          # VITE_API_DEV_PORT deriva de API_PORT (vite.config.mjs define) e
+          # alimenta a URL do WebSocket em dev (frontend/src/utils/wsUrl.js).
+          # Sem isto o WS aponta para localhost:3000 e cada página loga erros
+          # de console (ERR_CONNECTION_REFUSED) — o que reprova o cenário
+          # support-inbox-nota-ui da wave (critical_console_errors).
+          API_PORT: '3001'
 
       - name: Install dependencies (frontend-e2e)
         run: npm ci --no-audit --no-fund
