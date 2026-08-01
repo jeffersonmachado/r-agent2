@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-28T17:30:17.144Z",
-  "commit": "0f49e8566ddc5108c538fc4f5037da5004cbcfc1",
+  "generatedAt": "2026-08-01T10:23:17.252Z",
+  "commit": "5cda5fa5a6d8b6b6f04bda7e816d693023f71a17",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -245,7 +245,6 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "viaSpa": true,
           "consoleErrors": 0,
           "pageErrors": 0
         },
@@ -281,7 +280,6 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "viaSpa": true,
           "consoleErrors": 0,
           "pageErrors": 0
         },
