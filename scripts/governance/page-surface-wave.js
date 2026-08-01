@@ -415,6 +415,18 @@ async function main() {
           .filter((a) => a && a.passed === false && !a.notEvaluated)
           .map((a) => a.name);
         console.log(`[page-surface-wave] FAILED ${entry.id}: ${failedAssertions.join(', ') || 'sem assertiva identificada'}`);
+        // Sinais dos probes (erros de console/página) — em CI o log é a
+        // única evidência acessível; samples já passam por sanitizeSample.
+        for (const [probeName, probe] of Object.entries(entry.probes || {})) {
+          if (probe && typeof probe === 'object' && !probe.error) {
+            const samples = Array.isArray(probe.errorSamples) && probe.errorSamples.length > 0
+              ? ` | samples: ${probe.errorSamples.join(' || ')}`
+              : '';
+            console.log(`[page-surface-wave]   ${probeName}: rendered=${probe.rendered} login=${probe.loginSurface} denied=${probe.denied} docStatus=${probe.docStatus} consoleErrors=${probe.consoleErrors} pageErrors=${probe.pageErrors}${samples}`);
+          } else if (probe && probe.error) {
+            console.log(`[page-surface-wave]   ${probeName}: erro de navegação/rede`);
+          }
+        }
       }
     }
     console.log(`[page-surface-wave] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
