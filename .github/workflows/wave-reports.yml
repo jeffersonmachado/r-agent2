@@ -1,0 +1,195 @@
+name: Wave Reports Refresh
+
+# =============================================================================
+# Refresh automatizado dos relatórios versionados das waves técnicas:
+#   - reports/db-integrity-report.json  (Postgres real)
+#   - reports/api-surface-report.json   (probes HTTP contra API viva)
+#   - reports/page-surface-report.json  (navegação Playwright contra frontend)
+#
+# Motivo: o coverage gate (validate:coverage-gate, executado no workflow de
+# Release Governance a cada push) degrada para STALE os estados VALIDATED de
+# relatórios sem generatedAt ou mais velhos que 7 dias
+# (COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS). Sem refresh periódico, o gate
+# viraria NO_GO por evidência vencida ~7 dias após o último refresh manual.
+#
+# Roda semanalmente (domingo ~03:17 UTC) e sob demanda (workflow_dispatch).
+# O commit de refresh usa [skip ci] para não re-disparar os workflows.
+# A stack viva segue a receita validada do e2e.yml.
+# =============================================================================
+
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wave-reports-main
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION_LTS: '20'
+
+jobs:
+  refresh:
+    name: "Refresh dos relatórios de wave (stack viva)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+      RUNTIME_ROOT: /tmp/ragent2-runtime-ci
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar @results/auth (pacote irmão fora do checkout)
+        run: |
+          mkdir -p ../../packages
+          rm -rf ../../packages/auth
+          cp -r vendor/auth ../../packages/auth
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Chromium (playwright root — page-surface wave) + libs de sistema
+        run: npx playwright install --with-deps chromium
+
+      - name: Config mínima de runtime (.env + api/data/config.json)
+        run: |
+          cp env.example .env
+          echo "ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> .env
+          cp api/data/config.example.json api/data/config.json
+          node -e "const fs=require('fs');const p='api/data/config.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.auth={...(c.auth||{}),maxSessionsPerAgent:50};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');"
+          mkdir -p "$RUNTIME_ROOT"
+
+      - name: Run migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
+      - name: Start API (:3001) e aguardar /health
+        run: |
+          nohup node api/server.js > /tmp/api-wave-refresh.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3001/health > /dev/null 2>&1; then
+              echo "API saudável após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API não respondeu em 90s — últimas linhas do log:"
+          tail -100 /tmp/api-wave-refresh.log || true
+          exit 1
+        env:
+          API_PORT: '3001'
+
+      - name: Warmup de auth + seed do tenant context (system)
+        # Mesma justificativa do e2e.yml: /health responde antes do pipeline
+        # de auth estar quente; e o contexto do tenant system não existe em
+        # banco efêmero (o frontend o consulta no boot e loga erros de
+        # console, o que reprovaria páginas na page-surface wave).
+        run: |
+          TOKEN=''
+          for i in $(seq 1 60); do
+            TOKEN=$(curl -fsS -X POST "http://localhost:3001/auth/login?tenantId=system" \
+              -H 'Content-Type: application/json' \
+              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||'')}catch{}})")
+            if [ -n "$TOKEN" ]; then
+              echo "Login funcional após ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$TOKEN" ]; then
+            echo "Login não funcionou em 60s — últimas linhas do log da API:"
+            tail -100 /tmp/api-wave-refresh.log || true
+            exit 1
+          fi
+          curl -fsS -X PUT "http://localhost:3001/tenants/system/context" \
+            -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: system" \
+            -H 'Content-Type: application/json' \
+            -d '{"ramo_atividade":"Plataforma de operações autônomas (QA E2E)","objetivo":"Validar jornadas ponta a ponta no pipeline de CI"}' > /dev/null
+          echo "Tenant context (system) semeado"
+
+      - name: Install dependencies (frontend)
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend
+
+      - name: Start frontend Vite (:5173) e aguardar
+        run: |
+          nohup npm run start > /tmp/frontend-wave-refresh.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5173 > /dev/null 2>&1; then
+              echo "Frontend saudável após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Frontend não respondeu em 90s — últimas linhas do log:"
+          tail -100 /tmp/frontend-wave-refresh.log || true
+          exit 1
+        working-directory: frontend
+        env:
+          VITE_PROXY_TARGET: http://localhost:3001
+          API_PORT: '3001'
+
+      - name: Database Integrity Wave (Postgres real)
+        run: npm run wave:db-integrity
+
+      - name: API Surface Wave (probes HTTP contra a API viva)
+        run: npm run wave:api-surface
+
+      - name: Page Surface Wave (navegação Playwright contra o frontend vivo)
+        run: npm run wave:page-surface
+
+      - name: Commit e push dos relatórios atualizados (se houver mudança)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/db-integrity-report.json reports/api-surface-report.json reports/page-surface-report.json
+          if git diff --cached --quiet; then
+            echo "Relatórios sem mudanças — nada a commitar."
+            exit 0
+          fi
+          git commit -m "chore(governance): refresh automatizado dos relatórios de wave [skip ci]"
+          git push
+
+      - name: Dump logs (falhas)
+        if: failure()
+        run: |
+          tail -100 /tmp/api-wave-refresh.log || true
+          tail -50 /tmp/frontend-wave-refresh.log || true
