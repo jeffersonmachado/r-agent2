@@ -371,9 +371,54 @@ function evaluatePageSurface(inventoryItems, probesByItemId, exemptions = {}) {
   };
 }
 
+/**
+ * Endpoints cujo 404 é ESTADO VAZIO legítimo por contrato da API (não
+ * quebra). O browser emite "Failed to load resource" para qualquer resposta
+ * de erro — mensagem que JS não consegue suprimir — então a wave classifica
+ * esse ruído como 'expected-empty' quando há evidência de resposta 404 na
+ * URL correspondente. Cada entrada exige justificativa auditável.
+ */
+const EXPECTED_EMPTY_STATE_ENDPOINTS = Object.freeze({
+  '/qa-mesh/latest': '404 = "Nenhuma execução disponível" (ambiente sem execução de mesh — empty state tratado pela página)',
+  '/api/pbx/provisioning-token': '404 = "Tenant PBX não encontrado" (tenant sem token provisionado — empty state tratado pela página)',
+});
+
+/**
+ * Classifica um console.error de página. Retorna:
+ * - 'expected-empty': "Failed to load resource" cuja URL teve resposta 404
+ *   e está na allowlist de empty-state (não conta como erro da página);
+ * - 'error': qualquer outro caso (inclui resource sem resposta 404
+ *   correspondente, status >= 500, URLs fora da allowlist e erros de JS).
+ */
+function classifyPageConsoleError({ text, url, failedResources = [] }) {
+  const message = String(text || '');
+  if (message.startsWith('Failed to load resource')) {
+    let pathname = '';
+    try {
+      pathname = new URL(String(url || '')).pathname;
+    } catch {
+      pathname = '';
+    }
+    if (pathname && Object.prototype.hasOwnProperty.call(EXPECTED_EMPTY_STATE_ENDPOINTS, pathname)) {
+      const has404 = (failedResources || []).some((resource) => {
+        if (!resource || resource.status !== 404) return false;
+        try {
+          return new URL(String(resource.url || '')).pathname === pathname;
+        } catch {
+          return false;
+        }
+      });
+      if (has404) return 'expected-empty';
+    }
+  }
+  return 'error';
+}
+
 module.exports = {
   WAVE_ID,
   PUBLIC_PATHS,
+  EXPECTED_EMPTY_STATE_ENDPOINTS,
+  classifyPageConsoleError,
   isPublicPath,
   hasPathParam,
   probePolicy,

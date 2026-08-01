@@ -9,7 +9,11 @@ export async function refreshQaMeshRegistry() {
 }
 
 export async function getQaMeshLatest() {
-  return fetchJson('/qa-mesh/latest');
+  // 404 = "Nenhuma execução disponível" (estado vazio legítimo, ex.: ambiente
+  // recém-instalado) — a página trata como empty state; sem expectedStatuses
+  // o client logaria console.error e reprovaria a assertiva pageLoads da
+  // page-surface wave.
+  return fetchJson('/qa-mesh/latest', { expectedStatuses: [404] });
 }
 
 export async function getQaMeshHistory(options = {}) {

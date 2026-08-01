@@ -35,7 +35,11 @@ export function deleteAcl(id) {
 }
 
 export function getProvisioningToken() {
-  return fetchJson('/api/pbx/provisioning-token', { method: 'GET' });
+  // 404 = "Tenant PBX não encontrado" (tenant sem token provisionado —
+  // estado vazio legítimo tratado pela página); sem expectedStatuses o
+  // client logaria console.error e reprovaria a assertiva pageLoads da
+  // page-surface wave.
+  return fetchJson('/api/pbx/provisioning-token', { method: 'GET', expectedStatuses: [404] });
 }
 
 export function rotateProvisioningToken(expiresInSec = null) {

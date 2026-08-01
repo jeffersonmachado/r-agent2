@@ -49,7 +49,7 @@ const { execSync } = require('child_process');
 
 const { chromium } = require('playwright');
 
-const { evaluatePageSurface, probePolicy } = require('../../qa/coverage/pageSurfaceWave');
+const { evaluatePageSurface, probePolicy, classifyPageConsoleError } = require('../../qa/coverage/pageSurfaceWave');
 const { loginWithTenantSelection } = require('../../tests/helpers/playwrightAuth');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -119,12 +119,32 @@ async function probePage(context, pagePath) {
   const page = await context.newPage();
   let consoleErrors = 0;
   let pageErrors = 0;
+  let expectedEmptyErrors = 0;
   const errorSamples = [];
+  const failedResources = [];
   const sample = (text) => {
     if (errorSamples.length < 3) errorSamples.push(sanitizeSample(text));
   };
+  page.on('response', (response) => {
+    const status = response.status();
+    if (status >= 400) {
+      failedResources.push({ url: response.url(), status });
+    }
+  });
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
+      // 404 de estado vazio (contrato da API) gera "Failed to load resource"
+      // emitido pelo browser — não é quebra da página. A allowlist auditável
+      // vive em qa/coverage/pageSurfaceWave.js; o restante conta como erro.
+      const classification = classifyPageConsoleError({
+        text: msg.text(),
+        url: msg.location() && msg.location().url,
+        failedResources,
+      });
+      if (classification === 'expected-empty') {
+        expectedEmptyErrors += 1;
+        return;
+      }
       consoleErrors += 1;
       sample(msg.text());
     }
@@ -190,7 +210,7 @@ async function probePage(context, pagePath) {
   }
 
   await page.close().catch(() => {});
-  return { loginSurface, denied, rendered, docStatus, viaSpa, consoleErrors, pageErrors, errorSamples };
+  return { loginSurface, denied, rendered, docStatus, viaSpa, consoleErrors, pageErrors, expectedEmptyErrors, errorSamples };
 }
 
 /** Sessão de papel operacional (PRODUCTION): mesmo fluxo RPA da API Surface Wave. */
@@ -422,7 +442,7 @@ async function main() {
             const samples = Array.isArray(probe.errorSamples) && probe.errorSamples.length > 0
               ? ` | samples: ${probe.errorSamples.join(' || ')}`
               : '';
-            console.log(`[page-surface-wave]   ${probeName}: rendered=${probe.rendered} login=${probe.loginSurface} denied=${probe.denied} docStatus=${probe.docStatus} consoleErrors=${probe.consoleErrors} pageErrors=${probe.pageErrors}${samples}`);
+            console.log(`[page-surface-wave]   ${probeName}: rendered=${probe.rendered} login=${probe.loginSurface} denied=${probe.denied} docStatus=${probe.docStatus} consoleErrors=${probe.consoleErrors} pageErrors=${probe.pageErrors} expectedEmpty=${probe.expectedEmptyErrors || 0}${samples}`);
           } else if (probe && probe.error) {
             console.log(`[page-surface-wave]   ${probeName}: erro de navegação/rede`);
           }
