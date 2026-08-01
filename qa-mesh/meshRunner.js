@@ -24,7 +24,7 @@ const REPORT_PATH = process.env.QA_MESH_REPORT_PATH || path.join(__dirname, 'mes
 const HISTORY_DIR = process.env.QA_MESH_HISTORY_DIR || path.join(__dirname, 'meshHistory');
 const EVIDENCE_DIR = process.env.QA_MESH_EVIDENCE_DIR || path.join(__dirname, 'meshEvidence');
 const REPAIR_PLAN_PATH = process.env.QA_MESH_REPAIR_PLAN_PATH || path.join(__dirname, 'repairPlan.json');
-const BASELINE_PATH = path.join(__dirname, 'baseline.json');
+const BASELINE_PATH = process.env.QA_MESH_BASELINE_PATH || path.join(__dirname, 'baseline.json');
 const METRICS_PATH = process.env.QA_MESH_METRICS_PATH || path.join(__dirname, 'metrics.json');
 const INTELLIGENCE_DIR = process.env.QA_MESH_INTELLIGENCE_DIR || path.join(__dirname, 'intelligence');
 const QA_MESH_GO_NO_GO_PATH = process.env.QA_MESH_GO_NO_GO_PATH || path.join(__dirname, 'go-no-go-report.json');
@@ -1451,7 +1451,13 @@ function updateBaseline(summary, results, executionId) {
   }
 
   const bestPassRate = baseline.bestKnown?.passRate || 0;
-  if (!baseline.bestKnown || currentPassRate >= bestPassRate) {
+  const bestTotal = baseline.bestKnown?.total || 0;
+  // Empate de passRate não basta: uma execução parcial (ex.: 15/15) não pode
+  // erodir um bestKnown com cobertura maior (ex.: 130/130). Substitui apenas
+  // em melhora real de passRate ou em refresh com cobertura >=.
+  const isRealImprovement = currentPassRate > bestPassRate
+    || (currentPassRate === bestPassRate && (summary.total || 0) >= bestTotal);
+  if (!baseline.bestKnown || isRealImprovement) {
     baseline.bestKnown = {
       executionId,
       passRate: currentPassRate,
@@ -2484,4 +2490,5 @@ module.exports = {
   classifyScenarioResult,
   resolveBlockingPageNullDecision,
   normalizeExecutionRecord,
+  updateBaseline,
 };
