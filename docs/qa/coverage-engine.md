@@ -213,6 +213,26 @@ canônica quando o scheduler enchia a janela com runs parciais e o gate
 oscilava GO → NO_GO sem mudança de código (bug corrigido em 2026-07-26,
 regressão em `tests/governance/meshHistoryPrune.test.js`).
 
+### Frescor das evidências das waves técnicas (STALE por idade)
+
+Os relatórios `reports/db-integrity-report.json`,
+`reports/api-surface-report.json` e `reports/page-surface-report.json`
+alimentam o gate como `technicalExecutions`. Até 2026-08-01 apenas o
+relatório de tenant-isolation tinha política de frescor (24h); o gate
+consumiu um db-integrity com 6 dias sem qualquer degradação — evidência
+velha contando como VALIDATED.
+
+Política atual (`applyWaveReportStaleness` em
+`scripts/governance/validate-coverage-gate.js`): relatório sem
+`generatedAt` ou mais velho que o limiar (padrão 7 dias; override
+`COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS`) tem seus estados VALIDATED
+degradados para STALE antes de entrar no `evaluateCoverageGate` —
+deixam de contar como cobertura válida (STALE também não conta como
+visitada), o gate loga um AVISO por fonte degradada e a decisão reflete
+a queda (validado end-to-end: limiar de 1ms → NO_GO; relatórios frescos
+→ GO). Estados não-VALIDATED (VISITED, FAILED) são preservados.
+Regressão: `tests/unit/coverage/coverageGateStaleness.test.js` (6 casos).
+
 ### Cadeia imutável de execuções (`qa-mesh/executionHistoryChain.js`)
 
 Os arquivos `meshHistory/<id>.json` são o retrato persistido de cada

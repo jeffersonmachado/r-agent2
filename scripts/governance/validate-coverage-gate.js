@@ -72,6 +72,13 @@ const VISIBILITY_VALIDATOR_PATH = path.join(ROOT_DIR, 'scripts', 'governance', '
 const TENANT_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'tenant-isolation-report.json');
 const TENANT_REPORT_SCRIPT_PATH = path.join(ROOT_DIR, 'scripts', 'governance', 'tenant-isolation-report.js');
 const TENANT_REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// Frescor das evidências das waves técnicas (db-integrity, api-surface,
+// page-surface): relatório mais velho que o limiar tem seus estados
+// VALIDATED degradados para STALE — evidência vencida não conta como
+// cobertura válida (modelo de estados em qa/coverage/coverageStates.js).
+// Override via COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS (testes/ambientes).
+const WAVE_REPORT_MAX_AGE_MS = Number(process.env.COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS)
+  || 7 * 24 * 60 * 60 * 1000;
 const THRESHOLDS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-thresholds.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'coverage-gate-report.json');
 // Relatório da Database Integrity Wave (scripts/governance/db-integrity-wave.js):
@@ -196,6 +203,30 @@ function buildExecutions(scenarios) {
 }
 
 /**
+ * Política de frescor das evidências de wave: relatório sem generatedAt ou
+ * mais velho que options.maxAgeMs (padrão WAVE_REPORT_MAX_AGE_MS) tem seus
+ * estados VALIDATED degradados para STALE — evidência vencida não conta
+ * como cobertura válida. Estados não-VALIDATED são preservados.
+ * `options.nowMs` existe para testes determinísticos.
+ */
+function applyWaveReportStaleness(executions, report, options = {}) {
+  const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
+  const maxAgeMs = Number.isFinite(options.maxAgeMs) ? options.maxAgeMs : WAVE_REPORT_MAX_AGE_MS;
+  const generatedAtMs = Date.parse(report && report.generatedAt);
+  const stale = !Number.isFinite(generatedAtMs) || (nowMs - generatedAtMs) > maxAgeMs;
+  if (!stale) {
+    return { executions, stale: false };
+  }
+  return {
+    stale: true,
+    ageMs: Number.isFinite(generatedAtMs) ? nowMs - generatedAtMs : null,
+    executions: executions.map((entry) => (
+      entry.state === 'VALIDATED' ? { ...entry, state: 'STALE' } : entry
+    )),
+  };
+}
+
+/**
  * Lê reports/db-integrity-report.json e mapeia:
  * - cada entrada perModel para TODOS os itens do inventário pertencentes
  *   àquele model — correspondência por `item.model === <nome do model>`
@@ -232,8 +263,10 @@ function loadDbIntegrityTechnicalExecutions(inventoryItems, options = {}) {
       executions.push({ itemId: item.id, state: stateByRelationId.get(item.id) });
     }
   }
+  const freshness = applyWaveReportStaleness(executions, report, options);
   return {
-    executions,
+    executions: freshness.executions,
+    stale: freshness.stale,
     source: `reports/db-integrity-report.json (${report.generatedAt || 'sem data'})`,
     dbAvailable: report.dbAvailable === true,
   };
@@ -262,8 +295,10 @@ function loadApiSurfaceTechnicalExecutions(inventoryItems, options = {}) {
       executions.push({ itemId: item.id, state: stateById.get(item.id) });
     }
   }
+  const freshness = applyWaveReportStaleness(executions, report, options);
   return {
-    executions,
+    executions: freshness.executions,
+    stale: freshness.stale,
     source: `reports/api-surface-report.json (${report.generatedAt || 'sem data'})`,
   };
 }
@@ -292,8 +327,10 @@ function loadPageSurfaceTechnicalExecutions(inventoryItems, options = {}) {
       executions.push({ itemId: item.id, state: stateById.get(item.id) });
     }
   }
+  const freshness = applyWaveReportStaleness(executions, report, options);
   return {
-    executions,
+    executions: freshness.executions,
+    stale: freshness.stale,
     source: `reports/page-surface-report.json (${report.generatedAt || 'sem data'})`,
   };
 }
@@ -419,6 +456,11 @@ function main() {
   const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
   const apiSurface = loadApiSurfaceTechnicalExecutions(inventory.items);
   const pageSurface = loadPageSurfaceTechnicalExecutions(inventory.items);
+  for (const [label, wave] of [['db-integrity', dbIntegrity], ['api-surface', apiSurface], ['page-surface', pageSurface]]) {
+    if (wave.stale) {
+      console.log(`[coverage-gate] AVISO: relatório ${label} STALE (limiar ${WAVE_REPORT_MAX_AGE_MS}ms excedido ou sem data) — estados VALIDATED degradados para STALE`);
+    }
+  }
   const technicalExecutions = [...dbIntegrity.executions, ...apiSurface.executions, ...pageSurface.executions];
   const journeyLinks = loadJourneyLinkInputs(scenarios);
 
@@ -524,4 +566,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, applyWaveReportStaleness, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
