@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   dialplanPreview,
-  getProvisioningToken,
+  getProvisioningTokenOrNull,
   listAcls,
   listAudioAssets,
   listCallRules,
@@ -184,7 +184,7 @@ export function PbxModulePage() {
       } else if (key === 'governance') {
         const [auditRes, tokenRes] = await Promise.all([
           listPbxAuditEvents({ hours: 72, limit: 300 }),
-          getProvisioningToken(),
+          getProvisioningTokenOrNull(),
         ]);
         setRows(Array.isArray(auditRes?.items) ? auditRes.items : []);
         setGovernanceMeta({

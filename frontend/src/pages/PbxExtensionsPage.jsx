@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getProvisioningToken, listAcls, listExtensions, upsertExtension } from '../api/pbx';
+import { getProvisioningTokenOrNull, listAcls, listExtensions, upsertExtension } from '../api/pbx';
 import { Button } from '../styles/Button';
 import { PlatformGrid, usePlatformGridState } from '../modules/platform-grid';
 import { useToast } from '../components/Toast';
@@ -224,7 +224,7 @@ export function PbxExtensionsPage() {
       const [extensionsRes, aclsRes, tokenRes] = await Promise.all([
         listExtensions(),
         listAcls(),
-        getProvisioningToken(),
+        getProvisioningTokenOrNull(),
       ]);
 
       setExtensions(Array.isArray(extensionsRes?.items) ? extensionsRes.items : []);

@@ -42,6 +42,25 @@ export function getProvisioningToken() {
   return fetchJson('/api/pbx/provisioning-token', { method: 'GET', expectedStatuses: [404] });
 }
 
+export function isProvisioningTokenNotFound(err) {
+  return err?.status === 404;
+}
+
+export async function getProvisioningTokenOrNull() {
+  // Tenant sem PBX/token provisionado é estado vazio legítimo: devolve null
+  // em vez de lançar, para que as páginas renderizem o empty state sem
+  // logger.error/toast no catch do load (a rejeição do Promise.all era
+  // tratada como falha de carregamento — ver regressão em
+  // frontend/src/api/expectedEmptyState404.test.js). Qualquer outro erro
+  // continua sendo lançado (falha real segue visível).
+  try {
+    return await getProvisioningToken();
+  } catch (err) {
+    if (isProvisioningTokenNotFound(err)) return null;
+    throw err;
+  }
+}
+
 export function rotateProvisioningToken(expiresInSec = null) {
   const qs = expiresInSec != null ? `?expiresInSec=${encodeURIComponent(String(expiresInSec))}` : '';
   return fetchJson(`/api/pbx/provisioning-token/rotate${qs}`, {
