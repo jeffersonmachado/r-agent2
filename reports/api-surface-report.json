@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-01T09:43:37.723Z",
-  "commit": "848be1d9110201bc0b2ce0e7941e2ffa387d4c5e",
+  "generatedAt": "2026-08-01T16:29:33.126Z",
+  "commit": "ebc056c325e17f6702b67be4c8e9bf2dd017d8e4",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
@@ -4230,7 +4230,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "network-error",
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -8518,7 +8521,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "super_admin alcançou a rota (404)"
         }
       ],
       "probes": {
@@ -8531,7 +8534,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 200,
+          "status": 404,
           "notFoundFallback": false
         }
       }
@@ -9632,7 +9635,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 500,
           "notFoundFallback": false
         },
         "p3": "skipped"
