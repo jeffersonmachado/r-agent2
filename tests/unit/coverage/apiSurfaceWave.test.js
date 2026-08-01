@@ -240,3 +240,46 @@ describe('coverage-gate — loadApiSurfaceTechnicalExecutions', () => {
     expect(executions).toEqual([{ itemId: 'api:GET:/api/widgets', state: 'FAILED' }]);
   });
 });
+
+describe('api-surface-wave script — probeWithRetry (resiliência a blips de rede)', () => {
+  // Falha observada (2026-08-01): probes P2/P3 marcados como 'network-error'
+  // em rotas GET saudáveis (api:GET:/api/qa-waves/journey-status e
+  // api:GET:/api/qa-waves/operational/summary) durante a wave — blips de
+  // rede/contenção da máquina degradavam itens para VISITED sem tentativa de
+  // recuperação. Um retry único com backoff curto resolve o transitório sem
+  // mascarar falhas persistentes (que devem continuar network-error).
+  const { probeWithRetry } = require('../../../scripts/governance/api-surface-wave');
+
+  test('recupera quando o primeiro probe falha com erro de rede e o segundo responde', async () => {
+    let calls = 0;
+    const probeFn = async () => {
+      calls += 1;
+      return calls === 1 ? { error: true } : { status: 200, notFoundFallback: false };
+    };
+    const result = await probeWithRetry('GET', '/api/x', {}, { probeFn, delayMs: 0 });
+    expect(calls).toBe(2);
+    expect(result).toEqual({ status: 200, notFoundFallback: false });
+  });
+
+  test('não tenta novamente quando o probe retorna status HTTP (não é erro de rede)', async () => {
+    let calls = 0;
+    const probeFn = async () => {
+      calls += 1;
+      return { status: 401, notFoundFallback: false };
+    };
+    const result = await probeWithRetry('GET', '/api/x', {}, { probeFn, delayMs: 0 });
+    expect(calls).toBe(1);
+    expect(result.status).toBe(401);
+  });
+
+  test('erro de rede persistente continua erro após esgotar tentativas', async () => {
+    let calls = 0;
+    const probeFn = async () => {
+      calls += 1;
+      return { error: true };
+    };
+    const result = await probeWithRetry('GET', '/api/x', {}, { probeFn, retries: 2, delayMs: 0 });
+    expect(calls).toBe(3);
+    expect(result).toEqual({ error: true });
+  });
+});

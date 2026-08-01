@@ -83,6 +83,28 @@ async function probeOnce(method, routePath, headers) {
   }
 }
 
+/**
+ * Probe com retry único (padrão) para blips de rede: probeOnce retorna
+ * { error: true } em falha de transporte (ECONNREFUSED, timeout abortado,
+ * contenção da máquina). Retentar uma vez com backoff curto recupera o
+ * transitório; erro persistente continua { error: true } → 'network-error'.
+ * Respostas HTTP (qualquer status) nunca são retentadas — não é erro de rede.
+ */
+async function probeWithRetry(method, routePath, headers, options = {}) {
+  const probeFn = options.probeFn || probeOnce;
+  const retries = Number.isFinite(options.retries) ? options.retries : 1;
+  const delayMs = Number.isFinite(options.delayMs) ? options.delayMs : 250;
+
+  let result = await probeFn(method, routePath, headers);
+  for (let attempt = 0; result && result.error && attempt < retries; attempt += 1) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    result = await probeFn(method, routePath, headers);
+  }
+  return result;
+}
+
 async function loginSuperAdmin() {
   try {
     const res = await fetch(`${BASE_URL}/auth/login?tenantId=system`, {
@@ -156,16 +178,16 @@ async function main() {
     const probes = {};
 
     if (policy.p1) {
-      probes.p1 = await probeOnce(method, url, { 'Content-Type': 'application/json' });
+      probes.p1 = await probeWithRetry(method, url, { 'Content-Type': 'application/json' });
     }
     if (policy.p2 && prodToken) {
-      probes.p2 = await probeOnce(method, url, {
+      probes.p2 = await probeWithRetry(method, url, {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${prodToken}`,
       });
     }
     if (policy.p3 && devToken) {
-      probes.p3 = await probeOnce(method, url, {
+      probes.p3 = await probeWithRetry(method, url, {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${devToken}`,
         'X-Tenant-Id': 'api-surface-wave',
@@ -225,4 +247,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { concretePath };
+module.exports = { concretePath, probeWithRetry };
