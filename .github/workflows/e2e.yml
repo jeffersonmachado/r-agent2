@@ -137,6 +137,26 @@ jobs:
           tail -100 /tmp/api-e2e.log || true
           exit 1
 
+      - name: Seed do tenant context (system) — evita 404 tenant_context_not_found
+        # Em banco efêmero o contexto do tenant system não existe. O frontend
+        # chama GET /tenants/system/context no boot e loga erros de console,
+        # o que reprova cenários RPA da wave (critical_console_errors). O PUT
+        # cria o contexto na primeira chamada (tenantService.updateTenantContext
+        # cria a partir dos dados do tenant quando ausente). Campos validados
+        # contra schemas.updateTenantContext (api/utils/inputValidator.js).
+        run: |
+          TOKEN=$(curl -fsS -X POST "http://localhost:3001/auth/login?tenantId=system" \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"systemadmin","password":"Admin123!"}' | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).token")
+          curl -fsS -X PUT "http://localhost:3001/tenants/system/context" \
+            -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: system" \
+            -H 'Content-Type: application/json' \
+            -d '{"ramo_atividade":"Plataforma de operações autônomas (QA E2E)","objetivo":"Validar jornadas ponta a ponta no pipeline de CI"}'
+          echo
+          curl -fsS "http://localhost:3001/tenants/system/context" \
+            -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: system" | head -c 200
+          echo
+
       - name: Install dependencies (frontend)
         run: npm ci --no-audit --no-fund
         working-directory: frontend
