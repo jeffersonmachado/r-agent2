@@ -101,6 +101,14 @@ jobs:
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
+      - name: DDL legado agent-os (tabelas fora do Umzug)
+        # migrations/agent-os-2026-06-11.sql cria 7 tabelas via DDL versionado
+        # (CREATE TABLE IF NOT EXISTS — idempotente) que o Umzug não aplica.
+        # Sem elas a db-integrity wave falha 8 itens em banco efêmero
+        # (tableExistsInDb de ai_governance_records, corporate_agents,
+        # journey_registry, kg_edges, kg_nodes etc.).
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/agent-os-2026-06-11.sql
+
       - name: Start API (:3001) e aguardar /health
         run: |
           nohup node api/server.js > /tmp/api-wave-refresh.log 2>&1 &

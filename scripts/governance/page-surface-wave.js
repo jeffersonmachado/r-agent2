@@ -407,6 +407,16 @@ async function main() {
     const byState = totals.byState || {};
     console.log(`[page-surface-wave] estados: VALIDATED=${byState.VALIDATED || 0} VISITED=${byState.VISITED || 0} `
       + `FAILED=${byState.FAILED || 0} BLOCKED=${byState.BLOCKED || 0}`);
+    // Mesmo padrão do db-integrity-wave: listar os FAILED no log — em CI o
+    // relatório fica no runner e o log é a única evidência acessível.
+    for (const entry of (perItem || [])) {
+      if (entry && entry.state === 'FAILED') {
+        const failedAssertions = (entry.assertions || [])
+          .filter((a) => a && a.passed === false && !a.notEvaluated)
+          .map((a) => a.name);
+        console.log(`[page-surface-wave] FAILED ${entry.id}: ${failedAssertions.join(', ') || 'sem assertiva identificada'}`);
+      }
+    }
     console.log(`[page-surface-wave] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
     if ((byState.FAILED || 0) > 0) {
       console.log('[page-surface-wave] ATENÇÃO: há itens FAILED — inspecione o relatório (possível falha de segurança ou drift de inventário)');
