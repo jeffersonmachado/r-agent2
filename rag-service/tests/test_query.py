@@ -8,6 +8,11 @@ from main import app
 
 client = TestClient(app)
 
+# Token interno obrigatório quando configurado (auth serviço-a-serviço)
+import os as _os
+if _os.getenv("RAG_INTERNAL_TOKEN"):
+    client.headers["X-RAG-Internal-Token"] = _os.environ["RAG_INTERNAL_TOKEN"]
+
 
 @pytest.fixture
 def indexed_document():
@@ -15,6 +20,8 @@ def indexed_document():
     document = {
         "id": "query-test-doc",
         "tenantId": "query-test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "title": "Documento para Query",
         "content": "Para resetar sua senha, acesse o menu Configurações > Segurança > Redefinir Senha. Você receberá um email com instruções detalhadas."
     }

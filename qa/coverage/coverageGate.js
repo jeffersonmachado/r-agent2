@@ -324,6 +324,7 @@ function formatReason(check, threshold, actual, items) {
  *   a evidência (→ REVALIDATION_REQUIRED + evidência STALE).
  * @param {number|Array|object} [input.visibilityViolations]
  * @param {number|Array|object} [input.tenantIsolationViolations]
+ * @param {number|Array|object} [input.ragDomainSegregationViolations]
  * @param {Array<{itemId:string,state:string}>} [input.technicalExecutions]
  *   estados resolvidos por ondas técnicas fora do mesh (ex.: Database
  *   Integrity Wave) para itens de inventário sem domínio ligado.
@@ -353,6 +354,7 @@ function evaluateCoverageGate(input = {}) {
 
   const visibility = normalizeViolations(input.visibilityViolations);
   const tenantIsolation = normalizeViolations(input.tenantIsolationViolations);
+  const ragDomainSegregation = normalizeViolations(input.ragDomainSegregationViolations);
 
   const dimensions = dimensionCoverage(items);
   const critical = items.filter((item) => item.criticality === 'CRITICAL');
@@ -428,6 +430,9 @@ function evaluateCoverageGate(input = {}) {
   if (tenantIsolation.count > effectiveThresholds.tenantIsolationViolations) {
     reasons.push(formatReason('tenantIsolationViolations', effectiveThresholds.tenantIsolationViolations, tenantIsolation.count, tenantIsolation.items));
   }
+  if (ragDomainSegregation.count > effectiveThresholds.ragDomainSegregationViolations) {
+    reasons.push(formatReason('ragDomainSegregationViolations', effectiveThresholds.ragDomainSegregationViolations, ragDomainSegregation.count, ragDomainSegregation.items));
+  }
 
   const coverageChecks = [
     ['minimumJourneyCoverage', journeyCoverage],
@@ -457,6 +462,7 @@ function evaluateCoverageGate(input = {}) {
     orphaned: { count: orphaned.length, items: orphaned.map((item) => item.id).slice(0, REASON_ITEMS_LIMIT) },
     visibilityViolations: visibility,
     tenantIsolationViolations: tenantIsolation,
+    ragDomainSegregationViolations: ragDomainSegregation,
     totals: {
       items: items.length,
       journeys: journeyItems.length,

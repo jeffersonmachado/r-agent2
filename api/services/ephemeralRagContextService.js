@@ -42,8 +42,15 @@ function getTtlSeconds(input) {
   return Math.max(60, Math.min(6 * 3600, Math.floor(n))); // 1min..6h
 }
 
-function buildKey(tenantId, executionId) {
-  return `ctx:${tenantId}:${executionId}`;
+function sanitizeDomain(value) {
+  const domain = safeString(value).trim().toUpperCase();
+  return domain === 'SYSTEM' ? 'SYSTEM' : 'OPERATIONAL';
+}
+
+function buildKey(tenantId, executionId, domain) {
+  // A chave inclui o domínio: contexto de sessões operacionais nunca é
+  // reutilizado pelo domínio SYSTEM e vice-versa (segregação de cache).
+  return `ctx:${tenantId}:${sanitizeDomain(domain)}:${executionId}`;
 }
 
 function coerceChunk(c) {
@@ -155,7 +162,7 @@ async function upsertEphemeralContext(input) {
   if (executionId.length > 120) throw new Error('executionId muito longo');
 
   const ttlSeconds = getTtlSeconds(input?.ttlSeconds);
-  const key = buildKey(tenantId, executionId);
+  const key = buildKey(tenantId, executionId, input?.domain);
 
   const { chunks: incoming, stats } = dedupeAndCapWithStats(input?.chunks || []);
   if (incoming.length === 0) {
@@ -242,13 +249,13 @@ async function upsertEphemeralContext(input) {
 /**
  * Recupera contexto efêmero.
  *
- * @param {{ tenantId: string, executionId: string }} input
+ * @param {{ tenantId: string, executionId: string, domain?: string }} input
  */
 async function getEphemeralContext(input) {
   const tenantId = safeString(input?.tenantId).trim();
   const executionId = safeString(input?.executionId).trim();
   if (!tenantId || !executionId) return { ok: true, found: false, chunks: [], used: 'noop' };
-  const key = buildKey(tenantId, executionId);
+  const key = buildKey(tenantId, executionId, input?.domain);
 
   const redis = getReadyRedisClientOrNull();
   try {

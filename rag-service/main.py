@@ -8,15 +8,18 @@ Responsabilidades:
 - Consulta RAG com contexto
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import os
 import uvicorn
 import logging
 
 from api.routes import query, index, health, nlp, learning, maintenance, embeddings
 from config.settings import get_settings
+from services.internal_auth import has_valid_internal_token
 
 # Configura logging
 logging.basicConfig(
@@ -39,6 +42,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+INTERNAL_TOKEN_HEADER = "x-rag-internal-token"
+_internal_token = os.getenv("RAG_INTERNAL_TOKEN")
+
+if not _internal_token:
+    logger.warning(
+        "[SECURITY] RAG_INTERNAL_TOKEN não configurado: serviço RAG aceita chamadas "
+        "sem autenticação interna. Configure o token em produção."
+    )
+
+
+@app.middleware("http")
+async def require_internal_token(request: Request, call_next):
+    """
+    Autenticação serviço-a-serviço: quando RAG_INTERNAL_TOKEN está configurado,
+    toda rota /rag/* exige o header X-RAG-Internal-Token correspondente.
+    O backend Node é o único chamador autorizado — clientes finais nunca
+    falam diretamente com este serviço.
+    """
+    if _internal_token and request.url.path.startswith("/rag"):
+        if not has_valid_internal_token(request.headers):
+            logger.warning(
+                "[SECURITY] Chamada rejeitada sem token interno válido",
+                extra={"path": request.url.path, "client": request.client.host if request.client else None},
+            )
+            return JSONResponse(status_code=401, content={"error": "unauthorized", "message": "Token interno ausente ou inválido"})
+    return await call_next(request)
 
 # Incluir rotas
 # Compatibilidade/ops: expõe health também em /health (sem prefixo),

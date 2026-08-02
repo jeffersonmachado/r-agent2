@@ -12,5 +12,6 @@
   "tenantIsolationViolations": 0,
   "minimumJourneyCoverage": 99.5,
   "minimumTechnicalCoverage": 73.3,
-  "minimumWeightedCoverage": 83.9
+  "minimumWeightedCoverage": 83.9,
+  "ragDomainSegregationViolations": 0
 }

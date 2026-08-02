@@ -11,6 +11,11 @@ import logging
 from models.document import Document, DocumentMetadata, DocumentPermissions, ChunkMetadata
 from services.chunking_service import chunk_document
 from services.embedding_service import generate_embeddings_batch
+from services.domain_policy import (
+    DomainPolicyError,
+    detect_secrets,
+    normalize_domain_metadata,
+)
 from services.vector_store import get_vector_store, normalize_tenant_id
 from services.deduplication_service import (
     normalize_content,
@@ -60,6 +65,30 @@ async def index_document(request: IndexRequest):
             raise HTTPException(status_code=400, detail="Documento deve ter 'tenantId'")
         if not doc_data.get('content'):
             raise HTTPException(status_code=400, detail="Documento deve ter 'content'")
+
+        # Segregação de domínios: documento sem domain/classification explícitos
+        # e válidos é REJEITADO — nunca indexado automaticamente.
+        try:
+            domain_meta = normalize_domain_metadata(doc_data)
+        except DomainPolicyError as e:
+            raise HTTPException(status_code=400, detail={"error": e.code, "message": str(e)})
+
+        # Bloqueio de secrets ANTES de qualquer chunking/embedding/indexação.
+        secret_categories = detect_secrets(str(doc_data['content']))
+        if secret_categories:
+            logger.warning(
+                "[INDEX] Documento bloqueado: secret detectado",
+                extra={
+                    'document_id': doc_data.get('id'),
+                    'tenant_id': doc_data.get('tenantId'),
+                    'secret_categories': secret_categories,
+                }
+            )
+            raise HTTPException(status_code=422, detail={
+                "error": "secret_detected",
+                "message": "Documento contém credenciais/secrets e não pode ser indexado",
+                "categories": secret_categories,
+            })
         
         # Cria metadados
         now = datetime.utcnow().isoformat()
@@ -129,7 +158,10 @@ async def index_document(request: IndexRequest):
             content=normalized_content,  # Usa conteúdo normalizado
             metadata=metadata,
             permissions=permissions,
-            status=doc_data.get('status', 'active')
+            status=doc_data.get('status', 'active'),
+            domain=domain_meta['domain'],
+            classification=domain_meta['classification'],
+            sensitivity=domain_meta['sensitivity'],
         )
         
         # ETAPA 6: Chunking determinístico

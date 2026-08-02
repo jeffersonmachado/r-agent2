@@ -7,6 +7,7 @@ Type=simple
 User=root
 WorkingDirectory=%RAG_SERVICE_DIR%
 Environment="PATH=%RAG_SERVICE_DIR%/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=-%RAG_SERVICE_DIR%/.env
 ExecStart=%RAG_SERVICE_DIR%/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8001
 Restart=always
 RestartSec=10

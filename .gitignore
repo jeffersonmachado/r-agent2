@@ -132,6 +132,9 @@ reports/*
 # Exceção: baseline versionado da Page Surface Wave, consumido pelo Coverage
 # Gate como fonte de execução técnica (gerado por wave:page-surface).
 !reports/page-surface-report.json
+# Exceção: baseline de segregação dos domínios do RAG, consumido pelo Coverage
+# Gate como fonte bloqueante (gerado por report:rag-domain-segregation).
+!reports/rag-domain-segregation-report.json
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

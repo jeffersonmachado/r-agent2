@@ -60,7 +60,10 @@ def chunk_document_fixed_size(document: Document, chunk_size: int, overlap: int)
                 endChar=end,
                 tokenCount=len(chunk_content.split())  # Aproximação
             ),
-            permissions=document.permissions
+            permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
         )
         chunks.append(chunk)
         
@@ -117,7 +120,10 @@ def chunk_document_sentence(document: Document) -> List[Chunk]:
                     endChar=end_char,
                     tokenCount=len(chunk_content.split())
                 ),
-                permissions=document.permissions
+                permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
             )
             chunks.append(chunk)
             
@@ -155,7 +161,10 @@ def chunk_document_sentence(document: Document) -> List[Chunk]:
                 endChar=end_char,
                 tokenCount=len(chunk_content.split())
             ),
-            permissions=document.permissions
+            permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
         )
         chunks.append(chunk)
     
@@ -209,7 +218,10 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
                         endChar=end_char,
                         tokenCount=len(chunk_content.split())
                     ),
-                    permissions=document.permissions
+                    permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
                 )
                 chunks.append(chunk)
                 start_char = end_char
@@ -225,7 +237,10 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
                     title=document.title,
                     content=paragraph,
                     metadata=document.metadata,
-                    permissions=document.permissions
+                    permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
                 ),
                 chunk_size,
                 settings.chunk_overlap
@@ -263,7 +278,10 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
                     endChar=end_char,
                     tokenCount=len(chunk_content.split())
                 ),
-                permissions=document.permissions
+                permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
             )
             chunks.append(chunk)
             
@@ -295,7 +313,10 @@ def chunk_document_paragraph(document: Document) -> List[Chunk]:
                 endChar=end_char,
                 tokenCount=len(chunk_content.split())
             ),
-            permissions=document.permissions
+            permissions=document.permissions,
+            domain=getattr(document, 'domain', 'OPERATIONAL'),
+            classification=getattr(document, 'classification', 'PRODUCTION'),
+            sensitivity=getattr(document, 'sensitivity', 'INTERNAL')
         )
         chunks.append(chunk)
     

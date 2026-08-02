@@ -84,6 +84,17 @@ function getRagTimeout(tenantId) {
   return DEFAULT_RAG_TIMEOUT;
 }
 
+/**
+ * Headers de autenticação serviço-a-serviço (backend Node -> rag-service).
+ * O token é lido de RAG_INTERNAL_TOKEN a cada chamada (sem cache) para
+ * permitir rotação sem restart. Quando não configurado, retorna objeto vazio
+ * (o serviço Python aceita apenas se também estiver sem token — modo dev).
+ */
+function getRagInternalHeaders() {
+  const token = process.env.RAG_INTERNAL_TOKEN;
+  return token ? { 'X-RAG-Internal-Token': token } : {};
+}
+
 function getRagDomains(tenantId) {
   const ragConfig = config.get('rag', {});
   const tenantsConfig = ragConfig.tenants || {};
@@ -165,6 +176,7 @@ module.exports = {
   getRagDomainConfig,
   getRagDomainSources,
   getRagDomains,
+  getRagInternalHeaders,
   getRagServiceUrl,
   getRagTimeout,
   getTenantContextForRag,

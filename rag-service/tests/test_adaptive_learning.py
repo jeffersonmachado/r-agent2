@@ -12,6 +12,11 @@ from services.adaptive_learning import AdaptiveLearningService, get_adaptive_lea
 
 client = TestClient(app)
 
+# Token interno obrigatório quando configurado (auth serviço-a-serviço)
+import os as _os
+if _os.getenv("RAG_INTERNAL_TOKEN"):
+    client.headers["X-RAG-Internal-Token"] = _os.environ["RAG_INTERNAL_TOKEN"]
+
 
 @pytest.fixture
 def temp_validation_rules_file():

@@ -5,6 +5,7 @@ const {
   ensureRagPermission,
   isRouteMatch,
   logRagAction,
+  resolveScopedTenantId,
 } = require('./ragRouteUtils');
 
 async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
@@ -272,8 +273,9 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
 
     try {
       const queryParams = new URLSearchParams(req.url.split('?')[1] || '');
-      const tenantIdParam = queryParams.get('tenantId');
-      const finalTenantId = tenantIdParam || req.tenantId;
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: queryParams.get('tenantId') });
+      if (scope.forbidden) return true;
+      const finalTenantId = scope.tenantId;
       const domains = deps.ragService.getRagDomains(finalTenantId);
 
       const domainsInfo = {

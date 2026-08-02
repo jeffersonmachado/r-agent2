@@ -3,6 +3,7 @@ const {
   ensureJsonRequest,
   ensureRagPermission,
   isRouteMatch,
+  resolveScopedTenantId,
 } = require('./ragRouteUtils');
 
 async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
@@ -12,8 +13,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'read' })) return true;
 
     try {
-      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/metrics/'.length));
-      const metrics = await deps.ragService.getLearningMetrics(tenantId);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/metrics/'.length)) });
+      if (scope.forbidden) return true;
+      const metrics = await deps.ragService.getLearningMetrics(scope.tenantId);
       deps.sendJson(res, 200, metrics);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao obter métricas de aprendizado:' });
@@ -33,7 +35,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const result = await deps.ragService.updateSynonymsFromDocuments(tenant_id, documents);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: tenant_id });
+      if (scope.forbidden) return true;
+      const result = await deps.ragService.updateSynonymsFromDocuments(scope.tenantId, documents);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao atualizar sinônimos:' });
@@ -45,8 +49,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'update' })) return true;
 
     try {
-      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/trigger-learning/'.length));
-      const result = await deps.ragService.triggerLearning(tenantId);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/trigger-learning/'.length)) });
+      if (scope.forbidden) return true;
+      const result = await deps.ragService.triggerLearning(scope.tenantId);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao disparar aprendizado:' });
@@ -58,8 +63,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'read' })) return true;
 
     try {
-      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/full-data/'.length));
-      const result = await deps.ragService.getFullLearningData(tenantId);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/full-data/'.length)) });
+      if (scope.forbidden) return true;
+      const result = await deps.ragService.getFullLearningData(scope.tenantId);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao obter dados completos de aprendizado:' });
@@ -80,7 +86,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const result = await deps.ragService.updateSynonym(tenant_id, term, synonyms);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: tenant_id });
+      if (scope.forbidden) return true;
+      const result = await deps.ragService.updateSynonym(scope.tenantId, term, synonyms);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao atualizar sinônimo:' });
@@ -98,9 +106,10 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
         return true;
       }
 
-      const tenantId = decodeURIComponent(parts[3]);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(parts[3]) });
+      if (scope.forbidden) return true;
       const term = decodeURIComponent(parts[4]);
-      const result = await deps.ragService.deleteSynonym(tenantId, term);
+      const result = await deps.ragService.deleteSynonym(scope.tenantId, term);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao remover sinônimo:' });
@@ -139,7 +148,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'update' })) return true;
 
     try {
-      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/validation-rules/adapt/'.length));
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/validation-rules/adapt/'.length)) });
+      if (scope.forbidden) return true;
+      const tenantId = scope.tenantId;
       const serviceUrl = deps.ragService.getRagServiceUrl(tenantId);
       deps.ragService.getRagTimeout(tenantId);
 
@@ -167,8 +178,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'update' })) return true;
 
     try {
-      const tenantId = decodeURIComponent(pathname.slice('/rag/learning/clean-invalid-queries/'.length));
-      const result = await deps.ragService.cleanInvalidQueries(tenantId);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/clean-invalid-queries/'.length)) });
+      if (scope.forbidden) return true;
+      const result = await deps.ragService.cleanInvalidQueries(scope.tenantId);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao limpar queries inválidas:' });

@@ -25,6 +25,31 @@ function ensureRagPermission({ req, res, deps, permission }) {
   return true;
 }
 
+/**
+ * Resolve o tenant efetivo de uma operação RAG. O tenant solicitado (body/query/path)
+ * deve ser o tenant autenticado do ator; apenas super-admin pode operar em outro tenant.
+ * Retorna { tenantId, forbidden }: quando forbidden=true, o 403 já foi respondido.
+ */
+function resolveScopedTenantId({ req, res, deps, requestedTenantId }) {
+  const actorTenantId = req.tenantId || req.agent?.tenantId || null;
+  const requested = requestedTenantId ? String(requestedTenantId).trim() : null;
+
+  if (!requested || (actorTenantId && requested === actorTenantId)) {
+    return { tenantId: actorTenantId, forbidden: false };
+  }
+
+  const isSuperAdminUser = typeof deps.isSuperAdmin === 'function' && deps.isSuperAdmin(req.agent);
+  if (isSuperAdminUser) {
+    return { tenantId: requested, forbidden: false };
+  }
+
+  deps.sendJson(res, 403, {
+    error: 'forbidden',
+    message: 'Acesso a dados de outro tenant não é permitido',
+  });
+  return { tenantId: null, forbidden: true };
+}
+
 function ensureJsonRequest({ req, res, deps }) {
   if (!deps.hasJsonContentType(req)) {
     deps.badRequest(res, 'Content-Type deve ser application/json');
@@ -75,5 +100,6 @@ module.exports = {
   ensureRagPermission,
   isRouteMatch,
   logRagAction,
+  resolveScopedTenantId,
   sendRagApiError,
 };

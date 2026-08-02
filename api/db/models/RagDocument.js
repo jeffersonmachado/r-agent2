@@ -46,6 +46,22 @@ function getRagDocumentModel() {
         allowNull: false,
         defaultValue: {},
       },
+      // Segregação de domínios do RAG (OPERATIONAL vs SYSTEM)
+      domain: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'OPERATIONAL',
+      },
+      classification: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'PRODUCTION',
+      },
+      sensitivity: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'INTERNAL',
+      },
       status: {
         type: DataTypes.STRING,
         allowNull: false,

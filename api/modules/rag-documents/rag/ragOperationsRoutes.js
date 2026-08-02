@@ -5,6 +5,7 @@ const {
   ensureRagPermission,
   isRouteMatch,
   logRagAction,
+  resolveScopedTenantId,
   sendRagApiError,
 } = require('./ragRouteUtils');
 
@@ -16,9 +17,12 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
 
     try {
       const url = new URL(req.url || '/', 'http://localhost');
-      const tenantId = url.searchParams.get('tenantId')
+      const requestedTenantId = url.searchParams.get('tenantId')
         ? String(url.searchParams.get('tenantId')).trim()
-        : (req.agent?.tenantId ? String(req.agent.tenantId).trim() : null);
+        : null;
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId });
+      if (scope.forbidden) return true;
+      const tenantId = scope.tenantId;
       if (!tenantId) {
         deps.badRequest(res, 'tenantId é obrigatório');
         return true;
@@ -122,15 +126,17 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'update' })) return true;
 
     try {
-      let tenantId = null;
+      let requestedTenantId = null;
       let includeInconsistent = false;
       if (deps.hasJsonContentType(req) && req.headers['content-length'] && parseInt(req.headers['content-length'], 10) > 0) {
         const body = await deps.parseJsonBody(req);
-        tenantId = body?.tenantId || null;
+        requestedTenantId = body?.tenantId || null;
         includeInconsistent = body?.includeInconsistent === true;
       }
 
-      const result = await deps.reindexAllNotIndexed(tenantId, includeInconsistent);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId });
+      if (scope.forbidden) return true;
+      const result = await deps.reindexAllNotIndexed(scope.tenantId, includeInconsistent);
       logRagAction({
         req,
         deps,
@@ -151,7 +157,9 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
 
     try {
       const url = new URL(req.url || '/', 'http://localhost');
-      const tenantId = url.searchParams.get('tenantId') || deps.requireTenant(req, res);
+      const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: url.searchParams.get('tenantId') });
+      if (scope.forbidden) return true;
+      const tenantId = scope.tenantId || deps.requireTenant(req, res);
       if (!tenantId) return true;
 
       const result = await deps.ragDocumentsService.reindexAllTenant(String(tenantId));

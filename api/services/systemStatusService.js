@@ -26,6 +26,7 @@ function safeErrorMessage(err, fallback = '') {
 }
 const { isRedisAvailable, getRateLimitClient } = require('../../infra/redis/rateLimitClient');
 const { isRagAvailable, getRagServiceUrl } = require('./ragService');
+const { getRagInternalHeaders } = require('./rag/ragRuntime');
 const { getWebSocketServer } = require('./websocketService');
 const { getSequelize } = require('../db/sequelize');
 const { RagDocument: RagDocumentGetter } = require('../db/models');
@@ -233,6 +234,7 @@ async function checkRagServiceStatus() {
         
         const response = await fetchFn(`${ragServiceUrl}/rag/health`, {
           method: 'GET',
+          headers: getRagInternalHeaders(),
           signal: controller.signal,
         });
         
@@ -330,6 +332,7 @@ async function checkRagServiceStatus() {
       try {
         const response = await fetchFn(`${ragServiceUrl}/rag/health`, {
           method: 'GET',
+          headers: getRagInternalHeaders(),
           signal: controller.signal,
         });
         clearTimeout(timeoutId);

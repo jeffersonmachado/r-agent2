@@ -12,6 +12,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 from models.document import Chunk, ChunkMetadata, DocumentPermissions
+from services.domain_policy import resolve_query_scope
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,14 @@ class VectorStore:
                 _pgvector_literal(emb),
                 json.dumps(c.metadata.dict() if c.metadata else {}),
                 json.dumps(c.permissions.dict() if c.permissions else {}),
+                str(getattr(c, "domain", "OPERATIONAL") or "OPERATIONAL"),
+                str(getattr(c, "classification", "PRODUCTION") or "PRODUCTION"),
+                str(getattr(c, "sensitivity", "INTERNAL") or "INTERNAL"),
             ))
+
+        doc_domain = str(getattr(chunks[0], "domain", "OPERATIONAL") or "OPERATIONAL")
+        doc_classification = str(getattr(chunks[0], "classification", "PRODUCTION") or "PRODUCTION")
+        doc_sensitivity = str(getattr(chunks[0], "sensitivity", "INTERNAL") or "INTERNAL")
 
         with _get_conn() as conn:
             with conn.cursor() as cur:
@@ -119,17 +127,20 @@ class VectorStore:
                 cur.execute(
                     """
                     INSERT INTO rag_documents
-                      (id, tenant_key, title, content, metadata, permissions, status, indexed, indexed_at, chunks_count, created_at, updated_at)
+                      (id, tenant_key, title, content, metadata, permissions, status, indexed, indexed_at, chunks_count, created_at, updated_at, domain, classification, sensitivity)
                     VALUES
-                      (%s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, 'active', true, NOW(), %s, NOW(), NOW())
+                      (%s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, 'active', true, NOW(), %s, NOW(), NOW(), %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                       tenant_key = EXCLUDED.tenant_key,
                       indexed = true,
                       indexed_at = NOW(),
                       chunks_count = EXCLUDED.chunks_count,
-                      updated_at = NOW()
+                      updated_at = NOW(),
+                      domain = EXCLUDED.domain,
+                      classification = EXCLUDED.classification,
+                      sensitivity = EXCLUDED.sensitivity
                     """,
-                    (doc_id, self.tenant_id, doc_id, "", len(rows)),
+                    (doc_id, self.tenant_id, doc_id, "", len(rows), doc_domain, doc_classification, doc_sensitivity),
                 )
 
                 # reindex consistente: remove chunks antigos do documento e reinsere
@@ -142,19 +153,24 @@ class VectorStore:
                     cur,
                     """
                     INSERT INTO rag_chunks
-                      (id, tenant_key, document_id, chunk_index, content, embedding, metadata, permissions, created_at)
+                      (id, tenant_key, document_id, chunk_index, content, embedding, metadata, permissions, created_at, domain, classification, sensitivity)
                     VALUES %s
                     """,
                     rows,
-                    template="(%s,%s,%s,%s,%s,(%s)::vector,(%s)::jsonb,(%s)::jsonb,NOW())"
+                    template="(%s,%s,%s,%s,%s,(%s)::vector,(%s)::jsonb,(%s)::jsonb,NOW(),%s,%s,%s)"
                 )
         return len(rows)
 
-    def search(self, query_embedding: List[float], top_k: int = 5, filters: Optional[Dict] = None) -> List[Chunk]:
+    def search(self, query_embedding: List[float], top_k: int = 5, filters: Optional[Dict] = None, scope: Optional[Dict] = None) -> List[Chunk]:
         if not query_embedding or not isinstance(query_embedding, list):
             return []
         if len(query_embedding) != self.dimension:
             raise ValueError(f"EMBEDDING_DIM_MISMATCH: esperado {self.dimension}, recebido {len(query_embedding)}")
+
+        # Escopo obrigatório de segregação: tenant + domain + classification são
+        # filtrados no SQL ANTES da busca por similaridade. Sem escopo explícito,
+        # aplica o mais restritivo (OPERATIONAL/PRODUCTION).
+        resolved_scope = resolve_query_scope(scope)
 
         k = max(1, min(int(top_k or 5), 50))
         # buscamos mais para aplicar filtros (roles/agentes) sem perder recall
@@ -166,18 +182,21 @@ class VectorStore:
                 cur.execute(
                     """
                     SELECT id, document_id, chunk_index, content, metadata, permissions,
+                           domain, classification, sensitivity,
                            (embedding <=> (%s)::vector) AS distance
                     FROM rag_chunks
                     WHERE tenant_key = %s
+                      AND domain = %s
+                      AND classification = ANY(%s)
                     ORDER BY embedding <=> (%s)::vector
                     LIMIT %s
                     """,
-                    (qv, self.tenant_id, qv, fetch_k)
+                    (qv, self.tenant_id, resolved_scope["domain"], resolved_scope["classifications"], qv, fetch_k)
                 )
                 rows = cur.fetchall()
 
         results: List[Chunk] = []
-        for (chunk_id, document_id, chunk_index, content, metadata, permissions, distance) in rows:
+        for (chunk_id, document_id, chunk_index, content, metadata, permissions, domain, classification, sensitivity, distance) in rows:
             score = None
             try:
                 d = float(distance)
@@ -217,7 +236,10 @@ class VectorStore:
                 embedding=None,
                 metadata=ChunkMetadata(**meta_obj),
                 permissions=DocumentPermissions(**perm_obj) if isinstance(perm_obj, dict) else DocumentPermissions(),
-                score=score
+                score=score,
+                domain=str(domain or "OPERATIONAL"),
+                classification=str(classification or "PRODUCTION"),
+                sensitivity=str(sensitivity or "INTERNAL"),
             )
             results.append(chunk)
 

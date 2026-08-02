@@ -183,7 +183,7 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
         ? `${serviceUrl}/rag/health?tenant_id=${encodeURIComponent(tenantId)}`
         : `${serviceUrl}/rag/health`;
       let fetchFn = typeof global.fetch === 'function' ? global.fetch : require('node-fetch');
-      const beforeResponse = await fetchFn(healthUrlBefore, { method: 'GET' });
+      const beforeResponse = await fetchFn(healthUrlBefore, { method: 'GET', headers: ragService.getRagInternalHeaders ? ragService.getRagInternalHeaders() : {} });
       if (beforeResponse.ok) {
         const beforeData = await beforeResponse.json();
         logger.info('[RAGDocuments] Vector store ANTES da reindexação', {

@@ -168,6 +168,28 @@ describe('coverage/coverageGate', () => {
     expect(orphan.items).toContain('api:POST:/api/sem-vinculo');
   });
 
+  test('violação de segregação RAG bloqueia o gate (crossDomainLeakage > 0)', () => {
+    const fixture = baseFixture();
+    fixture.ragDomainSegregationViolations = { count: 1, items: ['crossDomainLeakage=1'] };
+
+    const result = evaluateCoverageGate(fixture);
+
+    expect(result.releaseGate.decision).toBe('NO_GO');
+    const rag = result.releaseGate.reasons.find((r) => r.check === 'ragDomainSegregationViolations');
+    expect(rag).toBeDefined();
+    expect(rag.items).toContain('crossDomainLeakage=1');
+  });
+
+  test('segregação RAG limpa não afeta o gate e aparece no relatório', () => {
+    const fixture = baseFixture();
+    fixture.ragDomainSegregationViolations = { count: 0, items: [] };
+
+    const result = evaluateCoverageGate(fixture);
+
+    expect(result.releaseGate.decision).toBe('GO');
+    expect(result.ragDomainSegregationViolations.count).toBe(0);
+  });
+
   test('weightedCoverage cai mais com falha CRITICAL do que com falha NORMAL', () => {
     const fixtureCritical = baseFixture();
     fixtureCritical.executions = fixtureCritical.executions.map((e) => (

@@ -70,6 +70,8 @@ const JOURNEY_CONTRACTS_PATH = path.join(ROOT_DIR, 'config', 'journey-contracts.
 const VISIBILITY_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'visibility-policy-report.json');
 const VISIBILITY_VALIDATOR_PATH = path.join(ROOT_DIR, 'scripts', 'governance', 'validate-visibility-policy.js');
 const TENANT_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'tenant-isolation-report.json');
+const RAG_SEGREGATION_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'rag-domain-segregation-report.json');
+const RAG_SEGREGATION_REPORT_SCRIPT_PATH = path.join(ROOT_DIR, 'scripts', 'governance', 'rag-domain-segregation-report.js');
 const TENANT_REPORT_SCRIPT_PATH = path.join(ROOT_DIR, 'scripts', 'governance', 'tenant-isolation-report.js');
 const TENANT_REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // Frescor das evidências das waves técnicas (db-integrity, api-surface,
@@ -423,6 +425,42 @@ function loadTenantIsolationViolations() {
   return { count, items, source };
 }
 
+/**
+ * Lê reports/rag-domain-segregation-report.json. Se ausente ou mais velho que
+ * 24h, executa scripts/governance/rag-domain-segregation-report.js — salvo
+ * quando COVERAGE_GATE_SKIP_RAG_RUN=1. A contagem agrega as métricas
+ * bloqueantes (crossDomainLeakage, crossTenantLeakage, unclassifiedDocuments,
+ * indexedSecrets, operationalAccessToSystemDomain etc.); os itens nomeiam as
+ * métricas ofensoras. Sem relatório algum: source='missing', 0 (conservador).
+ */
+function loadRagDomainSegregationViolations() {
+  const skipRun = process.env.COVERAGE_GATE_SKIP_RAG_RUN === '1';
+  let report = loadJsonIfExists(RAG_SEGREGATION_REPORT_PATH);
+  const stale = !report
+    || !Number.isFinite(Date.parse(report.generatedAt))
+    || (Date.now() - Date.parse(report.generatedAt)) > TENANT_REPORT_MAX_AGE_MS;
+
+  if (stale && !skipRun) {
+    console.log('[coverage-gate] relatório de segregação RAG ausente/desatualizado; '
+      + 'executando rag-domain-segregation-report...');
+    try {
+      execFileSync(process.execPath, [RAG_SEGREGATION_REPORT_SCRIPT_PATH], { stdio: 'inherit' });
+    } catch {
+      // exit != 0 (violações ou ambiente): o relatório, se gravado, é lido abaixo.
+    }
+    report = loadJsonIfExists(RAG_SEGREGATION_REPORT_PATH);
+  }
+
+  if (!report || !report.metrics) {
+    return { count: 0, items: [], source: 'missing' };
+  }
+  const offending = Object.entries(report.metrics).filter(([, value]) => typeof value === 'number' && value > 0);
+  const count = offending.reduce((acc, [, value]) => acc + value, 0);
+  const items = offending.map(([metric, value]) => `${metric}=${value}`);
+  const source = `reports/rag-domain-segregation-report.json${skipRun ? ' (skip-run)' : ''}`;
+  return { count, items, source };
+}
+
 function main() {
   const args = process.argv.slice(2);
   const informative = args.includes('--informative')
@@ -453,6 +491,7 @@ function main() {
   }
   const visibility = loadVisibilityViolations();
   const tenantIsolation = loadTenantIsolationViolations();
+  const ragDomainSegregation = loadRagDomainSegregationViolations();
   const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
   const apiSurface = loadApiSurfaceTechnicalExecutions(inventory.items);
   const pageSurface = loadPageSurfaceTechnicalExecutions(inventory.items);
@@ -485,6 +524,7 @@ function main() {
     journeyScenarioLinks: journeyLinks.links,
     visibilityViolations: visibility,
     tenantIsolationViolations: tenantIsolation,
+    ragDomainSegregationViolations: ragDomainSegregation,
     thresholds,
     waveId: 'system-coverage',
   });

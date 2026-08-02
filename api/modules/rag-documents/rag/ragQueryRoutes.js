@@ -1,4 +1,5 @@
-const { createInternalErrorResponder, ensureJsonRequest, ensureRagPermission, isRouteMatch, logRagAction } = require('./ragRouteUtils');
+const { createInternalErrorResponder, ensureJsonRequest, ensureRagPermission, isRouteMatch, logRagAction, resolveScopedTenantId } = require('./ragRouteUtils');
+const { resolveRetrievalScope } = require('../../../services/rag/domainRouter');
 
 async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
   const respondInternalError = createInternalErrorResponder(req, res, deps, 'Erro ao processar rota de consulta do RAG:');
@@ -19,14 +20,31 @@ async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
       return true;
     }
 
-    const finalTenantId = tenantId || req.tenantId;
+    const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: tenantId });
+    if (scope.forbidden) return true;
+    const finalTenantId = scope.tenantId;
+
+    // Domain Router: o domínio de recuperação é resolvido pela identidade do
+    // ator, nunca pelo texto da pergunta nem por metadados forjáveis do cliente.
+    // options.domain só é honrado se a classificação do ator permitir.
+    const scopeResolution = resolveRetrievalScope({ actor: req.agent, requestedDomain: options.domain });
+    if (!scopeResolution.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'domain_not_allowed',
+        message: 'Domínio de conhecimento não autorizado para este perfil',
+        reason: scopeResolution.reason,
+      });
+      return true;
+    }
+
     const filters = {
       topK: options.topK || 6,
       minScore: options.minScore || 0.45,
       maxTokens: options.maxTokens || 1000,
+      scope: scopeResolution.scope,
     };
 
-    const result = await deps.ragService.queryRag(query, finalTenantId, {}, filters);
+    const result = await deps.ragService.queryRag(query, finalTenantId, { actor: req.agent }, filters);
     logRagAction({
       req,
       deps,

@@ -21,6 +21,7 @@ const {
   getRagDomainConfig,
   getRagDomainSources,
   getRagDomains,
+  getRagInternalHeaders,
   getRagServiceUrl,
   getRagTimeout,
   getTenantContextForRag,
@@ -34,6 +35,7 @@ const {
   safeTrimLower,
   safeErrorMessage,
 } = require('../utils/defensiveCoercion');
+const { resolveRetrievalScope, sanitizeScope } = require('./rag/domainRouter');
 
 /**
  * Gera embeddings em batch reutilizando o modelo do serviço RAG (Python).
@@ -162,6 +164,41 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     throw new Error('tenantId é obrigatório');
   }
 
+  // Domain Router: resolve o escopo de recuperação ANTES da busca vetorial.
+  // Precedência: escopo já resolvido pela rota (filters.scope) > ator do
+  // contexto > default restritivo. O domínio nunca vem do texto da pergunta.
+  let scopeResolution;
+  if (filters.scope) {
+    scopeResolution = {
+      allowed: true,
+      scope: sanitizeScope(filters.scope),
+      reason: 'caller_provided_scope',
+    };
+  } else {
+    scopeResolution = resolveRetrievalScope({
+      actor: context.actor || null,
+      requestedDomain: filters.domain || null,
+    });
+  }
+
+  if (!scopeResolution.allowed) {
+    logger.warn('[RAGService] Recuperação negada pelo Domain Router', {
+      tenantId,
+      reason: scopeResolution.reason,
+      actorRole: context.actor?.role || null,
+    });
+    return {
+      success: false,
+      error: 'domain_not_allowed',
+      reason: scopeResolution.reason,
+      response: 'Não encontrei informação operacional autorizada para responder.',
+      sources: [],
+      confidence: 0,
+    };
+  }
+
+  const retrievalScope = scopeResolution.scope;
+
   try {
     // Carrega tenant_context para injetar contexto cognitivo
     const tenantContext = await getTenantContextForRag(tenantId);
@@ -230,6 +267,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         minScore: filters.minScore || 0.45,  // Reduzido de 0.5 para 0.45 para melhor captura de chunks relevantes
         maxTokens: filters.maxTokens || 1000,
       },
+      scope: retrievalScope,
     };
 
     logger.debug('[RAGService] Consultando RAG', {
@@ -247,6 +285,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
         body: JSON.stringify(requestBody),
       },
@@ -449,6 +488,12 @@ async function indexDocument(document, tenantId) {
         metadata: enhancedMetadata,
         permissions: document.permissions || {},
         status: document.status || 'active',
+        // Segregação de domínios: callers operacionais nunca enviam domain —
+        // o servidor fixa OPERATIONAL/PRODUCTION. SYSTEM exige declaração
+        // explícita de um pipeline técnico autorizado.
+        domain: document.domain || 'OPERATIONAL',
+        classification: document.classification || 'PRODUCTION',
+        sensitivity: document.sensitivity || 'INTERNAL',
       },
     };
 
@@ -485,6 +530,7 @@ async function indexDocument(document, tenantId) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
         body: JSON.stringify(requestBody),
       },
@@ -695,6 +741,7 @@ async function updateSynonymsFromDocuments(tenantId, documents) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
         body: JSON.stringify({
           tenant_id: tenantId,
@@ -756,6 +803,7 @@ async function getLearningMetrics(tenantId) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
       },
       timeout
@@ -797,6 +845,7 @@ async function triggerLearning(tenantId) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
       },
       timeout * 2 // Aprendizado pode demorar mais
@@ -845,6 +894,7 @@ async function getFullLearningData(tenantId) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
       },
       timeout
@@ -888,6 +938,7 @@ async function updateSynonym(tenantId, term, synonyms) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
         body: JSON.stringify({
           tenant_id: tenantId,
@@ -936,6 +987,7 @@ async function deleteSynonym(tenantId, term) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
       },
       timeout
@@ -978,6 +1030,7 @@ async function cleanInvalidQueries(tenantId) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
       },
       timeout
@@ -1022,6 +1075,7 @@ async function cleanOrphanedDocuments(tenantId, documentIds) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getRagInternalHeaders(),
         },
         body: JSON.stringify({ document_ids: documentIds })
       },
@@ -1093,6 +1147,7 @@ module.exports = {
   isRagAvailable,
   getRagServiceUrl,
   getRagTimeout,
+  getRagInternalHeaders,
   getRagDomains,
   getRagDomainConfig,
   isRagDomainEnabled,

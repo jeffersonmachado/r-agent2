@@ -37,6 +37,7 @@ const DEFAULT_THRESHOLDS = Object.freeze({
   staleCriticalEvidence: 0,
   visibilityViolations: 0,
   tenantIsolationViolations: 0,
+  ragDomainSegregationViolations: 0,
   minimumJourneyCoverage: 85,
   minimumTechnicalCoverage: 80,
   minimumWeightedCoverage: 85,

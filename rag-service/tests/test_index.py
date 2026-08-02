@@ -8,12 +8,19 @@ from main import app
 
 client = TestClient(app)
 
+# Token interno obrigatório quando configurado (auth serviço-a-serviço)
+import os as _os
+if _os.getenv("RAG_INTERNAL_TOKEN"):
+    client.headers["X-RAG-Internal-Token"] = _os.environ["RAG_INTERNAL_TOKEN"]
+
 
 def test_index_document_success():
     """Testa indexação bem-sucedida de um documento."""
     document = {
         "id": "test-doc-001",
         "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "title": "Documento de Teste",
         "content": "Este é um documento de teste para verificar a indexação no RAG.",
         "metadata": {
@@ -35,6 +42,8 @@ def test_index_document_missing_id():
     """Testa indexação sem ID do documento."""
     document = {
         "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "content": "Conteúdo sem ID"
     }
     
@@ -69,6 +78,8 @@ def test_index_document_empty_content():
     document = {
         "id": "test-doc-004",
         "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "content": ""
     }
     
@@ -82,6 +93,8 @@ def test_index_document_with_permissions():
     document = {
         "id": "test-doc-005",
         "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "title": "Documento com Permissões",
         "content": "Este documento tem permissões específicas.",
         "permissions": {
@@ -103,6 +116,8 @@ def test_index_document_long_content():
     document = {
         "id": "test-doc-006",
         "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
         "title": "Documento Longo",
         "content": long_content
     }

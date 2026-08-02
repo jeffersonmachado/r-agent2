@@ -8,6 +8,11 @@ from main import app
 
 client = TestClient(app)
 
+# Token interno obrigatório quando configurado (auth serviço-a-serviço)
+import os as _os
+if _os.getenv("RAG_INTERNAL_TOKEN"):
+    client.headers["X-RAG-Internal-Token"] = _os.environ["RAG_INTERNAL_TOKEN"]
+
 
 def test_health_check():
     """Testa se o health check retorna status healthy."""

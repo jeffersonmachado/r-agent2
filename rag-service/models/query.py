@@ -31,6 +31,16 @@ class TenantContext(BaseModel):
     escopo: Optional[List[str]] = None
 
 
+class QueryScope(BaseModel):
+    """
+    Escopo obrigatório de recuperação, resolvido no backend (Domain Router).
+    O serviço nunca amplia escopo: valores ausentes/inválidos caem no mais
+    restritivo (OPERATIONAL/PRODUCTION).
+    """
+    domain: Optional[str] = None  # OPERATIONAL | SYSTEM
+    classifications: Optional[List[str]] = None  # subconjunto de PRODUCTION | SUPPORT | DEVELOPMENT
+
+
 class QueryRequest(BaseModel):
     """Request de consulta RAG."""
     query: str
@@ -38,6 +48,7 @@ class QueryRequest(BaseModel):
     tenantContext: Optional[TenantContext] = None
     filters: Optional[QueryFilters] = None
     options: Optional[QueryOptions] = None
+    scope: Optional[QueryScope] = None
 
 
 class Source(BaseModel):
@@ -55,6 +66,9 @@ class QueryMetadata(BaseModel):
     chunksSearched: int
     chunksFound: int
     tokensUsed: Optional[int] = None
+    # Escopo efetivamente aplicado (evidência de segregação)
+    domain: Optional[str] = None
+    classificationsApplied: Optional[List[str]] = None
 
 
 class QueryResponse(BaseModel):

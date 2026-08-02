@@ -6,6 +6,7 @@
 
 const config = require('../utils/config');
 const logger = require('../utils/logger');
+const { getRagInternalHeaders } = require('./rag/ragRuntime');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -44,6 +45,7 @@ async function analyzeText(text, expand = true) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
       },
       body: JSON.stringify({
         text,

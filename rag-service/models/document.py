@@ -35,6 +35,10 @@ class Document(BaseModel):
     metadata: DocumentMetadata
     permissions: DocumentPermissions
     status: str = "active"  # active | archived | deleted
+    # Segregação de domínios (obrigatória na ingestão)
+    domain: str = "OPERATIONAL"  # OPERATIONAL | SYSTEM
+    classification: str = "PRODUCTION"  # PRODUCTION | SUPPORT | DEVELOPMENT
+    sensitivity: str = "INTERNAL"  # PUBLIC | INTERNAL | CONFIDENTIAL | RESTRICTED
 
 
 class ChunkMetadata(BaseModel):
@@ -63,4 +67,8 @@ class Chunk(BaseModel):
     metadata: ChunkMetadata
     permissions: DocumentPermissions
     score: Optional[float] = None  # Score de similaridade (usado em busca)
+    # Segregação de domínios (propagada do documento)
+    domain: str = "OPERATIONAL"
+    classification: str = "PRODUCTION"
+    sensitivity: str = "INTERNAL"
 

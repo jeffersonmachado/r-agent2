@@ -2,9 +2,10 @@
 Endpoint de health check.
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from typing import Optional
 from config.settings import get_settings
+from services.internal_auth import has_valid_internal_token
 import psycopg2
 
 router = APIRouter()
@@ -42,16 +43,18 @@ def _aggregated_stats() -> dict:
 
 
 @router.get("/health")
-def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenant (opcional). Se não fornecido, retorna estatísticas agregadas de todos os tenants.")):
+def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenant (opcional). Se não fornecido, retorna estatísticas agregadas de todos os tenants."), request: Request = None):
     """
     Health check do serviço RAG.
-    
+
     Retorna status do serviço, vector store e modelo de embeddings.
     Se tenant_id for fornecido, retorna estatísticas apenas desse tenant.
-    Caso contrário, retorna estatísticas agregadas de todos os tenants.
+    Estatísticas agregadas cross-tenant exigem token interno válido;
+    sem tenant_id e sem token, retorna apenas o status do serviço.
     """
     settings = get_settings()
     dsn = settings.postgres_dsn
+    allow_aggregated = has_valid_internal_token(request.headers) if request else False
 
     # Fallback para ambientes sem Postgres configurado (ex.: testes locais/unitários).
     if not dsn:
@@ -65,9 +68,11 @@ def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenan
         }
         if tenant_id:
             response["tenantId"] = str(tenant_id).strip()
-        else:
+        elif allow_aggregated:
             response["aggregated"] = True
             response["tenantsCount"] = 0
+        else:
+            response["scopeRestricted"] = True
         return response
 
     try:
@@ -77,10 +82,16 @@ def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenan
             indexed_docs = stats["indexedDocuments"]
             indexed_chunks = stats["indexedChunks"]
             aggregated = None
-        else:
+        elif allow_aggregated:
             aggregated = _aggregated_stats()
             indexed_docs = aggregated.get("indexedDocuments", 0)
             indexed_chunks = aggregated.get("indexedChunks", 0)
+        else:
+            # Sem tenant_id e sem token interno: apenas status do serviço,
+            # nunca estatísticas cross-tenant.
+            aggregated = None
+            indexed_docs = 0
+            indexed_chunks = 0
     except Exception:
         # Modo degradado: serviço sobe sem banco em ambiente de teste/local.
         indexed_docs = 0
@@ -97,10 +108,12 @@ def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenan
 
     if tenant_id:
         response["tenantId"] = tenant_id
-    else:
-        # Inclui informação sobre agregação
+    elif allow_aggregated:
+        # Inclui informação sobre agregação (somente com token interno)
         response["aggregated"] = True
-        response["tenantsCount"] = aggregated.get("tenantsCount", 0)
+        response["tenantsCount"] = (aggregated or {}).get("tenantsCount", 0)
+    else:
+        response["scopeRestricted"] = True
 
     return response
 

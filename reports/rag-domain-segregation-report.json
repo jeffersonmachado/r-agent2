@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-08-02T14:09:34.397Z",
+  "ragServiceUrl": "http://localhost:8001",
+  "metrics": {
+    "crossDomainLeakage": 0,
+    "crossTenantLeakage": 0,
+    "unclassifiedDocuments": 0,
+    "incoherentDocuments": 0,
+    "indexedSecrets": 0,
+    "operationalAccessToSystemDomain": 0
+  },
+  "probes": {
+    "serviceReachable": true,
+    "crossDomainLeakage": 0,
+    "crossTenantLeakage": 0,
+    "operationalAccessToSystemDomain": 0,
+    "details": []
+  },
+  "distribution": [
+    {
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "count": 42
+    }
+  ],
+  "details": [],
+  "status": "PASS"
+}
