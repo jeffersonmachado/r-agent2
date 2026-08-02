@@ -3651,6 +3651,114 @@ async function runFlowScenario(definition, ctx) {
     }
   }
 
+  if (definition.code === 'CORE-BIZ-RAG-SEGREGATION') {
+    // Segregação de domínios: o cliente nunca declara domínio. Um documento
+    // criado com domain/classification forjados no payload deve ser indexado
+    // como OPERATIONAL/PRODUCTION e só ser recuperável no escopo operacional.
+    const marker = `QASEG${runId}`;
+    // O rag-service descarta chunks com similaridade semântica > 0.97 (deduplicação).
+    // O conteúdo precisa variar de fato entre execuções, então derivamos termos
+    // únicos do runId (determinístico por run, distinto entre runs).
+    const segVocab = [
+      'ancora', 'bussola', 'cacto', 'dunas', 'fagulha', 'granito', 'hortela', 'irvore',
+      'jabuti', 'kilim', 'lagoa', 'mandala', 'neblina', 'orquidea', 'penhasco', 'quartzo',
+      'rafia', 'sereia', 'tundra', 'urutu', 'veludo', 'xadrez', 'zimbro', 'yuca',
+    ];
+    let segSeed = 0;
+    for (const ch of String(runId)) segSeed = (segSeed * 31 + ch.charCodeAt(0)) >>> 0;
+    const segRand = () => {
+      segSeed = (segSeed * 1664525 + 1013904223) >>> 0;
+      return segSeed / 0x100000000;
+    };
+    const uniqueWords = Array.from({ length: 16 }, () => segVocab[Math.floor(segRand() * segVocab.length)]);
+    const content = `${marker} horário de atendimento especial da jornada de segregação de domínios do RAG. Termos únicos desta execução: ${uniqueWords.join(' ')}.`;
+    const queryText = `${marker} horário de atendimento ${uniqueWords.slice(0, 4).join(' ')}`;
+    const created = await api.post('/rag/documents', {
+      title: `QA Segregation ${marker}`,
+      content,
+      autoIndex: true,
+      source: 'business_qa',
+      domain: 'SYSTEM',
+      classification: 'DEVELOPMENT',
+    });
+    const documentId = created?.document?.id || created?.id;
+    if (!documentId) {
+      throw new Error(`Documento de segregação não foi criado: ${JSON.stringify(created)}`);
+    }
+
+    try {
+      // Aguarda a indexação assíncrona concluir (embedding + upsert no pgvector).
+      let indexed = false;
+      let lastPollError = null;
+      for (let attempt = 0; attempt < 20 && !indexed; attempt += 1) {
+        const fetched = await api.get(`/rag/documents/${encodeURIComponent(documentId)}`).catch((err) => {
+          lastPollError = `status=${err.status} msg=${String(err.message).slice(0, 120)}`;
+          return null;
+        });
+        const doc = fetched?.document || fetched;
+        indexed = doc?.indexed === true || doc?.indexed_at;
+        if (!indexed) await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      if (!indexed) {
+        throw new Error(`Documento não foi indexado dentro do tempo esperado${lastPollError ? ` (último erro de poll: ${lastPollError})` : ''}`);
+      }
+
+      // Query operacional: deve encontrar o documento e reportar o escopo aplicado.
+      let opQuery;
+      try {
+        opQuery = await api.post('/rag/query', {
+          query: queryText,
+          options: { topK: 10, minScore: 0.0 },
+        });
+      } catch (err) {
+        if (err.status === 500 && /rag/i.test(String(err.body?.message || err.message))) {
+          return { detail: 'rag-service indisponível (ambiente)', ids: { documentId }, evidence: { queryOutcome: 'rag_service_unavailable' } };
+        }
+        throw err;
+      }
+      if (typeof opQuery?.success !== 'boolean') {
+        throw new Error(`rag/query sem contrato: ${JSON.stringify(opQuery)}`);
+      }
+      if (opQuery.metadata?.domain !== 'OPERATIONAL') {
+        throw new Error(`Escopo operacional não aplicado: metadata.domain=${opQuery.metadata?.domain}`);
+      }
+      if (!Array.isArray(opQuery.metadata?.classificationsApplied) || opQuery.metadata.classificationsApplied.length === 0) {
+        throw new Error('metadata.classificationsApplied ausente: sem evidência de escopo');
+      }
+      const opDocIds = (opQuery.sources || []).map((s) => s.documentId);
+      if (!opDocIds.includes(documentId)) {
+        throw new Error(`Documento operacional não encontrado no escopo OPERATIONAL: ${JSON.stringify(opDocIds)}`);
+      }
+
+      // Query no domínio SYSTEM (super_admin pode): NÃO deve encontrar o
+      // documento — se o domain forjado pelo cliente tivesse sido honrado,
+      // o documento apareceria aqui (prova de que foi indexado OPERATIONAL).
+      const sysQuery = await api.post('/rag/query', {
+        query: queryText,
+        options: { domain: 'SYSTEM', topK: 10, minScore: 0.0 },
+      });
+      if (sysQuery?.metadata?.domain !== 'SYSTEM') {
+        throw new Error(`Escopo SYSTEM não aplicado para super_admin: ${JSON.stringify(sysQuery?.metadata)}`);
+      }
+      const sysDocIds = (sysQuery.sources || []).map((s) => s.documentId);
+      if (sysDocIds.includes(documentId)) {
+        throw new Error('VAZAMENTO: documento criado pelo cliente apareceu no domínio SYSTEM');
+      }
+
+      return {
+        detail: 'Domínio forjado pelo cliente ignorado; escopo aplicado por domínio com evidência em metadata',
+        ids: { documentId },
+        evidence: {
+          operationalDomain: opQuery.metadata.domain,
+          operationalClassifications: opQuery.metadata.classificationsApplied,
+          systemSourcesCount: sysDocIds.length,
+        },
+      };
+    } finally {
+      await api.del(`/rag/documents/${encodeURIComponent(documentId)}`).catch(() => {});
+    }
+  }
+
   if (definition.code === 'CORE-BIZ-KNOWLEDGE-BASE'
     || definition.code === 'CORE-BIZ-PRODUCT-DOCS'
     || definition.code === 'CORE-BIZ-AGENDA'
