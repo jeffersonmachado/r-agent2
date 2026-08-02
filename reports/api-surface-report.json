@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-01T16:29:33.126Z",
-  "commit": "ebc056c325e17f6702b67be4c8e9bf2dd017d8e4",
+  "generatedAt": "2026-08-02T04:26:05.503Z",
+  "commit": "3e12b9edb4bf933861ee9754d264faf5543e408d",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
@@ -3066,7 +3066,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 500,
           "notFoundFallback": false
         },
         "p3": "skipped"
