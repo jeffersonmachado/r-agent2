@@ -639,7 +639,17 @@ async function assertBusinessPage(page, pageDef, definition) {
     await page.goto(`${FRONTEND_URL}${pageDef.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(1500);
     const bodyText = await page.locator('body').innerText();
-    if (/Acesso Negado/i.test(bodyText)) {
+    const accessDenied = /Acesso Negado/i.test(bodyText);
+    if (pageDef.expectDenied) {
+      // Assertiva RBAC negativa: a página DEVE negar acesso ao papel da
+      // sessão (ex.: admin sem tenant:read em /tenants). Se renderizar, a
+      // guarda de URL direta falhou — falha de segurança real.
+      if (!accessDenied) {
+        throw new Error(`Pagina ${pageDef.path} deveria negar acesso ao papel da sessão (RBAC), mas renderizou`);
+      }
+      return { path: pageDef.path, finalPath: new URL(page.url()).pathname, denied: true };
+    }
+    if (accessDenied) {
       throw new Error(`Pagina ${pageDef.path} apresentou 'Acesso Negado'`);
     }
     const rootText = await page.locator('#root').innerText().catch(() => '');
@@ -4090,7 +4100,9 @@ async function runFlowScenario(definition, ctx) {
     }
 
     // Métricas SEM X-Tenant-Id: super-admin sem tenant resolvido deve
-    // receber 400 tenant_required.
+    // receber 403 tenant_required — contrato deliberado de segurança do
+    // módulo voice (commit 57e45ab: "sem tenant explícito a resposta deve
+    // ser 403 tenant_required, nunca um 200 silencioso com lista vazia").
     let noTenantStatus = null;
     try {
       await fetchJson(buildUrl(API_URL, '/api/voice/metrics'), {
@@ -4099,12 +4111,12 @@ async function runFlowScenario(definition, ctx) {
       noTenantStatus = 200;
     } catch (err) {
       noTenantStatus = err.status;
-      if (err.status !== 400 || err.body?.error !== 'tenant_required') {
-        throw new Error(`voice/metrics sem tenant deveria ser 400 tenant_required: ${err.status} ${JSON.stringify(err.body)}`);
+      if (err.status !== 403 || err.body?.error !== 'tenant_required') {
+        throw new Error(`voice/metrics sem tenant deveria ser 403 tenant_required: ${err.status} ${JSON.stringify(err.body)}`);
       }
     }
-    if (noTenantStatus !== 400) {
-      throw new Error(`voice/metrics sem X-Tenant-Id retornou ${noTenantStatus} em vez de 400`);
+    if (noTenantStatus !== 403) {
+      throw new Error(`voice/metrics sem X-Tenant-Id retornou ${noTenantStatus} em vez de 403`);
     }
 
     const metrics = await api.get('/api/voice/metrics');

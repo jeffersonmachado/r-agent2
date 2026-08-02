@@ -1171,7 +1171,7 @@ const FLOW_SCENARIOS = [
     assertions: [
       'Evento ringing registrado com ok=true',
       'Evento visível no event-ledger filtrado por correlationId',
-      'voice/metrics sem X-Tenant-Id retorna 400 tenant_required',
+      'voice/metrics sem X-Tenant-Id retorna 403 tenant_required',
       'voice/metrics com tenant responde com totais',
     ],
     integrations: ['voice-event-service', 'event-ledger-service', 'api'],
@@ -1386,14 +1386,18 @@ const FLOW_SCENARIOS = [
   {
     code: 'CORE-BIZ-TENANTS',
     journey: 'tenants',
-    name: 'Core tenants: página renderiza autenticada, ai-config do tenant atual e teste de credencial com contrato estruturado',
+    name: 'Core tenants: guarda RBAC da página, ai-config do tenant atual e teste de credencial com contrato estruturado',
     vertical: 'core',
     type: 'flow',
     criticality: 'normal',
     preconditions: ['Tenant autenticado'],
-    pages: [{ path: '/tenants' }],
+    // /tenants exige tenant:read, ausente no papel admin da sessão RPA por
+    // design de RBAC (mesma justificativa auditável da isenção de
+    // page:/tenants na page-surface wave): a assertiva correta para esta
+    // sessão é a NEGAÇÃO — prova de que a guarda de URL direta funciona.
+    pages: [{ path: '/tenants', expectDenied: true }],
     assertions: [
-      'Página /tenants renderiza autenticada sem console errors',
+      'Página /tenants nega acesso ao papel sem tenant:read (guarda RBAC por URL direta)',
       'GET /tenants/current/ai-config responde config ou 404 estruturado',
       'POST /tenants/current/ai-credentials/test responde valid:false/true estruturado',
     ],
