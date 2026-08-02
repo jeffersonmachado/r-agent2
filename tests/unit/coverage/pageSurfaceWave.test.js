@@ -297,7 +297,7 @@ describe('coverage-gate — loadPageSurfaceTechnicalExecutions', () => {
 
   test('mapeia estados por id direto, apenas para itens page:', () => {
     const reportPath = writeReport({
-      generatedAt: '2026-07-28T00:00:00Z',
+      generatedAt: new Date().toISOString(), // relatório fresco — data fixa vira bomba-relógio com a política STALE de 7 dias
       perItem: [
         { id: 'page:/agenda', state: 'VALIDATED' },
         { id: 'page:/dev', state: 'VISITED' },

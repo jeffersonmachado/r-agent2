@@ -29,7 +29,7 @@ const INVENTORY_ITEMS = [
 describe('coverage-gate — loadDbIntegrityTechnicalExecutions com perRelation', () => {
   test('mapeia perRelation para itens relation: de mesmo id', () => {
     const reportPath = writeReport({
-      generatedAt: '2026-07-26T12:00:00.000Z',
+      generatedAt: new Date().toISOString(), // relatório fresco — data fixa vira bomba-relógio com a política STALE de 7 dias
       dbAvailable: true,
       perModel: [{ id: 'model:Widget', state: 'VALIDATED' }],
       perRelation: [
@@ -54,7 +54,7 @@ describe('coverage-gate — loadDbIntegrityTechnicalExecutions com perRelation',
 
   test('relatório sem perRelation (formato antigo) não emite execuções de relation', () => {
     const reportPath = writeReport({
-      generatedAt: '2026-07-26T12:00:00.000Z',
+      generatedAt: new Date().toISOString(), // relatório fresco — data fixa vira bomba-relógio com a política STALE de 7 dias
       dbAvailable: true,
       perModel: [{ id: 'model:Widget', state: 'VALIDATED' }],
     });
@@ -67,7 +67,7 @@ describe('coverage-gate — loadDbIntegrityTechnicalExecutions com perRelation',
 
   test('entrada perRelation sem item de inventário correspondente é ignorada', () => {
     const reportPath = writeReport({
-      generatedAt: '2026-07-26T12:00:00.000Z',
+      generatedAt: new Date().toISOString(), // relatório fresco — data fixa vira bomba-relógio com a política STALE de 7 dias
       dbAvailable: true,
       perModel: [],
       perRelation: [{ id: 'relation:Ghost.x->y.id', state: 'VALIDATED' }],
