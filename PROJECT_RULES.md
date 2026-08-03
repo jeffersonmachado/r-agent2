@@ -640,7 +640,7 @@ api/
 - **Backend**: Redis obrigatório em produção (`RATE_LIMIT_REDIS_URL`)
 - **Fallback**: Memória apenas em desenvolvimento (não recomendado)
 - **Integração**: Rate limiting aplicado ANTES de qualquer processamento (IA, scraping, etc.)
-- **Auditoria**: Todos os eventos registrados em `reports/rate-limit-events.json`
+- **Auditoria**: Todos os eventos registrados em `reports/rate-limit-events.json` (append-only NDJSON, uma linha por evento)
 
 #### Regras Críticas
 
