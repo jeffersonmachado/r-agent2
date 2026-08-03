@@ -119,6 +119,21 @@ const ENV_TO_CONFIG_MAP = {
   'PGPASSWORD': 'database.password',
 };
 
+// Índice invertido pré-computado: configPath -> [envVars] (na ordem de
+// declaração do mapa). Preserva exatamente a semântica da varredura original
+// de ENV_TO_CONFIG_MAP, incluindo múltiplas envs para o mesmo path
+// (ex.: RATE_LIMIT_REDIS_URL e REDIS_URL -> rateLimit.redis.url, onde a
+// primeira env definida na ordem do mapa vence).
+const CONFIG_PATH_TO_ENV_VARS = new Map();
+for (const [envVar, configPath] of Object.entries(ENV_TO_CONFIG_MAP)) {
+  const list = CONFIG_PATH_TO_ENV_VARS.get(configPath);
+  if (list) {
+    list.push(envVar);
+  } else {
+    CONFIG_PATH_TO_ENV_VARS.set(configPath, [envVar]);
+  }
+}
+
 /**
  * Carrega configuração do arquivo JSON.
  * 
@@ -174,15 +189,18 @@ function get(path, defaultValue = undefined) {
   const config = loadConfig();
 
   // 1) Primeiro: variáveis de ambiente (override do JSON)
-  // Procura no mapeamento ENV_TO_CONFIG_MAP
-  for (const [envVar, configPath] of Object.entries(ENV_TO_CONFIG_MAP)) {
-    if (configPath === path && process.env[envVar] !== undefined) {
-      // Converte string para tipo apropriado
-      const envValue = process.env[envVar];
-      if (envValue === 'true') return true;
-      if (envValue === 'false') return false;
-      if (/^\d+$/.test(envValue)) return Number(envValue);
-      return envValue;
+  // Consulta O(1) no índice invertido pré-computado (configPath -> envVars)
+  const envVars = CONFIG_PATH_TO_ENV_VARS.get(path);
+  if (envVars) {
+    for (const envVar of envVars) {
+      if (process.env[envVar] !== undefined) {
+        // Converte string para tipo apropriado
+        const envValue = process.env[envVar];
+        if (envValue === 'true') return true;
+        if (envValue === 'false') return false;
+        if (/^\d+$/.test(envValue)) return Number(envValue);
+        return envValue;
+      }
     }
   }
 

@@ -36,13 +36,16 @@ async function ensureAuditDir() {
 
 /**
  * Registra evento de rate limiting para auditoria.
- * 
+ *
+ * Formato append-only NDJSON: uma linha JSON por evento, sem leitura
+ * prévia nem rewrite do arquivo (cada request apenas anexa uma linha).
+ *
  * @param {Object} event - Evento a registrar
  */
 async function auditEvent(event) {
   try {
     await ensureAuditDir();
-    
+
     const auditData = {
       timestamp: new Date().toISOString(),
       userId: event.userId || 'unknown',
@@ -54,29 +57,22 @@ async function auditEvent(event) {
       totalPoints: event.totalPoints || null,
     };
 
-    // Lê arquivo existente ou cria novo
-    let events = [];
-    try {
-      const content = await fs.readFile(AUDIT_FILE, 'utf-8');
-      events = JSON.parse(content);
-    } catch (err) {
-      // Arquivo não existe, cria novo
-      events = [];
-    }
-
-    // Adiciona novo evento
-    events.push(auditData);
-
-    // Mantém apenas últimos 1000 eventos
-    if (events.length > 1000) {
-      events = events.slice(-1000);
-    }
-
-    // Salva arquivo
-    await fs.writeFile(AUDIT_FILE, JSON.stringify(events, null, 2), 'utf-8');
+    await fs.appendFile(AUDIT_FILE, `${JSON.stringify(auditData)}\n`, 'utf-8');
   } catch (err) {
     logger.error('[RateLimit] Erro ao registrar evento de auditoria', { error: err.message });
   }
+}
+
+/**
+ * Registra evento de auditoria em background (fire-and-forget).
+ * Nunca é awaited no caminho do request: falhas são apenas logadas.
+ *
+ * @param {Object} event - Evento a registrar
+ */
+function auditEventAsync(event) {
+  auditEvent(event).catch((err) => {
+    logger.error('[RateLimit] Erro inesperado ao registrar evento de auditoria', { error: err.message });
+  });
 }
 
 /**
@@ -252,8 +248,8 @@ async function checkRateLimit(options) {
       msBeforeNext: result.msBeforeNext,
     };
 
-    // Registra evento (permitido)
-    await auditEvent({
+    // Registra evento (permitido) em background — nunca bloqueia o request
+    auditEventAsync({
       userId,
       operationType,
       policy,
@@ -292,8 +288,8 @@ async function checkRateLimit(options) {
       retryAfter = policy.duration || 60;
     }
 
-    // Registra evento (bloqueado)
-    await auditEvent({
+    // Registra evento (bloqueado) em background — nunca bloqueia o request
+    auditEventAsync({
       userId,
       operationType,
       policy,
@@ -693,6 +689,7 @@ module.exports = {
   createRateLimitError,
   getLimiter,
   auditEvent,
+  auditEventAsync,
   clearLimitersCache,
   clearRedisRateLimitKeys,
 };

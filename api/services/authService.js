@@ -15,7 +15,7 @@
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
-const { cacheTenantContext } = require('./tenantService');
+const { cacheTenantContext, invalidateTenantCache } = require('./tenantService');
 
 const { getSequelize } = require('../db/sequelize');
 const { User, Session, Tenant, TenantContext } = require('../db/models');
@@ -29,6 +29,10 @@ const TOKEN_EXPIRATION_HOURS = config.get('auth.tokenExpirationHours', 24);
 const TOKEN_LENGTH = 64; // hex length
 const MAX_SESSIONS_PER_AGENT = config.get('auth.maxSessionsPerAgent', 3);
 const INACTIVITY_TIMEOUT_MINUTES = config.get('auth.inactivityTimeoutMinutes', 30);
+// Throttle da persistência de last_activity_at no DB (por sessão).
+// O cache em memória continua atualizado a cada validateToken (timeout de
+// inatividade intacto); apenas o write no Postgres é limitado a 1x/minuto.
+const ACTIVITY_PERSIST_INTERVAL_MS = 60 * 1000;
 
 // ---------------------------------------------------------------------------
 // Cache em memória (para validateToken síncrono)
@@ -210,6 +214,7 @@ async function loadCachesFromDb() {
       createdAt: s.created_at ? new Date(s.created_at).toISOString() : (s.createdAt?.toISOString?.() || null),
       expiresAt: expiresAt.toISOString(),
       lastActivityAt: new Date(s.last_activity_at).toISOString(),
+      lastActivityPersistedAt: new Date(s.last_activity_at).toISOString(),
       ipAddress: s.ip_address || 'unknown',
       userAgent: s.user_agent || 'unknown',
       tenantKey: s.tenant_key || null,
@@ -428,6 +433,9 @@ async function createSaasSignupAccount({ name, company, email, password }) {
       branding: {},
       trial_expires_at: trialExpiresAt,
     }, { transaction });
+
+    // Invalida cache de getTenant para a nova chave (defesa contra reuso de chave)
+    invalidateTenantCache(tenantKey);
 
     await TenantContextModel.create({
       tenant_key: tenantKey,
@@ -699,6 +707,7 @@ async function login(username, password, ipAddress = 'unknown', userAgent = 'unk
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     lastActivityAt: now.toISOString(),
+    lastActivityPersistedAt: now.toISOString(),
     ipAddress,
     userAgent,
     tenantKey: agent.tenantId,
@@ -807,15 +816,23 @@ function validateToken(token) {
     return { valid: false, error: 'Sessão expirada por inatividade' };
   }
 
-  // Atualiza lastActivityAt (cache) e best-effort no DB
+  // Atualiza lastActivityAt no cache em memória a cada chamada (usado pelo
+  // timeout de inatividade acima). A persistência no DB é throttled: no
+  // máximo 1 write por ACTIVITY_PERSIST_INTERVAL_MS por sessão.
   session.lastActivityAt = now.toISOString();
   sessions.set(token, session);
   if (dbAvailable()) {
-    const SessionModel = typeof Session === 'function' ? Session() : Session;
-    setImmediate(() => SessionModel.update(
-      { last_activity_at: now },
-      { where: { token } }
-    ).catch(() => {}));
+    const lastPersistedAt = session.lastActivityPersistedAt
+      ? new Date(session.lastActivityPersistedAt)
+      : lastActivity;
+    if (now - lastPersistedAt > ACTIVITY_PERSIST_INTERVAL_MS) {
+      session.lastActivityPersistedAt = now.toISOString();
+      const SessionModel = typeof Session === 'function' ? Session() : Session;
+      setImmediate(() => SessionModel.update(
+        { last_activity_at: now },
+        { where: { token } }
+      ).catch(() => {}));
+    }
   }
 
   return { valid: true, agent: session.agentSnapshot, session };
@@ -931,6 +948,7 @@ async function loginWithRpaToken(rpaToken, tenantId, ipAddress = 'unknown', user
     createdAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
     lastActivityAt: now.toISOString(),
+    lastActivityPersistedAt: now.toISOString(),
     ipAddress,
     userAgent: `RPA/${userAgent}`,
     tenantKey: rpaAgent.tenantId,

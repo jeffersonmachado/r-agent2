@@ -57,6 +57,14 @@ function requireAuth(req) {
     return { valid: false, error: 'Token de autenticação não fornecido' };
   }
 
+  // Short-circuit: o mesmo token já foi validado neste request (ex.:
+  // tenantValidation -> requireAuth -> handler da rota). Reutiliza
+  // req.agent/req.session/req.tenantId já populados com o mesmo contrato,
+  // sem re-validar o token nem re-gravar last_activity_at.
+  if (req.token === token && req.agent && req.session) {
+    return { valid: true, agent: req.agent, session: req.session };
+  }
+
   const validation = validateToken(token);
   
   if (!validation.valid) {

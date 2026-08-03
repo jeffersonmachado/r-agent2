@@ -113,6 +113,55 @@ describe('auth middleware', () => {
       
       expect(mockReq.tenantId).toBeNull();
     });
+
+    test('deve reutilizar req.agent/req.session quando o mesmo token já foi validado no request', () => {
+      const mockAgent = { id: 'agent-1', tenantId: 'tenant-1' };
+      const mockSession = { id: 'session-1' };
+
+      mockReq.headers.authorization = 'Bearer valid-token';
+      validateToken.mockReturnValue({
+        valid: true,
+        agent: mockAgent,
+        session: mockSession,
+      });
+
+      const first = requireAuth(mockReq);
+      expect(first.valid).toBe(true);
+      expect(validateToken).toHaveBeenCalledTimes(1);
+
+      const second = requireAuth(mockReq);
+      expect(second.valid).toBe(true);
+      expect(second.agent).toEqual(mockAgent);
+      expect(second.session).toEqual(mockSession);
+      // Não re-valida o token (evita 2x validateToken por request)
+      expect(validateToken).toHaveBeenCalledTimes(1);
+      // Contrato preservado: campos do request continuam populados
+      expect(mockReq.agent).toEqual(mockAgent);
+      expect(mockReq.session).toEqual(mockSession);
+      expect(mockReq.tenantId).toBe('tenant-1');
+    });
+
+    test('deve re-validar quando o token do header difere do token já validado', () => {
+      const mockAgent = { id: 'agent-1', tenantId: 'tenant-1' };
+      const mockSession = { id: 'session-1' };
+
+      mockReq.headers.authorization = 'Bearer token-a';
+      validateToken.mockReturnValue({
+        valid: true,
+        agent: mockAgent,
+        session: mockSession,
+      });
+
+      requireAuth(mockReq);
+      expect(validateToken).toHaveBeenCalledTimes(1);
+
+      mockReq.headers.authorization = 'Bearer token-b';
+      const result = requireAuth(mockReq);
+      expect(result.valid).toBe(true);
+      expect(validateToken).toHaveBeenCalledTimes(2);
+      expect(validateToken).toHaveBeenLastCalledWith('token-b');
+      expect(mockReq.token).toBe('token-b');
+    });
   });
 
   describe('requirePermission', () => {

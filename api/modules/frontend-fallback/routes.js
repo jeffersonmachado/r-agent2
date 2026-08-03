@@ -2,6 +2,40 @@
 
 const express = require('express');
 
+// Cache em memória do index.html (lazy). Releitura só ocorre quando o mtime
+// muda; o stat assíncrono é feito no máximo 1x por TTL por path.
+const INDEX_HTML_STAT_TTL_MS = 5000;
+/** @type {Map<string, { html: string, mtimeMs: number, checkedAt: number }>} */
+const indexHtmlCache = new Map();
+
+async function loadIndexHtml(deps, frontendIndexPath) {
+  const now = Date.now();
+  const cached = indexHtmlCache.get(frontendIndexPath);
+  if (cached && (now - cached.checkedAt) < INDEX_HTML_STAT_TTL_MS) {
+    return cached.html;
+  }
+
+  let stat = null;
+  try {
+    stat = await deps.fs.promises.stat(frontendIndexPath);
+  } catch (_) {
+    stat = null;
+  }
+  if (!stat || !stat.isFile()) {
+    indexHtmlCache.delete(frontendIndexPath);
+    return null;
+  }
+
+  if (!cached || cached.mtimeMs !== stat.mtimeMs) {
+    const html = await deps.fs.promises.readFile(frontendIndexPath, 'utf8');
+    indexHtmlCache.set(frontendIndexPath, { html, mtimeMs: stat.mtimeMs, checkedAt: now });
+    return html;
+  }
+
+  cached.checkedAt = now;
+  return cached.html;
+}
+
 function createFrontendFallbackRoutes({ buildDeps }) {
   const router = express.Router();
 
@@ -59,9 +93,9 @@ function createFrontendFallbackRoutes({ buildDeps }) {
       }
 
       const frontendIndexPath = deps.path.join(__dirname, '..', '..', 'frontend', 'index.html');
-      if (deps.fs.existsSync(frontendIndexPath)) {
+      const html = await loadIndexHtml(deps, frontendIndexPath);
+      if (html !== null) {
         deps.logger.debug('[Server] Servindo index.html do frontend para rota:', pathname);
-        const html = deps.fs.readFileSync(frontendIndexPath, 'utf8');
         res.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
         });
@@ -82,4 +116,8 @@ function createFrontendFallbackRoutes({ buildDeps }) {
 
 module.exports = {
   createFrontendFallbackRoutes,
+  // Funções internas para testes
+  _internal: {
+    clearIndexHtmlCache: () => indexHtmlCache.clear(),
+  },
 };

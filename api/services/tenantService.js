@@ -105,6 +105,26 @@ function safeIsoDate(value, fallback = null) {
 /** @type {Map<string, TenantContext>} */
 const tenantContexts = new Map();
 
+// ---------------------------------------------------------------------------
+// Cache em memória de getTenant (TTL curto) — reduz queries repetidas por
+// request no caminho de tenantValidation. Chave: identifier exato
+// (tenant_key ou UUID). Somente resultados encontrados são cacheados e todo
+// caminho de mutação (create/update/delete) invalida a chave.
+// ---------------------------------------------------------------------------
+const TENANT_CACHE_TTL_MS = 15 * 1000;
+
+/** @type {Map<string, { tenant: Tenant, expiresAt: number }>} */
+const tenantCache = new Map();
+
+function invalidateTenantCache(identifier) {
+  if (identifier === undefined || identifier === null) return;
+  tenantCache.delete(String(identifier));
+}
+
+function clearTenantCache() {
+  tenantCache.clear();
+}
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -540,6 +560,8 @@ async function createTenant({ id, tenant_key, name, site, ramo_atividade, objeti
 
     logger.info(`[TenantService] Tenant criado: ${tenantKey} (${normalizedName}), plano: ${plan}`);
 
+    invalidateTenantCache(tenantKey);
+
     return { success: true, tenant };
   } catch (err) {
     logger.error('[TenantService] Erro ao criar tenant no PostgreSQL:', err);
@@ -728,6 +750,8 @@ async function updateTenant(tenantId, updates) {
 
     logger.info(`[TenantService] Tenant atualizado: ${tenantId}`);
 
+    invalidateTenantCache(tenantId);
+
     return { success: true, tenant };
   } catch (err) {
     logger.error('[TenantService] Erro ao atualizar tenant no PostgreSQL:', err);
@@ -855,23 +879,22 @@ async function getTenant(tenantId) {
     throw new Error('PostgreSQL não está disponível. O banco de dados é obrigatório.');
   }
 
+  const cacheKey = typeof tenantId === 'string' ? tenantId : safeToString(tenantId);
+  const cached = cacheKey ? tenantCache.get(cacheKey) : null;
+  if (cached) {
+    if (cached.expiresAt > Date.now()) {
+      // Retorna cópia para que mutações do caller não contaminem o cache
+      return structuredClone(cached.tenant);
+    }
+    tenantCache.delete(cacheKey);
+  }
+
   try {
-    const { Tenant } = getModels();
-    
-    // Usa a função helper para buscar por tenant_key ou id
-    let tenant = await findTenantByIdentifier(tenantId);
+    // Busca única por tenant_key ou id (UUID) — a query redundante de
+    // re-fetch por attributes foi removida (o resultado nem era usado).
+    const tenant = await findTenantByIdentifier(tenantId);
     
     if (!tenant) {
-      return null;
-    }
-
-    // Busca novamente com os atributos específicos necessários
-    const tenantWithAttrs = await Tenant.findOne({
-      where: { id: tenant.id },
-      attributes: ['id', 'tenant_key', 'name', 'site', 'ramo_atividade', 'objetivo', 'status', 'plan', 'limits', 'settings', 'branding', 'suspended_at', 'trial_expires_at', 'created_at', 'updated_at'],
-    });
-
-    if (!tenantWithAttrs) {
       return null;
     }
 
@@ -896,7 +919,7 @@ async function getTenant(tenantId) {
       throw new Error(`Tenant ${tenantId} está inconsistente: campo 'name' é obrigatório mas está vazio ou ausente`);
     }
 
-    return {
+    const result = {
       id: tenantKey,
       tenant_key: tenantKey,
       name: tenantName,
@@ -914,6 +937,15 @@ async function getTenant(tenantId) {
       suspendedAt: safeIsoDate(tenantData.suspended_at) || safeIsoDate(tenantData.suspendedAt) || null,
       trialExpiresAt: safeIsoDate(tenantData.trial_expires_at) || safeIsoDate(tenantData.trialExpiresAt) || null,
     };
+
+    if (cacheKey) {
+      tenantCache.set(cacheKey, {
+        tenant: structuredClone(result),
+        expiresAt: Date.now() + TENANT_CACHE_TTL_MS,
+      });
+    }
+
+    return result;
   } catch (err) {
     logger.error('[TenantService] Erro ao obter tenant do PostgreSQL:', err);
     throw err;
@@ -948,6 +980,8 @@ async function deleteTenant(tenantId) {
 
     // Remove do PostgreSQL (CASCADE remove relacionamentos)
     await tenantRecord.destroy();
+
+    invalidateTenantCache(tenantId);
 
     logger.info(`[TenantService] Tenant removido: ${tenantId}`);
 
@@ -1138,11 +1172,13 @@ async function changePlan(tenantId, newPlan) {
  * Verifica se um tenant está ativo e não expirado (PostgreSQL).
  *
  * @param {string} tenantId
+ * @param {Object} [preloadedTenant] - Tenant já carregado pelo caller (ex.: requireTenant),
+ *   evitando uma segunda busca no banco no mesmo request.
  * @returns {Promise<{valid: boolean, error?: string}>}
  */
-async function validateTenantStatus(tenantId) {
+async function validateTenantStatus(tenantId, preloadedTenant = null) {
   try {
-    const tenant = await getTenant(tenantId);
+    const tenant = preloadedTenant || await getTenant(tenantId);
     if (!tenant) {
       return { valid: false, error: 'Tenant não encontrado' };
     }
@@ -1359,6 +1395,7 @@ module.exports = {
   listTenants,
   getTenant,
   findTenantByIdentifier, // Helper padronizado para buscar tenant por tenant_key ou id
+  invalidateTenantCache, // Invalidação explícita para writes de tenant fora deste serviço
   deleteTenant,
   suspendTenant,
   reactivateTenant,
@@ -1371,5 +1408,6 @@ module.exports = {
   _internal: {
     getDefaultLimits,
     clearTenantContexts: () => tenantContexts.clear(),
+    clearTenantCache,
   },
 };

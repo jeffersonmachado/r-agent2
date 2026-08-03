@@ -62,6 +62,44 @@ let wss = null;
  */
 const clients = new Map();
 
+/**
+ * Índice de clientes por tenant (chave null agrupa não autenticados).
+ * Mantido no connect/auth/disconnect para que broadcastToTenant não
+ * precise varrer clientes de todos os tenants.
+ * @type {Map<string|null, Set<WebSocketClient>>}
+ */
+const tenantClients = new Map();
+
+function addClientToTenantIndex(client) {
+  const key = client.tenantId || null;
+  let set = tenantClients.get(key);
+  if (!set) {
+    set = new Set();
+    tenantClients.set(key, set);
+  }
+  set.add(client);
+}
+
+function removeClientFromTenantIndex(client) {
+  if (!client) return;
+  const key = client.tenantId || null;
+  const set = tenantClients.get(key);
+  if (set) {
+    set.delete(client);
+    if (set.size === 0) tenantClients.delete(key);
+  }
+}
+
+// Remove cliente do mapa principal e do índice por tenant (todos os
+// caminhos de desconexão/limpeza devem usar este helper).
+function removeClient(clientId) {
+  const client = clients.get(clientId);
+  if (client) {
+    removeClientFromTenantIndex(client);
+    clients.delete(clientId);
+  }
+}
+
 function getConnectedAgentsByTenant(tenantId) {
   const result = new Map();
   if (!tenantId) return result;
@@ -123,6 +161,7 @@ function initializeWebSocket(httpServer) {
     };
 
     clients.set(clientId, client);
+    addClientToTenantIndex(client);
 
     logger.info(`[WebSocketService] Cliente conectado: ${clientId}`);
 
@@ -144,9 +183,12 @@ function initializeWebSocket(httpServer) {
         if (data.type === 'auth' && data.token) {
           const validation = validateToken(data.token);
           if (validation.valid) {
+            // Move o cliente no índice por tenant (null -> tenant autenticado)
+            removeClientFromTenantIndex(client);
             client.tenantId = validation.agent.tenantId;
             client.agentId = validation.agent.id;
             client.username = validation.agent.username;
+            addClientToTenantIndex(client);
 
             sendToClient(clientId, {
               type: 'auth',
@@ -243,14 +285,14 @@ function initializeWebSocket(httpServer) {
 
     // Handler de fechamento
     ws.on('close', () => {
-      clients.delete(clientId);
+      removeClient(clientId);
       logger.info(`[WebSocketService] Cliente desconectado: ${clientId}`);
     });
 
     // Handler de erro
     ws.on('error', (err) => {
       logger.error(`[WebSocketService] Erro no WebSocket do cliente ${clientId}:`, safeErrorMessage(err));
-      clients.delete(clientId);
+      removeClient(clientId);
     });
   });
 
@@ -264,7 +306,7 @@ function initializeWebSocket(httpServer) {
       if (inactiveTime > INACTIVE_TIMEOUT) {
         logger.info(`[WebSocketService] Desconectando cliente inativo: ${clientId}`);
         client.ws.close();
-        clients.delete(clientId);
+        removeClient(clientId);
       }
     }
   }, 5 * 60 * 1000); // Verifica a cada 5 minutos
@@ -298,14 +340,19 @@ function sendToClient(clientId, data) {
  * @param {Object} data - Dados a enviar
  */
 function broadcastToTenant(tenantId, data) {
+  // Serializa uma única vez fora do loop
+  const payload = JSON.stringify(data);
   let sent = 0;
-  for (const [clientId, client] of clients.entries()) {
-    if (client.tenantId === tenantId && client.ws.readyState === 1) {
-      try {
-        client.ws.send(JSON.stringify(data));
-        sent++;
-      } catch (err) {
-        logger.error(`[WebSocketService] Erro ao enviar broadcast para cliente ${clientId}:`, safeErrorMessage(err));
+  const tenantSet = tenantClients.get(tenantId || null);
+  if (tenantSet) {
+    for (const client of tenantSet) {
+      if (client.ws.readyState === 1) {
+        try {
+          client.ws.send(payload);
+          sent++;
+        } catch (err) {
+          logger.error(`[WebSocketService] Erro ao enviar broadcast para cliente ${client.id}:`, safeErrorMessage(err));
+        }
       }
     }
   }
@@ -332,17 +379,20 @@ function broadcastToTenant(tenantId, data) {
  * @param {Object} data
  */
 function broadcastToExecution(tenantId, executionId, data) {
+  const payload = JSON.stringify(data);
   let sent = 0;
-  for (const [clientId, client] of clients.entries()) {
-    if (client.tenantId !== tenantId) continue;
-    if (!client.executionIds || !(client.executionIds instanceof Set)) continue;
-    if (!client.executionIds.has(executionId)) continue;
-    if (client.ws.readyState !== 1) continue;
-    try {
-      client.ws.send(JSON.stringify(data));
-      sent++;
-    } catch (err) {
-      logger.error(`[WebSocketService] Erro ao enviar broadcast (execution) para cliente ${clientId}:`, safeErrorMessage(err));
+  const tenantSet = tenantClients.get(tenantId || null);
+  if (tenantSet) {
+    for (const client of tenantSet) {
+      if (!client.executionIds || !(client.executionIds instanceof Set)) continue;
+      if (!client.executionIds.has(executionId)) continue;
+      if (client.ws.readyState !== 1) continue;
+      try {
+        client.ws.send(payload);
+        sent++;
+      } catch (err) {
+        logger.error(`[WebSocketService] Erro ao enviar broadcast (execution) para cliente ${client.id}:`, safeErrorMessage(err));
+      }
     }
   }
   logger.info('[WebSocketService] Broadcast (execution) enviado', { tenantId, executionId, sent, event: data?.event || null });
@@ -355,11 +405,12 @@ function broadcastToExecution(tenantId, executionId, data) {
  * @param {Object} data - Dados a enviar
  */
 function sendToAgent(agentId, data) {
+  const payload = JSON.stringify(data);
   let sent = 0;
   for (const [clientId, client] of clients.entries()) {
     if (client.agentId === agentId && client.ws.readyState === 1) {
       try {
-        client.ws.send(JSON.stringify(data));
+        client.ws.send(payload);
         sent++;
       } catch (err) {
         logger.error(`[WebSocketService] Erro ao enviar mensagem para agente ${agentId}:`, safeErrorMessage(err));
@@ -408,10 +459,11 @@ function emitEvent(event, payload, options = {}) {
     if (!allowGlobal) {
       logger.warn('[WebSocketService] Emitindo evento sem tenantId ou agentId - broadcast global');
     }
+    const globalPayload = JSON.stringify(message);
     for (const [clientId, client] of clients.entries()) {
       if (client.ws.readyState === 1) {
         try {
-          client.ws.send(JSON.stringify(message));
+          client.ws.send(globalPayload);
         } catch (err) {
           logger.error(`[WebSocketService] Erro ao enviar evento para cliente ${clientId}:`, safeErrorMessage(err));
         }
@@ -550,6 +602,7 @@ async function shutdownWebSocket() {
       }
     }
     clients.clear();
+    tenantClients.clear();
   } catch {
     // best-effort
   }
@@ -579,4 +632,10 @@ module.exports = {
   isAgentOnline,
   getOnlineAgentsByTenant,
   getConnectedAgentsByTenant,
+  // Funções internas para testes
+  _internal: {
+    clients,
+    tenantClients,
+    removeClient,
+  },
 };

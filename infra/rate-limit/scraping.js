@@ -10,11 +10,51 @@ const { RateLimiterRedis, RateLimiterMemory } = require('rate-limiter-flexible')
 const { getRateLimitClient } = require('../redis/rateLimitClient');
 const { getScrapingDomainPolicy } = require('./policies');
 const logger = require('../../api/utils/logger');
-const { auditEvent } = require('./index');
+const { auditEventAsync } = require('./index');
 
-// Cache de limiters por domínio
+// Cache de limiters por domínio e por execução, com bound:
+// Maps cresceriam sem limite (um limiter por domínio/executionId).
+// Cap com evicção do menos recentemente usado (LRU simples sobre a
+// ordem de inserção do Map; cada acesso re-insere a chave no fim).
+const MAX_LIMITERS_CACHE_SIZE = 500;
 const domainLimitersCache = new Map();
 const executionLimitersCache = new Map();
+
+/**
+ * Lê limiter do cache, marcando-o como usado recentemente.
+ *
+ * @param {Map<string, Object>} cache - Cache de limiters
+ * @param {string} key - Chave
+ * @returns {Object|undefined} Limiter ou undefined
+ */
+function getCachedLimiter(cache, key) {
+  const limiter = cache.get(key);
+  if (limiter !== undefined) {
+    // Re-insere no fim do Map (mais recentemente usado)
+    cache.delete(key);
+    cache.set(key, limiter);
+  }
+  return limiter;
+}
+
+/**
+ * Insere limiter no cache, evictando o menos recentemente usado
+ * quando o cap é excedido.
+ *
+ * @param {Map<string, Object>} cache - Cache de limiters
+ * @param {string} key - Chave
+ * @param {Object} limiter - Limiter
+ */
+function setCachedLimiter(cache, key, limiter) {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+  cache.set(key, limiter);
+  while (cache.size > MAX_LIMITERS_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
+}
 
 /**
  * Extrai domínio de uma URL.
@@ -41,8 +81,9 @@ function extractDomain(url) {
 function getDomainLimiter(domain) {
   const cacheKey = `domain:${domain}`;
   
-  if (domainLimitersCache.has(cacheKey)) {
-    return domainLimitersCache.get(cacheKey);
+  const cached = getCachedLimiter(domainLimitersCache, cacheKey);
+  if (cached) {
+    return cached;
   }
 
   const policy = getScrapingDomainPolicy('REQUESTS_PER_SECOND');
@@ -78,7 +119,7 @@ function getDomainLimiter(domain) {
     });
   }
 
-  domainLimitersCache.set(cacheKey, limiter);
+  setCachedLimiter(domainLimitersCache, cacheKey, limiter);
   return limiter;
 }
 
@@ -91,8 +132,9 @@ function getDomainLimiter(domain) {
 function getExecutionLimiter(executionId) {
   const cacheKey = `execution:${executionId}`;
   
-  if (executionLimitersCache.has(cacheKey)) {
-    return executionLimitersCache.get(cacheKey);
+  const cached = getCachedLimiter(executionLimitersCache, cacheKey);
+  if (cached) {
+    return cached;
   }
 
   const policy = getScrapingDomainPolicy('PAGES_PER_EXECUTION');
@@ -128,7 +170,7 @@ function getExecutionLimiter(executionId) {
     });
   }
 
-  executionLimitersCache.set(cacheKey, limiter);
+  setCachedLimiter(executionLimitersCache, cacheKey, limiter);
   return limiter;
 }
 
@@ -179,7 +221,7 @@ async function checkScrapingRateLimit(options) {
       retryAfter = policy?.duration || 1;
     }
     
-    await auditEvent({
+    auditEventAsync({
       userId: userId || 'unknown',
       operationType: 'SCRAPING_DOMAIN',
       policy: policy,
@@ -218,7 +260,7 @@ async function checkScrapingRateLimit(options) {
         retryAfter = policy?.duration || 3600;
       }
       
-      await auditEvent({
+      auditEventAsync({
         userId: userId || 'unknown',
         operationType: 'SCRAPING_EXECUTION',
         policy: policy,
@@ -235,8 +277,8 @@ async function checkScrapingRateLimit(options) {
     }
   }
 
-  // Registra evento (permitido)
-  await auditEvent({
+  // Registra evento (permitido) em background — nunca bloqueia o request
+  auditEventAsync({
     userId: userId || 'unknown',
     operationType: 'SCRAPING',
     policy: getScrapingDomainPolicy('REQUESTS_PER_SECOND'),
@@ -272,5 +314,11 @@ module.exports = {
   checkScrapingRateLimit,
   enforceScrapingRateLimit,
   extractDomain,
+  getDomainLimiter,
+  getExecutionLimiter,
+  // Exportados para testes/diagnóstico do bound dos caches
+  MAX_LIMITERS_CACHE_SIZE,
+  domainLimitersCache,
+  executionLimitersCache,
 };
 

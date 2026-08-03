@@ -38,6 +38,8 @@ const {
 describe('tenantService SaaS (PostgreSQL)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Limpa o cache de getTenant entre testes (TTL curto em memória)
+    require('../tenantService')._internal.clearTenantCache();
     // Limpa mocks dos models
     Object.values(mockModels).forEach(model => {
       Object.values(model).forEach(method => {

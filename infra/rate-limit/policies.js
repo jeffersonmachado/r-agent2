@@ -7,6 +7,7 @@
  * - BOOTSTRAP: Extremamente restritivo
  * - SCRAPING: Por domínio e por execução
  * - SYSTEM_VALIDATE: Validações de sistema
+ * - TENANT_API / TENANT_USER_API: por tenant (dinâmico, codifica plano/pontos/duração)
  * 
  * Valores são lidos de config.json com fallback para variáveis de ambiente.
  */
@@ -127,6 +128,66 @@ const DEFAULT_POLICIES = {
   },
 };
 
+// -----------------------------------------------------------------------
+// Rate limit por tenant (api/middleware/tenantRateLimit.js).
+// O operationType é dinâmico e codifica plano/pontos/duração:
+//   TENANT_API_<plano>_<points>_<duration>        (limites do plano)
+//   TENANT_API_<points>_<duration>                (enterprise custom)
+//   TENANT_USER_API_<plano>_<points>_<duration>   (por usuário, plano)
+//   TENANT_USER_API_<points>_<duration>           (enterprise custom)
+// Estas tabelas são a fonte canônica de pontos por plano; o middleware
+// consome as mesmas tabelas para headers e fallbacks.
+// -----------------------------------------------------------------------
+const TENANT_API_PLAN_LIMITS = {
+  basic: { points: 500, duration: 60 },
+  free: { points: 100, duration: 60 },
+  trial: { points: 500, duration: 60 },
+  pro: { points: 2000, duration: 60 },
+  enterprise: { points: 10000, duration: 60 },
+};
+
+// Limites por usuário são menores que por tenant
+const TENANT_USER_API_PLAN_LIMITS = {
+  basic: { points: 100, duration: 60 },
+  free: { points: 20, duration: 60 },
+  trial: { points: 100, duration: 60 },
+  pro: { points: 500, duration: 60 },
+  enterprise: { points: 2000, duration: 60 },
+};
+
+const TENANT_API_OPERATION_PATTERN = /^TENANT_(USER_)?API_(?:([a-z]+)_)?(\d+)_(\d+)$/;
+
+/**
+ * Resolve política dinâmica de rate limit por tenant.
+ *
+ * @param {string} operationType - Tipo de operação (TENANT_API_* / TENANT_USER_API_*)
+ * @returns {Object|null} Política ou null se não reconhecida
+ */
+function getTenantApiPolicy(operationType) {
+  const match = TENANT_API_OPERATION_PATTERN.exec(operationType);
+  if (!match) {
+    return null;
+  }
+
+  const userScope = match[1] === 'USER_';
+  const plan = match[2] || null;
+  const points = parseInt(match[3], 10);
+  const duration = parseInt(match[4], 10);
+
+  if (!Number.isFinite(points) || points <= 0 || !Number.isFinite(duration) || duration <= 0) {
+    return null;
+  }
+
+  if (plan) {
+    // Plano conhecido: usa os limites canônicos do plano
+    const planLimits = userScope ? TENANT_USER_API_PLAN_LIMITS : TENANT_API_PLAN_LIMITS;
+    return planLimits[plan] || null;
+  }
+
+  // Sem plano: limite customizado (enterprise via tenant.settings)
+  return { points, duration };
+}
+
 /**
  * Políticas específicas para scraping por domínio.
  */
@@ -151,7 +212,7 @@ const SCRAPING_DOMAIN_POLICIES = {
  * @returns {Object|null} Política ou null se não encontrada
  */
 function getPolicy(operationType) {
-  return DEFAULT_POLICIES[operationType] || null;
+  return DEFAULT_POLICIES[operationType] || getTenantApiPolicy(operationType);
 }
 
 /**
@@ -179,6 +240,8 @@ function getAllPolicies() {
 module.exports = {
   DEFAULT_POLICIES,
   SCRAPING_DOMAIN_POLICIES,
+  TENANT_API_PLAN_LIMITS,
+  TENANT_USER_API_PLAN_LIMITS,
   getPolicy,
   getScrapingDomainPolicy,
   getAllPolicies,

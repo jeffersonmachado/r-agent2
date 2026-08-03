@@ -107,9 +107,9 @@ async function requireTenant(req) {
     };
   }
 
-  // Valida status do tenant
+  // Valida status do tenant (reusa o tenant já carregado — evita nova query)
   try {
-    const statusValidation = await validateTenantStatus(tenantId);
+    const statusValidation = await validateTenantStatus(tenantId, tenant);
     if (!statusValidation.valid) {
       logger.warn('[TenantValidation] Tentativa de acesso a tenant inválido/suspenso', {
         tenantId,

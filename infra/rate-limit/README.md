@@ -202,19 +202,12 @@ await enforceScrapingRateLimit({
 
 ## 📝 Auditoria
 
-Todos os eventos são registrados em `reports/rate-limit-events.json`:
+Todos os eventos são registrados em `reports/rate-limit-events.json` em formato
+**append-only NDJSON** (uma linha JSON por evento, `fs.appendFile`, sem rewrite
+do arquivo e fire-and-forget — nunca awaited no caminho do request):
 
 ```json
-{
-  "timestamp": "2025-01-01T12:00:00.000Z",
-  "userId": "user-123",
-  "operationType": "GENERATION_REAL",
-  "policy": { "points": 5, "duration": 60 },
-  "blocked": false,
-  "retryAfter": null,
-  "remainingPoints": 4,
-  "totalPoints": 5
-}
+{"timestamp":"2025-01-01T12:00:00.000Z","userId":"user-123","operationType":"GENERATION_REAL","policy":{"points":5,"duration":60},"blocked":false,"retryAfter":null,"remainingPoints":4,"totalPoints":5}
 ```
 
 ## 🔍 Monitoramento

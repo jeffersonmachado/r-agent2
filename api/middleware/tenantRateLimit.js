@@ -11,6 +11,7 @@
  */
 
 const { checkRateLimit } = require('../../infra/rate-limit');
+const { TENANT_API_PLAN_LIMITS, TENANT_USER_API_PLAN_LIMITS } = require('../../infra/rate-limit/policies');
 const { getTenant } = require('../services/tenantService');
 const { requireTenant } = require('./tenantValidation');
 const { isSuperAdmin } = require('../services/superAdminService');
@@ -18,30 +19,10 @@ const logger = require('../utils/logger');
 
 /**
  * Limites de requisições por minuto por plano.
+ * Fonte canônica: infra/rate-limit/policies.js (o operationType dinâmico
+ * TENANT_API_<plano>_<points>_<duration> resolve nessa mesma tabela).
  */
-const RATE_LIMITS_BY_PLAN = {
-  // Alias "basic" (SaaS) -> limites similares ao trial
-  basic: {
-    points: 500,
-    duration: 60,
-  },
-  free: {
-    points: 100,
-    duration: 60, // 60 segundos
-  },
-  trial: {
-    points: 500,
-    duration: 60,
-  },
-  pro: {
-    points: 2000,
-    duration: 60,
-  },
-  enterprise: {
-    points: 10000,
-    duration: 60,
-  },
-};
+const RATE_LIMITS_BY_PLAN = TENANT_API_PLAN_LIMITS;
 
 /**
  * Middleware que aplica rate limiting por tenant.
@@ -76,9 +57,12 @@ async function tenantRateLimitMiddleware(req, res, sendJson) {
       const tenantId = req.tenantId;
       const tenant = req.tenant;
       const limits = RATE_LIMITS_BY_PLAN[tenant.plan] || RATE_LIMITS_BY_PLAN.trial;
+      // Plano desconhecido cai no fallback trial: o operationType precisa
+      // refletir o plano efetivo para resolver na política canônica
+      const effectivePlan = RATE_LIMITS_BY_PLAN[tenant.plan] ? tenant.plan : 'trial';
       
       try {
-        const operationType = `TENANT_API_${tenant.plan}_${limits.points}_${limits.duration}`;
+        const operationType = `TENANT_API_${effectivePlan}_${limits.points}_${limits.duration}`;
         const result = await checkRateLimit({
           userId: `tenant:${tenantId}`,
           operationType,
@@ -160,10 +144,13 @@ async function tenantRateLimitMiddleware(req, res, sendJson) {
 
   // Obtém limites do plano
   const limits = RATE_LIMITS_BY_PLAN[tenant.plan] || RATE_LIMITS_BY_PLAN.trial;
+  // Plano desconhecido cai no fallback trial: o operationType precisa
+  // refletir o plano efetivo para resolver na política canônica
+  const effectivePlan = RATE_LIMITS_BY_PLAN[tenant.plan] ? tenant.plan : 'trial';
 
   try {
     // Usa operação específica para rate limiting por tenant
-    const operationType = `TENANT_API_${tenant.plan}_${limits.points}_${limits.duration}`;
+    const operationType = `TENANT_API_${effectivePlan}_${limits.points}_${limits.duration}`;
     
     const result = await checkRateLimit({
       userId: `tenant:${tenantId}`,
@@ -276,18 +263,12 @@ async function tenantUserRateLimitMiddleware(req, res, sendJson) {
   }
 
   // Limites por usuário são menores que por tenant
-  const userLimits = {
-    basic: { points: 100, duration: 60 },
-    free: { points: 20, duration: 60 },
-    trial: { points: 100, duration: 60 },
-    pro: { points: 500, duration: 60 },
-    enterprise: { points: 2000, duration: 60 },
-  };
-
-  const limits = userLimits[tenant.plan] || userLimits.trial;
+  // Fonte canônica: infra/rate-limit/policies.js (TENANT_USER_API_PLAN_LIMITS)
+  const limits = TENANT_USER_API_PLAN_LIMITS[tenant.plan] || TENANT_USER_API_PLAN_LIMITS.trial;
+  const effectivePlan = TENANT_USER_API_PLAN_LIMITS[tenant.plan] ? tenant.plan : 'trial';
 
   try {
-    const operationType = `TENANT_USER_API_${tenant.plan}_${limits.points}_${limits.duration}`;
+    const operationType = `TENANT_USER_API_${effectivePlan}_${limits.points}_${limits.duration}`;
     
     const result = await checkRateLimit({
       userId: `tenant:${tenantId}:user:${userId}`,
