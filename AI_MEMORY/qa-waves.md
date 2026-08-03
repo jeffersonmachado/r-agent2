@@ -33,7 +33,7 @@ Platform readiness: **AUTONOMOUS_READY_GO** (score 98.5, 0 blocking gaps, regene
 ## Legacy cleanup (2026-07-21)
 
 - Removed 3 scenario-store backups: `scenario-store.backup-1780062163517.json`, `scenario-store.backup-1780062959548.json`, `scenario-store.backup-1780063087327.json`.
-- Removed `api/modules/qa-waves/aiScenarioAdapter.ts` (unused TypeScript duplicate; canonical is `aiScenarioAdapter.js`).
+- Removed the unused TypeScript duplicate `aiScenarioAdapter.ts` (it lived in api/modules/qa-waves; canonical is `aiScenarioAdapter.js`).
 - `dev/qa-waves-ui/` is a legacy prototype (not a git worktree); preserved for reference, not part of the build or release pipeline. Contains uncommitted changes — do NOT delete without explicit confirmation.
 
 ## Snapshot refresh cadence (Gap 4)
@@ -116,7 +116,7 @@ Ciclo completo dirigido por browser real (Playwright headed, DISPLAY=:1) com dri
 
 ### Follow-ups registrados (não bloqueantes)
 
-- **GO estrutural do replay `leads`**: o NO_GO remanescente vem de provas de browser (screenshotAfter/network proof) que só existem para jornadas blocking (`support_ticket_flow`, `fitness_customer_checkin`) com step definitions + `browserOperationalRunner` + seed provisioning. Promover `leads` exige: `journeyStepDefinitions/leadsFlowSteps.js`, seed operacional (`qa/seeds/leadsOperationalSeed.js`), registro em `isBlockingOperationalJourney`/`resolveJourneyStepSpecs`/`validateOperationalSeedOutcome`, e então `:incremented` em tabelas de negócio passa a ser exigível. Estimativa: 1-2 dias.
+- **GO estrutural do replay `leads`**: o NO_GO remanescente vem de provas de browser (screenshotAfter/network proof) que só existem para jornadas blocking (`support_ticket_flow`, `fitness_customer_checkin`) com step definitions + `browserOperationalRunner` + seed provisioning. Promover `leads` exige: criar `leadsFlowSteps.js` em `api/services/qa/journeyStepDefinitions/`, seed operacional (`leadsOperationalSeed.js` em `qa/seeds/`), registro em `isBlockingOperationalJourney`/`resolveJourneyStepSpecs`/`validateOperationalSeedOutcome`, e então `:incremented` em tabelas de negócio passa a ser exigível. Estimativa: 1-2 dias.
 - **Não registrar `step_001..step_007` no `operationalStepRegistry`**: o registry é global por stepId e outros cenários reutilizam ids genéricos — registro causaria colisão (`step_action_type_not_canonical`). Os blockers `operational_step_contract_missing`/`replay_step_missing_network_proof` para jornadas simuladas são advisory (`blocking: false`) e by design.
 - **3 testes falhando em `api/services/__tests__/operationalSemanticConsistency.test.js`**: pré-existentes (falham também sem as mudanças desta sessão).
 - `save-scenario` normaliza `steps := semanticSteps` (já registrado acima); edits diretos no store exigem atualizar ambos.

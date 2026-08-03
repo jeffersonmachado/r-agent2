@@ -1,6 +1,6 @@
 # Rotas do Frontend
 
-Atualizado em 2026-04-30. Fonte: `frontend/src/main.jsx`, `frontend/src/navigation/menu.js` e rotas contextuais de projetos/storefront.
+Atualizado em 2026-08-03. Fonte: `frontend/src/main.jsx`, `frontend/src/navigation/menu.js` e rotas contextuais de projetos/storefront.
 
 ## Rotas públicas
 
@@ -54,7 +54,7 @@ Atualizado em 2026-04-30. Fonte: `frontend/src/main.jsx`, `frontend/src/navigati
 | `/analytics` | Análises e métricas. |
 | `/tenant-intelligence` | Inteligência do tenant. |
 | `/channel-health` | Saúde dos canais. |
-| `/system-status` | Status dos serviços. |
+| `/system-status` | Alias legado de `/dev/system-status` (status dos serviços). |
 | `/plan-usage` | Plano e consumo. |
 | `/orders` | Pedidos operacionais. |
 | `/kitchen` | Operação de cozinha. |
@@ -104,8 +104,8 @@ Atualizado em 2026-04-30. Fonte: `frontend/src/main.jsx`, `frontend/src/navigati
 | `/sla-policies` | Políticas de SLA. |
 | `/generate-system` | Geração de sistema/fluxo/RPA/seed. |
 | `/dev/rpa-test` | Execução de testes RPA. |
-| `/dev/rpa-replays` | Replays RPA. |
-| `/rpa-seeds` | Seeds RPA. |
+| `/dev/rpa-replays` | Replays RPA (rota canônica; `/rpa-replays` é alias). |
+| `/dev/rpa-seeds` | Seeds RPA (rota canônica; `/rpa-seeds` é alias legado). |
 | `/chat` | Chat de teste. |
 | `/ai-tools` | Ferramentas de IA. |
 | `/segmentation` | Segmentação. |
@@ -143,18 +143,12 @@ Atualizado em 2026-04-30. Fonte: `frontend/src/main.jsx`, `frontend/src/navigati
 | `/super-admin` | Painel de super-admin. |
 | `/dev` | Central de desenvolvimento. |
 | `/dev-dashboard` | Alias da central de desenvolvimento. |
+| `/dev/system-status` | Status dos serviços (rota canônica). |
 | `/dev/qa-waves` | QA Waves integrado. |
-| `/dev/work-management` | Gestão de trabalho: visão geral. |
-| `/dev/work-management/projects` | Gestão de trabalho: projetos. |
-| `/dev/work-management/board` | Gestão de trabalho: quadro. |
-| `/dev/work-management/timeline` | Gestão de trabalho: linha do tempo. |
-| `/dev/work-management/deliverables` | Gestão de trabalho: entregáveis. |
-| `/dev/work-management/operations` | Gestão de trabalho: operações. |
-| `/dev/work-management/qa-validation` | Gestão de trabalho: QA e validação. |
-| `/dev/work-management/documents` | Gestão de trabalho: documentos. |
-| `/dev/work-management/team` | Gestão de trabalho: equipe. |
-| `/dev/work-management/metrics` | Gestão de trabalho: métricas. |
-| `/dev/work-management/ai-suggestions` | Gestão de trabalho: sugestões de IA. |
+| `/dev/qa-waves/operational-health` | QA Waves: saúde operacional. |
+| `/dev/qa-waves/enterprise-governance` | QA Waves: governança enterprise. |
+| `/dev/qa-audit` | Auditoria QA. |
+| `/dev/qa-gaps` | Gaps operacionais de QA. |
 
 ## Observações de navegação
 
@@ -162,3 +156,5 @@ Atualizado em 2026-04-30. Fonte: `frontend/src/main.jsx`, `frontend/src/navigati
 - O menu secundário lista as rotas da macroárea ativa e agora também pode exibir rotas marcadas apenas como ocultas do rail.
 - Rotas públicas não entram no rail autenticado por desenho.
 - Rotas PBX sob `/pbx/*` que não têm página dedicada usam o módulo genérico `PbxModulePage`.
+- Rotas com prefixo `/dev` (e aliases `/rpa-replays`, `/rpa-seeds`, `/system-status`) são classificadas DEVELOPMENT pela política de segregação de experiência (`api/modules/agent-os/experience-segregation.js`): ficam ocultas para PRODUCTION, e o guard `frontend/src/utils/menuPermissions.js` (`PROTECTED_PATH_PREFIXES`) exige `super_admin` mesmo em acesso direto por URL. A segregação é in-app (mesma SPA/API); não existe app separado para suporte/dev.
+- A Gestão de Trabalho (antigas rotas `/dev/work-management*`) foi extraída da SPA em 2026-07-28 para o app standalone de engenharia `dev/work-management/` (Vite, porta 5177), desconectado do pacote operacional e fora do pipeline de release.

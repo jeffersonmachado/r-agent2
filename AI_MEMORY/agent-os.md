@@ -107,6 +107,10 @@ Rotina agregadora de aprendizado — automatiza o trecho não-humano do pipeline
 - Validador: `api/modules/agent-os/experience-segregation.js`
 - Política: PRODUCTION / SUPPORT / DEVELOPMENT
 - Rotas de Replay, QA Waves, Seeds, RPA permanecem ocultas para usuários operacionais
+- Modelo: segregação **in-app** (mesma SPA/API) — não existe app separado para suporte/dev. A rota `/dev` existe por design (Central Dev) e está classificada DEVELOPMENT.
+- Guards: itens `/dev*` no menu exigem `roles: ['super_admin']` (`frontend/src/navigation/menu.js`); guard de rota `PROTECTED_PATH_PREFIXES` (`/dev`, `/qa`, `/qa-mesh`, `/rpa*`) em `frontend/src/utils/menuPermissions.js` bloqueia acesso direto por URL para não super_admin; backend usa `requireClassification('DEVELOPMENT')` (ex.: `/dev/qa-waves/*`) e `isSuperAdmin` (ex.: `/dev/files*`).
+- Gate bloqueante: `npm run validate:visibility-policy` (PASS em 2026-08-03, 0 violações).
+- Apps standalone em `dev/` (fora do pacote operacional e do pipeline de release): `dev/qa-waves-ui/` (protótipo legado, ver `AI_MEMORY/qa-waves.md`) e `dev/work-management/` (Gestão de Trabalho extraída da SPA em 2026-07-28; roda isolado na porta 5177).
 
 ## Migration
 

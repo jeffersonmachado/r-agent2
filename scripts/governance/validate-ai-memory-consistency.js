@@ -68,6 +68,11 @@ function extractReferencesFromMd(filePath) {
     const pathRe = /\b([a-z][a-z0-9_]*(?:\/[a-z][a-z0-9_\-.]*)+\.(?:js|json|md|yml|sh|mjs|cjs|html|css))\b/g;
     while ((match = pathRe.exec(content)) !== null) {
       const ref = match[1];
+      // Skip matches that are suffixes of a longer path — e.g. `github/...` inside
+      // `.github/...` or `mesh/...` inside `qa-mesh/...` (the full ref is captured by
+      // the backtick regex above; the suffix alone would be a false stale-ref).
+      const prevChar = match.index > 0 ? content[match.index - 1] : '';
+      if (prevChar === '.' || prevChar === '/' || prevChar === '-') continue;
       if (!refs.some(r => r.ref === ref)) {
         refs.push({ ref, line: content.substring(0, match.index).split('\n').length });
       }
