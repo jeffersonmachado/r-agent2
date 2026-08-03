@@ -207,30 +207,142 @@ function deleteDocumentBestEffort(id) {
 
 /**
  * Inicializa cache em memória a partir do PostgreSQL (best-effort).
+ *
+ * Cache leve: carrega apenas metadados (sem a coluna `content`), mantendo a
+ * memória proporcional aos metadados e não ao corpus. Consumidores que
+ * precisam do content fazem query pontual por id (findByPk).
  */
 async function initialize() {
   if (!dbAvailable()) return;
   try {
     const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-    const rows = await RagDocumentModel.findAll();
+    const rows = await RagDocumentModel.findAll({ attributes: { exclude: ['content'] } });
     documents = new Map();
     for (const row of rows) {
       const doc = fromDbRow(row);
       documents.set(doc.id, doc);
     }
-    logger.info('[RAGDocuments] Cache inicializado do PostgreSQL', { count: documents.size });
+    logger.info('[RAGDocuments] Cache inicializado do PostgreSQL (metadados, sem content)', { count: documents.size });
   } catch (err) {
     logger.warn('[RAGDocuments] Falha ao inicializar cache do PostgreSQL', { error: safeErrorMessage(err) });
   }
 }
 
 /**
- * Lista documentos com filtros opcionais.
- * 
- * @param {Object} filters - Filtros (tenantId, source, category, productId, clientId, status)
- * @returns {Array} Lista de documentos
+ * Escapa curingas de LIKE/ILIKE (\, %, _) para busca substring segura.
  */
-function listDocuments(filters = {}) {
+function escapeLikePattern(term) {
+  return safeToString(term, '').replace(/[\\%_]/g, (m) => `\\${m}`);
+}
+
+/**
+ * Busca no DB os ids de documentos cujo título ou content casam (substring,
+ * case-insensitive) com o termo — equivalente ao filtro em memória anterior.
+ *
+ * @param {string} searchLower - Termo já normalizado (trim/lower)
+ * @param {string|null} tenantId - Escopo de tenant (opcional)
+ * @returns {Promise<Set<string>>} Ids que casam com o termo
+ */
+async function findDocumentIdsMatchingSearch(searchLower, tenantId = null) {
+  const sequelize = getSequelize();
+  const replacements = { pattern: `%${escapeLikePattern(searchLower)}%` };
+  let sql = "SELECT id FROM rag_documents WHERE (title ILIKE :pattern ESCAPE '\\' OR content ILIKE :pattern ESCAPE '\\')";
+  if (tenantId) {
+    sql += ' AND tenant_key = :tenantId';
+    replacements.tenantId = tenantId;
+  }
+  const [rows] = await sequelize.query(sql, { replacements });
+  return new Set((rows || []).map((r) => r && r.id).filter(Boolean));
+}
+
+/**
+ * Carrega o content de um documento via query pontual (findByPk).
+ *
+ * @param {string} documentId
+ * @returns {Promise<string|null>} Content, '' se vazio, null se não encontrado/DB indisponível
+ */
+async function loadDocumentContent(documentId) {
+  if (!dbAvailable()) return null;
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  const row = await RagDocumentModel.findByPk(safeToString(documentId), { attributes: ['id', 'content'] });
+  if (!row) return null;
+  const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+  return base.content || '';
+}
+
+/**
+ * Retorna (uma única query) os ids, dentre os informados, que têm content
+ * não vazio no DB. Retorna null quando o DB está indisponível (caller decide
+ * o fallback).
+ *
+ * @param {string[]} ids
+ * @returns {Promise<Set<string>|null>}
+ */
+async function loadContentfulDocumentIds(ids) {
+  if (!dbAvailable() || !Array.isArray(ids) || ids.length === 0) return null;
+  const sequelize = getSequelize();
+  const [rows] = await sequelize.query(
+    "SELECT id FROM rag_documents WHERE id IN (:ids) AND content IS NOT NULL AND btrim(content) <> ''",
+    { replacements: { ids } }
+  );
+  return new Set((rows || []).map((r) => r && r.id).filter(Boolean));
+}
+
+/**
+ * Hidrata o content de documentos leves (content === undefined) via uma única
+ * query em lote. Retorna cópias — nunca muta as entradas do cache leve.
+ * Sem DB disponível, retorna os documentos como estão (modo degradado).
+ *
+ * @param {Array} docs
+ * @returns {Promise<Array>}
+ */
+async function hydrateDocumentsWithContent(docs) {
+  if (!Array.isArray(docs) || docs.length === 0 || !dbAvailable()) return docs;
+  const missing = docs.filter((d) => d && d.content === undefined && d.id);
+  if (missing.length === 0) return docs;
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  const rows = await RagDocumentModel.findAll({
+    attributes: ['id', 'content'],
+    where: { id: missing.map((d) => d.id) },
+  });
+  const contentById = new Map(rows.map((r) => {
+    const base = r.toJSON ? r.toJSON() : (r.dataValues || r);
+    return [base.id, base.content];
+  }));
+  return docs.map((d) => (
+    d && d.content === undefined
+      ? { ...d, content: contentById.get(d.id) || '' }
+      : d
+  ));
+}
+
+function coerceOffset(raw) {
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const n = Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+function coerceLimit(raw) {
+  if (raw === undefined || raw === null || raw === '') return null; // sem limite (comportamento legado)
+  const n = Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return n;
+}
+
+/**
+ * Lista documentos com filtros opcionais.
+ *
+ * O filtro `search` consulta o DB com ILIKE (título/content) quando o DB está
+ * disponível; sem DB, cai no filtro em memória legado (cache degradado).
+ * Paginação opcional via limit/offset — sem limit informado, retorna tudo
+ * (comportamento legado). Documentos leves têm o content hidratado na resposta
+ * (uma query em lote), preservando os campos de antes.
+ *
+ * @param {Object} filters - Filtros (tenantId, source, category, productId, clientId, status, search, limit, offset)
+ * @returns {Promise<Array>} Lista de documentos
+ */
+async function listDocuments(filters = {}) {
   let result = Array.from(documents.values());
 
   if (filters.tenantId) {
@@ -260,11 +372,16 @@ function listDocuments(filters = {}) {
   if (filters.search != null) {
     const searchLower = safeTrimLower(filters.search);
     if (searchLower) {
-      result = result.filter(doc => {
-        const titleLower = safeTrimLower(doc.title);
-        const contentLower = safeTrimLower(doc.content);
-        return titleLower.includes(searchLower) || contentLower.includes(searchLower);
-      });
+      if (dbAvailable()) {
+        const matchingIds = await findDocumentIdsMatchingSearch(searchLower, filters.tenantId || null);
+        result = result.filter(doc => matchingIds.has(doc.id));
+      } else {
+        result = result.filter(doc => {
+          const titleLower = safeTrimLower(doc.title);
+          const contentLower = safeTrimLower(doc.content);
+          return titleLower.includes(searchLower) || contentLower.includes(searchLower);
+        });
+      }
     }
   }
 
@@ -275,7 +392,17 @@ function listDocuments(filters = {}) {
     return dateB - dateA;
   });
 
-  return result;
+  // Paginação opcional (preserva comportamento atual quando não informada)
+  const offset = coerceOffset(filters.offset);
+  const limit = coerceLimit(filters.limit);
+  if (offset > 0) {
+    result = result.slice(offset);
+  }
+  if (limit !== null) {
+    result = result.slice(0, limit);
+  }
+
+  return await hydrateDocumentsWithContent(result);
 }
 
 /**
@@ -286,6 +413,21 @@ function listDocuments(filters = {}) {
  */
 function getDocument(documentId) {
   return documents.get(documentId) || null;
+}
+
+/**
+ * Obtém um documento por ID com o content hidratado (query pontual por id).
+ * Usado por consumidores que precisam do content integral; o cache leve
+ * continua sem content.
+ *
+ * @param {string} documentId - ID do documento
+ * @returns {Promise<Object|null>} Documento (cópia, com content quando o DB está disponível) ou null
+ */
+async function getDocumentWithContent(documentId) {
+  const document = documents.get(documentId) || null;
+  if (!document) return null;
+  const [hydrated] = await hydrateDocumentsWithContent([document]);
+  return hydrated || document;
 }
 
 /**
@@ -332,8 +474,17 @@ async function createDocument(documentData, tenantId, options = {}) {
         persistFn: persistDocumentBestEffort,
         generateContentHash: ragDeduplicationService.generateContentHash,
         reindexDocumentFn: reindexDocument,
+        loadContentFn: loadDocumentContent,
       });
       if (duplicateResult) {
+        // Cache leve: hidrata content na resposta (query pontual), sem regravar no cache
+        if (duplicateResult.document) {
+          const [hydratedDoc] = await hydrateDocumentsWithContent([duplicateResult.document]);
+          duplicateResult.document = hydratedDoc;
+          if (duplicateResult.existingDocument) {
+            duplicateResult.existingDocument = hydratedDoc;
+          }
+        }
         return duplicateResult;
       }
     }
@@ -399,9 +550,12 @@ async function updateDocument(documentId, updates) {
       await ragDocumentsLifecycle.reindexUpdatedDocument(document, persistDocumentBestEffort);
     }
 
+    // Cache leve: resposta preserva o campo content (query pontual, cópia)
+    const [responseDocument] = await hydrateDocumentsWithContent([document]);
+
     return {
       success: true,
-      document,
+      document: responseDocument || document,
     };
   } catch (error) {
     logger.error('[RAGDocuments] Erro ao atualizar documento:', error);
@@ -498,7 +652,7 @@ async function deleteDocument(documentId) {
  * @returns {Promise<{success: boolean, chunksCreated: number, error?: string}>}
  */
 async function reindexDocument(documentId) {
-  return await ragDocumentsIndexing.reindexDocument(documentId, documents, persistDocumentBestEffort);
+  return await ragDocumentsIndexing.reindexDocument(documentId, documents, persistDocumentBestEffort, loadDocumentContent);
 }
 
 /**
@@ -514,7 +668,8 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
     includeInconsistent,
     documents,
     persistDocumentBestEffort,
-    reindexDocument
+    reindexDocument,
+    loadContentfulDocumentIds
   );
 }
 
@@ -578,6 +733,7 @@ module.exports = {
   initialize,
   listDocuments,
   getDocument,
+  getDocumentWithContent,
   findDocumentByUrl,
   findDocumentByFileName,
   createDocument,

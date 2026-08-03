@@ -27,9 +27,11 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
         clientId: url.searchParams.get('clientId') || null,
         status: url.searchParams.get('status') || null,
         search: url.searchParams.get('search') || null,
+        limit: url.searchParams.get('limit') || null,
+        offset: url.searchParams.get('offset') || null,
       };
 
-      deps.sendJson(res, 200, deps.listDocuments(filters));
+      deps.sendJson(res, 200, await deps.listDocuments(filters));
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao listar documentos:' });
     }
@@ -82,7 +84,7 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
       if (!tenantId) return true;
 
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
-      const document = deps.getDocument(documentId);
+      const document = await deps.ragDocumentsService.getDocumentWithContent(documentId);
 
       if (!document || (document.tenantId && document.tenantId !== tenantId)) {
         deps.sendJson(res, 404, { error: 'document_not_found' });

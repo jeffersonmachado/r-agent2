@@ -222,8 +222,8 @@ class Settings(BaseSettings):
         if _CONFIG_JSON else "openai"
     )
     llm_model: str = (
-        _CONFIG_JSON.get('llm', {}).get('model', 'gpt-3.5-turbo')
-        if _CONFIG_JSON else "gpt-3.5-turbo"
+        _CONFIG_JSON.get('llm', {}).get('model', 'gpt-4o-mini')
+        if _CONFIG_JSON else "gpt-4o-mini"
     )
     llm_api_key: Optional[str] = None
     llm_max_tokens: int = (

@@ -49,10 +49,17 @@ function findDocumentByFileName(fileName, tenantId, documentsCache, fileSize = n
   return null;
 }
 
-async function ensureContentHash(document, generateContentHash, documentsCache, persistFn) {
-  if (document.metadata?.content_hash || !document.content) return;
+async function ensureContentHash(document, generateContentHash, documentsCache, persistFn, loadContentFn = null) {
+  if (document.metadata?.content_hash) return;
 
-  const contentHash = await generateContentHash(document.content);
+  // Cache leve: content pode não estar em memória; busca pontual no DB
+  let content = document.content;
+  if (content === undefined && loadContentFn) {
+    content = await loadContentFn(document.id);
+  }
+  if (!content) return;
+
+  const contentHash = await generateContentHash(content);
   document.metadata = {
     ...document.metadata,
     content_hash: contentHash,
@@ -61,7 +68,7 @@ async function ensureContentHash(document, generateContentHash, documentsCache, 
   persistFn(document);
 }
 
-async function maybeReindexDuplicate(documentData, existingDoc, finalTenantId, documentsCache, persistFn, generateContentHash, reindexDocumentFn) {
+async function maybeReindexDuplicate(documentData, existingDoc, finalTenantId, documentsCache, persistFn, generateContentHash, reindexDocumentFn, loadContentFn = null) {
   if (documentData.autoIndex === false || existingDoc.indexed) {
     return;
   }
@@ -72,7 +79,7 @@ async function maybeReindexDuplicate(documentData, existingDoc, finalTenantId, d
   });
 
   try {
-    await ensureContentHash(existingDoc, generateContentHash, documentsCache, persistFn);
+    await ensureContentHash(existingDoc, generateContentHash, documentsCache, persistFn, loadContentFn);
     await reindexDocumentFn(existingDoc.id);
   } catch (indexError) {
     logger.error('[RAGDocuments] Erro ao indexar documento duplicado', {
@@ -94,6 +101,7 @@ async function handleDuplicateDocument({
   persistFn,
   generateContentHash,
   reindexDocumentFn,
+  loadContentFn = null,
 }) {
   if (!documentData?.metadata) return null;
 
@@ -115,7 +123,8 @@ async function handleDuplicateDocument({
         documentsCache,
         persistFn,
         generateContentHash,
-        reindexDocumentFn
+        reindexDocumentFn,
+        loadContentFn
       );
 
       return {
@@ -152,7 +161,8 @@ async function handleDuplicateDocument({
         documentsCache,
         persistFn,
         generateContentHash,
-        reindexDocumentFn
+        reindexDocumentFn,
+        loadContentFn
       );
 
       return {

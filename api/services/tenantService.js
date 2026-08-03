@@ -315,7 +315,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
       return;
     }
     
-    const existingDocs = ragDocsService.listDocuments({
+    const existingDocs = await ragDocsService.listDocuments({
       tenantId,
       source: 'site_institucional',
     });

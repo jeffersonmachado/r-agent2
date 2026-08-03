@@ -182,7 +182,7 @@ services:
       VECTOR_STORE_PATH: ${VECTOR_STORE_PATH:-/var/lib/ragent2/rag/vector_store}
       ADAPTIVE_LEARNING_DATA_PATH: ${ADAPTIVE_LEARNING_DATA_PATH:-/var/lib/ragent2/rag/adaptive_learning}
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
-      LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
+      LLM_MODEL: ${RAG_LLM_MODEL:-gpt-4o-mini}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
     ports:

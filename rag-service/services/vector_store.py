@@ -53,12 +53,42 @@ def _pgvector_literal(vec: List[float]) -> str:
     return "[" + ",".join(str(float(x)) for x in vec) + "]"
 
 
+_IVFFLAT_PROBES_LOGGED = False
+
+
+def _resolve_ivfflat_probes() -> int:
+    """
+    Número de probes do índice ivfflat (lists=100). Default do Postgres é 1,
+    o que degrada recall; 10 é um piso razoável. Configurável via
+    RAG_IVFFLAT_PROBES (mínimo 1, coerção defensiva).
+    """
+    import os
+    raw = os.getenv("RAG_IVFFLAT_PROBES")
+    if raw:
+        try:
+            probes = int(str(raw).strip())
+            if probes >= 1:
+                return probes
+        except Exception:
+            pass
+    return 10
+
+
 def _get_conn():
+    global _IVFFLAT_PROBES_LOGGED
     settings = get_settings()
     dsn = settings.postgres_dsn
     if not dsn:
         raise RuntimeError("Postgres DSN não configurado. Defina DATABASE_URL (recomendado) ou PGHOST/PGUSER/PGDATABASE.")
-    return psycopg2.connect(dsn)
+    conn = psycopg2.connect(dsn)
+    # Conexões são por operação: SET de sessão cobre search + dedup.
+    probes = _resolve_ivfflat_probes()
+    with conn.cursor() as cur:
+        cur.execute(f"SET ivfflat.probes = {probes}")
+    if not _IVFFLAT_PROBES_LOGGED:
+        _IVFFLAT_PROBES_LOGGED = True
+        logger.debug("[VectorStore] ivfflat.probes configurado na sessão", extra={"ivfflatProbes": probes})
+    return conn
 
 
 def get_vector_store(tenant_id: Optional[str] = None):

@@ -22,3 +22,7 @@ ENV/
 .env
 .env.local
 
+
+# Cobertura
+htmlcov/
+.coverage

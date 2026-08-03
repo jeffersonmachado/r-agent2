@@ -1,9 +1,8 @@
 function toDbPayload(doc) {
-  return {
+  const payload = {
     id: doc.id,
     tenant_key: doc.tenantId || null,
     title: doc.title || null,
-    content: doc.content || null,
     metadata: doc.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
     permissions: doc.permissions && typeof doc.permissions === 'object' ? doc.permissions : {},
     status: doc.status || 'active',
@@ -17,15 +16,20 @@ function toDbPayload(doc) {
     inconsistent: !!doc.inconsistent,
     inconsistent_reason: doc.inconsistentReason || null,
   };
+  // Cache leve: docs sem content carregado (undefined) não devem sobrescrever
+  // a coluna content no DB — omite o campo do payload nesse caso.
+  if (doc.content !== undefined) {
+    payload.content = doc.content || null;
+  }
+  return payload;
 }
 
 function fromDbRow(row) {
   const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
-  return {
+  const doc = {
     id: base.id,
     tenantId: base.tenant_key || null,
     title: base.title || 'Sem título',
-    content: base.content || '',
     metadata: base.metadata || {},
     permissions: base.permissions || {},
     status: base.status || 'active',
@@ -39,6 +43,11 @@ function fromDbRow(row) {
     inconsistent: !!base.inconsistent,
     inconsistentReason: base.inconsistent_reason || null,
   };
+  // Só carrega content quando a coluna foi selecionada (cache leve omite).
+  if (base.content !== undefined) {
+    doc.content = base.content || '';
+  }
+  return doc;
 }
 
 function setIndexState(doc, state, opts = {}) {

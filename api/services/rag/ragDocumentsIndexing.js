@@ -11,9 +11,10 @@ const postgresVectorStore = require('../vectorStore/postgresVectorStore');
  * @param {string} documentId - ID do documento
  * @param {Map} documentsCache - Cache de documentos (referência mutável)
  * @param {Function} persistFn - Função para persistir documento (best-effort)
+ * @param {Function} [loadContentFn] - Carrega content via query pontual quando o cache é leve
  * @returns {Promise<{success: boolean, chunksCreated: number, error?: string, errorCode?: string}>}
  */
-async function reindexDocument(documentId, documentsCache, persistFn) {
+async function reindexDocument(documentId, documentsCache, persistFn, loadContentFn = null) {
   try {
     const document = documentsCache.get(documentId);
     if (!document) {
@@ -24,7 +25,13 @@ async function reindexDocument(documentId, documentsCache, persistFn) {
       };
     }
 
-    if (!document.content) {
+    // Cache leve: content não fica em memória; busca pontual no DB quando ausente
+    let content = document.content;
+    if (content === undefined && loadContentFn) {
+      content = await loadContentFn(documentId);
+    }
+
+    if (!content) {
       return {
         success: false,
         chunksCreated: 0,
@@ -36,7 +43,7 @@ async function reindexDocument(documentId, documentsCache, persistFn) {
       documentId: document.id,
       tenantId: document.tenantId,
       title: document.title,
-      contentLength: document.content?.length || 0,
+      contentLength: content?.length || 0,
       currentlyIndexed: document.indexed
     });
 
@@ -57,7 +64,7 @@ async function reindexDocument(documentId, documentsCache, persistFn) {
       });
     }
 
-    const indexResult = await ragService.indexDocument(document, document.tenantId);
+    const indexResult = await ragService.indexDocument({ ...document, content }, document.tenantId);
     
     logger.info('[RAGDocuments] Resultado da indexação', {
       documentId: document.id,
@@ -122,9 +129,10 @@ async function reindexDocument(documentId, documentsCache, persistFn) {
  * @param {Map} documentsCache - Cache de documentos
  * @param {Function} persistFn - Função para persistir documento (best-effort)
  * @param {Function} reindexDocFn - Função de reindex individual
+ * @param {Function} [loadContentfulIdsFn] - Retorna Set de ids com content no DB (cache leve)
  * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
  */
-async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false, documentsCache, persistFn, reindexDocFn) {
+async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false, documentsCache, persistFn, reindexDocFn, loadContentfulIdsFn = null) {
   try {
     let docs = Array.from(documentsCache.values());
     
@@ -133,12 +141,27 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
       docs = docs.filter(doc => doc.tenantId === tenantId);
     }
     
+    // Cache leve: docs sem content em memória (undefined) têm a existência de
+    // content verificada no DB em uma única query (paridade com o filtro legado)
+    let contentfulIds = null;
+    if (loadContentfulIdsFn) {
+      const unknownContentIds = docs.filter((doc) => doc.content === undefined).map((doc) => doc.id);
+      if (unknownContentIds.length > 0) {
+        contentfulIds = await loadContentfulIdsFn(unknownContentIds);
+      }
+    }
+    const hasContent = (doc) => {
+      if (doc.content !== undefined) return !!doc.content;
+      if (contentfulIds) return contentfulIds.has(doc.id);
+      return true; // DB indisponível: tenta e deixa o reindex individual falhar explícito
+    };
+    
     // Filtra documentos não indexados
-    let notIndexedDocs = docs.filter(doc => !doc.indexed && doc.status === 'active' && doc.content);
+    let notIndexedDocs = docs.filter(doc => !doc.indexed && doc.status === 'active' && hasContent(doc));
     
     // Se includeInconsistent for true, também inclui documentos marcados como indexados
     if (includeInconsistent) {
-      const indexedDocs = docs.filter(doc => doc.indexed && doc.status === 'active' && doc.content);
+      const indexedDocs = docs.filter(doc => doc.indexed && doc.status === 'active' && hasContent(doc));
       notIndexedDocs = [...notIndexedDocs, ...indexedDocs];
     }
     

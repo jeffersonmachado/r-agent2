@@ -39,7 +39,9 @@ describe('ragDocumentsService - defensive coercions', () => {
       },
     };
 
-    expect(() => ragDocumentsService.listDocuments({ tenantId: 'tenant-safe', search: hostileSearch })).not.toThrow();
+    await expect(
+      ragDocumentsService.listDocuments({ tenantId: 'tenant-safe', search: hostileSearch })
+    ).resolves.toBeInstanceOf(Array);
   });
 
   it('listDocuments keeps nominal search behavior with mixed data', async () => {
@@ -55,9 +57,37 @@ describe('ragDocumentsService - defensive coercions', () => {
       { skipDuplicateCheck: true }
     );
 
-    const result = ragDocumentsService.listDocuments({ tenantId: 'tenant-safe-2', search: 'vendas' });
+    const result = await ragDocumentsService.listDocuments({ tenantId: 'tenant-safe-2', search: 'vendas' });
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('listDocuments applies optional limit/offset pagination', async () => {
+    const tenant = 'tenant-paged';
+    for (let i = 0; i < 3; i += 1) {
+      await ragDocumentsService.createDocument(
+        {
+          id: `doc-paged-${i}-${Date.now()}`,
+          title: `Doc Paginado ${i}`,
+          content: `conteudo ${i}`,
+          metadata: { source: 'manual' },
+          autoIndex: false,
+        },
+        tenant,
+        { skipDuplicateCheck: true }
+      );
+    }
+
+    const all = await ragDocumentsService.listDocuments({ tenantId: tenant });
+    expect(all.length).toBe(3);
+
+    const limited = await ragDocumentsService.listDocuments({ tenantId: tenant, limit: 2 });
+    expect(limited.length).toBe(2);
+    expect(limited[0].id).toBe(all[0].id);
+
+    const offset = await ragDocumentsService.listDocuments({ tenantId: tenant, offset: 2 });
+    expect(offset.length).toBe(1);
+    expect(offset[0].id).toBe(all[2].id);
   });
 
   it('findDocumentByUrl tolerates hostile URL values', () => {
