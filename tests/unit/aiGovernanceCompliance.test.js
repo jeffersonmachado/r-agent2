@@ -28,14 +28,40 @@ const { handleAiGovernanceRoutes } = require('../../api/modules/agent-os/routes/
 
 describe('generateComplianceReport — serialização do summary', () => {
   it('dataAccessed é array determinístico (nunca Set serializado como {})', async () => {
+    // A agregação agora acontece no SQL (GROUP BY/COUNT/SUM); o mock despacha
+    // pelo formato de cada query agregada. dataAccessed (jsonb) segue com scan
+    // limitado às 10k linhas mais recentes.
     const Model = getAiGovernanceRecordModel.__singleton;
-    Model.findAll = async () => ([
-      { eventType: 'access', riskLevel: 'low', cost: 1, agentId: 'ag-1', dataAccessed: ['crm.contacts', 'tickets'] },
-      { eventType: 'decision', riskLevel: 'high', cost: 2, agentId: 'ag-1', dataAccessed: ['crm.contacts'] },
-    ]);
+    Model.findAll = async (opts = {}) => {
+      const attrs = JSON.stringify(opts.attributes || []);
+      if (attrs.includes('eventType')) {
+        return [
+          { eventType: 'access', count: 1 },
+          { eventType: 'decision', count: 1 },
+        ];
+      }
+      if (attrs.includes('riskLevel')) {
+        return [
+          { riskLevel: 'low', count: 1 },
+          { riskLevel: 'high', count: 1 },
+        ];
+      }
+      if (attrs.includes('dataAccessed')) {
+        return [
+          { dataAccessed: ['crm.contacts', 'tickets'] },
+          { dataAccessed: ['crm.contacts'] },
+        ];
+      }
+      return []; // records (payload limitado aos 1000 mais recentes)
+    };
+    Model.findOne = async () => ({ totalEvents: 2, totalCost: 3, agentsInvolved: 1 });
 
     const report = await service.generateComplianceReport({ tenantId: 'tenant-a' });
 
+    expect(report.summary.totalEvents).toBe(2);
+    expect(report.summary.byType).toEqual({ access: 1, decision: 1 });
+    expect(report.summary.byRiskLevel).toEqual({ low: 1, high: 1 });
+    expect(report.summary.totalCost).toBe(3);
     expect(Array.isArray(report.summary.dataAccessed)).toBe(true);
     expect(report.summary.dataAccessed).toEqual(['crm.contacts', 'tickets']);
     expect(report.summary.dataAccessedCount).toBe(2);

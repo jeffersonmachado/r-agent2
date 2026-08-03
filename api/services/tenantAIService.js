@@ -25,6 +25,23 @@ const logger = require('../utils/logger');
 
 const SUPPORTED_AI_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek']);
 
+// ---------------------------------------------------------------------------
+// Cache em memória de getAIConfig (TTL 60s) — chamada por request e custa 2
+// queries (tenant + tenant_ai_settings). Chave: identifier exato passado pelo
+// caller (tenant_key ou UUID). Hits retornam cópia (structuredClone) para o
+// caller não mutar o valor cacheado. Todo write de TenantAISetting
+// (saveAIConfig) invalida as chaves afetadas.
+// ---------------------------------------------------------------------------
+const AI_CONFIG_CACHE_TTL_MS = 60 * 1000;
+
+/** @type {Map<string, { value: Object|null, expiresAt: number }>} */
+const aiConfigCache = new Map();
+
+function invalidateAIConfigCache(identifier) {
+  if (identifier === undefined || identifier === null) return;
+  aiConfigCache.delete(String(identifier));
+}
+
 function normalizeProvider(provider) {
   if (typeof provider !== 'string') return null;
   const normalized = provider.trim().toLowerCase();
@@ -61,6 +78,15 @@ async function findTenantByIdentifier(identifier) {
  * @returns {Promise<Object|null>} Configurações de IA ou null se não encontrado
  */
 async function getAIConfig(tenantKey) {
+  const cacheKey = String(tenantKey);
+  const cached = aiConfigCache.get(cacheKey);
+  if (cached) {
+    if (cached.expiresAt > Date.now()) {
+      return cached.value === null ? null : structuredClone(cached.value);
+    }
+    aiConfigCache.delete(cacheKey);
+  }
+
   try {
     const sequelize = getSequelize();
     if (!sequelize) {
@@ -71,6 +97,7 @@ async function getAIConfig(tenantKey) {
     const tenant = await findTenantByIdentifier(tenantKey);
 
     if (!tenant) {
+      aiConfigCache.set(cacheKey, { value: null, expiresAt: Date.now() + AI_CONFIG_CACHE_TTL_MS });
       return null;
     }
 
@@ -81,15 +108,17 @@ async function getAIConfig(tenantKey) {
 
     if (!aiSetting) {
       // Retorna configuração padrão
-      return {
+      const defaultConfig = {
         primary: null,
         secondary: null,
         configured: false,
       };
+      aiConfigCache.set(cacheKey, { value: defaultConfig, expiresAt: Date.now() + AI_CONFIG_CACHE_TTL_MS });
+      return structuredClone(defaultConfig);
     }
 
     // Retorna primary e secondary (provider vira primary para compatibilidade)
-    return {
+    const config = {
       primary: aiSetting.primary || aiSetting.provider || null,
       secondary: aiSetting.secondary || null,
       configured: !!(aiSetting.primary || aiSetting.provider),
@@ -101,6 +130,8 @@ async function getAIConfig(tenantKey) {
       max_tokens: aiSetting.max_tokens,
       quota_monthly: aiSetting.quota_monthly,
     };
+    aiConfigCache.set(cacheKey, { value: config, expiresAt: Date.now() + AI_CONFIG_CACHE_TTL_MS });
+    return structuredClone(config);
   } catch (err) {
     logger.error('[TenantAIService] Erro ao obter configuração de IA:', err);
     throw err;
@@ -178,6 +209,10 @@ async function saveAIConfig(tenantKey, config) {
 
     // Usa o tenant_key do tenant encontrado para garantir consistência
     const finalTenantKey = tenant.tenant_key || tenantKey;
+    // Invalida o cache de getAIConfig para todas as chaves que podem ter sido
+    // usadas (identifier exato do caller e tenant_key resolvido).
+    invalidateAIConfigCache(tenantKey);
+    invalidateAIConfigCache(finalTenantKey);
     return await getAIConfig(finalTenantKey);
   } catch (err) {
     logger.error('[TenantAIService] Erro ao salvar configuração de IA:', err);
@@ -360,5 +395,10 @@ module.exports = {
   saveAICredentials,
   getDecryptedAPIKey,
   hasCredentials,
+  invalidateAIConfigCache,
   SUPPORTED_AI_PROVIDERS,
+  // Funções internas para testes
+  _internal: {
+    clearAIConfigCache: () => aiConfigCache.clear(),
+  },
 };

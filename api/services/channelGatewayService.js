@@ -15,10 +15,14 @@
 'use strict';
 
 const crypto = require('crypto');
+const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelAccount, ChannelConversation, ChannelMessage } = require('../db/models');
 const WorkspaceLinkAutomationService = require('./workspace/WorkspaceLinkAutomationService');
+// Singleton module-level: o serviço é stateless (só guarda referências de
+// models + logger), então não precisa ser instanciado por evento.
+const workspaceLinkAutomationService = new WorkspaceLinkAutomationService();
 const { encrypt, decrypt } = require('../utils/crypto');
 const { storeTicketMedia } = require('./ticketMediaService');
 const { getTicketBySession } = require('./queueService');
@@ -646,8 +650,7 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
     });
 
     try {
-      const linker = new WorkspaceLinkAutomationService();
-      await linker.linkMessageReceived({
+      await workspaceLinkAutomationService.linkMessageReceived({
         tenantId,
         conversation: conversation.toJSON ? conversation.toJSON() : conversation,
         messageId: created.id,
@@ -764,6 +767,8 @@ async function updateStatus(channelType, statusPayload, options = {}) {
   const OutModel = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
   let updated = 0;
 
+  // Normaliza o batch uma única vez (id + status + metadados de erro).
+  const entries = [];
   for (const st of statuses) {
     const externalMessageId = st?.id ? safeToString(st.id) : null;
     const status = st?.status ? safeToString(st.status) : null;
@@ -778,28 +783,72 @@ async function updateStatus(channelType, statusPayload, options = {}) {
       ? (st?.errors ? JSON.stringify(st.errors).slice(0, 4000) : 'delivery_failed')
       : null;
 
-    const row = await MessageModel.findOne({
-      where: { tenant_key: tenantId, channel_type: channelType, external_message_id: externalMessageId },
+    entries.push({ externalMessageId, status, reasonCode, errorType, lastError });
+  }
+  if (entries.length === 0) return { updated: 0 };
+
+  const externalIds = Array.from(new Set(entries.map((e) => e.externalMessageId)));
+
+  // Leituras em lote (1 query por tabela, usando o índice
+  // (tenant_key, channel_type, external_message_id)) em vez de findOne por
+  // status do batch (N+1).
+  const messageRows = await MessageModel.findAll({
+    where: {
+      tenant_key: tenantId,
+      channel_type: channelType,
+      external_message_id: { [Op.in]: externalIds },
+    },
+  });
+  const messageByExternalId = new Map();
+  for (const row of messageRows) {
+    messageByExternalId.set(safeToString(row.external_message_id), row);
+  }
+
+  // Falha na leitura do outbound_queue não pode impedir o update das mensagens
+  // (mesmo isolamento de erro do código anterior, que era por item).
+  let outboundByExternalId = new Map();
+  try {
+    const outRows = await OutModel.findAll({
+      where: {
+        tenant_key: tenantId,
+        channel_type: channelType,
+        external_message_id: { [Op.in]: externalIds },
+      },
+      order: [['updated_at', 'DESC']],
     });
+    for (const outRow of outRows) {
+      const key = safeToString(outRow.external_message_id);
+      // ORDER BY updated_at DESC: o primeiro de cada external_message_id é o mais recente.
+      if (!outboundByExternalId.has(key)) outboundByExternalId.set(key, outRow);
+    }
+  } catch (_) {
+    outboundByExternalId = new Map();
+  }
+
+  const now = new Date();
+
+  for (const entry of entries) {
+    const { externalMessageId, status, reasonCode, errorType, lastError } = entry;
+
+    const row = messageByExternalId.get(externalMessageId);
     if (!row) continue;
 
-    await row.update({ status, updated_at: new Date() });
+    // eslint-disable-next-line no-await-in-loop
+    await row.update({ status, updated_at: now });
     updated++;
 
     // Atualiza status no outbound_queue (quando houver correlação por external_message_id).
     // Importante: outboundQueueService.processDue só reprocessa itens SEM external_message_id,
     // então marcar "failed" aqui não causa retries de mensagens já enviadas ao canal.
     try {
-      const outRow = await OutModel.findOne({
-        where: { tenant_key: tenantId, channel_type: channelType, external_message_id: externalMessageId },
-        order: [['updated_at', 'DESC']],
-      });
+      const outRow = outboundByExternalId.get(externalMessageId);
       if (outRow) {
+        // eslint-disable-next-line no-await-in-loop
         await outRow.update({
           status,
           reason_code: status === 'failed' ? reasonCode : outRow.reason_code,
           last_error: status === 'failed' ? (lastError || outRow.last_error || 'delivery_failed') : outRow.last_error,
-          updated_at: new Date(),
+          updated_at: now,
         }).catch(() => null);
       }
     } catch (_) {}

@@ -1210,6 +1210,176 @@ async function validateTenantStatus(tenantId, preloadedTenant = null) {
 }
 
 /**
+ * Obtém métricas de uso de vários tenants de uma vez (PostgreSQL).
+ *
+ * Uma query agregada (GROUP BY tenant_key) por métrica, cruzadas em memória —
+ * evita o N+1 de chamar getTenantUsage por tenant na listagem do super admin.
+ * Não consulta getTenant (não interfere no cache de getTenant): assume que os
+ * ids já foram validados pelo caller.
+ *
+ * @param {string[]} tenantIds
+ * @returns {Promise<Map<string, Object>>} tenantId → métricas (mesmo formato de getTenantUsage)
+ */
+async function getTenantsUsageBatch(tenantIds) {
+  const ids = Array.from(new Set(
+    (Array.isArray(tenantIds) ? tenantIds : [])
+      .map((id) => safeToString(id))
+      .filter((id) => id.length > 0)
+  ));
+  const result = new Map();
+  if (ids.length === 0) return result;
+
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+
+  const countsByTenant = new Map(ids.map((id) => [id, {
+    users: 0,
+    channels: 0,
+    channelConversations: 0,
+    ticketsMonth: 0,
+    ragDocs: 0,
+  }]));
+  const metricsByTenant = new Map();
+
+  try {
+    const sequelize = getSequelize();
+    if (!sequelize || !isConnected()) {
+      throw new Error('PostgreSQL não está disponível. O banco de dados é obrigatório.');
+    }
+
+    const applyCounts = (rows, key) => {
+      for (const row of rows || []) {
+        const entry = countsByTenant.get(safeToString(row.tenant_key));
+        if (entry) entry[key] = Number(row.count) || 0;
+      }
+    };
+
+    const [usersRows] = await sequelize.query(
+      `
+      SELECT tenant_key, COUNT(*)::int AS count
+      FROM users
+      WHERE tenant_key IN (:tenantIds)
+        AND is_active = true
+        AND (is_superadmin = false OR is_superadmin IS NULL)
+      GROUP BY tenant_key
+      `,
+      { replacements: { tenantIds: ids } }
+    );
+    applyCounts(usersRows, 'users');
+
+    const [channelsRows] = await sequelize.query(
+      `
+      SELECT tenant_key, COUNT(*)::int AS count
+      FROM channel_accounts
+      WHERE tenant_key IN (:tenantIds)
+      GROUP BY tenant_key
+      `,
+      { replacements: { tenantIds: ids } }
+    );
+    applyCounts(channelsRows, 'channels');
+
+    const [channelConversationsRows] = await sequelize.query(
+      `
+      SELECT tenant_key, COUNT(*)::int AS count
+      FROM channel_conversations
+      WHERE tenant_key IN (:tenantIds)
+        AND created_at >= :start
+        AND created_at < :end
+      GROUP BY tenant_key
+      `,
+      { replacements: { tenantIds: ids, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
+    );
+    applyCounts(channelConversationsRows, 'channelConversations');
+
+    const [ticketsMonthRows] = await sequelize.query(
+      `
+      SELECT tenant_key, COUNT(*)::int AS count
+      FROM tickets
+      WHERE tenant_key IN (:tenantIds)
+        AND created_at >= :start
+        AND created_at < :end
+      GROUP BY tenant_key
+      `,
+      { replacements: { tenantIds: ids, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
+    ).catch(() => [[]]);
+    applyCounts(ticketsMonthRows, 'ticketsMonth');
+
+    const [ragDocsRows] = await sequelize.query(
+      `
+      SELECT tenant_key, COUNT(*)::int AS count
+      FROM rag_documents
+      WHERE tenant_key IN (:tenantIds)
+      GROUP BY tenant_key
+      `,
+      { replacements: { tenantIds: ids } }
+    ).catch(() => [[]]);
+    applyCounts(ragDocsRows, 'ragDocs');
+
+    // Contadores de uso (agentes_ia, tokens_ia, etc.) persistidos em
+    // tenant_settings — 1 query no lugar de getSetting por tenant.
+    const [settingsRows] = await sequelize.query(
+      `
+      SELECT t.tenant_key, s.value
+      FROM tenant_settings s
+      JOIN tenants t ON t.id = s.tenant_id
+      WHERE s.key = 'usage_metrics'
+        AND t.tenant_key IN (:tenantIds)
+      `,
+      { replacements: { tenantIds: ids } }
+    ).catch(() => [[]]);
+    for (const row of settingsRows || []) {
+      metricsByTenant.set(safeToString(row.tenant_key), row.value || null);
+    }
+  } catch (err) {
+    // Propaga: getTenantUsage (1 tenant) preserva a semântica antiga de
+    // retornar null em erro; o caller em lote (superAdminService) faz
+    // fallback para zeros por tenant.
+    logger.error('[TenantService] Erro ao obter métricas de uso em lote:', err);
+    throw err;
+  }
+
+  const currentMonthStart = monthStart.toISOString();
+  for (const id of ids) {
+    const counts = countsByTenant.get(id);
+    const usageMetrics = metricsByTenant.get(id) || null;
+
+    const usageMonthStart = usageMetrics && usageMetrics.monthStart ? safeToString(usageMetrics.monthStart) : null;
+    const usageCounters = usageMonthStart === currentMonthStart && usageMetrics && usageMetrics.counters && typeof usageMetrics.counters === 'object'
+      ? usageMetrics.counters
+      : {};
+
+    const getCounter = (key) => {
+      const v = usageCounters && Object.prototype.hasOwnProperty.call(usageCounters, key)
+        ? Number(safeToString(usageCounters[key], '0'))
+        : 0;
+      return Number.isFinite(v) ? v : 0;
+    };
+
+    result.set(id, {
+      tenantId: id,
+      // compatibilidade com nomes antigos de plano
+      usuarios: counts.users,
+      // novos recursos enterprise
+      max_agentes: counts.users,
+      max_canais: counts.channels,
+      max_conversas_mes: counts.ticketsMonth,
+      conversas_canais_mes: counts.channelConversations,
+      // mantém estrutura anterior
+      agentes_ia: getCounter('agentes_ia'),
+      execucoes_rpa: getCounter('execucoes_rpa'),
+      tokens_ia: getCounter('tokens_ia'),
+      documentos_rag: counts.ragDocs,
+      storage_mb: getCounter('storage_mb'),
+      periodo: 'mensal',
+      window: { monthStart: monthStart.toISOString(), nextMonthStart: nextMonthStart.toISOString() },
+    });
+  }
+
+  return result;
+}
+
+/**
  * Obtém métricas de uso de um tenant (PostgreSQL).
  *
  * @param {string} tenantId
@@ -1239,104 +1409,9 @@ async function getTenantUsage(tenantId) {
       };
     }
 
-    const now = new Date();
-    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
-    const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
-
-    // Contagens principais (best-effort) — baseadas em tabelas já existentes
-    const [[usersRow]] = await sequelize.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM users
-      WHERE tenant_key = :tenant
-        AND is_active = true
-        AND (is_superadmin = false OR is_superadmin IS NULL)
-      `,
-      { replacements: { tenant: tenantId } }
-    );
-
-    const [[channelsRow]] = await sequelize.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM channel_accounts
-      WHERE tenant_key = :tenant
-      `,
-      { replacements: { tenant: tenantId } }
-    );
-
-    // Conversas do mês (canal) — útil para observabilidade
-    const [[channelConversationsRow]] = await sequelize.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM channel_conversations
-      WHERE tenant_key = :tenant
-        AND created_at >= :start
-        AND created_at < :end
-      `,
-      { replacements: { tenant: tenantId, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
-    );
-
-    // Conversas do mês (tickets) — usado para quota max_conversas_mes
-    const [[ticketsMonthRow]] = await sequelize.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM tickets
-      WHERE tenant_key = :tenant
-        AND created_at >= :start
-        AND created_at < :end
-      `,
-      { replacements: { tenant: tenantId, start: monthStart.toISOString(), end: nextMonthStart.toISOString() } }
-    ).catch(() => [[{ count: 0 }]]);
-
-    const [[ragDocsRow]] = await sequelize.query(
-      `
-      SELECT COUNT(*)::int AS count
-      FROM rag_documents
-      WHERE tenant_key = :tenant
-      `,
-      { replacements: { tenant: tenantId } }
-    ).catch(() => [[{ count: 0 }]]);
-
-    let usageMetrics = null;
-    try {
-      const { getSetting } = require('./tenantSettingsService');
-      const settings = await getSetting({ tenantId, key: 'usage_metrics' });
-      usageMetrics = settings && settings.ok ? (settings.value || null) : null;
-    } catch (_) {
-      usageMetrics = null;
-    }
-
-    const usageMonthStart = usageMetrics && usageMetrics.monthStart ? safeToString(usageMetrics.monthStart) : null;
-    const currentMonthStart = monthStart.toISOString();
-    const usageCounters = usageMonthStart === currentMonthStart && usageMetrics && usageMetrics.counters && typeof usageMetrics.counters === 'object'
-      ? usageMetrics.counters
-      : {};
-
-    const getCounter = (key) => {
-      const v = usageCounters && Object.prototype.hasOwnProperty.call(usageCounters, key)
-        ? Number(safeToString(usageCounters[key], '0'))
-        : 0;
-      return Number.isFinite(v) ? v : 0;
-    };
-
-    return {
-      tenantId,
-      // compatibilidade com nomes antigos de plano
-      usuarios: usersRow?.count ?? 0,
-      // novos recursos enterprise
-      max_agentes: usersRow?.count ?? 0,
-      max_canais: channelsRow?.count ?? 0,
-      max_conversas_mes: ticketsMonthRow?.count ?? 0,
-      conversas_canais_mes: channelConversationsRow?.count ?? 0,
-      // mantém estrutura anterior
-      agentes_ia: getCounter('agentes_ia'),
-      execucoes_rpa: getCounter('execucoes_rpa'),
-      tokens_ia: getCounter('tokens_ia'),
-      documentos_rag: ragDocsRow?.count ?? 0,
-      storage_mb: getCounter('storage_mb'),
-      periodo: 'mensal',
-      window: { monthStart: monthStart.toISOString(), nextMonthStart: nextMonthStart.toISOString() },
-    };
+    // Reusa a query agregada do batch filtrada para 1 tenant.
+    const batch = await getTenantsUsageBatch([tenantId]);
+    return batch.get(tenantId) || null;
   } catch (err) {
     logger.error('[TenantService] Erro ao obter métricas de uso:', err);
     return null;
@@ -1402,6 +1477,7 @@ module.exports = {
   changePlan,
   validateTenantStatus,
   getTenantUsage,
+  getTenantsUsageBatch,
   getTenantContext,
   updateTenantContext,
   // Funções internas para testes

@@ -44,21 +44,50 @@ async function collectDriftSignals({ tenantId, routeSkillMap }) {
   const since = new Date(Date.now() - 30 * 86400000);
   const signals = [];
 
-  for (const cert of active) {
-    const rows = await EventLedger().findAll({
-      where: {
-        tenant_key: String(tenantId),
-        source: 'learning-core',
-        actor_id: String(cert.agentId),
-        type: { [Op.like]: 'learning.interaction.%' },
-        occurred_at: { [Op.gte]: cert.issuedAt > since ? cert.issuedAt : since },
-      },
-      order: [['occurred_at', 'ASC']],
-      limit: 2000,
+  // Janela de eventos por certificação: max(issuedAt, since). Antes havia um
+  // findAll por certificação (até 500 queries); agora uma query única cobre
+  // todos os actors desde a janela mais antiga e o refinamento por
+  // certificação acontece em JS.
+  const windowStartByCert = active.map((cert) => (cert.issuedAt > since ? cert.issuedAt : since));
+  const earliestWindowStart = new Date(Math.min(...windowStartByCert.map((d) => new Date(d).getTime())));
+  const actorIds = Array.from(new Set(active.map((cert) => String(cert.agentId))));
+
+  // Cap defensivo de scan (tabela append-only): antes eram até 2000 linhas por
+  // certificação; o cap global evita varredura ilimitada e é logado se atingido.
+  const DRIFT_SCAN_LIMIT = 50000;
+  const rows = await EventLedger().findAll({
+    where: {
+      tenant_key: String(tenantId),
+      source: 'learning-core',
+      actor_id: { [Op.in]: actorIds },
+      type: { [Op.like]: 'learning.interaction.%' },
+      occurred_at: { [Op.gte]: earliestWindowStart },
+    },
+    order: [['occurred_at', 'ASC']],
+    limit: DRIFT_SCAN_LIMIT,
+  });
+  if (rows.length >= DRIFT_SCAN_LIMIT) {
+    logger.warn('[learning-core] Scan de drift atingiu o limite defensivo', {
+      tenantId: String(tenantId),
+      limit: DRIFT_SCAN_LIMIT,
     });
+  }
+
+  const rowsByActor = new Map();
+  for (const row of rows) {
+    const actorId = String(row.actor_id);
+    if (!rowsByActor.has(actorId)) rowsByActor.set(actorId, []);
+    rowsByActor.get(actorId).push(row);
+  }
+
+  for (let i = 0; i < active.length; i++) {
+    const cert = active[i];
+    const windowStart = windowStartByCert[i];
 
     let errorCount = 0;
-    for (const row of rows) {
+    for (const row of rowsByActor.get(String(cert.agentId)) || []) {
+      const occurredAt = row.occurred_at ? new Date(row.occurred_at) : null;
+      if (!occurredAt || occurredAt < new Date(windowStart)) continue;
       const payload = row.payload || {};
       if (routeSkillMap[payload.route] !== cert.skillKey) continue;
       const status = Number(payload.status);

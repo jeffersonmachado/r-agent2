@@ -11,7 +11,7 @@
  * IMPORTANTE: Apenas usuários com role 'super_admin' ou 'owner' do tenant 'system' podem usar este serviço.
  */
 
-const { listTenants, getTenant, suspendTenant, reactivateTenant, changePlan, getTenantUsage } = require('./tenantService');
+const { listTenants, getTenant, suspendTenant, reactivateTenant, changePlan, getTenantUsage, getTenantsUsageBatch } = require('./tenantService');
 const { listAgents, getAgent, updateAgent } = require('./authService');
 const { queryLogs } = require('./auditService');
 const logger = require('../utils/logger');
@@ -69,20 +69,19 @@ async function listAllTenants(filters = {}) {
     );
   }
   
-  // Adiciona métricas básicas
-  return await Promise.all(filtered.map(async tenant => {
-    const usage = await getTenantUsage(tenant.id);
-    return {
-      ...tenant,
-      metrics: usage || {
-        usuarios: 0,
-        agentes_ia: 0,
-        execucoes_rpa: 0,
-        tokens_ia: 0,
-        documentos_rag: 0,
-        storage_mb: 0,
-      },
-    };
+  // Adiciona métricas básicas — agregadas em lote (1 query por métrica para
+  // todos os tenants) em vez de getTenantUsage por tenant (N+1).
+  const usageByTenant = await getTenantsUsageBatch(filtered.map((t) => t.id)).catch(() => new Map());
+  return filtered.map((tenant) => ({
+    ...tenant,
+    metrics: usageByTenant.get(tenant.id) || {
+      usuarios: 0,
+      agentes_ia: 0,
+      execucoes_rpa: 0,
+      tokens_ia: 0,
+      documentos_rag: 0,
+      storage_mb: 0,
+    },
   }));
 }
 

@@ -64,40 +64,75 @@ async function generateComplianceReport({ tenantId, startDate, endDate }) {
     if (endDate) where.created_at[Op.lte] = new Date(endDate);
   }
 
+  // Agregações no SQL (tabela append-only: findAll sem limite + agregação em
+  // JS escalava mal). byType/byRiskLevel/totais/agentes via GROUP BY/COUNT/SUM.
+  const [byTypeRows, byRiskRows, totalsRow] = await Promise.all([
+    AiGovernanceRecord.findAll({
+      where,
+      attributes: ['eventType', [fn('COUNT', col('event_type')), 'count']],
+      group: ['eventType'],
+      raw: true,
+    }),
+    AiGovernanceRecord.findAll({
+      where,
+      attributes: ['riskLevel', [fn('COUNT', col('risk_level')), 'count']],
+      group: ['riskLevel'],
+      raw: true,
+    }),
+    AiGovernanceRecord.findOne({
+      where,
+      attributes: [
+        [fn('COUNT', col('id')), 'totalEvents'],
+        [fn('COALESCE', fn('SUM', col('cost')), 0), 'totalCost'],
+        [fn('COUNT', fn('DISTINCT', col('agent_id'))), 'agentsInvolved'],
+      ],
+      raw: true,
+    }),
+  ]);
+
+  const byType = {};
+  for (const row of byTypeRows || []) {
+    byType[row.eventType] = Number(row.count) || 0;
+  }
+  const byRiskLevel = {};
+  for (const row of byRiskRows || []) {
+    byRiskLevel[row.riskLevel] = Number(row.count) || 0;
+  }
+
+  // dataAccessed (jsonb array) é caro de agregar no SQL; mantém scan limitado
+  // às 10k linhas mais recentes para o conjunto de dados acessados.
+  const DATA_ACCESSED_SCAN_LIMIT = 10000;
+  const dataAccessedRows = await AiGovernanceRecord.findAll({
+    where,
+    attributes: ['dataAccessed'],
+    order: [['created_at', 'DESC']],
+    limit: DATA_ACCESSED_SCAN_LIMIT,
+  });
+  const dataAccessed = new Set();
+  for (const r of dataAccessedRows || []) {
+    for (const d of (r.dataAccessed || [])) dataAccessed.add(d);
+  }
+
+  // Payload de registros limitado aos 1000 mais recentes (antes: sem limite).
+  const RECORDS_LIMIT = 1000;
   const records = await AiGovernanceRecord.findAll({
     where,
     order: [['created_at', 'DESC']],
+    limit: RECORDS_LIMIT,
   });
-
-  const summary = {
-    totalEvents: records.length,
-    byType: {},
-    byRiskLevel: {},
-    totalCost: 0,
-    agentsInvolved: new Set(),
-    dataAccessed: new Set(),
-  };
-
-  for (const r of records) {
-    summary.byType[r.eventType] = (summary.byType[r.eventType] || 0) + 1;
-    summary.byRiskLevel[r.riskLevel] = (summary.byRiskLevel[r.riskLevel] || 0) + 1;
-    summary.totalCost += r.cost || 0;
-    if (r.agentId) summary.agentsInvolved.add(r.agentId);
-    for (const d of (r.dataAccessed || [])) summary.dataAccessed.add(d);
-  }
 
   return {
     period: { startDate: startDate || 'beginning', endDate: endDate || 'now' },
     summary: {
-      totalEvents: summary.totalEvents,
-      byType: summary.byType,
-      byRiskLevel: summary.byRiskLevel,
-      totalCost: summary.totalCost,
-      agentsInvolved: summary.agentsInvolved.size,
-      dataAccessedCount: summary.dataAccessed.size,
+      totalEvents: Number(totalsRow?.totalEvents) || 0,
+      byType,
+      byRiskLevel,
+      totalCost: Number(totalsRow?.totalCost) || 0,
+      agentsInvolved: Number(totalsRow?.agentsInvolved) || 0,
+      dataAccessedCount: dataAccessed.size,
       // Set serializa como {} em JSON — o payload publica o array
       // determinístico (ordenado) com os dados efetivamente acessados.
-      dataAccessed: [...summary.dataAccessed].sort(),
+      dataAccessed: [...dataAccessed].sort(),
     },
     records,
   };

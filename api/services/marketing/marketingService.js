@@ -619,48 +619,85 @@ async function sendEmailCampaignNow({ tenantId, campaignId, limit = 2000 } = {})
     limit: Math.min(Math.max(Number(limit) || 2000, 1), 5000),
   });
 
-  let queued = 0;
+  // Dedup em memória + insert em lote (bulkCreate em chunks) no lugar de um
+  // INSERT por lead. A idempotência por (campaign, lead) é garantida pelo
+  // índice único marketing_email_sends_campaign_lead_uq (tenant_key,
+  // campaign_id, lead_id) — ver model MarketingEmailSend.
+  const prepared = [];
+  const seenLeadIds = new Set();
   for (const lr of leads) {
     const lead = lr.toJSON ? lr.toJSON() : lr;
     const to = normalizeEmail(lead.email);
     if (!to) continue;
-    // Cria send idempotente por (campaign, lead)
-    let sendRow = null;
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      sendRow = await SendModel.create({
-        id: newId('mes'),
+    if (!lead.id || seenLeadIds.has(lead.id)) continue;
+    seenLeadIds.add(lead.id);
+    prepared.push({ lead, to });
+  }
+
+  let queued = 0;
+  if (prepared.length > 0) {
+    const leadIds = prepared.map((p) => p.lead.id);
+    const existingSends = await SendModel.findAll({
+      where: {
         tenant_key: t,
         campaign_id: cid,
-        lead_id: lead.id,
-        to_email: to,
-        status: 'queued',
-      });
-    } catch (err) {
-      // unique violation -> já existe
-      continue;
+        lead_id: { [Op2.in]: leadIds },
+      },
+      attributes: ['lead_id'],
+    });
+    const alreadyQueued = new Set(
+      existingSends.map((r) => {
+        const d = r.toJSON ? r.toJSON() : r;
+        return d.lead_id;
+      })
+    );
+
+    const toInsert = prepared
+      .filter((p) => !alreadyQueued.has(p.lead.id))
+      .map((p) => ({
+        row: {
+          id: newId('mes'),
+          tenant_key: t,
+          campaign_id: cid,
+          lead_id: p.lead.id,
+          to_email: p.to,
+          status: 'queued',
+        },
+        lead: p.lead,
+        to: p.to,
+      }));
+
+    const BULK_CHUNK = 500;
+    for (let i = 0; i < toInsert.length; i += BULK_CHUNK) {
+      const chunk = toInsert.slice(i, i + BULK_CHUNK);
+      // ignoreDuplicates: proteção contra race com outro envio concorrente —
+      // a constraint única (tenant_key, campaign_id, lead_id) existe no model.
+      // eslint-disable-next-line no-await-in-loop
+      await SendModel.bulkCreate(chunk.map((c) => c.row), { ignoreDuplicates: true });
     }
 
-    // eslint-disable-next-line no-await-in-loop
-    await outboundQueueService.enqueueOutbound({
-      tenantId: t,
-      channelType: 'email',
-      channelAccountId: null,
-      conversationId: null,
-      message: {
-        to,
-        type: 'text',
-        body: {
-          subject: camp.subject,
-          text: camp.body_text,
-          html: camp.body_html || null,
+    for (const item of toInsert) {
+      // eslint-disable-next-line no-await-in-loop
+      await outboundQueueService.enqueueOutbound({
+        tenantId: t,
+        channelType: 'email',
+        channelAccountId: null,
+        conversationId: null,
+        message: {
+          to: item.to,
+          type: 'text',
+          body: {
+            subject: camp.subject,
+            text: camp.body_text,
+            html: camp.body_html || null,
+          },
+          meta: {
+            marketing: { campaignId: cid, leadId: item.lead.id, sendId: item.row.id },
+          },
         },
-        meta: {
-          marketing: { campaignId: cid, leadId: lead.id, sendId: sendRow.id },
-        },
-      },
-    }).catch(() => null);
-    queued += 1;
+      }).catch(() => null);
+      queued += 1;
+    }
   }
 
   try {

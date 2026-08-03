@@ -2,7 +2,7 @@ const { beautyNoShowRisk, beautyReengagementSuggestion, beautyUpsellSuggestion, 
 const { computeVerticalMetrics } = require('../../../services/vertical/verticalMetricsEngine');
 const { VerticalJourneyEvent, BillingTransaction } = require('../../../db/models');
 const { getSequelize } = require('../../../db/sequelize');
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { ensureAuth, tenantId, VERTICAL } = require('./beautyRouteHelpers');
 
 async function handleBeautyInsightsRoutes(ctx) {
@@ -45,7 +45,9 @@ async function handleBeautyInsightsRoutes(ctx) {
     const since = new Date(Date.now() - windowDays * 86400000);
     const sequelizeReady = !!getSequelize();
 
-    const [metrics, events, revenueRows] = await Promise.all([
+    // Agregações no SQL (GROUP BY / SUM) — antes: findAll de até 5000 linhas
+    // com COUNT/SUM em JS, o que truncava as métricas silenciosamente.
+    const [metrics, eventCounts, revenueRow] = await Promise.all([
       computeVerticalMetrics({ tenantId: tenantId(req), vertical: VERTICAL, windowDays }).catch(() => null),
       sequelizeReady
         ? VerticalJourneyEvent().findAll({
@@ -55,36 +57,35 @@ async function handleBeautyInsightsRoutes(ctx) {
             occurred_at: { [Op.gte]: since },
             event_type: { [Op.in]: ['no_show_detected', 'reactivation_sent', 'service_completed'] },
           },
-          attributes: ['event_type'],
-          limit: 5000,
+          attributes: ['event_type', [fn('COUNT', col('event_type')), 'count']],
+          group: ['event_type'],
+          raw: true,
         }).catch(() => [])
         : [],
       sequelizeReady
-        ? BillingTransaction().findAll({
+        ? BillingTransaction().findOne({
           where: {
             tenant_key: tenantId(req),
             vertical: VERTICAL,
             status: 'confirmed',
             created_at: { [Op.gte]: since },
           },
-          attributes: ['amount'],
-          limit: 5000,
-        }).catch(() => [])
-        : [],
+          attributes: [[fn('COALESCE', fn('SUM', col('amount')), 0), 'total']],
+          raw: true,
+        }).catch(() => null)
+        : null,
     ]);
 
     const counters = { noShow: 0, reactivation: 0, loyaltyCompleted: 0 };
-    for (const row of (events || [])) {
+    for (const row of (eventCounts || [])) {
       const d = row.toJSON ? row.toJSON() : row;
-      if (d.event_type === 'no_show_detected') counters.noShow += 1;
-      if (d.event_type === 'reactivation_sent') counters.reactivation += 1;
-      if (d.event_type === 'service_completed') counters.loyaltyCompleted += 1;
+      const count = Number(d.count) || 0;
+      if (d.event_type === 'no_show_detected') counters.noShow = count;
+      if (d.event_type === 'reactivation_sent') counters.reactivation = count;
+      if (d.event_type === 'service_completed') counters.loyaltyCompleted = count;
     }
 
-    const revenue = (revenueRows || []).reduce((acc, row) => {
-      const d = row.toJSON ? row.toJSON() : row;
-      return acc + Number(d.amount || 0);
-    }, 0);
+    const revenue = Number((revenueRow && (revenueRow.toJSON ? revenueRow.toJSON() : revenueRow).total) || 0);
 
     sendJson(res, 200, {
       vertical: VERTICAL,
