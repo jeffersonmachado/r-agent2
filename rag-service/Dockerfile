@@ -18,8 +18,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip cache purge
 
 # Pré-baixa o modelo de embeddings padrão (sentence-transformers/all-MiniLM-L6-v2)
-# para o cold start não depender de rede externa ao HuggingFace
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+# nos backends torch e ONNX, para o cold start não depender de rede externa
+# ao HuggingFace (RAG_EMBEDDING_BACKEND=onnx no compose de produção)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', backend='onnx', model_kwargs={'file_name': 'onnx/model.onnx'})"
 
 # Copia código da aplicação
 COPY . .
