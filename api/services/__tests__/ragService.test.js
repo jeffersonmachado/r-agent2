@@ -207,6 +207,57 @@ describe('ragService', () => {
     });
   });
 
+  describe('generateEmbeddingsBatch', () => {
+    let originalToken;
+
+    beforeEach(() => {
+      originalToken = process.env.RAG_INTERNAL_TOKEN;
+    });
+
+    afterEach(() => {
+      if (originalToken === undefined) {
+        delete process.env.RAG_INTERNAL_TOKEN;
+      } else {
+        process.env.RAG_INTERNAL_TOKEN = originalToken;
+      }
+    });
+
+    it('deve enviar header interno quando RAG_INTERNAL_TOKEN está configurado', async () => {
+      process.env.RAG_INTERNAL_TOKEN = 'token-teste';
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, embeddings: [[0.1, 0.2]], model: 'm', dimensions: 2 }),
+        text: async () => '',
+        status: 200,
+      });
+
+      const result = await ragService.generateEmbeddingsBatch(['texto de teste'], 'tenant-001');
+
+      expect(result.success).toBe(true);
+      const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
+      expect(callArgs[0]).toBe('http://localhost:9000/rag/embeddings');
+      expect(callArgs[1].headers['Content-Type']).toBe('application/json');
+      expect(callArgs[1].headers['X-RAG-Internal-Token']).toBe('token-teste');
+    });
+
+    it('não deve enviar header interno quando RAG_INTERNAL_TOKEN não está configurado', async () => {
+      delete process.env.RAG_INTERNAL_TOKEN;
+
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, embeddings: [[0.1, 0.2]], model: 'm', dimensions: 2 }),
+        text: async () => '',
+        status: 200,
+      });
+
+      await ragService.generateEmbeddingsBatch(['texto de teste'], 'tenant-001');
+
+      const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
+      expect(callArgs[1].headers['X-RAG-Internal-Token']).toBeUndefined();
+    });
+  });
+
   describe('indexDocument', () => {
     it('deve indexar documento com sucesso', async () => {
       const mockResponse = {

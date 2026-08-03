@@ -11,6 +11,10 @@ const {
 
 const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
+// Timeout dedicado do caminho /rag/query: precisa acomodar a geração LLM no
+// serviço Python (que desiste da OpenAI em ~25s). Demais chamadas (health,
+// index, etc.) continuam usando DEFAULT_RAG_TIMEOUT.
+const DEFAULT_RAG_QUERY_TIMEOUT = parseInt(process.env.RAG_QUERY_TIMEOUT || config.get('rag.queryTimeoutMs', '30000'), 10);
 
 function normalizeTenantId(tenantId) {
   if (tenantId === null || tenantId === undefined) return null;
@@ -18,25 +22,60 @@ function normalizeTenantId(tenantId) {
   return tid || null;
 }
 
+const TENANT_CONTEXT_CACHE_TTL_MS = 60000;
+
+/**
+ * Cache em memória do tenant_context para RAG (chave = tenantId).
+ * TTL de 60s cobre a defasagem de writers fora do caminho invalidado
+ * explicitamente (ver invalidateTenantContextCache).
+ * @type {Map<string, { value: Object|null, expiresAt: number }>}
+ */
+const tenantContextCache = new Map();
+
+/**
+ * Invalida a entrada de cache do tenant_context de um tenant.
+ * Deve ser chamada por qualquer writer de tenant_context (ex.: tenantService).
+ *
+ * @param {string} tenantId
+ */
+function invalidateTenantContextCache(tenantId) {
+  const finalTenantId = normalizeTenantId(tenantId);
+  if (!finalTenantId) return;
+  tenantContextCache.delete(finalTenantId);
+}
+
 async function getTenantContextForRag(tenantId) {
   const finalTenantId = normalizeTenantId(tenantId);
   if (!finalTenantId) return null;
   if (!getSequelize()) return null;
 
+  const cached = tenantContextCache.get(finalTenantId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
   try {
     const TenantContextModel = typeof TenantContextGetter === 'function' ? TenantContextGetter() : TenantContextGetter;
     if (!TenantContextModel) return null;
     const row = await TenantContextModel.findByPk(finalTenantId);
-    if (!row) return null;
-    const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
-    return {
-      tenantId: base.tenant_key,
-      ramo_atividade: base.ramo_atividade || '',
-      objetivo: base.objetivo || '',
-      site_oficial: base.site_oficial || '',
-      prioridade: base.prioridade || 'HIGH',
-      escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
-    };
+    const value = row
+      ? (() => {
+          const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
+          return {
+            tenantId: base.tenant_key,
+            ramo_atividade: base.ramo_atividade || '',
+            objetivo: base.objetivo || '',
+            site_oficial: base.site_oficial || '',
+            prioridade: base.prioridade || 'HIGH',
+            escopo: Array.isArray(base.escopo) ? base.escopo : ['rag', 'chatbot', 'classificacao_intencao'],
+          };
+        })()
+      : null;
+    tenantContextCache.set(finalTenantId, {
+      value,
+      expiresAt: Date.now() + TENANT_CONTEXT_CACHE_TTL_MS,
+    });
+    return value;
   } catch (err) {
     logger.warn('[RAGService] Erro ao consultar tenant_context no PostgreSQL', {
       tenantId: finalTenantId,
@@ -82,6 +121,29 @@ function getRagTimeout(tenantId) {
   }
 
   return DEFAULT_RAG_TIMEOUT;
+}
+
+/**
+ * Timeout dedicado para o caminho de query (/rag/query), que inclui geração
+ * LLM no serviço Python. Configurável por tenant via
+ * rag.tenants[tenantId].queryTimeoutMs, globalmente via rag.queryTimeoutMs
+ * ou RAG_QUERY_TIMEOUT; fallback de 30s.
+ */
+function getRagQueryTimeout(tenantId) {
+  const finalTenantId = normalizeTenantId(tenantId);
+  if (!finalTenantId) {
+    return DEFAULT_RAG_QUERY_TIMEOUT;
+  }
+
+  const ragConfig = config.get('rag', {});
+  const tenantsConfig = ragConfig.tenants || {};
+  const tenantConfig = tenantsConfig[finalTenantId];
+
+  if (tenantConfig && tenantConfig.queryTimeoutMs) {
+    return parseInt(tenantConfig.queryTimeoutMs, 10);
+  }
+
+  return DEFAULT_RAG_QUERY_TIMEOUT;
 }
 
 /**
@@ -172,15 +234,18 @@ async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT
 module.exports = {
   DEFAULT_RAG_SERVICE_URL,
   DEFAULT_RAG_TIMEOUT,
+  DEFAULT_RAG_QUERY_TIMEOUT,
   fetchWithTimeout,
   getRagDomainConfig,
   getRagDomainSources,
   getRagDomains,
   getRagInternalHeaders,
+  getRagQueryTimeout,
   getRagServiceUrl,
   getRagTimeout,
   getTenantContextForRag,
   handleRagHttpError,
+  invalidateTenantContextCache,
   isRagDomainEnabled,
   normalizeTenantId,
 };

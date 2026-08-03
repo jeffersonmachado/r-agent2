@@ -17,23 +17,34 @@ const { getCachedContext, setCachedContext } = require('./ragContextCache');
 const fs = require('fs');
 const path = require('path');
 
+// Contrato RAG é estático por processo: memoiza em nível de módulo para
+// evitar readFileSync + JSON.parse a cada execução. `undefined` = ainda não
+// carregado; `null` = carga tentada e falhou (também memoizado).
+let cachedRagContract;
+
 /**
  * Carrega o contrato RAG.
  * 
  * @returns {Object|null} Contrato RAG ou null
  */
 function loadRagContract() {
+  if (cachedRagContract !== undefined) {
+    return cachedRagContract;
+  }
   try {
     const contractPath = path.join(__dirname, '..', 'contracts', 'rag.contract.json');
     if (!fs.existsSync(contractPath)) {
       logger.warn('[buildRagContext] Contrato RAG não encontrado');
-      return null;
+      cachedRagContract = null;
+      return cachedRagContract;
     }
     const content = fs.readFileSync(contractPath, 'utf8');
-    return JSON.parse(content);
+    cachedRagContract = JSON.parse(content);
+    return cachedRagContract;
   } catch (err) {
     logger.error('[buildRagContext] Erro ao carregar contrato RAG', err);
-    return null;
+    cachedRagContract = null;
+    return cachedRagContract;
   }
 }
 

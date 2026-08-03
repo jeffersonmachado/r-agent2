@@ -23,6 +23,7 @@ const config = require('../utils/config');
 const ragDocumentsService = require('./ragDocumentsService');
 const webScrapingService = require('./webScrapingService');
 const { getSequelize } = require('../db/sequelize');
+const { invalidateTenantContextCache } = require('./rag/ragRuntime');
 const {
   safeToString,
   safeTrim,
@@ -128,12 +129,14 @@ async function upsertTenantContextToDb(context) {
   } else {
     await TenantContext.create({ ...payload, created_at: now, updated_at: now });
   }
+  invalidateTenantContextCache(context.tenantId);
 }
 
 async function deleteTenantContextFromDb(tenantKey) {
   if (!dbAvailable() || !isConnected()) return;
   const { TenantContext } = getModels();
   await TenantContext.destroy({ where: { tenant_key: tenantKey } });
+  invalidateTenantContextCache(tenantKey);
 }
 
 function persistTenantContextBestEffort(context) {

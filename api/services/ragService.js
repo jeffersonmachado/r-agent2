@@ -22,6 +22,7 @@ const {
   getRagDomainSources,
   getRagDomains,
   getRagInternalHeaders,
+  getRagQueryTimeout,
   getRagServiceUrl,
   getRagTimeout,
   getTenantContextForRag,
@@ -69,7 +70,10 @@ async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
     url,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
+      },
       body: JSON.stringify({ texts: safeTexts, tenantId }),
     },
     timeout
@@ -277,7 +281,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     });
 
     const serviceUrl = getRagServiceUrl(tenantId);
-    const timeout = getRagTimeout(tenantId);
+    const timeout = getRagQueryTimeout(tenantId);
     
     const response = await fetchWithTimeout(
       `${serviceUrl}/rag/query`,
@@ -679,9 +683,12 @@ async function isRagAvailable(tenantId = null) {
     logger.info('[RAGService] Verificando disponibilidade', { serviceUrl, tenantId });
     
     const response = await fetchWithTimeout(
-      `${serviceUrl}/health`,
+      `${serviceUrl}/rag/health`,
       {
         method: 'GET',
+        headers: {
+          ...getRagInternalHeaders(),
+        },
       },
       2000 // Timeout menor para health check
     );
@@ -1133,7 +1140,7 @@ async function listVectorDocuments(tenantId, options = {}) {
   const timeout = getRagTimeout(tenantId);
   const url = `${serviceUrl}/rag/documents?tenant_id=${encodeURIComponent(tenantId)}&limit=${encodeURIComponent(safeToString(limit))}`;
 
-  const response = await fetchWithTimeout(url, { method: 'GET' }, Math.min(4000, timeout));
+  const response = await fetchWithTimeout(url, { method: 'GET', headers: { ...getRagInternalHeaders() } }, Math.min(4000, timeout));
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new Error(`Erro ao listar documentos do vector store: HTTP ${response.status} ${errorText || response.statusText}`);
