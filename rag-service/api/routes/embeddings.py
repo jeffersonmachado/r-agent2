@@ -49,7 +49,7 @@ def _sanitize_texts(texts: List[str]) -> List[str]:
 
 
 @router.post("/embeddings", response_model=EmbeddingsResponse)
-async def generate_embeddings(request: EmbeddingsRequest):
+def generate_embeddings(request: EmbeddingsRequest):
     """
     Gera embeddings em batch para uma lista de textos.
     """

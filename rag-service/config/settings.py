@@ -85,9 +85,16 @@ def load_config_json() -> Optional[dict]:
     return None
 
 
+# Cache em módulo do config.json completo, invalidado por mtime do arquivo.
+_full_config_cache: dict = {"path": None, "mtime": None, "data": None}
+
+
 def load_full_config_json() -> Optional[dict]:
     """
     Carrega o config.json completo (não apenas a seção RAG).
+
+    O parse é cacheado em módulo e invalidado quando o mtime do arquivo muda
+    (arquivo ausente mantém o comportamento original: retorna None).
     """
     # Tenta encontrar o diretório raiz do projeto
     project_root = find_project_root()
@@ -96,29 +103,42 @@ def load_full_config_json() -> Optional[dict]:
         project_root = os.getenv("PROJECT_ROOT")
         if project_root:
             project_root = Path(project_root)
-    
+
     base_paths = []
-    
+
     # Adiciona caminho baseado no diretório raiz detectado
     if project_root:
         base_paths.append(project_root / "api" / "data" / "config.json")
-    
+
     # Adiciona caminhos relativos (para desenvolvimento)
     base_paths.extend([
         Path(__file__).parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent.parent.parent / "api" / "data" / "config.json",
         Path(__file__).parent.parent / "api" / "data" / "config.json",
     ])
-    
+
     for config_path in base_paths:
         if config_path.exists():
             try:
+                mtime = config_path.stat().st_mtime
+            except OSError:
+                continue
+            if (
+                _full_config_cache["path"] == config_path
+                and _full_config_cache["mtime"] == mtime
+            ):
+                return _full_config_cache["data"]
+            try:
                 with open(config_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    _full_config_cache["path"] = config_path
+                    _full_config_cache["mtime"] = mtime
+                    _full_config_cache["data"] = data
+                    return data
             except (json.JSONDecodeError, IOError) as e:
                 print(f"[Settings] Erro ao ler config.json completo de {config_path}: {e}")
                 continue
-    
+
     return None
 
 

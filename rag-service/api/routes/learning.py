@@ -39,7 +39,7 @@ class OptimizeConfigResponse(BaseModel):
 
 
 @router.post("/analyze-documents")
-async def analyze_documents(request: AnalyzeDocumentsRequest):
+def analyze_documents(request: AnalyzeDocumentsRequest):
     """
     Analisa documentos de um tenant para extrair sinônimos e melhorar aprendizado.
     
@@ -71,7 +71,7 @@ class UpdateSynonymsRequest(BaseModel):
 
 
 @router.post("/update-synonyms")
-async def update_synonyms(request: UpdateSynonymsRequest):
+def update_synonyms(request: UpdateSynonymsRequest):
     """
     Atualiza sinônimos baseado em lista de documentos.
     
@@ -96,7 +96,7 @@ async def update_synonyms(request: UpdateSynonymsRequest):
 
 
 @router.get("/metrics/{tenant_id}", response_model=LearningMetricsResponse)
-async def get_learning_metrics(tenant_id: str):
+def get_learning_metrics(tenant_id: str):
     """Retorna métricas de aprendizado para um tenant."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -109,7 +109,7 @@ async def get_learning_metrics(tenant_id: str):
 
 
 @router.get("/synonyms/{tenant_id}")
-async def get_synonyms(tenant_id: str):
+def get_synonyms(tenant_id: str):
     """Retorna sinônimos aprendidos para um tenant."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -127,7 +127,7 @@ async def get_synonyms(tenant_id: str):
 
 
 @router.get("/full-data/{tenant_id}")
-async def get_full_learning_data(tenant_id: str):
+def get_full_learning_data(tenant_id: str):
     """Retorna todos os dados de aprendizado para um tenant."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -156,7 +156,7 @@ class UpdateSynonymRequest(BaseModel):
 
 
 @router.put("/synonyms")
-async def update_synonym(request: UpdateSynonymRequest):
+def update_synonym(request: UpdateSynonymRequest):
     """Atualiza sinônimos de um termo específico."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -181,7 +181,7 @@ async def update_synonym(request: UpdateSynonymRequest):
 
 
 @router.delete("/synonyms/{tenant_id}/{term}")
-async def delete_synonym(tenant_id: str, term: str):
+def delete_synonym(tenant_id: str, term: str):
     """Remove um sinônimo específico."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -206,7 +206,7 @@ async def delete_synonym(tenant_id: str, term: str):
 
 
 @router.get("/validation-rules")
-async def get_validation_rules():
+def get_validation_rules():
     """Retorna regras de validação atuais."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -222,7 +222,7 @@ async def get_validation_rules():
 
 
 @router.post("/validation-rules/adapt/{tenant_id}")
-async def trigger_rule_adaptation(tenant_id: str):
+def trigger_rule_adaptation(tenant_id: str):
     """Dispara adaptação de regras de validação."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -238,7 +238,7 @@ async def trigger_rule_adaptation(tenant_id: str):
 
 
 @router.post("/clean-invalid-queries/{tenant_id}")
-async def clean_invalid_queries(tenant_id: str):
+def clean_invalid_queries(tenant_id: str):
     """Remove queries inválidas e duplicadas do histórico de aprendizado."""
     try:
         learning_service = get_adaptive_learning_service()
@@ -296,7 +296,7 @@ async def clean_invalid_queries(tenant_id: str):
 
 
 @router.post("/optimize-config/{tenant_id}", response_model=OptimizeConfigResponse)
-async def optimize_config(tenant_id: str):
+def optimize_config(tenant_id: str):
     """
     Otimiza configurações do RAG para um tenant baseado em métricas.
     
@@ -324,7 +324,7 @@ async def optimize_config(tenant_id: str):
 
 
 @router.post("/trigger-learning/{tenant_id}")
-async def trigger_learning(tenant_id: str):
+def trigger_learning(tenant_id: str):
     """
     Dispara processo de aprendizado completo para um tenant.
     

@@ -42,7 +42,7 @@ class VectorDocumentsResponse(BaseModel):
     error: Optional[str] = None
 
 @router.get("/documents", response_model=VectorDocumentsResponse)
-async def list_vector_documents(
+def list_vector_documents(
     tenant_id: str = Query(..., description="ID do tenant"),
     limit: int = Query(5000, ge=1, le=50000, description="Limite de IDs retornados")
 ):
@@ -100,7 +100,7 @@ async def list_vector_documents(
 
 
 @router.post("/clean-orphans", response_model=CleanOrphansResponse)
-async def clean_orphaned_documents(
+def clean_orphaned_documents(
     tenant_id: str = Query(..., description="ID do tenant"),
     request: CleanOrphansRequest = None
 ):

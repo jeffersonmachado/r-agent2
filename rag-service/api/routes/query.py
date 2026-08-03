@@ -253,7 +253,7 @@ def calculate_confidence(chunks: list, min_score: float) -> float:
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query_rag(request: QueryRequest):
+def query_rag(request: QueryRequest):
     """
     Consulta RAG.
     

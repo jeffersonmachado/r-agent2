@@ -49,7 +49,7 @@ class IndexResponse(BaseModel):
 
 
 @router.post("/index", response_model=IndexResponse)
-async def index_document(request: IndexRequest):
+def index_document(request: IndexRequest):
     """
     Indexa um documento.
     

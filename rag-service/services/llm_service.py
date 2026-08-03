@@ -16,6 +16,22 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+# Cliente OpenAI reutilizável (lazy singleton). Evita recriar conexão a cada
+# request e aplica timeout explícito (o SDK usa 600s por padrão) para que o
+# Python desista antes do timeout do cliente Node (30s).
+_OPENAI_TIMEOUT = 25.0
+_openai_client: Optional["OpenAI"] = None
+_openai_client_key: Optional[str] = None
+
+
+def _get_openai_client(api_key: str) -> "OpenAI":
+    """Retorna cliente OpenAI singleton, recriando se a chave mudar."""
+    global _openai_client, _openai_client_key
+    if _openai_client is None or _openai_client_key != api_key:
+        _openai_client = OpenAI(api_key=api_key, timeout=_OPENAI_TIMEOUT)
+        _openai_client_key = api_key
+    return _openai_client
+
 
 def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 0.7) -> str:
     """
@@ -39,7 +55,7 @@ def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 
         
         try:
             logger.debug(f"Chamando OpenAI: model={settings.llm_model}, max_tokens={max_tokens}, temperature={temperature}")
-            client = OpenAI(api_key=api_key)
+            client = _get_openai_client(api_key)
             
             response = client.chat.completions.create(
                 model=settings.llm_model,

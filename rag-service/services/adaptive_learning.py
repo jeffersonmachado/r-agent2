@@ -96,6 +96,8 @@ class AdaptiveLearningService:
     
     def __init__(self):
         self.learning_data: Dict[str, Dict] = {}
+        # mtime do arquivo por tenant, usado para invalidar o cache de leitura
+        self._learning_mtimes: Dict[str, float] = {}
         self.validation_rules: Optional[Dict] = None
         self.load_all_learning_data()
         self.load_validation_rules()
@@ -105,17 +107,38 @@ class AdaptiveLearningService:
         return LEARNING_DATA_PATH / f"{tenant_id}_learning.json"
     
     def load_learning_data(self, tenant_id: str) -> Dict:
-        """Carrega dados de aprendizado de um tenant."""
+        """
+        Carrega dados de aprendizado de um tenant.
+
+        Cacheia o conteúdo em memória e só relê do disco quando o mtime do
+        arquivo muda (arquivo ausente mantém o comportamento original).
+        """
         file_path = self.get_learning_file_path(tenant_id)
-        
+
         if file_path.exists():
+            try:
+                mtime = file_path.stat().st_mtime
+            except OSError:
+                mtime = None
+
+            # Cache hit: mesmo arquivo, mesmo mtime
+            if (
+                mtime is not None
+                and tenant_id in self.learning_data
+                and self._learning_mtimes.get(tenant_id) == mtime
+            ):
+                return self.learning_data[tenant_id]
+
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.learning_data[tenant_id] = data
+                    if mtime is not None:
+                        self._learning_mtimes[tenant_id] = mtime
                     return data
             except Exception as e:
                 logger.error(f"Erro ao carregar dados de aprendizado para {tenant_id}: {e}")
+                self._learning_mtimes.pop(tenant_id, None)
         
         # Retorna estrutura padrão
         default_data = {
@@ -162,9 +185,16 @@ class AdaptiveLearningService:
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+            # Atualiza o mtime do cache para refletir o conteúdo recém-escrito
+            try:
+                self._learning_mtimes[tenant_id] = file_path.stat().st_mtime
+            except OSError:
+                self._learning_mtimes.pop(tenant_id, None)
             logger.debug(f"Dados de aprendizado salvos para {tenant_id}")
         except Exception as e:
             logger.error(f"Erro ao salvar dados de aprendizado para {tenant_id}: {e}")
+            # Invalida o cache: o arquivo pode estar parcialmente escrito
+            self._learning_mtimes.pop(tenant_id, None)
     
     def load_all_learning_data(self):
         """Carrega todos os dados de aprendizado disponíveis."""
