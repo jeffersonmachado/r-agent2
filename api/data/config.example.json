@@ -26,13 +26,13 @@
       "asaas": {
         "baseUrl": "https://api.asaas.com/v3",
         "apiKey": "REPLACE_WITH_ASAAS_API_KEY",
-        "webhookSecret": "REPLACE_WITH_ASAAS_WEBHOOK_SECRET",
+        "webhookSecret": "REPLACE_WITH_ASAAS_WEBHOOK_SECRET_GERAR_COM_node_-e_console.log_require_crypto_randomBytes_32_toString_hex", 
         "billingType": "PIX"
       },
       "mercadoPago": {
         "baseUrl": "https://api.mercadopago.com",
         "accessToken": "REPLACE_WITH_MP_ACCESS_TOKEN",
-        "webhookSecret": "REPLACE_WITH_MP_WEBHOOK_SECRET"
+        "webhookSecret": "REPLACE_WITH_MP_WEBHOOK_SECRET_GERAR_COM_node_-e_console.log_require_crypto_randomBytes_32_toString_hex"
       }
     }
   },
@@ -64,6 +64,15 @@
     "mariadb": {
       "url": "mysql://USER:PASS@HOST:3306/results"
     }
+  },
+  "webhooks": {
+    "whatsappQrSecret": "REPLACE_WITH_WHATSAPP_QR_WEBHOOK_SECRET_GERAR_COM_node_-e_console.log_require_crypto_randomBytes_32_toString_hex"
+  },
+  "instagram": {
+    "appSecret": "REPLACE_WITH_INSTAGRAM_APP_SECRET_OBTER_NO_META_DEVELOPER_DASHBOARD"
+  },
+  "messenger": {
+    "appSecret": "REPLACE_WITH_MESSENGER_APP_SECRET_OBTER_NO_META_DEVELOPER_DASHBOARD"
   },
   "ai": {
     "openai": {

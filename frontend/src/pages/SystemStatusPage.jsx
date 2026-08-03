@@ -188,7 +188,7 @@ export function SystemStatusPage() {
         details.push(
           <div key={key} className="text-sm">
             <span className="font-medium text-text-primary">{key}:</span>{' '}
-            <span className="text-text-secondary">
+            <span className="text-text-secondary" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
               {typeof value === 'object' ? JSON.stringify(value) : String(value)}
             </span>
           </div>

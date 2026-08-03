@@ -168,6 +168,24 @@ export async function validateTenantAiCredentials({ tenantId = null, provider = 
 }
 
 /**
+ * Valida credenciais de billing (API Key + Webhook Secret) contra o provedor.
+ *
+ * @param {{ provider: string, apiKey: string, webhookSecret?: string }} params
+ * @returns {Promise<{success: boolean, apiKey?: {valid: boolean, error?: string}, webhookSecret?: {valid: boolean, error?: string}}>}
+ */
+export async function validateBillingCredentials({ provider, apiKey, webhookSecret } = {}) {
+  try {
+    return await fetchJson('/config/validate-billing-credentials', {
+      method: 'POST',
+      body: JSON.stringify({ provider, apiKey, webhookSecret }),
+    });
+  } catch (error) {
+    logger.error('Erro ao validar credenciais de billing', error);
+    throw error;
+  }
+}
+
+/**
  * Valida a conexão do Redis.
  * 
  * @param {string} redisUrl - URL do Redis a ser testada

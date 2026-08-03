@@ -72,7 +72,7 @@ export function StatusTab({ systemStatus }) {
                 {Object.entries(service.details).map(([key, value]) => (
                   <div key={key}>
                     <span className="font-medium text-text-primary">{key}:</span>{' '}
-                    <span className="text-text-secondary">
+                    <span className="text-text-secondary" style={{ wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                       {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </span>
                   </div>

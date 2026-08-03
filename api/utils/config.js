@@ -66,6 +66,7 @@ const ENV_TO_CONFIG_MAP = {
   'WHATSAPP_VERIFY_TOKEN': 'whatsapp.verifyToken',
   'INSTAGRAM_APP_SECRET': 'instagram.appSecret',
   'MESSENGER_APP_SECRET': 'messenger.appSecret',
+  'WHATSAPP_QR_WEBHOOK_SECRET': 'webhooks.whatsappQrSecret',
   'NOTIFICATION_EMAIL_ENABLED': 'notifications.email.enabled',
   'EMAIL_SMTP_HOST': 'notifications.email.smtp.host',
   'EMAIL_SMTP_PORT': 'notifications.email.smtp.port',

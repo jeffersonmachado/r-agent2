@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const express = require('express');
+const config = require('../../utils/config');
 
 function ensurePermission(req, res, deps, resource, action) {
   const authResult = deps.requireAuth(req);
@@ -29,7 +30,7 @@ function createWhatsAppQrWebhookRoutes({ buildDeps }) {
 
     try {
       const body = await deps.parseJsonBody(req);
-      const secretExpected = String(process.env.WHATSAPP_QR_WEBHOOK_SECRET || '').trim();
+      const secretExpected = String(config.get('webhooks.whatsappQrSecret') || '').trim();
       if (secretExpected) {
         const provided = String(req.headers['x-whatsapp-qr-secret'] || '').trim();
         const providedBuf = Buffer.from(provided, 'utf8');

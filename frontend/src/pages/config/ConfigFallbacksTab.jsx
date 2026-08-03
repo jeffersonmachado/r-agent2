@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function ConfigFallbacksTab({ editedConfig, updateValue, setEditedConfig, viewMode, setJsonText }) {
+export function ConfigFallbacksTab({ editedConfig, updateValue, setEditedConfig }) {
   return (
 <div className="space-y-6">
   <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
@@ -23,7 +23,6 @@ export function ConfigFallbacksTab({ editedConfig, updateValue, setEditedConfig,
             frontendNavigationHardRedirect: false,
           };
           setEditedConfig(next);
-          if (viewMode === 'json') setJsonText(JSON.stringify(next, null, 2));
         }}
         className="flex items-center gap-2"
       >

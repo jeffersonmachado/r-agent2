@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials, validateTenantAiCredentials } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials, validateTenantAiCredentials, validateBillingCredentials } from '../api/config';
 import { getTenantSetting, upsertTenantSetting } from '../api/tenantSettings';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
@@ -25,6 +25,7 @@ import { ConfigRateLimitTab } from './config/ConfigRateLimitTab';
 import { ConfigFallbacksTab } from './config/ConfigFallbacksTab';
 import { ConfigGeneralTab } from './config/ConfigGeneralTab';
 import { ConfigEmailTab } from './config/ConfigEmailTab';
+import { ConfigWebhooksTab } from './config/ConfigWebhooksTab';
 
 /**
  * Página de gerenciamento de configuração do sistema.
@@ -59,19 +60,39 @@ export function ConfigPage() {
   }
   const [config, setConfig] = useState(null);
   const [editedConfig, setEditedConfig] = useState(null);
-  const [jsonText, setJsonText] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [jsonError, setJsonError] = useState(null);
-  const [viewMode, setViewMode] = useState('form'); // 'form' ou 'json'
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [billingValidation, setBillingValidation] = useState({}); // { provider: { apiKey: {valid,error}, webhookSecret: {valid,error} } }
+  const [validatingBilling, setValidatingBilling] = useState(false);
+
+  // Padrões rejeitados: placeholders que indicam campo não configurado
+  const REJECTED_PATTERNS = [
+    /^REPLACE/i,
+    /OBTER_NO_META/i,
+    /PLACEHOLDER/i,
+    /REPLACE_WITH/i,
+    /GERAR_COM/i,
+  ];
+
+  // Função de validação para campos de secret/webhook
+  const validateFieldValue = useCallback((path, value) => {
+    const str = String(value || '').trim();
+    if (!str) return 'Campo obrigatório';
+    for (const pattern of REJECTED_PATTERNS) {
+      if (pattern.test(str)) return 'Valor placeholder — configure o segredo real';
+    }
+    if (str.length < 8) return 'Mínimo de 8 caracteres';
+    return null;
+  }, []);
   
   // Lê o parâmetro 'tab' da URL para abrir a aba correta
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'email', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'].includes(tabParam)) {
+      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'email', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general', 'webhooks'].includes(tabParam)) {
         return tabParam;
       }
     }
@@ -147,9 +168,7 @@ export function ConfigPage() {
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
               setConfig(parsed);
               setEditedConfig(JSON.parse(JSON.stringify(parsed))); // Deep copy
-              setJsonText(JSON.stringify(parsed, null, 2));
               setHasChanges(false);
-              setJsonError(null);
               return;
             }
           } catch {
@@ -195,9 +214,8 @@ export function ConfigPage() {
       }
       
       setEditedConfig(filteredData);
-      setJsonText(JSON.stringify(filteredData, null, 2));
       setHasChanges(false);
-      setJsonError(null);
+      setFieldErrors({});
       
       // Salva o tenant atual no ref
       configLoadedTenantRef.current = currentTenantId;
@@ -411,59 +429,18 @@ export function ConfigPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, loadingTenantAiConfig, tenantAiConfig?.primary, targetTenantId, agent?.tenantId, providerAutoValidationNonce]);
 
-  // Valida JSON quando o texto muda (com debounce)
-  const jsonValidationTimeoutRef = useRef(null);
-  useEffect(() => {
-    if (viewMode !== 'json' || !jsonText) {
-      return;
-    }
-
-    // Limpa timeout anterior
-    if (jsonValidationTimeoutRef.current) {
-      clearTimeout(jsonValidationTimeoutRef.current);
-    }
-
-    // Debounce de 300ms para evitar validação excessiva
-    jsonValidationTimeoutRef.current = setTimeout(() => {
-      try {
-        const parsed = JSON.parse(jsonText);
-        setJsonError(null);
-        setEditedConfig(parsed);
-      } catch (err) {
-        setJsonError(err.message);
-      }
-    }, 300);
-
-    return () => {
-      if (jsonValidationTimeoutRef.current) {
-        clearTimeout(jsonValidationTimeoutRef.current);
-      }
-    };
-  }, [jsonText, viewMode]);
+  // Detecta se há erros de validação em qualquer campo
+  const hasValidationErrors = useMemo(() => {
+    return Object.values(fieldErrors).some(err => err !== null && err !== undefined);
+  }, [fieldErrors]);
 
   // Detecta mudanças usando useMemo com comparação direta
   const hasChangesMemo = useMemo(() => {
     if (!editedConfig || !config) return false;
-    
-    if (viewMode === 'json' && jsonText) {
-      try {
-        const parsed = JSON.parse(jsonText);
-        const parsedString = JSON.stringify(parsed);
-        const configString = JSON.stringify(config);
-        return parsedString !== configString;
-      } catch {
-        return false;
-      }
-    }
-    
-    if (viewMode === 'form') {
-      const editedString = JSON.stringify(editedConfig);
-      const configString = JSON.stringify(config);
-      return editedString !== configString;
-    }
-    
-    return false;
-  }, [editedConfig, config, viewMode, jsonText]);
+    const editedString = JSON.stringify(editedConfig);
+    const configString = JSON.stringify(config);
+    return editedString !== configString;
+  }, [editedConfig, config]);
 
   useEffect(() => {
     setHasChanges(hasChangesMemo);
@@ -471,11 +448,6 @@ export function ConfigPage() {
 
   // Salva configuração
   const handleSave = async () => {
-    if (jsonError) {
-      showToast('Corrija os erros no JSON antes de salvar', 'error');
-      return;
-    }
-
     setSaving(true);
     try {
       // Se estiver na aba IA, salva a configuração de IA do tenant
@@ -563,9 +535,8 @@ export function ConfigPage() {
     }
 
     setEditedConfig(JSON.parse(JSON.stringify(config))); // Deep copy
-    setJsonText(JSON.stringify(config, null, 2));
     setHasChanges(false);
-    setJsonError(null);
+    setFieldErrors({});
     showToast('Alterações descartadas', 'info');
   };
 
@@ -644,6 +615,29 @@ export function ConfigPage() {
   // Validação de token global removida: credenciais de IA são por-tenant e ficam no DB (criptografadas).
 
   // Valida conexão do Redis
+  // Validação de credenciais de billing contra o provedor
+  const handleValidateBilling = useCallback(async () => {
+    if (!editedConfig) return;
+    const provider = editedConfig?.billing?.provider || 'asaas';
+    const apiKey = editedConfig?.billing?.providers?.[provider]?.apiKey || '';
+    const webhookSecret = editedConfig?.billing?.providers?.[provider]?.webhookSecret || '';
+
+    setValidatingBilling(true);
+    try {
+      const result = await validateBillingCredentials({ provider, apiKey, webhookSecret });
+      setBillingValidation(prev => ({
+        ...prev,
+        [provider]: result,
+      }));
+      if (result.apiKey?.valid) showToast('✅ API Key validada com sucesso', 'success');
+      else showToast('❌ API Key inválida: ' + (result.apiKey?.error || 'erro'), 'error');
+    } catch (err) {
+      showToast('Erro ao validar credenciais', 'error');
+    } finally {
+      setValidatingBilling(false);
+    }
+  }, [editedConfig, showToast]);
+
   const validateRedis = useCallback(async (redisUrl) => {
     if (!redisUrl || redisUrl.trim() === '') {
       setRedisValidationStatus(null);
@@ -743,16 +737,19 @@ export function ConfigPage() {
     }
 
     setEditedConfig(newConfig);
-    // Atualiza jsonText apenas se estiver no modo JSON para evitar serialização desnecessária
-    if (viewMode === 'json') {
-      setJsonText(JSON.stringify(newConfig, null, 2));
-    }
+
+    // Valida campos do tipo password / secrets
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      next[path] = validateFieldValue(path, value);
+      return next;
+    });
 
     // Validação de token global removida: credenciais são por-tenant (DB).
     if (path === 'rateLimit.redis.url') {
       setRedisValidationStatus(null);
     }
-  }, [editedConfig, viewMode, showToast]);
+  }, [editedConfig, showToast, validateFieldValue]);
 
   // Renderiza campo de input para um valor
   const renderField = (label, path, value, type = 'text', options = null) => {
@@ -760,6 +757,8 @@ export function ConfigPage() {
     const isRedisField = path === 'rateLimit.redis.url';
     const redisValidating = isRedisField && validatingRedis;
     const redisStatus = isRedisField ? redisValidationStatus : null;
+    const fieldError = fieldErrors[path] || null;
+    const hasError = !!fieldError;
 
     // Se tem opções, renderiza como select
     if (options && Array.isArray(options)) {
@@ -814,12 +813,14 @@ export function ConfigPage() {
                 type={type}
                 value={displayValue}
                 onChange={(e) => updateValue(path, e.target.value)}
-                className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all ${
-                  (redisStatus)
-                    ? (redisStatus?.valid)
-                      ? 'border-status-success'
-                      : 'border-status-error'
-                    : 'border-border-default'
+                className={`w-full px-3 py-2 pr-10 bg-bg-secondary border rounded-lg text-text-primary focus:outline-none focus:ring-2 transition-all ${
+                  hasError
+                    ? 'border-status-error focus:ring-status-error'
+                    : (redisStatus)
+                      ? (redisStatus?.valid)
+                        ? 'border-status-success focus:ring-accent-primary'
+                        : 'border-status-error focus:ring-status-error'
+                      : 'border-border-default focus:ring-accent-primary focus:border-transparent'
                 }`}
                 placeholder={label}
               />
@@ -867,6 +868,12 @@ export function ConfigPage() {
         {isRedisField && redisStatus && redisStatus.valid && (
           <p className="mt-1 text-xs text-status-success">✓ Conexão com Redis válida e funcionando corretamente</p>
         )}
+        {hasError && (
+          <p className="mt-1 text-xs text-status-error flex items-center gap-1">
+            <span>⚠️</span>
+            <span>{fieldError}</span>
+          </p>
+        )}
       </div>
     );
   };
@@ -885,6 +892,7 @@ export function ConfigPage() {
     { id: 'rateLimit', label: 'Rate Limiting', icon: '🚦' },
     { id: 'fallbacks', label: 'Fallbacks', icon: '🛟' },
     { id: 'general', label: 'Geral', icon: '🌐' },
+    { id: 'webhooks', label: 'Webhooks', icon: '🪝' },
   ];
 
   if (loading && !config) {
@@ -939,7 +947,7 @@ export function ConfigPage() {
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={(saving || savingTenantAiConfig) || (activeTab !== 'ai' && !hasChanges) || jsonError || (activeTab === 'ai' && !tenantAiConfig?.primary)} 
+              disabled={(saving || savingTenantAiConfig) || (activeTab !== 'ai' && (!hasChanges || hasValidationErrors)) || (activeTab === 'ai' && (!tenantAiConfig?.primary || hasValidationErrors))} 
               variant="primary"
               className="flex items-center gap-2"
             >
@@ -970,28 +978,7 @@ export function ConfigPage() {
               <span>🔄</span>
               <span>Reiniciar Servidor</span>
             </Button>
-            <div className="ml-auto flex gap-2">
-              <button
-                onClick={() => setViewMode('form')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  viewMode === 'form'
-                    ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/30'
-                    : 'bg-bg-secondary text-text-secondary hover:bg-bg-hover border border-border-default'
-                }`}
-              >
-                📋 Formulário
-              </button>
-              <button
-                onClick={() => setViewMode('json')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  viewMode === 'json'
-                    ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/30'
-                    : 'bg-bg-secondary text-text-secondary hover:bg-bg-hover border border-border-default'
-                }`}
-              >
-                {'{ }'} JSON
-              </button>
-            </div>
+            <div className="ml-auto"></div>
           </div>
         </div>
 
@@ -1032,8 +1019,7 @@ export function ConfigPage() {
           </div>
         )}
 
-        {/* Abas de navegação (apenas no modo formulário) */}
-        {viewMode === 'form' && (
+        {/* Abas de navegação */}
           <div className="mb-6 border-b border-border-default">
             <div className="flex flex-wrap gap-0">
               {tabs.map((tab) => {
@@ -1056,10 +1042,9 @@ export function ConfigPage() {
               })}
             </div>
           </div>
-        )}
 
         {/* Conteúdo */}
-        {viewMode === 'form' && editedConfig ? (
+        {editedConfig && (
           <div className="bg-transparent sm:bg-bg-elevated rounded-none sm:rounded-xl border-0 sm:border border-border-default p-0 sm:p-6 shadow-none sm:shadow-lg">
             {/* Aba: API */}
             {activeTab === 'api' && (
@@ -1077,7 +1062,13 @@ export function ConfigPage() {
             )}
 
             {activeTab === 'billing' && (
-              <ConfigBillingTab editedConfig={editedConfig} renderField={renderField} />
+              <ConfigBillingTab
+                editedConfig={editedConfig}
+                renderField={renderField}
+                billingValidation={billingValidation}
+                validatingBilling={validatingBilling}
+                onValidateBilling={handleValidateBilling}
+              />
             )}
 
             {/* Aba: WhatsApp */}
@@ -1148,9 +1139,12 @@ export function ConfigPage() {
                 editedConfig={editedConfig}
                 updateValue={updateValue}
                 setEditedConfig={setEditedConfig}
-                viewMode={viewMode}
-                setJsonText={setJsonText}
               />
+            )}
+
+            {/* Aba: Webhooks */}
+            {activeTab === 'webhooks' && (
+              <ConfigWebhooksTab editedConfig={editedConfig} renderField={renderField} />
             )}
 
             {/* Aba: Geral */}
@@ -1167,27 +1161,6 @@ export function ConfigPage() {
                 showToast={showToast}
                 upsertTenantSetting={upsertTenantSetting}
               />
-            )}
-          </div>
-        ) : (
-          <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-            <textarea
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-              className={`w-full min-h-[500px] p-4 font-mono text-sm rounded-lg bg-bg-secondary border-2 transition-all focus:outline-none focus:ring-2 focus:ring-accent-primary ${
-                jsonError 
-                  ? 'border-status-error focus:ring-status-error' 
-                  : 'border-border-default focus:border-transparent'
-              } text-text-primary`}
-              spellCheck={false}
-            />
-            {jsonError && (
-              <div className="mt-4 p-4 bg-status-error/10 border border-status-error rounded-lg">
-                <p className="text-status-error font-medium flex items-center gap-2">
-                  <span>❌</span>
-                  <span>Erro no JSON: {jsonError}</span>
-                </p>
-              </div>
             )}
           </div>
         )}

@@ -679,7 +679,7 @@ async function isRagAvailable(tenantId = null) {
     logger.info('[RAGService] Verificando disponibilidade', { serviceUrl, tenantId });
     
     const response = await fetchWithTimeout(
-      `${serviceUrl}/rag/health`,
+      `${serviceUrl}/health`,
       {
         method: 'GET',
       },

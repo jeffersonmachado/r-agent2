@@ -28,6 +28,7 @@ function createConfigRoutes({ buildDeps }) {
   router.put('/config', (req, res) => controllerFor(req, res).updateConfig(req, res));
   router.get('/server/process-manager', (req, res) => controllerFor(req, res).getProcessManager(req, res));
   router.post('/config/validate-provider-token', (req, res) => controllerFor(req, res).validateProviderToken(req, res));
+  router.post('/config/validate-billing-credentials', (req, res) => controllerFor(req, res).validateBillingCredentials(req, res));
   router.post('/config/validate-redis', (req, res) => controllerFor(req, res).validateRedis(req, res));
   router.post('/server/restart', (req, res) => controllerFor(req, res).restartServer(req, res));
 

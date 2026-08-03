@@ -68,6 +68,14 @@ services:
       # Configurações adicionais de produção
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # -------------------------------------------------------------------
+      # Webhook Secrets (fail-closed: sem secret = webhook rejeitado em produção)
+      # -------------------------------------------------------------------
+      WHATSAPP_QR_WEBHOOK_SECRET: ${WHATSAPP_QR_WEBHOOK_SECRET:-}
+      # INSTAGRAM_APP_SECRET e MESSENGER_APP_SECRET: obter no Meta Developer Dashboard
+      # (App > Configurações > Básico > App Secret). Sem eles, webhooks do Meta são rejeitados.
+      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
+      MESSENGER_APP_SECRET: ${MESSENGER_APP_SECRET:-}
+      # -------------------------------------------------------------------
       # PBX v1 (Asterisk Realtime/ODBC + AMI)
       # -------------------------------------------------------------------
       AMI_HOST: ${AMI_HOST:-asterisk}

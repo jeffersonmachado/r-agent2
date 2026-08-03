@@ -439,6 +439,71 @@ function createConfigService({ deps }) {
     validateProviderToken: validateProviderCredentials,
     validateRedisUrl,
     validateRedisConnection,
+
+    async validateBillingCredentials({ provider, apiKey, webhookSecret }) {
+      const cleanProvider = String(provider || '').trim().toLowerCase();
+      const cleanApiKey = String(apiKey || '').trim();
+      const cleanWebhookSecret = String(webhookSecret || '').trim();
+
+      const results = {};
+
+      // Valida API Key contra o provedor
+      if (cleanApiKey) {
+        try {
+          if (cleanProvider === 'asaas') {
+            const res = await fetch('https://api.asaas.com/v3/financial/transactions?limit=1', {
+              method: 'GET',
+              headers: { 'access_token': cleanApiKey },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (res.ok) {
+              results.apiKey = { valid: true };
+            } else if (res.status === 401) {
+              results.apiKey = { valid: false, error: 'API Key inválida' };
+            } else {
+              const body = await res.json().catch(() => ({}));
+              results.apiKey = { valid: false, error: body.errors?.[0]?.description || `Erro ${res.status}` };
+            }
+          } else if (cleanProvider === 'mercado_pago' || cleanProvider === 'mercadopago') {
+            const res = await fetch('https://api.mercadopago.com/v1/users/me', {
+              method: 'GET',
+              headers: { 'Authorization': `Bearer ${cleanApiKey}` },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (res.ok) {
+              results.apiKey = { valid: true };
+            } else if (res.status === 401 || res.status === 403) {
+              results.apiKey = { valid: false, error: 'Access Token inválido' };
+            } else {
+              results.apiKey = { valid: false, error: `Erro ${res.status}` };
+            }
+          } else {
+            results.apiKey = { valid: false, error: 'Provider não suportado para validação' };
+          }
+        } catch (err) {
+          if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+            results.apiKey = { valid: false, error: 'Timeout — verifique a conexão' };
+          } else {
+            results.apiKey = { valid: false, error: err.message || 'Erro de conexão' };
+          }
+        }
+      } else {
+        results.apiKey = { valid: false, error: 'API Key não informada' };
+      }
+
+      // Webhook secret: validação local (formato/tamanho)
+      if (cleanWebhookSecret) {
+        if (cleanWebhookSecret.length >= 32) {
+          results.webhookSecret = { valid: true };
+        } else {
+          results.webhookSecret = { valid: false, error: 'Mínimo de 32 caracteres' };
+        }
+      } else {
+        results.webhookSecret = { valid: false, error: 'Webhook Secret não informado' };
+      }
+
+      return results;
+    },
   };
 }
 

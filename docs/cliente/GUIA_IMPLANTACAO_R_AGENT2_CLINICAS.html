@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guia de Prontidão para Implantação do r-agent2 em Clínicas</title>
+  <style>
+    @page { size: A4; margin: 15mm 15mm 17mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #172033;
+      font: 10.4pt/1.48 Arial, Helvetica, sans-serif;
+      background: #fff;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 27pt; line-height: 1.08; margin-bottom: 8mm; }
+    h2 {
+      margin: 8mm 0 3.5mm;
+      padding-bottom: 2mm;
+      color: #123d68;
+      border-bottom: 1px solid #cbd8e5;
+      font-size: 17pt;
+      break-after: avoid;
+    }
+    h3 { margin: 5mm 0 2mm; color: #116b69; font-size: 12.5pt; break-after: avoid; }
+    p { margin-bottom: 3mm; }
+    ul, ol { margin: 1.5mm 0 4mm 5.5mm; padding-left: 4mm; }
+    li { margin: 1.2mm 0; }
+    table { width: 100%; margin: 3mm 0 5mm; border-collapse: collapse; font-size: 9.4pt; }
+    th, td { padding: 2.4mm 2.6mm; border: 1px solid #cbd8e5; vertical-align: top; }
+    th { color: #fff; background: #123d68; text-align: left; }
+    tr:nth-child(even) td { background: #f5f8fb; }
+    .cover {
+      min-height: 257mm;
+      padding: 17mm 13mm;
+      color: #fff;
+      background: linear-gradient(142deg, #0b2746 0%, #114c70 58%, #12817a 100%);
+      break-after: page;
+      position: relative;
+    }
+    .brand { font-size: 12pt; font-weight: bold; letter-spacing: 1.2px; }
+    .cover-main { margin-top: 43mm; max-width: 150mm; }
+    .cover .eyebrow { color: #79ddd2; font-weight: bold; letter-spacing: 1.1px; text-transform: uppercase; }
+    .cover .subtitle { max-width: 145mm; font-size: 15pt; line-height: 1.45; color: #e5f0f5; }
+    .cover .meta { position: absolute; bottom: 18mm; left: 13mm; color: #c8dde6; }
+    .content { padding: 0 1mm; }
+    .intro {
+      margin: 3mm 0 7mm;
+      padding: 5mm;
+      background: #edf7f6;
+      border-left: 4px solid #12817a;
+      border-radius: 2mm;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3mm;
+      margin: 4mm 0 7mm;
+    }
+    .card {
+      padding: 4mm;
+      background: #f5f8fb;
+      border: 1px solid #d8e2eb;
+      border-radius: 2mm;
+      break-inside: avoid;
+    }
+    .card strong { display: block; margin-bottom: 1.5mm; color: #123d68; }
+    .checklist { list-style: none; margin-left: 0; padding-left: 0; }
+    .checklist li { position: relative; padding-left: 7mm; }
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      color: #116b69;
+      font-weight: bold;
+    }
+    .note {
+      margin: 4mm 0;
+      padding: 4mm;
+      border: 1px solid #efc467;
+      background: #fff8e8;
+      border-radius: 2mm;
+      break-inside: avoid;
+    }
+    .success {
+      margin: 4mm 0;
+      padding: 4mm;
+      border: 1px solid #8bc9c3;
+      background: #edf7f6;
+      border-radius: 2mm;
+      break-inside: avoid;
+    }
+    .page-break { break-before: page; }
+    .small { color: #536276; font-size: 8.8pt; }
+    .signature {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12mm;
+      margin-top: 13mm;
+    }
+    .signature div { padding-top: 11mm; border-top: 1px solid #657386; }
+    footer { margin-top: 10mm; padding-top: 3mm; border-top: 1px solid #d8e2eb; color: #657386; font-size: 8.5pt; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="brand">RAP · RESULTS AUTONOMOUS PLATFORM</div>
+    <div class="cover-main">
+      <div class="eyebrow">Guia executivo de prontidão</div>
+      <h1>Implantação do r-agent2 em Clínicas</h1>
+      <p class="subtitle">Requisitos, responsabilidades e plano recomendado para uma implantação segura, integrada e orientada a resultados.</p>
+    </div>
+    <div class="meta">
+      <div><strong>Preparado para:</strong> __________________________________</div>
+      <div><strong>Data:</strong> 30 de julho de 2026</div>
+      <div><strong>Versão:</strong> 1.0</div>
+    </div>
+  </section>
+
+  <main class="content">
+    <h2>1. Visão geral</h2>
+    <div class="intro">
+      O r-agent2 é uma plataforma SaaS multiempresa para integrar atendimento, agenda, relacionamento, automações e inteligência artificial. A solução será hospedada e operada na infraestrutura do fornecedor. Em uma clínica, o objetivo é transformar contatos e eventos operacionais em jornadas rastreáveis, com decisões, execuções, aprendizado e evidências de qualidade.
+    </div>
+    <p>A implantação bem-sucedida não depende apenas da instalação do software. A clínica precisa disponibilizar processos, dados, acessos técnicos, conteúdo aprovado e responsáveis para homologação. Este documento apresenta o mínimo recomendado para iniciar o projeto.</p>
+
+    <div class="summary-grid">
+      <div class="card"><strong>Operação</strong>Jornadas, regras de agenda, exceções e atendimento humano.</div>
+      <div class="card"><strong>Dados</strong>Pacientes, profissionais, serviços, agenda e consentimentos.</div>
+      <div class="card"><strong>Integrações</strong>Canais, agenda/prontuário, telefonia e pagamentos.</div>
+      <div class="card"><strong>Governança</strong>Privacidade, acessos, auditoria e aprovação clínica.</div>
+    </div>
+
+    <h2>2. Informações que a clínica deve fornecer</h2>
+
+    <h3>2.1 Processos operacionais</h3>
+    <ul class="checklist">
+      <li>Fluxo de cadastro, triagem, agendamento, confirmação e reagendamento.</li>
+      <li>Regras de check-in, fila, encaixe, atraso, cancelamento e falta.</li>
+      <li>Fluxo de retorno e acompanhamento após o atendimento.</li>
+      <li>Critérios de transferência da IA para uma pessoa.</li>
+      <li>Unidades, horários, feriados, profissionais, especialidades e salas.</li>
+      <li>Serviços/procedimentos, duração, preço e regras de elegibilidade.</li>
+    </ul>
+
+    <h3>2.2 Dados para carga inicial</h3>
+    <ul class="checklist">
+      <li>Cadastro de pacientes e meios de contato.</li>
+      <li>Cadastro de profissionais, serviços, unidades e disponibilidade.</li>
+      <li>Agenda futura e histórico estritamente necessário.</li>
+      <li>Consentimentos e preferências de comunicação.</li>
+      <li>Critérios de deduplicação e responsável pela conferência da migração.</li>
+    </ul>
+    <p class="small">Formato recomendado: exportação estruturada em CSV ou integração por API, acompanhada de dicionário de dados. Dados clínicos sensíveis devem ser limitados ao necessário para o escopo aprovado.</p>
+
+    <h3>2.3 Base de conhecimento</h3>
+    <ul class="checklist">
+      <li>Perguntas frequentes e respostas oficiais.</li>
+      <li>Serviços, preços, convênios, endereços e horários.</li>
+      <li>Políticas de cancelamento, retorno, cobrança e reembolso.</li>
+      <li>Preparos e orientações pré/pós-atendimento aprovados.</li>
+      <li>Temas proibidos e situações de encaminhamento obrigatório.</li>
+      <li>Responsável clínico pela aprovação e atualização do conteúdo.</li>
+    </ul>
+
+    <div class="note"><strong>Limite recomendado para a IA:</strong> atendimento administrativo, orientação baseada em conteúdo aprovado e encaminhamento. Diagnóstico, prescrição ou alteração de conduta clínica não devem fazer parte do piloto sem desenho específico, validação especializada e governança adicional.</div>
+
+    <h2 class="page-break">3. Integrações necessárias</h2>
+    <table>
+      <thead>
+        <tr><th>Integração</th><th>O que a clínica precisa disponibilizar</th><th>Prioridade</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>WhatsApp</td><td>Conta/número, provedor oficial, credenciais e modelos aprovados.</td><td>Alta</td></tr>
+        <tr><td>Agenda ou prontuário</td><td>Documentação de API, ambiente de teste, credenciais e contato do fornecedor.</td><td>Alta</td></tr>
+        <tr><td>E-mail/SMS</td><td>Provedor, domínio remetente, credenciais e política de envio.</td><td>Conforme escopo</td></tr>
+        <tr><td>Telefonia/PBX</td><td>Números, operadora, filas, URA, gravação e regras de retenção.</td><td>Opcional no piloto</td></tr>
+        <tr><td>Pagamentos</td><td>Gateway, eventos de cobrança, regras de estorno e conciliação.</td><td>Fase posterior</td></tr>
+        <tr><td>IA</td><td>Conta OpenAI ou Anthropic, orçamento e credencial protegida.</td><td>Alta</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Atenção:</strong> as jornadas de confirmação, lembrete, falta, pós-atendimento e reativação existem na vertical. A entrega real por WhatsApp, SMS ou e-mail depende da conexão e homologação do provedor escolhido; sem isso, notificações não devem ser consideradas entregues.</div>
+
+    <h2>4. Modelo SaaS, infraestrutura e segurança</h2>
+    <p>A clínica não precisará instalar ou manter servidores para executar o r-agent2. O ambiente de aplicação, banco de dados, filas, armazenamento e componentes de inteligência serão hospedados na infraestrutura do fornecedor.</p>
+    <table>
+      <thead><tr><th>Responsabilidade do fornecedor SaaS</th><th>Responsabilidade da clínica</th></tr></thead>
+      <tbody>
+        <tr><td>Hospedagem e operação da plataforma.</td><td>Computadores/dispositivos compatíveis e acesso estável à internet.</td></tr>
+        <tr><td>Banco de dados, Redis, armazenamento e isolamento por tenant.</td><td>Fornecer dados corretos e autorizar os tratamentos previstos no projeto.</td></tr>
+        <tr><td>HTTPS, backups, monitoramento, atualização e recuperação.</td><td>Administrar seus usuários e comunicar desligamentos ou mudanças de função.</td></tr>
+        <tr><td>Proteção de credenciais e segredos da plataforma.</td><td>Fornecer credenciais das integrações por canal seguro e controlar contas de terceiros.</td></tr>
+        <tr><td>Disponibilidade técnica e suporte conforme acordo de serviço.</td><td>Indicar responsáveis para homologação, incidentes e decisões operacionais.</td></tr>
+      </tbody>
+    </table>
+    <p>O fornecedor configurará um tenant exclusivo para a clínica, com perfis de acesso por função e trilha de auditoria. A clínica acessará a solução por navegador, conforme usuários e permissões autorizados.</p>
+    <div class="note"><strong>Definição contratual necessária:</strong> o contrato deve registrar níveis de serviço, suporte, backup, recuperação, retenção, exportação ao término, responsabilidades sobre dados pessoais e condições de indisponibilidade. Credenciais nunca devem ser enviadas em documentos ou mensagens comuns.</div>
+
+    <h2>5. Privacidade e governança</h2>
+    <ul class="checklist">
+      <li>Definir responsáveis pelo tratamento e pela segurança dos dados.</li>
+      <li>Mapear finalidade, base aplicável e consentimentos de comunicação.</li>
+      <li>Definir perfis de acesso para recepção, profissionais, gestores e TI.</li>
+      <li>Estabelecer retenção, correção, exportação e exclusão de dados.</li>
+      <li>Definir regras para conversas, documentos, gravações e evidências.</li>
+      <li>Aprovar respostas, automações e limites de atuação da IA.</li>
+      <li>Manter plano de resposta a incidentes e canal de escalonamento.</li>
+    </ul>
+    <p class="small">A validação jurídica e de privacidade deve considerar o tipo de clínica, os dados tratados, os canais utilizados e as integrações contratadas.</p>
+
+    <h2 class="page-break">6. Equipe mínima do projeto</h2>
+    <table>
+      <thead><tr><th>Papel</th><th>Responsabilidade principal</th></tr></thead>
+      <tbody>
+        <tr><td>Patrocinador/decisor</td><td>Prioridades, orçamento e decisões de escopo.</td></tr>
+        <tr><td>Responsável operacional</td><td>Mapear processos, exceções e critérios de aceite.</td></tr>
+        <tr><td>Responsável clínico</td><td>Aprovar conteúdo, orientações e limites da IA.</td></tr>
+        <tr><td>Privacidade/segurança</td><td>Validar tratamento de dados, acessos e retenção.</td></tr>
+        <tr><td>TI/fornecedores</td><td>Viabilizar APIs, credenciais, conectividade e suporte aos sistemas da clínica.</td></tr>
+        <tr><td>Usuários-chave</td><td>Executar testes e homologar a operação real.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>7. Piloto recomendado</h2>
+    <p>Para reduzir risco e acelerar aprendizado, recomenda-se começar com uma unidade, um grupo pequeno de profissionais e uma jornada delimitada:</p>
+    <ol>
+      <li>Entrada pelo WhatsApp ou formulário.</li>
+      <li>Resposta a dúvidas administrativas com base aprovada.</li>
+      <li>Agendamento ou transferência para atendimento humano.</li>
+      <li>Confirmação e lembrete do atendimento.</li>
+      <li>Registro de comparecimento, cancelamento ou falta.</li>
+      <li>Contato pós-atendimento e painel de indicadores.</li>
+    </ol>
+    <p>Prontuário clínico completo, decisões clínicas por IA, pagamentos complexos, telefonia avançada e expansão para várias unidades devem ser tratados como fases posteriores.</p>
+
+    <h2>8. Etapas da implantação</h2>
+    <table>
+      <thead><tr><th>Fase</th><th>Resultado esperado</th><th>Critério de avanço</th></tr></thead>
+      <tbody>
+        <tr><td>1. Descoberta</td><td>Escopo, jornada, riscos e indicadores acordados.</td><td>Aprovação do desenho.</td></tr>
+        <tr><td>2. Preparação</td><td>Tenant SaaS, dados, usuários e acessos disponíveis.</td><td>Checklist técnico concluído.</td></tr>
+        <tr><td>3. Configuração</td><td>Fluxos, conteúdo, perfis e integrações configurados.</td><td>Testes técnicos aprovados.</td></tr>
+        <tr><td>4. Homologação</td><td>Cenários reais executados por usuários-chave.</td><td>Critérios de aceite atendidos.</td></tr>
+        <tr><td>5. Piloto</td><td>Operação controlada e acompanhada.</td><td>Indicadores e incidentes avaliados.</td></tr>
+        <tr><td>6. Expansão</td><td>Mais jornadas, profissionais ou unidades.</td><td>Decisão formal de expansão.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>9. Critérios de sucesso do piloto</h2>
+    <div class="success">
+      Os indicadores devem ser definidos na descoberta. Sugestões: percentual de mensagens respondidas, agendamentos concluídos, confirmações entregues, redução de faltas, tempo até atendimento humano, taxa de resolução administrativa, satisfação dos usuários e ausência de incidentes críticos de segurança.
+    </div>
+
+    <h2>10. Aceite para início do projeto</h2>
+    <ul class="checklist">
+      <li>Escopo e jornada do piloto aprovados.</li>
+      <li>Responsáveis do cliente nomeados.</li>
+      <li>Dados e documentos disponíveis para avaliação.</li>
+      <li>Fornecedores e integrações identificados.</li>
+      <li>Requisitos de privacidade e segurança avaliados.</li>
+      <li>Critérios de homologação e sucesso acordados.</li>
+    </ul>
+
+    <div class="signature">
+      <div>Responsável pela clínica<br><span class="small">Nome, cargo e data</span></div>
+      <div>Responsável pela implantação<br><span class="small">Nome, cargo e data</span></div>
+    </div>
+
+    <footer>
+      Documento executivo de preparação. O escopo definitivo, os prazos e os custos dependem do diagnóstico técnico, das integrações selecionadas e da qualidade dos dados disponibilizados.
+    </footer>
+  </main>
+</body>
+</html>

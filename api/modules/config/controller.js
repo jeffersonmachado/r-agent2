@@ -267,6 +267,26 @@ function createConfigController({ service, deps }) {
       }
     },
 
+    async validateBillingCredentials(req, res) {
+      if (!ensureJson(req, res)) return;
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return;
+      try {
+        const body = await deps.parseJsonBody(req);
+        const results = await service.validateBillingCredentials({
+          provider: body?.provider,
+          apiKey: body?.apiKey,
+          webhookSecret: body?.webhookSecret,
+        });
+        deps.sendJson(res, 200, { success: true, ...results });
+      } catch (err) {
+        deps.logger.error('Erro ao validar credenciais de billing', err);
+        deps.sendJson(res, 500, { success: false, error: 'Erro ao validar credenciais', message: err.message });
+      }
+    },
+
     async validateRedis(req, res) {
       if (!ensureJson(req, res)) return;
       // Tenta conexão TCP arbitrária (SSRF): exige auth + config:read.
