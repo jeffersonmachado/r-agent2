@@ -205,7 +205,23 @@ async function aiNodeHandler(node, state, input, deps = null) {
         variables: nextState.variables,
       }, filters);
 
-      if (ragResult.success && ragResult.confidence >= ragMinConfidence) {
+      if (ragResult.skipped) {
+        // Gating por intent (saudação/despedida): o fluxo segue SEM contexto
+        // RAG e SEM acionar fallback de erro — ragUsed permanece false e a
+        // execução cai para a IA direta abaixo.
+        events.push(
+          createEngineEvent({
+            sessionId: state.sessionId,
+            flowId: state.flowId,
+            nodeId: node.id,
+            type: 'RAG_QUERY_SKIPPED',
+            payload: {
+              reason: ragResult.reason || 'intent_gated',
+              intent: ragResult.intent || null,
+            },
+          }),
+        );
+      } else if (ragResult.success && ragResult.confidence >= ragMinConfidence) {
         // RAG bem-sucedido
         rawResponse = ragResult.response || '';
         ragUsed = true;

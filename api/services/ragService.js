@@ -39,6 +39,78 @@ const {
   safeErrorMessage,
 } = require('../utils/defensiveCoercion');
 const { resolveRetrievalScope, sanitizeScope } = require('./rag/domainRouter');
+const ragResponseCache = require('./rag/ragResponseCache');
+
+// ---------------------------------------------------------------------------
+// Gating por intent: saudações e despedidas não precisam de recuperação RAG.
+// Vocabulário real do NLP Python (rag-service/services/nlp_service.py):
+// question, complaint, request, greeting, goodbye, information, support.
+// Não existe intent de "confirmação" no vocabulário; 'goodbye' cobre
+// agradecimentos/encerramentos (patterns incluem 'obrigado/obrigada').
+// Configurável via env RAG_SKIP_INTENTS (CSV) ou config rag.skipIntents.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_SKIP_INTENTS = ['greeting', 'goodbye'];
+const DEFAULT_SKIP_INTENT_MIN_CONFIDENCE = 0.3;
+
+function getSkipIntents() {
+  const raw = process.env.RAG_SKIP_INTENTS || config.get('rag.skipIntents', '');
+  if (!raw || (Array.isArray(raw) && raw.length === 0)) return DEFAULT_SKIP_INTENTS;
+  const list = (Array.isArray(raw) ? raw : String(raw).split(','))
+    .map((s) => safeTrimLower(s))
+    .filter(Boolean);
+  return list.length > 0 ? list : DEFAULT_SKIP_INTENTS;
+}
+
+function getSkipIntentMinConfidence() {
+  const raw = process.env.RAG_SKIP_INTENT_MIN_CONFIDENCE
+    || config.get('rag.skipIntentMinConfidence', String(DEFAULT_SKIP_INTENT_MIN_CONFIDENCE));
+  const value = Number.parseFloat(String(raw));
+  return Number.isFinite(value) && value >= 0 && value <= 1 ? value : DEFAULT_SKIP_INTENT_MIN_CONFIDENCE;
+}
+
+/**
+ * true se o intent classificado pelo NLP dispensa recuperação RAG.
+ * Postura conservadora: só pula com intent classificado E confidence mínima;
+ * se o NLP falhar (intent desconhecido), segue para o RAG normalmente.
+ */
+function shouldSkipRagForIntent(intent, intentConfidence) {
+  if (!intent) return false;
+  return (
+    getSkipIntents().includes(String(intent).toLowerCase())
+    && intentConfidence >= getSkipIntentMinConfidence()
+  );
+}
+
+/**
+ * Monta o escopo que entra na chave do cache de respostas: tudo que afeta o
+ * resultado do /rag/query (scope de domínio, filtros, opções e tenant_context
+ * injetado na query enviada ao Python).
+ */
+function buildResponseCacheScope(retrievalScope, filters, tenantContext) {
+  return {
+    scope: retrievalScope,
+    filters: {
+      roles: Array.isArray(filters.roles) ? filters.roles : [],
+      agentId: filters.agentId || null,
+      productId: filters.productId || null,
+      clientId: filters.clientId || null,
+      category: filters.category || null,
+    },
+    options: {
+      topK: filters.topK || 6,
+      minScore: filters.minScore || 0.45,
+      maxTokens: filters.maxTokens || 1000,
+    },
+    tenantContext: tenantContext ? {
+      ramo_atividade: tenantContext.ramo_atividade,
+      objetivo: tenantContext.objetivo,
+      site_oficial: tenantContext.site_oficial,
+      prioridade: tenantContext.prioridade,
+      escopo: tenantContext.escopo,
+    } : null,
+  };
+}
 
 /**
  * Gera embeddings em batch reutilizando o modelo do serviço RAG (Python).
@@ -217,6 +289,28 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       });
     }
 
+    // Cache de resposta (TTL simples, sem invalidação por reindex — decisão
+    // de projeto). O check acontece ANTES do NLP analyze e do /rag/query:
+    // um hit poupa as 2 chamadas HTTP ao rag-service.
+    // Efeito colateral conhecido e DESEJADO: o Python registra cada query
+    // para aprendizado adaptativo (rag-service/api/routes/query.py,
+    // learning_service.record_query_result); um hit de cache pula esse
+    // registro — reduzir queries repetidas é o próprio objetivo do cache.
+    const responseCacheKey = ragResponseCache.buildCacheKey(
+      tenantId,
+      query,
+      buildResponseCacheScope(retrievalScope, filters, tenantContext)
+    );
+    const cachedResponse = ragResponseCache.getCachedResponse(responseCacheKey);
+    if (cachedResponse) {
+      logger.debug('[RAGService] Resposta RAG servida do cache (hit)', {
+        tenantId,
+        query: query.substring(0, 100),
+      });
+      // Cópia superficial marcada — nunca mutar o objeto cacheado.
+      return { ...cachedResponse, fromCache: true };
+    }
+
     // Pré-processa query com NLP (opcional, não bloqueia se falhar)
     let processedQuery = query.trim();
     
@@ -230,8 +324,12 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       });
     }
     
+    let nlpIntent = null;
+    let nlpIntentConfidence = 0;
     try {
       const nlpResult = await nlpService.analyzeText(query, true);
+      nlpIntent = typeof nlpResult.intent === 'string' ? nlpResult.intent : null;
+      nlpIntentConfidence = Number.isFinite(nlpResult.confidence) ? nlpResult.confidence : 0;
       if (nlpResult.expanded_query) {
         // Mantém o contexto do tenant mesmo após expansão NLP
         if (tenantContext && tenantContext.ramo_atividade && !processedQuery.includes('[Contexto do negócio:')) {
@@ -249,6 +347,30 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     } catch (nlpError) {
       logger.warn('[RAGService] NLP não disponível, usando query original', { error: safeErrorMessage(nlpError) });
       // Continua com query original se NLP falhar
+    }
+
+    // Gating por intent: saudações/despedidas não precisam de recuperação RAG.
+    // Acontece APÓS o analyze e ANTES do /rag/query. Respostas skipped NÃO
+    // entram no cache de respostas. Shape: success=true + skipped=true +
+    // response=null — o caller (aiNode) segue sem contexto RAG, sem acionar
+    // fallback de erro.
+    if (shouldSkipRagForIntent(nlpIntent, nlpIntentConfidence)) {
+      logger.info('[RAGService] RAG pulado por gating de intent', {
+        tenantId,
+        intent: nlpIntent,
+        intentConfidence: nlpIntentConfidence,
+      });
+      return {
+        success: true,
+        skipped: true,
+        reason: 'intent_gated',
+        intent: nlpIntent,
+        response: null,
+        sources: [],
+        confidence: 0,
+        metadata: { intentConfidence: nlpIntentConfidence },
+        error: null,
+      };
     }
 
     const requestBody = {
@@ -355,7 +477,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       });
     }
 
-    return {
+    const responsePayload = {
       success: result.success,
       response: result.response,
       sources: filteredSources, // Usa sources filtrados
@@ -367,6 +489,18 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       },
       error: result.error || null,
     };
+
+    // Cacheia SOMENTE sucesso com resposta não-vazia. Erros, respostas
+    // vazias e falhas de circuito nunca entram no cache.
+    if (
+      responsePayload.success
+      && typeof responsePayload.response === 'string'
+      && responsePayload.response.trim()
+    ) {
+      ragResponseCache.setCachedResponse(responseCacheKey, responsePayload);
+    }
+
+    return responsePayload;
   } catch (error) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const rawErrorMessage = safeErrorMessage(error);

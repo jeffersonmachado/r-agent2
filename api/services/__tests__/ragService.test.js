@@ -7,6 +7,20 @@ jest.mock('../nlpService', () => ({
   analyzeText: jest.fn().mockResolvedValue({ expanded_query: null }),
 }));
 
+// Mock parcial da deduplicação: helpers puros reais; funções DB-backed stubadas
+// com funções simples (jest.config usa resetMocks: true, que zeraria
+// implementações de jest.fn()). A camada DB é coberta em
+// tests/unit/ragDeduplicationService.coercion.test.js.
+jest.mock('../ragDeduplicationService', () => {
+  const actual = jest.requireActual('../ragDeduplicationService');
+  return {
+    ...actual,
+    checkStructuralDuplicate: async () => ({ isDuplicate: false }),
+    getCurrentSourceVersion: async () => 1,
+    deactivatePreviousVersions: async () => undefined,
+  };
+});
+
 // Mock do fetch global ANTES de carregar o módulo
 let mockFetchResponse = {
   ok: true,
@@ -29,6 +43,9 @@ global.AbortController = jest.fn(() => {
 });
 
 const ragService = require('../ragService');
+const ragResponseCache = require('../rag/ragResponseCache');
+const nlpService = require('../nlpService'); // mockado acima
+const { resetRagCircuitBreaker } = require('../rag/ragRuntime');
 
 describe('ragService', () => {
   beforeEach(() => {
@@ -42,6 +59,11 @@ describe('ragService', () => {
     };
     process.env.RAG_SERVICE_URL = 'http://localhost:9000';
     process.env.RAG_TIMEOUT = '5000';
+    // Isolamento entre testes: cache de respostas e circuit breaker são
+    // estado em nível de módulo.
+    ragResponseCache.clearResponseCache();
+    resetRagCircuitBreaker();
+    nlpService.analyzeText.mockResolvedValue({ expanded_query: null });
   });
 
   afterEach(() => {
@@ -404,6 +426,167 @@ describe('ragService', () => {
       await expect(
         ragService.indexDocument(document, 'tenant-001')
       ).rejects.toThrow('RAG service error: 400');
+    });
+  });
+
+  describe('queryRag — cache de resposta e gating por intent', () => {
+    const successPayload = (response = 'Resposta gerada pelo RAG') => ({
+      success: true,
+      response,
+      sources: [],
+      confidence: 0.9,
+      metadata: { chunksFound: 1 },
+    });
+
+    const mockRagSuccess = (payload = successPayload()) =>
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => payload,
+        text: async () => JSON.stringify(payload),
+        status: 200,
+      });
+
+    it('hit de cache não chama fetch novamente (poupa /rag/query)', async () => {
+      mockRagSuccess();
+
+      const first = await ragService.queryRag('pergunta cacheável', 'tenant-cache');
+      expect(first.success).toBe(true);
+      expect(first.fromCache).toBeUndefined();
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      // Mesma pergunta com case/whitespace diferentes → mesma chave
+      const second = await ragService.queryRag('  PERGUNTA   Cacheável ', 'tenant-cache');
+      expect(second.success).toBe(true);
+      expect(second.fromCache).toBe(true);
+      expect(second.response).toBe('Resposta gerada pelo RAG');
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('cópia marcada do cache não muta a entrada cacheada', async () => {
+      mockRagSuccess(successPayload('Original'));
+      await ragService.queryRag('pergunta mutação', 'tenant-cache');
+
+      const hit = await ragService.queryRag('pergunta mutação', 'tenant-cache');
+      expect(hit.fromCache).toBe(true);
+      hit.response = 'MUTADO';
+
+      const hitAgain = await ragService.queryRag('pergunta mutação', 'tenant-cache');
+      expect(hitAgain.response).toBe('Original');
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('não cacheia erro: próxima chamada vai ao serviço de novo', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+        json: async () => ({}),
+      });
+
+      await expect(
+        ragService.queryRag('pergunta com erro', 'tenant-cache')
+      ).rejects.toThrow('Erro interno no serviço RAG');
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      mockRagSuccess(successPayload('Recuperou'));
+      const result = await ragService.queryRag('pergunta com erro', 'tenant-cache');
+      expect(result.success).toBe(true);
+      expect(result.fromCache).toBeUndefined();
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('intent de saudação não chama /rag/query e retorna shape de skip', async () => {
+      nlpService.analyzeText.mockResolvedValueOnce({
+        intent: 'greeting',
+        confidence: 0.3,
+        expanded_query: null,
+      });
+
+      const result = await ragService.queryRag('Olá, bom dia!', 'tenant-gate');
+
+      expect(result).toMatchObject({
+        success: true,
+        skipped: true,
+        reason: 'intent_gated',
+        intent: 'greeting',
+        response: null,
+        sources: [],
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('intent de despedida também é gated; demais intents seguem para /rag/query', async () => {
+      nlpService.analyzeText.mockResolvedValueOnce({
+        intent: 'goodbye',
+        confidence: 0.6,
+        expanded_query: null,
+      });
+      const bye = await ragService.queryRag('tchau, obrigado', 'tenant-gate');
+      expect(bye.skipped).toBe(true);
+      expect(fetch).not.toHaveBeenCalled();
+
+      nlpService.analyzeText.mockResolvedValueOnce({
+        intent: 'question',
+        confidence: 0.9,
+        expanded_query: null,
+      });
+      mockRagSuccess();
+      const question = await ragService.queryRag('Como resetar senha?', 'tenant-gate');
+      expect(question.skipped).toBeUndefined();
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('confidence abaixo do mínimo configurado não faz skip', async () => {
+      process.env.RAG_SKIP_INTENT_MIN_CONFIDENCE = '0.5';
+      try {
+        nlpService.analyzeText.mockResolvedValueOnce({
+          intent: 'greeting',
+          confidence: 0.3,
+          expanded_query: null,
+        });
+        mockRagSuccess();
+
+        const result = await ragService.queryRag('olá', 'tenant-gate');
+        expect(result.skipped).toBeUndefined();
+        expect(fetch).toHaveBeenCalledTimes(1);
+      } finally {
+        delete process.env.RAG_SKIP_INTENT_MIN_CONFIDENCE;
+      }
+    });
+
+    it('lista de skip é configurável via RAG_SKIP_INTENTS (CSV)', async () => {
+      process.env.RAG_SKIP_INTENTS = 'question';
+      try {
+        nlpService.analyzeText.mockResolvedValueOnce({
+          intent: 'question',
+          confidence: 0.9,
+          expanded_query: null,
+        });
+
+        const result = await ragService.queryRag('Como faço X?', 'tenant-gate');
+        expect(result.skipped).toBe(true);
+        expect(result.intent).toBe('question');
+        expect(fetch).not.toHaveBeenCalled();
+      } finally {
+        delete process.env.RAG_SKIP_INTENTS;
+      }
+    });
+
+    it('resposta skipped não entra no cache de respostas', async () => {
+      nlpService.analyzeText.mockResolvedValue({
+        intent: 'greeting',
+        confidence: 0.9,
+        expanded_query: null,
+      });
+
+      await ragService.queryRag('oi', 'tenant-gate');
+      const second = await ragService.queryRag('oi', 'tenant-gate');
+
+      expect(second.skipped).toBe(true);
+      expect(second.fromCache).toBeUndefined();
+      // Sem cache: o analyze foi consultado nas 2 chamadas
+      expect(nlpService.analyzeText).toHaveBeenCalledTimes(2);
+      expect(fetch).not.toHaveBeenCalled();
     });
   });
 });
