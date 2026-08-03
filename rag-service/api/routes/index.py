@@ -214,18 +214,27 @@ def index_document(request: IndexRequest):
         valid_chunks = []
         valid_embeddings = []
         duplicate_count = 0
+        # Chunks aceitos no batch corrente: o Postgres só enxerga o que já foi
+        # commitado, então a dedup intra-documento compara contra esta lista.
+        batch_accepted = []
         
         for chunk, embedding in zip(chunks, embeddings):
             # Normaliza embedding
             normalized_emb = normalize_embedding(embedding)
             semantic_hash = generate_semantic_hash(normalized_emb)
             
+            # Persiste semantic_hash nos metadados do chunk (dedup exata via DB)
+            metadata_dict = chunk.metadata.dict() if hasattr(chunk.metadata, 'dict') else chunk.metadata.__dict__
+            metadata_dict['semantic_hash'] = semantic_hash
+            chunk.metadata = ChunkMetadata(**metadata_dict)
+            
             # Verifica duplicidade semântica
             semantic_check = check_semantic_duplicate(
                 tenant_id,
                 normalized_emb,
                 semantic_hash,
-                source_id
+                source_id,
+                batch_accepted=batch_accepted
             )
             
             if semantic_check.get('is_duplicate'):
@@ -256,6 +265,7 @@ def index_document(request: IndexRequest):
             }
             
             register_chunk(tenant_id, chunk_metadata, normalized_emb)
+            batch_accepted.append({'embedding': normalized_emb, 'chunk_metadata': chunk_metadata})
             
             valid_chunks.append(chunk)
             valid_embeddings.append(embedding)

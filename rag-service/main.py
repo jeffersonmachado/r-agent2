@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from contextlib import asynccontextmanager
 import os
 import uvicorn
 import logging
@@ -28,10 +29,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Warm-up de startup: carrega o modelo de embeddings (singleton) e aquece
+    o torch com um encode antes de aceitar tráfego. Sem warm-up, o primeiro
+    request pagaria download/load do modelo (~90MB) dentro do handler.
+    Falha explícita: se o modelo não carrega, o startup falha (healthcheck
+    do Docker barra o deploy) — nunca fallback silencioso.
+    """
+    from starlette.concurrency import run_in_threadpool
+    from services.embedding_service import get_embedding_model, generate_embedding
+
+    logger.info('[STARTUP] Carregando modelo de embeddings (warm-up)...')
+    await run_in_threadpool(get_embedding_model)
+    await run_in_threadpool(generate_embedding, 'warm-up')
+    logger.info('[STARTUP] Modelo de embeddings pronto')
+    yield
+
+
 app = FastAPI(
     title="RAG Service",
     description="Serviço de Retrieval-Augmented Generation",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS para permitir chamadas do Node.js

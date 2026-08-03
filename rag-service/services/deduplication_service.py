@@ -12,26 +12,24 @@ REGRAS:
 - Lógica determinística e reexecutável
 - NÃO reindexa documentos existentes automaticamente
 - NÃO remove dados históricos
+- Estado de deduplicação é persistido no Postgres (`rag_chunks.metadata`);
+  NÃO há índices em memória (eram perdidos a cada restart e não escalavam).
+- Falha de DB durante a deduplicação propaga erro explícito
+  (persistence_required): nunca tratar falha como "não duplicado".
 """
 
 import hashlib
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import numpy as np
-from models.document import Chunk
+
+from services.vector_store import _get_conn, _pgvector_literal
 
 logger = logging.getLogger(__name__)
 
-# Storage em memória para metadados de chunks (em produção, usar Redis ou DB)
-# Estrutura: {tenant_id: {content_hash: metadata}}
-_content_hash_index: Dict[str, Dict[str, Dict]] = {}
-
-# Estrutura: {tenant_id: {chunk_id: metadata}}
-_chunk_index: Dict[str, Dict[str, Dict]] = {}
-
-# Estrutura: {tenant_id: {source_id: {current_version: int, versions: List[int]}}}
-_source_version_index: Dict[str, Dict[str, Dict]] = {}
+# Threshold de similaridade cosseno para considerar duplicata semântica
+SEMANTIC_DUPLICATE_THRESHOLD = 0.97
 
 
 def normalize_content(text: str) -> str:
@@ -160,19 +158,138 @@ def cosine_similarity(embedding1: List[float], embedding2: List[float]) -> float
     return float(dot_product / (norm1 * norm2))
 
 
-def initialize_tenant_indices(tenant_id: str):
-    """Inicializa índices para um tenant."""
-    if tenant_id not in _content_hash_index:
-        _content_hash_index[tenant_id] = {}
-    if tenant_id not in _chunk_index:
-        _chunk_index[tenant_id] = {}
-    if tenant_id not in _source_version_index:
-        _source_version_index[tenant_id] = {}
+# ---------------------------------------------------------------------------
+# Camada de acesso ao Postgres (rag_chunks)
+# ---------------------------------------------------------------------------
+# Os metadados de dedup (source_id, source_version, content_hash,
+# semantic_hash, active, tenant_id, chunk_id) são gravados pelo fluxo de
+# indexação dentro do JSONB `metadata` de rag_chunks. As consultas abaixo
+# filtram sempre por tenant_key; linhas antigas sem as chaves no metadata
+# simplesmente não casam (degradação graciosa, equivalente ao comportamento
+# pós-restart da versão em memória).
+
+def _row_to_existing_chunk(row) -> Dict:
+    """
+    Converte row (id, document_id, metadata) do Postgres para o formato
+    `existing_chunk` (chunk_id/document_id da linha + campos do metadata).
+    """
+    chunk_id, document_id, metadata = row
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except Exception:
+            metadata = {}
+    metadata = metadata if isinstance(metadata, dict) else {}
+    return {**metadata, 'chunk_id': str(chunk_id), 'document_id': str(document_id)}
+
+
+def _fetch_chunk_by_content_hash(tenant_id: str, content_hash: str) -> Optional[Dict]:
+    """Busca chunk pelo content_hash do documento (dedup estrutural)."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, document_id, metadata
+                FROM rag_chunks
+                WHERE tenant_key = %s
+                  AND metadata->>'content_hash' = %s
+                LIMIT 1
+                """,
+                (tenant_id, content_hash),
+            )
+            row = cur.fetchone()
+    return _row_to_existing_chunk(row) if row else None
+
+
+def _fetch_chunk_by_semantic_hash(tenant_id: str, semantic_hash: str) -> Optional[Dict]:
+    """Busca chunk ativo pelo semantic_hash (dedup semântica exata)."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, document_id, metadata
+                FROM rag_chunks
+                WHERE tenant_key = %s
+                  AND metadata->>'semantic_hash' = %s
+                  AND COALESCE((metadata->>'active')::boolean, true)
+                LIMIT 1
+                """,
+                (tenant_id, semantic_hash),
+            )
+            row = cur.fetchone()
+    return _row_to_existing_chunk(row) if row else None
+
+
+def _fetch_most_similar_chunk(tenant_id: str, embedding: List[float]) -> Optional[Dict]:
+    """
+    Busca o chunk ativo mais similar no Postgres via pgvector (cosseno).
+    Substitui o varredura O(N) em memória com numpy.
+    """
+    qv = _pgvector_literal(embedding)
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, document_id, metadata,
+                       1 - (embedding <=> %s::vector) AS similarity
+                FROM rag_chunks
+                WHERE tenant_key = %s
+                  AND COALESCE((metadata->>'active')::boolean, true)
+                ORDER BY embedding <=> %s::vector
+                LIMIT 1
+                """,
+                (qv, tenant_id, qv),
+            )
+            row = cur.fetchone()
+    if not row:
+        return None
+    chunk_id, document_id, metadata, similarity = row
+    return {
+        'chunk': _row_to_existing_chunk((chunk_id, document_id, metadata)),
+        'similarity': float(similarity) if similarity is not None else 0.0,
+    }
+
+
+def _update_deactivate_previous_versions(tenant_id: str, source_id: str, new_version: int) -> int:
+    """Marca versões anteriores de um source como inativas (metadata.active=false)."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE rag_chunks
+                SET metadata = jsonb_set(metadata, '{active}', 'false'::jsonb)
+                WHERE tenant_key = %s
+                  AND metadata->>'source_id' = %s
+                  AND COALESCE((metadata->>'source_version')::int, 1) < %s
+                  AND COALESCE((metadata->>'active')::boolean, true)
+                """,
+                (tenant_id, source_id, int(new_version)),
+            )
+            return cur.rowcount or 0
+
+
+def _fetch_max_source_version(tenant_id: str, source_id: str) -> Optional[int]:
+    """Retorna a maior source_version persistida para o source (None se não houver)."""
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT MAX(COALESCE((metadata->>'source_version')::int, 1))
+                FROM rag_chunks
+                WHERE tenant_key = %s
+                  AND metadata->>'source_id' = %s
+                """,
+                (tenant_id, source_id),
+            )
+            row = cur.fetchone()
+    if row and row[0] is not None:
+        return int(row[0])
+    return None
 
 
 def check_structural_duplicate(tenant_id: str, content_hash: str, source_id: Optional[str] = None) -> Dict:
     """
-    Verifica duplicidade estrutural (content_hash).
+    Verifica duplicidade estrutural (content_hash) consultando o Postgres.
     
     Args:
         tenant_id: ID do tenant
@@ -182,10 +299,7 @@ def check_structural_duplicate(tenant_id: str, content_hash: str, source_id: Opt
     Returns:
         {is_duplicate: bool, existing_chunk?: Dict, reason?: str}
     """
-    initialize_tenant_indices(tenant_id)
-    
-    tenant_content_hash = _content_hash_index[tenant_id]
-    existing = tenant_content_hash.get(content_hash)
+    existing = _fetch_chunk_by_content_hash(tenant_id, content_hash)
 
     if existing:
         logger.info(
@@ -212,74 +326,104 @@ def check_semantic_duplicate(
     tenant_id: str,
     embedding: List[float],
     semantic_hash: str,
-    source_id: Optional[str] = None
+    source_id: Optional[str] = None,
+    batch_accepted: Optional[List[Dict]] = None
 ) -> Dict:
     """
     Verifica duplicidade semântica (similaridade de embedding > 0.97).
+
+    A verificação ocorre em duas frentes:
+    1. Batch corrente (`batch_accepted`): chunks já aceitos do MESMO documento
+       ainda não foram commitados no Postgres, então são comparados em memória
+       (batches são pequenos — dezenas de chunks — O(batch²) local é aceitável).
+       Cada entrada: {embedding: List[float], chunk_metadata: Dict}.
+    2. Postgres: semantic_hash exato e vizinho mais próximo via pgvector.
     
     Args:
         tenant_id: ID do tenant
         embedding: Embedding normalizado
         semantic_hash: Hash do embedding
         source_id: ID da fonte (opcional, para logs)
+        batch_accepted: Chunks já aceitos no batch corrente (opcional)
     
     Returns:
         {is_duplicate: bool, existing_chunk?: Dict, similarity?: float, reason?: str}
     """
-    initialize_tenant_indices(tenant_id)
-    
-    tenant_chunks = _chunk_index[tenant_id]
     normalized_embedding = normalize_embedding(embedding)
 
     max_similarity = 0.0
     most_similar_chunk = None
 
-    for chunk_id, chunk_metadata in tenant_chunks.items():
-        # Verifica se chunk está ativo
-        if not chunk_metadata.get('active', True):
-            continue
+    # 1) Dedup intra-documento contra o batch corrente (não commitado ainda)
+    for accepted in (batch_accepted or []):
+        accepted_metadata = accepted.get('chunk_metadata') or {}
 
         # Se tem semantic_hash igual, é duplicata exata
-        if chunk_metadata.get('semantic_hash') == semantic_hash:
+        if accepted_metadata.get('semantic_hash') == semantic_hash:
             logger.info(
-                f'[RAGDeduplication] Duplicidade semântica exata detectada (semantic_hash)',
+                f'[RAGDeduplication] Duplicidade semântica exata detectada no batch corrente (semantic_hash)',
                 extra={
                     'tenant_id': tenant_id,
                     'semantic_hash': semantic_hash[:16] + '...',
                     'source_id': source_id,
-                    'existing_chunk_id': chunk_id,
-                    'existing_document_id': chunk_metadata.get('document_id'),
+                    'existing_chunk_id': accepted_metadata.get('chunk_id'),
+                    'existing_document_id': accepted_metadata.get('document_id'),
                 }
             )
 
             return {
                 'is_duplicate': True,
-                'existing_chunk': {**chunk_metadata, 'chunk_id': chunk_id},
+                'existing_chunk': accepted_metadata,
                 'similarity': 1.0,
                 'reason': 'semantic_hash_exact_duplicate',
             }
 
-        # Se tem embedding armazenado, calcula similaridade
-        stored_embedding = chunk_metadata.get('embedding')
-        if stored_embedding and isinstance(stored_embedding, list):
+        accepted_embedding = accepted.get('embedding')
+        if accepted_embedding and isinstance(accepted_embedding, list):
             try:
-                similarity = cosine_similarity(normalized_embedding, stored_embedding)
-                
+                similarity = cosine_similarity(normalized_embedding, accepted_embedding)
                 if similarity > max_similarity:
                     max_similarity = similarity
-                    most_similar_chunk = {**chunk_metadata, 'chunk_id': chunk_id}
+                    most_similar_chunk = dict(accepted_metadata)
             except Exception as err:
-                logger.warn(
-                    f'[RAGDeduplication] Erro ao calcular similaridade',
+                logger.warning(
+                    f'[RAGDeduplication] Erro ao calcular similaridade no batch corrente',
                     extra={
                         'tenant_id': tenant_id,
-                        'chunk_id': chunk_id,
+                        'chunk_id': accepted_metadata.get('chunk_id'),
                         'error': str(err),
                     }
                 )
 
+    # 2) Duplicata exata no Postgres (semantic_hash)
+    exact = _fetch_chunk_by_semantic_hash(tenant_id, semantic_hash)
+    if exact:
+        logger.info(
+            f'[RAGDeduplication] Duplicidade semântica exata detectada (semantic_hash)',
+            extra={
+                'tenant_id': tenant_id,
+                'semantic_hash': semantic_hash[:16] + '...',
+                'source_id': source_id,
+                'existing_chunk_id': exact.get('chunk_id'),
+                'existing_document_id': exact.get('document_id'),
+            }
+        )
+
+        return {
+            'is_duplicate': True,
+            'existing_chunk': exact,
+            'similarity': 1.0,
+            'reason': 'semantic_hash_exact_duplicate',
+        }
+
+    # 3) Vizinho mais próximo no Postgres (pgvector, cosseno)
+    nearest = _fetch_most_similar_chunk(tenant_id, normalized_embedding)
+    if nearest and nearest['similarity'] > max_similarity:
+        max_similarity = nearest['similarity']
+        most_similar_chunk = nearest['chunk']
+
     # Threshold de 0.97 para considerar duplicata semântica
-    if max_similarity > 0.97:
+    if max_similarity > SEMANTIC_DUPLICATE_THRESHOLD:
         logger.info(
             f'[RAGDeduplication] Duplicidade semântica detectada (similaridade alta)',
             extra={
@@ -304,99 +448,51 @@ def check_semantic_duplicate(
 
 def register_chunk(tenant_id: str, chunk_metadata: Dict, embedding: Optional[List[float]] = None):
     """
-    Registra chunk nos índices de deduplicação.
+    No-op de compatibilidade: a deduplicação agora é persistida no Postgres
+    (via VectorStore.add_chunks); não existem mais índices em memória nem
+    embeddings retidos em RAM.
+
+    Mantida para não quebrar imports/callers; preserva apenas a validação
+    dos metadados obrigatórios do contrato anterior.
     
     Args:
         tenant_id: ID do tenant
         chunk_metadata: Metadados do chunk
-        embedding: Embedding do chunk (opcional, para similaridade futura)
+        embedding: Embedding do chunk (ignorado; persistência é via add_chunks)
     """
-    initialize_tenant_indices(tenant_id)
-
-    chunk_id = chunk_metadata.get('chunk_id')
-    document_id = chunk_metadata.get('document_id')
-    source_id = chunk_metadata.get('source_id')
-    source_version = chunk_metadata.get('source_version', 1)
-    content_hash = chunk_metadata.get('content_hash')
-    semantic_hash = chunk_metadata.get('semantic_hash')
-    active = chunk_metadata.get('active', True)
-
-    # Valida metadados obrigatórios
-    if not all([chunk_id, document_id, source_id, content_hash, semantic_hash]):
+    # Valida metadados obrigatórios (contrato preservado)
+    if not all([
+        chunk_metadata.get('chunk_id'),
+        chunk_metadata.get('document_id'),
+        chunk_metadata.get('source_id'),
+        chunk_metadata.get('content_hash'),
+        chunk_metadata.get('semantic_hash'),
+    ]):
         raise ValueError('Metadados obrigatórios faltando: chunk_id, document_id, source_id, content_hash, semantic_hash')
 
-    metadata = {
-        'tenant_id': tenant_id,
-        'chunk_id': chunk_id,
-        'document_id': document_id,
-        'source_id': source_id,
-        'source_version': source_version,
-        'content_hash': content_hash,
-        'semantic_hash': semantic_hash,
-        'active': active,
-        'created_at': chunk_metadata.get('created_at'),
-        'embedding': normalize_embedding(embedding) if embedding else None,
-    }
-
-    # Registra no índice de content_hash
-    _content_hash_index[tenant_id][content_hash] = metadata
-
-    # Registra no índice de chunk_id
-    _chunk_index[tenant_id][chunk_id] = metadata
-
-    # Atualiza versionamento de source
-    if source_id not in _source_version_index[tenant_id]:
-        _source_version_index[tenant_id][source_id] = {
-            'current_version': source_version,
-            'versions': [],
-        }
-
-    source_info = _source_version_index[tenant_id][source_id]
-    if source_version > source_info['current_version']:
-        # Nova versão: marca versões anteriores como inativas
-        for chunk_id_key, chunk_meta in _chunk_index[tenant_id].items():
-            if (chunk_meta.get('source_id') == source_id and 
-                chunk_meta.get('source_version', 1) < source_version):
-                chunk_meta['active'] = False
-                _chunk_index[tenant_id][chunk_id_key] = chunk_meta
-        source_info['current_version'] = source_version
-
-    if source_version not in source_info['versions']:
-        source_info['versions'].append(source_version)
-
     logger.debug(
-        f'[RAGDeduplication] Chunk registrado',
+        f'[RAGDeduplication] Chunk aceito (persistência via add_chunks)',
         extra={
             'tenant_id': tenant_id,
-            'chunk_id': chunk_id[:16] + '...',
-            'document_id': document_id,
-            'source_id': source_id,
-            'source_version': source_version,
+            'chunk_id': chunk_metadata['chunk_id'][:16] + '...',
+            'document_id': chunk_metadata['document_id'],
+            'source_id': chunk_metadata['source_id'],
+            'source_version': chunk_metadata.get('source_version', 1),
         }
     )
 
 
 def deactivate_previous_versions(tenant_id: str, source_id: str, new_version: int):
     """
-    Marca versões anteriores de um source como inativas.
+    Marca versões anteriores de um source como inativas no Postgres
+    (metadata.active=false), preservando o histórico.
     
     Args:
         tenant_id: ID do tenant
         source_id: ID da fonte
         new_version: Nova versão
     """
-    initialize_tenant_indices(tenant_id)
-    
-    tenant_chunks = _chunk_index[tenant_id]
-    deactivated_count = 0
-
-    for chunk_id, chunk_meta in tenant_chunks.items():
-        if (chunk_meta.get('source_id') == source_id and 
-            chunk_meta.get('source_version', 1) < new_version and 
-            chunk_meta.get('active', True)):
-            chunk_meta['active'] = False
-            tenant_chunks[chunk_id] = chunk_meta
-            deactivated_count += 1
+    deactivated_count = _update_deactivate_previous_versions(tenant_id, source_id, new_version)
 
     if deactivated_count > 0:
         logger.info(
@@ -412,7 +508,7 @@ def deactivate_previous_versions(tenant_id: str, source_id: str, new_version: in
 
 def get_current_source_version(tenant_id: str, source_id: str) -> int:
     """
-    Obtém versão atual de um source.
+    Obtém versão atual de um source a partir do Postgres.
     
     Args:
         tenant_id: ID do tenant
@@ -421,15 +517,15 @@ def get_current_source_version(tenant_id: str, source_id: str) -> int:
     Returns:
         Versão atual ou 1 se não existir
     """
-    initialize_tenant_indices(tenant_id)
-    
-    source_info = _source_version_index[tenant_id].get(source_id)
-    return source_info['current_version'] if source_info else 1
+    max_version = _fetch_max_source_version(tenant_id, source_id)
+    return max_version if max_version is not None else 1
 
 
 def filter_chunks_for_retrieval(tenant_id: str, chunks: List[Dict]) -> List[Dict]:
     """
     Filtra chunks para recuperação (remove duplicatas e inativos).
+
+    Opera apenas sobre a lista recebida (não consulta índices nem DB).
     
     Args:
         tenant_id: ID do tenant
@@ -482,30 +578,53 @@ def filter_chunks_for_retrieval(tenant_id: str, chunks: List[Dict]) -> List[Dict
 
 def get_deduplication_stats(tenant_id: str) -> Dict:
     """
-    Obtém estatísticas de deduplicação para um tenant.
+    Obtém estatísticas de deduplicação para um tenant a partir do Postgres.
     
     Args:
         tenant_id: ID do tenant
     
     Returns:
-        Estatísticas
+        Estatísticas (mesmas chaves da versão em memória)
     """
-    initialize_tenant_indices(tenant_id)
-    
-    tenant_content_hash = _content_hash_index[tenant_id]
-    tenant_chunks = _chunk_index[tenant_id]
-    tenant_sources = _source_version_index[tenant_id]
+    with _get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                  COUNT(*)::int AS total_chunks,
+                  COUNT(*) FILTER (WHERE COALESCE((metadata->>'active')::boolean, true))::int AS active_chunks,
+                  COUNT(*) FILTER (WHERE NOT COALESCE((metadata->>'active')::boolean, true))::int AS inactive_chunks,
+                  COUNT(DISTINCT metadata->>'content_hash')::int AS total_content_hashes,
+                  COUNT(DISTINCT metadata->>'source_id')::int AS total_sources
+                FROM rag_chunks
+                WHERE tenant_key = %s
+                """,
+                (tenant_id,),
+            )
+            row = cur.fetchone()
+            cur.execute(
+                """
+                SELECT COUNT(*)::int
+                FROM (
+                  SELECT metadata->>'source_id' AS source_id
+                  FROM rag_chunks
+                  WHERE tenant_key = %s
+                    AND metadata->>'source_id' IS NOT NULL
+                  GROUP BY metadata->>'source_id'
+                  HAVING COUNT(DISTINCT COALESCE((metadata->>'source_version')::int, 1)) > 1
+                ) multi_version_sources
+                """,
+                (tenant_id,),
+            )
+            multi_version_row = cur.fetchone()
 
-    active_chunks = [c for c in tenant_chunks.values() if c.get('active', True)]
-    inactive_chunks = [c for c in tenant_chunks.values() if not c.get('active', True)]
+    total_chunks, active_chunks, inactive_chunks, total_content_hashes, total_sources = row
 
     return {
-        'total_content_hashes': len(tenant_content_hash),
-        'total_chunks': len(tenant_chunks),
-        'active_chunks': len(active_chunks),
-        'inactive_chunks': len(inactive_chunks),
-        'total_sources': len(tenant_sources),
-        'sources_with_multiple_versions': len([
-            s for s in tenant_sources.values() if len(s.get('versions', [])) > 1
-        ]),
+        'total_content_hashes': int(total_content_hashes or 0),
+        'total_chunks': int(total_chunks or 0),
+        'active_chunks': int(active_chunks or 0),
+        'inactive_chunks': int(inactive_chunks or 0),
+        'total_sources': int(total_sources or 0),
+        'sources_with_multiple_versions': int(multi_version_row[0] if multi_version_row else 0),
     }
