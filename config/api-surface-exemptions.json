@@ -10,5 +10,135 @@
     "reason": "Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente.",
     "approvedBy": "jeffersonmachado",
     "date": "2026-07-28"
+  },
+
+  "api:POST:/auth/login": {
+    "assertion": "publicByDesign",
+    "reason": "Endpoint pré-autenticação: estruturalmente impossível exigir sessão — a credencial (senha) está no payload. Proteção anti brute-force por IP via política AUTH_PUBLIC (infra/rate-limit) desde 2026-08-03; cobertura de comportamento em tests/unit/authPublicRateLimit.test.js e api/server.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/api/auth/login": {
+    "assertion": "publicByDesign",
+    "reason": "Alias de /auth/login (mesmo handler, api/modules/auth/routes.js): endpoint pré-autenticação com credencial no payload e rate limit AUTH_PUBLIC por IP.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/signup": {
+    "assertion": "publicByDesign",
+    "reason": "Endpoint pré-autenticação (criação de conta SaaS): não há sessão possível antes do cadastro. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede spam de criação de tenants; cobertura em tests/unit/authPublicRateLimit.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/api/auth/signup": {
+    "assertion": "publicByDesign",
+    "reason": "Alias de /auth/signup (mesmo handler): pré-autenticação com rate limit AUTH_PUBLIC por IP.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/logout": {
+    "assertion": "publicByDesign",
+    "reason": "Logout é idempotente e só invalida o token apresentado no header — exigir sessão válida impediria encerrar sessões com token expirado. Sem token o handler responde 401 (api/modules/auth/routes.js).",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/api/auth/logout": {
+    "assertion": "publicByDesign",
+    "reason": "Alias de /auth/logout (mesmo handler): invalida apenas o token apresentado; sem token responde 401.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/logout-all": {
+    "assertion": "publicByDesign",
+    "reason": "Exige token VÁLIDO no payload da requisição (validateToken → 401 se inválido) e só invalida sessões do dono do token — não escala privilégio. A guarda é por credencial no request, não por middleware de sessão.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/api/auth/logout-all": {
+    "assertion": "publicByDesign",
+    "reason": "Alias de /auth/logout-all (mesmo handler): exige token válido e só invalida sessões do próprio dono.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/rpa/login": {
+    "assertion": "publicByDesign",
+    "reason": "Login serviço-a-serviço: a credencial é o segredo RPA no payload (rpaToken + tenantId). A EMISSÃO do segredo (GET /auth/rpa/token) exige classificação SUPPORT+ desde 2026-08-03, e o login tem rate limit AUTH_PUBLIC por IP.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/api/auth/rpa/login": {
+    "assertion": "publicByDesign",
+    "reason": "Alias de /auth/rpa/login (mesmo handler): credencial RPA no payload + rate limit AUTH_PUBLIC por IP.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/accept-invitation": {
+    "assertion": "publicByDesign",
+    "reason": "Endpoint pré-autenticação: a credencial é o invitationToken de uso único no payload (estruturalmente impossível exigir sessão). Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/request-password-reset": {
+    "assertion": "publicByDesign",
+    "reason": "Endpoint pré-autenticação com resposta genérica anti-enumeração. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 elimina o vetor de spam de e-mail; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/auth/reset-password": {
+    "assertion": "publicByDesign",
+    "reason": "Endpoint pré-autenticação: a credencial é o resetToken no payload. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+
+  "api:POST:/flows/validate": {
+    "assertion": "publicByDesign",
+    "reason": "Função pura de validação (engine/validator, zero I/O — não lê flows, store nem DB): nenhum dado é exposto nem efeito colateral existe. Em produção, request anônimo sem X-Tenant-Id válido é barrado pelo tenant rate limit (tenant_validation_failed). Uso anônimo coberto por api/server.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+
+  "api:POST:/billing/webhook": {
+    "assertion": "publicByDesign",
+    "reason": "Webhook de provedor de pagamento: autenticado pelo segredo do provedor no header (comparação timing-safe desde 2026-08-03; fail-closed em produção quando o secret não está configurado — verifyWebhookSignature em api/integrations/paymentProvider.js). Sessão de usuário não se aplica a server-to-server.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/webhooks/instagram": {
+    "assertion": "publicByDesign",
+    "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/webhooks/messenger": {
+    "assertion": "publicByDesign",
+    "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/webhooks/whatsapp-qr/events": {
+    "assertion": "publicByDesign",
+    "reason": "Webhook do bridge WhatsApp-QR server-to-server: autenticado por segredo compartilhado no header x-whatsapp-qr-secret (comparação timing-safe e fail-closed em produção sem WHATSAPP_QR_WEBHOOK_SECRET desde 2026-08-03).",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+
+  "api:POST:/lp/:id/submit": {
+    "assertion": "publicByDesign",
+    "reason": "Captura pública de landing page: exige token público válido (resolvePublicToken kind storefront → 401 sem token) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId. Nenhum dado é retornado além do aceite da submissão.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/mkt/e": {
+    "assertion": "publicByDesign",
+    "reason": "Coleta pública de eventos de marketing: exige token público válido (resolvePublicToken) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
+  },
+  "api:POST:/storefront/orders": {
+    "assertion": "publicByDesign",
+    "reason": "Pedido público de vitrine: exige token público válido via query (resolveStorefrontToken → 401 sem token) + rate limit por tokenId. Criação de pedido anônima sem token é impossível.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-03"
   }
 }

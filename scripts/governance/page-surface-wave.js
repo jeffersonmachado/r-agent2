@@ -213,10 +213,31 @@ async function probePage(context, pagePath) {
   return { loginSurface, denied, rendered, docStatus, viaSpa, consoleErrors, pageErrors, expectedEmptyErrors, errorSamples };
 }
 
-/** Sessão de papel operacional (PRODUCTION): mesmo fluxo RPA da API Surface Wave. */
-async function loginProductionRole() {
+/** Token de API do super_admin (classificação DEVELOPMENT) para leituras SUPPORT+. */
+async function loginAdminApiToken() {
   try {
+    const res = await fetch(`${API_URL}/auth/login?tenantId=system`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: ADMIN_USER, password: ADMIN_PASSWORD }),
+      signal: AbortSignal.timeout(NAV_TIMEOUT_MS),
+    });
+    if (res.status !== 200) return null;
+    const body = await res.json();
+    return body && typeof body.token === 'string' ? body.token : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sessão de papel operacional (PRODUCTION): mesmo fluxo RPA da API Surface Wave. */
+async function loginProductionRole(bearerToken) {
+  try {
+    // Desde 2026-08-03 GET /auth/rpa/token exige sessão SUPPORT+ (o token RPA
+    // é segredo de serviço): o runner apresenta o Bearer do super_admin.
+    if (!bearerToken) return null;
     const tokenRes = await fetch(`${API_URL}/auth/rpa/token`, {
+      headers: { authorization: `Bearer ${bearerToken}` },
       signal: AbortSignal.timeout(NAV_TIMEOUT_MS),
     });
     if (tokenRes.status !== 200) return null;
@@ -251,7 +272,7 @@ async function main() {
   console.log(`[page-surface-wave] alvo: ${BASE_URL} (api: ${API_URL})`);
   console.log(`[page-surface-wave] ${pageItems.length} páginas page: no inventário`);
 
-  let prodSession = await loginProductionRole();
+  let prodSession = await loginProductionRole(await loginAdminApiToken());
   console.log(`[page-surface-wave] sessão production=${prodSession ? 'ok' : 'indisponível'}`);
   if (!prodSession) {
     console.log('[page-surface-wave] AVISO: sem sessão de papel operacional — P2 pulado (itens ficam no máximo VISITED/BLOCKED)');
@@ -333,7 +354,7 @@ async function main() {
       if (!newProdContext) return null;
       const first = await probeInContext(newProdContext, pagePath);
       if (!first || first.error || !first.loginSurface) return first;
-      const refreshed = await loginProductionRole();
+      const refreshed = await loginProductionRole(await loginAdminApiToken());
       if (!refreshed) return first;
       prodSession = refreshed;
       return probeInContext(newProdContext, pagePath);

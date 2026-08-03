@@ -251,9 +251,21 @@ oficial é `AUTH_REQUIRED_OVERRIDES` no próprio scanner — cada entrada exige
 justificativa ancorada em probe ao vivo.
 
 Rotas públicas mutáveis (login, signup, webhooks de provedores, storefront,
-`/flows/validate`) permanecem VISITED por design: probe anônimo mutável
-poderia causar efeito real e não há assertiva de auth a verificar — a
-cobertura de negócio delas vem das jornadas de mesh.
+`/flows/validate`) não podem receber probe (risco de efeito colateral) e não
+têm assertiva de auth de sessão a verificar. O estado terminal honesto delas
+é **NOT_APPLICABLE via isenção `publicByDesign`** em
+`config/api-surface-exemptions.json` (desde 2026-08-03): cada entrada declara
+por que o endpoint é público e qual proteção real existe no lugar da sessão
+— credencial no payload + rate limit `AUTH_PUBLIC` por IP (login, signup,
+rpa/login, invite, reset de senha), assinatura HMAC do provedor
+(`X-Hub-Signature-256` nos webhooks Meta, timing-safe e fail-closed em
+produção), segredo compartilhado (billing, whatsapp-qr) ou token público +
+rate limit (storefront, `/lp/:id/submit`, `/mkt/e`). A isenção só é honrada
+quando **nenhum probe foi executado** — se a rota ganhar auth declarada e se
+tornar avaliável, a isenção é ignorada automaticamente (não esconde rota
+avaliável). NOT_APPLICABLE sai do denominador de elegíveis do Coverage
+Engine, então essas rotas não diluem nem inflam a cobertura; a cobertura de
+negócio delas vem das jornadas de mesh.
 
 ### Frescor das evidências das waves técnicas (STALE por idade)
 

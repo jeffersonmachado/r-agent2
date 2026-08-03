@@ -27,6 +27,7 @@ async function handleAgentRoutes(ctx) {
     isSuperAdmin,
     logAction,
     logger,
+    checkRateLimit,
   } = deps;
 
   const handledCrud = await handleAgentCrudRoutes({
@@ -73,6 +74,7 @@ async function handleAgentRoutes(ctx) {
       resetPassword,
       logAction,
       logger,
+      checkRateLimit,
     },
   });
   if (handledOnboarding) {

@@ -16,6 +16,9 @@ function createAuthRoutes({
   logoutAllSessions,
   logAction,
   logger,
+  requireAuth,
+  checkClassification,
+  checkRateLimit,
 }) {
   const router = express.Router();
   const jsonParser = express.json({ limit: '1mb' });
@@ -28,8 +31,29 @@ function createAuthRoutes({
     return req.headers['user-agent'] || fallback;
   }
 
+  /**
+   * Anti brute-force dos endpoints pré-autenticação (login, signup, rpa/login):
+   * limita por IP via política AUTH_PUBLIC. Sem isso essas rotas ficavam sem
+   * nenhuma proteção (são excluídas do rate limit por tenant por design).
+   * Retorna true quando o fluxo pode prosseguir; responde 429 e retorna false
+   * quando o limite foi excedido.
+   */
+  async function allowAuthPublicRequest(req, res) {
+    const rl = await checkRateLimit({ userId: `ip:${getIpAddress(req)}`, operationType: 'AUTH_PUBLIC' });
+    if (rl.allowed) return true;
+    const retryAfter = rl.retryAfter || 60;
+    res.setHeader('Retry-After', retryAfter);
+    sendJson(res, 429, {
+      error: 'rate_limit_exceeded',
+      message: `Limite de requisições excedido. Tente novamente em ${retryAfter} segundos.`,
+      retryAfter,
+    });
+    return false;
+  }
+
   router.post(['/auth/login', '/api/auth/login'], jsonParser, async (req, res) => {
     try {
+      if (!(await allowAuthPublicRequest(req, res))) return;
       let validated;
       try {
         validated = validateInput(req.body || {}, schemas.login);
@@ -76,6 +100,7 @@ function createAuthRoutes({
 
   router.post(['/auth/signup', '/api/auth/signup'], jsonParser, async (req, res) => {
     try {
+      if (!(await allowAuthPublicRequest(req, res))) return;
       let validated;
       try {
         validated = validateInput(req.body || {}, schemas.signupSaas);
@@ -111,6 +136,7 @@ function createAuthRoutes({
 
   router.post(['/auth/rpa/login', '/api/auth/rpa/login'], jsonParser, async (req, res) => {
     try {
+      if (!(await allowAuthPublicRequest(req, res))) return;
       const rpaToken = req.body?.token || req.body?.rpaToken;
       const tenantId = req.body?.tenantId;
 
@@ -156,6 +182,23 @@ function createAuthRoutes({
   });
 
   router.get(['/auth/rpa/token', '/api/auth/rpa/token'], (req, res) => {
+    // O token RPA é um segredo compartilhado de serviço: emiti-lo exige sessão
+    // autenticada com classificação mínima SUPPORT (RPA é mecanismo interno;
+    // ver AGENTS.md — APIs de replay/RPA exigem requireClassification('SUPPORT')).
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return;
+    }
+    const classificationCheck = checkClassification(req, 'SUPPORT');
+    if (!classificationCheck.allowed) {
+      sendJson(res, 403, {
+        error: 'classification_required',
+        required: classificationCheck.required,
+        classification: classificationCheck.classification,
+      });
+      return;
+    }
     try {
       const rpaTokenManager = require('../../../core/rpa/utils/rpaTokenManager');
       const token = rpaTokenManager.getOrCreateRpaToken();

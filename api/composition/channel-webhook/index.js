@@ -13,6 +13,7 @@ function createChannelWebhookExpressRouter({ buildExtendedRoutingContext }) {
         'badRequest',
         'hasJsonContentType',
         'parseJsonBody',
+        'parseJsonBodyWithRaw',
         'logger',
         'verifyWebhook',
         'processWhatsAppMessage',

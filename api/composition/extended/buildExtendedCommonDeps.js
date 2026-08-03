@@ -10,6 +10,7 @@ const { isSuperAdmin } = require('../../services/superAdminService');
 const { sendApiError, buildApiError } = require('../../utils/apiError');
 const {
   parseJsonBody,
+  parseJsonBodyWithRaw,
   setCorsHeaders,
   sendJson,
   badRequest,
@@ -27,6 +28,7 @@ function buildExtendedCommonDeps({ req, res, requireTenant }) {
     badRequest,
     hasJsonContentType,
     parseJsonBody,
+    parseJsonBodyWithRaw,
     isSuperAdmin,
     logAction,
     logger,

@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
 
@@ -442,14 +443,39 @@ function normalizeWebhook({ provider, body = {}, headers = {} }) {
   };
 }
 
+let warnedMissingWebhookSecret = false;
+
+function isProductionEnv() {
+  return String(config.get('nodeEnv') || '').trim().toLowerCase() === 'production';
+}
+
 function verifyWebhookSignature({ provider, headers = {} }) {
-  const cfg = providerConfig(provider);
-  if (!cfg.webhookSecret) return true;
-  if (cfg.provider === PROVIDER_SANDBOX) return true;
+  if (provider === PROVIDER_SANDBOX) return true;
+
+  const secretPath = provider === PROVIDER_MERCADO_PAGO
+    ? 'billing.providers.mercadoPago.webhookSecret'
+    : 'billing.providers.asaas.webhookSecret';
+  const secret = String(config.getFromFile(secretPath) || '').trim();
+
+  if (!secret) {
+    if (isProductionEnv()) {
+      logger.warn(`[paymentProvider] webhook secret ausente (${secretPath}) em produção; rejeitando webhook (fail-closed)`);
+      return false;
+    }
+    if (!warnedMissingWebhookSecret) {
+      warnedMissingWebhookSecret = true;
+      logger.warn(`[paymentProvider] webhook secret ausente (${secretPath}); aceitando webhooks SEM verificação (fora de produção)`);
+    }
+    return true;
+  }
 
   const token = String(headers['x-webhook-token'] || headers['x-signature'] || '').trim();
   if (!token) return false;
-  return token === cfg.webhookSecret;
+
+  const tokenBuf = Buffer.from(token, 'utf8');
+  const secretBuf = Buffer.from(secret, 'utf8');
+  if (tokenBuf.length !== secretBuf.length) return false;
+  return crypto.timingSafeEqual(tokenBuf, secretBuf);
 }
 
 module.exports = {

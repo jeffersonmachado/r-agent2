@@ -438,11 +438,11 @@ describe('API server (api/server.js)', () => {
     expect(validateRes.body).toHaveProperty('valid');
     expect(Array.isArray(validateRes.body.errors)).toBe(true);
 
-    // 4) POST /flows/simulate
+    // 4) POST /flows/simulate (exige auth desde 2026-08-03: lê flows.get)
     const simulateRes = await request(port, 'POST', '/flows/simulate', {
       flowId: savedFlow.id,
       maxSteps: 10,
-    });
+    }, authHeaders);
 
     expect(simulateRes.status).toBe(200);
     expect(simulateRes.body).toHaveProperty('compiledFlowInfo');
@@ -581,14 +581,17 @@ describe('API server (api/server.js)', () => {
   });
 
   test('POST /flows/simulate com flowId ausente ou inexistente', async () => {
-    if (skipServerTests) return;
-    const res1 = await request(port, 'POST', '/flows/simulate', {});
+    if (skipServerTests || !dbReady) return;
+    // /flows/simulate exige auth (lê flows.get): as validações de entrada
+    // acontecem depois da autenticação.
+    const authHeaders = await loginAuthHeaders('tenant-demo');
+    const res1 = await request(port, 'POST', '/flows/simulate', {}, authHeaders);
     expect(res1.status).toBe(400);
     expect(res1.body).toHaveProperty('error', 'bad_request');
 
     const res2 = await request(port, 'POST', '/flows/simulate', {
       flowId: 'nao-existe',
-    });
+    }, authHeaders);
     expect(res2.status).toBe(404);
     expect(res2.body).toHaveProperty('error', 'flow_not_found');
   });
@@ -698,7 +701,7 @@ describe('API server (api/server.js)', () => {
     const res = await request(port, 'POST', '/flows/simulate', {
       flowId: 'flow-simulate-test',
       maxSteps: 5,
-    });
+    }, authHeaders);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('steps');
     expect(Array.isArray(res.body.steps)).toBe(true);
@@ -724,7 +727,7 @@ describe('API server (api/server.js)', () => {
     const res = await request(port, 'POST', '/flows/simulate', {
       flowId: 'flow-simulate-limit',
       maxSteps: 10000,
-    });
+    }, authHeaders);
 
     // O servidor deve rejeitar maxSteps > 1000
     expect(res.status).toBe(400);

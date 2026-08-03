@@ -114,6 +114,17 @@ const DEFAULT_POLICIES = {
     points: getConfigValue('rateLimit.policies.executionQueue.enqueue.points', 'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_POINTS', 300),
     duration: getConfigValue('rateLimit.policies.executionQueue.enqueue.duration', 'RATE_LIMIT_EXECUTION_QUEUE_ENQUEUE_DURATION', 60),
   },
+
+  // -----------------------------------------------------------------------
+  // Endpoints pré-autenticação (anti brute-force por IP)
+  // login, signup, rpa/login, accept-invitation, request/reset-password.
+  // Estas rotas são excluídas do rate limit por tenant (não há tenant ainda);
+  // sem esta política ficavam totalmente desprotegidas.
+  // -----------------------------------------------------------------------
+  AUTH_PUBLIC: {
+    points: getConfigValue('rateLimit.policies.authPublic.points', 'RATE_LIMIT_AUTH_PUBLIC_POINTS', 30),
+    duration: getConfigValue('rateLimit.policies.authPublic.duration', 'RATE_LIMIT_AUTH_PUBLIC_DURATION', 60),
+  },
 };
 
 /**

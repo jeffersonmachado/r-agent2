@@ -13,7 +13,31 @@ async function handleAgentOnboardingRoutes(ctx) {
     resetPassword,
     logAction,
     logger,
+    checkRateLimit,
   } = deps;
+
+  function getOnboardingIp() {
+    return req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  }
+
+  /**
+   * Anti brute-force dos endpoints pré-autenticação de onboarding
+   * (accept-invitation, request/reset-password): limita por IP via política
+   * AUTH_PUBLIC. Retorna true quando o fluxo pode prosseguir; responde 429 e
+   * retorna false quando o limite foi excedido.
+   */
+  async function allowAuthPublicRequest() {
+    const rl = await checkRateLimit({ userId: `ip:${getOnboardingIp()}`, operationType: 'AUTH_PUBLIC' });
+    if (rl.allowed) return true;
+    const retryAfter = rl.retryAfter || 60;
+    res.setHeader('Retry-After', retryAfter);
+    sendJson(res, 429, {
+      error: 'rate_limit_exceeded',
+      message: `Limite de requisições excedido. Tente novamente em ${retryAfter} segundos.`,
+      retryAfter,
+    });
+    return false;
+  }
 
   // POST /auth/invite
   if (method === 'POST' && pathname === '/auth/invite') {
@@ -70,6 +94,7 @@ async function handleAgentOnboardingRoutes(ctx) {
 
   // POST /auth/accept-invitation
   if (method === 'POST' && pathname === '/auth/accept-invitation') {
+    if (!(await allowAuthPublicRequest())) return true;
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;
@@ -117,6 +142,7 @@ async function handleAgentOnboardingRoutes(ctx) {
 
   // POST /auth/request-password-reset
   if (method === 'POST' && pathname === '/auth/request-password-reset') {
+    if (!(await allowAuthPublicRequest())) return true;
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;
@@ -147,6 +173,7 @@ async function handleAgentOnboardingRoutes(ctx) {
 
   // POST /auth/reset-password
   if (method === 'POST' && pathname === '/auth/reset-password') {
+    if (!(await allowAuthPublicRequest())) return true;
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;

@@ -26,6 +26,8 @@ describe('agentRoutes handler', () => {
       isSuperAdmin: jest.fn(() => false),
       logAction: jest.fn(),
       logger: { error: jest.fn() },
+      // Política AUTH_PUBLIC (2026-08-03): harness permite por padrão.
+      checkRateLimit: jest.fn(async () => ({ allowed: true, remainingPoints: 29, totalPoints: 30 })),
       ...overrides,
     };
   }

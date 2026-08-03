@@ -230,6 +230,70 @@ describe('apiSurfaceWave — isenções justificadas', () => {
   });
 });
 
+describe('apiSurfaceWave — isenção publicByDesign (endpoint público intencional)', () => {
+  // Os 21 endpoints VISITED do relatório 2026-08-03 são métodos mutáveis sem
+  // auth de sessão por design (login, webhooks de provedor, captura pública):
+  // a política de probe seguro não executa NENHUM probe neles (risco de efeito
+  // colateral), então ficavam VISITED para sempre — sem estado terminal
+  // honesto. A isenção publicByDesign declara, justifica e audita a
+  // inaplicabilidade do probe: o item sai de VISITED para NOT_APPLICABLE
+  // (fora do denominador de elegíveis, ver coverageCalculator).
+  const publicExemption = {
+    assertion: 'publicByDesign',
+    reason: 'endpoint pré-autenticação: a credencial está no payload e o IP é limitado pela política AUTH_PUBLIC',
+    approvedBy: 'qa',
+    date: '2026-08-03',
+  };
+  const publicItem = () => apiItem({ method: 'POST', authRequired: false, id: 'api:POST:/auth/login', path: '/auth/login' });
+
+  test('mutável sem auth, nenhum probe executado + isenção válida → NOT_APPLICABLE auditável', () => {
+    const result = evaluateApiItem(publicItem(), {}, publicExemption);
+    expect(result.state).toBe(COVERAGE_STATES.NOT_APPLICABLE);
+    expect(result.exemption).toMatchObject({
+      item: 'api:POST:/auth/login',
+      assertion: 'publicByDesign',
+      approvedBy: 'qa',
+    });
+    const a = result.assertions.find((x) => x.name === 'publicByDesign');
+    expect(a).toBeDefined();
+    expect(a.passed).toBe(true);
+    expect(a.notApplicable).toBe(true);
+    expect(a.detail).toContain('endpoint pré-autenticação');
+  });
+
+  test('SEM isenção o mesmo item permanece VISITED (comportamento atual preservado)', () => {
+    const result = evaluateApiItem(publicItem(), {});
+    expect(result.state).toBe(COVERAGE_STATES.VISITED);
+    expect(result.exemption).toBeUndefined();
+  });
+
+  test('isenção publicByDesign é IGNORADA quando probes foram executados (rota avaliável não pode se esconder)', () => {
+    // Rota com auth declarada: P1 roda mesmo em método mutável.
+    const item = apiItem({ method: 'POST', id: 'api:POST:/api/widgets' });
+    const result = evaluateApiItem(item, { p1: { status: 401 } }, publicExemption);
+    expect(result.state).toBe(COVERAGE_STATES.VALIDATED);
+    expect(result.exemption).toBeUndefined();
+    expect(result.assertions.find((x) => x.name === 'publicByDesign')).toBeUndefined();
+  });
+
+  test('isenção publicByDesign sem campos obrigatórios é IGNORADA (fica VISITED)', () => {
+    const result = evaluateApiItem(publicItem(), {}, { assertion: 'publicByDesign' });
+    expect(result.state).toBe(COVERAGE_STATES.VISITED);
+    expect(result.exemption).toBeUndefined();
+  });
+
+  test('evaluateApiSurface registra aplicações publicByDesign em exemptionsApplied', () => {
+    const items = [publicItem()];
+    const { perItem, totals, exemptionsApplied } = evaluateApiSurface(items, new Map(), {
+      'api:POST:/auth/login': publicExemption,
+    });
+    expect(perItem[0].state).toBe(COVERAGE_STATES.NOT_APPLICABLE);
+    expect(totals.byState.NOT_APPLICABLE).toBe(1);
+    expect(exemptionsApplied).toHaveLength(1);
+    expect(exemptionsApplied[0]).toMatchObject({ item: 'api:POST:/auth/login', assertion: 'publicByDesign' });
+  });
+});
+
 describe('coverage-gate — loadApiSurfaceTechnicalExecutions', () => {
   function writeReport(payload) {
     const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'apis-report-')), 'report.json');

@@ -6,20 +6,23 @@
  */
 
 /**
- * Faz o parse do body JSON da requisição.
+ * Faz o parse do body JSON da requisição preservando o corpo bruto.
  * Inclui limite de tamanho para prevenir DoS.
+ * O `raw` é a string exata do corpo (necessária para verificação de
+ * assinatura HMAC de webhooks, ex.: X-Hub-Signature-256 da Meta).
  *
  * @param {http.IncomingMessage} req
  * @param {number} [maxSize=10*1024*1024]
- * @returns {Promise<any>}
+ * @returns {Promise<{ body: any, raw: string }>}
  */
-function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
+function parseJsonBodyWithRaw(req, maxSize = 10 * 1024 * 1024) {
   if (req.body !== undefined) {
-    return Promise.resolve(req.body || {});
+    const body = req.body || {};
+    return Promise.resolve({ body, raw: JSON.stringify(body) });
   }
 
   if (req.readableEnded || req.complete) {
-    return Promise.resolve({});
+    return Promise.resolve({ body: {}, raw: '' });
   }
 
   return new Promise((resolve, reject) => {
@@ -38,12 +41,12 @@ function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
 
     req.on('end', () => {
       if (!data) {
-        resolve({});
+        resolve({ body: {}, raw: '' });
         return;
       }
       try {
         const json = JSON.parse(data);
-        resolve(json);
+        resolve({ body: json, raw: data });
       } catch (err) {
         reject(err);
       }
@@ -53,6 +56,17 @@ function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
       reject(err);
     });
   });
+}
+
+/**
+ * Faz o parse do body JSON da requisição (somente o objeto parseado).
+ *
+ * @param {http.IncomingMessage} req
+ * @param {number} [maxSize=10*1024*1024]
+ * @returns {Promise<any>}
+ */
+function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
+  return parseJsonBodyWithRaw(req, maxSize).then(({ body }) => body);
 }
 
 /**
@@ -117,6 +131,7 @@ function hasJsonContentType(req) {
 
 module.exports = {
   parseJsonBody,
+  parseJsonBodyWithRaw,
   setCorsHeaders,
   sendJson,
   notFound,

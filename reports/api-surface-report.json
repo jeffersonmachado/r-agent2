@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-03T00:57:34.004Z",
-  "commit": "0262a0c38a582a1f3b95c589f55419efced18853",
+  "generatedAt": "2026-08-03T02:58:40.763Z",
+  "commit": "589b05e4d79cfc58dab0771a90c63ad95de33ef2",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
@@ -10,7 +10,7 @@
     "items": 759,
     "byState": {
       "VALIDATED": 738,
-      "VISITED": 21
+      "NOT_APPLICABLE": 21
     }
   },
   "exemptions": [
@@ -27,6 +27,153 @@
       "reason": "Endpoint público intencional: status agregado de infra sem dados de tenant (decisão documentada em api/services/systemStatusService.js — '/system/status é público, então NÃO usa tenantId (agregado)'). O requireAuth no handler é opcional e só enriquece a resposta (emit de websocket) quando o chamador já está autenticado; o inventário marca authRequired=true por detectar esse requireAuth condicional.",
       "approvedBy": "jeffersonmachado",
       "date": "2026-07-28"
+    },
+    {
+      "item": "api:POST:/api/auth/login",
+      "assertion": "publicByDesign",
+      "reason": "Alias de /auth/login (mesmo handler, api/modules/auth/routes.js): endpoint pré-autenticação com credencial no payload e rate limit AUTH_PUBLIC por IP.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/api/auth/logout",
+      "assertion": "publicByDesign",
+      "reason": "Alias de /auth/logout (mesmo handler): invalida apenas o token apresentado; sem token responde 401.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/api/auth/logout-all",
+      "assertion": "publicByDesign",
+      "reason": "Alias de /auth/logout-all (mesmo handler): exige token válido e só invalida sessões do próprio dono.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/api/auth/rpa/login",
+      "assertion": "publicByDesign",
+      "reason": "Alias de /auth/rpa/login (mesmo handler): credencial RPA no payload + rate limit AUTH_PUBLIC por IP.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/api/auth/signup",
+      "assertion": "publicByDesign",
+      "reason": "Alias de /auth/signup (mesmo handler): pré-autenticação com rate limit AUTH_PUBLIC por IP.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/accept-invitation",
+      "assertion": "publicByDesign",
+      "reason": "Endpoint pré-autenticação: a credencial é o invitationToken de uso único no payload (estruturalmente impossível exigir sessão). Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/login",
+      "assertion": "publicByDesign",
+      "reason": "Endpoint pré-autenticação: estruturalmente impossível exigir sessão — a credencial (senha) está no payload. Proteção anti brute-force por IP via política AUTH_PUBLIC (infra/rate-limit) desde 2026-08-03; cobertura de comportamento em tests/unit/authPublicRateLimit.test.js e api/server.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/logout",
+      "assertion": "publicByDesign",
+      "reason": "Logout é idempotente e só invalida o token apresentado no header — exigir sessão válida impediria encerrar sessões com token expirado. Sem token o handler responde 401 (api/modules/auth/routes.js).",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/logout-all",
+      "assertion": "publicByDesign",
+      "reason": "Exige token VÁLIDO no payload da requisição (validateToken → 401 se inválido) e só invalida sessões do dono do token — não escala privilégio. A guarda é por credencial no request, não por middleware de sessão.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/request-password-reset",
+      "assertion": "publicByDesign",
+      "reason": "Endpoint pré-autenticação com resposta genérica anti-enumeração. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 elimina o vetor de spam de e-mail; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/reset-password",
+      "assertion": "publicByDesign",
+      "reason": "Endpoint pré-autenticação: a credencial é o resetToken no payload. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/rpa/login",
+      "assertion": "publicByDesign",
+      "reason": "Login serviço-a-serviço: a credencial é o segredo RPA no payload (rpaToken + tenantId). A EMISSÃO do segredo (GET /auth/rpa/token) exige classificação SUPPORT+ desde 2026-08-03, e o login tem rate limit AUTH_PUBLIC por IP.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/auth/signup",
+      "assertion": "publicByDesign",
+      "reason": "Endpoint pré-autenticação (criação de conta SaaS): não há sessão possível antes do cadastro. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede spam de criação de tenants; cobertura em tests/unit/authPublicRateLimit.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/billing/webhook",
+      "assertion": "publicByDesign",
+      "reason": "Webhook de provedor de pagamento: autenticado pelo segredo do provedor no header (comparação timing-safe desde 2026-08-03; fail-closed em produção quando o secret não está configurado — verifyWebhookSignature em api/integrations/paymentProvider.js). Sessão de usuário não se aplica a server-to-server.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/flows/validate",
+      "assertion": "publicByDesign",
+      "reason": "Função pura de validação (engine/validator, zero I/O — não lê flows, store nem DB): nenhum dado é exposto nem efeito colateral existe. Em produção, request anônimo sem X-Tenant-Id válido é barrado pelo tenant rate limit (tenant_validation_failed). Uso anônimo coberto por api/server.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/lp/:id/submit",
+      "assertion": "publicByDesign",
+      "reason": "Captura pública de landing page: exige token público válido (resolvePublicToken kind storefront → 401 sem token) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId. Nenhum dado é retornado além do aceite da submissão.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/mkt/e",
+      "assertion": "publicByDesign",
+      "reason": "Coleta pública de eventos de marketing: exige token público válido (resolvePublicToken) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/storefront/orders",
+      "assertion": "publicByDesign",
+      "reason": "Pedido público de vitrine: exige token público válido via query (resolveStorefrontToken → 401 sem token) + rate limit por tokenId. Criação de pedido anônima sem token é impossível.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/webhooks/instagram",
+      "assertion": "publicByDesign",
+      "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/webhooks/messenger",
+      "assertion": "publicByDesign",
+      "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
+    },
+    {
+      "item": "api:POST:/webhooks/whatsapp-qr/events",
+      "assertion": "publicByDesign",
+      "reason": "Webhook do bridge WhatsApp-QR server-to-server: autenticado por segredo compartilhado no header x-whatsapp-qr-secret (comparação timing-safe e fail-closed em produção sem WHATSAPP_QR_WEBHOOK_SECRET desde 2026-08-03).",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-03"
     }
   ],
   "perItem": [
@@ -1510,11 +1657,11 @@
       ],
       "probes": {
         "p1": {
-          "status": 200,
+          "status": 401,
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 403,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -7070,11 +7217,11 @@
       ],
       "probes": {
         "p1": {
-          "status": 200,
+          "status": 401,
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 403,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -12202,15 +12349,28 @@
     },
     {
       "id": "api:POST:/api/auth/login",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Alias de /auth/login (mesmo handler, api/modules/auth/routes.js): endpoint pré-autenticação com credencial no payload e rate limit AUTH_PUBLIC por IP. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/api/auth/login",
+        "assertion": "publicByDesign",
+        "reason": "Alias de /auth/login (mesmo handler, api/modules/auth/routes.js): endpoint pré-autenticação com credencial no payload e rate limit AUTH_PUBLIC por IP.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -12219,15 +12379,28 @@
     },
     {
       "id": "api:POST:/api/auth/logout",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Alias de /auth/logout (mesmo handler): invalida apenas o token apresentado; sem token responde 401. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/api/auth/logout",
+        "assertion": "publicByDesign",
+        "reason": "Alias de /auth/logout (mesmo handler): invalida apenas o token apresentado; sem token responde 401.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -12236,15 +12409,28 @@
     },
     {
       "id": "api:POST:/api/auth/logout-all",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Alias de /auth/logout-all (mesmo handler): exige token válido e só invalida sessões do próprio dono. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/api/auth/logout-all",
+        "assertion": "publicByDesign",
+        "reason": "Alias de /auth/logout-all (mesmo handler): exige token válido e só invalida sessões do próprio dono.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -12253,15 +12439,28 @@
     },
     {
       "id": "api:POST:/api/auth/rpa/login",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Alias de /auth/rpa/login (mesmo handler): credencial RPA no payload + rate limit AUTH_PUBLIC por IP. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/api/auth/rpa/login",
+        "assertion": "publicByDesign",
+        "reason": "Alias de /auth/rpa/login (mesmo handler): credencial RPA no payload + rate limit AUTH_PUBLIC por IP.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -12270,15 +12469,28 @@
     },
     {
       "id": "api:POST:/api/auth/signup",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Alias de /auth/signup (mesmo handler): pré-autenticação com rate limit AUTH_PUBLIC por IP. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/api/auth/signup",
+        "assertion": "publicByDesign",
+        "reason": "Alias de /auth/signup (mesmo handler): pré-autenticação com rate limit AUTH_PUBLIC por IP.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16291,15 +16503,28 @@
     },
     {
       "id": "api:POST:/auth/accept-invitation",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Endpoint pré-autenticação: a credencial é o invitationToken de uso único no payload (estruturalmente impossível exigir sessão). Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/accept-invitation",
+        "assertion": "publicByDesign",
+        "reason": "Endpoint pré-autenticação: a credencial é o invitationToken de uso único no payload (estruturalmente impossível exigir sessão). Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16356,15 +16581,28 @@
     },
     {
       "id": "api:POST:/auth/login",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Endpoint pré-autenticação: estruturalmente impossível exigir sessão — a credencial (senha) está no payload. Proteção anti brute-force por IP via política AUTH_PUBLIC (infra/rate-limit) desde 2026-08-03; cobertura de comportamento em tests/unit/authPublicRateLimit.test.js e api/server.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/login",
+        "assertion": "publicByDesign",
+        "reason": "Endpoint pré-autenticação: estruturalmente impossível exigir sessão — a credencial (senha) está no payload. Proteção anti brute-force por IP via política AUTH_PUBLIC (infra/rate-limit) desde 2026-08-03; cobertura de comportamento em tests/unit/authPublicRateLimit.test.js e api/server.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16373,15 +16611,28 @@
     },
     {
       "id": "api:POST:/auth/logout",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Logout é idempotente e só invalida o token apresentado no header — exigir sessão válida impediria encerrar sessões com token expirado. Sem token o handler responde 401 (api/modules/auth/routes.js). (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/logout",
+        "assertion": "publicByDesign",
+        "reason": "Logout é idempotente e só invalida o token apresentado no header — exigir sessão válida impediria encerrar sessões com token expirado. Sem token o handler responde 401 (api/modules/auth/routes.js).",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16390,15 +16641,28 @@
     },
     {
       "id": "api:POST:/auth/logout-all",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Exige token VÁLIDO no payload da requisição (validateToken → 401 se inválido) e só invalida sessões do dono do token — não escala privilégio. A guarda é por credencial no request, não por middleware de sessão. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/logout-all",
+        "assertion": "publicByDesign",
+        "reason": "Exige token VÁLIDO no payload da requisição (validateToken → 401 se inválido) e só invalida sessões do dono do token — não escala privilégio. A guarda é por credencial no request, não por middleware de sessão.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16503,15 +16767,28 @@
     },
     {
       "id": "api:POST:/auth/request-password-reset",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Endpoint pré-autenticação com resposta genérica anti-enumeração. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 elimina o vetor de spam de e-mail; cobertura em tests/unit/agentOnboardingRateLimit.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/request-password-reset",
+        "assertion": "publicByDesign",
+        "reason": "Endpoint pré-autenticação com resposta genérica anti-enumeração. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 elimina o vetor de spam de e-mail; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16520,15 +16797,28 @@
     },
     {
       "id": "api:POST:/auth/reset-password",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Endpoint pré-autenticação: a credencial é o resetToken no payload. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/reset-password",
+        "assertion": "publicByDesign",
+        "reason": "Endpoint pré-autenticação: a credencial é o resetToken no payload. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede adivinhação de tokens; cobertura em tests/unit/agentOnboardingRateLimit.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16537,15 +16827,28 @@
     },
     {
       "id": "api:POST:/auth/rpa/login",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Login serviço-a-serviço: a credencial é o segredo RPA no payload (rpaToken + tenantId). A EMISSÃO do segredo (GET /auth/rpa/token) exige classificação SUPPORT+ desde 2026-08-03, e o login tem rate limit AUTH_PUBLIC por IP. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/rpa/login",
+        "assertion": "publicByDesign",
+        "reason": "Login serviço-a-serviço: a credencial é o segredo RPA no payload (rpaToken + tenantId). A EMISSÃO do segredo (GET /auth/rpa/token) exige classificação SUPPORT+ desde 2026-08-03, e o login tem rate limit AUTH_PUBLIC por IP.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16554,15 +16857,28 @@
     },
     {
       "id": "api:POST:/auth/signup",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Endpoint pré-autenticação (criação de conta SaaS): não há sessão possível antes do cadastro. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede spam de criação de tenants; cobertura em tests/unit/authPublicRateLimit.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/auth/signup",
+        "assertion": "publicByDesign",
+        "reason": "Endpoint pré-autenticação (criação de conta SaaS): não há sessão possível antes do cadastro. Rate limit AUTH_PUBLIC por IP desde 2026-08-03 impede spam de criação de tenants; cobertura em tests/unit/authPublicRateLimit.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -16691,15 +17007,28 @@
     },
     {
       "id": "api:POST:/billing/webhook",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Webhook de provedor de pagamento: autenticado pelo segredo do provedor no header (comparação timing-safe desde 2026-08-03; fail-closed em produção quando o secret não está configurado — verifyWebhookSignature em api/integrations/paymentProvider.js). Sessão de usuário não se aplica a server-to-server. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/billing/webhook",
+        "assertion": "publicByDesign",
+        "reason": "Webhook de provedor de pagamento: autenticado pelo segredo do provedor no header (comparação timing-safe desde 2026-08-03; fail-closed em produção quando o secret não está configurado — verifyWebhookSignature em api/integrations/paymentProvider.js). Sessão de usuário não se aplica a server-to-server.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -17330,15 +17659,28 @@
     },
     {
       "id": "api:POST:/flows/validate",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Função pura de validação (engine/validator, zero I/O — não lê flows, store nem DB): nenhum dado é exposto nem efeito colateral existe. Em produção, request anônimo sem X-Tenant-Id válido é barrado pelo tenant rate limit (tenant_validation_failed). Uso anônimo coberto por api/server.test.js. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/flows/validate",
+        "assertion": "publicByDesign",
+        "reason": "Função pura de validação (engine/validator, zero I/O — não lê flows, store nem DB): nenhum dado é exposto nem efeito colateral existe. Em produção, request anônimo sem X-Tenant-Id válido é barrado pelo tenant rate limit (tenant_validation_failed). Uso anônimo coberto por api/server.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -17443,15 +17785,28 @@
     },
     {
       "id": "api:POST:/lp/:id/submit",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Captura pública de landing page: exige token público válido (resolvePublicToken kind storefront → 401 sem token) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId. Nenhum dado é retornado além do aceite da submissão. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/lp/:id/submit",
+        "assertion": "publicByDesign",
+        "reason": "Captura pública de landing page: exige token público válido (resolvePublicToken kind storefront → 401 sem token) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId. Nenhum dado é retornado além do aceite da submissão.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -17484,15 +17839,28 @@
     },
     {
       "id": "api:POST:/mkt/e",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Coleta pública de eventos de marketing: exige token público válido (resolvePublicToken) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/mkt/e",
+        "assertion": "publicByDesign",
+        "reason": "Coleta pública de eventos de marketing: exige token público válido (resolvePublicToken) + rate limit PUBLIC_TOKEN_STOREFRONT por tokenId.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -19067,15 +19435,28 @@
     },
     {
       "id": "api:POST:/storefront/orders",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Pedido público de vitrine: exige token público válido via query (resolveStorefrontToken → 401 sem token) + rate limit por tokenId. Criação de pedido anônima sem token é impossível. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/storefront/orders",
+        "assertion": "publicByDesign",
+        "reason": "Pedido público de vitrine: exige token público válido via query (resolveStorefrontToken → 401 sem token) + rate limit por tokenId. Criação de pedido anônima sem token é impossível.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -19780,15 +20161,28 @@
     },
     {
       "id": "api:POST:/webhooks/instagram",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/webhooks/instagram",
+        "assertion": "publicByDesign",
+        "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -19797,15 +20191,28 @@
     },
     {
       "id": "api:POST:/webhooks/messenger",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log. (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/webhooks/messenger",
+        "assertion": "publicByDesign",
+        "reason": "Webhook Meta server-to-server: desde 2026-08-03 o POST exige X-Hub-Signature-256 válido (HMAC-SHA256 do corpo com o app secret; timing-safe; fail-closed em produção sem secret configurado). Payload sem tenant resolvível é descartado com log.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",
@@ -19814,15 +20221,28 @@
     },
     {
       "id": "api:POST:/webhooks/whatsapp-qr/events",
-      "state": "VISITED",
+      "state": "NOT_APPLICABLE",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
           "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
           "notEvaluated": true
+        },
+        {
+          "name": "publicByDesign",
+          "passed": true,
+          "detail": "NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): Webhook do bridge WhatsApp-QR server-to-server: autenticado por segredo compartilhado no header x-whatsapp-qr-secret (comparação timing-safe e fail-closed em produção sem WHATSAPP_QR_WEBHOOK_SECRET desde 2026-08-03). (aprovada por jeffersonmachado em 2026-08-03)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:POST:/webhooks/whatsapp-qr/events",
+        "assertion": "publicByDesign",
+        "reason": "Webhook do bridge WhatsApp-QR server-to-server: autenticado por segredo compartilhado no header x-whatsapp-qr-secret (comparação timing-safe e fail-closed em produção sem WHATSAPP_QR_WEBHOOK_SECRET desde 2026-08-03).",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-03"
+      },
       "probes": {
         "p1": "skipped",
         "p2": "skipped",

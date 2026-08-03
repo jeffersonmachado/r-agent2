@@ -258,13 +258,43 @@ function evaluateApiItem(item, probes = {}, exemption = null) {
   const exemptionResult = applyExemption(assertions, exemption, item.id);
   const finalAssertions = exemptionResult.assertions;
 
+  // Isenção de endpoint público por design (`assertion: 'publicByDesign'`):
+  // aplicável SOMENTE quando a política de probe seguro não executou nenhum
+  // probe (método mutável sem auth declarada) — caso em que o item ficaria
+  // VISITED para sempre, sem estado terminal honesto. Se probes rodaram, a
+  // rota é avaliável e a isenção é ignorada (não se esconde rota avaliável).
+  let publicDesignExemption = null;
+  if (
+    !anyProbeAttempted
+    && exemption
+    && exemption.assertion === 'publicByDesign'
+    && isValidExemption(exemption)
+  ) {
+    finalAssertions.push(assertion(
+      'publicByDesign',
+      true,
+      `NOT_APPLICABLE — endpoint público por design (probe mutável proibido por risco de efeito colateral): `
+        + `${exemption.reason} (aprovada por ${exemption.approvedBy} em ${exemption.date})`,
+      { notApplicable: true },
+    ));
+    publicDesignExemption = {
+      item: item.id,
+      assertion: 'publicByDesign',
+      reason: exemption.reason,
+      approvedBy: exemption.approvedBy,
+      date: exemption.date,
+    };
+  }
+
   // Estado final
   const failed = finalAssertions.some((a) => !a.notEvaluated && a.passed === false);
   const networkDown = anyProbeAttempted && !anyProbeRan;
   const pendingEvaluation = finalAssertions.some((a) => a.notEvaluated === true);
 
   let state;
-  if (failed && !networkDown) {
+  if (publicDesignExemption) {
+    state = COVERAGE_STATES.NOT_APPLICABLE;
+  } else if (failed && !networkDown) {
     state = COVERAGE_STATES.FAILED;
   } else if (networkDown) {
     state = COVERAGE_STATES.BLOCKED;
@@ -281,6 +311,7 @@ function evaluateApiItem(item, probes = {}, exemption = null) {
     state,
     assertions: finalAssertions,
     ...(exemptionResult.applied ? { exemption: exemptionResult.applied } : {}),
+    ...(publicDesignExemption ? { exemption: publicDesignExemption } : {}),
     probes: {
       p1: summarizeProbe(p1),
       p2: summarizeProbe(p2),

@@ -132,10 +132,15 @@ async function loginSuperAdmin() {
 /**
  * Token de papel operacional (PRODUCTION): fluxo RPA cria/reutiliza o usuário
  * `rpa_api-surface-wave` com role admin — classificação PRODUCTION por design.
+ * Desde 2026-08-03 GET /auth/rpa/token exige sessão SUPPORT+ (o token RPA é
+ * segredo de serviço): o runner autentica como super_admin e apresenta o
+ * Bearer na leitura do token RPA.
  */
-async function loginProductionRole() {
+async function loginProductionRole(bearerToken) {
   try {
+    if (!bearerToken) return null;
     const tokenRes = await fetch(`${BASE_URL}/auth/rpa/token`, {
+      headers: { authorization: `Bearer ${bearerToken}` },
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     if (tokenRes.status !== 200) return null;
@@ -166,7 +171,8 @@ async function main() {
   console.log(`[api-surface-wave] alvo: ${BASE_URL}`);
   console.log(`[api-surface-wave] ${apiItems.length} rotas api: no inventário`);
 
-  const [devToken, prodToken] = [await loginSuperAdmin(), await loginProductionRole()];
+  const devToken = await loginSuperAdmin();
+  const prodToken = await loginProductionRole(devToken);
   console.log(`[api-surface-wave] tokens: development=${devToken ? 'ok' : 'indisponível'} `
     + `production=${prodToken ? 'ok' : 'indisponível'}`);
   if (!devToken) {

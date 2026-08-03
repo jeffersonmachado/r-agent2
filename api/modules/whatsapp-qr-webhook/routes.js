@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const express = require('express');
 
 function ensurePermission(req, res, deps, resource, action) {
@@ -31,10 +32,21 @@ function createWhatsAppQrWebhookRoutes({ buildDeps }) {
       const secretExpected = String(process.env.WHATSAPP_QR_WEBHOOK_SECRET || '').trim();
       if (secretExpected) {
         const provided = String(req.headers['x-whatsapp-qr-secret'] || '').trim();
-        if (!provided || provided !== secretExpected) {
+        const providedBuf = Buffer.from(provided, 'utf8');
+        const expectedBuf = Buffer.from(secretExpected, 'utf8');
+        const secretOk = provided
+          && providedBuf.length === expectedBuf.length
+          && crypto.timingSafeEqual(providedBuf, expectedBuf);
+        if (!secretOk) {
           deps.sendJson(res, 401, { error: 'unauthorized', message: 'Invalid webhook secret' });
           return;
         }
+      } else if (String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
+        deps.logger.error('[WhatsAppQR] WHATSAPP_QR_WEBHOOK_SECRET não configurado em produção; webhook rejeitado (fail-closed)');
+        deps.sendJson(res, 503, { error: 'webhook_misconfigured' });
+        return;
+      } else {
+        deps.logger.warn('[WhatsAppQR] WHATSAPP_QR_WEBHOOK_SECRET não configurado; processando webhook SEM autenticação (fora de produção)');
       }
 
       const tenantId = body?.tenantId || body?.tenant_id;

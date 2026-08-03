@@ -2,7 +2,7 @@
 
 const config = require('../../utils/config');
 const logger = require('../../utils/logger');
-const { clearLimitersCache, clearRedisRateLimitKeys } = require('../../../infra/rate-limit');
+const { clearLimitersCache, clearRedisRateLimitKeys, checkRateLimit } = require('../../../infra/rate-limit');
 const { requireAuth, requirePermission } = require('../../middleware/auth');
 const { sendJson, badRequest, hasJsonContentType, parseJsonBody } = require('../../express/httpHelpers');
 const { validateInput, ValidationError, schemas } = require('../../utils/inputValidator');
@@ -19,6 +19,7 @@ function buildCoreCommonDeps({ req, res, strictTenantMode }) {
     res,
     clearLimitersCache,
     clearRedisRateLimitKeys,
+    checkRateLimit,
     config,
     requireAuth,
     requirePermission,

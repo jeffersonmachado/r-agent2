@@ -1,5 +1,11 @@
 'use strict';
 
+const config = require('../../utils/config');
+const { verifyMetaSignature } = require('../../utils/metaWebhookSignature');
+const { parseJsonBodyWithRaw: parseJsonBodyWithRawFallback } = require('../../express/httpHelpers');
+
+let warnedMissingAppSecret = false;
+
 /**
  * Instagram webhook routes.
  * GET  /webhooks/instagram  – hub verification
@@ -13,6 +19,7 @@ async function handleInstagramWebhookRoutes({ req, res, method, pathname, deps }
     badRequest,
     hasJsonContentType,
     parseJsonBody,
+    parseJsonBodyWithRaw,
     logger,
     verifyInstagramWebhook,
     sendInstagramMessage,
@@ -50,7 +57,25 @@ async function handleInstagramWebhookRoutes({ req, res, method, pathname, deps }
 
   if (method === 'POST' && pathname === '/webhooks/instagram') {
     try {
-      const body = await parseJsonBody(req);
+      const readBody = parseJsonBodyWithRaw || parseJsonBodyWithRawFallback;
+      const { body, raw } = await readBody(req);
+
+      const appSecret = String(config.get('instagram.appSecret') || '').trim();
+      if (appSecret) {
+        const signatureHeader = req.headers ? req.headers['x-hub-signature-256'] : undefined;
+        if (!verifyMetaSignature({ rawBody: raw, signatureHeader, appSecret })) {
+          logger.warn('[Webhook Instagram] Assinatura X-Hub-Signature-256 ausente ou inválida; payload rejeitado');
+          sendJson(res, 401, { error: 'invalid_signature' });
+          return true;
+        }
+      } else if (String(config.get('nodeEnv') || '').trim().toLowerCase() === 'production') {
+        logger.error('[Webhook Instagram] instagram.appSecret não configurado em produção; webhook rejeitado (fail-closed)');
+        sendJson(res, 503, { error: 'webhook_misconfigured' });
+        return true;
+      } else if (!warnedMissingAppSecret) {
+        warnedMissingAppSecret = true;
+        logger.warn('[Webhook Instagram] instagram.appSecret não configurado; processando SEM verificação de assinatura (fora de produção)');
+      }
 
       if (body.object === 'instagram') {
         const entries = body.entry || [];

@@ -22,6 +22,9 @@ const {
 } = require('../../services/authService');
 const { logAction } = require('../../services/auditService');
 const logger = require('../../utils/logger');
+const { requireAuth } = require('../../middleware/auth');
+const { checkClassification } = require('../../middleware/requireClassification');
+const { checkRateLimit } = require('../../../infra/rate-limit');
 const { createAuthRoutes } = require('../../modules/auth/routes');
 
 function buildAuthRouteDeps() {
@@ -39,6 +42,9 @@ function buildAuthRouteDeps() {
     logoutAllSessions,
     logAction,
     logger,
+    requireAuth,
+    checkClassification,
+    checkRateLimit,
   };
 }
 
