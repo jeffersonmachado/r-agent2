@@ -208,6 +208,131 @@ function handleRagHttpError(response, serviceUrl, endpoint, errorText = 'Erro de
   return new Error(`Erro HTTP ${response.status} do serviço RAG: ${errorText}`);
 }
 
+// ---------------------------------------------------------------------------
+// Circuit breaker (nível de módulo) + retry seletivo para chamadas ao
+// rag-service. Abre após N falhas consecutivas (timeout, erro de rede ou
+// HTTP 5xx — 4xx NÃO conta) e rejeita imediatamente com code 'rag_unavailable'
+// durante o período de reset. Após o reset, uma chamada de probe (meio-aberto)
+// fecha o circuito em caso de sucesso.
+// ---------------------------------------------------------------------------
+
+const CB_DEFAULT_FAILURE_THRESHOLD = 3;
+const CB_DEFAULT_RESET_MS = 30000;
+const CB_DEFAULT_RETRY_BASE_MS = 250;
+const CB_MAX_RETRIES = 2;
+
+function parsePositiveInt(raw, fallback) {
+  const value = parseInt(String(raw), 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function getCbFailureThreshold() {
+  return parsePositiveInt(
+    process.env.RAG_CB_FAILURE_THRESHOLD || config.get('rag.circuitBreaker.failureThreshold', String(CB_DEFAULT_FAILURE_THRESHOLD)),
+    CB_DEFAULT_FAILURE_THRESHOLD
+  );
+}
+
+function getCbResetMs() {
+  return parsePositiveInt(
+    process.env.RAG_CB_RESET_MS || config.get('rag.circuitBreaker.resetMs', String(CB_DEFAULT_RESET_MS)),
+    CB_DEFAULT_RESET_MS
+  );
+}
+
+function getCbRetryBaseMs() {
+  return parsePositiveInt(
+    process.env.RAG_CB_RETRY_BASE_MS || config.get('rag.circuitBreaker.retryBaseMs', String(CB_DEFAULT_RETRY_BASE_MS)),
+    CB_DEFAULT_RETRY_BASE_MS
+  );
+}
+
+const circuitBreaker = {
+  state: 'closed', // 'closed' | 'open' | 'half-open'
+  consecutiveFailures: 0,
+  openedAt: 0,
+  halfOpenInFlight: false,
+};
+
+function createRagUnavailableError() {
+  const err = new Error('Serviço RAG indisponível no momento (circuit breaker aberto). Tente novamente em instantes.');
+  err.code = 'rag_unavailable';
+  return err;
+}
+
+/**
+ * true enquanto o circuito está aberto e ainda dentro da janela de reset.
+ * Usado por isRagAvailable para responder false sem ir à rede.
+ */
+function isRagCircuitOpen() {
+  if (circuitBreaker.state !== 'open') return false;
+  return (Date.now() - circuitBreaker.openedAt) < getCbResetMs();
+}
+
+/** Snapshot do estado do breaker (diagnóstico/testes). */
+function getRagCircuitBreakerState() {
+  return {
+    state: circuitBreaker.state,
+    consecutiveFailures: circuitBreaker.consecutiveFailures,
+    openedAt: circuitBreaker.openedAt,
+  };
+}
+
+/** Reseta o breaker (uso em testes). */
+function resetRagCircuitBreaker() {
+  circuitBreaker.state = 'closed';
+  circuitBreaker.consecutiveFailures = 0;
+  circuitBreaker.openedAt = 0;
+  circuitBreaker.halfOpenInFlight = false;
+}
+
+function acquireCircuitSlot() {
+  if (circuitBreaker.state !== 'open') return;
+  const elapsed = Date.now() - circuitBreaker.openedAt;
+  if (elapsed >= getCbResetMs() && !circuitBreaker.halfOpenInFlight) {
+    // Meio-aberto: permite UMA chamada de probe.
+    circuitBreaker.state = 'half-open';
+    circuitBreaker.halfOpenInFlight = true;
+    return;
+  }
+  throw createRagUnavailableError();
+}
+
+function recordCircuitSuccess() {
+  const wasOpen = circuitBreaker.state !== 'closed';
+  circuitBreaker.consecutiveFailures = 0;
+  circuitBreaker.state = 'closed';
+  circuitBreaker.halfOpenInFlight = false;
+  if (wasOpen) {
+    logger.info('[RAGService] Circuit breaker fechado: rag-service voltou a responder');
+  }
+}
+
+function recordCircuitFailure() {
+  if (circuitBreaker.state === 'half-open') {
+    circuitBreaker.state = 'open';
+    circuitBreaker.openedAt = Date.now();
+    circuitBreaker.halfOpenInFlight = false;
+    logger.warn('[RAGService] Circuit breaker reaberto: probe do rag-service falhou', {
+      resetMs: getCbResetMs(),
+    });
+    return;
+  }
+  circuitBreaker.consecutiveFailures += 1;
+  if (circuitBreaker.consecutiveFailures >= getCbFailureThreshold()) {
+    circuitBreaker.state = 'open';
+    circuitBreaker.openedAt = Date.now();
+    logger.warn('[RAGService] Circuit breaker aberto após falhas consecutivas no rag-service', {
+      consecutiveFailures: circuitBreaker.consecutiveFailures,
+      resetMs: getCbResetMs(),
+    });
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -231,11 +356,65 @@ async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT
   }
 }
 
+/**
+ * fetch com circuit breaker em nível de módulo + retry seletivo.
+ *
+ * - Conta como falha: timeout, erro de rede e HTTP 5xx. 4xx NÃO conta
+ *   (o serviço está vivo e respondeu).
+ * - Circuito aberto: rejeita imediatamente com Error code 'rag_unavailable',
+ *   sem ir à rede. Após RAG_CB_RESET_MS, uma chamada de probe (meio-aberto)
+ *   fecha o circuito em caso de sucesso.
+ * - Retry com backoff exponencial (máx 2 retries: base, 3*base — default
+ *   250ms/750ms) APENAS quando `idempotent: true`. Nunca usar retry em
+ *   POST de query/index/embeddings.
+ * - Falhas são contabilizadas 1x por chamada lógica (retries esgotados
+ *   contam como uma única falha).
+ *
+ * @param {string} url
+ * @param {Object} [options]
+ * @param {number} [timeout]
+ * @param {{ idempotent?: boolean }} [breakerOptions]
+ * @returns {Promise<Response>} Resposta HTTP (inclusive 5xx final, para o
+ *   caller tratar via handleRagHttpError como antes).
+ */
+async function fetchRagWithBreaker(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT, { idempotent = false } = {}) {
+  acquireCircuitSlot();
+
+  const maxAttempts = idempotent ? CB_MAX_RETRIES + 1 : 1;
+  let lastError = null;
+  let lastResponse = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options, timeout);
+      if (response && response.status >= 500) {
+        lastResponse = response;
+      } else {
+        // Sucesso para o breaker (inclui 4xx: serviço vivo — não conta falha).
+        recordCircuitSuccess();
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+      lastResponse = null;
+    }
+    if (attempt < maxAttempts) {
+      await sleep(getCbRetryBaseMs() * (2 * attempt - 1));
+    }
+  }
+
+  recordCircuitFailure();
+  if (lastError) throw lastError;
+  return lastResponse;
+}
+
 module.exports = {
   DEFAULT_RAG_SERVICE_URL,
   DEFAULT_RAG_TIMEOUT,
   DEFAULT_RAG_QUERY_TIMEOUT,
+  fetchRagWithBreaker,
   fetchWithTimeout,
+  getRagCircuitBreakerState,
   getRagDomainConfig,
   getRagDomainSources,
   getRagDomains,
@@ -246,6 +425,8 @@ module.exports = {
   getTenantContextForRag,
   handleRagHttpError,
   invalidateTenantContextCache,
+  isRagCircuitOpen,
   isRagDomainEnabled,
   normalizeTenantId,
+  resetRagCircuitBreaker,
 };

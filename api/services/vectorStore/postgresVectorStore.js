@@ -67,46 +67,52 @@ async function upsertChunks({ tenantId, documentId, chunks }) {
       { replacements: { tenantKey, documentId: String(documentId) }, transaction: t }
     );
 
-    let inserted = 0;
+    const validChunks = [];
     for (const c of chunks) {
       if (!c || !c.id) continue;
-      const embedding = c.embedding;
-      assertEmbeddingDim(embedding);
-      const vectorLiteral = embeddingToPgVectorLiteral(embedding);
-      await sequelize.query(
-        `
-          INSERT INTO rag_chunks
-            (id, tenant_key, document_id, chunk_index, content, embedding, metadata, permissions, created_at)
-          VALUES
-            (:id, :tenantKey, :documentId, :chunkIndex, :content, (:embedding)::vector, (:metadata)::jsonb, (:permissions)::jsonb, NOW())
-          ON CONFLICT (id)
-          DO UPDATE SET
-            tenant_key = EXCLUDED.tenant_key,
-            document_id = EXCLUDED.document_id,
-            chunk_index = EXCLUDED.chunk_index,
-            content = EXCLUDED.content,
-            embedding = EXCLUDED.embedding,
-            metadata = EXCLUDED.metadata,
-            permissions = EXCLUDED.permissions
-        `,
-        {
-          replacements: {
-            id: String(c.id),
-            tenantKey,
-            documentId: String(documentId),
-            chunkIndex: Number.isFinite(c.chunkIndex) ? c.chunkIndex : 0,
-            content: String(c.content || ''),
-            embedding: vectorLiteral,
-            metadata: JSON.stringify(c.metadata || {}),
-            permissions: JSON.stringify(c.permissions || {}),
-          },
-          transaction: t,
-        }
-      );
-      inserted += 1;
+      assertEmbeddingDim(c.embedding);
+      validChunks.push(c);
     }
 
-    return { insertedChunksCount: inserted };
+    if (validChunks.length === 0) {
+      return { insertedChunksCount: 0 };
+    }
+
+    // INSERT multi-row único (1 roundtrip para o batch inteiro), com bind
+    // params por linha — sem concatenação de valores.
+    const replacements = {};
+    const valuesSql = validChunks.map((c, idx) => {
+      replacements[`id${idx}`] = String(c.id);
+      replacements[`tenantKey${idx}`] = tenantKey;
+      replacements[`documentId${idx}`] = String(documentId);
+      replacements[`chunkIndex${idx}`] = Number.isFinite(c.chunkIndex) ? c.chunkIndex : 0;
+      replacements[`content${idx}`] = String(c.content || '');
+      replacements[`embedding${idx}`] = embeddingToPgVectorLiteral(c.embedding);
+      replacements[`metadata${idx}`] = JSON.stringify(c.metadata || {});
+      replacements[`permissions${idx}`] = JSON.stringify(c.permissions || {});
+      return `(:id${idx}, :tenantKey${idx}, :documentId${idx}, :chunkIndex${idx}, :content${idx}, (:embedding${idx})::vector, (:metadata${idx})::jsonb, (:permissions${idx})::jsonb, NOW())`;
+    }).join(',\n');
+
+    await sequelize.query(
+      `
+        INSERT INTO rag_chunks
+          (id, tenant_key, document_id, chunk_index, content, embedding, metadata, permissions, created_at)
+        VALUES
+          ${valuesSql}
+        ON CONFLICT (id)
+        DO UPDATE SET
+          tenant_key = EXCLUDED.tenant_key,
+          document_id = EXCLUDED.document_id,
+          chunk_index = EXCLUDED.chunk_index,
+          content = EXCLUDED.content,
+          embedding = EXCLUDED.embedding,
+          metadata = EXCLUDED.metadata,
+          permissions = EXCLUDED.permissions
+      `,
+      { replacements, transaction: t }
+    );
+
+    return { insertedChunksCount: validChunks.length };
   });
 }
 

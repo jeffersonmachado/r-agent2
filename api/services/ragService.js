@@ -17,6 +17,7 @@ const { RecordingSystem } = require('../../lib/recordingSystem');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
 const {
   DEFAULT_RAG_TIMEOUT,
+  fetchRagWithBreaker,
   fetchWithTimeout,
   getRagDomainConfig,
   getRagDomainSources,
@@ -27,6 +28,7 @@ const {
   getRagTimeout,
   getTenantContextForRag,
   handleRagHttpError,
+  isRagCircuitOpen,
   isRagDomainEnabled,
   normalizeTenantId,
 } = require('./rag/ragRuntime');
@@ -66,7 +68,7 @@ async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
   const timeout = Number.isFinite(options.timeoutMs) ? options.timeoutMs : Math.min(getRagTimeout(tenantId) * 2, 15000);
 
   const url = `${serviceUrl}/rag/embeddings`;
-  const response = await fetchWithTimeout(
+  const response = await fetchRagWithBreaker(
     url,
     {
       method: 'POST',
@@ -283,7 +285,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagQueryTimeout(tenantId);
     
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/query`,
       {
         method: 'POST',
@@ -528,7 +530,7 @@ async function indexDocument(document, tenantId) {
       }
     });
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       url,
       {
         method: 'POST',
@@ -624,34 +626,6 @@ async function indexDocument(document, tenantId) {
       sourceId,
       sourceVersion,
     });
-    
-    // Verifica vector store após indexação
-    try {
-      const healthUrl = `${serviceUrl}/rag/health${tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''}`;
-      logger.info('[RAGService] Verificando vector store após indexação', { healthUrl, tenantId });
-      
-      const healthResponse = await fetchWithTimeout(healthUrl, { method: 'GET' }, 2000);
-      if (healthResponse.ok) {
-        const healthData = await healthResponse.json();
-        logger.info('[RAGService] Vector store após indexação', {
-          tenantId,
-          indexedDocuments: healthData.indexedDocuments,
-          indexedChunks: healthData.indexedChunks,
-          vectorStore: healthData.vectorStore,
-          documentId: document.id
-        });
-      } else {
-        logger.warn('[RAGService] Não foi possível verificar vector store após indexação', {
-          status: healthResponse.status,
-          tenantId
-        });
-      }
-    } catch (healthErr) {
-      logger.warn('[RAGService] Erro ao verificar vector store após indexação', {
-        error: safeErrorMessage(healthErr),
-        tenantId
-      });
-    }
 
     return {
       success: result.success,
@@ -679,9 +653,18 @@ async function indexDocument(document, tenantId) {
  */
 async function isRagAvailable(tenantId = null) {
   try {
+    // Circuito aberto: indisponibilidade já conhecida — responde false sem
+    // ir à rede e sem contar falha nova no breaker.
+    if (isRagCircuitOpen()) {
+      logger.warn('[RAGService] Circuit breaker aberto, RAG considerado indisponível sem health check', { tenantId });
+      return false;
+    }
+
     const serviceUrl = getRagServiceUrl(tenantId);
     logger.info('[RAGService] Verificando disponibilidade', { serviceUrl, tenantId });
-    
+
+    // Health check é probe diagnóstico: usa fetchWithTimeout direto (sem
+    // retry e sem alimentar o breaker — quem alimenta é o tráfego real).
     const response = await fetchWithTimeout(
       `${serviceUrl}/rag/health`,
       {
@@ -742,7 +725,7 @@ async function updateSynonymsFromDocuments(tenantId, documents) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/update-synonyms`,
       {
         method: 'POST',
@@ -804,7 +787,7 @@ async function getLearningMetrics(tenantId) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/metrics/${tenantId}`,
       {
         method: 'GET',
@@ -813,7 +796,8 @@ async function getLearningMetrics(tenantId) {
           ...getRagInternalHeaders(),
         },
       },
-      timeout
+      timeout,
+      { idempotent: true }
     );
 
     if (!response.ok) {
@@ -846,7 +830,7 @@ async function triggerLearning(tenantId) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/trigger-learning/${tenantId}`,
       {
         method: 'POST',
@@ -895,7 +879,7 @@ async function getFullLearningData(tenantId) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/full-data/${tenantId}`,
       {
         method: 'GET',
@@ -904,7 +888,8 @@ async function getFullLearningData(tenantId) {
           ...getRagInternalHeaders(),
         },
       },
-      timeout
+      timeout,
+      { idempotent: true }
     );
 
     if (!response.ok) {
@@ -939,7 +924,7 @@ async function updateSynonym(tenantId, term, synonyms) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/synonyms`,
       {
         method: 'PUT',
@@ -988,7 +973,7 @@ async function deleteSynonym(tenantId, term) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/synonyms/${tenantId}/${encodeURIComponent(term)}`,
       {
         method: 'DELETE',
@@ -1031,7 +1016,7 @@ async function cleanInvalidQueries(tenantId) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagTimeout(tenantId);
 
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/learning/clean-invalid-queries/${tenantId}`,
       {
         method: 'POST',
@@ -1076,7 +1061,7 @@ async function cleanOrphanedDocuments(tenantId, documentIds) {
       url
     });
     
-    const response = await fetchWithTimeout(
+    const response = await fetchRagWithBreaker(
       url,
       {
         method: 'POST',
@@ -1140,7 +1125,7 @@ async function listVectorDocuments(tenantId, options = {}) {
   const timeout = getRagTimeout(tenantId);
   const url = `${serviceUrl}/rag/documents?tenant_id=${encodeURIComponent(tenantId)}&limit=${encodeURIComponent(safeToString(limit))}`;
 
-  const response = await fetchWithTimeout(url, { method: 'GET', headers: { ...getRagInternalHeaders() } }, Math.min(4000, timeout));
+  const response = await fetchRagWithBreaker(url, { method: 'GET', headers: { ...getRagInternalHeaders() } }, Math.min(4000, timeout), { idempotent: true });
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new Error(`Erro ao listar documentos do vector store: HTTP ${response.status} ${errorText || response.statusText}`);

@@ -201,55 +201,68 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
       });
     }
     
-    // Reindexa cada documento
-    for (let i = 0; i < notIndexedDocs.length; i++) {
-      const doc = notIndexedDocs[i];
-      logger.info(`[RAGDocuments] Processando documento ${i + 1}/${notIndexedDocs.length}`, {
-        documentId: doc.id,
-        title: doc.title,
-        tenantId: doc.tenantId
-      });
-      
-      try {
-        const result = await reindexDocFn(doc.id);
-        if (result.success) {
-          indexed++;
-          logger.info(`[RAGDocuments] Documento ${doc.id} reindexado com sucesso`, {
-            documentId: doc.id,
-            chunksCreated: result.chunksCreated,
-            indexed: indexed,
-            total: notIndexedDocs.length
-          });
-        } else {
+    // Reindexa com concorrência limitada (pool de workers simples, sem
+    // dependência nova). Cada worker consome o próximo índice disponível;
+    // falhas de um doc não interrompem os demais.
+    const REINDEX_CONCURRENCY = 4;
+    const total = notIndexedDocs.length;
+    let nextIndex = 0;
+
+    const reindexWorker = async () => {
+      while (nextIndex < total) {
+        const i = nextIndex;
+        nextIndex += 1;
+        const doc = notIndexedDocs[i];
+        logger.info(`[RAGDocuments] Processando documento ${i + 1}/${total}`, {
+          documentId: doc.id,
+          title: doc.title,
+          tenantId: doc.tenantId
+        });
+
+        try {
+          const result = await reindexDocFn(doc.id);
+          if (result.success) {
+            indexed++;
+            logger.info(`[RAGDocuments] Documento ${doc.id} reindexado com sucesso`, {
+              documentId: doc.id,
+              chunksCreated: result.chunksCreated,
+              indexed: indexed,
+              total: total
+            });
+          } else {
+            failed++;
+            errors.push({
+              documentId: doc.id,
+              title: doc.title,
+              error: result.error || 'Erro desconhecido',
+            });
+            logger.error(`[RAGDocuments] Falha ao reindexar documento ${doc.id}`, {
+              documentId: doc.id,
+              error: result.error,
+              indexed: indexed,
+              failed: failed
+            });
+          }
+        } catch (error) {
           failed++;
           errors.push({
             documentId: doc.id,
             title: doc.title,
-            error: result.error || 'Erro desconhecido',
+            error: safeErrorMessage(error, 'Erro desconhecido'),
           });
-          logger.error(`[RAGDocuments] Falha ao reindexar documento ${doc.id}`, {
+          logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}`, {
             documentId: doc.id,
-            error: result.error,
+            error: safeErrorMessage(error),
+            stack: error.stack,
             indexed: indexed,
             failed: failed
           });
         }
-      } catch (error) {
-        failed++;
-        errors.push({
-          documentId: doc.id,
-          title: doc.title,
-          error: safeErrorMessage(error, 'Erro desconhecido'),
-        });
-        logger.error(`[RAGDocuments] Erro ao reindexar documento ${doc.id}`, {
-          documentId: doc.id,
-          error: safeErrorMessage(error),
-          stack: error.stack,
-          indexed: indexed,
-          failed: failed
-        });
       }
-    }
+    };
+
+    const workerCount = Math.min(REINDEX_CONCURRENCY, total);
+    await Promise.all(Array.from({ length: workerCount }, () => reindexWorker()));
     
     logger.info(`[RAGDocuments] Reindexação em lote concluída: ${indexed} indexados, ${failed} falharam`);
     
