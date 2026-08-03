@@ -16,6 +16,16 @@ openai==2.52.1
 python-multipart==0.0.32
 psycopg2-binary==2.9.12
 
+# Backend ONNX opcional de embeddings (RAG_EMBEDDING_BACKEND=onnx).
+# O extra optimum[onnxruntime] exige transformers<4.54 (conflita com o pin 4.57.6)
+# e optimum>=2.x exige torch.rms_norm (ausente no torch 2.2.2). Por isso os pacotes
+# do extra são pinados diretamente: optimum base só exige transformers>=4.29.
+optimum==1.27.0
+onnx==1.22.0
+# onnxruntime >=1.21 referencia torch.uint16 (só existe em torch>=2.3); com o
+# torch 2.2.2 pinado, a última compatível é 1.20.1.
+onnxruntime==1.20.1
+
 # Testes
 pytest==8.4.2
 httpx==0.28.1

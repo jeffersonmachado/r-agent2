@@ -34,8 +34,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Warm-up de startup: carrega o modelo de embeddings (singleton) e aquece
-    o torch com um encode antes de aceitar tráfego. Sem warm-up, o primeiro
-    request pagaria download/load do modelo (~90MB) dentro do handler.
+    o backend efetivo (torch ou onnx, via get_embedding_model) com um encode
+    antes de aceitar tráfego. Sem warm-up, o primeiro request pagaria
+    download/load do modelo (~90MB) dentro do handler.
     Falha explícita: se o modelo não carrega, o startup falha (healthcheck
     do Docker barra o deploy) — nunca fallback silencioso.
     """

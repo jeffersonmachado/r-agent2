@@ -164,6 +164,12 @@ class Settings(BaseSettings):
         _CONFIG_JSON.get('embedding', {}).get('dimension', 384)
         if _CONFIG_JSON else 384
     )
+    # Backend de execução do modelo de embeddings: 'torch' (padrão) ou 'onnx'.
+    # Env: RAG_EMBEDDING_BACKEND. Fallback onnx→torch ocorre no embedding_service.
+    embedding_backend: str = (
+        _CONFIG_JSON.get('embedding', {}).get('backend', 'torch')
+        if _CONFIG_JSON else "torch"
+    )
     
     # Chunking
     chunk_size: int = (

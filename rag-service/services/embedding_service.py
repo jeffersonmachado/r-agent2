@@ -19,14 +19,38 @@ _model: Optional[SentenceTransformer] = None
 def get_embedding_model() -> SentenceTransformer:
     """
     Retorna instância do modelo de embeddings (singleton).
-    
+
+    Backend configurável via settings.embedding_backend ('torch' | 'onnx',
+    env RAG_EMBEDDING_BACKEND). Com 'onnx', o modelo é carregado via
+    SentenceTransformer(..., backend='onnx') (optimum/onnxruntime); se o
+    carregamento ONNX falhar (modelo não cacheado, lib ausente), cai de
+    forma explícita para torch com warning — nunca derruba o serviço.
+
     Returns:
         Modelo SentenceTransformer
     """
     global _model
     if _model is None:
         settings = get_settings()
-        _model = SentenceTransformer(settings.embedding_model)
+        backend = (settings.embedding_backend or 'torch').strip().lower()
+        if backend == 'onnx':
+            try:
+                _model = SentenceTransformer(settings.embedding_model, backend='onnx')
+                logger.info('[EMBEDDING] Modelo carregado com backend ONNX')
+            except Exception as exc:
+                logger.warning(
+                    '[EMBEDDING] Falha ao carregar backend ONNX (%s: %s); '
+                    'usando fallback torch',
+                    type(exc).__name__, exc,
+                )
+                _model = SentenceTransformer(settings.embedding_model)
+        else:
+            if backend != 'torch':
+                logger.warning(
+                    "[EMBEDDING] embedding_backend inválido '%s'; usando torch",
+                    backend,
+                )
+            _model = SentenceTransformer(settings.embedding_model)
     return _model
 
 
