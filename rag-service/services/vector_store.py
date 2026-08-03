@@ -53,14 +53,33 @@ def _pgvector_literal(vec: List[float]) -> str:
     return "[" + ",".join(str(float(x)) for x in vec) + "]"
 
 
-_IVFFLAT_PROBES_LOGGED = False
+_SESSION_TUNING_LOGGED = False
+
+
+def _resolve_hnsw_ef_search() -> int:
+    """
+    ef_search do índice HNSW (knob atual de recall, pgvector >= 0.5).
+    Default do pgvector é 40, que já é razoável. Configurável via
+    RAG_HNSW_EF_SEARCH (mínimo 1, coerção defensiva).
+    """
+    import os
+    raw = os.getenv("RAG_HNSW_EF_SEARCH")
+    if raw:
+        try:
+            ef_search = int(str(raw).strip())
+            if ef_search >= 1:
+                return ef_search
+        except Exception:
+            pass
+    return 40
 
 
 def _resolve_ivfflat_probes() -> int:
     """
-    Número de probes do índice ivfflat (lists=100). Default do Postgres é 1,
-    o que degrada recall; 10 é um piso razoável. Configurável via
-    RAG_IVFFLAT_PROBES (mínimo 1, coerção defensiva).
+    LEGADO: número de probes do índice ivfflat (lists=100). Mantido apenas como
+    fallback enquanto o índice ivfflat existir — a migration
+    20260803000002-rag-chunks-hnsw-index.js substitui ivfflat por HNSW e o knob
+    passa a ser hnsw.ef_search. Configurável via RAG_IVFFLAT_PROBES (mínimo 1).
     """
     import os
     raw = os.getenv("RAG_IVFFLAT_PROBES")
@@ -75,19 +94,37 @@ def _resolve_ivfflat_probes() -> int:
 
 
 def _get_conn():
-    global _IVFFLAT_PROBES_LOGGED
+    global _SESSION_TUNING_LOGGED
     settings = get_settings()
     dsn = settings.postgres_dsn
     if not dsn:
         raise RuntimeError("Postgres DSN não configurado. Defina DATABASE_URL (recomendado) ou PGHOST/PGUSER/PGDATABASE.")
     conn = psycopg2.connect(dsn)
     # Conexões são por operação: SET de sessão cobre search + dedup.
+    # hnsw.ef_search é o knob atual; ivfflat.probes é legado (inócuo sem índice
+    # ivfflat). SET de parâmetro inexistente (pgvector antigo) é tolerado com
+    # warn — nunca derruba a operação.
+    ef_search = _resolve_hnsw_ef_search()
     probes = _resolve_ivfflat_probes()
     with conn.cursor() as cur:
-        cur.execute(f"SET ivfflat.probes = {probes}")
-    if not _IVFFLAT_PROBES_LOGGED:
-        _IVFFLAT_PROBES_LOGGED = True
-        logger.debug("[VectorStore] ivfflat.probes configurado na sessão", extra={"ivfflatProbes": probes})
+        for param, value in (("hnsw.ef_search", ef_search), ("ivfflat.probes", probes)):
+            try:
+                cur.execute(f"SET {param} = {value}")
+            except Exception as exc:
+                # SET falho aborta a transação implícita do psycopg2; rollback
+                # limpa o estado para as queries seguintes da sessão.
+                conn.rollback()
+                logger.warning(
+                    "[VectorStore] SET %s falhou (pgvector sem suporte?); seguindo sem esse tuning",
+                    param,
+                    extra={"error": str(exc)},
+                )
+    if not _SESSION_TUNING_LOGGED:
+        _SESSION_TUNING_LOGGED = True
+        logger.debug(
+            "[VectorStore] tuning de sessão configurado",
+            extra={"hnswEfSearch": ef_search, "ivfflatProbesLegacy": probes},
+        )
     return conn
 
 
@@ -203,25 +240,53 @@ class VectorStore:
         resolved_scope = resolve_query_scope(scope)
 
         k = max(1, min(int(top_k or 5), 50))
-        # buscamos mais para aplicar filtros (roles/agentes) sem perder recall
-        fetch_k = min(200, k * 6)
         qv = _pgvector_literal(query_embedding)
+
+        # Filtros de roles/agentId aplicados no SQL (sobre o JSONB permissions),
+        # reproduzindo a semântica histórica do filtro em Python: chunk sem
+        # restrição (permissions vazio/ausente, ou roles/agents ausente/vazio)
+        # é visível para todos; com restrição, exige interseção.
+        filters = filters or {}
+        roles = filters.get("roles")
+        if isinstance(roles, str):
+            roles = [roles]
+        roles = [str(r) for r in (roles or []) if str(r).strip()] if isinstance(roles, (list, tuple)) else []
+        agent_id = str(filters.get("agentId")).strip() if filters.get("agentId") else ""
+
+        where_clauses = ["tenant_key = %s", "domain = %s", "classification = ANY(%s)"]
+        params: List[Any] = [qv, self.tenant_id, resolved_scope["domain"], resolved_scope["classifications"]]
+        if roles:
+            where_clauses.append(
+                "(permissions->'roles' IS NULL OR permissions->'roles' = '[]'::jsonb"
+                " OR permissions->'roles' ?| %s)"
+            )
+            params.append(roles)
+        if agent_id:
+            where_clauses.append(
+                "(permissions->'agents' IS NULL OR permissions->'agents' = '[]'::jsonb"
+                " OR permissions->'agents' ? %s)"
+            )
+            params.append(agent_id)
+
+        # Com filtro no SQL não há descarte em Python: fetch_k = k. Sem filtro,
+        # mantém o overscan histórico (inócuo, mas preserva o comportamento).
+        has_sql_filter = bool(roles or agent_id)
+        fetch_k = k if has_sql_filter else min(200, k * 6)
+        params.extend([qv, fetch_k])
 
         with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT id, document_id, chunk_index, content, metadata, permissions,
                            domain, classification, sensitivity,
                            (embedding <=> (%s)::vector) AS distance
                     FROM rag_chunks
-                    WHERE tenant_key = %s
-                      AND domain = %s
-                      AND classification = ANY(%s)
+                    WHERE {' AND '.join(where_clauses)}
                     ORDER BY embedding <=> (%s)::vector
                     LIMIT %s
                     """,
-                    (qv, self.tenant_id, resolved_scope["domain"], resolved_scope["classifications"], qv, fetch_k)
+                    tuple(params)
                 )
                 rows = cur.fetchall()
 
@@ -273,24 +338,7 @@ class VectorStore:
             )
             results.append(chunk)
 
-        if filters:
-            results = self._filter_chunks(results, filters)
-
         return results[:k]
-
-    def _filter_chunks(self, chunks: List[Chunk], filters: Dict) -> List[Chunk]:
-        filtered: List[Chunk] = []
-        for chunk in chunks:
-            # roles
-            if filters.get("roles") and chunk.permissions and chunk.permissions.roles:
-                if not any(role in chunk.permissions.roles for role in filters["roles"]):
-                    continue
-            # agentId
-            if filters.get("agentId") and chunk.permissions and chunk.permissions.agents:
-                if filters["agentId"] not in chunk.permissions.agents:
-                    continue
-            filtered.append(chunk)
-        return filtered
 
     def remove_document(self, document_id: str) -> int:
         if not document_id:
